@@ -23,8 +23,6 @@ import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
 import type { Message as BubbleMessage } from "@/components/crm/message-bubble";
-import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
-import { FavoritesPanel } from "@/components/crm/favorites-panel";
 import { ContactAside } from "@/components/crm/contact-aside";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { PageHeader } from "@/components/crm/page-header";
@@ -48,11 +46,8 @@ import {
   useConversations,
   useContactSidebar,
   useInboxRealtime,
-  useFavoriteMessage,
   useMarkConversationRead,
   useMessages,
-  usePinMessage,
-  useUnpinMessage,
   useReactMessage,
   useSelectedOutboundChannel,
   useSendMessage,
@@ -63,7 +58,6 @@ import {
   AssigneePopover,
   Composer,
   ConversationActionsMenu,
-  ConversationTimelineTab,
   InboxFilterButton,
   TagsPopover,
   TemplatePickerList,
@@ -82,7 +76,10 @@ import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popo
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
-import { DealNotesTab } from "@/features/pipeline-v2/extras";
+import {
+  DealNotesTab,
+  DealTimelineTab,
+} from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
 // ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover.
@@ -369,13 +366,8 @@ export default function InboxV2ClientPage({
   // ── Mutations ───────────────────────────────────────────────────
   const sendMessage = useSendMessage(activeId);
   const reactMessage = useReactMessage(activeId);
-  const pinMessage = usePinMessage(activeId);
-  const unpinMessage = useUnpinMessage(activeId);
-  const favoriteMessageMutation = useFavoriteMessage(activeId);
   const markRead = useMarkConversationRead();
   const bulkAction = useBulkConversationAction();
-  const { requestDuration: requestPinDuration, dialog: pinDurationDialog } = usePinDurationDialog();
-  const [favoritesOpen, setFavoritesOpen] = useState(false);
 
   // Handler de reação disparado pelo menu contextual de cada bubble.
   // WhatsApp: apertar o mesmo emoji novamente remove; escolher outro
@@ -387,54 +379,6 @@ export default function InboxV2ClientPage({
       { messageId: msg.id, emoji: emoji ?? "" },
       {
         onError: (err) => toast.error(err.message || "Falha ao reagir"),
-      },
-    );
-  }
-
-  // Fixar: toggle — clicar numa mensagem já fixada desafixa direto (igual
-  // WhatsApp). Fixar uma NOVA abre o picker de duração (24h/7d/30d) antes
-  // de confirmar. Várias podem ficar fixadas ao mesmo tempo (máx. 3).
-  async function handlePinMessage(msg: { id: string; isPinnedMessage?: boolean }) {
-    if (!activeId) return;
-    if (msg.isPinnedMessage) {
-      unpinMessage.mutate(
-        { messageId: msg.id },
-        {
-          onSuccess: () => toast.success("Mensagem desafixada"),
-          onError: (err) => toast.error(err.message || "Falha ao desafixar"),
-        },
-      );
-      return;
-    }
-    const durationHours = await requestPinDuration();
-    if (durationHours == null) return;
-    pinMessage.mutate(
-      { messageId: msg.id, durationHours },
-      {
-        onSuccess: () => toast.success("Mensagem fixada"),
-        onError: (err) => toast.error(err.message || "Falha ao fixar"),
-      },
-    );
-  }
-
-  function handleUnpinMessage(messageId: string) {
-    if (!activeId) return;
-    unpinMessage.mutate(
-      { messageId },
-      { onError: (err) => toast.error(err.message || "Falha ao desafixar") },
-    );
-  }
-
-  // Favoritar: marcador pessoal — sem `favorite` explícito, o backend
-  // alterna o estado atual (evita round-trip extra pra saber o estado
-  // prévio, que o front já tem local via `msg.isFavorited`).
-  function handleFavoriteMessage(msg: { id: string; isFavorited?: boolean }) {
-    favoriteMessageMutation.mutate(
-      { messageId: msg.id, favorite: !msg.isFavorited },
-      {
-        onSuccess: (res) =>
-          toast.success(res.favorited ? "Mensagem favoritada" : "Removida dos favoritos"),
-        onError: (err) => toast.error(err.message || "Falha ao favoritar"),
       },
     );
   }
@@ -539,27 +483,10 @@ export default function InboxV2ClientPage({
     [rows, activeId],
   );
   const contactName = activeRow?.contact?.name ?? "";
-  const pinnedMessageIds = useMemo(
-    () => messagesData?.pinnedMessageIds ?? [],
-    [messagesData?.pinnedMessageIds],
-  );
-  const pinnedIdSet = useMemo(() => new Set(pinnedMessageIds), [pinnedMessageIds]);
   const messageBubbles = useMemo(
-    () =>
-      messages.map((m) => {
-        const bubble = toMessageBubble(m, contactName);
-        return pinnedIdSet.has(m.id) ? { ...bubble, isPinnedMessage: true } : bubble;
-      }),
-    [messages, contactName, pinnedIdSet],
+    () => messages.map((m) => toMessageBubble(m, contactName)),
+    [messages, contactName],
   );
-  // Previews do banner "fixadas" (várias, estilo WhatsApp) — derivados do
-  // próprio array já carregado, na ordem em que o backend os retorna.
-  const pinnedMessagesPreview = useMemo(() => {
-    return pinnedMessageIds
-      .map((pid) => messageBubbles.find((m) => m.id === pid))
-      .filter((m): m is NonNullable<typeof m> => !!m)
-      .map((m) => ({ id: m.id, content: m.content, senderName: m.senderName ?? null }));
-  }, [pinnedMessageIds, messageBubbles]);
   const chatContact = activeRow ? toChatContact(activeRow) : null;
   // Backend é source of truth quando disponível (`session.active`).
   // Fallback heurístico: se o backend não enviou `session`, calculamos a
@@ -705,7 +632,6 @@ export default function InboxV2ClientPage({
       }}
       hasMore={hasNextPage}
       isLoadingMore={isFetchingNextPage}
-      className="h-full min-h-0"
       renderCardSlots={(c) => ({
         assigneeSlot: (
           <RequirePermission
@@ -883,13 +809,10 @@ export default function InboxV2ClientPage({
   ) : (
     <NoDealTab message="Vincule um negocio a este contato para registrar notas." />
   );
-  // Timeline da CONVERSA (nao do deal) — sempre disponivel quando ha
-  // conversa ativa, mesmo sem deal vinculado. Ver AGENT.md "ID de
-  // conversa + logs + gatilho".
-  const timelineSlot = activeId ? (
-    <ConversationTimelineTab conversationId={activeId} />
+  const timelineSlot = firstDealId ? (
+    <DealTimelineTab dealId={firstDealId} />
   ) : (
-    <NoDealTab message="Selecione uma conversa para ver a timeline." />
+    <NoDealTab message="Vincule um negocio a este contato para ver a timeline." />
   );
   const activitiesSlot = firstDealId ? (
     <div className="flex-1 overflow-auto">
@@ -916,15 +839,8 @@ export default function InboxV2ClientPage({
         showSessionAlert={sessionExpired}
         connection={messagesData?.channel ?? null}
         connections={messagesData?.channels}
-        conversationNumber={activeRow?.number ?? null}
-        conversationResolved={activeRow?.status === "RESOLVED"}
-        conversationClosedAt={activeRow?.closedAt ?? null}
         onUseTemplate={() => setTemplateOpen(true)}
         onReactMessage={handleReactMessage}
-        onPinMessage={handlePinMessage}
-        onFavoriteMessage={handleFavoriteMessage}
-        pinnedMessages={pinnedMessagesPreview}
-        onUnpinMessage={handleUnpinMessage}
         onReplyMessage={handleReplyMessage}
         headerActionsSlot={
           <>
@@ -941,8 +857,6 @@ export default function InboxV2ClientPage({
             <ConversationActionsMenu
               conversationId={activeId}
               isResolved={activeRow.status === "RESOLVED"}
-              onOpenFavorites={() => setFavoritesOpen(true)}
-              onReopenNewConversation={(newId) => setActiveId(newId)}
             />
           </>
         }
@@ -1041,20 +955,6 @@ export default function InboxV2ClientPage({
       </div>
     ) : null;
 
-  // Picker de duração do "Fixar" (24h/7d/30d) + painel "Mensagens
-  // favoritas" — self-contained, plugados nos 4 pontos de retorno
-  // (mobile/desktop × com/sem pageHeader) junto do templateModalNode.
-  const extraDialogsNode = (
-    <>
-      {pinDurationDialog}
-      <FavoritesPanel
-        open={favoritesOpen}
-        onOpenChange={setFavoritesOpen}
-        conversationId={activeId}
-      />
-    </>
-  );
-
   // Layout COM cabeçalho de página (estilo "Caixa de entrada" da
   // referência): NavRail fixo à esquerda; à direita o header no topo e
   // as 3 colunas (lista/chat/contato) numa grade abaixo.
@@ -1062,77 +962,73 @@ export default function InboxV2ClientPage({
     // ── Mobile: layout de painel único (lista → chat/negócio) ──────
     if (!isDesktop) {
       return (
-        <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
-          {navRailNode}
-          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
-            <PageHeader
-              icon={pageHeader.icon}
-              title={pageHeader.title}
-              description={pageHeader.description}
-              center={
-                <PageSearchBar
-                  variant="compact"
-                  value={searchInput}
-                  onChange={setSearchInput}
-                  placeholder="Buscar conversa, contato, telefone..."
-                  aria-label="Buscar conversas"
-                />
-              }
-              actions={null}
-            />
-            {!activeId ? (
-              <div className="min-h-0 flex-1 overflow-hidden">
-                {conversationColumnNode}
-              </div>
-            ) : (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
-                <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
+        <div className="v2-screen flex flex-col overflow-hidden">
+          <PageHeader
+            icon={pageHeader.icon}
+            title={pageHeader.title}
+            description={pageHeader.description}
+            center={
+              <PageSearchBar
+                variant="compact"
+                value={searchInput}
+                onChange={setSearchInput}
+                placeholder="Buscar conversa, contato, telefone..."
+                aria-label="Buscar conversas"
+              />
+            }
+            actions={null}
+          />
+          {!activeId ? (
+            <div className="min-h-0 flex-1">
+              {conversationColumnNode}
+            </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col">
+              {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
+              <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveId(null)}
+                  className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                >
+                  <IconArrowLeft size={16} stroke={2} />
+                  Voltar
+                </button>
+                <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
                   <button
                     type="button"
-                    onClick={() => setActiveId(null)}
-                    className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                    onClick={() => setMobilePaneTab("chat")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                      mobilePaneTab === "chat"
+                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                    )}
                   >
-                    <IconArrowLeft size={16} stroke={2} />
-                    Voltar
+                    <IconMessageCircle size={14} stroke={2} />
+                    Chat
                   </button>
-                  <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setMobilePaneTab("chat")}
-                      className={cn(
-                        "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                        mobilePaneTab === "chat"
-                          ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                          : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                      )}
-                    >
-                      <IconMessageCircle size={14} stroke={2} />
-                      Chat
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMobilePaneTab("negocio")}
-                      className={cn(
-                        "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                        mobilePaneTab === "negocio"
-                          ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                          : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                      )}
-                    >
-                      <IconBriefcase size={14} stroke={2} />
-                      Negócio
-                    </button>
-                  </div>
-                </div>
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  {mobilePaneTab === "chat" ? chatNode : asideNode}
+                  <button
+                    type="button"
+                    onClick={() => setMobilePaneTab("negocio")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                      mobilePaneTab === "negocio"
+                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                    )}
+                  >
+                    <IconBriefcase size={14} stroke={2} />
+                    Negócio
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+              <div className="min-h-0 flex-1">
+                {mobilePaneTab === "chat" ? chatNode : asideNode}
+              </div>
+            </div>
+          )}
           {templateModalNode}
-          {extraDialogsNode}
         </div>
       );
     }
@@ -1181,7 +1077,6 @@ export default function InboxV2ClientPage({
           </div>
         </div>
         {templateModalNode}
-        {extraDialogsNode}
       </div>
     );
   }
@@ -1191,62 +1086,58 @@ export default function InboxV2ClientPage({
   // ── Mobile: layout de painel único (lista → chat/negócio) ──────
   if (!isDesktop) {
     return (
-      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
-        {navRailNode}
-        <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
-          {!activeId ? (
-            <div className="min-h-0 flex-1 overflow-hidden">
-              {conversationColumnNode}
-            </div>
-          ) : (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
-              <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
+      <div className="v2-screen flex flex-col overflow-hidden">
+        {!activeId ? (
+          <div className="min-h-0 flex-1">
+            {conversationColumnNode}
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col">
+            {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
+            <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
+              <button
+                type="button"
+                onClick={() => setActiveId(null)}
+                className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+              >
+                <IconArrowLeft size={16} stroke={2} />
+                Voltar
+              </button>
+              <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
                 <button
                   type="button"
-                  onClick={() => setActiveId(null)}
-                  className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                  onClick={() => setMobilePaneTab("chat")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                    mobilePaneTab === "chat"
+                      ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                  )}
                 >
-                  <IconArrowLeft size={16} stroke={2} />
-                  Voltar
+                  <IconMessageCircle size={14} stroke={2} />
+                  Chat
                 </button>
-                <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setMobilePaneTab("chat")}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                      mobilePaneTab === "chat"
-                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                    )}
-                  >
-                    <IconMessageCircle size={14} stroke={2} />
-                    Chat
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMobilePaneTab("negocio")}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                      mobilePaneTab === "negocio"
-                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                    )}
-                  >
-                    <IconBriefcase size={14} stroke={2} />
-                    Negócio
-                  </button>
-                </div>
-              </div>
-              <div className="min-h-0 flex-1 overflow-hidden">
-                {mobilePaneTab === "chat" ? chatNode : asideNode}
+                <button
+                  type="button"
+                  onClick={() => setMobilePaneTab("negocio")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                    mobilePaneTab === "negocio"
+                      ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                  )}
+                >
+                  <IconBriefcase size={14} stroke={2} />
+                  Negócio
+                </button>
               </div>
             </div>
-          )}
-        </div>
+            <div className="min-h-0 flex-1">
+              {mobilePaneTab === "chat" ? chatNode : asideNode}
+            </div>
+          </div>
+        )}
         {templateModalNode}
-        {extraDialogsNode}
       </div>
     );
   }
@@ -1274,7 +1165,6 @@ export default function InboxV2ClientPage({
         {asideNode}
       </div>
       {templateModalNode}
-      {extraDialogsNode}
     </div>
   );
 }
@@ -1361,15 +1251,13 @@ function InboxStageDropdown({
   useEffect(() => {
     if (!open || !triggerRef.current) return;
     const b = triggerRef.current.getBoundingClientRect();
-    const longest = stages.reduce((n, s) => Math.max(n, s.name.length), 0);
-    const menuWidth = Math.min(
-      Math.max(220, longest * 8 + 48),
-      Math.min(320, window.innerWidth - 16),
-    );
+    const menuWidth = 200;
+    // Se caber a partir de left, mantem alinhamento a esquerda; se vazar
+    // pela direita da viewport, ancora pela direita do trigger.
     const wouldOverflow = b.left + menuWidth > window.innerWidth - 8;
     const left = wouldOverflow ? Math.max(8, b.right - menuWidth) : b.left;
     setPos({ top: b.bottom + 4, left, width: menuWidth });
-  }, [open, stages]);
+  }, [open]);
 
   return (
     <div ref={ref} className="relative">
@@ -1378,18 +1266,18 @@ function InboxStageDropdown({
         type="button"
         disabled={isPending}
         onClick={() => setOpen((v) => !v)}
-        className="flex max-w-[min(100%,11rem)] items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
+        className="flex items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
       >
         {current?.color && (
           <span
-            className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+            className="inline-block h-1.5 w-1.5 rounded-full"
             style={{ background: current.color }}
           />
         )}
-        <span className="truncate">{current?.name ?? "Sem estagio"}</span>
+        {current?.name ?? "Sem estagio"}
         <IconChevronDown
           size={11}
-          className={cn("shrink-0 transition-transform duration-150", open && "rotate-180")}
+          className={cn("transition-transform duration-150", open && "rotate-180")}
         />
       </button>
 
@@ -1411,7 +1299,7 @@ function InboxStageDropdown({
                     disabled={isPending}
                     onClick={() => { onSelect(s.id); setOpen(false); }}
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left font-display text-[12px] font-semibold transition-colors",
+                      "flex w-full items-center gap-2 px-3 py-2 font-display text-[12px] font-semibold transition-colors",
                       isActive
                         ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
                         : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
@@ -1421,7 +1309,7 @@ function InboxStageDropdown({
                       className="h-1.5 w-1.5 shrink-0 rounded-full"
                       style={{ background: s.color ?? "var(--brand-primary)" }}
                     />
-                    <span className="whitespace-nowrap">{s.name}</span>
+                    {s.name}
                     {isActive && (
                       <span className="ml-auto font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
                         Atual

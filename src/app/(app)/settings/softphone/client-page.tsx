@@ -28,20 +28,20 @@ export default function SoftphoneSettingsClientPage() {
           tabs={[...MAIN_TABS]}
           activeTab={activeTab}
           onChange={setActiveTab}
-          scrollable
+          className="max-w-md"
         />
       }
     >
       {activeTab === 0 && (
-        <div className="flex min-w-0 w-full max-w-full flex-col gap-3 sm:gap-6">
+        <div className="flex flex-col gap-6">
           <TabsGlass
             tabs={[...RAMAL_TABS]}
             activeTab={ramalMode}
             onChange={setRamalMode}
-            scrollable
+            className="max-w-lg"
           />
 
-          <GlassCard variant="panel" className="min-w-0 overflow-hidden p-3 sm:p-5">
+          <GlassCard variant="panel" className="p-5">
             {ramalMode === 0 && <Api4ComConnectForm />}
 
             {ramalMode === 1 && (
@@ -58,8 +58,8 @@ export default function SoftphoneSettingsClientPage() {
       )}
 
       {activeTab === 1 && (
-        <div className="flex min-w-0 w-full max-w-full flex-col gap-3 sm:gap-6">
-          <GlassCard variant="panel" className="min-w-0 overflow-hidden p-3 sm:p-5">
+        <div className="flex flex-col gap-6">
+          <GlassCard variant="panel" className="p-5">
             <p className="mb-4 font-body text-[13px] text-[var(--text-muted)]">
               Configure o webhook para o histórico de chamadas. Para Api4Com,
               escolha o provedor <strong>Api4Com</strong> e cole a URL gerada no

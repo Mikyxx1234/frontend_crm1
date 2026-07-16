@@ -19,7 +19,6 @@ import {
   PageSearchBar,
   PageSegmentedControl,
 } from "@/components/crm/page-toolbar";
-import { cn } from "@/lib/utils";
 
 import { useCampaigns } from "@/features/campaigns/hooks";
 import { MOCK_CAMPAIGNS_PAGE } from "@/features/campaigns/mock-campaigns";
@@ -96,10 +95,10 @@ export default function CampaignsClientPage() {
   const isDemo = isDemoBase && !isLoading;
 
   return (
-    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
-      <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden sm:gap-4">
+      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
           icon={<IconSpeakerphone size={22} stroke={2.2} />}
           title="Campanhas"
@@ -114,93 +113,86 @@ export default function CampaignsClientPage() {
             />
           }
           actions={
-            <PagePrimaryButton href="/campaigns/new" className="shrink-0">
-              <IconPlus size={15} stroke={2.4} />
-              <span className="sm:hidden">Nova</span>
-              <span className="hidden sm:inline">Nova campanha</span>
+            <PagePrimaryButton href="/campaigns/new">
+              <IconPlus size={15} stroke={2.4} /> Nova campanha
             </PagePrimaryButton>
           }
         />
 
         {isDemo && (
-          <div className="shrink-0">
-            <PageDemoBanner>
-              Dados de exemplo — campanhas com métricas, barras de progresso e status variados.
-            </PageDemoBanner>
-          </div>
+          <PageDemoBanner>
+            Dados de exemplo — campanhas com métricas, barras de progresso e status variados.
+          </PageDemoBanner>
         )}
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-          <div className="toolbar-hscroll shrink-0">
+        <div className="min-h-0 flex-1 overflow-auto">
+          <div className="mb-3 flex flex-wrap justify-end">
             <PageSegmentedControl
-              size="compact"
               aria-label="Filtrar campanhas por status"
-              className="w-max shrink-0"
+              className="max-w-full"
               items={CAMPAIGN_STATUS_FILTERS.map((f) => {
-                const count =
-                  f.value === ""
-                    ? isDemoBase
-                      ? MOCK_CAMPAIGNS_PAGE.items.length
-                      : realItems.length
-                    : (statusCounts[f.value as CampaignStatus] ?? 0);
-                return {
-                  value: f.value,
-                  label: (
-                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                      {f.label}
-                      {!isLoading && (
-                        <span className="min-w-[18px] rounded-full bg-[var(--glass-bg-overlay)] px-1.5 text-center text-[11px] font-bold text-[var(--text-muted)]">
-                          {count}
-                        </span>
-                      )}
-                    </span>
-                  ),
-                };
-              })}
-              value={statusFilter}
-              onChange={setStatusFilter}
-            />
+              const count =
+                f.value === ""
+                  ? isDemoBase
+                    ? MOCK_CAMPAIGNS_PAGE.items.length
+                    : realItems.length
+                  : (statusCounts[f.value as CampaignStatus] ?? 0);
+              return {
+                value: f.value,
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    {f.label}
+                    {!isLoading && (
+                      <span className="min-w-[18px] rounded-full bg-[var(--glass-bg-overlay)] px-1.5 text-center text-[11px] font-bold text-[var(--text-muted)]">
+                        {count}
+                      </span>
+                    )}
+                  </span>
+                ),
+              };
+            })}
+            value={statusFilter}
+            onChange={setStatusFilter}
+          />
           </div>
 
-          <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
-            {isLoading && allItems.length === 0 ? (
-              <div className="flex flex-col gap-2.5">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-[72px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]"
-                  />
-                ))}
-              </div>
-            ) : error ? (
-              <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
-                {error instanceof Error ? error.message : "Erro ao carregar."}
-              </div>
-            ) : allItems.length === 0 ? (
-              <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
-                <EmptyState
-                  icon={<IconSpeakerphone size={28} />}
-                  title="Nenhuma campanha"
-                  description={
-                    statusFilter
-                      ? "Nenhuma campanha com esse status."
-                      : "Crie sua primeira campanha para disparar mensagens em massa."
-                  }
-                  action={
-                    <PagePrimaryButton href="/campaigns/new">
-                      <IconPlus size={15} stroke={2.4} /> Nova campanha
-                    </PagePrimaryButton>
-                  }
+          {isLoading && allItems.length === 0 ? (
+            <div className="flex flex-col gap-2.5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[72px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]"
                 />
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2.5 pb-3">
-                {allItems.map((c) => (
-                  <CampaignRow key={c.id} campaign={c} />
-                ))}
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
+              {error instanceof Error ? error.message : "Erro ao carregar."}
+            </div>
+          ) : allItems.length === 0 ? (
+            <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
+              <EmptyState
+                icon={<IconSpeakerphone size={28} />}
+                title="Nenhuma campanha"
+                description={
+                  statusFilter
+                    ? "Nenhuma campanha com esse status."
+                    : "Crie sua primeira campanha para disparar mensagens em massa."
+                }
+                action={
+                  <PagePrimaryButton href="/campaigns/new">
+                    <IconPlus size={15} stroke={2.4} /> Nova campanha
+                  </PagePrimaryButton>
+                }
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {allItems.map((c) => (
+                <CampaignRow key={c.id} campaign={c} />
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>
@@ -233,94 +225,82 @@ function CampaignRow({ campaign }: { campaign: CampaignListItem }) {
   return (
     <Link
       href={`/campaigns/${campaign.id}`}
-      className="group flex min-w-0 cursor-pointer flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] transition-all hover:border-[var(--input-border-focus,rgba(91,111,245,0.50))] hover:shadow-[var(--glass-shadow)] sm:flex-row sm:items-center sm:gap-4 sm:px-4.5 sm:py-3.5 sm:hover:translate-x-0.5"
+      className="group flex cursor-pointer items-center gap-4.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4.5 py-3.5 shadow-[var(--glass-shadow-sm)] transition-all hover:translate-x-0.5 hover:border-[var(--input-border-focus,rgba(91,111,245,0.50))] hover:shadow-[var(--glass-shadow)]"
     >
-      <div className="flex min-w-0 flex-1 items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-wa-bg,rgba(37,211,102,0.14))] text-[var(--color-wa-dark,#128c4b)] sm:h-11 sm:w-11">
-          <IconBrandWhatsapp size={22} />
-        </span>
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-wa-bg,rgba(37,211,102,0.14))] text-[var(--color-wa-dark,#128c4b)]">
+        <IconBrandWhatsapp size={24} />
+      </span>
 
-        <div className="min-w-0 flex-1">
-          <p className="break-words font-display text-[14.5px] font-extrabold leading-snug text-[var(--text-primary)] sm:truncate sm:text-[15.5px]">
-            {campaign.name}
-          </p>
-          <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 font-body text-[12px] text-[var(--text-muted)]">
-            <span className="min-w-0 break-words sm:truncate">{listLabel}</span>
-            <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-[var(--text-muted)] opacity-60" />
-            <span className="min-w-0 break-words">{dateLabel}</span>
-          </p>
+      <div className="min-w-[200px] flex-1">
+        <p className="truncate font-display text-[15.5px] font-extrabold text-[var(--text-primary)]">
+          {campaign.name}
+        </p>
+        <p className="mt-0.5 flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
+          <span className="truncate">{listLabel}</span>
+          <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-[var(--text-muted)] opacity-60" />
+          <span className="shrink-0">{dateLabel}</span>
+        </p>
+      </div>
+
+      <span
+        className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 font-display text-[11.5px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current ${TONE_CLASSES[meta.tone]} ${
+          isSending ? "before:animate-pulse" : ""
+        }`}
+      >
+        {meta.label}
+      </span>
+
+      {noMetrics ? (
+        <p className="flex-1 font-body text-[12.5px] italic text-[var(--text-muted)]">
+          {campaign.status === "SCHEDULED"
+            ? "Aguardando disparo — métricas após o início do envio."
+            : "Rascunho — configure e lance a campanha para ver métricas."}
+        </p>
+      ) : (
+        <div className="w-[180px] shrink-0">
+          <div className="flex h-[7px] overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
+            <div
+              className="bg-[var(--color-success)] transition-all duration-500"
+              style={{ width: `${pctSent}%` }}
+            />
+            <div
+              className="bg-[var(--color-danger)] transition-all duration-500"
+              style={{ width: `${pctFailed}%` }}
+            />
+          </div>
+          <div className="mt-1.5 flex justify-between font-display text-[11px] font-bold">
+            <span className="text-[var(--color-success-dark,var(--color-success-text))]">
+              {pctSent}% enviado
+            </span>
+            {pctFailed > 0 && (
+              <span className="text-[var(--color-danger)]">{pctFailed}% falha</span>
+            )}
+          </div>
         </div>
+      )}
 
-        <IconChevronRight
-          size={18}
-          stroke={2.5}
-          className="mt-1 shrink-0 text-[var(--brand-primary)] sm:hidden"
-        />
-      </div>
-
-      <div className="flex min-w-0 flex-wrap items-center gap-2 sm:contents">
-        <span
-          className={cn(
-            "inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 font-display text-[11.5px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
-            TONE_CLASSES[meta.tone],
-            isSending && "before:animate-pulse",
-          )}
-        >
-          {meta.label}
-        </span>
-
-        {noMetrics ? (
-          <p className="min-w-0 flex-1 text-pretty break-words font-body text-[12px] italic leading-snug text-[var(--text-muted)] sm:text-[12.5px]">
-            {campaign.status === "SCHEDULED"
-              ? "Aguardando disparo — métricas após o início do envio."
-              : "Rascunho — configure e lance a campanha para ver métricas."}
-          </p>
-        ) : (
-          <div className="w-full min-w-0 sm:w-[180px] sm:shrink-0">
-            <div className="flex h-[7px] overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
-              <div
-                className="bg-[var(--color-success)] transition-all duration-500"
-                style={{ width: `${pctSent}%` }}
-              />
-              <div
-                className="bg-[var(--color-danger)] transition-all duration-500"
-                style={{ width: `${pctFailed}%` }}
-              />
-            </div>
-            <div className="mt-1.5 flex justify-between font-display text-[11px] font-bold">
-              <span className="text-[var(--color-success-dark,var(--color-success-text))]">
-                {pctSent}% enviado
-              </span>
-              {pctFailed > 0 && (
-                <span className="text-[var(--color-danger)]">{pctFailed}% falha</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {!noMetrics && (
-          <div className="hidden shrink-0 gap-5.5 min-[1100px]:flex">
-            <Metric label="Total" value={total} tone="brand" />
-            <Metric label="Enviado" value={sent} tone="success" />
-            <Metric
-              label="Lido"
-              value={campaign.readCount}
-              tone={campaign.readCount > 0 ? "brand" : "muted"}
-            />
-            <Metric
-              label="Resp."
-              value={campaign.repliedCount ?? 0}
-              tone={(campaign.repliedCount ?? 0) > 0 ? "brand" : "muted"}
-            />
-            <Metric label="Falha" value={failed} tone="danger" />
-          </div>
-        )}
-      </div>
+      {!noMetrics && (
+        <div className="hidden shrink-0 gap-5.5 min-[1100px]:flex">
+          <Metric label="Total" value={total} tone="brand" />
+          <Metric label="Enviado" value={sent} tone="success" />
+          <Metric
+            label="Lido"
+            value={campaign.readCount}
+            tone={campaign.readCount > 0 ? "brand" : "muted"}
+          />
+          <Metric
+            label="Resp."
+            value={campaign.repliedCount ?? 0}
+            tone={(campaign.repliedCount ?? 0) > 0 ? "brand" : "muted"}
+          />
+          <Metric label="Falha" value={failed} tone="danger" />
+        </div>
+      )}
 
       <IconChevronRight
         size={18}
         stroke={2.5}
-        className="hidden shrink-0 text-[var(--brand-primary)] transition-transform group-hover:translate-x-0.5 sm:block"
+        className="shrink-0 text-[var(--brand-primary)] transition-transform group-hover:translate-x-0.5"
       />
     </Link>
   );

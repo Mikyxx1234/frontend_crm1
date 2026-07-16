@@ -75,10 +75,10 @@ export function SettingsV2Shell({
 
   return (
     <SettingsHeaderSlotsContext.Provider value={slotSetters}>
-      <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
+      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
         <NavRailV2 />
 
-        <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden sm:gap-3.5">
+        <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
           <PageHeader
             back={back}
             icon={icon}
@@ -88,7 +88,7 @@ export function SettingsV2Shell({
             actions={actions ?? slotActions}
           />
 
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pr-1 sm:gap-3.5 [-webkit-overflow-scrolling:touch]">
+          <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-auto pr-2">
             {children}
           </div>
         </main>

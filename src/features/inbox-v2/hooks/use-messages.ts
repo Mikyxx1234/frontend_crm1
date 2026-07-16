@@ -4,16 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   addNoteToLog,
-  favoriteMessage,
-  getFavoriteMessages,
   getMessages,
-  pinMessage,
-  unpinMessage,
   pinNote,
   sendAttachment,
   sendMessage,
   sendReaction,
-  type FavoriteMessageDto,
   type InboxMessageDto,
   type MessagesResponse,
   type ReactionDto,
@@ -95,7 +90,7 @@ export function useAddNoteToLog(dealId: string | null) {
 export function useReactMessage(conversationId: string | null) {
   const qc = useQueryClient();
   return useMutation<
-    { reactions?: ReactionDto[]; metaError?: string },
+    { reactions: ReactionDto[]; metaError?: string },
     Error,
     { messageId: string; emoji: string }
   >({
@@ -105,83 +100,6 @@ export function useReactMessage(conversationId: string | null) {
       // pra refletir o badge no bubble sem esperar o SSE.
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
     },
-  });
-}
-
-/**
- * Mutation: fixar mensagem no topo da conversa (banner estilo WhatsApp).
- * Diferente de `usePinNote` — aceita qualquer mensagem, não só notas.
- * Várias fixadas por conversa (máx. 3); fixar a mesma renova só o prazo.
- */
-export function usePinMessage(conversationId: string | null) {
-  const qc = useQueryClient();
-  return useMutation<
-    { ok: true },
-    Error,
-    { messageId: string; durationHours?: number }
-  >({
-    mutationFn: ({ messageId, durationHours }) =>
-      pinMessage(conversationId as string, messageId, durationHours),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
-    },
-  });
-}
-
-/**
- * Mutation: desafixar uma mensagem específica do banner (estilo WhatsApp).
- * Recebe o `messageId` (id de bolha) — obrigatório, já que há várias
- * fixadas possíveis.
- */
-export function useUnpinMessage(conversationId: string | null) {
-  const qc = useQueryClient();
-  return useMutation<{ ok: true }, Error, { messageId: string }>({
-    mutationFn: ({ messageId }) =>
-      unpinMessage(conversationId as string, messageId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
-    },
-  });
-}
-
-/**
- * Mutation: favoritar / desfavoritar mensagem — marcador PESSOAL do
- * agente logado (não aparece pra outros agentes). Sem `favorite`
- * explícito, o backend alterna o estado atual.
- */
-export function useFavoriteMessage(conversationId: string | null) {
-  const qc = useQueryClient();
-  return useMutation<
-    { favorited: boolean },
-    Error,
-    { messageId: string; favorite?: boolean }
-  >({
-    mutationFn: ({ messageId, favorite }) => favoriteMessage(messageId, favorite),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
-      qc.invalidateQueries({ queryKey: favoritesKey(conversationId) });
-    },
-  });
-}
-
-export function favoritesKey(conversationId: string | null | undefined) {
-  return ["favorites", conversationId ?? "__none__"] as const;
-}
-
-/**
- * Lista de mensagens favoritadas (marcador pessoal do agente logado)
- * nesta conversa — alimenta o painel "Mensagens favoritas" do menu (⋮).
- * `enabled` controlado externamente: só busca quando o painel abre.
- */
-export function useFavoriteMessagesList(
-  conversationId: string | null,
-  enabled: boolean,
-) {
-  return useQuery<FavoriteMessageDto[]>({
-    queryKey: favoritesKey(conversationId),
-    queryFn: () => getFavoriteMessages(conversationId as string),
-    enabled: !!conversationId && enabled,
-    staleTime: 5_000,
   });
 }
 

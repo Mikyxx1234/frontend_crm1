@@ -41,9 +41,9 @@ export default function NotificationsSettingsPage() {
   };
 
   return (
-    <div className="min-w-0 w-full max-w-full space-y-3 sm:space-y-4">
-      <GlassCard variant="overlay" className="min-w-0 overflow-hidden p-3.5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+    <div className="space-y-4">
+      <GlassCard variant="overlay" className="p-8">
+        <div className="flex items-start gap-4">
           <div
             className={cn(
               "flex size-12 shrink-0 items-center justify-center rounded-2xl text-white",
@@ -59,10 +59,10 @@ export default function NotificationsSettingsPage() {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="text-pretty font-display text-base font-extrabold tracking-tight text-[var(--text-primary)] sm:text-lg">
+            <h2 className="font-display text-lg font-extrabold tracking-tight text-[var(--text-primary)]">
               Notificações push neste dispositivo
             </h2>
-            <p className="mt-1 text-pretty break-words text-sm text-[var(--text-muted)]">
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
               {isSubscribed
                 ? "Você receberá um aviso instantâneo aqui sempre que um cliente responder, mesmo com o app fechado."
                 : "Ative para receber novos contatos em tempo real, sem precisar abrir o EduIT."}
@@ -92,13 +92,13 @@ export default function NotificationsSettingsPage() {
               />
             )}
 
-            <div className="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="mt-5 flex items-center gap-3">
               <ButtonGlass
                 type="button"
                 onClick={handleToggle}
                 disabled={!canToggle}
                 variant={isSubscribed ? "glass" : "primary"}
-                className="h-11 w-full px-5 text-sm font-bold sm:w-auto"
+                className="h-11 px-5 text-sm font-bold"
               >
                 {isLoading ? (
                   <Loader2 className="size-4 animate-spin" strokeWidth={2.4} />
@@ -123,34 +123,34 @@ export default function NotificationsSettingsPage() {
         </div>
       </GlassCard>
 
-      <GlassCard variant="overlay" className="min-w-0 overflow-hidden p-3.5 sm:p-6">
-        <h2 className="text-pretty font-display text-base font-extrabold tracking-tight text-[var(--text-primary)] sm:text-lg">
+      <GlassCard variant="overlay" className="p-8">
+        <h2 className="font-display text-lg font-extrabold tracking-tight text-[var(--text-primary)]">
           Sobre o aplicativo
         </h2>
-        <p className="mt-1 text-pretty break-words text-sm text-[var(--text-muted)]">
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
           Para receber notificações no celular como um app nativo,
           instale o EduIT na tela inicial.
         </p>
 
-        <div className="mt-5 flex min-w-0 items-start gap-3 rounded-2xl bg-[var(--glass-bg-subtle)] p-4">
+        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[var(--glass-bg-subtle)] p-4">
           <Smartphone className="mt-0.5 size-5 shrink-0 text-primary" />
-          <div className="min-w-0 text-sm text-[var(--text-muted)]">
+          <div className="text-sm text-[var(--text-muted)]">
             <p className="font-bold text-[var(--text-secondary)]">Como instalar</p>
-            <ul className="mt-2 min-w-0 space-y-1.5 text-[13px]">
-              <li className="min-w-0 text-pretty break-words">
+            <ul className="mt-2 space-y-1.5 text-[13px]">
+              <li>
                 <span className="font-semibold text-[var(--text-primary)]">
                   Android (Chrome / Edge):
                 </span>{" "}
                 toque em ⋮ → &quot;Instalar app&quot; ou aceite o banner de
                 instalação que aparece no rodapé.
               </li>
-              <li className="min-w-0 text-pretty break-words">
+              <li>
                 <span className="font-semibold text-[var(--text-primary)]">
                   iPhone (Safari):
                 </span>{" "}
                 toque em Compartilhar → &quot;Adicionar à Tela de Início&quot;.
               </li>
-              <li className="min-w-0 text-pretty break-words">
+              <li>
                 <span className="font-semibold text-[var(--text-primary)]">Desktop:</span>{" "}
                 ícone de instalação (⊕) na barra de endereço, ao lado do cadeado.
               </li>
@@ -192,13 +192,13 @@ function Alert({
   return (
     <div
       className={cn(
-        "mt-4 flex min-w-0 items-start gap-2.5 rounded-xl border p-3",
+        "mt-4 flex items-start gap-2.5 rounded-xl border p-3",
         styles.bg,
       )}
     >
       <div className="min-w-0">
         <p className={cn("text-[13px] font-bold", styles.title)}>{title}</p>
-        <p className={cn("mt-0.5 text-pretty break-words text-[12px] font-medium", styles.text)}>
+        <p className={cn("mt-0.5 text-[12px] font-medium", styles.text)}>
           {description}
         </p>
       </div>

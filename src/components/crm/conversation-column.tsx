@@ -424,7 +424,7 @@ export function ConversationColumn({
       )}
 
       {/* Lista */}
-      <div className="flex flex-1 min-h-0 flex-col gap-2.5 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
+      <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
         {displayed.map((conversation) => {
           const slots = renderCardSlots?.(conversation)
           return (

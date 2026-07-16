@@ -30,11 +30,11 @@ import { GlassCard } from "@/components/crm/glass-card";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
-import { PaginationGlass } from "@/components/crm/pagination-glass";
 import {
   listTableHeadRowClass,
   ListColumnLabel,
 } from "@/components/crm/sortable-header";
+import { PaginationGlass } from "@/components/crm/pagination-glass";
 import {
   PagePrimaryButton,
   PageSearchBar,
@@ -48,7 +48,6 @@ import {
 } from "@/lib/permissions";
 
 import { useRoles } from "@/features/permissions/hooks";
-import { useIsDesktop } from "@/hooks/use-media-query";
 
 import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 import { TelephonyToggle } from "@/features/telephony/telephony-toggle";
@@ -67,13 +66,13 @@ type UserRow = {
 
 type CrmPermissionDraft = Record<CrmActionKey, boolean>;
 
-const DEFAULT_PER_PAGE = 25;
-
 const DEFAULT_INVITE_PERMISSIONS: CrmPermissionDraft = {
   editLeads: true,
   runAutomations: true,
   assignOwner: true,
 };
+
+const DEFAULT_PER_PAGE = 25;
 
 const AVATAR_COLORS = [
   "var(--brand-primary)",
@@ -137,7 +136,6 @@ export default function TeamV2ClientPage() {
   const qc = useQueryClient();
   const { data: session, status } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
-  const isDesktop = useIsDesktop();
 
   // Funções disponíveis (modelo híbrido): ADMIN preset + roles customizadas.
   const { data: roles = [] } = useRoles();
@@ -158,9 +156,9 @@ export default function TeamV2ClientPage() {
   );
 
   const [search, setSearch] = React.useState("");
-  const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(DEFAULT_PER_PAGE);
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
   const [inviteOpen, setInviteOpen] = React.useState(false);
   const [inviteName, setInviteName] = React.useState("");
@@ -191,7 +189,7 @@ export default function TeamV2ClientPage() {
     enabled: status === "authenticated",
   });
 
-  // ─── Derivados: busca client-side ──────────────────────────────────────
+  // ─── Derivados: busca + paginação client-side ──────────────────────────
   const term = search.trim().toLowerCase();
   const filtered = React.useMemo(() => {
     if (!term) return users;
@@ -201,14 +199,6 @@ export default function TeamV2ClientPage() {
     );
   }, [users, term]);
 
-  React.useEffect(() => {
-    setSelected(new Set());
-  }, [term]);
-
-  React.useEffect(() => {
-    setPage(1);
-  }, [term, perPage]);
-
   const total = filtered.length;
   const lastPage = Math.max(1, Math.ceil(total / perPage));
   const currentPage = Math.min(page, lastPage);
@@ -217,23 +207,25 @@ export default function TeamV2ClientPage() {
     [filtered, currentPage, perPage],
   );
 
-  const visibleUsers = isDesktop ? pageItems : filtered;
+  React.useEffect(() => {
+    setPage(1);
+  }, [term, perPage]);
 
   React.useEffect(() => {
-    if (isDesktop) setSelected(new Set());
-  }, [currentPage, isDesktop]);
+    setSelected(new Set());
+  }, [term, currentPage]);
 
   const adminCount = users.filter((u) => u.role === "ADMIN").length;
   const othersCount = users.filter((u) => u.role !== "ADMIN").length;
 
-  const allChecked = visibleUsers.length > 0 && visibleUsers.every((u) => selected.has(u.id));
-  const someChecked = visibleUsers.some((u) => selected.has(u.id));
+  const allChecked = pageItems.length > 0 && pageItems.every((u) => selected.has(u.id));
+  const someChecked = pageItems.some((u) => selected.has(u.id));
 
   function toggleAll() {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allChecked) visibleUsers.forEach((u) => next.delete(u.id));
-      else visibleUsers.forEach((u) => next.add(u.id));
+      if (allChecked) pageItems.forEach((u) => next.delete(u.id));
+      else pageItems.forEach((u) => next.add(u.id));
       return next;
     });
   }
@@ -445,35 +437,12 @@ export default function TeamV2ClientPage() {
       }
       actions={
         <PagePrimaryButton type="button" onClick={() => setInviteOpen(true)}>
-          <IconPlus size={16} />
-          <span className="sm:hidden">Novo</span>
-          <span className="hidden sm:inline">Novo usuário</span>
+          <IconPlus size={16} /> Novo usuário
         </PagePrimaryButton>
       }
     >
-      {/* STATS — shrink-0: toolbar-hscroll/overflow em flex-col colapsava a altura
-          (~só o topo dos ícones visível). Mobile: 3 mini-cards; desktop: StatCards. */}
-      <div className="grid shrink-0 grid-cols-3 gap-2 sm:hidden">
-        <CompactStat
-          tone="brand"
-          icon={<IconUsers size={16} />}
-          value={users.length}
-          label="Usuários"
-        />
-        <CompactStat
-          tone="violet"
-          icon={<IconShield size={16} />}
-          value={adminCount}
-          label={adminCount === 1 ? "Admin" : "Admins"}
-        />
-        <CompactStat
-          tone="green"
-          icon={<IconUserPlus size={16} />}
-          value={othersCount}
-          label="Demais"
-        />
-      </div>
-      <div className="hidden shrink-0 sm:grid sm:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] sm:gap-3.5">
+      {/* STATS */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3.5">
         <StatCard
           tone="brand"
           icon={<IconUsers size={20} />}
@@ -530,49 +499,30 @@ export default function TeamV2ClientPage() {
       {/* LIST — mesma estrutura glass-grid de /contacts */}
       {isLoading && users.length === 0 ? (
         <GlassCard variant="panel" className="h-[400px] animate-pulse">{null}</GlassCard>
-      ) : filtered.length === 0 ? (
+      ) : pageItems.length === 0 ? (
         <GlassCard variant="panel" className="px-6 py-12 text-center font-body text-[13px] text-[var(--text-muted)]">
           {term
             ? `Nenhum usuário encontrado para "${search.trim()}".`
             : "Nenhum usuário cadastrado ainda."}
         </GlassCard>
       ) : (
-        <GlassCard variant="panel" className="min-w-0 shrink-0 overflow-x-hidden p-3 sm:p-4">
-          <p className="mb-2.5 px-1 font-body text-[12px] text-[var(--text-muted)]">
-            {filtered.length.toLocaleString("pt-BR")}{" "}
-            {filtered.length === 1 ? "usuário" : "usuários"}
-          </p>
-
-          <div className="mb-2.5 hidden sm:block">
-            <div className={listTableHeadRowClass("grid-cols-[42px_2.6fr_1.1fr_1.3fr]")}>
-              <span>
-                <CheckboxGlass
-                  checked={allChecked}
-                  indeterminate={!allChecked && someChecked}
-                  onChange={toggleAll}
-                  aria-label="Selecionar todos"
-                />
-              </span>
-              <ListColumnLabel>Usuário</ListColumnLabel>
-              <ListColumnLabel>Função</ListColumnLabel>
-              <ListColumnLabel align="right">Ações</ListColumnLabel>
-            </div>
-          </div>
-
-          <div className="mb-2 flex items-center gap-2 sm:hidden">
-            <CheckboxGlass
-              checked={allChecked}
-              indeterminate={!allChecked && someChecked}
-              onChange={toggleAll}
-              aria-label="Selecionar todos"
-            />
-            <span className="font-body text-[12px] text-[var(--text-muted)]">
-              Selecionar todos
+        <GlassCard variant="panel" className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
+          <div className={listTableHeadRowClass("mb-2.5 grid-cols-[42px_2.6fr_1.1fr_1.3fr]")}>
+            <span>
+              <CheckboxGlass
+                checked={allChecked}
+                indeterminate={!allChecked && someChecked}
+                onChange={toggleAll}
+                aria-label="Selecionar todos"
+              />
             </span>
+            <ListColumnLabel>Usuário</ListColumnLabel>
+            <ListColumnLabel>Função</ListColumnLabel>
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
           </div>
 
-          <div className="flex flex-col gap-2.5">
-            {visibleUsers.map((u) => {
+          <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
+            {pageItems.map((u) => {
               const isSelected = selected.has(u.id);
               const fnRole = userFunctionRole(u, adminRole?.id);
               const isAdminRole = fnRole?.systemPreset === "ADMIN";
@@ -588,53 +538,50 @@ export default function TeamV2ClientPage() {
                 <div
                   key={u.id}
                   className={cn(
-                    "flex flex-col gap-3 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)]",
-                    "sm:grid sm:grid-cols-[42px_2.6fr_1.1fr_1.3fr] sm:items-center sm:gap-3.5 sm:px-3.5 sm:py-3",
+                    "grid grid-cols-[42px_2.6fr_1.1fr_1.3fr] items-center gap-3.5 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)]",
                     isSelected
                       ? "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
                       : "border-[var(--glass-border-subtle)]",
                   )}
                 >
-                  <div className="flex items-start gap-3 sm:contents">
-                    <span>
-                      <CheckboxGlass
-                        checked={isSelected}
-                        onChange={() => toggleOne(u.id)}
-                        aria-label={`Selecionar ${u.name}`}
-                      />
-                    </span>
+                  <span>
+                    <CheckboxGlass
+                      checked={isSelected}
+                      onChange={() => toggleOne(u.id)}
+                      aria-label={`Selecionar ${u.name}`}
+                    />
+                  </span>
 
-                    <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
-                      <span
-                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
-                        style={{ background: avatarColor(u.id) }}
-                      >
-                        {initials(u.name)}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="break-words font-display text-[13px] font-bold text-[var(--text-primary)]">
-                            {u.name}
-                          </span>
-                          <span
-                            className={cn(
-                              "inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-display text-[10px] font-bold",
-                              roleBadgeClass(isAdminRole),
-                            )}
-                          >
-                            <IconShield size={11} className="opacity-85" />
-                            {fnLabel}
-                          </span>
-                        </div>
-                        <div className="mt-0.5 flex items-start gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
-                          <IconMail size={13} className="mt-0.5 flex-shrink-0" />
-                          <span className="break-all">{u.email}</span>
-                        </div>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
+                      style={{ background: avatarColor(u.id) }}
+                    >
+                      {initials(u.name)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+                          {u.name}
+                        </span>
+                        <span
+                          className={cn(
+                            "inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-display text-[10px] font-bold",
+                            roleBadgeClass(isAdminRole),
+                          )}
+                        >
+                          <IconShield size={11} className="opacity-85" />
+                          {fnLabel}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
+                        <IconMail size={13} className="flex-shrink-0" />
+                        <span className="truncate">{u.email}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="min-w-0">
+                  <div>
                     <DropdownGlass
                       options={rowOptions}
                       value={fnRole && fnRole.id !== "__admin__" ? fnRole.id : undefined}
@@ -645,11 +592,11 @@ export default function TeamV2ClientPage() {
                       }}
                       disabled={setPrimaryRole.isPending || !isAdmin}
                       matchTriggerWidth={false}
-                      triggerClassName="h-9 w-full min-w-0 sm:w-auto sm:min-w-[160px]"
+                      triggerClassName="h-9 min-w-[160px]"
                     />
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <div className="flex items-center justify-end gap-2">
                     {isAdmin ? (
                       <>
                         <TelephonyToggle userId={u.id} />
@@ -679,20 +626,20 @@ export default function TeamV2ClientPage() {
         </GlassCard>
       )}
 
-      {isDesktop && filtered.length > 0 ? (
-        <PaginationGlass
-          label={`${total.toLocaleString("pt-BR")} ${total === 1 ? "usuário" : "usuários"} — página ${currentPage} de ${lastPage}`}
-          canPrev={currentPage > 1}
-          canNext={currentPage < lastPage}
-          onPrev={() => setPage((p) => Math.max(1, p - 1))}
-          onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
-          perPage={perPage}
-          onPerPageChange={(value) => {
-            setPerPage(value);
-            setPage(1);
-          }}
-        />
-      ) : null}
+      <PaginationGlass
+        label={`${total.toLocaleString("pt-BR")} ${
+          total === 1 ? "usuário" : "usuários"
+        } — página ${currentPage} de ${lastPage}`}
+        canPrev={currentPage > 1}
+        canNext={currentPage < lastPage}
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+        perPage={perPage}
+        onPerPageChange={(value) => {
+          setPerPage(value);
+          setPage(1);
+        }}
+      />
 
       {/* ─── Dialog: criar usuário ─── */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
@@ -1092,44 +1039,6 @@ function StatCard({
           {label}
         </div>
       </div>
-    </div>
-  );
-}
-
-/** Mini-card de métrica — 3 colunas no mobile, altura estável (sem overflow). */
-function CompactStat({
-  tone,
-  icon,
-  value,
-  label,
-}: {
-  tone: "brand" | "violet" | "green";
-  icon: React.ReactNode;
-  value: number;
-  label: string;
-}) {
-  const toneClass =
-    tone === "brand"
-      ? "bg-[var(--color-enterprise-bg,rgba(91,111,245,0.15))] text-[var(--brand-primary)]"
-      : tone === "violet"
-        ? "bg-[rgba(167,139,250,0.18)] text-[var(--brand-secondary)]"
-        : "bg-[var(--color-success-bg,rgba(16,185,129,0.12))] text-[var(--color-success-dark)]";
-  return (
-    <div className="flex min-w-0 flex-col items-center gap-1.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-2 py-2.5 text-center shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <span
-        className={cn(
-          "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)]",
-          toneClass,
-        )}
-      >
-        {icon}
-      </span>
-      <span className="font-display text-[18px] font-extrabold leading-none tracking-tight text-[var(--text-primary)]">
-        {value}
-      </span>
-      <span className="line-clamp-2 font-body text-[10px] font-semibold leading-tight text-[var(--text-muted)]">
-        {label}
-      </span>
     </div>
   );
 }

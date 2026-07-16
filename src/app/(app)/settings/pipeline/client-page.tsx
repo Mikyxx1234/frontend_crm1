@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
+  IconArrowLeft,
   IconBolt,
   IconCheck,
   IconChevronLeft,
@@ -33,7 +35,6 @@ import { usePipelines, useBoard } from "@/features/pipeline-v2/hooks";
 import { boardKey } from "@/features/pipeline-v2/hooks/use-board";
 import { useAutomations } from "@/features/automations-v2/hooks";
 import { apiUrl } from "@/lib/api";
-import { SETTINGS_HUB_BACK } from "../_v2-shell";
 import { AddAutomationDrawer } from "./add-automation-drawer";
 
 // ─── Constantes ───────────────────────────────────────────────────
@@ -1074,6 +1075,7 @@ function NewPipelineModal({
 interface TabsOverrideProps {
   onNewPipeline: () => void;
   onSetDefault: () => void;
+  onBack: () => void;
   onSave: () => void;
   hasChanges: boolean;
   saving: boolean;
@@ -1082,6 +1084,7 @@ interface TabsOverrideProps {
 function PipelineSettingsTabs({
   onNewPipeline,
   onSetDefault,
+  onBack,
   onSave,
   hasChanges,
   saving,
@@ -1122,6 +1125,15 @@ function PipelineSettingsTabs({
           <IconCheck size={14} />
           {saving ? "Salvando..." : "Salvar alterações"}
         </button>
+
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-[12px] font-bold text-[var(--text-secondary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+        >
+          <IconArrowLeft size={14} />
+          Voltar
+        </button>
       </div>
     </div>
   );
@@ -1130,6 +1142,7 @@ function PipelineSettingsTabs({
 // ─── Tela principal ───────────────────────────────────────────────
 
 export default function PipelineSettingsClientPage() {
+  const router = useRouter();
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
@@ -1939,7 +1952,6 @@ export default function PipelineSettingsClientPage() {
         >
           <PipelineHeader
             hideActions
-            back={SETTINGS_HUB_BACK}
             pipelineNameSlot={
               <PipelineSwitcher
                 selectedId={pipelineId}
@@ -1956,6 +1968,7 @@ export default function PipelineSettingsClientPage() {
               <PipelineSettingsTabs
                 onNewPipeline={() => setNewPipelineOpen(true)}
                 onSetDefault={handleSetDefault}
+                onBack={() => router.push("/settings")}
                 onSave={handleSaveAll}
                 hasChanges={hasChanges}
                 saving={saving}

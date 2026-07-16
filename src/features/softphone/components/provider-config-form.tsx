@@ -78,19 +78,19 @@ export function ProviderConfigForm() {
   });
 
   return (
-    <div className="flex min-w-0 w-full flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {configs?.map((c) => (
         <div
           key={c.id}
-          className="flex min-w-0 items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-3"
+          className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-3"
         >
-          <IconWebhook size={16} className="shrink-0 text-[var(--text-muted)]" />
-          <div className="flex min-w-0 flex-1 flex-col">
+          <IconWebhook size={16} className="text-[var(--text-muted)]" />
+          <div className="flex flex-1 flex-col">
             <span className="text-sm font-medium text-[var(--text-primary)]">{c.providerKey}</span>
-            <span className="truncate text-xs text-[var(--text-muted)]">{c.webhookUrl}</span>
+            <span className="text-xs text-[var(--text-muted)] truncate">{c.webhookUrl}</span>
           </div>
           <span
-            className={`shrink-0 text-xs ${c.isActive ? "text-[var(--color-success)]/80" : "text-[var(--text-muted)]"}`}
+            className={`text-xs ${c.isActive ? "text-[var(--color-success)]/80" : "text-[var(--text-muted)]"}`}
           >
             {c.isActive ? "Ativo" : "Inativo"}
           </span>

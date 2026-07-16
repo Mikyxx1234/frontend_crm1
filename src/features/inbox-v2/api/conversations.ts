@@ -92,25 +92,11 @@ export type ConversationActionPayload =
   | { action: "reopen" }
   | { action: "assign"; assignedToId: string | null };
 
-/**
- * Retorno de POST /api/conversations/:id/actions.
- * - `resolve`: `conversation` traz o estado atualizado (status=RESOLVED).
- * - `reopen`: modelo de ticket — o backend cria uma NOVA conversa vinculada
- *   ao mesmo contato/canal e retorna o novo id em `conversation.id`; o id
- *   antigo vem em `previousConversationId` para logs/navegacao.
- * - `assign`: `conversation` traz o novo assignedTo.
- */
-export interface ConversationActionResponse {
-  conversation: ConversationListRow;
-  /** Presente apenas em `reopen` (modelo de ticket). */
-  previousConversationId?: string;
-}
-
 /** POST /api/conversations/:id/actions */
 export async function postConversationAction(
   conversationId: string,
   payload: ConversationActionPayload,
-): Promise<ConversationActionResponse> {
+): Promise<{ conversation: ConversationListRow }> {
   const res = await fetch(apiUrl(`/api/conversations/${conversationId}/actions`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -122,7 +108,7 @@ export async function postConversationAction(
       typeof data?.message === "string" ? data.message : "Erro ao executar acao",
     );
   }
-  return data as ConversationActionResponse;
+  return data as { conversation: ConversationListRow };
 }
 
 /** POST /api/conversations/:id/read */

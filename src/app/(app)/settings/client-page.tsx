@@ -53,10 +53,10 @@ export default function SettingsClientPageV2() {
     setCollapsed(allCollapsed ? new Set() : new Set(allIds));
 
   return (
-    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
-      <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden sm:gap-3.5">
+      <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
         {/* Header fixo */}
         <PageHeader
           title="Configurações"
@@ -65,17 +65,17 @@ export default function SettingsClientPageV2() {
         />
 
         {/* Área scrollável */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pb-8 pr-1 sm:gap-6 sm:pr-2 [-webkit-overflow-scrolling:touch]">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto pb-8 pr-2">
 
           {/* Atalhos pessoais */}
-          <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {SETTINGS_PERSONAL.map((item) => (
               <PersonalShortcut key={item.id} item={item} pathname={pathname} />
             ))}
           </section>
 
           {/* Barra de seções + ação de expandir/recolher tudo */}
-          <div className="flex min-w-0 items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span
                 className="h-4 w-1 rounded-full"
@@ -108,7 +108,7 @@ export default function SettingsClientPageV2() {
           </div>
 
           {/* Grupos de configuração */}
-          <div className="grid min-w-0 grid-cols-1 items-start gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
             {settingsGroups.map((group) => {
               const GroupIcon = group.icon;
               const isCollapsed = collapsed.has(group.id);
@@ -116,7 +116,7 @@ export default function SettingsClientPageV2() {
                 <section
                   key={group.id}
                   className={cn(
-                    "group/section min-w-0 overflow-hidden rounded-[var(--radius-xl)] border bg-[var(--glass-bg-base)] backdrop-blur-sm transition-[border-color,box-shadow] duration-200",
+                    "group/section overflow-hidden rounded-[var(--radius-xl)] border bg-[var(--glass-bg-base)] backdrop-blur-sm transition-[border-color,box-shadow] duration-200",
                     isCollapsed
                       ? "border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]"
                       : "border-[rgba(91,111,245,0.30)] shadow-[var(--shadow-indigo-glow)]",
@@ -132,7 +132,7 @@ export default function SettingsClientPageV2() {
                     aria-expanded={!isCollapsed}
                     aria-controls={`group-body-${group.id}`}
                     className={cn(
-                      "flex w-full items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-3 text-left transition-colors duration-200 sm:px-4 sm:py-3.5",
+                      "flex w-full items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3.5 text-left transition-colors duration-200",
                       isCollapsed
                         ? "bg-[var(--glass-bg-panel)] hover:bg-[var(--glass-bg-strong)]"
                         : "bg-[var(--color-enterprise-bg)] hover:brightness-[1.03]",
@@ -235,7 +235,7 @@ function SettingsRow({
   const body = (
     <span
       className={cn(
-        "group flex w-full items-center gap-3 px-3 py-2.5 transition-colors duration-150 sm:px-4",
+        "group flex w-full items-center gap-3 px-4 py-2.5 transition-colors duration-150",
         active
           ? "bg-[rgba(91,111,245,0.08)]"
           : item.href
@@ -336,7 +336,7 @@ function PersonalShortcut({
 
   const body = (
     <span
-      className="flex min-w-0 items-center gap-3 rounded-[var(--radius-xl)] border px-3 py-3 transition-all duration-150 sm:px-4 sm:py-3.5"
+      className="flex items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3.5 transition-all duration-150"
       style={{
         borderColor: active
           ? "rgba(91,111,245,0.40)"

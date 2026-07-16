@@ -159,113 +159,62 @@ export default function ApiTokensPage() {
               </p>
             </div>
           ) : (
-            <>
-              {/* Mobile: cards */}
-              <div className="space-y-3 sm:hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Chave</TableHead>
+                  <TableHead>Criada em</TableHead>
+                  <TableHead>Último uso</TableHead>
+                  <TableHead>Expira em</TableHead>
+                  <TableHead className="w-[60px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {tokens.map((t) => {
                   const expired =
                     t.expiresAt && new Date(t.expiresAt) < new Date();
                   return (
-                    <div
-                      key={t.id}
-                      className="min-w-0 rounded-lg border border-border/80 p-3"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="break-words font-medium">{t.name}</p>
-                          <code className="mt-1 inline-block break-all rounded bg-muted px-1.5 py-0.5 text-xs">
-                            {t.tokenPrefix}...
-                          </code>
-                        </div>
+                    <TableRow key={t.id}>
+                      <TableCell className="font-medium">{t.name}</TableCell>
+                      <TableCell>
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                          {t.tokenPrefix}...
+                        </code>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(t.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(t.lastUsedAt)}
+                      </TableCell>
+                      <TableCell>
+                        {t.expiresAt ? (
+                          <Badge variant={expired ? "destructive" : "secondary"}>
+                            {expired ? "Expirada" : formatDate(t.expiresAt)}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Sem expiração
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <ButtonGlass
                           variant="icon"
                           size="icon"
-                          className="shrink-0 text-[var(--color-destructive)] hover:text-[var(--color-destructive)]"
+                          className="text-[var(--color-destructive)] hover:text-[var(--color-destructive)]"
                           onClick={() => setDeleteId(t.id)}
                           aria-label="Revogar"
                         >
                           <Trash2 className="size-4" />
                         </ButtonGlass>
-                      </div>
-                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                        <p>Criada em: {formatDate(t.createdAt)}</p>
-                        <p>Último uso: {formatDate(t.lastUsedAt)}</p>
-                        <p className="flex flex-wrap items-center gap-1.5">
-                          <span>Expira em:</span>
-                          {t.expiresAt ? (
-                            <Badge variant={expired ? "destructive" : "secondary"}>
-                              {expired ? "Expirada" : formatDate(t.expiresAt)}
-                            </Badge>
-                          ) : (
-                            <span>Sem expiração</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </div>
-
-              {/* Desktop: table */}
-              <div className="hidden overflow-x-auto sm:block">
-                <Table className="min-w-[720px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Chave</TableHead>
-                      <TableHead>Criada em</TableHead>
-                      <TableHead>Último uso</TableHead>
-                      <TableHead>Expira em</TableHead>
-                      <TableHead className="w-[60px]" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tokens.map((t) => {
-                      const expired =
-                        t.expiresAt && new Date(t.expiresAt) < new Date();
-                      return (
-                        <TableRow key={t.id}>
-                          <TableCell className="font-medium">{t.name}</TableCell>
-                          <TableCell>
-                            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                              {t.tokenPrefix}...
-                            </code>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(t.createdAt)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(t.lastUsedAt)}
-                          </TableCell>
-                          <TableCell>
-                            {t.expiresAt ? (
-                              <Badge variant={expired ? "destructive" : "secondary"}>
-                                {expired ? "Expirada" : formatDate(t.expiresAt)}
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">
-                                Sem expiração
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <ButtonGlass
-                              variant="icon"
-                              size="icon"
-                              className="text-[var(--color-destructive)] hover:text-[var(--color-destructive)]"
-                              onClick={() => setDeleteId(t.id)}
-                              aria-label="Revogar"
-                            >
-                              <Trash2 className="size-4" />
-                            </ButtonGlass>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
+              </TableBody>
+            </Table>
           )}
         </div>
       </GlassCard>

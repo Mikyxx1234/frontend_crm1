@@ -34,7 +34,7 @@ export function ExtensionSettingsForm() {
         e.preventDefault();
         mutation.mutate();
       }}
-      className="flex min-w-0 w-full flex-col gap-3"
+      className="flex flex-col gap-3"
     >
       {fields.map((f) => (
         <div key={f.label} className="flex flex-col gap-1.5">

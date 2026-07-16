@@ -161,7 +161,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
   }, [templates, query, catFilter]);
 
   return (
-    <div className={embedded ? "min-w-0 w-full max-w-full space-y-3 sm:space-y-4" : "min-w-0 w-full space-y-6"}>
+    <div className={embedded ? "w-full space-y-4" : "w-full space-y-6"}>
       {embedded ? null : (
         <>
           <Link
@@ -240,7 +240,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
         </HubToolbar>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:gap-3.5 sm:p-[18px]">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-3.5 p-[18px]">
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 rounded-[var(--radius-lg)]" />)}
           </div>
         ) : grouped.length === 0 ? (
@@ -265,7 +265,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
                 </span>
                 <span className="h-px flex-1 bg-[var(--glass-border-subtle)]" />
               </div>
-              <div className="grid grid-cols-1 gap-3 px-3 pb-3 pt-1.5 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:gap-3.5 sm:px-[18px] sm:pb-[18px]">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-3.5 px-[18px] pb-[18px] pt-1.5">
                 {items.map((t) => (
                   <InternalTemplateCard
                     key={t.id}
@@ -293,13 +293,9 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
       </HubPanel>
 
       <Dialog open={formOpen} onOpenChange={(v) => { if (!v) { setFormOpen(false); setEditing(null); } else setFormOpen(true); }}>
-        <DialogContent
-          size="lg"
-          panelClassName="max-w-[min(40rem,calc(100vw-1.25rem))]"
-          bodyClassName="gap-3 overflow-x-hidden p-4 sm:gap-4 sm:p-6"
-        >
+        <DialogContent size="xl">
           <DialogClose />
-          <DialogHeader className="pr-10">
+          <DialogHeader>
             <DialogTitle>{editing ? "Editar Template" : "Novo Template"}</DialogTitle>
           </DialogHeader>
           <TemplateForm
@@ -366,9 +362,13 @@ function TemplateForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="min-w-0 w-full space-y-3 sm:space-y-4">
-      <div className="grid min-w-0 gap-3">
-        <div className="flex min-w-0 flex-col gap-1.5">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Campos de identificação compactos no topo — nome, categoria e canal
+          cabem numa única linha em vez de três blocos empilhados com
+          rótulo+ajuda cada, que era a origem da "lacuna gigante" entre os
+          campos e o corpo da mensagem. */}
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="flex flex-col gap-1.5">
           <label htmlFor="tpl-name" className={FIELD_LABEL_CLASS}>
             Nome do modelo
           </label>
@@ -378,43 +378,39 @@ function TemplateForm({
             onChange={(e) => setName(e.target.value)}
             placeholder="ex.: Boas-vindas, Pós-venda"
             required
-            className="min-w-0 max-w-full"
           />
         </div>
-        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <label htmlFor="tpl-category" className={FIELD_LABEL_CLASS}>
-              Categoria
-            </label>
-            <InputGlass
-              id="tpl-category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Vendas, Suporte…"
-              className="min-w-0 max-w-full"
-            />
-          </div>
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <label className={FIELD_LABEL_CLASS}>Canal</label>
-            <DropdownGlass
-              options={[
-                { value: "", label: "Todos os canais" },
-                { value: "WHATSAPP", label: "WhatsApp" },
-                { value: "INSTAGRAM", label: "Instagram" },
-                { value: "FACEBOOK", label: "Facebook" },
-                { value: "EMAIL", label: "E-mail" },
-              ]}
-              value={channelType}
-              onValueChange={(v) => setChannelType(v)}
-              triggerClassName="w-full min-w-0 max-w-full"
-            />
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="tpl-category" className={FIELD_LABEL_CLASS}>
+            Categoria
+          </label>
+          <InputGlass
+            id="tpl-category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="Vendas, Suporte…"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className={FIELD_LABEL_CLASS}>Canal</label>
+          <DropdownGlass
+            options={[
+              { value: "", label: "Todos os canais" },
+              { value: "WHATSAPP", label: "WhatsApp" },
+              { value: "INSTAGRAM", label: "Instagram" },
+              { value: "FACEBOOK", label: "Facebook" },
+              { value: "EMAIL", label: "E-mail" },
+            ]}
+            value={channelType}
+            onValueChange={(v) => setChannelType(v)}
+            triggerClassName="w-full"
+          />
         </div>
       </div>
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
             <label htmlFor="tpl-content" className={FIELD_LABEL_CLASS}>
               Mensagem
             </label>
@@ -424,24 +420,22 @@ function TemplateForm({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Olá {{contato.primeiroNome}}, tudo bem? Vi seu interesse no negócio {{negocio.titulo}}..."
-              rows={5}
+              rows={6}
               required
-              className="min-h-[120px] w-full min-w-0 max-w-full resize-y rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/10 sm:px-3.5"
+              className="w-full resize-none rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/10"
             />
-            <p className="text-pretty break-words font-body text-[11.5px] leading-snug text-[var(--text-muted)]">
+            <p className="font-body text-[11.5px] text-[var(--text-muted)]">
               Clique numa variável abaixo para inserir no cursor — o CRM substitui pelo valor real na hora de enviar.
             </p>
           </div>
 
-          <InternalTemplateVariablePicker onSelect={insertToken} defaultOpen={false} />
+          <InternalTemplateVariablePicker onSelect={insertToken} />
         </div>
 
-        <div className="min-w-0">
-          <InternalTemplatePreview name={name} content={content} channelType={channelType} />
-        </div>
+        <InternalTemplatePreview name={name} content={content} channelType={channelType} />
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] pt-3 sm:pt-4">
+      <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] pt-4">
         <ButtonGlass type="button" onClick={onCancel}>Cancelar</ButtonGlass>
         <ButtonGlass type="submit" variant="primary" disabled={isPending || !name.trim() || !content.trim()} className="gap-2">
           {isPending && <Loader2 className="size-4 animate-spin" />}
@@ -474,19 +468,19 @@ function InternalTemplatePreview({
 }) {
   const channelLabel = channelType ? CHANNEL_LABELS[channelType] ?? channelType : "Todos os canais";
   return (
-    <aside aria-label="Pré-visualização da mensagem" className="min-w-0 space-y-2">
+    <aside aria-label="Pré-visualização da mensagem" className="space-y-2">
       <p className={FIELD_LABEL_CLASS}>Pré-visualização</p>
-      <div className="min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)]">
-        <div className="flex min-w-0 items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-2">
+      <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)]">
+        <div className="flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-2">
           <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
             <FileText className="size-3.5" />
           </span>
-          <span className="min-w-0 truncate text-[12px] font-bold text-[var(--text-primary)]">
+          <span className="truncate text-[12px] font-bold text-[var(--text-primary)]">
             {name.trim() || "Novo modelo"}
           </span>
         </div>
-        <div className="min-w-0 p-3">
-          <div className="break-words whitespace-pre-wrap rounded-xl rounded-tl-sm bg-[var(--glass-bg-strong)] px-3 py-2.5 text-[12.5px] leading-relaxed text-[var(--text-secondary)] shadow-sm">
+        <div className="p-3">
+          <div className="rounded-xl rounded-tl-sm bg-[var(--glass-bg-strong)] px-3 py-2.5 text-[12.5px] leading-relaxed text-[var(--text-secondary)] shadow-sm">
             {content.trim() ? (
               highlightVars(content)
             ) : (
@@ -538,14 +532,14 @@ function InternalTemplateCard({
   const channel = template.channelType ? CHANNEL_LABELS[template.channelType] ?? template.channelType : null;
 
   return (
-    <div className="group flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]">
+    <div className="group flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]">
       <div className="flex items-start gap-2.5 px-3.5 pt-3.5">
         <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
           <FileText className="size-[17px]" />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[14px] font-bold leading-tight text-[var(--text-primary)]">{template.name}</div>
-          <div className="mt-0.5 truncate text-[11px] font-semibold text-[var(--text-muted)]">{category}</div>
+          <div className="text-[14px] font-bold leading-tight text-[var(--text-primary)]">{template.name}</div>
+          <div className="mt-0.5 text-[11px] font-semibold text-[var(--text-muted)]">{category}</div>
         </div>
         <div className="flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
           <button
@@ -584,8 +578,8 @@ function InternalTemplateCard({
           ))}
         </div>
       ) : null}
-      <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-2 px-3.5 py-3 pt-3">
-        <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[11.5px] font-semibold text-[var(--text-muted)]">
+      <div className="mt-auto flex items-center justify-between gap-2.5 px-3.5 py-3 pt-3">
+        <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--text-muted)]">
           {channel ?? "Todos os canais"}
         </span>
         <button
@@ -593,7 +587,7 @@ function InternalTemplateCard({
           onClick={() => {
             void navigator.clipboard.writeText(template.content ?? "");
           }}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 text-[12px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
+          className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 text-[12px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
         >
           <Copy className="size-3.5" /> Copiar
         </button>

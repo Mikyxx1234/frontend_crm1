@@ -158,7 +158,7 @@ export function ContactTagsPopover({
                 width: 256,
                 isolation: "isolate",
               }}
-              className="z-(--z-popover) rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-2 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+              className="z-(--z-popover) rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
             >
               <div className="mb-2 px-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 Tags do contato
@@ -183,7 +183,7 @@ export function ContactTagsPopover({
                     createTagMutation.mutate(filter.trim());
                   }
                 }}
-                className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]/40"
+                className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]/40"
               />
               <ul className="max-h-56 overflow-y-auto">
                 {tagsQuery.isLoading && (

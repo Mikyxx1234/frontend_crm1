@@ -194,7 +194,7 @@ export default function SettingsChannelsPage({
     : channels;
 
   return (
-    <div className="min-w-0 w-full shrink-0 space-y-6">
+    <div className="w-full space-y-6">
       {!hideToolbar ? (
         <div className="flex justify-end">
           <ButtonGlass
@@ -216,7 +216,10 @@ export default function SettingsChannelsPage({
       ) : null}
 
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]">
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}
+        >
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-[232px] rounded-[var(--radius-xl)]" />
           ))}
@@ -247,7 +250,10 @@ export default function SettingsChannelsPage({
           </p>
         </GlassCard>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]">
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}
+        >
           {filteredChannels.map((ch) => (
             <ChannelCard
               key={ch.id}

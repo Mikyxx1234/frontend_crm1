@@ -142,7 +142,7 @@ export type SectionProps = {
 
 // ─── Primitivas DS v2 ───────────────────────────────────────────────────────────
 
-/** Card de campo — superfície glass, hairline, label uppercase, estado ativo brand. */
+/** Card de campo — superfície branca, hairline, label uppercase, estado ativo azul. */
 export function FieldCard({
   label,
   active,
@@ -159,20 +159,18 @@ export function FieldCard({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-[var(--glass-bg-overlay)] p-3 transition-colors",
-        active
-          ? "border-[var(--brand-primary)]/20 bg-[var(--color-enterprise-bg)]"
-          : "border-[var(--glass-border)] hover:border-[var(--glass-border)]",
+        "rounded-xl border bg-white p-3 transition-colors",
+        active ? "border-primary/20 bg-primary-soft/30" : "border-black/6 hover:border-black/10",
         className,
       )}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{label}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">{label}</span>
         {active && onClear && (
           <button
             type="button"
             onClick={onClear}
-            className="text-[11px] font-medium text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-light)]"
+            className="text-[11px] font-medium text-primary transition-colors hover:text-primary-dark"
           >
             Limpar
           </button>
@@ -200,7 +198,7 @@ export function ChipToggle({
         "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors",
         active
           ? "border-transparent bg-primary text-white"
-          : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+          : "border-black/6 bg-white text-ink-soft hover:border-black/10 hover:text-foreground",
       )}
     >
       {active && <Check className="size-3" />}
@@ -234,7 +232,7 @@ export function TextField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={cn(
-          "h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20",
+          "h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none transition-colors focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-[var(--brand-primary)]/20",
           icon && "pl-8",
         )}
       />
@@ -266,14 +264,14 @@ function DateRangeField({ value, onChange }: { value?: DateRangeValue; onChange:
             type="date"
             value={value?.from ?? ""}
             onChange={(e) => onChange({ ...value, from: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
           />
           <span className="shrink-0 text-[12px] text-ink-subtle">até</span>
           <input
             type="date"
             value={value?.to ?? ""}
             onChange={(e) => onChange({ ...value, to: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
           />
         </div>
       )}
@@ -335,7 +333,7 @@ export function StagesSection({ draft, options, optionsLoading, setDraftField, t
                   "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors",
                   active
                     ? "border-transparent bg-primary text-white"
-                    : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                    : "border-black/6 bg-white text-ink-soft hover:border-black/10 hover:text-foreground",
                 )}
               >
                 <span className="size-2 shrink-0 rounded-full" style={{ background: stage.color || "#94a3b8" }} />
@@ -578,7 +576,7 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Mínimo"
           value={draft.valueFrom ?? ""}
           onChange={(e) => setDraftField("valueFrom", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-[var(--brand-primary)]/20"
         />
         <span className="shrink-0 text-[12px] text-ink-subtle">–</span>
         <input
@@ -586,7 +584,7 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Máximo"
           value={draft.valueTo ?? ""}
           onChange={(e) => setDraftField("valueTo", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-[var(--brand-primary)]/20"
         />
       </div>
     </FieldCard>
@@ -666,7 +664,7 @@ function CustomFieldRow({
       : {};
 
   return (
-    <div className="space-y-2 rounded-lg border border-[var(--glass-border)] bg-muted/60 p-2">
+    <div className="space-y-2 rounded-lg border border-black/6 bg-muted/60 p-2">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[12px] font-semibold text-ink-soft">{field.label}</span>
         <button type="button" onClick={onRemove} className="text-ink-subtle transition-colors hover:text-destructive" aria-label="Remover">
@@ -690,13 +688,13 @@ function CustomFieldRow({
                 type="date"
                 value={dateVal.from ?? ""}
                 onChange={(e) => onChange({ ...filter, value: { ...dateVal, from: e.target.value || null } })}
-                className="h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[12px] text-[var(--text-primary)] outline-none focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+                className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
               />
               <input
                 type="date"
                 value={dateVal.to ?? ""}
                 onChange={(e) => onChange({ ...filter, value: { ...dateVal, to: e.target.value || null } })}
-                className="h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[12px] text-[var(--text-primary)] outline-none focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+                className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
               />
             </div>
           ) : hasOptions ? (
@@ -728,7 +726,7 @@ function CustomFieldRow({
               value={typeof filter.value === "string" ? filter.value : ""}
               onChange={(e) => onChange({ ...filter, value: e.target.value })}
               placeholder="Valor"
-              className="h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[12px] text-[var(--text-primary)] outline-none focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+              className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
             />
           )
         ) : (
@@ -962,7 +960,7 @@ export function QuickFiltersList({
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors",
                 active
                   ? "border-transparent bg-primary text-white"
-                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-ink-soft hover:text-foreground",
+                  : "border-black/6 bg-white text-ink-soft hover:border-black/10 hover:text-foreground",
               )}
             >
               {qf.dot && <span className="size-2 rounded-full" style={{ background: qf.dot }} />}

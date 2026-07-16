@@ -37,7 +37,6 @@ import {
   IconShare2,
   IconMoodPlus,
   IconStar,
-  IconStarFilled,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -165,12 +164,6 @@ export interface Message {
   formFields?: FormField[]
   /** Título do formulário (ex: "form_estag") */
   formTitle?: string
-  /**
-   * Botões de resposta rápida enviados numa mensagem interativa/template
-   * (WhatsApp). Renderizados como cards empilhados abaixo do corpo —
-   * separados do texto pelo adapter (marcador `[Botões: ...]` do backend).
-   */
-  buttons?: string[]
   /** Tipo de mídia: "audio", "image", "document", "video", "text" etc. */
   messageType?: string
   /**
@@ -215,18 +208,6 @@ export interface Message {
    * em grupos futuramente). Renderiza como badge flutuante na base.
    */
   reactions?: Array<{ emoji: string; from: string; at?: string }>
-  /**
-   * Favoritada pelo agente LOGADO (marcador pessoal — outros agentes não
-   * veem essa marcação). Alimenta a estrela preenchida no menu e o label
-   * dinâmico "Favoritar"/"Desfavoritar".
-   */
-  isFavorited?: boolean
-  /**
-   * Mensagem atualmente fixada no topo da conversa (banner estilo
-   * WhatsApp). Vem de `Conversation.pinnedMessageId` — diferente de
-   * `isPinned` (usado só para notas na aba "Notas").
-   */
-  isPinnedMessage?: boolean
 }
 
 
@@ -354,40 +335,6 @@ export interface MessageBubbleProps {
 /** Emojis exibidos na barra rápida de reações — padrão WhatsApp. */
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as const
 
-/**
- * Paleta da bolha de AUTOMAÇÃO (referência V0): lavanda com acento
- * violeta. Hardcoded — em v2-dark os tokens de tema flipam para claro e
- * perdem o contraste contra o fundo claro fixo desta bolha.
- */
-const AUTOMATION_BG = "#efedfd"
-const AUTOMATION_TEXT = "#1e1b39"
-const AUTOMATION_ACCENT = "#6c5ce7"
-
-/**
- * Botões de resposta rápida (interactive/template) renderizados como
- * cards empilhados abaixo do corpo — igual ao WhatsApp e à referência V0.
- * `onLightBg` = bolha clara (automação): card branco com acento violeta.
- */
-function MessageButtons({ buttons, onLightBg }: { buttons: string[]; onLightBg: boolean }) {
-  return (
-    <div className="mt-2.5 grid gap-1.5">
-      {buttons.map((b, i) => (
-        <span
-          key={`${b}-${i}`}
-          className="rounded-lg border px-3 py-1.5 text-center font-display text-[12.5px] font-semibold"
-          style={
-            onLightBg
-              ? { borderColor: `${AUTOMATION_ACCENT}4d`, background: "#ffffff", color: AUTOMATION_ACCENT }
-              : { borderColor: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.14)", color: "#ffffff" }
-          }
-        >
-          {b}
-        </span>
-      ))}
-    </div>
-  )
-}
-
 function FormBubble({ message, className }: { message: Message; className?: string }) {
   const [open, setOpen] = useState(false)
   const fields = message.formFields!
@@ -412,17 +359,16 @@ function FormBubble({ message, className }: { message: Message; className?: stri
             <p className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-primary)]/70 leading-none mb-0.5">
               Formulário
             </p>
-            <div className="flex items-center gap-1.5 min-w-0">
-              <p className="truncate font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
+            <div className="flex items-baseline gap-1.5 min-w-0">
+              <p className="truncate font-display text-[12px] font-bold leading-tight text-[var(--text-primary)]">
                 {message.formTitle || "Resposta"}
+                <span className="ml-1.5 font-normal text-[var(--text-muted)]">
+                  · {count} {count === 1 ? "campo" : "campos"}
+                </span>
               </p>
-              {/* Contador de campos como pill preenchida (ref. V0) */}
-              <span className="shrink-0 rounded-md bg-[var(--brand-primary)]/12 px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--brand-primary)]">
-                {count} {count === 1 ? "campo" : "campos"}
-              </span>
               {/* Timestamp inline no estado recolhido — padrão WhatsApp */}
               {!open && (
-                <span className="ml-auto shrink-0 font-body text-[10px] leading-none text-[var(--text-muted)]">
+                <span className="shrink-0 font-body text-[10px] leading-none text-[var(--text-muted)]">
                   {message.time}
                 </span>
               )}
@@ -1072,14 +1018,8 @@ function ReceivedMessageMenu({
                     tiver UI real; a prop e o handler seguem intactos
                     no componente pra minimizar o diff quando reativar. */}
                 <MenuItem
-                  icon={
-                    message.isPinnedMessage ? (
-                      <IconPinFilled size={15} className="text-[var(--brand-primary)]" />
-                    ) : (
-                      <IconPin size={15} />
-                    )
-                  }
-                  label={message.isPinnedMessage ? "Desafixar" : "Fixar"}
+                  icon={<IconPin size={15} />}
+                  label="Fixar"
                   onClick={() => {
                     if (onPin) {
                       onPin(message)
@@ -1090,14 +1030,8 @@ function ReceivedMessageMenu({
                   }}
                 />
                 <MenuItem
-                  icon={
-                    message.isFavorited ? (
-                      <IconStarFilled size={15} className="text-amber-500" />
-                    ) : (
-                      <IconStar size={15} />
-                    )
-                  }
-                  label={message.isFavorited ? "Desfavoritar" : "Favoritar"}
+                  icon={<IconStar size={15} />}
+                  label="Favoritar"
                   onClick={() => {
                     if (onFavorite) {
                       onFavorite(message)
@@ -1336,13 +1270,12 @@ export function MessageBubble({
         {isOutgoing && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
-                  !isBot && "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
-                )}
-                style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
-              >
+              <div className={cn(
+                "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
+                isBot
+                  ? "bg-[var(--text-muted)]"
+                  : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
+              )}>
                 {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
               </div>
             </TooltipTrigger>
@@ -1358,10 +1291,11 @@ export function MessageBubble({
             "relative min-w-0 rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
             isOutgoing
               ? isBot
-                // Bolha de AUTOMAÇÃO: lavanda com acento violeta (ref. V0).
+                // Bolha de AUTOMAÇÃO: card claro tintado indigo com borda
+                // sutil — destaca da bolha regular sem competir com ela.
                 // Cores hardcoded (não usar --text-primary) porque em v2-dark
-                // o token flipa para cinza claro e some contra o bg claro.
-                ? "rounded-br border border-[rgba(108,92,231,0.22)] shadow-[0_2px_10px_rgba(108,92,231,0.14)]"
+                // o token flipa para cinza claro e some contra o bg branco.
+                ? "rounded-br border border-[rgba(91,111,245,0.28)] shadow-[0_2px_10px_rgba(91,111,245,0.14)]"
                 : "rounded-br shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
               : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
@@ -1369,10 +1303,10 @@ export function MessageBubble({
             isOutgoing
               ? isBot
                 ? {
-                    // Lavanda com texto violeta-escuro fixo — invariante ao
-                    // data-chat-theme e ao modo dark/light (ref. V0).
-                    background: AUTOMATION_BG,
-                    color: AUTOMATION_TEXT,
+                    // Tint indigo sobre branco puro; texto slate-900 fixo
+                    // — invariante ao data-chat-theme e ao modo dark/light.
+                    background: "#eef0ff",
+                    color: "#0f172a",
                   }
                 : {
                     background: "var(--chat-bubble-sent-bg)",
@@ -1381,26 +1315,14 @@ export function MessageBubble({
               : { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" }
           }
         >
-          {/* Indicador de mensagem fixada — banner no topo da conversa
-              (Conversation.pinnedMessageId). Canto oposto ao chevron do
-              menu (que fica em -right-2 nas recebidas) pra não colidir. */}
-          {message.isPinnedMessage && (
-            <span
-              className="absolute -left-1.5 -top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-black/5 shadow-[0_2px_6px_rgba(15,20,40,0.18)]"
-              style={{ background: "#ffffff" }}
-              title="Mensagem fixada"
-            >
-              <IconPinFilled size={10} className="text-[var(--brand-primary)]" />
-            </span>
-          )}
           {/* Badge AUTOMAÇÃO — pill escuro em cima do card claro tintado.
               Exibe o nome da automação (senderName) quando o backend envia;
               caso contrário cai no rótulo genérico "Automação". */}
           {isBot && (
             <div className="mb-1.5 flex items-center gap-1.5">
               <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest"
-                style={{ background: `${AUTOMATION_ACCENT}1f`, color: AUTOMATION_ACCENT }}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-white"
+                style={{ background: "#334155" /* slate-700 / petróleo */ }}
                 title={senderName || "Automação"}
               >
                 <IconRobot size={10} />
@@ -1425,7 +1347,7 @@ export function MessageBubble({
                 )}
                 title="Mensagem enviada usando um template aprovado da Meta"
               >
-                <IconFile size={10} />
+                <IconClipboardList size={10} />
                 Template
               </span>
             </div>
@@ -1455,11 +1377,6 @@ export function MessageBubble({
           )}
           {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
           <MessageContent message={message} isOutgoing={isOutgoing} />
-          {/* Botões de resposta rápida (interactive/template) — cards
-              empilhados abaixo do corpo, estilo WhatsApp/V0. */}
-          {message.buttons && message.buttons.length > 0 && (
-            <MessageButtons buttons={message.buttons} onLightBg={!isOutgoing || isBot} />
-          )}
           <span
             className={cn(
               "pointer-events-none absolute bottom-1.5 right-2.5 inline-flex select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
@@ -1472,9 +1389,6 @@ export function MessageBubble({
                 : undefined
             }
           >
-            {message.isFavorited && (
-              <IconStarFilled size={10} className="text-amber-400" aria-label="Favoritada" />
-            )}
             {message.time}
             {isOutgoing && message.status && (
               <StatusIndicator
@@ -1620,42 +1534,6 @@ export function ConnectionDivider({ label }: ConnectionDividerProps) {
       <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
         <IconArrowsExchange size={12} className="text-[var(--brand-primary)]" />
         via {label}
-      </span>
-      <span className="h-px w-6 bg-[var(--glass-border)]" />
-    </div>
-  )
-}
-
-interface ConversationClosedMarkerProps {
-  /** ISO da data de encerramento — quando ausente, mostra so "Conversa encerrada". */
-  closedAt?: string | null
-}
-
-/**
- * Marcador no fim da timeline indicando que a conversa foi encerrada.
- * Mesmo padrao visual do `ConnectionDivider`/`DaySeparator` (chip pill
- * centralizado com bordas hairline) — minimalista, dentro do proprio
- * chat, sem card lateral. Usado no inbox (via ChatArea) e no pipeline
- * (via messagesSlot do DealDetailPanel).
- */
-export function ConversationClosedMarker({ closedAt }: ConversationClosedMarkerProps) {
-  let label: string | null = null
-  if (closedAt) {
-    const d = new Date(closedAt)
-    if (!Number.isNaN(d.getTime())) {
-      const dd = String(d.getDate()).padStart(2, "0")
-      const mm = String(d.getMonth() + 1).padStart(2, "0")
-      const hh = String(d.getHours()).padStart(2, "0")
-      const mi = String(d.getMinutes()).padStart(2, "0")
-      label = `${dd}/${mm} às ${hh}:${mi}`
-    }
-  }
-  return (
-    <div className="my-2 flex items-center justify-center gap-2 self-center">
-      <span className="h-px w-6 bg-[var(--glass-border)]" />
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
-        <IconLock size={12} className="text-[var(--text-muted)]" />
-        Conversa encerrada{label ? ` · ${label}` : ""}
       </span>
       <span className="h-px w-6 bg-[var(--glass-border)]" />
     </div>

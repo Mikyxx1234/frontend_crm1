@@ -20,8 +20,8 @@ export default function AIAgentsV2ClientPage() {
       description="Configure assistentes, prompts e fila de rascunhos"
       icon={<IconRobot size={22} />}
     >
-      <div className="min-w-0 overflow-x-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-3 backdrop-blur-md sm:p-4">
-        <OldAIAgentsPage embedded />
+      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 backdrop-blur-md">
+        <OldAIAgentsPage />
       </div>
     </AppV2PageShell>
   );

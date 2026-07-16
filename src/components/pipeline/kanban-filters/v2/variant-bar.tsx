@@ -50,7 +50,7 @@ export function FilterBar({
   const activeCount = countActiveFilters(draft);
 
   return (
-    <div className="rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]">
+    <div className="rounded-2xl border border-[var(--glass-border-subtle)] bg-white">
       {/* Barra */}
       <div className="flex flex-wrap items-center gap-3 px-4 py-3">
         <button

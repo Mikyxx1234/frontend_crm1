@@ -385,7 +385,7 @@ export default function MessageModelsHubPage() {
   }, [headerSlots, tabBarNode, actionNode]);
 
   return (
-    <div className="min-w-0 w-full max-w-full space-y-3 sm:space-y-4">
+    <div className="w-full space-y-4">
       {!headerSlots ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           {tabBarNode}

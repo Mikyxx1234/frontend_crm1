@@ -45,7 +45,6 @@ export function ComposerMenu({
   templateContext,
   onPickInternal,
   onPickTemplate,
-  onReopenNewConversation,
 }: {
   conversationId: string | null;
   className?: string;
@@ -58,20 +57,13 @@ export function ComposerMenu({
   onPickInternal?: (text: string) => void;
   /** Abre o painel de validação do template do WhatsApp no composer. */
   onPickTemplate?: (tpl: WhatsappTemplate) => void;
-  /** Callback quando "Reabrir" cria novo ticket (modelo de ticket). Ver
-   *  ConversationActionsMenu e useToggleConversationResolve. */
-  onReopenNewConversation?: (newConversationId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"root" | "template" | "internal" | "automation">("root");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const toggleResolve = useToggleConversationResolve({
-    onNewConversation: (newId) => {
-      onReopenNewConversation?.(newId);
-    },
-  });
+  const toggleResolve = useToggleConversationResolve();
 
   function closeMenu() {
     setOpen(false);

@@ -151,46 +151,42 @@ function AccountsList({
   }
 
   return (
-    <div className="flex min-w-0 w-full flex-col gap-2">
+    <div className="flex flex-col gap-2">
       {accounts.map((acc) => (
         <div
           key={acc.id}
-          className="flex flex-col gap-3 px-4 py-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] sm:flex-row sm:items-center"
+          className="flex items-center gap-3 px-4 py-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]"
         >
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <span className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--brand-primary)] text-white font-bold text-[14px] font-display shrink-0">
-              {acc.email[0]?.toUpperCase()}
+          <span className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--brand-primary)] text-white font-bold text-[14px] font-display shrink-0">
+            {acc.email[0]?.toUpperCase()}
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="font-display font-bold text-[14px] text-[var(--text-primary)] truncate">
+              {acc.email}
+            </p>
+            <p className="text-[12px] text-[var(--text-muted)]">
+              {acc.imapHost} · {acc.visibility === "PERSONAL" ? "Pessoal" : "Compartilhado"}
+              {acc.lastSyncedAt && (
+                <> · Sincronizado em {new Date(acc.lastSyncedAt).toLocaleString("pt-BR")}</>
+              )}
+            </p>
+          </div>
+          <button
+            onClick={() => void handleSync(acc.id)}
+            disabled={syncing === acc.id}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] text-[12px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] transition-colors disabled:opacity-50"
+          >
+            <span className={syncing === acc.id ? "animate-spin inline-flex" : "inline-flex"}>
+              <RefreshCw size={13} />
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-display font-bold text-[14px] text-[var(--text-primary)] break-all">
-                {acc.email}
-              </p>
-              <p className="text-[12px] text-[var(--text-muted)]">
-                {acc.imapHost} · {acc.visibility === "PERSONAL" ? "Pessoal" : "Compartilhado"}
-                {acc.lastSyncedAt && (
-                  <> · Sincronizado em {new Date(acc.lastSyncedAt).toLocaleString("pt-BR")}</>
-                )}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 sm:shrink-0 sm:flex-row">
-            <button
-              onClick={() => void handleSync(acc.id)}
-              disabled={syncing === acc.id}
-              className="inline-flex w-full items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] text-[12px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] transition-colors disabled:opacity-50 sm:w-auto"
-            >
-              <span className={syncing === acc.id ? "animate-spin inline-flex" : "inline-flex"}>
-                <RefreshCw size={13} />
-              </span>
-              Sincronizar
-            </button>
-            <button
-              onClick={() => void handleDisconnect(acc.id, acc.email)}
-              className="inline-flex w-full items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] text-[12px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--color-danger)] hover:border-[var(--color-danger)] transition-colors sm:w-auto"
-            >
-              <X size={13} /> Desconectar
-            </button>
-          </div>
+            Sincronizar
+          </button>
+          <button
+            onClick={() => void handleDisconnect(acc.id, acc.email)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] text-[12px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--color-danger)] hover:border-[var(--color-danger)] transition-colors"
+          >
+            <X size={13} /> Desconectar
+          </button>
         </div>
       ))}
     </div>
@@ -254,15 +250,15 @@ function AccountRules({ accountId, confirm }: { accountId: string; confirm: Conf
   const [showForm, setShowForm] = React.useState(false);
 
   return (
-    <div className="flex min-w-0 w-full flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="min-w-0 text-pretty break-words text-[13px] text-[var(--text-muted)]">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[13px] text-[var(--text-muted)]">
           As regras se aplicam automaticamente a novas mensagens recebidas.
           Primeira regra que bate vence (ordem por prioridade).
         </p>
         <button
           onClick={() => setShowForm(true)}
-          className="inline-flex w-full shrink-0 items-center justify-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--brand-primary)] text-[var(--brand-primary)] text-[12px] font-bold hover:bg-[var(--color-enterprise-bg,rgba(91,111,245,0.12))] transition-colors sm:w-auto"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--brand-primary)] text-[var(--brand-primary)] text-[12px] font-bold hover:bg-[var(--color-enterprise-bg,rgba(91,111,245,0.12))] transition-colors"
         >
           <Plus size={13} /> Nova regra
         </button>

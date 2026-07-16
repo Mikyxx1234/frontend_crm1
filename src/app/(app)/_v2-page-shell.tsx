@@ -45,10 +45,10 @@ export function AppV2PageShell({
   );
 
   return (
-    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
-      <main className="flex min-h-0 min-w-0 flex-col gap-3.5 overflow-hidden">
+      <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
         <PageHeader
           icon={icon}
           title={title}
@@ -56,7 +56,7 @@ export function AppV2PageShell({
           actions={headerActions}
         />
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3.5 overflow-y-auto overscroll-contain pr-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-auto pr-2">
           {children}
         </div>
       </main>

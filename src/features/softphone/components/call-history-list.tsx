@@ -17,7 +17,8 @@ import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortabl
 import { listCalls } from "../api/extensions";
 import type { CallRecord, ListCallsFilters } from "../api/types";
 
-const COLS = "grid-cols-[36px_minmax(180px,2fr)_90px_100px_70px_minmax(130px,1.1fr)_80px]";
+const COLS = "grid-cols-[36px_2fr_0.9fr_0.9fr_0.7fr_1.1fr_80px]";
+// largura final aumentada de 44px → 80px para acomodar "Gravação" no header
 
 function formatDuration(sec: number | null) {
   if (!sec) return "—";
@@ -107,35 +108,30 @@ export function CallHistoryList({
   }
 
   return (
-    <div className={cn("flex min-h-0 flex-col gap-4", !embedded && "flex-1")}>
+    <div className={cn("flex flex-col gap-4", !embedded && "flex-1")}>
       {/* Tabela */}
-      <div className="flex w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
-        {/* Scroll horizontal cobre header + rows em sincronia */}
-        <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-          <div className="min-w-[780px]">
-            {/* Cabeçalho */}
-            <div className={listTableHeadRowClass(`${COLS} gap-3 px-3 py-2`)}>
-              <ListColumnLabel> </ListColumnLabel>
-              <ListColumnLabel>Contato / Telefone</ListColumnLabel>
-              <ListColumnLabel>Direção</ListColumnLabel>
-              <ListColumnLabel>Status</ListColumnLabel>
-              <ListColumnLabel>Duração</ListColumnLabel>
-              <ListColumnLabel>Data e hora</ListColumnLabel>
-              <ListColumnLabel align="right">Gravação</ListColumnLabel>
-            </div>
+      <div className="flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+        {/* Cabeçalho */}
+        <div className={listTableHeadRowClass(`${COLS} gap-3 px-3 py-2`)}>
+          <ListColumnLabel> </ListColumnLabel>
+          <ListColumnLabel>Contato / Telefone</ListColumnLabel>
+          <ListColumnLabel>Direção</ListColumnLabel>
+          <ListColumnLabel>Status</ListColumnLabel>
+          <ListColumnLabel>Duração</ListColumnLabel>
+          <ListColumnLabel>Data e hora</ListColumnLabel>
+          <ListColumnLabel align="right">Gravação</ListColumnLabel>
+        </div>
 
-            {/* Linhas */}
-            <div className="flex flex-col">
-              {calls.map((call) => (
-                <CallTableRow
-                  key={call.id}
-                  call={call}
-                  isPlaying={playingId === call.id}
-                  onPlay={() => setPlayingId(playingId === call.id ? null : call.id)}
-                />
-              ))}
-            </div>
-          </div>
+        {/* Linhas */}
+        <div className="flex min-h-0 flex-col overflow-y-auto">
+          {calls.map((call) => (
+            <CallTableRow
+              key={call.id}
+              call={call}
+              isPlaying={playingId === call.id}
+              onPlay={() => setPlayingId(playingId === call.id ? null : call.id)}
+            />
+          ))}
         </div>
       </div>
 

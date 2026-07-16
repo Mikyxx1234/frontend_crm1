@@ -4,7 +4,7 @@
 
 import * as React from "react";
 
-import { IconArrowLeft, IconFilter, IconMail } from "@tabler/icons-react";
+import { IconFilter, IconMail } from "@tabler/icons-react";
 
 import { toast } from "sonner";
 
@@ -33,8 +33,6 @@ import {
   usePersistentWidth,
 
 } from "@/components/crm/column-resizer";
-
-import { useIsDesktop } from "@/hooks/use-media-query";
 
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
@@ -213,9 +211,19 @@ export function EmailPage() {
 
 
 
-  const isDesktop = useIsDesktop();
+  const [isMobile, setIsMobile] = React.useState(false);
 
-  const [mobilePane, setMobilePane] = React.useState<"folders" | "list">("list");
+  React.useEffect(() => {
+
+    const check = () => setIsMobile(window.innerWidth < 768);
+
+    check();
+
+    window.addEventListener("resize", check);
+
+    return () => window.removeEventListener("resize", check);
+
+  }, []);
 
 
 
@@ -683,157 +691,6 @@ export function EmailPage() {
 
 
 
-  if (!isDesktop) {
-    return (
-      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
-        <NavRailV2 />
-        <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
-          <PageHeader
-            icon={<IconMail size={22} />}
-            title="E-mail"
-            description="Caixa de entrada conectada ao CRM"
-            center={
-              <PageSearchBar
-                variant="compact"
-                value={searchInput}
-                onChange={setSearchInput}
-                placeholder="Buscar e-mails…"
-                aria-label="Buscar e-mails"
-              />
-            }
-            actions={
-              <>
-                <PageGhostButton
-                  type="button"
-                  onClick={() => setRulesOpen(true)}
-                  disabled={accounts.length === 0}
-                  aria-label="Regras de e-mail"
-                  title="Regras"
-                  className="h-10 w-10 justify-center px-0"
-                >
-                  <IconFilter size={16} stroke={2.2} />
-                </PageGhostButton>
-                <PagePrimaryButton
-                  type="button"
-                  onClick={() => openCompose()}
-                  disabled={accounts.length === 0}
-                >
-                  <IcoCompose />
-                  <span className="hidden sm:inline">Novo e-mail</span>
-                  <span className="sm:hidden">Nova</span>
-                </PagePrimaryButton>
-              </>
-            }
-          />
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow)]">
-            {mobilePane === "list" ? (
-              <>
-                <div className="flex shrink-0 items-center gap-2.5 border-b border-[var(--glass-border-subtle,var(--glass-border))] px-4 py-3.5">
-                  <button
-                    type="button"
-                    onClick={() => setMobilePane("folders")}
-                    className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
-                  >
-                    <IconArrowLeft size={16} stroke={2} />
-                    Pastas
-                  </button>
-                  <h2 className="flex-1 truncate font-display text-[15px] font-extrabold leading-tight">
-                    {folderLabel}
-                  </h2>
-                  {lastSyncMsg ? (
-                    <span className="text-[11px] font-semibold text-[var(--brand-primary)]">
-                      ✓ {lastSyncMsg}
-                    </span>
-                  ) : null}
-                  <button
-                    onClick={() => void handleRefreshAll()}
-                    disabled={syncing || accounts.length === 0}
-                    aria-label="Sincronizar e atualizar"
-                    className="flex h-[34px] w-[34px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] transition-all hover:border-[var(--brand-primary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-40"
-                  >
-                    <span className={syncing ? "inline-flex animate-spin" : "inline-flex"}>
-                      <IcoRefresh />
-                    </span>
-                  </button>
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto">
-                  <EmailList
-                    emails={emails}
-                    loading={emailsLoading}
-                    selectedId={selectedEmailId}
-                    folder={selectedFolder}
-                    showAccountTag={!selectedAccountId || searching}
-                    accountEmails={accountEmailMap}
-                    customFolders={customFolders}
-                    onSelect={handleSelectEmail}
-                    onTrash={handleTrash}
-                    onRestore={handleRestore}
-                    onDeletePermanent={handleDeletePermanent}
-                    onMoveToCustomFolder={handleMoveToCustomFolder}
-                    onRemoveFromCustomFolder={handleRemoveFromCustomFolder}
-                    onToggleRead={handleToggleRead}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex shrink-0 items-center border-b border-[var(--glass-border-subtle,var(--glass-border))] px-4 py-3.5">
-                  <button
-                    type="button"
-                    onClick={() => setMobilePane("list")}
-                    className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
-                  >
-                    <IconArrowLeft size={16} stroke={2} />
-                    Voltar
-                  </button>
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto">
-                  <EmailSidebar
-                    accounts={accounts}
-                    loading={accountsLoading}
-                    customFolders={customFolders}
-                    selectedAccountId={selectedAccountId}
-                    selectedFolder={selectedFolder}
-                    selectedCustomFolderId={selectedCustomFolderId}
-                    onSelectAccount={(id) => { setSelectedAccountId(id); setMobilePane("list"); }}
-                    onSelectFolder={(f) => { handleSelectFolder(f); setMobilePane("list"); }}
-                    onSelectCustomFolder={(id) => { handleSelectCustomFolder(id); setMobilePane("list"); }}
-                    onSync={syncAndRefresh}
-                    onCreateCustomFolder={handleCreateCustomFolder}
-                    onDeleteCustomFolder={handleDeleteCustomFolder}
-                    onDropToSystemFolder={handleDropToSystemFolder}
-                    onDropToCustomFolder={handleMoveToCustomFolder}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        </main>
-        <EmailDetailSheet
-          email={emailDetail}
-          loading={detailLoading}
-          open={!!selectedEmailId && !isDesktop}
-          onOpenChange={(o) => { if (!o) setSelectedEmailId(null); }}
-        />
-        <ComposeModal
-          open={composeOpen}
-          onOpenChange={setComposeOpen}
-          accounts={accounts}
-          draft={composeDraft}
-          onSent={refreshEmails}
-        />
-        <EmailRulesModal
-          open={rulesOpen}
-          onOpenChange={setRulesOpen}
-          accounts={accounts}
-          customFolders={customFolders}
-          defaultAccountId={selectedAccountId}
-        />
-        {confirmDialog}
-      </div>
-    );
-  }
-
   return (
 
     <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
@@ -1154,7 +1011,7 @@ export function EmailPage() {
 
         loading={detailLoading}
 
-        open={!!selectedEmailId && !isDesktop}
+        open={!!selectedEmailId && isMobile}
 
         onOpenChange={(o) => { if (!o) setSelectedEmailId(null); }}
 

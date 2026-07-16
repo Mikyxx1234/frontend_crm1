@@ -88,12 +88,7 @@ const AUTONOMY_LABEL: Record<AgentRow["autonomyMode"], string> = {
   DRAFT: "Rascunho",
 };
 
-export default function AIAgentsPage({
-  embedded = false,
-}: {
-  /** Quando true, omite o `PageHeader` legado (título/descrição já vêm do shell v2). */
-  embedded?: boolean;
-}) {
+export default function AIAgentsPage() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [testing, setTesting] = React.useState<{ id: string; name: string } | null>(null);
@@ -146,38 +141,29 @@ export default function AIAgentsPage({
     if (ok) deleteMutation.mutate(id);
   };
 
-  const newAgentButton = (
-    <Button
-      onClick={() => setCreating(true)}
-      className={cn("w-full gap-2 sm:w-auto", pageHeaderPrimaryCtaClass)}
-      disabled={aiDisabled}
-      title={aiDisabled ? "IA desativada — configure a chave da OpenAI" : undefined}
-    >
-      <Plus className="size-4" /> Novo agente
-    </Button>
-  );
-
   return (
-    <div className="w-full min-w-0 space-y-6">
-      {embedded ? (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          {newAgentButton}
-        </div>
-      ) : (
-        <PageHeader
-          title="Agentes IA"
-          description="Operadores virtuais que atendem leads, qualificam oportunidades e escalam pra humanos quando necessário."
-          icon={<Bot />}
-          className="flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
-          actions={newAgentButton}
-        />
-      )}
+    <div className="w-full space-y-6">
+      <PageHeader
+        title="Agentes IA"
+        description="Operadores virtuais que atendem leads, qualificam oportunidades e escalam pra humanos quando necessário."
+        icon={<Bot />}
+        actions={
+          <Button
+            onClick={() => setCreating(true)}
+            className={cn("gap-2", pageHeaderPrimaryCtaClass)}
+            disabled={aiDisabled}
+            title={aiDisabled ? "IA desativada — configure a chave da OpenAI" : undefined}
+          >
+            <Plus className="size-4" /> Novo agente
+          </Button>
+        }
+      />
 
       {aiDisabled ? (
         <div className="rounded-xl border border-[var(--color-warning)]/70 bg-[var(--color-amber-soft)]/60 p-4 text-sm text-[var(--color-amber-text)] dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-[var(--color-amber-muted)]">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 size-5 shrink-0" />
-            <div className="min-w-0 flex-1 break-words">
+            <div className="min-w-0 flex-1">
               <p className="font-semibold">IA desativada — configure a chave da OpenAI</p>
               <p className="mt-0.5 text-[13px] leading-relaxed opacity-90">
                 Nenhuma chave configurada. Os agentes de IA e o playground
@@ -199,7 +185,7 @@ export default function AIAgentsPage({
         <div className="rounded-xl border border-dashed border-[var(--color-warning)]/60 bg-[var(--color-amber-soft)]/40 p-4 text-sm text-[var(--color-amber-text)] dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-[var(--color-amber-muted)]">
           <div className="flex items-start gap-2">
             <CircleAlert className="mt-0.5 size-4 shrink-0" />
-            <div className="min-w-0 flex-1 break-words">
+            <div>
               <p className="font-medium">Playground e RAG ativos — Inbox nas próximas fases</p>
               <p className="mt-0.5 text-[13px] leading-relaxed opacity-90">
                 Crie, configure, alimente com documentos e teste agentes pelo

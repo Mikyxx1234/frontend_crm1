@@ -120,8 +120,8 @@ export default function AiSettingsPage() {
     <div className="w-full space-y-4">
       <GlassCard className="overflow-hidden p-0">
         <div className="space-y-1 border-b border-[var(--glass-border-subtle)] px-6 py-5">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h2 className="flex min-w-0 items-center gap-2 font-display text-lg font-bold text-[var(--text-primary)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="flex items-center gap-2 font-display text-lg font-bold text-[var(--text-primary)]">
               <Key className="size-4 text-[var(--text-muted)]" />
               Chave da OpenAI
             </h2>
@@ -170,8 +170,8 @@ export default function AiSettingsPage() {
             <Label htmlFor="openai-key">
               {status?.configured ? "Substituir chave" : "Nova chave"}
             </Label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <div className="relative min-w-0 w-full sm:flex-1">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
                 <InputGlass
                   id="openai-key"
                   type={showKey ? "text" : "password"}
@@ -198,7 +198,6 @@ export default function AiSettingsPage() {
               <ButtonGlass
                 variant="primary"
                 type="button"
-                className="w-full shrink-0 sm:w-auto"
                 onClick={() => saveMutation.mutate(apiKey.trim())}
                 disabled={!apiKey.trim() || saveMutation.isPending}
               >
@@ -226,7 +225,7 @@ export default function AiSettingsPage() {
             )}
           </div>
         </div>
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-6 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-6 py-3">
           <ButtonGlass
             type="button"
             variant="glass"

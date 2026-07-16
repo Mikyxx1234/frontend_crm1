@@ -81,13 +81,19 @@ export function AssigneePopover({
         createPortal(
           <div
             ref={popoverRef}
-            className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-2 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+            className="rounded-[var(--radius-lg)] border p-2"
             style={{
               position: "fixed",
               top: position.top,
               left: position.left,
               width: 256,
               zIndex: "var(--z-popover)",
+              background: "rgba(255, 255, 255, 0.98)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              borderColor: "rgba(255, 255, 255, 0.7)",
+              boxShadow:
+                "0 12px 40px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.08)",
             }}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
@@ -98,7 +104,7 @@ export function AssigneePopover({
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Buscar pessoa…"
-              className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+              className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             />
             <ul role="listbox" className="max-h-56 overflow-y-auto">
               {currentOwnerId && (
@@ -106,7 +112,7 @@ export function AssigneePopover({
                   <button
                     type="button"
                     onClick={() => handleSelect(null)}
-                    className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--color-warning)] hover:bg-[var(--glass-bg-strong)]"
+                    className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--color-warning)] hover:bg-black/5"
                   >
                     <span>Remover responsavel</span>
                   </button>
@@ -130,9 +136,9 @@ export function AssigneePopover({
                       type="button"
                       disabled={update.isPending}
                       onClick={() => handleSelect(u.id)}
-                      className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] hover:bg-[var(--glass-bg-strong)] ${
+                      className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] hover:bg-black/5 ${
                         isActive
-                          ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                          ? "bg-[rgba(91,111,245,0.10)] text-[var(--brand-primary)]"
                           : "text-[var(--text-primary)]"
                       }`}
                     >

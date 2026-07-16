@@ -357,25 +357,6 @@ function parseFormResponse(content: string): { title: string; fields: FormField[
   return { title, fields };
 }
 
-/**
- * Extrai os botões de uma mensagem interativa/template.
- *
- * O backend (automation-executor `send_whatsapp_interactive`) grava o
- * conteúdo como `${corpo}\n[Botões: A, B, C]`. Aqui separamos o corpo
- * real dos rótulos dos botões para o bubble renderizá-los como cards
- * (estilo WhatsApp), em vez de exibir o marcador cru `[Botões: ...]`.
- */
-function parseInteractiveButtons(content: string): { text: string; buttons?: string[] } {
-  const m = content.match(/\n?\[Bot[õo]es:\s*([^\]]+)\]\s*$/i);
-  if (!m) return { text: content };
-  const buttons = m[1]
-    .split(",")
-    .map((b) => b.trim())
-    .filter(Boolean);
-  const text = content.slice(0, m.index).trimEnd();
-  return { text, buttons: buttons.length ? buttons : undefined };
-}
-
 /** InboxMessageDto → Message (bolha do chat). */
 export function toMessageBubble(
   dto: InboxMessageDto,
@@ -399,14 +380,9 @@ export function toMessageBubble(
   // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
   const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;
 
-  // Botões de mensagem interativa/template (outbound) — separa o corpo
-  // do marcador `[Botões: ...]` gravado pelo backend.
-  const btnParsed = !formParsed ? parseInteractiveButtons(dto.content ?? "") : null;
-
   return {
     id: dto.id,
-    content: formParsed ? "" : (btnParsed?.text ?? dto.content ?? ""),
-    buttons: btnParsed?.buttons,
+    content: formParsed ? "" : (dto.content ?? ""),
     time: formatTime(dto.createdAt),
     createdAt: dto.createdAt ?? undefined,
     type: isInbound ? "incoming" : "outgoing",
@@ -469,7 +445,6 @@ export function toMessageBubble(
             )
             .map((r) => ({ emoji: r.emoji, from: r.from, at: r.at }))
         : undefined,
-    isFavorited: dto.favoritedByMe || undefined,
   };
 }
 

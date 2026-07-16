@@ -86,7 +86,7 @@ export function SecurityClientPage() {
           />
         </GlassCard>
       ) : (
-        <div className="mx-auto w-full max-w-2xl min-w-0 space-y-4">
+        <div className="mx-auto max-w-2xl space-y-4">
           <p className="font-display text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             Feature flags
           </p>
@@ -99,31 +99,31 @@ export function SecurityClientPage() {
               return (
                 <div
                   key={flag.key}
-                  className="min-w-0 max-w-full rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md sm:p-4"
+                  className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
                 >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-display text-[13.5px] font-semibold text-pretty text-[var(--text-primary)]">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
                           {label}
                         </span>
                         {flag.enabled ? (
-                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-success)]/12 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-success)]">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success)]/12 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-success)]">
                             <CheckCircle2 size={10} />
                             Ativo
                           </span>
                         ) : (
-                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-muted)]">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-muted)]">
                             <Circle size={10} />
                             Inativo
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-[12.5px] text-pretty text-[var(--text-muted)]">
+                      <p className="mt-1 text-[12.5px] text-[var(--text-muted)]">
                         {flag.description}
                       </p>
                       {warning && !flag.enabled && (
-                        <div className="mt-2 flex items-start gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-warning)]/8 px-2.5 py-2 text-[12px] text-pretty text-[var(--color-warning)]">
+                        <div className="mt-2 flex items-start gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-warning)]/8 px-2.5 py-2 text-[12px] text-[var(--color-warning)]">
                           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                           <span>{warning}</span>
                         </div>
@@ -136,7 +136,7 @@ export function SecurityClientPage() {
                       onClick={() =>
                         mutation.mutate({ key: flag.key, enabled: !flag.enabled })
                       }
-                      className={`inline-flex shrink-0 items-center justify-center rounded-[var(--radius-md)] px-3 py-1.5 font-display text-[12px] font-semibold transition-colors disabled:opacity-50 ${
+                      className={`inline-flex shrink-0 items-center rounded-[var(--radius-md)] px-3 py-1.5 font-display text-[12px] font-semibold transition-colors disabled:opacity-50 ${
                         flag.enabled
                           ? "bg-[var(--color-danger)]/8 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/15"
                           : "bg-[var(--brand-primary)]/8 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/15"

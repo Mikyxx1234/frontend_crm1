@@ -236,39 +236,34 @@ function TabelaView({ items, selected, allChecked, someChecked, onToggleAll, onT
   onToggleAll: () => void; onToggleOne: (id: string) => void; onEdit: (c: CompanyListItemDto) => void;
 }) {
   return (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
-      {/* H-scroll único: header + linhas andam juntos */}
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-        <div className="flex min-h-0 min-w-[760px] flex-1 flex-col">
-          <div className={listTableHeadRowClass(`grid ${TABELA_COLS} gap-3 px-3 py-2`)}>
-            <span><CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todas" /></span>
-            <ListColumnLabel>Nome da empresa</ListColumnLabel>
-            <ListColumnLabel>CNPJ</ListColumnLabel>
-            <ListColumnLabel>Telefone</ListColumnLabel>
-            <ListColumnLabel>Endereço</ListColumnLabel>
-            <ListColumnLabel>Contatos</ListColumnLabel>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <div className={listTableHeadRowClass(`grid ${TABELA_COLS} gap-3 px-3 py-2`)}>
+        <span><CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todas" /></span>
+        <ListColumnLabel>Nome da empresa</ListColumnLabel>
+        <ListColumnLabel>CNPJ</ListColumnLabel>
+        <ListColumnLabel>Telefone</ListColumnLabel>
+        <ListColumnLabel>Endereço</ListColumnLabel>
+        <ListColumnLabel>Contatos</ListColumnLabel>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {items.map((c) => (
+          <div key={c.id} className={`grid ${TABELA_COLS} items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}>
+            <span><CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} /></span>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] font-display text-[11px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
+                {initials(c.name)}
+              </span>
+              <Link href={`/companies/${c.id}`} className="group/name inline-flex min-w-0 items-center gap-1.5 font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
+                <span className="truncate">{c.name}</span>
+                <IconPencil size={13} className="flex-shrink-0 opacity-0 transition-opacity group-hover/name:opacity-60" />
+              </Link>
+            </div>
+            <div className="truncate font-display text-[13px] text-[var(--text-muted)]">{c.size ?? "—"}</div>
+            <div className="truncate font-display text-[13px] text-[var(--text-muted)]">{c.phone ?? "—"}</div>
+            <div className="truncate font-display text-[13px] text-[var(--text-muted)]">{c.address ?? "—"}</div>
+            <div><BadgeGlass variant="enterprise">{c._count.contacts}</BadgeGlass></div>
           </div>
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            {items.map((c) => (
-              <div key={c.id} className={`grid ${TABELA_COLS} items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}>
-                <span><CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} /></span>
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] font-display text-[11px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-                    {initials(c.name)}
-                  </span>
-                  <Link href={`/companies/${c.id}`} className="group/name inline-flex min-w-0 items-center gap-1.5 font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
-                    <span className="truncate">{c.name}</span>
-                    <IconPencil size={13} className="flex-shrink-0 opacity-0 transition-opacity group-hover/name:opacity-60" />
-                  </Link>
-                </div>
-                <div className="truncate font-display text-[13px] text-[var(--text-muted)]">{c.size ?? "—"}</div>
-                <div className="truncate font-display text-[13px] text-[var(--text-muted)]">{c.phone ?? "—"}</div>
-                <div className="truncate font-display text-[13px] text-[var(--text-muted)]">{c.address ?? "—"}</div>
-                <div><BadgeGlass variant="enterprise">{c._count.contacts}</BadgeGlass></div>
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );

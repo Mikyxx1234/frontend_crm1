@@ -1,4 +1,4 @@
-import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconClock as Clock, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutKanban as Kanban, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPhone as Phone, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconArrowsShuffle as Shuffle, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconThumbDown as ThumbsDown, IconUsers as Users } from "@tabler/icons-react";
+import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconBuilding as Building, IconClock as Clock, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutKanban as Kanban, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPhone as Phone, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconArrowsShuffle as Shuffle, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconThumbDown as ThumbsDown, IconUsers as Users } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { UserRole } from "@/lib/prisma-enum-types";
 
@@ -241,6 +241,14 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         href: "/settings/team",
         allowedRoles: GESTAO,
         requiredPermission: "settings:team",
+      },
+      {
+        id: "departments",
+        label: "Departamentos",
+        description: "Times de atendimento (comercial, suporte…)",
+        icon: Building,
+        href: "/settings/departments",
+        allowedRoles: GESTAO,
       },
       {
         id: "schedules",

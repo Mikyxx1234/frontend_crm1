@@ -7,11 +7,12 @@ import { useUserRole } from "@/hooks/use-user-role";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { SettingsV2Shell, SETTINGS_HUB_BACK } from "../_v2-shell";
 import { ConversationsConfigTab } from "@/features/conversations-settings/components/ConversationsConfigTab";
-import { DepartmentsTab } from "@/features/conversations-settings/components/DepartmentsTab";
 import { AgentsTab } from "@/features/conversations-settings/components/AgentsTab";
+// "Departamentos" migrou para pagina propria em Equipe & Operacao
+// (/settings/departments) — faz mais sentido junto de "Equipe" do que
+// dentro de "Conversas". A aba local foi removida em 16/jul/26.
 const TABS = [
   { id: "configuracoes", label: "Configurações" },
-  { id: "departamentos", label: "Departamentos" },
   { id: "atendentes", label: "Atendentes" },
 ] as const;
 
@@ -36,7 +37,7 @@ export function ConversationsSettingsClientPage() {
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
       title="Conversas"
-      description="Departamentos, atendentes e permissões"
+      description="Atendentes e permissões de conversa"
       icon={<IconMessageCircle size={22} />}
     >
       {/* Inner tab navigation */}
@@ -63,7 +64,6 @@ export function ConversationsSettingsClientPage() {
       {/* Tab content */}
       <div className="min-h-0 flex-1">
         {activeTab === "configuracoes" && <ConversationsConfigTab />}
-        {activeTab === "departamentos" && <DepartmentsTab />}
         {activeTab === "atendentes" && <AgentsTab />}
       </div>
     </SettingsV2Shell>

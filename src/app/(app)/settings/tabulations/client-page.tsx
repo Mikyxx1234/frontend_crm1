@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   IconChevronDown as ChevronDown,
@@ -165,6 +166,18 @@ export default function TabulationsClientPage() {
               </option>
             ))}
           </SelectNative>
+          {departments.length === 0 ? (
+            <p className="text-xs text-[var(--text-muted)]">
+              Nenhum departamento ainda.{" "}
+              <Link
+                href="/settings/departments"
+                className="font-medium text-[var(--brand-primary)] underline-offset-2 hover:underline"
+              >
+                Cadastrar em Equipe & Operação › Departamentos
+              </Link>
+              .
+            </p>
+          ) : null}
 
           {effectiveDeptId ? (
             <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">

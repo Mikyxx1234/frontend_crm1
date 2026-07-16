@@ -4,8 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   IconChevronRight as ChevronRight,
   IconChevronLeft as ChevronLeft,
+  IconCircleDot,
+  IconFolder,
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
+
+import { cn } from "@/lib/utils";
 
 import {
   Dialog,
@@ -82,20 +86,23 @@ export function TabulationDialog({
 
         <div className="flex min-h-[220px] flex-col gap-3">
           {path.length > 0 ? (
-            <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+            <div className="flex flex-wrap items-center gap-0.5 font-body text-[12px] text-[var(--text-muted)]">
               <button
                 type="button"
-                className="rounded-md px-1.5 py-0.5 hover:bg-[var(--glass-bg)]"
+                className="rounded-[var(--radius-sm)] px-1.5 py-0.5 font-medium transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)]"
                 onClick={() => setPath([])}
               >
                 Início
               </button>
               {path.map((n, i) => (
-                <span key={n.id} className="flex items-center gap-1">
-                  <ChevronRight size={12} />
+                <span key={n.id} className="flex items-center gap-0.5">
+                  <ChevronRight size={13} className="opacity-60" />
                   <button
                     type="button"
-                    className="rounded-md px-1.5 py-0.5 hover:bg-[var(--glass-bg)]"
+                    className={cn(
+                      "rounded-[var(--radius-sm)] px-1.5 py-0.5 font-medium transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)]",
+                      i === path.length - 1 && "text-[var(--brand-primary)]",
+                    )}
                     onClick={() => setPath((prev) => prev.slice(0, i + 1))}
                   >
                     {n.name}
@@ -114,13 +121,13 @@ export function TabulationDialog({
               Erro ao carregar tabulações.
             </div>
           ) : currentChildren.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-[var(--glass-border)] p-6 text-center text-sm text-[var(--text-muted)]">
+            <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] p-6 text-center font-body text-[13px] text-[var(--text-muted)]">
               {path.length === 0
                 ? "Nenhuma tabulação disponível para este departamento."
                 : "Fim do ramo — selecione esta opção para confirmar."}
             </div>
           ) : (
-            <ul className="flex flex-col gap-1">
+            <ul className="flex flex-col gap-2">
               {currentChildren.map((n) => {
                 const hasChildren = n.children.length > 0;
                 const selected =
@@ -129,11 +136,12 @@ export function TabulationDialog({
                   <li key={n.id}>
                     <button
                       type="button"
-                      className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border px-2.5 py-2 text-left transition-colors",
                         selected
-                          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10"
-                          : "border-[var(--glass-border)] hover:bg-[var(--glass-bg)]"
-                      }`}
+                          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/8"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]",
+                      )}
                       onClick={() => {
                         if (hasChildren) {
                           setPath((prev) => [...prev, n]);
@@ -150,12 +158,26 @@ export function TabulationDialog({
                         }
                       }}
                     >
-                      <span className="flex-1 text-sm">{n.name}</span>
+                      <span
+                        className={cn(
+                          "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
+                          hasChildren
+                            ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                            : selected
+                              ? "bg-[var(--brand-primary)] text-white"
+                              : "bg-[var(--glass-bg-base)] text-[var(--text-secondary)]",
+                        )}
+                      >
+                        {hasChildren ? <IconFolder size={17} /> : <IconCircleDot size={17} />}
+                      </span>
+                      <span className="flex-1 truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
+                        {n.name}
+                      </span>
                       {hasChildren ? (
-                        <ChevronRight size={14} className="text-[var(--text-muted)]" />
+                        <ChevronRight size={16} className="shrink-0 text-[var(--text-muted)]" />
                       ) : (
-                        <span className="rounded-full bg-[var(--glass-bg)] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
-                          folha
+                        <span className="shrink-0 rounded-full bg-[var(--glass-bg-base)] px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                          Folha
                         </span>
                       )}
                     </button>

@@ -1,23 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  IconChevronDown as ChevronDown,
-  IconChevronRight as ChevronRight,
-  IconEdit as Edit3,
-  IconLayoutList as LayoutList,
-  IconPlus as Plus,
-  IconTrash as Trash2,
+  IconCheck,
+  IconChevronDown,
+  IconCircleDot,
+  IconEdit,
+  IconFolder,
+  IconFolderOpen,
+  IconLayoutList,
+  IconListTree,
+  IconPlus,
+  IconSparkles,
+  IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SelectNative } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { GlassCard } from "@/components/crm/glass-card";
+import { InputGlass } from "@/components/crm/input-glass";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { SwitchGlass } from "@/components/crm/switch-glass";
+import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
-import { useDepartments } from "@/features/conversations-settings/hooks/use-departments";
+import { useDepartments, type Department } from "@/features/conversations-settings/hooks/use-departments";
+import { DeptGlyph } from "@/features/conversations-settings/department-icons";
 
 import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 
@@ -50,6 +58,15 @@ async function fetchTabulations(departmentId: string): Promise<TabulationsRespon
   return res.json();
 }
 
+function countLeaves(nodes: TabulationNode[]): number {
+  let total = 0;
+  for (const n of nodes) {
+    if (n.children.length === 0) total += 1;
+    else total += countLeaves(n.children);
+  }
+  return total;
+}
+
 export default function TabulationsClientPage() {
   const qc = useQueryClient();
   const departmentsQuery = useDepartments();
@@ -66,6 +83,7 @@ export default function TabulationsClientPage() {
   });
 
   const requireOnClose = treeQuery.data?.requireTabulationOnClose ?? false;
+  const leaves = useMemo(() => countLeaves(treeQuery.data?.tree ?? []), [treeQuery.data?.tree]);
 
   const toggleRequire = useMutation({
     mutationFn: async (next: boolean) => {
@@ -140,68 +158,71 @@ export default function TabulationsClientPage() {
     },
   });
 
+  const selectedDept = departments.find((d) => d.id === effectiveDeptId) ?? null;
+
   return (
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
       title="Tabulações"
       description="Motivos hierárquicos escolhidos ao encerrar conversas"
-      icon={<LayoutList size={22} />}
+      icon={<IconLayoutList size={22} />}
     >
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
-        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
-          <label className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
-            Departamento
-          </label>
-          <SelectNative
-            value={effectiveDeptId ?? ""}
-            onChange={(e) => setDepartmentId(e.target.value || null)}
-            disabled={departments.length === 0}
-          >
-            {departments.length === 0 ? (
-              <option value="">Nenhum departamento cadastrado</option>
-            ) : null}
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.icon} {d.name}
-              </option>
-            ))}
-          </SelectNative>
-          {departments.length === 0 ? (
-            <p className="text-xs text-[var(--text-muted)]">
-              Nenhum departamento ainda.{" "}
-              <Link
-                href="/settings/departments"
-                className="font-medium text-[var(--brand-primary)] underline-offset-2 hover:underline"
-              >
-                Cadastrar em Equipe & Operação › Departamentos
-              </Link>
-              .
-            </p>
-          ) : null}
-
-          {effectiveDeptId ? (
-            <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-[var(--text-primary)]">
-                  Exigir tabulação ao encerrar
-                </div>
-                <div className="text-xs text-[var(--text-muted)]">
-                  Quando ativado, o agente escolhe uma folha antes de resolver a conversa deste departamento.
-                </div>
-              </div>
-              <Switch
-                checked={requireOnClose}
-                onCheckedChange={(v) => toggleRequire.mutate(!!v)}
-                disabled={toggleRequire.isPending}
+      <div className="flex w-full min-w-0 flex-col gap-4 px-1 pb-8">
+        {/* ── Departamento + exigência ─────────────────────────────── */}
+        <GlassCard variant="panel" className="min-w-0 overflow-visible p-4 sm:p-5">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,420px)_1fr] lg:items-start">
+            <div>
+              <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                Departamento
+              </p>
+              <DeptSelect
+                departments={departments}
+                selected={selectedDept}
+                onSelect={(id) => setDepartmentId(id)}
               />
+              {departments.length === 0 ? (
+                <p className="mt-2 font-body text-[12px] text-[var(--text-muted)]">
+                  Nenhum departamento ainda.{" "}
+                  <Link
+                    href="/settings/departments"
+                    className="font-semibold text-[var(--brand-primary)] underline-offset-2 hover:underline"
+                  >
+                    Cadastrar em Equipe &amp; Operação › Departamentos
+                  </Link>
+                  .
+                </p>
+              ) : null}
             </div>
-          ) : null}
-        </div>
 
+            {effectiveDeptId ? (
+              <div className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+                <div className="min-w-0">
+                  <div className="font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
+                    Exigir tabulação ao encerrar
+                  </div>
+                  <div className="mt-0.5 font-body text-[12px] text-[var(--text-muted)]">
+                    Quando ativado, o agente escolhe uma folha antes de resolver a conversa deste
+                    departamento.
+                  </div>
+                </div>
+                <SwitchGlass
+                  checked={requireOnClose}
+                  onChange={(v) => toggleRequire.mutate(v)}
+                  disabled={toggleRequire.isPending}
+                  size="list"
+                  aria-label="Exigir tabulação ao encerrar"
+                />
+              </div>
+            ) : null}
+          </div>
+        </GlassCard>
+
+        {/* ── Árvore de tabulações ─────────────────────────────────── */}
         {effectiveDeptId ? (
           <TreeEditor
             tree={treeQuery.data?.tree ?? []}
             loading={treeQuery.isLoading}
+            leaves={leaves}
             onCreate={(parentId, name) => createNode.mutate({ parentId, name })}
             onRename={(id, name) => updateNode.mutate({ id, name })}
             onToggleActive={(id, active) => updateNode.mutate({ id, active })}
@@ -213,9 +234,108 @@ export default function TabulationsClientPage() {
   );
 }
 
+/* ─── Seletor de departamento (dropdown glass com ícone real) ─────── */
+
+function DeptSelect({
+  departments,
+  selected,
+  onSelect,
+}: {
+  departments: Department[];
+  selected: Department | null;
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const fn = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", fn);
+    return () => document.removeEventListener("pointerdown", fn);
+  }, [open]);
+
+  const disabled = departments.length === 0;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--brand-primary)]/50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {selected ? (
+          <span
+            className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)]"
+            style={{ backgroundColor: (selected.color ?? "#6366f1") + "1f" }}
+          >
+            <DeptGlyph icon={selected.icon} size={16} color={selected.color ?? undefined} />
+          </span>
+        ) : null}
+        <span className="flex-1 truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
+          {selected?.name ?? "Nenhum departamento cadastrado"}
+        </span>
+        <IconChevronDown
+          size={16}
+          className={cn(
+            "shrink-0 text-[var(--text-muted)] transition-transform",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+
+      {open && departments.length > 0 && (
+        <div className="absolute left-0 top-full z-50 mt-1.5 max-h-[280px] w-full overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[0_10px_30px_rgba(15,23,42,0.16)]">
+          {departments.map((d) => {
+            const isSel = d.id === selected?.id;
+            return (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => {
+                  onSelect(d.id);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                  isSel
+                    ? "bg-[var(--brand-primary)]/8"
+                    : "hover:bg-[var(--glass-bg-overlay)]",
+                )}
+              >
+                <span
+                  className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)]"
+                  style={{ backgroundColor: (d.color ?? "#6366f1") + "1f" }}
+                >
+                  <DeptGlyph icon={d.icon} size={16} color={d.color ?? undefined} />
+                </span>
+                <span
+                  className={cn(
+                    "flex-1 truncate font-display text-[13px] font-semibold",
+                    isSel ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]",
+                  )}
+                >
+                  {d.name}
+                </span>
+                {isSel && <IconCheck size={15} className="shrink-0 text-[var(--brand-primary)]" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Editor da árvore ────────────────────────────────────────────── */
+
 function TreeEditor(props: {
   tree: TabulationNode[];
   loading: boolean;
+  leaves: number;
   onCreate: (parentId: string | null, name: string) => void;
   onRename: (id: string, name: string) => void;
   onToggleActive: (id: string, active: boolean) => void;
@@ -223,47 +343,71 @@ function TreeEditor(props: {
 }) {
   const [newRootName, setNewRootName] = useState("");
 
+  const submitRoot = () => {
+    const name = newRootName.trim();
+    if (!name) return;
+    props.onCreate(null, name);
+    setNewRootName("");
+  };
+
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm font-semibold text-[var(--text-primary)]">Árvore de tabulações</div>
-          <div className="text-xs text-[var(--text-muted)]">
+    <GlassCard variant="panel" className="min-w-0 p-4 sm:p-5">
+      {/* Header */}
+      <div className="mb-4 flex items-center gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
+          <IconListTree size={20} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+            Árvore de tabulações
+          </h2>
+          <p className="font-body text-[12px] text-[var(--text-muted)]">
             Categorias (nós internos) organizam; agentes selecionam uma folha.
-          </div>
+          </p>
         </div>
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--glass-bg-base)] px-2.5 py-1 font-display text-[11.5px] font-semibold text-[var(--text-secondary)]">
+          <IconSparkles size={14} className="text-[var(--brand-primary)]" />
+          {props.leaves} {props.leaves === 1 ? "folha" : "folhas"}
+        </span>
       </div>
 
-      <form
-        className="flex items-center gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const name = newRootName.trim();
-          if (!name) return;
-          props.onCreate(null, name);
-          setNewRootName("");
-        }}
-      >
-        <Input
+      {/* Nova categoria raiz */}
+      <div className="mb-4 flex items-center gap-2">
+        <InputGlass
           placeholder="Nova categoria raiz…"
           value={newRootName}
           onChange={(e) => setNewRootName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return;
+            if (e.key === "Enter") {
+              e.preventDefault();
+              submitRoot();
+            }
+          }}
         />
-        <Button type="submit" size="sm">
-          <Plus size={16} className="mr-1" /> Adicionar
-        </Button>
-      </form>
+        <ButtonGlass
+          type="button"
+          variant="primary"
+          onClick={submitRoot}
+          disabled={!newRootName.trim()}
+          className="shrink-0"
+        >
+          <IconPlus size={16} /> Adicionar
+        </ButtonGlass>
+      </div>
 
       {props.loading ? (
-        <div className="py-8 text-center text-sm text-[var(--text-muted)]">Carregando…</div>
+        <div className="py-10 text-center font-body text-[13px] text-[var(--text-muted)]">
+          Carregando…
+        </div>
       ) : props.tree.length === 0 ? (
-        <div className="py-8 text-center text-sm text-[var(--text-muted)]">
+        <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] py-10 text-center font-body text-[13px] text-[var(--text-muted)]">
           Nenhuma tabulação ainda. Crie a primeira categoria acima.
         </div>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <div className="flex flex-col gap-2.5">
           {props.tree.map((n) => (
-            <TreeItem
+            <TreeCard
               key={n.id}
               node={n}
               depth={0}
@@ -273,13 +417,15 @@ function TreeEditor(props: {
               onDelete={props.onDelete}
             />
           ))}
-        </ul>
+        </div>
       )}
-    </div>
+    </GlassCard>
   );
 }
 
-function TreeItem(props: {
+/* ─── Card de nó (estilo v0 + DS v2) ──────────────────────────────── */
+
+function TreeCard(props: {
   node: TabulationNode;
   depth: number;
   onCreate: (parentId: string | null, name: string) => void;
@@ -290,155 +436,231 @@ function TreeItem(props: {
   const { node, depth } = props;
   const [open, setOpen] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState(node.name);
-  const [addingChild, setAddingChild] = useState(false);
+  const [draft, setDraft] = useState(node.name);
+  const [adding, setAdding] = useState(false);
   const [childName, setChildName] = useState("");
+
   const hasChildren = node.children.length > 0;
   const isLeaf = !hasChildren;
-  const indent = useMemo(() => ({ paddingLeft: `${depth * 18}px` }), [depth]);
+
+  const commitRename = () => {
+    const t = draft.trim();
+    if (t && t !== node.name) props.onRename(node.id, t);
+    setEditing(false);
+  };
+  const commitAdd = () => {
+    const t = childName.trim();
+    if (t) {
+      props.onCreate(node.id, t);
+      setOpen(true);
+    }
+    setChildName("");
+    setAdding(false);
+  };
 
   return (
-    <li>
-      <div
-        className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-[var(--glass-bg)]"
-        style={indent}
-      >
+    <div
+      className={cn(
+        "rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] transition-colors",
+        node.active ? "border-[var(--glass-border)]" : "border-dashed border-[var(--glass-border)] opacity-75",
+      )}
+    >
+      <div className="group flex items-center gap-3 p-2.5">
+        {/* Ícone tile */}
         <button
           type="button"
-          className="text-[var(--text-muted)]"
-          onClick={() => setOpen((s) => !s)}
-          aria-label={open ? "Recolher" : "Expandir"}
+          onClick={() => hasChildren && setOpen((v) => !v)}
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-colors",
+            isLeaf
+              ? "bg-[var(--glass-bg-base)] text-[var(--text-secondary)]"
+              : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/15",
+          )}
+          aria-label={hasChildren ? (open ? "Recolher" : "Expandir") : undefined}
         >
-          {hasChildren ? (
-            open ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+          {isLeaf ? (
+            <IconCircleDot size={19} />
+          ) : open ? (
+            <IconFolderOpen size={19} />
           ) : (
-            <span className="inline-block h-4 w-4" />
+            <IconFolder size={19} />
           )}
         </button>
 
+        {/* Nome + subtítulo OU edição */}
         {editing ? (
-          <form
-            className="flex flex-1 items-center gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const v = editName.trim();
-              if (!v) return;
-              props.onRename(node.id, v);
-              setEditing(false);
-            }}
-          >
-            <Input
+          <div className="flex flex-1 items-center gap-2">
+            <InputGlass
               autoFocus
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-            />
-            <Button type="submit" size="sm">Salvar</Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setEditing(false);
-                setEditName(node.name);
-              }}
-            >
-              Cancelar
-            </Button>
-          </form>
-        ) : (
-          <>
-            <span
-              className={`flex-1 truncate text-sm ${
-                node.active ? "text-[var(--text-primary)]" : "text-[var(--text-muted)] line-through"
-              }`}
-            >
-              {node.name}
-              {isLeaf ? (
-                <span className="ml-2 rounded-full bg-[var(--glass-bg)] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
-                  folha
-                </span>
-              ) : null}
-            </span>
-            <Switch
-              checked={node.active}
-              onCheckedChange={(v) => props.onToggleActive(node.id, !!v)}
-              aria-label="Ativa"
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setAddingChild((s) => !s)}
-              title="Adicionar filho"
-            >
-              <Plus size={14} />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setEditing(true)}
-              title="Renomear"
-            >
-              <Edit3 size={14} />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                if (confirm(`Remover "${node.name}" e todos os subitens?`)) {
-                  props.onDelete(node.id);
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing) return;
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  commitRename();
+                }
+                if (e.key === "Escape") {
+                  setDraft(node.name);
+                  setEditing(false);
                 }
               }}
-              title="Remover"
+            />
+            <button
+              type="button"
+              onClick={commitRename}
+              aria-label="Salvar"
+              className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-base)]"
             >
-              <Trash2 size={14} />
-            </Button>
-          </>
+              <IconCheck size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(node.name);
+                setEditing(false);
+              }}
+              aria-label="Cancelar"
+              className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)]"
+            >
+              <IconX size={17} />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => hasChildren && setOpen((v) => !v)}
+            className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+          >
+            <span className="flex min-w-0 flex-col">
+              <span
+                className={cn(
+                  "truncate font-display text-[13.5px] font-semibold",
+                  node.active
+                    ? "text-[var(--text-primary)]"
+                    : "text-[var(--text-muted)] line-through",
+                )}
+              >
+                {node.name}
+              </span>
+              <span className="font-body text-[11px] text-[var(--text-muted)]">
+                {isLeaf
+                  ? "Selecionável pelo agente"
+                  : `${node.children.length} ${node.children.length === 1 ? "subitem" : "subitens"}`}
+              </span>
+            </span>
+            <span
+              className={cn(
+                "shrink-0 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-wider",
+                isLeaf
+                  ? "bg-[var(--glass-bg-base)] text-[var(--text-secondary)]"
+                  : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
+              )}
+            >
+              {isLeaf ? "Folha" : "Categoria"}
+            </span>
+            {hasChildren && (
+              <IconChevronDown
+                size={16}
+                className={cn(
+                  "shrink-0 text-[var(--text-muted)] transition-transform",
+                  open && "rotate-180",
+                )}
+              />
+            )}
+          </button>
+        )}
+
+        {/* Ações */}
+        {!editing && (
+          <div className="flex shrink-0 items-center gap-1">
+            <SwitchGlass
+              checked={node.active}
+              onChange={(v) => props.onToggleActive(node.id, v)}
+              size="sm"
+              aria-label={node.active ? "Desativar" : "Ativar"}
+            />
+            <div className="flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                aria-label="Adicionar subcategoria"
+                className="flex size-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--brand-primary)]"
+              >
+                <IconPlus size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(node.name);
+                  setEditing(true);
+                }}
+                aria-label="Renomear"
+                className="flex size-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)]"
+              >
+                <IconEdit size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Remover "${node.name}" e todos os subitens?`)) {
+                    props.onDelete(node.id);
+                  }
+                }}
+                aria-label="Excluir"
+                className="flex size-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
+              >
+                <IconTrash size={16} />
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
-      {addingChild ? (
-        <form
-          className="flex items-center gap-2 py-1"
-          style={{ paddingLeft: `${(depth + 1) * 18}px` }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const v = childName.trim();
-            if (!v) return;
-            props.onCreate(node.id, v);
-            setChildName("");
-            setAddingChild(false);
-          }}
-        >
-          <Input
+      {/* Form de adicionar filho */}
+      {adding && (
+        <div className="flex items-center gap-2 px-2.5 pb-2.5 pl-[62px]">
+          <InputGlass
             autoFocus
-            placeholder="Nome do subitem…"
             value={childName}
+            placeholder="Nome da subcategoria…"
             onChange={(e) => setChildName(e.target.value)}
-          />
-          <Button type="submit" size="sm">Adicionar</Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setAddingChild(false);
-              setChildName("");
+            onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing) return;
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitAdd();
+              }
+              if (e.key === "Escape") {
+                setChildName("");
+                setAdding(false);
+              }
             }}
+          />
+          <ButtonGlass type="button" variant="primary" onClick={commitAdd} className="shrink-0">
+            <IconCheck size={16} /> Adicionar
+          </ButtonGlass>
+          <button
+            type="button"
+            onClick={() => {
+              setChildName("");
+              setAdding(false);
+            }}
+            aria-label="Cancelar"
+            className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)]"
           >
-            Cancelar
-          </Button>
-        </form>
-      ) : null}
+            <IconX size={17} />
+          </button>
+        </div>
+      )}
 
-      {open && hasChildren ? (
-        <ul className="flex flex-col gap-1">
-          {node.children.map((c) => (
-            <TreeItem
-              key={c.id}
-              node={c}
+      {/* Filhos */}
+      {hasChildren && open && (
+        <div className="ml-5 space-y-2.5 border-l border-[var(--glass-border)] py-1 pb-2.5 pl-4 pr-2.5">
+          {node.children.map((child) => (
+            <TreeCard
+              key={child.id}
+              node={child}
               depth={depth + 1}
               onCreate={props.onCreate}
               onRename={props.onRename}
@@ -446,8 +668,8 @@ function TreeItem(props: {
               onDelete={props.onDelete}
             />
           ))}
-        </ul>
-      ) : null}
-    </li>
+        </div>
+      )}
+    </div>
   );
 }

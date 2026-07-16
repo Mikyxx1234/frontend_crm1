@@ -364,26 +364,59 @@ const AUTOMATION_TEXT = "#1e1b39"
 const AUTOMATION_ACCENT = "#6c5ce7"
 
 /**
- * Botões de resposta rápida (interactive/template) renderizados como
- * cards empilhados abaixo do corpo — igual ao WhatsApp e à referência V0.
+ * Botões de resposta rápida (interactive/template) — preview compacto no
+ * CRM: sub-card com label "Opções enviadas" + pills inline (flex wrap).
+ * Sinaliza claramente que é uma prévia (nao-clicavel no CRM), evitando
+ * confusao com botao real.
  * `onLightBg` = bolha clara (automação): card branco com acento violeta.
  */
 function MessageButtons({ buttons, onLightBg }: { buttons: string[]; onLightBg: boolean }) {
+  const cardStyle = onLightBg
+    ? {
+        borderColor: `${AUTOMATION_ACCENT}33`,
+        background: `${AUTOMATION_ACCENT}0d`,
+      }
+    : {
+        borderColor: "rgba(255,255,255,0.22)",
+        background: "rgba(255,255,255,0.08)",
+      }
+  const labelStyle = onLightBg
+    ? { color: `${AUTOMATION_ACCENT}` }
+    : { color: "rgba(255,255,255,0.75)" }
+  const pillStyle = onLightBg
+    ? {
+        borderColor: `${AUTOMATION_ACCENT}66`,
+        background: "#ffffff",
+        color: AUTOMATION_ACCENT,
+      }
+    : {
+        borderColor: "rgba(255,255,255,0.35)",
+        background: "rgba(255,255,255,0.16)",
+        color: "#ffffff",
+      }
   return (
-    <div className="mt-2.5 grid gap-1.5">
-      {buttons.map((b, i) => (
-        <span
-          key={`${b}-${i}`}
-          className="rounded-lg border px-3 py-1.5 text-center font-display text-[12.5px] font-semibold"
-          style={
-            onLightBg
-              ? { borderColor: `${AUTOMATION_ACCENT}4d`, background: "#ffffff", color: AUTOMATION_ACCENT }
-              : { borderColor: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.14)", color: "#ffffff" }
-          }
-        >
-          {b}
-        </span>
-      ))}
+    <div
+      className="mt-2.5 rounded-lg border px-2.5 py-2"
+      style={cardStyle}
+    >
+      <div
+        className="mb-1.5 font-display text-[9.5px] font-bold uppercase tracking-[0.08em] opacity-80"
+        style={labelStyle}
+      >
+        Opções enviadas
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {buttons.map((b, i) => (
+          <span
+            key={`${b}-${i}`}
+            className="inline-flex max-w-full items-center rounded-md border px-2 py-0.5 font-display text-[11.5px] font-semibold leading-tight"
+            style={pillStyle}
+            title={b}
+          >
+            <span className="truncate">{b}</span>
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

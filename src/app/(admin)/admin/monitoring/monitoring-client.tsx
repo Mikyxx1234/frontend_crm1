@@ -5,15 +5,26 @@ import {
   IconAlertTriangle as AlertTriangle,
   IconRefresh as RefreshCw,
   IconDownload as Download,
+  IconClipboardCheck as ClipboardCheck,
   IconClipboard as Clipboard,
   IconCpu as Cpu,
   IconDatabase as Database,
   IconServer as Server,
   IconStack2 as Stack,
+  IconActivity as Activity,
+  IconCircleCheck as CircleCheck,
+  IconBolt as Bolt,
+  IconClockHour4 as Clock,
 } from "@tabler/icons-react";
 
-import { Badge } from "@/components/ui/badge";
+import { GlassCard } from "@/components/crm/glass-card";
+import {
+  HubStat,
+  HubStatGrid,
+  HubCallout,
+} from "@/features/legacy-v1/settings/message-models/hub-ui";
 import { apiUrl } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 import { MonitoringCharts, type SeriesResponse } from "./monitoring-charts";
 
@@ -92,6 +103,7 @@ export function MonitoringClient({ initial }: { initial: PerfReport | null }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -132,6 +144,8 @@ export function MonitoringClient({ initial }: { initial: PerfReport | null }) {
   const copyForAi = useCallback(async () => {
     if (!report) return;
     await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
   }, [report]);
 
   const downloadJson = useCallback(() => {
@@ -145,114 +159,131 @@ export function MonitoringClient({ initial }: { initial: PerfReport | null }) {
     URL.revokeObjectURL(url);
   }, [report]);
 
+  const criticalCount = report?.recommendations.filter((r) => r.severity === "critical").length ?? 0;
+  const warningCount = report?.recommendations.filter((r) => r.severity === "warning").length ?? 0;
+  const worstDisk = useMemo(() => {
+    const list = report?.host.diskFreePctByMount ?? [];
+    if (list.length === 0) return null;
+    return list.reduce((min, d) => (d.freePct < min.freePct ? d : min));
+  }, [report]);
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex overflow-hidden rounded-full border border-border bg-background">
-          {WINDOW_OPTIONS.map((opt) => (
-            <button
-              key={opt.minutes}
-              onClick={() => setWindowMinutes(opt.minutes)}
-              className={`px-3 py-1.5 text-sm transition ${
-                windowMinutes === opt.minutes ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+    <div className="flex flex-col gap-5">
+      {/* Toolbar glass */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <SegmentedControl
+          options={WINDOW_OPTIONS.map((o) => ({ value: String(o.minutes), label: o.label }))}
+          value={String(windowMinutes)}
+          onChange={(v) => setWindowMinutes(Number(v))}
+        />
 
-        <div className="flex overflow-hidden rounded-full border border-border bg-background">
-          <button
-            onClick={() => setEnvFilter("all")}
-            className={`px-3 py-1.5 text-sm transition ${envFilter === "all" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-          >
-            all
-          </button>
-          {envKeys.map((e) => (
-            <button
-              key={e}
-              onClick={() => setEnvFilter(e)}
-              className={`px-3 py-1.5 text-sm transition ${envFilter === e ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-            >
-              {e}
-            </button>
-          ))}
-        </div>
+        {envKeys.length > 0 ? (
+          <SegmentedControl
+            options={[{ value: "all", label: "todos" }, ...envKeys.map((e) => ({ value: e, label: e }))]}
+            value={envFilter}
+            onChange={setEnvFilter}
+          />
+        ) : null}
 
-        <label className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm">
+        <label className="inline-flex cursor-pointer select-none items-center gap-2 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--brand-primary)]">
           <input
             type="checkbox"
             checked={autoRefresh}
             onChange={(e) => setAutoRefresh(e.target.checked)}
-            className="size-3.5"
+            className="size-3.5 accent-[var(--brand-primary)]"
           />
-          Auto (30s)
+          Auto 30s
         </label>
 
-        <button
-          onClick={() => void refresh()}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm transition hover:bg-muted disabled:opacity-50"
-        >
-          <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
+        <ToolbarButton onClick={() => void refresh()} disabled={loading}>
+          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
           Atualizar
-        </button>
+        </ToolbarButton>
 
         <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={copyForAi}
-            disabled={!report}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm transition hover:bg-muted disabled:opacity-50"
-            title="Copiar JSON completo para colar em prompt de IA"
-          >
-            <Clipboard className="size-4" />
-            Copiar p/ IA
-          </button>
-          <button
-            onClick={downloadJson}
-            disabled={!report}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm transition hover:bg-muted disabled:opacity-50"
-          >
+          <ToolbarButton onClick={copyForAi} disabled={!report} title="Copiar JSON completo para colar em prompt de IA">
+            {copied ? <ClipboardCheck className="size-4 text-[var(--color-success)]" /> : <Clipboard className="size-4" />}
+            {copied ? "Copiado" : "Copiar p/ IA"}
+          </ToolbarButton>
+          <ToolbarButton onClick={downloadJson} disabled={!report}>
             <Download className="size-4" />
             Baixar JSON
-          </button>
+          </ToolbarButton>
         </div>
       </div>
 
-      {error ? (
-        <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {error}
+      {report ? (
+        <div className="flex items-center gap-2 text-[11.5px] text-[var(--text-muted)]">
+          <Clock className="size-3.5" />
+          Atualizado {new Date(report.generatedAt).toLocaleTimeString()} · janela de{" "}
+          {windowMinutes >= 60 ? `${windowMinutes / 60}h` : `${windowMinutes}m`}
+          {report.prometheusConfigured ? (
+            <span className="inline-flex items-center gap-1 text-[var(--color-success-text)]">
+              <span className="size-1.5 rounded-full bg-[var(--color-success)]" /> Prometheus conectado
+            </span>
+          ) : null}
         </div>
       ) : null}
 
+      {error ? (
+        <HubCallout tone="danger" icon={<AlertTriangle className="size-[18px]" />}>
+          Falha ao carregar: {error}
+        </HubCallout>
+      ) : null}
+
       {!report ? (
-        <div className="rounded-xl border border-border bg-background p-10 text-center text-sm text-muted-foreground">
-          Sem dados. Verifique se voce e super-admin e se `PROMETHEUS_URL` esta configurado no backend.
-        </div>
+        <GlassCard variant="panel" className="p-10 text-center">
+          <Activity className="mx-auto mb-3 size-8 text-[var(--text-muted)]" />
+          <p className="text-[13px] font-semibold text-[var(--text-primary)]">Sem dados</p>
+          <p className="mt-1 text-[12px] text-[var(--text-muted)]">
+            Verifique se você é super-admin e se <code className="font-mono">PROMETHEUS_URL</code> está configurado no backend.
+          </p>
+        </GlassCard>
       ) : (
         <>
           {!report.prometheusConfigured ? (
-            <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 text-xs text-warning">
-              Prometheus nao configurado no backend (`PROMETHEUS_URL`). Metricas de container/host indisponiveis;
-              slow queries funcionam via pg direto.
-            </div>
+            <HubCallout tone="warn" icon={<AlertTriangle className="size-[18px]" />}>
+              Prometheus não configurado no backend (<code className="font-mono">PROMETHEUS_URL</code>). Métricas de
+              container/host indisponíveis; slow queries funcionam via pg direto.
+            </HubCallout>
           ) : null}
 
-          {/* Recomendacoes */}
+          {/* Visão geral */}
+          <HubStatGrid>
+            <HubStat
+              tone={criticalCount > 0 ? "warn" : warningCount > 0 ? "warn" : "success"}
+              icon={criticalCount + warningCount > 0 ? <AlertTriangle className="size-5" /> : <CircleCheck className="size-5" />}
+              value={criticalCount + warningCount === 0 ? "OK" : `${criticalCount + warningCount}`}
+              label={criticalCount + warningCount === 0 ? "Sistema saudável" : `Alertas (${criticalCount} críticos)`}
+            />
+            <HubStat
+              tone="brand"
+              icon={<Cpu className="size-5" />}
+              value={report.containers.length}
+              label="Containers monitorados"
+            />
+            <HubStat
+              tone={report.host.load1 > 4 ? "warn" : "violet"}
+              icon={<Bolt className="size-5" />}
+              value={report.host.load1.toFixed(2)}
+              label="Load 1m (host)"
+            />
+            <HubStat
+              tone={worstDisk && worstDisk.freePct < 15 ? "warn" : "success"}
+              icon={<Server className="size-5" />}
+              value={worstDisk ? `${worstDisk.freePct.toFixed(0)}%` : "—"}
+              label={worstDisk ? `Disco livre (${worstDisk.mount})` : "Disco livre"}
+            />
+          </HubStatGrid>
+
           <RecommendationsCard recs={report.recommendations} />
 
-          {/* Host */}
           <HostCard host={report.host} />
 
-          {/* Containers */}
           <ContainersCard containers={report.containers} />
 
-          {/* Charts */}
           {series ? <MonitoringCharts data={series} /> : null}
 
-          {/* Por env */}
           {envsToShow.map((env) => (
             <EnvCard key={env} env={env} stats={report.envs[env]!} />
           ))}
@@ -262,207 +293,345 @@ export function MonitoringClient({ initial }: { initial: PerfReport | null }) {
   );
 }
 
+/* ────────────────────────── Toolbar bits ────────────────────────── */
+
+function SegmentedControl({
+  options,
+  value,
+  onChange,
+}: {
+  options: Array<{ value: string; label: string }>;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="inline-flex flex-nowrap gap-1 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "rounded-[var(--radius-full)] px-3 py-1.5 text-[12.5px] font-bold transition-colors",
+              active
+                ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.30)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+            )}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ToolbarButton({
+  children,
+  onClick,
+  disabled,
+  title,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--input-border-focus)] hover:text-[var(--brand-primary)] disabled:pointer-events-none disabled:opacity-50"
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ────────────────────────── Section shell ────────────────────────── */
+
+function SectionCard({
+  title,
+  icon,
+  count,
+  right,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  count?: number;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <GlassCard variant="panel" className="overflow-hidden">
+      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3.5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+          {icon}
+        </span>
+        <h2 className="text-[15px] font-extrabold tracking-tight text-[var(--text-primary)]">{title}</h2>
+        {typeof count === "number" ? (
+          <span className="rounded-[var(--radius-full)] bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-secondary)]">
+            {count}
+          </span>
+        ) : null}
+        {right ? <div className="ml-auto">{right}</div> : null}
+      </div>
+      <div className="p-4">{children}</div>
+    </GlassCard>
+  );
+}
+
+function StatTile({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3">
+      <div className="text-[10.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{label}</div>
+      <div
+        className={cn(
+          "mt-1 text-[18px] font-extrabold tabular-nums leading-none tracking-tight",
+          warn ? "text-[var(--color-warn)]" : "text-[var(--text-primary)]",
+        )}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────── Sections ────────────────────────── */
+
 function RecommendationsCard({ recs }: { recs: PerfRecommendation[] }) {
   if (recs.length === 0) {
     return (
-      <Section title="Recomendacoes" icon={<AlertTriangle className="size-4" />}>
-        <div className="text-sm text-muted-foreground">
-          Nenhuma recomendacao acima dos thresholds. Sistema saudavel na janela atual.
+      <SectionCard title="Recomendações" icon={<AlertTriangle className="size-[18px]" />}>
+        <div className="flex items-center gap-2 text-[13px] text-[var(--text-muted)]">
+          <CircleCheck className="size-4 text-[var(--color-success)]" />
+          Nenhuma recomendação acima dos thresholds. Sistema saudável na janela atual.
         </div>
-      </Section>
+      </SectionCard>
     );
   }
+  const tone = (s: PerfRecommendation["severity"]): "danger" | "warn" | "info" =>
+    s === "critical" ? "danger" : s === "warning" ? "warn" : "info";
   return (
-    <Section title={`Recomendacoes (${recs.length})`} icon={<AlertTriangle className="size-4" />}>
-      <ul className="divide-y divide-border">
+    <SectionCard title="Recomendações" icon={<AlertTriangle className="size-[18px]" />} count={recs.length}>
+      <div className="flex flex-col gap-2.5">
         {recs.map((r) => (
-          <li key={r.id} className="flex flex-col gap-1 py-2 first:pt-0 last:pb-0">
+          <HubCallout key={r.id} tone={tone(r.severity)} icon={<AlertTriangle className="size-[18px]" />}>
             <div className="flex flex-wrap items-center gap-2">
               <SeverityBadge severity={r.severity} />
-              <span className="font-mono text-xs text-muted-foreground">{r.target}</span>
-              <span className="text-sm font-medium">{r.action}</span>
+              <span className="font-mono text-[11px] text-[var(--text-muted)]">{r.target}</span>
+              <span className="text-[13px] font-bold text-[var(--text-primary)]">{r.action}</span>
             </div>
-            <div className="text-xs text-muted-foreground">
-              {r.rationale} <span className="opacity-70">· metric={r.metric} observed={fmtNum(r.observed)} threshold={fmtNum(r.threshold)}</span>
+            <div className="mt-1 text-[12px] text-[var(--text-secondary)]">
+              {r.rationale}{" "}
+              <span className="text-[var(--text-muted)]">
+                · metric={r.metric} observed={fmtNum(r.observed)} threshold={fmtNum(r.threshold)}
+              </span>
             </div>
-          </li>
+          </HubCallout>
         ))}
-      </ul>
-    </Section>
+      </div>
+    </SectionCard>
   );
 }
 
 function HostCard({ host }: { host: PerfReport["host"] }) {
   return (
-    <Section title="Host" icon={<Server className="size-4" />}>
+    <SectionCard title="Host" icon={<Server className="size-[18px]" />}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Metric label="load 1m" value={host.load1.toFixed(2)} />
-        <Metric label="load 5m" value={host.load5.toFixed(2)} />
-        <Metric label="load 15m" value={host.load15.toFixed(2)} />
-        <Metric label="IO r/w /s" value={`${host.ioReadsPerSec.toFixed(0)} / ${host.ioWritesPerSec.toFixed(0)}`} />
+        <StatTile label="Load 1m" value={host.load1.toFixed(2)} warn={host.load1 > 4} />
+        <StatTile label="Load 5m" value={host.load5.toFixed(2)} warn={host.load5 > 4} />
+        <StatTile label="Load 15m" value={host.load15.toFixed(2)} warn={host.load15 > 4} />
+        <StatTile label="IO r/w /s" value={`${host.ioReadsPerSec.toFixed(0)} / ${host.ioWritesPerSec.toFixed(0)}`} />
       </div>
       {host.diskFreePctByMount.length > 0 ? (
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {host.diskFreePctByMount.map((d) => (
-            <div key={d.mount} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-xs">
-              <span className="font-mono">{d.mount}</span>
-              <span className={d.freePct < 15 ? "font-semibold text-destructive" : "text-foreground"}>
-                {d.freePct.toFixed(1)}% livre
-              </span>
-            </div>
-          ))}
+        <div className="mt-3.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {host.diskFreePctByMount.map((d) => {
+            const low = d.freePct < 15;
+            return (
+              <div
+                key={d.mount}
+                className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-2.5"
+              >
+                <div className="flex items-center justify-between text-[12px]">
+                  <span className="font-mono text-[var(--text-secondary)]">{d.mount}</span>
+                  <span className={cn("font-bold tabular-nums", low ? "text-[var(--color-danger)]" : "text-[var(--text-primary)]")}>
+                    {d.freePct.toFixed(1)}% livre
+                  </span>
+                </div>
+                <Bar pct={100 - d.freePct} tone={low ? "danger" : d.freePct < 30 ? "warn" : "brand"} />
+              </div>
+            );
+          })}
         </div>
       ) : null}
-    </Section>
+    </SectionCard>
   );
 }
 
 function ContainersCard({ containers }: { containers: ContainerStat[] }) {
   if (containers.length === 0) return null;
+  const sorted = [...containers].sort((a, b) => b.cpuPct - a.cpuPct);
+  const maxMem = Math.max(...sorted.map((c) => c.memBytes), 1);
   return (
-    <Section title={`Containers (${containers.length})`} icon={<Cpu className="size-4" />}>
+    <SectionCard title="Containers" icon={<Cpu className="size-[18px]" />} count={containers.length}>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="px-2 py-2 text-left">Container</th>
-              <th className="px-2 py-2 text-right">CPU %</th>
-              <th className="px-2 py-2 text-right">CPU pico</th>
-              <th className="px-2 py-2 text-right">Mem</th>
-              <th className="px-2 py-2 text-right">Mem pico</th>
-              <th className="px-2 py-2 text-right">Rede rx/tx</th>
-              <th className="px-2 py-2 text-right">IO r/w</th>
+        <table className="w-full border-separate border-spacing-0 text-[13px]">
+          <thead>
+            <tr className="text-[10.5px] uppercase tracking-wide text-[var(--text-muted)]">
+              <th className="px-2 py-2 text-left font-semibold">Container</th>
+              <th className="px-2 py-2 text-left font-semibold">CPU %</th>
+              <th className="px-2 py-2 text-right font-semibold">CPU pico</th>
+              <th className="px-2 py-2 text-left font-semibold">Memória</th>
+              <th className="px-2 py-2 text-right font-semibold">Mem pico</th>
+              <th className="px-2 py-2 text-right font-semibold">Rede rx/tx</th>
+              <th className="px-2 py-2 text-right font-semibold">IO r/w</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
-            {containers.map((c) => (
-              <tr key={c.name} className="hover:bg-muted/30">
-                <td className="px-2 py-1.5 font-mono text-xs">{c.name}</td>
-                <td className={`px-2 py-1.5 text-right tabular-nums ${c.cpuPct > 80 ? "font-semibold text-destructive" : ""}`}>
-                  {c.cpuPct.toFixed(1)}
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{c.cpuPctPeak.toFixed(1)}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{fmtBytes(c.memBytes)}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{fmtBytes(c.memBytesPeak)}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums text-xs">
-                  {fmtBytes(c.netRxBytesPerSec)}/s · {fmtBytes(c.netTxBytesPerSec)}/s
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums text-xs">
-                  {fmtBytes(c.ioReadBytesPerSec)}/s · {fmtBytes(c.ioWriteBytesPerSec)}/s
-                </td>
-              </tr>
-            ))}
+          <tbody>
+            {sorted.map((c) => {
+              const hot = c.cpuPct > 80;
+              return (
+                <tr key={c.name} className="border-t border-[var(--glass-border-subtle)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
+                  <td className="max-w-[220px] truncate px-2 py-2 font-mono text-[11.5px] text-[var(--text-secondary)]" title={c.name}>
+                    {c.name}
+                  </td>
+                  <td className="px-2 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("w-10 shrink-0 tabular-nums font-bold", hot ? "text-[var(--color-danger)]" : "text-[var(--text-primary)]")}>
+                        {c.cpuPct.toFixed(1)}
+                      </span>
+                      <div className="min-w-[60px] flex-1">
+                        <Bar pct={Math.min(c.cpuPct, 100)} tone={hot ? "danger" : c.cpuPct > 50 ? "warn" : "brand"} />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.cpuPctPeak.toFixed(1)}</td>
+                  <td className="px-2 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-14 shrink-0 tabular-nums font-semibold text-[var(--text-primary)]">{fmtBytes(c.memBytes)}</span>
+                      <div className="min-w-[60px] flex-1">
+                        <Bar pct={(c.memBytes / maxMem) * 100} tone="violet" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{fmtBytes(c.memBytesPeak)}</td>
+                  <td className="px-2 py-2 text-right tabular-nums text-[11.5px] text-[var(--text-muted)]">
+                    {fmtBytes(c.netRxBytesPerSec)}/s · {fmtBytes(c.netTxBytesPerSec)}/s
+                  </td>
+                  <td className="px-2 py-2 text-right tabular-nums text-[11.5px] text-[var(--text-muted)]">
+                    {fmtBytes(c.ioReadBytesPerSec)}/s · {fmtBytes(c.ioWriteBytesPerSec)}/s
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
-    </Section>
+    </SectionCard>
   );
 }
 
 function EnvCard({ env, stats }: { env: string; stats: EnvStats }) {
   return (
-    <Section title={`Env: ${env}`} icon={<Stack className="size-4" />}>
+    <SectionCard title={`Env: ${env}`} icon={<Stack className="size-[18px]" />}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Metric label="RPS" value={stats.api.rps.toFixed(2)} />
-        <Metric
-          label="p95"
-          value={`${(stats.api.p95Latency * 1000).toFixed(0)}ms`}
-          warn={stats.api.p95Latency > 1}
-        />
-        <Metric
-          label="erro 5xx"
-          value={`${(stats.api.errorRate * 100).toFixed(1)}%`}
-          warn={stats.api.errorRate > 0.05}
-        />
-        <Metric label="AI tokens/min" value={stats.ai.tokensPerMin.toFixed(0)} />
-        <Metric label="Meta /min" value={stats.meta.callsPerMin.toFixed(0)} />
-        <Metric label="DB conns" value={stats.db.connectionsActive.toFixed(0)} />
-        <Metric
+        <StatTile label="RPS" value={stats.api.rps.toFixed(2)} />
+        <StatTile label="p95" value={`${(stats.api.p95Latency * 1000).toFixed(0)}ms`} warn={stats.api.p95Latency > 1} />
+        <StatTile label="Erro 5xx" value={`${(stats.api.errorRate * 100).toFixed(1)}%`} warn={stats.api.errorRate > 0.05} />
+        <StatTile label="AI tokens/min" value={stats.ai.tokensPerMin.toFixed(0)} />
+        <StatTile label="Meta /min" value={stats.meta.callsPerMin.toFixed(0)} />
+        <StatTile label="DB conns" value={stats.db.connectionsActive.toFixed(0)} />
+        <StatTile
           label="DB cache hit"
           value={`${(stats.db.cacheHitRatio * 100).toFixed(1)}%`}
           warn={stats.db.cacheHitRatio > 0 && stats.db.cacheHitRatio < 0.9}
         />
-        <Metric label="DB size" value={fmtBytes(stats.db.sizeBytes)} />
+        <StatTile label="DB size" value={fmtBytes(stats.db.sizeBytes)} />
       </div>
 
       {stats.queues.byQueue.length > 0 ? (
-        <div className="mt-3">
-          <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <Database className="mr-1 inline size-3" /> Filas BullMQ
+        <div className="mt-4">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+            <Database className="size-3.5" /> Filas BullMQ
           </div>
-          <table className="w-full text-sm">
-            <thead className="text-xs text-muted-foreground">
-              <tr>
-                <th className="px-2 py-1 text-left">Queue</th>
-                <th className="px-2 py-1 text-right">Waiting</th>
-                <th className="px-2 py-1 text-right">Active</th>
-                <th className="px-2 py-1 text-right">Failed</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {stats.queues.byQueue.map((q) => (
-                <tr key={q.name}>
-                  <td className="px-2 py-1 font-mono text-xs">{q.name}</td>
-                  <td className={`px-2 py-1 text-right tabular-nums ${q.waiting > 1000 ? "text-warning" : ""}`}>{q.waiting}</td>
-                  <td className="px-2 py-1 text-right tabular-nums">{q.active}</td>
-                  <td className={`px-2 py-1 text-right tabular-nums ${q.failed > 50 ? "text-destructive" : ""}`}>{q.failed}</td>
+          <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)]">
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="bg-[var(--glass-bg-overlay)] text-[10.5px] uppercase tracking-wide text-[var(--text-muted)]">
+                  <th className="px-3 py-2 text-left font-semibold">Queue</th>
+                  <th className="px-3 py-2 text-right font-semibold">Waiting</th>
+                  <th className="px-3 py-2 text-right font-semibold">Active</th>
+                  <th className="px-3 py-2 text-right font-semibold">Failed</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {stats.queues.byQueue.map((q) => (
+                  <tr key={q.name} className="border-t border-[var(--glass-border-subtle)]">
+                    <td className="px-3 py-1.5 font-mono text-[11.5px] text-[var(--text-secondary)]">{q.name}</td>
+                    <td className={cn("px-3 py-1.5 text-right tabular-nums", q.waiting > 1000 && "font-bold text-[var(--color-warn)]")}>{q.waiting}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-secondary)]">{q.active}</td>
+                    <td className={cn("px-3 py-1.5 text-right tabular-nums", q.failed > 50 && "font-bold text-[var(--color-danger)]")}>{q.failed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : null}
 
       {stats.db.slowQueries.length > 0 ? (
-        <div className="mt-3">
-          <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Slow queries</div>
+        <div className="mt-4">
+          <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Slow queries</div>
           <div className="space-y-2">
             {stats.db.slowQueries.slice(0, 5).map((sq, i) => (
-              <div key={i} className="rounded-lg border border-border bg-muted/20 p-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">
-                    mean {sq.meanExecMs.toFixed(0)}ms · calls {sq.calls}
-                  </span>
-                  <span className="text-muted-foreground">total {(sq.totalExecMs / 1000).toFixed(1)}s</span>
+              <div key={i} className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-2.5">
+                <div className="flex items-center justify-between text-[11.5px] text-[var(--text-muted)]">
+                  <span>mean {sq.meanExecMs.toFixed(0)}ms · calls {sq.calls}</span>
+                  <span>total {(sq.totalExecMs / 1000).toFixed(1)}s</span>
                 </div>
-                <div className="mt-1 truncate font-mono text-xs">{sq.query}</div>
+                <div className="mt-1 truncate font-mono text-[11.5px] text-[var(--text-secondary)]">{sq.query}</div>
               </div>
             ))}
           </div>
         </div>
       ) : null}
-    </Section>
+    </SectionCard>
   );
 }
 
-function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className="rounded-xl border border-border bg-background p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-        {icon}
-        {title}
-      </div>
-      {children}
-    </section>
-  );
-}
+/* ────────────────────────── Small bits ────────────────────────── */
 
-function Metric({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
+function Bar({ pct, tone }: { pct: number; tone: "brand" | "warn" | "danger" | "violet" }) {
+  const toneClass: Record<string, string> = {
+    brand: "bg-[var(--brand-primary)]",
+    warn: "bg-[var(--color-warn)]",
+    danger: "bg-[var(--color-danger)]",
+    violet: "bg-[var(--brand-secondary)]",
+  };
   return (
-    <div className="rounded-lg border border-border bg-muted/20 px-3 py-2">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`mt-1 text-lg font-semibold tabular-nums ${warn ? "text-warning" : ""}`}>{value}</div>
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--text-muted)_18%,transparent)]">
+      <div className={cn("h-full rounded-full transition-all", toneClass[tone])} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
     </div>
   );
 }
 
 function SeverityBadge({ severity }: { severity: PerfRecommendation["severity"] }) {
-  const map: Record<PerfRecommendation["severity"], "secondary" | "warning" | "destructive"> = {
-    info: "secondary",
-    warning: "warning",
-    critical: "destructive",
+  const map: Record<PerfRecommendation["severity"], string> = {
+    info: "bg-[var(--color-info-bg)] text-[var(--color-info)] border-[var(--color-info-border)]",
+    warning: "bg-[var(--color-warn-bg)] text-[var(--color-warn)] border-[var(--color-warn-border)]",
+    critical: "bg-[var(--color-danger-bg)] text-[var(--color-danger)] border-[color-mix(in_srgb,var(--color-danger)_30%,transparent)]",
   };
-  return <Badge variant={map[severity]}>{severity}</Badge>;
+  return (
+    <span className={cn("rounded-[var(--radius-full)] border px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide", map[severity])}>
+      {severity}
+    </span>
+  );
 }
 
 function fmtBytes(n: number): string {

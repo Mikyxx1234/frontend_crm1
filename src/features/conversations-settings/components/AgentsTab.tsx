@@ -374,7 +374,7 @@ function SummaryCard({
   ];
 
   return (
-    <div className="sticky top-0 flex flex-col gap-4">
+    <div className="flex flex-col gap-4 2xl:sticky 2xl:top-0">
       {/* Summary card */}
       <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
         <div className="border-b border-[var(--glass-border-subtle)] px-4 py-3">
@@ -550,8 +550,10 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
         </div>
       )}
 
-      {/* ── 2-column: permissions + summary ── */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_280px]">
+      {/* ── 2-column: permissions + summary ──
+          Resumo só na direita em telas realmente largas (≥1536px). Em
+          telas médias empilha embaixo pra evitar o corte. */}
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1fr)_260px]">
         {/* Left: permission groups */}
         <div className="flex flex-col gap-4">
           {/* VISIBILIDADE */}
@@ -847,25 +849,25 @@ function GroupsView({
   }, [agents]);
 
   return (
-    <div className="flex flex-col gap-3 p-1">
+    <div className="flex flex-col gap-2 p-1">
       {(["standard", "supervisor", "readonly", "custom"] as const).map((key) => {
         const meta = PRESET_GROUP_META[key];
         const members = grouped[key] ?? [];
         const isOpen = expandedGroup === key;
         return (
           <div key={key} className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white/80 shadow-[0_1px_3px_rgba(100,130,180,0.07)]">
-            {/* Group header */}
+            {/* Group header — compacto */}
             <button
               type="button"
-              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
               onClick={() => setExpandedGroup(isOpen ? null : key)}
             >
-              <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]", meta.bg, meta.color)}>
-                <IconShieldCheck size={16} strokeWidth={1.75} />
+              <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)]", meta.bg, meta.color)}>
+                <IconShieldCheck size={14} strokeWidth={1.75} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className={cn("font-display text-[13.5px] font-bold", meta.color)}>{meta.label}</p>
-                <p className="font-body text-[11.5px] text-[var(--text-muted)]">{meta.desc}</p>
+                <p className={cn("truncate font-display text-[12.5px] font-bold leading-tight", meta.color)}>{meta.label}</p>
+                <p className="mt-0.5 line-clamp-2 font-body text-[10.5px] leading-tight text-[var(--text-muted)]">{meta.desc}</p>
               </div>
               <span className={cn("shrink-0 rounded-full px-2 py-0.5 font-display text-[11px] font-bold", meta.bg, meta.color)}>
                 {members.length}
@@ -999,7 +1001,7 @@ export function AgentsTab() {
   }
 
   return (
-    <div className="grid min-w-0 w-full max-w-full grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
+    <div className="grid min-w-0 w-full max-w-full grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
       {/* ── Agent list sidebar ── */}
       <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
         {/* View toggle + search */}

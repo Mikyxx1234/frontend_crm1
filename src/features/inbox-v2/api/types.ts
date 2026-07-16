@@ -47,8 +47,20 @@ export type MessageStatus =
 
 export interface ConversationListRow {
   id: string;
+  /**
+   * ID amigavel sequencial por organizacao (comeca em 1 em cada org).
+   * Usado como "ticket number" na UI (ex.: #1234). Padrao Contact/Deal.
+   * Opcional aqui por compat: o backend legado pode ainda nao devolver
+   * — nesse caso o card lateral esconde o "#N".
+   */
+  number?: number | null;
   channel: Channel;
   status: ConversationStatus;
+  /**
+   * Preenchido quando status = RESOLVED. Usado no card lateral para
+   * exibir "Encerrada em ..." e no filtro de finalizados por data.
+   */
+  closedAt?: string | null;
   contact: {
     id: string;
     name: string;
@@ -80,6 +92,10 @@ export interface ConversationListRow {
   tags?: { id: string; name: string; color: string | null }[];
   hasError?: boolean;
   pinnedNoteId?: string | null;
+  /** Timestamp de criacao da conversa. Backend sempre serializa. */
+  createdAt?: string | null;
+  /** Ultima atualizacao (mensagem/status/atribuicao). */
+  updatedAt?: string | null;
 }
 
 export interface ConversationListResponse {
@@ -208,6 +224,10 @@ export interface InboxMessageDto {
    * `MessagesResponse.channels[channelId]`.
    */
   channelId?: string | null;
+  /** Mensagem favoritada pelo agente LOGADO (marcador pessoal — não
+   *  compartilhado entre agentes). Alimenta a estrela preenchida no
+   *  menu contextual e no bubble. */
+  favoritedByMe?: boolean;
 }
 
 /** Resumo de uma conexão (Channel) — mesmo shape do ConnectionRefDto do backend. */
@@ -227,6 +247,10 @@ export interface SessionInfo {
 export interface MessagesResponse {
   messages: InboxMessageDto[];
   pinnedNoteId: string | null;
+  /** Mensagens fixadas no topo da conversa (banner estilo WhatsApp) —
+   *  várias por conversa (máx. 3), diferente de `pinnedNoteId` (só notas).
+   *  Cada id já vem no formato de bolha (`externalId ?? id`). */
+  pinnedMessageIds?: string[];
   channelProvider: string | null;
   /** Conexão ATUAL da conversa (último canal usado). Null se sem canal. */
   channel?: ConnectionRef | null;

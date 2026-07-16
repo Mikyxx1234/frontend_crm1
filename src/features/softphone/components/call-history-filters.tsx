@@ -41,7 +41,7 @@ export function CallHistoryFilters({ filters, onChange }: CallHistoryFiltersProp
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex shrink-0 items-center gap-2">
       <DropdownGlass
         options={DIRECTION_OPTIONS}
         value={filters.direction ?? ""}

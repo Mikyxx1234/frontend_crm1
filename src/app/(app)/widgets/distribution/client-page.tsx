@@ -136,10 +136,10 @@ export default function DistributionClientPage({
   if (roleReady && !isManagerUp) return <RestrictedScreen />;
 
   return (
-    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
       {navRail ?? <NavRailV2 />}
 
-      <main className="flex min-w-0 flex-col gap-4 overflow-y-auto pr-1">
+      <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden pb-3 sm:gap-4 sm:pb-4">
         <PageHeader
           icon={<IconRoute size={22} />}
           title="Distribuição"
@@ -170,17 +170,21 @@ export default function DistributionClientPage({
         ) : !useDemo && respQuery.error ? (
           <ErrorState message={respQuery.error.message} />
         ) : (
-          <>
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden sm:gap-4">
             {useDemo && (
-              <PageDemoBanner>
-                Dados de exemplo — equipe, fila e elegibilidade ilustrativas para o módulo de distribuição.
-              </PageDemoBanner>
+              <div className="shrink-0">
+                <PageDemoBanner>
+                  Dados de exemplo — equipe, fila e elegibilidade ilustrativas para o módulo de distribuição.
+                </PageDemoBanner>
+              </div>
             )}
             {simResult && (
-              <SimulationPanel
-                result={simResult}
-                onClose={() => setSimResult(null)}
-              />
+              <div className="shrink-0">
+                <SimulationPanel
+                  result={simResult}
+                  onClose={() => setSimResult(null)}
+                />
+              </div>
             )}
             <PendingQueueBlock
               pending={pending}
@@ -194,7 +198,7 @@ export default function DistributionClientPage({
               canManage={canManage}
               onEdit={(r) => setEditing(r)}
             />
-          </>
+          </div>
         )}
       </main>
 
@@ -210,7 +214,9 @@ export default function DistributionClientPage({
 
 // ── Tabela de responsáveis ──────────────────────────────────────────────
 
-const RESP_GRID = "grid-cols-[2.4fr_1.4fr_0.7fr_0.8fr_1.2fr_0.9fr]";
+// 6 colunas com mínimos legíveis — H-scroll no card quando viewport < ~960px.
+const RESP_GRID =
+  "grid-cols-[minmax(200px,2.4fr)_minmax(160px,1.4fr)_minmax(64px,0.7fr)_minmax(72px,0.8fr)_minmax(150px,1.2fr)_minmax(100px,0.9fr)]";
 
 /* Paleta de avatares: rotaciona pelo índice do responsável */
 const AVATAR_PALETTES = [
@@ -246,26 +252,166 @@ function ResponsiblesTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
-      <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-3 px-3 py-2"))}>
-        <ListColumnLabel>Responsável</ListColumnLabel>
-        <ListColumnLabel>Presença</ListColumnLabel>
-        <ListColumnLabel className="text-center">Fila</ListColumnLabel>
-        <ListColumnLabel className="text-center">Volume</ListColumnLabel>
-        <ListColumnLabel>Elegibilidade</ListColumnLabel>
-        <ListColumnLabel align="right">Ações</ListColumnLabel>
+    <>
+      {/* Mobile: painel glass até o rodapé + cards com scroll interno */}
+      <section
+        aria-label="Responsáveis"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3 shadow-[var(--glass-shadow)] backdrop-blur-md md:hidden"
+      >
+        <p className="mb-2.5 shrink-0 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+          Responsáveis ({responsibles.length})
+        </p>
+        <div className="scrollbar-thin min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
+          {responsibles.map((r, idx) => (
+            <ResponsibleMobileCard
+              key={r.userId}
+              r={r}
+              idx={idx}
+              isCurrentUser={r.userId === currentUserId}
+              canManage={canManage}
+              onEdit={onEdit}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Desktop/tablet: tabela com H-scroll sincronizado + scroll vertical */}
+      <div className="hidden min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md md:flex">
+        <div className="scrollbar-thin min-h-0 flex-1 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="min-w-[960px]">
+            <div className={listTableHeadRowClass(cn(RESP_GRID, "sticky top-0 z-[1] gap-3 px-3 py-2"))}>
+              <ListColumnLabel>Responsável</ListColumnLabel>
+              <ListColumnLabel>Presença</ListColumnLabel>
+              <ListColumnLabel className="text-center">Fila</ListColumnLabel>
+              <ListColumnLabel className="text-center">Volume</ListColumnLabel>
+              <ListColumnLabel>Elegibilidade</ListColumnLabel>
+              <ListColumnLabel align="right">Ações</ListColumnLabel>
+            </div>
+            {responsibles.map((r, idx) => (
+              <ResponsibleRow
+                key={r.userId}
+                r={r}
+                idx={idx}
+                isCurrentUser={r.userId === currentUserId}
+                canManage={canManage}
+                onEdit={onEdit}
+              />
+            ))}
+          </div>
+        </div>
       </div>
-      {responsibles.map((r, idx) => (
-        <ResponsibleRow
-          key={r.userId}
-          r={r}
-          idx={idx}
-          isCurrentUser={r.userId === currentUserId}
-          canManage={canManage}
-          onEdit={onEdit}
-        />
-      ))}
-    </div>
+    </>
+  );
+}
+
+function ResponsibleMobileCard({
+  r,
+  idx,
+  isCurrentUser,
+  canManage,
+  onEdit,
+}: {
+  r: DistributionResponsibleDto;
+  idx: number;
+  isCurrentUser: boolean;
+  canManage: boolean;
+  onEdit: (r: DistributionResponsibleDto) => void;
+}) {
+  const statusMut = useSetAgentStatus();
+  const initials = (r.name ?? r.email ?? "?")
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
+  const avatarClass = AVATAR_PALETTES[idx % AVATAR_PALETTES.length];
+
+  return (
+    <article className="min-w-0 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      <div className="flex min-w-0 items-start gap-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-extrabold ${avatarClass}`}
+        >
+          {initials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+            {r.name ?? "Sem nome"}
+          </p>
+          <p className="truncate font-body text-[11.5px] text-[var(--text-muted)]">
+            {r.email ?? "—"}{" "}
+            <span className="font-mono text-[10px] text-[var(--text-secondary)]">· {r.role}</span>
+          </p>
+        </div>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => onEdit(r)}
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 font-display text-[11.5px] font-bold text-[var(--text-secondary)]"
+          >
+            <IconPencil size={13} /> Editar
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
+        {isCurrentUser && (
+          <button
+            type="button"
+            onClick={() =>
+              statusMut.mutate(
+                { userId: r.userId, status: isOnline ? "OFFLINE" : "ONLINE" },
+                { onError: (e) => toast.error(e.message || "Erro ao alterar status.") },
+              )
+            }
+            disabled={statusMut.isPending}
+            className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--text-muted)] disabled:opacity-50"
+          >
+            {statusMut.isPending ? "…" : isOnline ? "Ficar offline" : "Ficar online"}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2.5 py-2">
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+            Fila
+          </p>
+          <p className="mt-0.5 font-display text-[15px] font-extrabold text-[var(--text-primary)]">
+            {r.queueCount}
+          </p>
+        </div>
+        <div className="rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2.5 py-2">
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+            Volume
+          </p>
+          <p className="mt-0.5 font-display text-[15px] font-extrabold text-[var(--text-primary)]">
+            {r.queueLimit > 0 ? r.queueLimit : "∞"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-2.5 flex min-w-0 flex-col gap-1">
+        {r.eligible ? (
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-success-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-success-dark,#0f7a5a)]">
+            <IconCircleCheck size={13} /> Elegível
+          </span>
+        ) : (
+          <>
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-danger-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-danger-text)]">
+              <IconAlertTriangle size={13} /> Indisponível
+            </span>
+            {r.blockedReasons.length > 0 && (
+              <span className="min-w-0 text-pretty break-words font-body text-[11px] text-[var(--text-muted)]">
+                {r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -303,7 +449,7 @@ function ResponsibleRow({
   };
 
   return (
-    <div className={cn("grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]", RESP_GRID)}>
+    <div className={cn("grid min-w-0 items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]", RESP_GRID)}>
       {/* Responsável */}
       <div className="flex min-w-0 items-center gap-3">
         <div
@@ -323,14 +469,14 @@ function ResponsibleRow({
       </div>
 
       {/* Presença */}
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
         {isCurrentUser && (
           <button
             type="button"
             onClick={toggleOwnStatus}
             disabled={statusMut.isPending}
-            className="cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+            className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
           >
             {statusMut.isPending
               ? "…"
@@ -358,7 +504,7 @@ function ResponsibleRow({
       </div>
 
       {/* Elegibilidade */}
-      <div className="flex flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-1">
         {r.eligible ? (
           <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-success-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-success-dark,#0f7a5a)]">
             <IconCircleCheck size={13} /> Elegível
@@ -369,7 +515,7 @@ function ResponsibleRow({
               <IconAlertTriangle size={13} /> Indisponível
             </span>
             {r.blockedReasons.length > 0 && (
-              <span className="pl-0.5 font-body text-[11px] text-[var(--text-muted)]">
+              <span className="min-w-0 break-words pl-0.5 font-body text-[11px] text-[var(--text-muted)]">
                 {r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
               </span>
             )}
@@ -503,36 +649,38 @@ function PendingQueueBlock({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[var(--radius-xl)] border backdrop-blur-md",
+        "min-w-0 shrink-0 rounded-[var(--radius-xl)] border backdrop-blur-md",
         isEmpty
           ? "border-[var(--glass-border)] bg-[var(--glass-bg-base,rgba(255,255,255,0.82))] shadow-[var(--glass-shadow)]"
           : "border-[var(--color-warn)]/40 bg-[var(--color-warn-bg)]/80 shadow-[var(--glass-shadow)]",
       )}
     >
-      <div className="flex items-start gap-3 p-4">
-        {/* Ícone */}
-        <div
-          className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
-            isEmpty
-              ? "bg-[var(--color-success-bg)] text-[var(--color-success)]"
-              : "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
-          )}
-        >
-          {isEmpty ? (
-            <IconCircleCheck size={18} />
-          ) : (
-            <IconClockExclamation size={18} />
-          )}
-        </div>
+      <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-start sm:gap-3 sm:p-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {/* Ícone */}
+          <div
+            className={cn(
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
+              isEmpty
+                ? "bg-[var(--color-success-bg)] text-[var(--color-success)]"
+                : "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
+            )}
+          >
+            {isEmpty ? (
+              <IconCircleCheck size={18} />
+            ) : (
+              <IconClockExclamation size={18} />
+            )}
+          </div>
 
-        <div className="flex-1 min-w-0">
-          <p className="font-display text-[14.5px] font-extrabold text-[var(--text-primary)]">
-            Aguardando distribuição ({pending.length})
-          </p>
-          <p className="mt-0.5 font-body text-[12px] text-[var(--text-muted)]">
-            Leads sem responsável elegível. São redistribuídos quando alguém fica online.
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-[14.5px] font-extrabold text-[var(--text-primary)]">
+              Aguardando distribuição ({pending.length})
+            </p>
+            <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
+              Leads sem responsável elegível. São redistribuídos quando alguém fica online.
+            </p>
+          </div>
         </div>
 
         {!isEmpty && (
@@ -540,7 +688,7 @@ function PendingQueueBlock({
             type="button"
             onClick={onRetry}
             disabled={retrying}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-[var(--color-warn)]/50 bg-[var(--color-warn-bg)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--color-warn)] transition-colors hover:bg-[var(--color-warn-bg)] disabled:opacity-50"
+            className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--color-warn)]/50 bg-[var(--color-warn-bg)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--color-warn)] transition-colors hover:bg-[var(--color-warn-bg)] disabled:opacity-50 sm:w-auto"
           >
             {retrying ? (
               <IconLoader2 size={14} className="animate-spin" />
@@ -553,20 +701,22 @@ function PendingQueueBlock({
       </div>
 
       {isEmpty ? (
-        <div className="mx-4 mb-4 flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3 font-body text-[13px] text-[var(--text-muted)]">
-          <IconCircleCheck size={15} className="shrink-0 text-[var(--color-success)]" />
-          {loading
-            ? "Carregando fila…"
-            : "Nenhum lead aguardando. Todos os leads recebidos foram distribuídos."}
+        <div className="mx-3 mb-3 flex items-start gap-2.5 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 font-body text-[13px] leading-snug text-[var(--text-muted)] sm:mx-4 sm:mb-4 sm:px-4">
+          <IconCircleCheck size={15} className="mt-0.5 shrink-0 text-[var(--color-success)]" />
+          <span className="min-w-0 flex-1 text-pretty break-words">
+            {loading
+              ? "Carregando fila…"
+              : "Nenhum lead aguardando. Todos os leads recebidos foram distribuídos."}
+          </span>
         </div>
       ) : (
-        <ul className="mx-4 mb-4 flex flex-col gap-1.5">
+        <ul className="mx-3 mb-3 flex flex-col gap-1.5 sm:mx-4 sm:mb-4">
           {pending.map((p) => (
             <li
               key={p.id}
-              className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px]"
+              className="flex min-w-0 flex-col gap-1 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
-              <span className="min-w-0 truncate font-semibold text-[var(--text-primary)]">
+              <span className="min-w-0 break-words font-semibold text-[var(--text-primary)]">
                 {p.label}
                 {p.distributionType && (
                   <span className="ml-2 font-normal text-[var(--text-muted)]">

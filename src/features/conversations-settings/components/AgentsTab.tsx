@@ -196,14 +196,14 @@ function PermGroup({
   children: React.ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
-      <div className="flex items-center gap-3 px-5 py-4">
+    <div className="min-w-0 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
+      <div className="flex items-center gap-3 px-3 py-4 sm:px-5">
         <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]", iconBg, iconColor)}>
           <Icon size={16} strokeWidth={1.75} />
         </div>
-        <div>
-          <h3 className="font-display text-[14px] font-bold text-[var(--text-primary)]">{title}</h3>
-          <p className="font-body text-[12px] text-[var(--text-muted)]">{desc}</p>
+        <div className="min-w-0">
+          <h3 className="font-display text-[14px] font-bold text-pretty text-[var(--text-primary)]">{title}</h3>
+          <p className="font-body text-[12px] text-pretty text-[var(--text-muted)]">{desc}</p>
         </div>
       </div>
       {children}
@@ -238,7 +238,7 @@ function PermRow({
 }) {
   return (
     <div className="border-t border-[var(--glass-border-subtle)]">
-      <div className="flex items-start gap-3 px-5 py-3.5">
+      <div className="flex items-start gap-3 px-3 py-3.5 sm:px-5">
         <div className={cn(
           "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
           iconBg || "bg-[var(--glass-bg-strong)]",
@@ -247,17 +247,17 @@ function PermRow({
           <Icon size={15} strokeWidth={1.75} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-[13.5px] font-semibold text-[var(--text-primary)]">{label}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-display text-[13.5px] font-semibold text-pretty text-[var(--text-primary)]">{label}</span>
             {dangerTag && (
-              <span className="rounded-full bg-red-50 px-2 py-0.5 font-display text-[10px] font-bold tracking-wide text-red-600">
+              <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 font-display text-[10px] font-bold tracking-wide text-red-600">
                 Irreversível
               </span>
             )}
           </div>
-          <p className="mt-0.5 font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">{desc}</p>
+          <p className="mt-0.5 break-words font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">{desc}</p>
         </div>
-        <SwitchGlass checked={checked} onChange={onChange} disabled={disabled} size="sm" aria-label={label} />
+        <SwitchGlass checked={checked} onChange={onChange} disabled={disabled} size="sm" aria-label={label} className="mt-0.5 shrink-0" />
       </div>
       {children}
     </div>
@@ -285,19 +285,19 @@ function Accordion({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
+        className="flex w-full items-center gap-3 px-3 py-3.5 text-left transition-colors hover:bg-[var(--glass-bg-overlay)] sm:px-5"
       >
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] text-[var(--text-muted)]">
           <Icon size={15} strokeWidth={1.75} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[13.5px] font-semibold text-[var(--text-primary)]">{title}</p>
-          <p className="font-body text-[12px] text-[var(--text-muted)]">{desc}</p>
+          <p className="font-display text-[13.5px] font-semibold text-pretty text-[var(--text-primary)]">{title}</p>
+          <p className="break-words font-body text-[12px] text-[var(--text-muted)]">{desc}</p>
         </div>
         <IconChevronDown size={16} className={cn("shrink-0 text-[var(--text-muted)] transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="px-5 pb-5 pt-1 pl-[4.5rem]">
+        <div className="min-w-0 px-3 pb-5 pt-1 sm:px-5 sm:pl-[4.5rem]">
           {children}
         </div>
       )}
@@ -502,38 +502,40 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
   const color = avatarColor(agent.id);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       {/* ── Profile card ── */}
-      <div className="flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-5 py-4">
-        {/* Avatar */}
-        <div className="relative shrink-0">
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-full font-display text-[15px] font-bold text-white"
-            style={{ backgroundColor: color }}
-          >
-            {getInitials(agent.name)}
+      <div className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5 sm:py-4">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          {/* Avatar */}
+          <div className="relative shrink-0">
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-full font-display text-[15px] font-bold text-white"
+              style={{ backgroundColor: color }}
+            >
+              {getInitials(agent.name)}
+            </div>
+            <span className={cn(
+              "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--glass-bg-panel)]",
+              agent.isOnline ? "bg-green-500" : "bg-[var(--text-muted)]",
+            )} />
           </div>
-          <span className={cn(
-            "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--glass-bg-panel)]",
-            agent.isOnline ? "bg-green-500" : "bg-[var(--text-muted)]",
-          )} />
-        </div>
 
-        {/* Info */}
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-[16px] font-bold text-[var(--text-primary)]">{agent.name}</p>
-          <p className="font-body text-[13px] text-[var(--text-muted)]">{agent.email}</p>
+          {/* Info */}
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-[16px] font-bold text-pretty text-[var(--text-primary)]">{agent.name}</p>
+            <p className="truncate font-body text-[13px] text-[var(--text-muted)]">{agent.email}</p>
+          </div>
         </div>
 
         {/* Preset selector */}
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="font-body text-[12px] text-[var(--text-muted)]">Modelo</span>
+        <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+          <span className="shrink-0 font-body text-[12px] text-[var(--text-muted)]">Modelo</span>
           <DropdownGlass
             options={PRESET_OPTIONS}
             value={preset}
             onValueChange={applyPreset}
             disabled={isAdmin}
-            triggerClassName="w-44 text-[13px]"
+            triggerClassName="w-40 text-[13px] sm:w-44"
           />
         </div>
       </div>
@@ -657,16 +659,16 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
               desc="Quais canais (WhatsApp, Instagram, etc.) esse atendente enxerga"
               defaultOpen={limitConnections}
             >
-              <div className="flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
-                <div>
-                  <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+              <div className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="font-display text-[13px] font-semibold text-pretty text-[var(--text-primary)]">
                     Limitar acesso por conexões específicas
                   </p>
-                  <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+                  <p className="break-words font-body text-[11.5px] text-[var(--text-muted)]">
                     Quando ativo, o atendente só vê as conexões marcadas abaixo.
                   </p>
                 </div>
-                <SwitchGlass checked={limitConnections} onChange={toggleLimitConnections} disabled={isAdmin} size="sm" />
+                <SwitchGlass checked={limitConnections} onChange={toggleLimitConnections} disabled={isAdmin} size="sm" className="shrink-0 self-end sm:self-auto" />
               </div>
               {channels.length > 0 ? (
                 <div className={cn("mt-3 flex flex-wrap gap-2 transition-opacity", !limitConnections && "pointer-events-none opacity-40")}>
@@ -694,16 +696,16 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
               desc="Quais equipes esse atendente pode atender"
               defaultOpen={limitDepartments}
             >
-              <div className="flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
-                <div>
-                  <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+              <div className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="font-display text-[13px] font-semibold text-pretty text-[var(--text-primary)]">
                     Limitar acesso por departamentos específicos
                   </p>
-                  <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+                  <p className="break-words font-body text-[11.5px] text-[var(--text-muted)]">
                     Quando ativo, o atendente só atende os departamentos marcados abaixo.
                   </p>
                 </div>
-                <SwitchGlass checked={limitDepartments} onChange={toggleLimitDepartments} disabled={isAdmin} size="sm" />
+                <SwitchGlass checked={limitDepartments} onChange={toggleLimitDepartments} disabled={isAdmin} size="sm" className="shrink-0 self-end sm:self-auto" />
               </div>
               {departments.length > 0 ? (
                 <div className={cn("mt-3 flex flex-wrap gap-2 transition-opacity", !limitDepartments && "pointer-events-none opacity-40")}>
@@ -997,7 +999,7 @@ export function AgentsTab() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
+    <div className="grid min-w-0 w-full max-w-full grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
       {/* ── Agent list sidebar ── */}
       <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
         {/* View toggle + search */}

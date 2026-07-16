@@ -465,7 +465,7 @@ export function GroupPermissionsEditor({
                       )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-x-3.5 gap-y-3">
+                  <div className="grid grid-cols-1 gap-x-3.5 gap-y-3 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))]">
                     {res.actions.map((act) => {
                       const key = `${res.resource}:${act.action}`;
                       const level = scopes[key] ?? "NONE";

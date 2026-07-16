@@ -71,7 +71,7 @@ export function FilterDrawer({
         className="absolute right-0 top-0 flex h-full w-[min(540px,100vw)] flex-col bg-[var(--glass-bg-subtle)] shadow-[0_0_60px_-12px_rgba(15,23,42,0.4)]"
       >
         {/* Header */}
-        <header className="flex items-center justify-between gap-3 border-b border-[var(--glass-border-subtle)] bg-white px-5 py-4">
+        <header className="flex items-center justify-between gap-3 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-5 py-4">
           <div className="flex items-center gap-2.5">
             <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
               <SlidersHorizontal className="size-4" />
@@ -92,7 +92,7 @@ export function FilterDrawer({
         </header>
 
         {/* Quick filters */}
-        <div className="border-b border-[var(--glass-border-subtle)] bg-white px-5 py-3">
+        <div className="border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-5 py-3">
           <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Atalhos</span>
           <QuickFiltersList
             draft={draft}
@@ -118,7 +118,7 @@ export function FilterDrawer({
         </div>
 
         {/* Footer */}
-        <footer className="flex items-center justify-between gap-2 border-t border-[var(--glass-border-subtle)] bg-white px-5 py-3">
+        <footer className="flex items-center justify-between gap-2 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-5 py-3">
           <button
             type="button"
             onClick={() => {

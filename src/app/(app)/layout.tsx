@@ -17,6 +17,7 @@ import "@/styles/globals-v2.css";
 import { UpdateAvailableBanner } from "@/components/layout/update-banner";
 import { SoftphoneWidget } from "@/features/softphone/components";
 import { ChatThemeApplier } from "@/components/providers/chat-theme-applier";
+import { MobileBottomNav } from "@/components/crm/mobile-bottom-nav";
 
 // O TooltipProvider (Radix) é provido uma única vez na raiz (app/providers.tsx),
 // cobrindo tanto os TooltipGlass quanto os TooltipContent/TooltipHost. Não é
@@ -33,6 +34,8 @@ export default function AppLayout({
         {children}
         <UpdateAvailableBanner />
         <SoftphoneWidget />
+        {/* Teste mobile: barra inferior global (hide-on-scroll). md+ não renderiza. */}
+        <MobileBottomNav />
       </div>
     </>
   );

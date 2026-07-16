@@ -449,11 +449,11 @@ export default function V2ActivitiesClientPage() {
                     )}
                   </p>
                 </div>
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <div className="toolbar-hscroll min-w-0 w-full max-w-full sm:w-auto">
                   <PageSegmentedControl
                     size="compact"
                     aria-label="Filtrar tarefas"
-                    className="max-w-full shrink"
+                    className="w-max shrink-0"
                     items={STATUS_FILTERS.map((f) => ({
                       value: f.key,
                       label: f.label,

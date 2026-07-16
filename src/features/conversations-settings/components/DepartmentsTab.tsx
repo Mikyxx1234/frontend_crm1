@@ -537,30 +537,32 @@ export function DepartmentsTab() {
   ] as const;
 
   return (
-    <>
+    <div className="min-w-0 w-full max-w-full">
       {/* ── Toolbar ── */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <PageSearchBar
           value={search}
           onChange={setSearch}
           placeholder="Buscar departamento…"
           variant="compact"
-          className="flex-1 min-w-[180px] max-w-xs"
+          className="w-full sm:min-w-[180px] sm:max-w-xs sm:flex-1"
         />
 
-        <div className="ml-auto flex items-center gap-2">
-          <PageSegmentedControl
-            items={VIEW_SEGMENT_ITEMS}
-            value={viewMode}
-            onChange={(v) => setViewMode(v as ViewMode)}
-            aria-label="Modo de visualização"
-            size="compact"
-          />
+        <div className="toolbar-hscroll min-w-0 max-w-full sm:ml-auto sm:max-w-none sm:overflow-visible">
+          <div className="flex w-max flex-nowrap items-center gap-2">
+            <PageSegmentedControl
+              items={VIEW_SEGMENT_ITEMS}
+              value={viewMode}
+              onChange={(v) => setViewMode(v as ViewMode)}
+              aria-label="Modo de visualização"
+              size="compact"
+            />
 
-          <PagePrimaryButton onClick={() => setShowCreate(true)} className="gap-1.5">
-            <IconPlus size={14} />
-            Criar
-          </PagePrimaryButton>
+            <PagePrimaryButton onClick={() => setShowCreate(true)} className="shrink-0 gap-1.5">
+              <IconPlus size={14} />
+              Criar
+            </PagePrimaryButton>
+          </div>
         </div>
       </div>
 
@@ -628,34 +630,36 @@ export function DepartmentsTab() {
         </div>
       ) : (
         /* ── Tabela ── */
-        <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
-          {/* Table header */}
-          <div className={listTableHeadRowClass("grid grid-cols-[2rem_2.5rem_1fr_6rem_5.5rem_3.5rem] rounded-none border-b-0 border-x-0 border-t-0")}>
-            <input
-              type="checkbox"
-              checked={allSelected}
-              ref={(el) => { if (el) el.indeterminate = someSelected; }}
-              onChange={toggleAll}
-              className="size-4 rounded accent-[var(--brand-primary)]"
-            />
-            <span />
-            <ListColumnLabel>Nome</ListColumnLabel>
-            <ListColumnLabel className="hidden sm:block">Criado em</ListColumnLabel>
-            <ListColumnLabel className="hidden sm:block">Status</ListColumnLabel>
-            <span />
-          </div>
-
-          <div className="divide-y divide-[var(--glass-border-subtle)]">
-            {filtered.map((dept) => (
-              <TabelaRow
-                key={dept.id}
-                dept={dept}
-                selected={selected.has(dept.id)}
-                onToggle={() => toggleSelect(dept.id)}
-                onDelete={() => { setDeleteError(undefined); setDeleteTarget(dept); }}
-                onEdit={() => setEditTarget(dept)}
+        <div className="overflow-x-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
+          <div className="min-w-[420px]">
+            {/* Table header */}
+            <div className={listTableHeadRowClass("grid grid-cols-[2rem_2.5rem_1fr_6rem_5.5rem_3.5rem] rounded-none border-b-0 border-x-0 border-t-0")}>
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                onChange={toggleAll}
+                className="size-4 rounded accent-[var(--brand-primary)]"
               />
-            ))}
+              <span />
+              <ListColumnLabel>Nome</ListColumnLabel>
+              <ListColumnLabel className="hidden sm:block">Criado em</ListColumnLabel>
+              <ListColumnLabel className="hidden sm:block">Status</ListColumnLabel>
+              <span />
+            </div>
+
+            <div className="divide-y divide-[var(--glass-border-subtle)]">
+              {filtered.map((dept) => (
+                <TabelaRow
+                  key={dept.id}
+                  dept={dept}
+                  selected={selected.has(dept.id)}
+                  onToggle={() => toggleSelect(dept.id)}
+                  onDelete={() => { setDeleteError(undefined); setDeleteTarget(dept); }}
+                  onEdit={() => setEditTarget(dept)}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -678,6 +682,6 @@ export function DepartmentsTab() {
         errorMsg={deleteError}
       />
       <EditDepartmentModal dept={editTarget} onClose={() => setEditTarget(null)} />
-    </>
+    </div>
   );
 }

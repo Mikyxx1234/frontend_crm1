@@ -84,10 +84,10 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
   }, [callsWidget.enabled, syncMutation]);
 
   return (
-    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
       {navRail ?? <NavRailV2 />}
 
-      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
+      <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden sm:gap-4">
         <PageHeader
           icon={<IconPhone size={22} stroke={2.2} />}
           title="Chamadas"
@@ -102,7 +102,7 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
             />
           }
           actions={
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <PageGhostButton
                 onClick={() => syncMutation.mutate()}
                 disabled={syncMutation.isPending}
@@ -112,7 +112,12 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
                   size={15}
                   className={syncMutation.isPending ? "animate-spin" : undefined}
                 />
-                {syncMutation.isPending ? "Sincronizando…" : "Sincronizar"}
+                <span className="hidden sm:inline">
+                  {syncMutation.isPending ? "Sincronizando…" : "Sincronizar"}
+                </span>
+                <span className="sm:hidden">
+                  {syncMutation.isPending ? "Sinc…" : "Sinc"}
+                </span>
               </PageGhostButton>
               <Link
                 href="/settings/softphone"
@@ -120,7 +125,7 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
                 title="Configurações do softphone"
               >
                 <IconSettings size={15} />
-                Configurações
+                <span className="hidden sm:inline">Configurações</span>
               </Link>
             </div>
           }
@@ -132,7 +137,7 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
           <NotEnabledState />
         ) : (
           <>
-            <PageFilterBar>
+            <PageFilterBar className="toolbar-hscroll max-w-full flex-nowrap overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
               <CallHistoryFilters filters={filters} onChange={setFilters} />
             </PageFilterBar>
             <CallHistoryList filters={filters} onFiltersChange={setFilters} />

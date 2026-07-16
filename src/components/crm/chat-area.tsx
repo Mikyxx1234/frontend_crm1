@@ -32,7 +32,7 @@ import {
 
 export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
 
-const CHAT_TABS: { id: ChatTabId; label: string; icon: React.ComponentType<{ size?: number; stroke?: number }> }[] = [
+const CHAT_TABS: { id: ChatTabId; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle },
   { id: "atividades", label: "Tarefas", icon: IconChecklist },
   { id: "notas", label: "Notas", icon: IconNote },
@@ -611,7 +611,7 @@ function ChatTabsBar({
                 : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
             )}
           >
-            <Icon size={13} stroke={isActive ? 2.4 : 2} />
+            <Icon size={13} strokeWidth={isActive ? 2.4 : 2} />
             {tab.label}
           </button>
         )

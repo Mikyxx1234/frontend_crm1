@@ -28,6 +28,11 @@ const STAGE_TRIGGERS: StageTriggerOption[] = [
     description: "Executa ao mover ou criar um negócio nesta etapa.",
   },
   {
+    value: "STAGE_MOVED_IN",
+    label: "Quando movido para etapa",
+    description: "Executa ao mover um negócio para a etapa escolhida.",
+  },
+  {
     value: "STAGE_EXITED",
     label: "Quando sair desta etapa",
     description: "Executa ao mover um negócio para outra etapa.",
@@ -251,31 +256,48 @@ function AutomationPicker({
 
 // ─── Drawer principal ─────────────────────────────────────────────
 
+/** Gatilhos que exigem escolher a etapa de destino (toStageId) inline. */
+const STAGE_TARGET_TRIGGERS = new Set(["STAGE_MOVED_IN"]);
+
 export interface AddAutomationDrawerProps {
   open: boolean;
   stageName: string;
+  /** Etapas do pipeline — usado pelo seletor inline do gatilho "movido para etapa". */
+  stages?: { id: string; name: string }[];
+  /** Etapa do painel; default do seletor inline de destino. */
+  currentStageId?: string;
   /** Pré-preenche para modo de edição */
   initialAutomationId?: string | null;
   initialTrigger?: string;
+  /** Etapa de destino pré-selecionada (edição de "movido para etapa"). */
+  initialTargetStageId?: string | null;
   onClose: () => void;
   onConfirm: (payload: {
     automationId: string;
     trigger: string;
     applyToExisting: boolean;
+    /** Só para gatilhos de destino (movido para etapa): etapa escolhida. */
+    targetStageId?: string;
   }) => void;
 }
 
 export function AddAutomationDrawer({
   open,
   stageName,
+  stages = [],
+  currentStageId,
   initialAutomationId,
   initialTrigger,
+  initialTargetStageId,
   onClose,
   onConfirm,
 }: AddAutomationDrawerProps) {
   const [trigger, setTrigger] = useState(initialTrigger ?? "STAGE_ENTERED");
   const [automationId, setAutomationId] = useState<string | null>(initialAutomationId ?? null);
   const [applyToExisting, setApplyToExisting] = useState(false);
+  const [targetStageId, setTargetStageId] = useState<string | null>(
+    initialTargetStageId ?? currentStageId ?? null,
+  );
 
   // Re-inicializa quando abre para edição
   useEffect(() => {
@@ -283,8 +305,11 @@ export function AddAutomationDrawer({
       setTrigger(initialTrigger ?? "STAGE_ENTERED");
       setAutomationId(initialAutomationId ?? null);
       setApplyToExisting(false);
+      setTargetStageId(initialTargetStageId ?? currentStageId ?? null);
     }
-  }, [open, initialTrigger, initialAutomationId]);
+  }, [open, initialTrigger, initialAutomationId, initialTargetStageId, currentStageId]);
+
+  const needsTargetStage = STAGE_TARGET_TRIGGERS.has(trigger);
 
   // Fecha ao pressionar Escape
   useEffect(() => {
@@ -296,11 +321,17 @@ export function AddAutomationDrawer({
     return () => document.removeEventListener("keydown", fn);
   }, [open, onClose]);
 
-  const canConfirm = !!automationId;
+  const canConfirm = !!automationId && (!needsTargetStage || !!targetStageId);
 
   const handleConfirm = () => {
     if (!automationId) return;
-    onConfirm({ automationId, trigger, applyToExisting });
+    if (needsTargetStage && !targetStageId) return;
+    onConfirm({
+      automationId,
+      trigger,
+      applyToExisting,
+      ...(needsTargetStage && targetStageId ? { targetStageId } : {}),
+    });
   };
 
   return (
@@ -381,6 +412,42 @@ export function AddAutomationDrawer({
             }))}
             onChange={setTrigger}
           />
+
+          {/* Seletor inline de etapa de destino (gatilho "movido para etapa") */}
+          {needsTargetStage && (
+            <div>
+              <p className="mb-1.5 font-display text-[10.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                Para qual etapa
+              </p>
+              {stages.length === 0 ? (
+                <p className="font-display text-[12px] text-[var(--text-muted)]">
+                  Nenhuma etapa disponível.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-1.5 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-1.5 shadow-sm">
+                  {stages.map((s) => {
+                    const isSel = s.id === targetStageId;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setTargetStageId(s.id)}
+                        className={cn(
+                          "flex items-center justify-between rounded-lg px-3 py-2 text-left font-display text-[13px] font-semibold transition-colors",
+                          isSel
+                            ? "bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
+                            : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
+                        )}
+                      >
+                        <span className="truncate">{s.name}</span>
+                        {isSel && <IconCheck size={14} className="shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Separador */}
           <div className="h-px w-full bg-[var(--glass-bg-base)]" />

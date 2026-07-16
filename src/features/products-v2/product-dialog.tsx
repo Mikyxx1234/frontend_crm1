@@ -672,8 +672,6 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
             </div>
           )}
         </div>
-
-      </div>
     </FormSheet>
   );
 }

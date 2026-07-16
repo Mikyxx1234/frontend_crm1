@@ -782,11 +782,11 @@ export function ImportPanel({
         {...sharedFlowProps}
       />
 
-      {/* Progresso da importação assíncrona (ETL worker) — contatos. */}
+      {/* Progresso da importação assíncrona (ETL worker) — contatos e negócios. */}
       <BulkOperationProgressDialog
         operationId={etlOperationId}
         optimisticTotal={etlTotal}
-        title="Importação de contatos"
+        title={entity === "contacts" ? "Importação de contatos" : "Importação de negócios"}
         onOpenChange={(open) => {
           if (!open) {
             setEtlOperationId(null);

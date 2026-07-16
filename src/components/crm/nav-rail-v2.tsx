@@ -4,9 +4,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import {
+  IconCheck,
   IconChevronDown,
   IconChevronsLeft,
   IconChevronsRight,
+  IconCopy,
+  IconHome,
   IconLogout,
   IconMoon,
   IconSettings,
@@ -43,6 +46,7 @@ import {
 } from "@/lib/sidebar-catalog";
 import { useSidebarPreferences } from "@/features/sidebar/hooks";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
+import { useOrganization } from "@/hooks/use-organization";
 
 /**
  * Cache local da preferencia da sidebar. O react-query perde o cache a cada
@@ -125,6 +129,29 @@ export function NavRailV2({ className }: { className?: string }) {
   const { role, isSuperAdmin } = useUserRole();
   const { data: prefs } = useSidebarPreferences();
   const { data: myPerms } = useMyPermissions();
+  const { data: organization } = useOrganization();
+
+  // Identidade da empresa (avatar do topo, estilo Kommo): iniciais do nome da
+  // org e o ID da conta (organizationId) copiável no popover. Enquanto a org
+  // não carrega, mostra "··" — mesmo placeholder do avatar do usuário.
+  const companyName = organization?.name?.trim() ?? "";
+  const companyInitials = companyName ? computeInitials(companyName) : "··";
+  const accountId =
+    organization?.id ??
+    (session?.user as { organizationId?: string | null } | undefined)
+      ?.organizationId ??
+    "";
+  const [accountIdCopied, setAccountIdCopied] = useState(false);
+  async function copyAccountId() {
+    if (!accountId) return;
+    try {
+      await navigator.clipboard.writeText(accountId);
+      setAccountIdCopied(true);
+      window.setTimeout(() => setAccountIdCopied(false), 1500);
+    } catch {
+      /* clipboard indisponível — ignora */
+    }
+  }
 
   const agentStatus = useAgentStatus();
   const [statusPopupOpen, setStatusPopupOpen] = useState(false);
@@ -311,18 +338,84 @@ export function NavRailV2({ className }: { className?: string }) {
         {expanded ? <IconChevronsLeft size={14} strokeWidth={2.5} /> : <IconChevronsRight size={14} strokeWidth={2.5} />}
       </button>
 
-      {/* Avatar da empresa (EL): sempre 44x44, centralizado — igual ao
-          avatar do usuario no rodape. Nao ganha label mesmo quando expandido. */}
-      <Link
-        href="/dashboard"
-        aria-label="Início"
-        className={cn(
-          "mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]",
-          expanded ? "mx-auto" : "",
-        )}
-      >
-        EL
-      </Link>
+      {/* Avatar da empresa: iniciais do nome da org (estilo Kommo). Ao clicar,
+          abre um popover com o nome e o ID da conta (copiável) + atalho Início.
+          Gate `mounted` idêntico ao avatar do usuário: no SSR/1o render usamos
+          um Link estático (preserva navegação sem JS) e trocamos pelo dropdown
+          após o mount, evitando hydration mismatch do useId. */}
+      {!mounted ? (
+        <Link
+          href="/dashboard"
+          aria-label="Início"
+          className={cn(
+            "mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]",
+            expanded ? "mx-auto" : "",
+          )}
+        >
+          {companyInitials}
+        </Link>
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            title={companyName || "Conta da empresa"}
+            aria-label="Conta da empresa"
+            className={cn(
+              "mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)] outline-none transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25 focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25",
+              expanded ? "mx-auto" : "",
+            )}
+          >
+            {companyInitials}
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="start" className="w-64">
+            <div className="flex items-center gap-3 px-2 py-2">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[13px] font-bold text-white">
+                {companyInitials}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate font-display text-[13px] font-bold text-foreground">
+                  {companyName || "Minha empresa"}
+                </p>
+                <p className="text-[11px] text-muted-foreground">Conta</p>
+              </div>
+            </div>
+
+            <DropdownMenuSeparator />
+
+            <div className="px-2 py-1.5">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                ID da conta
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="min-w-0 flex-1 truncate rounded bg-muted px-1.5 py-1 font-mono text-[11px] text-foreground">
+                  {accountId || "—"}
+                </code>
+                <button
+                  type="button"
+                  onClick={copyAccountId}
+                  disabled={!accountId}
+                  aria-label="Copiar ID da conta"
+                  title={accountIdCopied ? "Copiado!" : "Copiar ID da conta"}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                >
+                  {accountIdCopied ? (
+                    <IconCheck size={14} className="text-[var(--color-success,#16a34a)]" />
+                  ) : (
+                    <IconCopy size={14} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+              <IconHome size={16} className="text-muted-foreground" />
+              <span className="font-medium">Início</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {/* Miolo rolavel — quando ha overflow, chevrons piscantes indicam scroll.
           `overflow-x-clip` permite scroll vertical sem forçar scroll horizontal. */}

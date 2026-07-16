@@ -6,6 +6,7 @@ import {
   IconCheck,
   IconChevronDown,
   IconCircleDot,
+  IconDownload,
   IconEdit,
   IconFolder,
   IconFolderOpen,
@@ -14,6 +15,7 @@ import {
   IconPlus,
   IconSparkles,
   IconTrash,
+  IconUpload,
   IconX,
 } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -58,13 +60,103 @@ async function fetchTabulations(departmentId: string): Promise<TabulationsRespon
   return res.json();
 }
 
-function countLeaves(nodes: TabulationNode[]): number {
+function countNodes(nodes: TabulationNode[]): number {
   let total = 0;
   for (const n of nodes) {
-    if (n.children.length === 0) total += 1;
-    else total += countLeaves(n.children);
+    total += 1 + countNodes(n.children);
   }
   return total;
+}
+
+/* ─── CSV helpers (round-trip por id) ─────────────────────────────── */
+
+type FlatRow = {
+  id: string;
+  parentId: string;
+  name: string;
+  active: string;
+  position: string;
+  path: string;
+};
+
+function flattenTree(
+  nodes: TabulationNode[],
+  parentPath: string[] = [],
+): FlatRow[] {
+  const out: FlatRow[] = [];
+  for (const n of nodes) {
+    const path = [...parentPath, n.name];
+    out.push({
+      id: n.id,
+      parentId: n.parentId ?? "",
+      name: n.name,
+      active: n.active ? "true" : "false",
+      position: String(n.position),
+      path: path.join(" > "),
+    });
+    if (n.children.length) out.push(...flattenTree(n.children, path));
+  }
+  return out;
+}
+
+function csvEscape(v: string): string {
+  if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
+  return v;
+}
+
+function toCsv(rows: FlatRow[]): string {
+  const header = ["id", "parentId", "name", "active", "position", "path"];
+  const lines = [header.join(",")];
+  for (const r of rows) {
+    lines.push(
+      [r.id, r.parentId, r.name, r.active, r.position, r.path].map(csvEscape).join(","),
+    );
+  }
+  return lines.join("\r\n");
+}
+
+/** Parser CSV tolerante a aspas, vírgulas e quebras de linha dentro de campos. */
+function parseCsv(text: string): Record<string, string>[] {
+  const rows: string[][] = [];
+  let field = "";
+  let row: string[] = [];
+  let inQuotes = false;
+  const src = text.replace(/^\uFEFF/, ""); // remove BOM
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (src[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ",") {
+      row.push(field);
+      field = "";
+    } else if (c === "\n" || c === "\r") {
+      if (c === "\r" && src[i + 1] === "\n") i++;
+      row.push(field);
+      field = "";
+      if (row.some((f) => f.length > 0)) rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    if (row.some((f) => f.length > 0)) rows.push(row);
+  }
+  if (rows.length === 0) return [];
+  const header = rows[0].map((h) => h.trim());
+  return rows.slice(1).map((r) => {
+    const obj: Record<string, string> = {};
+    header.forEach((h, idx) => {
+      obj[h] = (r[idx] ?? "").trim();
+    });
+    return obj;
+  });
 }
 
 export default function TabulationsClientPage() {
@@ -83,7 +175,8 @@ export default function TabulationsClientPage() {
   });
 
   const requireOnClose = treeQuery.data?.requireTabulationOnClose ?? false;
-  const leaves = useMemo(() => countLeaves(treeQuery.data?.tree ?? []), [treeQuery.data?.tree]);
+  const tree = useMemo(() => treeQuery.data?.tree ?? [], [treeQuery.data?.tree]);
+  const nodeCount = useMemo(() => countNodes(tree), [tree]);
 
   const toggleRequire = useMutation({
     mutationFn: async (next: boolean) => {
@@ -158,7 +251,78 @@ export default function TabulationsClientPage() {
     },
   });
 
+  const importCsv = useMutation({
+    mutationFn: async (rows: { id?: string; parentId?: string; name: string; active?: boolean; position?: number }[]) => {
+      if (!effectiveDeptId) throw new Error("Sem departamento");
+      const res = await fetch(apiUrl("/api/settings/tabulations/import"), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ departmentId: effectiveDeptId, rows }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { message?: string }).message ?? "Erro ao importar");
+      }
+      return res.json() as Promise<{ created: number; updated: number; skipped: number }>;
+    },
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: tabulationsQueryKey(effectiveDeptId) });
+      alert(
+        `Importação concluída.\nCriados: ${r.created} · Atualizados: ${r.updated} · Ignorados: ${r.skipped}`,
+      );
+    },
+    onError: (e) => {
+      alert(`Falha na importação: ${e instanceof Error ? e.message : "erro desconhecido"}`);
+    },
+  });
+
   const selectedDept = departments.find((d) => d.id === effectiveDeptId) ?? null;
+
+  const handleExport = () => {
+    const rows = flattenTree(tree);
+    const csv = toCsv(rows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const slug = (selectedDept?.name ?? "departamento")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    a.href = url;
+    a.download = `tabulacoes-${slug}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = async (file: File) => {
+    const text = await file.text();
+    const parsed = parseCsv(text);
+    const rows = parsed
+      .map((r) => {
+        const name = (r.name ?? "").trim();
+        if (!name) return null;
+        const activeRaw = (r.active ?? "").trim().toLowerCase();
+        const active =
+          activeRaw === "" ? undefined : ["true", "1", "sim", "ativo", "yes"].includes(activeRaw);
+        const posNum = Number((r.position ?? "").trim());
+        return {
+          id: (r.id ?? "").trim() || undefined,
+          parentId: (r.parentId ?? "").trim() || undefined,
+          name,
+          active,
+          position: Number.isFinite(posNum) && (r.position ?? "").trim() !== "" ? posNum : undefined,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (rows.length === 0) {
+      alert("Nenhuma linha válida encontrada no CSV (coluna 'name' é obrigatória).");
+      return;
+    }
+    importCsv.mutate(rows);
+  };
 
   return (
     <SettingsV2Shell
@@ -169,9 +333,9 @@ export default function TabulationsClientPage() {
     >
       <div className="flex w-full min-w-0 flex-col gap-4 px-1 pb-8">
         {/* ── Departamento + exigência ─────────────────────────────── */}
-        <GlassCard variant="panel" className="min-w-0 overflow-visible p-4 sm:p-5">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,420px)_1fr] lg:items-start">
-            <div>
+        <GlassCard variant="panel" className="relative z-30 min-w-0 overflow-visible p-4 sm:p-5">
+          <div className="flex flex-col gap-4">
+            <div className="max-w-[520px]">
               <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                 Departamento
               </p>
@@ -201,8 +365,8 @@ export default function TabulationsClientPage() {
                     Exigir tabulação ao encerrar
                   </div>
                   <div className="mt-0.5 font-body text-[12px] text-[var(--text-muted)]">
-                    Quando ativado, o agente escolhe uma folha antes de resolver a conversa deste
-                    departamento.
+                    Quando ativado, o agente escolhe um nível final antes de resolver a conversa
+                    deste departamento.
                   </div>
                 </div>
                 <SwitchGlass
@@ -220,9 +384,12 @@ export default function TabulationsClientPage() {
         {/* ── Árvore de tabulações ─────────────────────────────────── */}
         {effectiveDeptId ? (
           <TreeEditor
-            tree={treeQuery.data?.tree ?? []}
+            tree={tree}
             loading={treeQuery.isLoading}
-            leaves={leaves}
+            nodeCount={nodeCount}
+            importing={importCsv.isPending}
+            onExport={handleExport}
+            onImportFile={handleImportFile}
             onCreate={(parentId, name) => createNode.mutate({ parentId, name })}
             onRename={(id, name) => updateNode.mutate({ id, name })}
             onToggleActive={(id, active) => updateNode.mutate({ id, active })}
@@ -288,7 +455,7 @@ function DeptSelect({
       </button>
 
       {open && departments.length > 0 && (
-        <div className="absolute left-0 top-full z-50 mt-1.5 max-h-[280px] w-full overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[0_10px_30px_rgba(15,23,42,0.16)]">
+        <div className="absolute left-0 top-full z-[60] mt-1.5 max-h-[280px] w-full overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[0_16px_40px_rgba(15,23,42,0.22)] backdrop-blur-xl">
           {departments.map((d) => {
             const isSel = d.id === selected?.id;
             return (
@@ -335,13 +502,17 @@ function DeptSelect({
 function TreeEditor(props: {
   tree: TabulationNode[];
   loading: boolean;
-  leaves: number;
+  nodeCount: number;
+  importing: boolean;
+  onExport: () => void;
+  onImportFile: (file: File) => void;
   onCreate: (parentId: string | null, name: string) => void;
   onRename: (id: string, name: string) => void;
   onToggleActive: (id: string, active: boolean) => void;
   onDelete: (id: string) => void;
 }) {
   const [newRootName, setNewRootName] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const submitRoot = () => {
     const name = newRootName.trim();
@@ -351,9 +522,9 @@ function TreeEditor(props: {
   };
 
   return (
-    <GlassCard variant="panel" className="min-w-0 p-4 sm:p-5">
+    <GlassCard variant="panel" className="relative z-10 min-w-0 p-4 sm:p-5">
       {/* Header */}
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
           <IconListTree size={20} />
         </span>
@@ -362,19 +533,52 @@ function TreeEditor(props: {
             Árvore de tabulações
           </h2>
           <p className="font-body text-[12px] text-[var(--text-muted)]">
-            Categorias (nós internos) organizam; agentes selecionam uma folha.
+            Organize os níveis; o agente escolhe um nível final ao encerrar.
           </p>
         </div>
         <span className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--glass-bg-base)] px-2.5 py-1 font-display text-[11.5px] font-semibold text-[var(--text-secondary)]">
           <IconSparkles size={14} className="text-[var(--brand-primary)]" />
-          {props.leaves} {props.leaves === 1 ? "folha" : "folhas"}
+          {props.nodeCount} {props.nodeCount === 1 ? "nível" : "níveis"}
         </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) props.onImportFile(f);
+              e.target.value = "";
+            }}
+          />
+          <ButtonGlass
+            type="button"
+            variant="glass"
+            size="sm"
+            onClick={() => fileRef.current?.click()}
+            disabled={props.importing}
+            title="Atualiza por id (round-trip) e cria linhas sem id. Não apaga o que ficar de fora."
+          >
+            <IconUpload size={15} /> {props.importing ? "Importando…" : "Importar CSV"}
+          </ButtonGlass>
+          <ButtonGlass
+            type="button"
+            variant="glass"
+            size="sm"
+            onClick={props.onExport}
+            disabled={props.tree.length === 0}
+            title="Exporta a árvore com os ids para atualização por id"
+          >
+            <IconDownload size={15} /> Exportar CSV
+          </ButtonGlass>
+        </div>
       </div>
 
       {/* Nova categoria raiz */}
       <div className="mb-4 flex items-center gap-2">
         <InputGlass
-          placeholder="Nova categoria raiz…"
+          placeholder="Novo nível raiz…"
           value={newRootName}
           onChange={(e) => setNewRootName(e.target.value)}
           onKeyDown={(e) => {
@@ -402,7 +606,7 @@ function TreeEditor(props: {
         </div>
       ) : props.tree.length === 0 ? (
         <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] py-10 text-center font-body text-[13px] text-[var(--text-muted)]">
-          Nenhuma tabulação ainda. Crie a primeira categoria acima.
+          Nenhuma tabulação ainda. Crie o primeiro nível acima.
         </div>
       ) : (
         <div className="flex flex-col gap-2.5">
@@ -545,8 +749,8 @@ function TreeCard(props: {
               </span>
               <span className="font-body text-[11px] text-[var(--text-muted)]">
                 {isLeaf
-                  ? "Selecionável pelo agente"
-                  : `${node.children.length} ${node.children.length === 1 ? "subitem" : "subitens"}`}
+                  ? "Nível final — selecionável pelo agente"
+                  : `${node.children.length} ${node.children.length === 1 ? "subnível" : "subníveis"}`}
               </span>
             </span>
             <span
@@ -557,7 +761,7 @@ function TreeCard(props: {
                   : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
               )}
             >
-              {isLeaf ? "Folha" : "Categoria"}
+              Nível {depth + 1}
             </span>
             {hasChildren && (
               <IconChevronDown
@@ -584,7 +788,7 @@ function TreeCard(props: {
               <button
                 type="button"
                 onClick={() => setAdding(true)}
-                aria-label="Adicionar subcategoria"
+                aria-label="Adicionar subnível"
                 className="flex size-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--brand-primary)]"
               >
                 <IconPlus size={16} />
@@ -623,7 +827,7 @@ function TreeCard(props: {
           <InputGlass
             autoFocus
             value={childName}
-            placeholder="Nome da subcategoria…"
+            placeholder="Nome do subnível…"
             onChange={(e) => setChildName(e.target.value)}
             onKeyDown={(e) => {
               if (e.nativeEvent.isComposing) return;

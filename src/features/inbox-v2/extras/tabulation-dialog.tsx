@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   IconChevronRight as ChevronRight,
   IconChevronLeft as ChevronLeft,
+  IconCheck,
   IconCircleDot,
   IconFolder,
 } from "@tabler/icons-react";
@@ -80,7 +81,7 @@ export function TabulationDialog({
         <DialogHeader>
           <DialogTitle>Selecione a tabulação</DialogTitle>
           <DialogDescription>
-            Escolha o motivo do encerramento. Categorias abrem submotivos até uma folha.
+            Escolha o motivo do encerramento. Os níveis abrem submotivos até um nível final.
           </DialogDescription>
         </DialogHeader>
 
@@ -175,9 +176,11 @@ export function TabulationDialog({
                       </span>
                       {hasChildren ? (
                         <ChevronRight size={16} className="shrink-0 text-[var(--text-muted)]" />
+                      ) : selected ? (
+                        <IconCheck size={16} className="shrink-0 text-[var(--brand-primary)]" />
                       ) : (
                         <span className="shrink-0 rounded-full bg-[var(--glass-bg-base)] px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                          Folha
+                          Selecionar
                         </span>
                       )}
                     </button>

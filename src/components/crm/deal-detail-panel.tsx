@@ -979,8 +979,11 @@ export function DealDetailPanel({
                                       ) : (
                                         /* ── Focus: grid 2 colunas de cards ── */
                                         <div className="py-2 grid grid-cols-2 gap-1.5">
-                                          {/* Telefone */}
-                                          <div className="flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
+                                          {/* Telefone — col-span-2 para não truncar
+                                              números formatados (+55 (11) 98888-0123)
+                                              na aside estreita; Email já faz o mesmo
+                                              quando length > 20. */}
+                                          <div className="col-span-2 flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
                                             <span className="text-[10px] font-medium text-[var(--text-muted)]">Telefone</span>
                                             {deal.contactId ? (
                                               <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />

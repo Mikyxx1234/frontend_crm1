@@ -80,10 +80,38 @@ export function useInboxRealtime(options: {
         try {
           const data = JSON.parse((e as MessageEvent).data) as {
             conversationId?: string;
+            messageId?: string;
+            status?: string;
           };
           if (data.conversationId) {
-            // Sempre invalida — ticks azuis precisam atualizar mesmo quando
-            // o operador não está na conversa no momento do evento.
+            // Atualização otimista do tick (sent→delivered→read) sem
+            // esperar o refetch — evita atraso perceptível nos ticks azuis.
+            if (data.messageId && data.status) {
+              const mapped = ({
+                pending: "PENDING",
+                sent: "SENT",
+                delivered: "DELIVERED",
+                read: "READ",
+                failed: "FAILED",
+              } as Record<string, string>)[data.status.toLowerCase()];
+              if (mapped) {
+                qc.setQueryData(
+                  messagesKey(data.conversationId),
+                  (old: { messages?: Array<{ id: string; status?: string; sendStatus?: string | null }> } | undefined) => {
+                    if (!old?.messages) return old;
+                    return {
+                      ...old,
+                      messages: old.messages.map((m) =>
+                        m.id === data.messageId
+                          ? { ...m, status: mapped, sendStatus: data.status!.toLowerCase() }
+                          : m,
+                      ),
+                    };
+                  },
+                );
+              }
+            }
+            // Confirma com o servidor (e atualiza conversas não abertas).
             qc.invalidateQueries({
               queryKey: messagesKey(data.conversationId),
               refetchType: data.conversationId === activeRef.current ? "active" : "none",

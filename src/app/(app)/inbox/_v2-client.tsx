@@ -178,6 +178,39 @@ function ContactTagsTray({
 }
 
 const DEFAULT_FILTERS: InboxFilters = {};
+const INBOX_FILTERS_STORAGE_KEY = "inbox-v2:filters";
+
+function readStoredInboxFilters(): InboxFilters {
+  if (typeof window === "undefined") return DEFAULT_FILTERS;
+  try {
+    const raw = window.localStorage.getItem(INBOX_FILTERS_STORAGE_KEY);
+    if (!raw) return DEFAULT_FILTERS;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return DEFAULT_FILTERS;
+    }
+    return parsed as InboxFilters;
+  } catch {
+    return DEFAULT_FILTERS;
+  }
+}
+
+function writeStoredInboxFilters(filters: InboxFilters) {
+  try {
+    const empty =
+      !hasInboxServerFilters(filters) &&
+      !filters.sortBy &&
+      !filters.sortOrder &&
+      !filters.windowState;
+    if (empty) {
+      window.localStorage.removeItem(INBOX_FILTERS_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(INBOX_FILTERS_STORAGE_KEY, JSON.stringify(filters));
+  } catch {
+    /* localStorage indisponível */
+  }
+}
 
 // Ordem das tabs alinhada ao legado (`conversation-list.tsx`
 // TAB_ORDER). "Automação" lista conversas cujo contato tem automação
@@ -236,7 +269,18 @@ export default function InboxV2ClientPage({
   // Default "todos": ao abrir/atualizar a página, todas as conversas
   // ficam selecionadas (pedido do usuário).
   const [tab, setTab] = useState<InboxTab>("todos");
+  // Filtros do painel persistem em localStorage — sobrevive navegação
+  // para outras páginas do CRM e refresh. Lê no effect (SSR-safe).
   const [filters, setFilters] = useState<InboxFilters>(DEFAULT_FILTERS);
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
+  useEffect(() => {
+    setFilters(readStoredInboxFilters());
+    setFiltersHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!filtersHydrated) return;
+    writeStoredInboxFilters(filters);
+  }, [filters, filtersHydrated]);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);

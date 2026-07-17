@@ -376,7 +376,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 <div
                   role="tablist"
                   aria-label="Seções do filtro"
-                  className="flex items-center gap-0.5 rounded-full bg-[var(--glass-bg-strong)] p-1"
+                  className="flex items-center gap-1 overflow-x-auto rounded-full bg-[var(--glass-bg-strong)] p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                   {FILTER_TABS.map((t) => {
                     const active = tab === t.id;
@@ -389,20 +389,25 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                         aria-selected={active}
                         onClick={() => setTab(t.id)}
                         className={cn(
-                          "flex flex-1 items-center justify-center gap-1 rounded-full px-1.5 py-1.5 font-display text-[11px] font-bold transition-all",
+                          "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 py-1.5 font-display text-[11px] font-bold leading-none transition-all",
                           active
                             ? "bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
                             : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                         )}
                       >
-                        <span className={active ? "text-[var(--brand-primary)]" : undefined}>
+                        <span
+                          className={cn(
+                            "inline-flex shrink-0 items-center justify-center [&_svg]:block",
+                            active && "text-[var(--brand-primary)]",
+                          )}
+                        >
                           {t.icon}
                         </span>
-                        <span className="truncate">{t.label}</span>
+                        <span className="leading-none">{t.label}</span>
                         {badge > 0 && (
                           <span
                             className={cn(
-                              "inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] font-bold",
+                              "inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] font-bold leading-none",
                               active
                                 ? "bg-[var(--brand-primary)] text-white"
                                 : "bg-[var(--glass-border)] text-[var(--text-secondary)]",

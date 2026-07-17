@@ -665,7 +665,9 @@ export function DealDetailPanel({
                   <div className="absolute -bottom-10 -left-6 size-24 rounded-full bg-white/10" />
                 </div>
 
-                {/* Linha de controles: Voltar (esq) + spacer + kebab + engrenagem */}
+                {/* Linha de controles: Voltar (esq) + spacer + etapa + kebab.
+                    A pill de etapa subiu pra cá (menor e proporcional) pra
+                    economizar altura do header. */}
                 <div className="relative flex items-center gap-1.5">
                   <button
                     type="button"
@@ -677,6 +679,15 @@ export function DealDetailPanel({
                     <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
                   </button>
                   <div className="flex-1" />
+                  {stageDropdownSlot ? (
+                    <div className="relative z-30 shrink-0 inline-flex items-center gap-0.5 rounded-full bg-white px-1.5 py-[1px] text-[10px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[10px] [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100 [&_svg]:!size-3">
+                      {stageDropdownSlot}
+                    </div>
+                  ) : deal.stage ? (
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-white/20 px-1.5 py-[1px] text-[10px] font-medium backdrop-blur-sm">
+                      {deal.stage}
+                    </span>
+                  ) : null}
                   {moreActionsSlot && (
                     <div className="[&_button]:!text-white [&_button:hover]:!bg-white/15 [&_button]:!rounded-[var(--radius-sm)]">
                       {moreActionsSlot}
@@ -684,29 +695,14 @@ export function DealDetailPanel({
                   )}
                 </div>
 
-                {/* Linha topo: título + #num + editar (esq) + pill de etapa (dir) */}
-                <div className="relative mt-2 flex items-center justify-between gap-2">
+                {/* Linha topo: título + #num */}
+                <div className="relative mt-2 flex items-center gap-2">
                   <h2 className="flex min-w-0 items-baseline gap-1.5 font-display text-[14px] font-bold leading-snug text-white">
                     <span className="min-w-0 truncate">{deal.name}</span>
                     <span className="shrink-0 font-mono text-[10px] font-semibold text-white/65">
                       #{deal.number ?? deal.id.slice(-6).toUpperCase()}
                     </span>
-                    {contactEditSlot && (
-                      <span className="shrink-0 self-center [&_button]:!text-white/70 [&_button:hover]:!text-white">
-                        {contactEditSlot}
-                      </span>
-                    )}
                   </h2>
-
-                  {stageDropdownSlot ? (
-                    <div className="relative z-30 shrink-0 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
-                      {stageDropdownSlot}
-                    </div>
-                  ) : (
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium backdrop-blur-sm">
-                      {deal.stage ?? "Em processo"}
-                    </span>
-                  )}
                 </div>
 
                 {/* Linha base: anel de progresso + pipeline info + responsável */}
@@ -893,25 +889,36 @@ export function DealDetailPanel({
                                       title="Informações do Contato"
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                       titleActions={
-                                        resolvedContactConfig && (
-                                          <TooltipGlass
-                                            label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
-                                            side="top"
-                                          >
-                                            <button
-                                              type="button"
-                                              onClick={() => setContactConfigOpen((v) => !v)}
-                                              aria-label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
-                                              className={cn(
-                                                "flex h-6 w-6 items-center justify-center rounded transition-colors",
-                                                contactConfigOpen
-                                                  ? "bg-[var(--brand-primary)] text-white"
-                                                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
-                                              )}
-                                            >
-                                              {contactConfigOpen ? <IconX size={12} /> : <IconSettings size={12} />}
-                                            </button>
-                                          </TooltipGlass>
+                                        (contactEditSlot || resolvedContactConfig) && (
+                                          <div className="flex items-center gap-0.5">
+                                            {/* Lápis de edição do contato — movido do header
+                                                pra ficar ao lado da engrenagem do contato. */}
+                                            {contactEditSlot && (
+                                              <span className="[&_button]:h-6 [&_button]:w-6 [&_span]:h-6 [&_span]:w-6">
+                                                {contactEditSlot}
+                                              </span>
+                                            )}
+                                            {resolvedContactConfig && (
+                                              <TooltipGlass
+                                                label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
+                                                side="top"
+                                              >
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setContactConfigOpen((v) => !v)}
+                                                  aria-label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
+                                                  className={cn(
+                                                    "flex h-6 w-6 items-center justify-center rounded transition-colors",
+                                                    contactConfigOpen
+                                                      ? "bg-[var(--brand-primary)] text-white"
+                                                      : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                                                  )}
+                                                >
+                                                  {contactConfigOpen ? <IconX size={12} /> : <IconSettings size={12} />}
+                                                </button>
+                                              </TooltipGlass>
+                                            )}
+                                          </div>
                                         )
                                       }
                                     >
@@ -925,7 +932,7 @@ export function DealDetailPanel({
                                         <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] overflow-hidden mt-1">
                                           {/* Telefone */}
                                           <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Telefone</span>
+                                            <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Telefone</span>
                                             <div className="min-w-0 flex-1">
                                               {deal.contactId ? (
                                                 <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)]" />
@@ -936,27 +943,27 @@ export function DealDetailPanel({
                                           </div>
                                           {/* Email */}
                                           <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Email</span>
+                                            <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Email</span>
                                             <div className="min-w-0 flex-1">
                                               {deal.contactId ? (
                                                 <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)] break-all" />
                                               ) : (
-                                                <span className="font-display text-[12px] font-semibold text-[var(--brand-primary)] break-all">{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
+                                                <span className="block min-w-0 truncate font-display text-[12px] font-semibold text-[var(--brand-primary)]" title={deal.email ?? undefined}>{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
                                               )}
                                             </div>
                                           </div>
                                           {/* @ WhatsApp — só leitura, vem do webhook Meta */}
                                           {deal.whatsappUsername && (
                                             <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                              <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">@ WhatsApp</span>
+                                              <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">@ WhatsApp</span>
                                               <div className="min-w-0 flex-1">
-                                                <span className="font-display text-[12px] font-semibold text-[var(--text-primary)] break-all">@{deal.whatsappUsername.replace(/^@/, "")}</span>
+                                                <span className="block min-w-0 truncate font-display text-[12px] font-semibold text-[var(--text-primary)]" title={`@${deal.whatsappUsername.replace(/^@/, "")}`}>@{deal.whatsappUsername.replace(/^@/, "")}</span>
                                               </div>
                                             </div>
                                           )}
                                           {/* Canal */}
                                           <div className="flex items-baseline gap-2 px-3 py-1.5">
-                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Canal</span>
+                                            <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Canal</span>
                                             <div className="min-w-0 flex-1">
                                               {connection ? (
                                                 <span className="inline-flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-primary)]">
@@ -980,7 +987,7 @@ export function DealDetailPanel({
                                             ) : onCreateContactForField ? (
                                               <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="deal" entityId={deal.id} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} customSave={(v) => onCreateContactForField("phone", v)} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
                                             ) : (
-                                              <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all">{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
+                                              <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="block min-w-0 truncate font-display text-[12.5px] font-bold text-[var(--brand-primary)]" title={deal.phone ? formatPhoneDisplay(deal.phone) : undefined}>{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
                                             )}
                                           </div>
                                           {/* Email */}
@@ -991,14 +998,14 @@ export function DealDetailPanel({
                                             ) : onCreateContactForField ? (
                                               <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="deal" entityId={deal.id} fieldKey="email" inputType="email" placeholder="+ Adicionar" customSave={(v) => onCreateContactForField("email", v)} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
                                             ) : (
-                                              <span className="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all">{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
+                                              <span className="block min-w-0 truncate font-display text-[12.5px] font-bold text-[var(--brand-primary)]" title={deal.email ?? undefined}>{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
                                             )}
                                           </div>
                                           {/* @ WhatsApp — só leitura, vem do webhook Meta */}
                                           {deal.whatsappUsername && (
                                             <div className="flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
                                               <span className="text-[10px] font-medium text-[var(--text-muted)]">@ WhatsApp</span>
-                                              <span className="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all">@{deal.whatsappUsername.replace(/^@/, "")}</span>
+                                              <span className="block min-w-0 truncate font-display text-[12.5px] font-bold text-[var(--text-primary)]" title={`@${deal.whatsappUsername.replace(/^@/, "")}`}>@{deal.whatsappUsername.replace(/^@/, "")}</span>
                                             </div>
                                           )}
                                           {/* Canal */}
@@ -1008,7 +1015,7 @@ export function DealDetailPanel({
                                               <TooltipGlass label={`Conversando por ${formatConnectionLabel(connection)}`} side="left">
                                                 <span className="inline-flex items-center gap-1 font-display text-[12.5px] font-bold text-[var(--text-primary)]">
                                                   <IconAffiliate size={12} className="shrink-0 text-[var(--brand-primary)]" />
-                                                  <span className="break-all">{channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}</span>
+                                                  <span className="min-w-0 truncate">{channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}</span>
                                                 </span>
                                               </TooltipGlass>
                                             ) : (

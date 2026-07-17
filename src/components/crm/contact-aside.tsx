@@ -328,16 +328,20 @@ function Row({
     >
       <span className={cn(
         "shrink-0 font-medium text-[var(--text-muted)]",
-        compact ? "w-[40%] text-[11px] leading-tight" : "w-[38%] text-[12px]",
+        compact ? "w-[32%] text-[11px] leading-tight" : "w-[30%] text-[12px]",
       )}>
         {label}
       </span>
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 justify-end">
         {children ?? (
-          <span className={cn(
-            "font-display font-semibold text-[var(--text-primary)] break-words",
-            compact ? "text-[12px]" : "text-[13px]",
-          )} style={valueStyle}>
+          <span
+            className={cn(
+              "min-w-0 truncate text-right font-display font-semibold text-[var(--text-primary)]",
+              compact ? "text-[12px]" : "text-[13px]",
+            )}
+            style={valueStyle}
+            title={value}
+          >
             {value}
           </span>
         )}

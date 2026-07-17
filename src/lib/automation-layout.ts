@@ -2,10 +2,10 @@ import type { AutomationStep } from "@/lib/automation-workflow";
 
 const NONE = "__none__";
 const START_X = 200;
-// Nós com edição inline expandem pra ~340–420px. GAP_X=300 deixava o
-// próximo step por baixo do selecionado (ex.: Aguardar resposta → Mover
-// estágio). 480 = largura expandida + folga pra edge/handles.
-const GAP_X = 480;
+// Folga horizontal fixa ENTRE colunas (somada à largura real do nó mais
+// largo de cada coluna). Mantém respiro pra edge/handles sem depender de
+// um GAP_X único que ora sobra (nós recolhidos), ora falta (expandidos).
+const COL_GAP = 140;
 // 27/mai/26 — START_Y agora bate com `NODE_Y` em `workflow-canvas.tsx`
 // (=300). Antes era 140, o que jogava todo o fluxo 160px acima do nó
 // do gatilho (que fica fixo em y=300). Visualmente parecia que o
@@ -14,6 +14,36 @@ const START_Y = 300;
 // Espaçamento entre lanes — acomoda nodes altos (condition multi-branch,
 // wait_for_reply + painel inline, interactive com muitos botões).
 const GAP_Y = 280;
+
+// Largura estimada (recolhida) por tipo de step — usada pra espaçar as
+// colunas de forma responsiva. Bate com os `max-w`/`w` de cada *-node.tsx.
+// A coluna usa o MAIOR nó nela; assim fluxos recolhidos ficam compactos e
+// nós largos (interactive, business_hours) ganham espaço automaticamente.
+const DEFAULT_NODE_W = 290;
+function estStepWidth(type: string): number {
+  switch (type) {
+    case "condition":
+      return 300;
+    case "business_hours":
+      return 340;
+    case "execute_distribution":
+      return 300;
+    case "question":
+    case "send_whatsapp_interactive":
+      return 320;
+    case "wait_for_reply":
+      return 310;
+    case "delay":
+    case "set_variable":
+    case "goto":
+      return 270;
+    case "finish":
+    case "stop_automation":
+      return 260;
+    default:
+      return DEFAULT_NODE_W;
+  }
+}
 
 function isRealTarget(target: unknown, stepIds: Set<string>): target is string {
   return typeof target === "string" && target !== "" && target !== NONE && stepIds.has(target);
@@ -157,11 +187,28 @@ export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[
     }
   }
 
+  // Largura máxima de cada coluna (profundidade) → X responsivo. Colunas
+  // com nós largos afastam a próxima; colunas estreitas ficam compactas.
+  const maxDepth = Math.max(0, ...Array.from(depth.values()));
+  const colWidth = new Map<number, number>();
+  for (const step of steps) {
+    const d = depth.get(step.id) ?? 0;
+    const w = estStepWidth(step.type);
+    if (w > (colWidth.get(d) ?? 0)) colWidth.set(d, w);
+  }
+  const colX = new Map<number, number>();
+  let cursorX = START_X;
+  for (let d = 0; d <= maxDepth; d++) {
+    colX.set(d, cursorX);
+    cursorX += (colWidth.get(d) ?? DEFAULT_NODE_W) + COL_GAP;
+  }
+
   return steps.map((step) => {
     const cfg = (step.config ?? {}) as Record<string, unknown>;
     const nextCfg = { ...cfg };
+    const d = depth.get(step.id) ?? 0;
     nextCfg.__rfPos = {
-      x: START_X + (depth.get(step.id) ?? 0) * GAP_X,
+      x: colX.get(d) ?? START_X,
       y: START_Y + (laneById.get(step.id) ?? 0) * GAP_Y,
     };
     return { ...step, config: nextCfg };

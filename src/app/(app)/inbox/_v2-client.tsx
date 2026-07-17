@@ -56,12 +56,12 @@ import {
   useReactMessage,
   useSelectedOutboundChannel,
   useSendMessage,
-  useActiveAutomations,
   useTabCounts,
   useWhatsappChannels,
   CONVERSATION_REOPENED_EVENT,
 } from "@/features/inbox-v2/hooks";
 import {
+  ActiveBotsButton,
   AssigneePopover,
   Composer,
   ConversationActionsMenu,
@@ -335,11 +335,6 @@ export default function InboxV2ClientPage({
   }, [rawRows, windowState, sortBy, sortOrder]);
 
   const { data: tabCounts } = useTabCounts(isAuthenticated);
-
-  // Robôs (automações RUNNING/PAUSED) vivos pro contato da conversa
-  // ativa — alimenta o chip no header do chat. Atualiza via SSE
-  // `automation_state` (use-realtime).
-  const { data: activeAutomations } = useActiveAutomations(activeId);
 
   // ── Sticky activeRow ────────────────────────────────────────────
   // A `rows` reflete o filtro da aba atual (ex.: "entrada"). Se o
@@ -943,7 +938,7 @@ export default function InboxV2ClientPage({
         conversationNumber={activeRow?.number ?? null}
         conversationResolved={activeRow?.status === "RESOLVED"}
         conversationClosedAt={activeRow?.closedAt ?? null}
-        activeAutomations={activeAutomations}
+        activeBotsSlot={<ActiveBotsButton contactId={activeContactId} />}
         onUseTemplate={() => setTemplateOpen(true)}
         onReactMessage={handleReactMessage}
         onPinMessage={handlePinMessage}

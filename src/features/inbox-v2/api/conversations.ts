@@ -239,6 +239,39 @@ export async function getActiveAutomations(
   return data as { items: ActiveAutomationDto[] };
 }
 
+/** GET /api/contacts/:id/active-automations — botão "Robôs ativos" (inbox/deal) */
+export async function getContactActiveAutomations(
+  contactId: string,
+): Promise<{ items: ActiveAutomationDto[] }> {
+  const res = await fetch(
+    apiUrl(`/api/contacts/${contactId}/active-automations`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao carregar automações ativas",
+    );
+  }
+  return data as { items: ActiveAutomationDto[] };
+}
+
+/** DELETE /api/contacts/:id/active-automations/:contextId — interromper robô */
+export async function cancelContactAutomation(
+  contactId: string,
+  contextId: string,
+): Promise<void> {
+  const res = await fetch(
+    apiUrl(`/api/contacts/${contactId}/active-automations/${contextId}`),
+    { method: "DELETE" },
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao interromper o robô",
+    );
+  }
+}
+
 /** POST /api/conversations/create */
 export async function createConversation(payload: {
   contactId?: string;

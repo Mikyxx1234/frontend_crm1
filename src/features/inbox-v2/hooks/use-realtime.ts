@@ -120,7 +120,21 @@ export function useInboxRealtime(options: {
       // contactId (contexto não referencia conversa), então invalidamos a
       // query da conversa ativa; se o contato não for o mesmo, o refetch
       // é barato e o resultado idêntico.
-      es.addEventListener("automation_state", () => {
+      es.addEventListener("automation_state", (e) => {
+        // Invalida o botão "Robôs ativos" (por contato) do evento e,
+        // por compat, o chip antigo (por conversa ativa).
+        try {
+          const data = JSON.parse((e as MessageEvent).data) as {
+            contactId?: string;
+          };
+          if (data.contactId) {
+            qc.invalidateQueries({
+              queryKey: ["active-automations-contact", data.contactId],
+            });
+          }
+        } catch {
+          /* ignore */
+        }
         if (activeRef.current) {
           qc.invalidateQueries({
             queryKey: ["active-automations", activeRef.current],

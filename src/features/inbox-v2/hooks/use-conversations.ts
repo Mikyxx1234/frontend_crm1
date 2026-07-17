@@ -1,11 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
+  cancelContactAutomation,
   fetchTabCounts,
   getActiveAutomations,
+  getContactActiveAutomations,
   listConversations,
   type ActiveAutomationDto,
   type ConversationListResponse,
@@ -125,6 +132,37 @@ export function useActiveAutomations(conversationId: string | null) {
     enabled: Boolean(conversationId) && !isPreviewMode(),
     staleTime: 15_000,
     select: (d) => d.items,
+  });
+}
+
+/** QueryKey do botão "Robôs ativos" (por contato) — inbox e deal. */
+export const contactActiveAutomationsKey = (contactId: string | null) =>
+  ["active-automations-contact", contactId] as const;
+
+/**
+ * Automações vivas (RUNNING/PAUSED) do CONTATO — alimenta o botão
+ * "Robôs ativos" ao lado da composer (inbox e deal). Invalidado em
+ * tempo real pelo evento SSE `automation_state` (ver use-realtime.ts).
+ */
+export function useContactActiveAutomations(contactId: string | null) {
+  return useQuery<{ items: ActiveAutomationDto[] }, Error, ActiveAutomationDto[]>({
+    queryKey: contactActiveAutomationsKey(contactId),
+    queryFn: () => getContactActiveAutomations(contactId as string),
+    enabled: Boolean(contactId) && !isPreviewMode(),
+    staleTime: 15_000,
+    select: (d) => d.items,
+  });
+}
+
+/** Interrompe manualmente um robô e revalida a lista do contato. */
+export function useCancelAutomation(contactId: string | null) {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (contextId: string) =>
+      cancelContactAutomation(contactId as string, contextId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: contactActiveAutomationsKey(contactId) });
+    },
   });
 }
 

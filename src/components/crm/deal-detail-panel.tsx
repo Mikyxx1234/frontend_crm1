@@ -52,6 +52,7 @@ import { TabulationDialog } from "@/features/inbox-v2/extras/tabulation-dialog"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
 import { useContactSources } from "@/hooks/use-contact-sources"
+import { formatPhoneDisplay } from "@/lib/phone"
 import { useIsDesktop } from "@/hooks/use-media-query"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
@@ -102,6 +103,7 @@ const SIDEBAR_TAB_ITEMS = [
 ] as const
 import { ChatArea } from "./chat-area"
 import { type Message } from "./message-bubble"
+import { ActiveBotsButton } from "@/features/inbox-v2/extras"
 import { resolveHighlight, SEVERITY_COLORS } from "@/lib/highlight"
 import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
 import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
@@ -125,6 +127,8 @@ export interface DealDetail {
   avatarColor: string
   phone?: string
   email?: string | null
+  /** @ do WhatsApp (Contact.whatsappUsername), quando disponível. Só leitura. */
+  whatsappUsername?: string | null
   /** Valor do negócio (campo "Venda" no painel Kommo). */
   value?: number | string | null
   online?: boolean
@@ -924,9 +928,9 @@ export function DealDetailPanel({
                                             <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Telefone</span>
                                             <div className="min-w-0 flex-1">
                                               {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)]" />
+                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)]" />
                                               ) : (
-                                                <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12px] font-semibold text-[var(--brand-primary)]">{deal.phone || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
+                                                <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12px] font-semibold text-[var(--brand-primary)]">{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
                                               )}
                                             </div>
                                           </div>
@@ -941,6 +945,15 @@ export function DealDetailPanel({
                                               )}
                                             </div>
                                           </div>
+                                          {/* @ WhatsApp — só leitura, vem do webhook Meta */}
+                                          {deal.whatsappUsername && (
+                                            <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
+                                              <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">@ WhatsApp</span>
+                                              <div className="min-w-0 flex-1">
+                                                <span className="font-display text-[12px] font-semibold text-[var(--text-primary)] break-all">@{deal.whatsappUsername.replace(/^@/, "")}</span>
+                                              </div>
+                                            </div>
+                                          )}
                                           {/* Canal */}
                                           <div className="flex items-baseline gap-2 px-3 py-1.5">
                                             <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Canal</span>
@@ -963,11 +976,11 @@ export function DealDetailPanel({
                                           <div className="flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
                                             <span className="text-[10px] font-medium text-[var(--text-muted)]">Telefone</span>
                                             {deal.contactId ? (
-                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
+                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
                                             ) : onCreateContactForField ? (
-                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="deal" entityId={deal.id} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" customSave={(v) => onCreateContactForField("phone", v)} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
+                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="deal" entityId={deal.id} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} customSave={(v) => onCreateContactForField("phone", v)} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
                                             ) : (
-                                              <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all">{deal.phone || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
+                                              <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all">{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
                                             )}
                                           </div>
                                           {/* Email */}
@@ -981,6 +994,13 @@ export function DealDetailPanel({
                                               <span className="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all">{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
                                             )}
                                           </div>
+                                          {/* @ WhatsApp — só leitura, vem do webhook Meta */}
+                                          {deal.whatsappUsername && (
+                                            <div className="flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
+                                              <span className="text-[10px] font-medium text-[var(--text-muted)]">@ WhatsApp</span>
+                                              <span className="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all">@{deal.whatsappUsername.replace(/^@/, "")}</span>
+                                            </div>
+                                          )}
                                           {/* Canal */}
                                           <div className="col-span-2 flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
                                             <span className="text-[10px] font-medium text-[var(--text-muted)]">Canal</span>
@@ -1271,10 +1291,13 @@ export function DealDetailPanel({
             <main
               aria-label="Conversa"
               className={cn(
-                "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
                 !isDesktop && "min-h-0 flex-1",
               )}
             >
+              {/* Botão flutuante "Robôs ativos" (canto inf. direito, ao
+                  lado da composer) — mesmo componente do inbox. */}
+              <ActiveBotsButton contactId={deal.contactId ?? null} />
               <TabsBar
                 activeTab={activeTab}
                 onChange={setActiveTab}

@@ -16,3 +16,4 @@ export { TagsPopover } from "./tags-popover";
 export { ConversationActionsMenu } from "./conversation-actions-menu";
 export { ConversationTimelineTab } from "./conversation-timeline-tab";
 export { InboxFilterButton } from "./filter-panel";
+export { ActiveBotsButton } from "./active-bots-button";

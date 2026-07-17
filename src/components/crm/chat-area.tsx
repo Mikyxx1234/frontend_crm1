@@ -27,7 +27,6 @@ import {
   IconPinFilled,
   IconX,
   IconLock,
-  IconRobot,
 } from "@tabler/icons-react"
 
 export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
@@ -166,15 +165,11 @@ interface ChatAreaProps {
   conversationClosedAt?: string | null
 
   /**
-   * Automações (robôs) vivas para o contato desta conversa. Quando não
-   * vazio, renderiza um chip discreto no header (ícone de robô + nome),
-   * com tooltip mostrando o passo atual de cada fluxo.
+   * Slot flutuante (canto inferior direito, ao lado da composer) — usado
+   * para o botão "Robôs ativos". Renderizado como overlay absoluto dentro
+   * do `<main>` (que agora é `relative`); o próprio slot cuida da posição.
    */
-  activeAutomations?: {
-    name: string
-    status: "RUNNING" | "PAUSED"
-    stepLabel?: string | null
-  }[]
+  activeBotsSlot?: React.ReactNode
 }
 
 export function ChatArea({
@@ -214,7 +209,7 @@ export function ChatArea({
   onUnpinMessage,
   conversationResolved,
   conversationClosedAt,
-  activeAutomations,
+  activeBotsSlot,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
@@ -286,7 +281,7 @@ export function ChatArea({
     <main
       aria-label={`Conversa com ${contact.name}`}
       className={cn(
-        "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
@@ -328,36 +323,6 @@ export function ChatArea({
               a ser sinalizado pela faixa verde sutil abaixo do header — o
               #N continua acessivel no separador de ticket da timeline. */}
 
-          {/* Chip "robô em execução": automações vivas (RUNNING/PAUSED)
-              pro contato deste chat. Discreto — ícone + nome do fluxo +
-              ponto pulsante; tooltip lista o passo atual de cada um. */}
-          {activeAutomations && activeAutomations.length > 0 && (
-            <TooltipGlass
-              side="bottom"
-              label={activeAutomations
-                .map((a) =>
-                  a.stepLabel ? `${a.name} — ${a.stepLabel}` : a.name,
-                )
-                .join(" · ")}
-            >
-              <span
-                role="status"
-                aria-label={`${activeAutomations.length} automação(ões) em execução`}
-                className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-medium text-violet-700 v2-dark:text-violet-300"
-              >
-                <span className="relative flex h-1.5 w-1.5 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-60" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-500" />
-                </span>
-                <IconRobot size={12} className="shrink-0" />
-                <span className="truncate">
-                  {activeAutomations[0].name}
-                  {activeAutomations.length > 1 && ` +${activeAutomations.length - 1}`}
-                </span>
-              </span>
-            </TooltipGlass>
-          )}
-
           {tabsEnabled && (
             <ChatTabsBar
               activeTab={activeTab}
@@ -390,6 +355,10 @@ export function ChatArea({
           </div>
         </div>
       </header>
+
+      {/* Botão flutuante "Robôs ativos" — overlay no canto inf. direito,
+          ao lado da composer. O slot cuida do próprio posicionamento. */}
+      {activeBotsSlot}
 
       {/* Faixa sutil de conversa resolvida — substitui o chip "ENCERRADA"
           do header. Verde suave, discreta, colada abaixo do header. */}

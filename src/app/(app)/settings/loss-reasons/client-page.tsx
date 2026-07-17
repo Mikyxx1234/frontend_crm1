@@ -3,6 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import {
   IconGripVertical,
+  IconLink,
   IconMenu2,
   IconPlus,
   IconSettings,
@@ -17,13 +18,14 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { InputGlass } from "@/components/crm/input-glass";
-import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import {
   Dialog,
@@ -59,7 +61,8 @@ type PipelineLossMeta = {
   reasons: { id: string; label: string; position: number; linkId: string }[];
 };
 
-type Segment = "catalog" | string; // "catalog" | pipelineId
+/** `catalog` = catálogo global; string = id do funil. */
+type Scope = "catalog" | string;
 
 async function fetchReasons(): Promise<LossReason[]> {
   const res = await fetch(apiUrl("/api/settings/loss-reasons"));
@@ -91,7 +94,7 @@ async function fetchAllowOther(): Promise<boolean> {
 
 export default function LossReasonsV2ClientPage() {
   const qc = useQueryClient();
-  const [segment, setSegment] = useState<Segment | null>(null);
+  const [scope, setScope] = useState<Scope | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -110,15 +113,24 @@ export default function LossReasonsV2ClientPage() {
     queryFn: fetchAllowOther,
   });
 
-  const pipelineId = segment && segment !== "catalog" ? segment : null;
+  const pipelines = pipelinesQuery.data ?? [];
+  const reasons = reasonsQuery.data ?? [];
+
+  // Default: funil padrão (ou o primeiro) — obrigatoriedade e vínculos
+  // ficam visíveis sem precisar do mini-dash.
+  useEffect(() => {
+    if (scope != null) return;
+    if (!pipelines.length) return;
+    const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
+    setScope(def.id);
+  }, [pipelines, scope]);
+
+  const pipelineId = scope && scope !== "catalog" ? scope : null;
   const pipelineMetaQuery = useQuery({
     queryKey: ["pipeline-loss-reasons", pipelineId],
     queryFn: () => fetchPipelineMeta(pipelineId!),
     enabled: !!pipelineId,
   });
-
-  const reasons = reasonsQuery.data ?? [];
-  const pipelines = pipelinesQuery.data ?? [];
   const pipelineMeta = pipelineMetaQuery.data;
 
   const createMut = useMutation({
@@ -135,7 +147,6 @@ export default function LossReasonsV2ClientPage() {
       setNewLabel("");
       setAddOpen(false);
       await qc.invalidateQueries({ queryKey: ["loss-reasons"] });
-      // Se estiver num funil, já vincula o novo motivo.
       if (pipelineId) {
         const current = pipelineMeta?.reasons.map((r) => r.id) ?? [];
         await fetch(apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`), {
@@ -143,9 +154,15 @@ export default function LossReasonsV2ClientPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reasonIds: [...current, created.id] }),
         });
-        await qc.invalidateQueries({ queryKey: ["pipeline-loss-reasons", pipelineId] });
+        await qc.invalidateQueries({
+          queryKey: ["pipeline-loss-reasons", pipelineId],
+        });
       }
-      toast.success("Motivo adicionado");
+      toast.success(
+        pipelineId
+          ? "Motivo criado e vinculado a este funil"
+          : "Motivo adicionado ao catálogo",
+      );
     },
     onError: () => toast.error("Não foi possível criar o motivo"),
   });
@@ -197,18 +214,61 @@ export default function LossReasonsV2ClientPage() {
       lossReasonRequired?: boolean;
     }) => {
       if (!pipelineId) throw new Error("Sem funil");
-      const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Erro ao salvar funil");
+      const res = await fetch(
+        apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as {
+          message?: string;
+        };
+        throw new Error(err.message || "Erro ao salvar funil");
+      }
       return res.json() as Promise<PipelineLossMeta>;
     },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["pipeline-loss-reasons", pipelineId] });
+    onMutate: async (payload) => {
+      if (!pipelineId || typeof payload.lossReasonRequired !== "boolean")
+        return;
+      await qc.cancelQueries({
+        queryKey: ["pipeline-loss-reasons", pipelineId],
+      });
+      const prev = qc.getQueryData<PipelineLossMeta>([
+        "pipeline-loss-reasons",
+        pipelineId,
+      ]);
+      if (prev) {
+        qc.setQueryData<PipelineLossMeta>(
+          ["pipeline-loss-reasons", pipelineId],
+          { ...prev, lossReasonRequired: payload.lossReasonRequired },
+        );
+      }
+      return { prev };
+    },
+    onError: (err, _vars, ctx) => {
+      if (pipelineId && ctx?.prev) {
+        qc.setQueryData(["pipeline-loss-reasons", pipelineId], ctx.prev);
+      }
+      toast.error(err instanceof Error ? err.message : "Falha ao salvar");
+    },
+    onSuccess: async (_data, vars) => {
+      await qc.invalidateQueries({
+        queryKey: ["pipeline-loss-reasons", pipelineId],
+      });
       await qc.invalidateQueries({ queryKey: ["loss-reasons"] });
       await qc.invalidateQueries({ queryKey: ["pipelines"] });
+      if (typeof vars.lossReasonRequired === "boolean") {
+        toast.success(
+          vars.lossReasonRequired
+            ? "Motivo de perda obrigatório neste funil"
+            : "Motivo de perda opcional neste funil",
+        );
+      } else if (vars.reasonIds) {
+        toast.success("Vínculos do funil atualizados");
+      }
     },
   });
 
@@ -238,13 +298,29 @@ export default function LossReasonsV2ClientPage() {
   );
   const funnelItems = pipelineMeta?.reasons ?? [];
 
+  const scopeOptions = useMemo(
+    () => [
+      ...pipelines.map((p) => ({
+        value: p.id,
+        label: p.name,
+        description: p.isDefault ? "Funil padrão" : undefined,
+      })),
+      {
+        value: "catalog",
+        label: "Catálogo global",
+        description: "Motivos reutilizáveis entre funis",
+      },
+    ],
+    [pipelines],
+  );
+
   function onDragEnd(result: DropResult) {
     if (!result.destination) return;
     const from = result.source.index;
     const to = result.destination.index;
     if (from === to) return;
 
-    if (!segment || segment === "catalog") {
+    if (!pipelineId) {
       const next = [...catalogItems];
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
@@ -260,117 +336,145 @@ export default function LossReasonsV2ClientPage() {
     const next = [...funnelItems];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
-    qc.setQueryData<PipelineLossMeta>(["pipeline-loss-reasons", pipelineId], (prev) =>
-      prev ? { ...prev, reasons: next.map((r, i) => ({ ...r, position: i })) } : prev,
+    qc.setQueryData<PipelineLossMeta>(
+      ["pipeline-loss-reasons", pipelineId],
+      (prev) =>
+        prev
+          ? { ...prev, reasons: next.map((r, i) => ({ ...r, position: i })) }
+          : prev,
     );
     savePipelineMut.mutate({ reasonIds: next.map((r) => r.id) });
   }
 
-  const segments: {
-    id: Segment;
-    label: string;
-    tone: KpiTone;
-    value: number;
-  }[] = [
-    {
-      id: "catalog",
-      label: "Catálogo",
-      tone: "brand",
-      value: catalogItems.length,
-    },
-    ...pipelines.map((p) => ({
-      id: p.id as Segment,
-      label: p.name,
-      tone: "violet" as KpiTone,
-      value:
-        segment === p.id
-          ? funnelItems.length
-          : reasons.filter((r) => r.pipelineIds?.includes(p.id)).length,
-    })),
-  ];
+  const listItems = !pipelineId
+    ? catalogItems.map((r) => ({
+        id: r.id,
+        label: r.label,
+        meta:
+          (r.pipelineIds?.length ?? 0) === 0
+            ? "Sem funil"
+            : `${r.pipelineIds.length} funil(is)`,
+      }))
+    : funnelItems.map((r) => ({
+        id: r.id,
+        label: r.label,
+        meta: "Neste funil",
+      }));
 
-  const listItems =
-    !segment || segment === "catalog"
-      ? catalogItems.map((r) => ({
-          id: r.id,
-          label: r.label,
-          meta: `${r.pipelineIds?.length ?? 0} funil(is)`,
-        }))
-      : funnelItems.map((r) => ({
-          id: r.id,
-          label: r.label,
-          meta: "Vinculado a este funil",
-        }));
+  const scopeLabel = pipelineId
+    ? (pipelineMeta?.name ??
+      pipelines.find((p) => p.id === pipelineId)?.name ??
+      "Funil")
+    : "Catálogo global";
 
   return (
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
       title="Motivos de perda"
-      description="Catálogo reutilizável e vínculo por funil — ordem por drag and drop"
+      description="Parametrize por funil — compartilhe motivos ou torne obrigatório"
       icon={<IconThumbDown size={22} />}
       actions={
-        <ActionsMenu
-          onAdd={() => setAddOpen(true)}
-          onAssign={pipelineId ? () => setAssignOpen(true) : undefined}
-          onSettings={() => setSettingsOpen(true)}
-        />
+        <div className="flex items-center gap-2">
+          <ButtonGlass
+            type="button"
+            variant="primary"
+            className="h-9 gap-1.5 px-3"
+            onClick={() => setAddOpen(true)}
+          >
+            <IconPlus size={16} stroke={2.2} />
+            <span className="hidden sm:inline">Novo motivo</span>
+          </ButtonGlass>
+          <ActionsMenu
+            onAdd={() => setAddOpen(true)}
+            onAssign={pipelineId ? () => setAssignOpen(true) : undefined}
+            onSettings={() => setSettingsOpen(true)}
+          />
+        </div>
       }
     >
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-        <section
-          className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
-          aria-label="Segmentos de motivos"
-        >
-          {segments.map((seg) => (
-            <KpiCard
-              key={seg.id}
-              label={seg.label}
-              value={String(seg.value)}
-              icon={<IconThumbDown size={20} stroke={2.2} />}
-              tone={seg.tone}
-              active={segment === seg.id}
-              onClick={() =>
-                setSegment((prev) => (prev === seg.id ? null : seg.id))
+        <div className="flex shrink-0 flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <p className="font-display text-[12px] font-semibold text-[var(--text-muted)]">
+              Escopo
+            </p>
+            <DropdownGlass
+              options={scopeOptions}
+              value={scope ?? ""}
+              onValueChange={(v) => setScope(v as Scope)}
+              placeholder={
+                pipelinesQuery.isLoading ? "Carregando funis…" : "Selecione o funil"
               }
+              className="w-full max-w-md"
             />
-          ))}
-        </section>
-
-        {pipelineId && pipelineMeta && (
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)]">
-            <div className="min-w-0">
-              <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-                Obrigatoriedade · {pipelineMeta.name}
-              </p>
-              <p className="text-[12px] text-[var(--text-muted)]">
-                Quando ativo, marcar perdido neste funil exige um motivo.
-              </p>
-            </div>
-            <SwitchGlass
-              checked={pipelineMeta.lossReasonRequired}
-              onChange={(v) =>
-                savePipelineMut.mutate({ lossReasonRequired: v })
-              }
-              aria-label="Motivo obrigatório neste funil"
-            />
+            <p className="text-[12px] text-[var(--text-muted)]">
+              {pipelineId
+                ? "Motivos listados abaixo valem só para este funil. O mesmo motivo pode ser vinculado a vários funis."
+                : "Catálogo compartilhado — vincule cada motivo aos funis que devem usá-lo."}
+            </p>
           </div>
-        )}
+
+          {pipelineId && (
+            <div className="flex shrink-0 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+                  Obrigatório
+                </p>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Exige motivo ao marcar perdido
+                </p>
+              </div>
+              <SwitchGlass
+                checked={Boolean(pipelineMeta?.lossReasonRequired)}
+                onChange={(v) =>
+                  savePipelineMut.mutate({ lossReasonRequired: v })
+                }
+                disabled={pipelineMetaQuery.isLoading || savePipelineMut.isPending}
+                aria-label={`Motivo obrigatório em ${scopeLabel}`}
+              />
+            </div>
+          )}
+        </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-2 shadow-[var(--glass-shadow)]">
-          {reasonsQuery.isLoading || pipelinesQuery.isLoading ? (
+          <div className="flex shrink-0 items-center justify-between gap-2 px-2 py-1.5">
+            <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+              {scopeLabel}
+              <span className="ml-2 font-normal text-[var(--text-muted)]">
+                · {listItems.length}
+              </span>
+            </p>
+            {pipelineId && (
+              <ButtonGlass
+                type="button"
+                variant="glass"
+                className="h-8 gap-1.5 px-2.5 text-[12px]"
+                onClick={() => setAssignOpen(true)}
+              >
+                <IconLink size={14} />
+                Vincular do catálogo
+              </ButtonGlass>
+            )}
+          </div>
+
+          {reasonsQuery.isLoading ||
+          pipelinesQuery.isLoading ||
+          (pipelineId && pipelineMetaQuery.isLoading) ? (
             <div className="h-40 animate-pulse rounded-[var(--radius-lg)] bg-[var(--glass-bg-subtle)]" />
           ) : listItems.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
               <IconThumbDown size={28} className="text-[var(--text-muted)]" />
               <p className="font-display text-[15px] font-bold text-[var(--text-primary)]">
-                {pipelineId ? "Nenhum motivo neste funil" : "Nenhum motivo ainda"}
+                {pipelineId
+                  ? "Nenhum motivo neste funil"
+                  : "Nenhum motivo no catálogo"}
               </p>
               <p className="max-w-sm text-[13px] text-[var(--text-muted)]">
                 {pipelineId
-                  ? "Vincule motivos do catálogo ou crie um novo pelo menu."
-                  : "Use o menu para adicionar o primeiro motivo de perda."}
+                  ? "Crie um motivo novo (já fica vinculado) ou vincule itens do catálogo global."
+                  : "Crie motivos reutilizáveis e vincule-os a cada funil."}
               </p>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
                 <ButtonGlass
                   type="button"
                   variant="primary"
@@ -399,7 +503,11 @@ export default function LossReasonsV2ClientPage() {
                     className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-1.5"
                   >
                     {listItems.map((item, index) => (
-                      <Draggable key={item.id} draggableId={item.id} index={index}>
+                      <Draggable
+                        key={item.id}
+                        draggableId={item.id}
+                        index={index}
+                      >
                         {(drag, snapshot) => (
                           <div
                             ref={drag.innerRef}
@@ -472,6 +580,11 @@ export default function LossReasonsV2ClientPage() {
           <DialogHeader>
             <DialogTitle>Novo motivo de perda</DialogTitle>
           </DialogHeader>
+          <p className="text-[12px] text-[var(--text-muted)]">
+            {pipelineId
+              ? `Será criado no catálogo e vinculado a “${scopeLabel}”.`
+              : "Fica no catálogo global — vincule aos funis depois."}
+          </p>
           <InputGlass
             autoFocus
             placeholder="Ex.: Preço alto"
@@ -484,7 +597,11 @@ export default function LossReasonsV2ClientPage() {
             }}
           />
           <DialogFooter>
-            <ButtonGlass type="button" variant="glass" onClick={() => setAddOpen(false)}>
+            <ButtonGlass
+              type="button"
+              variant="glass"
+              onClick={() => setAddOpen(false)}
+            >
               Cancelar
             </ButtonGlass>
             <ButtonGlass
@@ -521,9 +638,11 @@ export default function LossReasonsV2ClientPage() {
           </DialogHeader>
           <div className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] px-3 py-3">
             <div>
-              <p className="font-display text-[13px] font-bold">Permitir motivo personalizado</p>
+              <p className="font-display text-[13px] font-bold">
+                Permitir motivo personalizado
+              </p>
               <p className="text-[12px] text-[var(--text-muted)]">
-                Exibe “Outro…” no dialog de perda (global).
+                Exibe “Outro…” no dialog de perda (global na organização).
               </p>
             </div>
             <SwitchGlass
@@ -611,6 +730,10 @@ function AssignDialog({
         <DialogHeader>
           <DialogTitle>Vincular motivos ao funil</DialogTitle>
         </DialogHeader>
+        <p className="text-[12px] text-[var(--text-muted)]">
+          Marque os motivos deste funil. O mesmo item pode aparecer em vários
+          funis.
+        </p>
         <div className="max-h-[360px] space-y-1 overflow-y-auto">
           {catalog.length === 0 ? (
             <p className="py-6 text-center text-[13px] text-[var(--text-muted)]">
@@ -649,7 +772,11 @@ function AssignDialog({
           )}
         </div>
         <DialogFooter>
-          <ButtonGlass type="button" variant="glass" onClick={() => onOpenChange(false)}>
+          <ButtonGlass
+            type="button"
+            variant="glass"
+            onClick={() => onOpenChange(false)}
+          >
             Cancelar
           </ButtonGlass>
           <ButtonGlass
@@ -667,6 +794,7 @@ function AssignDialog({
   );
 }
 
+/** Menu em portal — o header tem overflow e cortava o dropdown. */
 function ActionsMenu({
   onAdd,
   onAssign,
@@ -677,15 +805,35 @@ function ActionsMenu({
   onSettings: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setPos({
+      top: rect.bottom + 6,
+      right: window.innerWidth - rect.right,
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
     }
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const items = [
@@ -693,7 +841,7 @@ function ActionsMenu({
     ...(onAssign
       ? [
           {
-            icon: <IconSettings size={16} />,
+            icon: <IconLink size={16} />,
             label: "Vincular do catálogo",
             onClick: onAssign,
           },
@@ -708,8 +856,9 @@ function ActionsMenu({
   ];
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label="Ações"
@@ -721,28 +870,35 @@ function ActionsMenu({
       >
         <IconMenu2 size={18} stroke={2.2} />
       </button>
-      {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          {items.map((it) => (
-            <div key={it.label}>
-              {"divider" in it && it.divider && (
-                <div className="my-1 h-px bg-[var(--glass-border)]" />
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  it.onClick();
-                }}
-                className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-              >
-                <span className="text-[var(--text-muted)]">{it.icon}</span>
-                {it.label}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+      {open &&
+        pos &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ top: pos.top, right: pos.right }}
+            className="fixed z-[200] w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md"
+          >
+            {items.map((it) => (
+              <div key={it.label}>
+                {"divider" in it && it.divider && (
+                  <div className="my-1 h-px bg-[var(--glass-border)]" />
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    it.onClick();
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+                >
+                  <span className="text-[var(--text-muted)]">{it.icon}</span>
+                  {it.label}
+                </button>
+              </div>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }

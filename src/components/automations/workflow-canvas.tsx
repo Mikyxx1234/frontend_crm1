@@ -852,19 +852,21 @@ function WorkflowCanvasInner({
     setNodes(buildNodes(steps, removeStep, addStepAfter));
   }, [steps, buildNodes, removeStep, addStepAfter, setNodes]);
 
-  // 27/mai/26 — Recentraliza o viewport quando o operador clica em
-  // "Auto alinhar". O `autoAlignVersion` é um contador; quando muda,
-  // chamamos `fitView` pra enquadrar todos os nodes na tela.
-  // Esperamos uns ticks porque `setNodes` acima é assíncrono — sem o
-  // setTimeout o fitView calcula bounds usando os nodes antigos.
-  // `autoAlignVersion === 0` é o estado inicial, pulamos pra não
-  // mexer no zoom inicial do operador.
+  // Recentraliza o viewport após "Auto alinhar". Espera o React Flow
+  // aplicar as novas posições (setNodes é assíncrono). `maxZoom: 1`
+  // evita zoom-in excessivo em fluxos curtos (empurrava o fluxo pra
+  // baixo da tela no shell v2 com CSS zoom).
   useEffect(() => {
     if (!autoAlignVersion) return;
-    const timer = setTimeout(() => {
-      fitView({ duration: 400, padding: 0.2 });
-    }, 100);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      void fitView({ duration: 380, padding: 0.22, maxZoom: 1, minZoom: 0.35 });
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [autoAlignVersion, fitView]);
 
   const edges = useMemo(

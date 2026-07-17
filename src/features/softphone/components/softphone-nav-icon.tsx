@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * Ícone de telefonia na NavRail — fica ao lado do status do agente (wifi),
- * separado por um pipe. Sem badge/ping de status (o softphone idle sai do
- * canto inferior direito; chamadas ativas continuam no SoftphoneWidget).
+ * Ícone de telefonia na NavRail — sob o status do agente (wifi) quando a
+ * rail está colapsada; ao lado com pipe quando expandida. Sem badge/ping
+ * (o softphone idle sai do canto; chamadas ativas ficam no SoftphoneWidget).
  */
 
 import * as React from "react";
@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { IconPhoneFilled } from "@tabler/icons-react";
 
+import { DockButton } from "@/components/crm/floating-dock";
 import { cn } from "@/lib/utils";
 import { useSoftphone } from "../hooks/use-softphone";
 import { useCallsWidget } from "../hooks/use-calls-widget";
@@ -73,6 +74,27 @@ export function SoftphoneNavIcon({
       ? "Softphone: conectando…"
       : `Softphone • Ramal ${ramal}`;
 
+  const icon = (
+    <IconPhoneFilled
+      size={20}
+      className={cn(isError && "text-[var(--color-danger)]")}
+    />
+  );
+
+  // Rail colapsada: mesmo tile 44×44 dos demais ícones (cabe em 72px).
+  if (!expanded) {
+    return (
+      <DockButton
+        title={title}
+        onClick={requestSoftphoneExpand}
+        disablePop
+        className={className}
+      >
+        {icon}
+      </DockButton>
+    );
+  }
+
   const phoneBtn = (
     <button
       type="button"
@@ -80,15 +102,12 @@ export function SoftphoneNavIcon({
       aria-label={title}
       title={title}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center transition-colors",
-        expanded
-          ? "text-[var(--nav-text-hover)] hover:text-white"
-          : "text-[var(--nav-text-muted)] hover:text-[var(--nav-text-hover)]",
+        "inline-flex shrink-0 items-center justify-center text-[var(--nav-text-hover)] transition-colors hover:text-white",
         isError && "text-[var(--color-danger)]",
         className,
       )}
     >
-      <IconPhoneFilled size={20} />
+      {icon}
     </button>
   );
 

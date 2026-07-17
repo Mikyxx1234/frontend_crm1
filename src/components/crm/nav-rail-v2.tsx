@@ -501,7 +501,9 @@ export function NavRailV2({ className }: { className?: string }) {
           <SoftphoneNavIcon expanded withPipe className="ml-1" />
         </div>
       ) : (
-        <div className="flex items-center gap-1.5">
+        // Colapsada (72px): empilha wifi + phone — lado a lado + pipe
+        // estoura a largura (DockButton 44px + pipe + phone).
+        <div className="flex flex-col items-center gap-1">
           <DockButton
             title={`Status: ${statusMeta.label}`}
             onClick={() => setStatusPopupOpen(true)}
@@ -509,7 +511,7 @@ export function NavRailV2({ className }: { className?: string }) {
           >
             <StatusIcon size={20} style={{ color: statusMeta.color }} />
           </DockButton>
-          <SoftphoneNavIcon withPipe />
+          <SoftphoneNavIcon />
         </div>
       )}
 

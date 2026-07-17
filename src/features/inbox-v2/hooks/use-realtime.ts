@@ -116,11 +116,18 @@ export function useInboxRealtime(options: {
                 );
               }
             }
-            // Confirma com o servidor (e atualiza conversas não abertas).
-            qc.invalidateQueries({
-              queryKey: messagesKey(data.conversationId),
-              refetchType: data.conversationId === activeRef.current ? "active" : "none",
-            });
+            // Refetch forçado na conversa aberta — invalidate sozinho
+            // às vezes não dispara a tempo do tick azul.
+            if (data.conversationId === activeRef.current) {
+              void qc.refetchQueries({
+                queryKey: messagesKey(data.conversationId),
+              });
+            } else {
+              qc.invalidateQueries({
+                queryKey: messagesKey(data.conversationId),
+                refetchType: "none",
+              });
+            }
           }
           scheduleInboxRefresh();
         } catch {

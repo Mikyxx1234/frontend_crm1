@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
@@ -439,23 +440,21 @@ export function CatalogsManager() {
       </section>
 
       {/* DIALOGS */}
-      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle>Novo catálogo</DialogTitle>
-            <DialogDescription>
-              Responda perguntas de negócio — o catálogo monta as capacidades para você.
-            </DialogDescription>
-          </DialogHeader>
-          <CatalogWizard
-            onDone={(createdId) => {
-              setWizardOpen(false);
-              if (createdId) setNewProductCatalogId(createdId);
-            }}
-            onCancel={() => setWizardOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      <FormSheet
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        size="lg"
+        title="Novo catálogo"
+        description="Responda perguntas de negócio — o catálogo monta as capacidades para você."
+      >
+        <CatalogWizard
+          onDone={(createdId) => {
+            setWizardOpen(false);
+            if (createdId) setNewProductCatalogId(createdId);
+          }}
+          onCancel={() => setWizardOpen(false)}
+        />
+      </FormSheet>
 
       <ProductDialog
         open={!!newProductCatalogId}
@@ -465,24 +464,22 @@ export function CatalogsManager() {
         onCreated={() => setNewProductCatalogId(null)}
       />
 
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle>Editar catálogo</DialogTitle>
-            <DialogDescription>
-              Ajuste capacidades, modos e políticas de override deste catálogo.
-            </DialogDescription>
-          </DialogHeader>
-          {editing && (
-            <CatalogWizard
-              key={editing.id}
-              catalog={editing}
-              onDone={() => setEditing(null)}
-              onCancel={() => setEditing(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <FormSheet
+        open={!!editing}
+        onOpenChange={(o) => !o && setEditing(null)}
+        size="lg"
+        title="Editar catálogo"
+        description="Ajuste capacidades, modos e políticas de override deste catálogo."
+      >
+        {editing && (
+          <CatalogWizard
+            key={editing.id}
+            catalog={editing}
+            onDone={() => setEditing(null)}
+            onCancel={() => setEditing(null)}
+          />
+        )}
+      </FormSheet>
       {dialog}
     </div>
   );

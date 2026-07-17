@@ -34,6 +34,7 @@ import {
   DialogClose,
   DialogContent,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import {
   DragDropContext,
   Draggable,
@@ -507,30 +508,31 @@ function FieldFormDialog({
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="md" bodyClassName="p-0 gap-0">
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-6 py-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
-            {TYPE_ICONS[type] ?? <IconLetterT size={16} strokeWidth={2.5} />}
-          </div>
-          <div className="flex-1">
-            <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
-              {mode === "create" ? "Novo campo" : "Editar campo"}
-            </h2>
-            <p className="font-body text-[12px] text-[var(--text-muted)]">
-              {mode === "create" ? "Defina o nome, tipo e entidade." : `Editando "${initial?.label}"`}
-            </p>
-          </div>
-          <DialogClose />
-        </div>
-
-        {/* Body */}
-        <form
-          id="field-form"
-          onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
-        >
-          <div className="flex flex-col gap-5 px-6 py-5">
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      busy={mutation.isPending}
+      icon={<span className="text-[var(--brand-primary)]">{TYPE_ICONS[type] ?? <IconLetterT size={16} strokeWidth={2.5} />}</span>}
+      title={mode === "create" ? "Novo campo" : "Editar campo"}
+      description={mode === "create" ? "Defina o nome, tipo e entidade." : `Editando "${initial?.label}"`}
+      footer={
+        <>
+          <button type="button" onClick={() => onOpenChange(false)}
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
+            Cancelar
+          </button>
+          <ButtonGlass type="submit" form="field-form" variant="primary" disabled={mutation.isPending || !label.trim()}>
+            {mutation.isPending ? "Salvando…" : mode === "create" ? "Criar campo" : "Salvar"}
+          </ButtonGlass>
+        </>
+      }
+    >
+      {/* Body */}
+      <form
+        id="field-form"
+        onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
+      >
+        <div className="flex flex-col gap-5">
             {/* Entidade + Tipo */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
@@ -644,21 +646,8 @@ function FieldFormDialog({
             )}
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] px-6 py-4">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
-            >
-              Cancelar
-            </button>
-            <ButtonGlass type="submit" variant="primary" disabled={mutation.isPending || !label.trim()}>
-              {mutation.isPending ? "Salvando…" : mode === "create" ? "Criar campo" : "Salvar"}
-            </ButtonGlass>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </form>
+    </FormSheet>
   );
 }

@@ -8,7 +8,7 @@ import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
 import { BadgeGlass } from "./badge-glass"
 import { avatarGradients, channelBadge } from "./conversation-card"
-import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, type Message } from "./message-bubble"
+import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
 import {
   formatConnectionLabel,
@@ -458,6 +458,18 @@ export function ChatArea({
           const showConnSwitches = distinctChannels.size >= 2
           let lastChannelId: string | null = null
           return messages.map((message, index) => {
+            // Separador de ticket — item sintético injetado pelo backend
+            // quando `?history=1`. Não é uma bolha; renderiza diretamente.
+            if (message.messageType === "ticket-separator" && message.ticketInfo) {
+              return (
+                <TicketDivider
+                  key={message.id || `sep-${index}`}
+                  number={message.ticketInfo.number}
+                  closedAt={message.ticketInfo.closedAt}
+                  isCurrent={message.ticketInfo.isCurrent}
+                />
+              )
+            }
             if (message.type !== "incoming" && message.type !== "outgoing") {
               return null
             }

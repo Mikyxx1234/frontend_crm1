@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -331,27 +332,91 @@ export function CreateChannelDialog({
   const showEmbeddedSignup =
     effectiveProvider === "META_CLOUD_API" && embeddedSignup.isConfigured;
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        size="lg"
-        panelClassName="max-h-[90vh]"
-        className="p-0"
-      >
-        <div className="p-6">
-          <DialogHeader className="text-left">
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="size-5 text-[var(--brand-primary)]" />
-              Novo canal
-            </DialogTitle>
-            <DialogDescription>
-              {step === 1 && "Escolha o tipo de canal."}
-              {step === 2 && channelType === "WHATSAPP" && "Configure o provedor."}
-              {step === 3 && "Finalize a configuração."}
-            </DialogDescription>
-          </DialogHeader>
+  const sheetFooter = (
+    <div className="flex w-full flex-wrap items-center gap-2">
+      {step > 1 ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-1"
+          onClick={() => {
+            if (step === 3) {
+              if (channelType === "WHATSAPP") setStep(2);
+              else setStep(1);
+            } else if (step === 2) {
+              setStep(1);
+            }
+          }}
+        >
+          <ChevronLeft className="size-4" />
+          Voltar
+        </Button>
+      ) : null}
+      <div className="flex flex-1 flex-wrap justify-end gap-2">
+        {step === 3 && effectiveProvider === "META_CLOUD_API" ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-1.5"
+            disabled={webhookLoading}
+            onClick={() => void fetchWebhookInfo()}
+          >
+            {webhookLoading ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Webhook className="size-3.5" />
+            )}
+            Webhook
+          </Button>
+        ) : null}
+        <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
+          Cancelar
+        </Button>
+        {step < 3 ? (
+          <Button
+            type="button"
+            disabled={step === 1 ? !channelType : !canAdvanceFromStep2()}
+            onClick={() => {
+              if (step === 1 && channelType) {
+                if (channelType === "WHATSAPP") setStep(2);
+                else setStep(3);
+              } else if (step === 2) {
+                setStep(3);
+              }
+            }}
+          >
+            Continuar
+          </Button>
+        ) : (showEmbeddedSignup && !showManualConfig) ? null : (
+          <Button type="button" onClick={() => void submit()} disabled={submitting}>
+            {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
+            Criar canal
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 
-          <div className="mt-6 space-y-6">
+  const stepDescription =
+    step === 1
+      ? "Escolha o tipo de canal."
+      : step === 2 && channelType === "WHATSAPP"
+        ? "Configure o provedor."
+        : "Finalize a configuração.";
+
+  return (
+    <>
+    <FormSheet
+      open={open}
+      onOpenChange={handleOpenChange}
+      busy={submitting}
+      size="lg"
+      icon={<Sparkles className="size-5 text-[var(--brand-primary)]" />}
+      title="Novo canal"
+      description={stepDescription}
+      footer={sheetFooter}
+    >
+        <div className="space-y-6">
             {step === 1 ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {TYPES.map(({ type, label, description, icon: Icon, cardClass }) => (
@@ -600,87 +665,8 @@ export function CreateChannelDialog({
                 {error}
               </p>
             ) : null}
-          </div>
         </div>
-
-        <DialogFooter className="flex-row flex-wrap gap-2 border-t bg-[var(--glass-bg-overlay)] px-6 py-4">
-          {step > 1 ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="gap-1"
-              onClick={() => {
-                if (step === 3) {
-                  if (channelType === "WHATSAPP") setStep(2);
-                  else setStep(1);
-                } else if (step === 2) {
-                  setStep(1);
-                }
-              }}
-            >
-              <ChevronLeft className="size-4" />
-              Voltar
-            </Button>
-          ) : (
-            <span />
-          )}
-          <div className="flex flex-1 flex-wrap justify-end gap-2">
-            {step === 3 && effectiveProvider === "META_CLOUD_API" ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-1.5"
-                disabled={webhookLoading}
-                onClick={() => void fetchWebhookInfo()}
-              >
-                {webhookLoading ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Webhook className="size-3.5" />
-                )}
-                Webhook
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => handleOpenChange(false)}
-            >
-              Cancelar
-            </Button>
-            {step < 3 ? (
-              <Button
-                type="button"
-                disabled={
-                  step === 1
-                    ? !channelType
-                    : step === 2
-                      ? !canAdvanceFromStep2()
-                      : false
-                }
-                onClick={() => {
-                  if (step === 1 && channelType) {
-                    if (channelType === "WHATSAPP") setStep(2);
-                    else setStep(3);
-                  } else if (step === 2) {
-                    setStep(3);
-                  }
-                }}
-              >
-                Continuar
-              </Button>
-            ) : (showEmbeddedSignup && !showManualConfig) ? null : (
-              <Button type="button" onClick={() => void submit()} disabled={submitting}>
-                {submitting ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : null}
-                Criar canal
-              </Button>
-            )}
-          </div>
-        </DialogFooter>
-        <DialogClose />
-      </DialogContent>
+    </FormSheet>
 
       <Dialog open={webhookModalOpen} onOpenChange={setWebhookModalOpen}>
         <DialogContent size="md" panelClassName="max-h-[90vh]">
@@ -817,6 +803,6 @@ export function CreateChannelDialog({
           <DialogClose />
         </DialogContent>
       </Dialog>
-    </Dialog>
+    </>
   );
 }

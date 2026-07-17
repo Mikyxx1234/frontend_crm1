@@ -37,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 
 import {
   useCompanies,
@@ -456,29 +457,30 @@ function CreateCompanyDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader className="mb-4"><DialogTitle className="text-base">Nova empresa</DialogTitle></DialogHeader>
-          <div>
-            <FieldInput label="Nome da Empresa *" type="text" required autoFocus value={name} onChange={setName} placeholder="Razão social ou nome fantasia" />
-            <div className="grid grid-cols-2 gap-3">
-              <FieldInput label="CNPJ" type="text" value={cnpj} onChange={setCnpj} placeholder="00.000.000/0000-00" />
-              <FieldInput label="Telefone" type="tel" value={phone} onChange={setPhone} placeholder="(11) 3333-4444" />
-            </div>
-            <FieldInput label="E-mail" type="email" value={email} onChange={setEmail} placeholder="contato@empresa.com" />
-            <FieldInput label="Endereço da Empresa" type="text" value={address} onChange={setAddress} placeholder="Rua, número, bairro, cidade — UF" />
-            {createMut.isError && (
-              <p className="mb-3 text-[12px] text-[var(--color-danger-text)]">{createMut.error instanceof Error ? createMut.error.message : "Erro ao criar empresa."}</p>
-            )}
-          </div>
-          <DialogFooter>
-            <ButtonGlass variant="glass" size="sm" type="button" onClick={() => onOpenChange(false)} className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]">Cancelar</ButtonGlass>
-            <ButtonGlass variant="primary" size="sm" type="submit" disabled={!name.trim() || createMut.isPending}>{createMut.isPending ? "Criando..." : "Criar"}</ButtonGlass>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Nova empresa"
+      footer={
+        <>
+          <ButtonGlass variant="glass" size="sm" type="button" onClick={() => onOpenChange(false)}>Cancelar</ButtonGlass>
+          <ButtonGlass variant="primary" size="sm" type="submit" form="new-company-form" disabled={!name.trim() || createMut.isPending}>{createMut.isPending ? "Criando..." : "Criar"}</ButtonGlass>
+        </>
+      }
+    >
+      <form id="new-company-form" onSubmit={handleSubmit} className="flex flex-col">
+        <FieldInput label="Nome da Empresa *" type="text" required autoFocus value={name} onChange={setName} placeholder="Razão social ou nome fantasia" />
+        <div className="grid grid-cols-2 gap-3">
+          <FieldInput label="CNPJ" type="text" value={cnpj} onChange={setCnpj} placeholder="00.000.000/0000-00" />
+          <FieldInput label="Telefone" type="tel" value={phone} onChange={setPhone} placeholder="(11) 3333-4444" />
+        </div>
+        <FieldInput label="E-mail" type="email" value={email} onChange={setEmail} placeholder="contato@empresa.com" />
+        <FieldInput label="Endereço da Empresa" type="text" value={address} onChange={setAddress} placeholder="Rua, número, bairro, cidade — UF" />
+        {createMut.isError && (
+          <p className="text-[12px] text-[var(--color-danger-text)]">{createMut.error instanceof Error ? createMut.error.message : "Erro ao criar empresa."}</p>
+        )}
+      </form>
+    </FormSheet>
   );
 }
 
@@ -508,29 +510,30 @@ function EditCompanyDialog({ company, onClose }: { company: CompanyListItemDto |
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent size="md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader className="mb-4"><DialogTitle className="text-base">Editar empresa</DialogTitle></DialogHeader>
-          <div>
-            <FieldInput label="Nome da Empresa *" type="text" required autoFocus value={name} onChange={setName} placeholder="Razão social ou nome fantasia" />
-            <div className="grid grid-cols-2 gap-3">
-              <FieldInput label="CNPJ" type="text" value={cnpj} onChange={setCnpj} placeholder="00.000.000/0000-00" />
-              <FieldInput label="Telefone" type="tel" value={phone} onChange={setPhone} placeholder="(11) 3333-4444" />
-            </div>
-            <FieldInput label="E-mail" type="email" value={email} onChange={setEmail} placeholder="contato@empresa.com" />
-            <FieldInput label="Endereço da Empresa" type="text" value={address} onChange={setAddress} placeholder="Rua, número, bairro, cidade — UF" />
-            {updateMut.isError && (
-              <p className="mb-3 text-[12px] text-[var(--color-danger-text)]">{updateMut.error instanceof Error ? updateMut.error.message : "Erro ao atualizar empresa."}</p>
-            )}
-          </div>
-          <DialogFooter>
-            <ButtonGlass variant="glass" size="sm" type="button" onClick={onClose} className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]">Cancelar</ButtonGlass>
-            <ButtonGlass variant="primary" size="sm" type="submit" disabled={!name.trim() || updateMut.isPending}>{updateMut.isPending ? "Salvando..." : "Salvar"}</ButtonGlass>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormSheet
+      open={open}
+      onOpenChange={(next) => !next && onClose()}
+      title="Editar empresa"
+      footer={
+        <>
+          <ButtonGlass variant="glass" size="sm" type="button" onClick={onClose}>Cancelar</ButtonGlass>
+          <ButtonGlass variant="primary" size="sm" type="submit" form="edit-company-form" disabled={!name.trim() || updateMut.isPending}>{updateMut.isPending ? "Salvando..." : "Salvar"}</ButtonGlass>
+        </>
+      }
+    >
+      <form id="edit-company-form" onSubmit={handleSubmit} className="flex flex-col">
+        <FieldInput label="Nome da Empresa *" type="text" required autoFocus value={name} onChange={setName} placeholder="Razão social ou nome fantasia" />
+        <div className="grid grid-cols-2 gap-3">
+          <FieldInput label="CNPJ" type="text" value={cnpj} onChange={setCnpj} placeholder="00.000.000/0000-00" />
+          <FieldInput label="Telefone" type="tel" value={phone} onChange={setPhone} placeholder="(11) 3333-4444" />
+        </div>
+        <FieldInput label="E-mail" type="email" value={email} onChange={setEmail} placeholder="contato@empresa.com" />
+        <FieldInput label="Endereço da Empresa" type="text" value={address} onChange={setAddress} placeholder="Rua, número, bairro, cidade — UF" />
+        {updateMut.isError && (
+          <p className="text-[12px] text-[var(--color-danger-text)]">{updateMut.error instanceof Error ? updateMut.error.message : "Erro ao atualizar empresa."}</p>
+        )}
+      </form>
+    </FormSheet>
   );
 }
 

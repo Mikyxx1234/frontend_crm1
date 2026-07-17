@@ -15,7 +15,10 @@ import type {
 export async function getMessages(
   conversationId: string,
 ): Promise<MessagesResponse> {
-  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages`));
+  // history=1: inclui mensagens de tickets anteriores do mesmo contato,
+  // com separadores de ticket injetados pelo backend. Sempre ativo no
+  // inbox v2 para exibir a linha do tempo contínua (comportamento Kommo).
+  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages?history=1`));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(

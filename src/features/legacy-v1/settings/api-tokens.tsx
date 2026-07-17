@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import {
@@ -270,95 +271,57 @@ export default function ApiTokensPage() {
         </div>
       </GlassCard>
 
-      {/* Create dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          {createdToken ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>Chave criada com sucesso</DialogTitle>
-                <DialogDescription>
-                  Copie a chave agora. Ela não será exibida novamente.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <InputGlass readOnly value={createdToken} className="font-mono text-xs" />
-                  <TooltipHost label="Copiar" side="top">
-                    <ButtonGlass
-                      variant="glass"
-                      size="icon"
-                      onClick={handleCopy}
-                      aria-label="Copiar"
-                    >
-                      <Copy className="size-4" />
-                    </ButtonGlass>
-                  </TooltipHost>
-                </div>
-                {copied && (
-                  <p className="text-xs text-[var(--color-success)]">Copiado!</p>
-                )}
-                <div className="rounded-md border border-[var(--color-warning)]/30 bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] p-3 text-xs text-[var(--color-warning)]">
-                  Guarde esta chave em um local seguro. Ela será usada como
-                  token de autenticação nas requisições (Bearer Token).
-                </div>
-              </div>
-              <DialogFooter>
-                <ButtonGlass variant="primary" onClick={handleCloseCreated}>Fechar</ButtonGlass>
-              </DialogFooter>
-            </>
+      {/* Create drawer */}
+      <FormSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        busy={createMutation.isPending}
+        title={createdToken ? "Chave criada com sucesso" : "Criar nova chave de API"}
+        description={createdToken ? "Copie a chave agora. Ela não será exibida novamente." : "Defina um nome e, opcionalmente, uma data de expiração."}
+        footer={
+          createdToken ? (
+            <ButtonGlass variant="primary" onClick={handleCloseCreated}>Fechar</ButtonGlass>
           ) : (
             <>
-              <DialogHeader>
-                <DialogTitle>Criar nova chave de API</DialogTitle>
-                <DialogDescription>
-                  Defina um nome e, opcionalmente, uma data de expiração.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div className="space-y-2">
-                  <Label htmlFor="tk-name">Nome</Label>
-                  <InputGlass
-                    id="tk-name"
-                    value={tokenName}
-                    onChange={(e) => setTokenName(e.target.value)}
-                    placeholder="Ex.: Integração ERP"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tk-expiry">Expira em (opcional)</Label>
-                  <InputGlass
-                    id="tk-expiry"
-                    type="date"
-                    value={tokenExpiry}
-                    onChange={(e) => setTokenExpiry(e.target.value)}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <ButtonGlass
-                  variant="glass"
-                  onClick={() => setCreateOpen(false)}
-                >
-                  Cancelar
-                </ButtonGlass>
-                <ButtonGlass
-                  variant="primary"
-                  disabled={!tokenName.trim() || createMutation.isPending}
-                  onClick={() => createMutation.mutate()}
-                >
-                  {createMutation.isPending ? "Criando..." : "Criar chave"}
-                </ButtonGlass>
-              </DialogFooter>
-              {createMutation.isError && (
-                <p className="text-sm text-destructive">
-                  {(createMutation.error as Error).message}
-                </p>
-              )}
+              <ButtonGlass variant="glass" onClick={() => setCreateOpen(false)}>Cancelar</ButtonGlass>
+              <ButtonGlass variant="primary" disabled={!tokenName.trim() || createMutation.isPending} onClick={() => createMutation.mutate()}>
+                {createMutation.isPending ? "Criando..." : "Criar chave"}
+              </ButtonGlass>
             </>
-          )}
-        </DialogContent>
-      </Dialog>
+          )
+        }
+      >
+        {createdToken ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <InputGlass readOnly value={createdToken} className="font-mono text-xs" />
+              <TooltipHost label="Copiar" side="top">
+                <ButtonGlass variant="glass" size="icon" onClick={handleCopy} aria-label="Copiar">
+                  <Copy className="size-4" />
+                </ButtonGlass>
+              </TooltipHost>
+            </div>
+            {copied && <p className="text-xs text-[var(--color-success)]">Copiado!</p>}
+            <div className="rounded-md border border-[var(--color-warning)]/30 bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] p-3 text-xs text-[var(--color-warning)]">
+              Guarde esta chave em um local seguro. Ela será usada como token de autenticação nas requisições (Bearer Token).
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tk-name">Nome</Label>
+              <InputGlass id="tk-name" value={tokenName} onChange={(e) => setTokenName(e.target.value)} placeholder="Ex.: Integração ERP" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tk-expiry">Expira em (opcional)</Label>
+              <InputGlass id="tk-expiry" type="date" value={tokenExpiry} onChange={(e) => setTokenExpiry(e.target.value)} />
+            </div>
+            {createMutation.isError && (
+              <p className="text-sm text-destructive">{(createMutation.error as Error).message}</p>
+            )}
+          </div>
+        )}
+      </FormSheet>
 
       {/* Delete confirm */}
       <Dialog

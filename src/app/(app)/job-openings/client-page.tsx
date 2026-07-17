@@ -26,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
@@ -266,16 +267,23 @@ function CreateJobDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
-        <DialogHeader>
-          <DialogTitle>Nova vaga</DialogTitle>
-          <DialogDescription>
-            Processo seletivo (B2C) com nº de posições e empresa cliente.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3">
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      busy={create.isPending}
+      title="Nova vaga"
+      description="Processo seletivo (B2C) com nº de posições e empresa cliente."
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleCreate} disabled={create.isPending}>
+            {create.isPending && <IconLoader2 size={14} className="mr-1.5 animate-spin" />}
+            Criar vaga
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label>Título *</Label>
@@ -383,19 +391,8 @@ function CreateJobDialog({
               </div>
             </div>
           )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleCreate} disabled={create.isPending}>
-            {create.isPending && <IconLoader2 size={14} className="mr-1.5 animate-spin" />}
-            Criar vaga
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormSheet>
   );
 }
 

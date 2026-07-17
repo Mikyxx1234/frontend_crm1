@@ -227,6 +227,16 @@ export interface Message {
    * `isPinned` (usado só para notas na aba "Notas").
    */
   isPinnedMessage?: boolean
+  /**
+   * Metadados de separador de ticket (messageType === "ticket-separator").
+   * Presente apenas nos itens sintéticos injetados pelo backend quando
+   * `?history=1` para marcar o início de cada ticket na linha do tempo.
+   */
+  ticketInfo?: {
+    number: number
+    closedAt: string | null
+    isCurrent?: boolean
+  }
 }
 
 
@@ -1655,6 +1665,49 @@ export function ConnectionDivider({ label }: ConnectionDividerProps) {
         via {label}
       </span>
       <span className="h-px w-6 bg-[var(--glass-border)]" />
+    </div>
+  )
+}
+
+interface TicketDividerProps {
+  /** Número sequencial do ticket (#N). */
+  number: number
+  /** ISO do encerramento — null para o ticket atual (em andamento). */
+  closedAt: string | null
+  /** Ticket em andamento (mais recente) — estilo ligeiramente diferente. */
+  isCurrent?: boolean
+}
+
+/**
+ * Separador de ticket na linha do tempo contínua do contato.
+ * Aparece no início de cada ticket quando `history=1` está ativo,
+ * distinguindo ciclos de atendimento distintos sem esconder o histórico.
+ */
+export function TicketDivider({ number, closedAt, isCurrent }: TicketDividerProps) {
+  let dateLabel = ""
+  if (closedAt) {
+    const d = new Date(closedAt)
+    if (!Number.isNaN(d.getTime())) {
+      const dd = String(d.getDate()).padStart(2, "0")
+      const mm = String(d.getMonth() + 1).padStart(2, "0")
+      const yyyy = d.getFullYear()
+      dateLabel = ` · encerrado ${dd}/${mm}/${yyyy}`
+    }
+  }
+  return (
+    <div className="my-3 flex items-center gap-2 self-stretch">
+      <span className="h-px flex-1 bg-[var(--glass-border)]" />
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[10.5px] font-semibold",
+          isCurrent
+            ? "border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+        )}
+      >
+        {isCurrent ? "Conversa atual" : `#${number}${dateLabel}`}
+      </span>
+      <span className="h-px flex-1 bg-[var(--glass-border)]" />
     </div>
   )
 }

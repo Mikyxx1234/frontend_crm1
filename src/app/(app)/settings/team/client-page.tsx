@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
@@ -694,17 +695,29 @@ export default function TeamV2ClientPage() {
         />
       ) : null}
 
-      {/* ─── Dialog: criar usuário ─── */}
-      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Criar usuário</DialogTitle>
-            <DialogDescription>
-              O usuário é criado na hora e já acessa com o e-mail e a senha
-              definidos abaixo. Nenhum e-mail de convite é enviado.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-2">
+      {/* ─── Drawer: criar usuário ─── */}
+      <FormSheet
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        busy={invite.isPending}
+        title="Criar usuário"
+        description="O usuário é criado na hora e já acessa com o e-mail e a senha definidos abaixo. Nenhum e-mail de convite é enviado."
+        footer={
+          <>
+            <ButtonGlass type="button" variant="glass" onClick={() => setInviteOpen(false)}>Cancelar</ButtonGlass>
+            <ButtonGlass
+              type="button"
+              variant="primary"
+              disabled={invite.isPending || !inviteName.trim() || !inviteEmail.trim() || invitePassword.length < 6}
+              onClick={() => invite.mutate()}
+            >
+              {invite.isPending ? <Loader2 className="size-4 animate-spin" /> : <IconPlus size={16} />}
+              Criar usuário
+            </ButtonGlass>
+          </>
+        }
+      >
+        <div className="grid gap-3">
             <div className="grid gap-1.5">
               <label htmlFor="invite-name" className="text-sm font-medium">
                 Nome
@@ -813,71 +826,56 @@ export default function TeamV2ClientPage() {
                 })}
               </div>
             </GlassCard>
-          </div>
           {invite.isError && invite.error instanceof Error ? (
             <p className="text-sm text-[var(--color-danger,#e11d48)]">
               {invite.error.message}
             </p>
           ) : null}
-          <DialogFooter className="gap-2 sm:gap-0">
-            <ButtonGlass
-              type="button"
-              variant="glass"
-              onClick={() => setInviteOpen(false)}
-            >
-              Cancelar
-            </ButtonGlass>
+        </div>
+      </FormSheet>
+
+      {/* ─── Drawer: trocar senha ─── */}
+      <FormSheet
+        open={passwordTarget != null}
+        onOpenChange={(open) => {
+          if (!open) closePasswordDialog();
+        }}
+        busy={updatePassword.isPending}
+        icon={<KeyRound className="size-5 text-[var(--color-lavender)]" />}
+        title="Trocar senha"
+        description={
+          passwordTarget ? (
+            <>
+              Defina uma nova senha para{" "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {passwordTarget.name}
+              </span>{" "}
+              <span className="text-[var(--text-muted)]">
+                ({passwordTarget.email})
+              </span>
+              . O próximo login usará esta senha.
+            </>
+          ) : null
+        }
+        footer={
+          <>
+            <ButtonGlass type="button" variant="glass" onClick={closePasswordDialog} disabled={updatePassword.isPending}>Cancelar</ButtonGlass>
             <ButtonGlass
               type="button"
               variant="primary"
-              disabled={
-                invite.isPending ||
-                !inviteName.trim() ||
-                !inviteEmail.trim() ||
-                invitePassword.length < 6
-              }
-              onClick={() => invite.mutate()}
+              disabled={!canSubmitPassword}
+              onClick={() => {
+                if (!passwordTarget) return;
+                updatePassword.mutate({ id: passwordTarget.id, password: newPassword });
+              }}
             >
-              {invite.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <IconPlus size={16} />
-              )}
-              Criar usuário
+              {updatePassword.isPending ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
+              Salvar nova senha
             </ButtonGlass>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ─── Dialog: trocar senha ─── */}
-      <Dialog
-        open={passwordTarget != null}
-        onOpenChange={(open) => {
-          if (!open && !updatePassword.isPending) closePasswordDialog();
-        }}
+          </>
+        }
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="size-4 text-[var(--color-lavender)]" />
-              Trocar senha
-            </DialogTitle>
-            <DialogDescription>
-              {passwordTarget ? (
-                <>
-                  Defina uma nova senha para{" "}
-                  <span className="font-medium text-[var(--text-primary)]">
-                    {passwordTarget.name}
-                  </span>{" "}
-                  <span className="text-[var(--text-muted)]">
-                    ({passwordTarget.email})
-                  </span>
-                  . O próximo login usará esta senha.
-                </>
-              ) : null}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-2">
+        <div className="grid gap-3">
             <div className="grid gap-1.5">
               <label htmlFor="new-password" className="text-sm font-medium">
                 Nova senha
@@ -922,38 +920,8 @@ export default function TeamV2ClientPage() {
                 </p>
               ) : null}
             </div>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <ButtonGlass
-              type="button"
-              variant="glass"
-              onClick={closePasswordDialog}
-              disabled={updatePassword.isPending}
-            >
-              Cancelar
-            </ButtonGlass>
-            <ButtonGlass
-              type="button"
-              variant="primary"
-              disabled={!canSubmitPassword}
-              onClick={() => {
-                if (!passwordTarget) return;
-                updatePassword.mutate({
-                  id: passwordTarget.id,
-                  password: newPassword,
-                });
-              }}
-            >
-              {updatePassword.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <KeyRound className="size-4" />
-              )}
-              Salvar nova senha
-            </ButtonGlass>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </FormSheet>
 
       {/* ─── Dialog: excluir (single) ─── */}
       <Dialog

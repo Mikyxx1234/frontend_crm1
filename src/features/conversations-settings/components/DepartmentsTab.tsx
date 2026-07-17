@@ -41,6 +41,7 @@ import { ButtonGlass } from "@/components/crm/button-glass";
 import { PageSearchBar, PageSegmentedControl, PagePrimaryButton } from "@/components/crm/page-toolbar";
 import { listTableHeadRowClass, ListColumnLabel } from "@/components/crm/sortable-header";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import {
   useDepartments,
   useCreateDepartment,
@@ -148,79 +149,63 @@ function CreateDepartmentModal({ open, onClose }: { open: boolean; onClose: () =
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { reset(); onClose(); } }}>
-      <DialogContent size="sm" bodyClassName="p-0 gap-0">
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-5 py-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]" style={{ backgroundColor: color + "22" }}>
-            <DeptIcon name={iconName} size={20} color={color} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-display text-[15px] font-bold text-[var(--text-primary)]">Novo departamento</h3>
-            {name.trim() && <p className="truncate font-body text-[12px] text-[var(--text-muted)]">{name.trim()}</p>}
-          </div>
-          <DialogClose />
+    <FormSheet
+      open={open}
+      onOpenChange={(v) => { if (!v) { reset(); onClose(); } }}
+      busy={createMutation.isPending}
+      icon={<DeptIcon name={iconName} size={20} color={color} />}
+      title="Novo departamento"
+      description={name.trim() || undefined}
+      footer={
+        <>
+          <button type="button" onClick={() => { reset(); onClose(); }}
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
+            Cancelar
+          </button>
+          <ButtonGlass type="submit" form="new-dept-form" variant="primary" disabled={!name.trim() || createMutation.isPending}>
+            {createMutation.isPending ? "Criando…" : "Criar"}
+          </ButtonGlass>
+        </>
+      }
+    >
+      <form id="new-dept-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div>
+          <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Nome</label>
+          <InputGlass value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Suporte, Vendas, Financeiro…" autoFocus />
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="flex flex-col gap-5 px-5 py-5">
-            <div>
-              <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Nome</label>
-              <InputGlass value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Suporte, Vendas, Financeiro…" autoFocus />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Ícone</label>
-              <div className="grid grid-cols-11 gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2">
-                {DEPT_ICONS.map(({ name: ic, label }) => (
-                  <button key={ic} type="button" title={label} onClick={() => setIconName(ic)}
-                    className={cn("flex h-8 w-full items-center justify-center rounded-[var(--radius-sm)] transition-all",
-                      iconName === ic ? "bg-[var(--brand-primary)]/12 ring-1 ring-[var(--brand-primary)]/40" : "hover:bg-[var(--glass-bg-strong)]")}>
-                    <DeptIcon name={ic} size={17} color={iconName === ic ? color : undefined}
-                      className={iconName === ic ? undefined : "text-[var(--text-muted)]"} />
-                  </button>
-                ))}
-              </div>
-              <p className="mt-1.5 text-center font-body text-[11px] text-[var(--text-muted)]">
-                {DEPT_ICONS.find((i) => i.name === iconName)?.label}
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Cor</label>
-              <div className="flex flex-wrap gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
-                {DEPT_COLORS.map((c) => (
-                  <button key={c} type="button" onClick={() => setColor(c)}
-                    className={cn("relative size-6 rounded-full transition-all hover:scale-110", color === c && "scale-110 ring-2 ring-offset-2")}
-                    style={{ backgroundColor: c, ...(color === c ? { ringColor: c } : {}) }}
-                    aria-label={c}>
-                    {color === c && <IconCheck size={12} strokeWidth={3} className="absolute inset-0 m-auto text-white" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-[var(--glass-border-subtle)] px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)]" style={{ backgroundColor: color + "22" }}>
-                <DeptIcon name={iconName} size={14} color={color} />
-              </div>
-              <span className="font-display text-[13px] font-semibold text-[var(--text-primary)]">{name.trim() || "Nome do departamento"}</span>
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => { reset(); onClose(); }}
-                className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
-                Cancelar
+        <div>
+          <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Ícone</label>
+          <div className="grid grid-cols-11 gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2">
+            {DEPT_ICONS.map(({ name: ic, label }) => (
+              <button key={ic} type="button" title={label} onClick={() => setIconName(ic)}
+                className={cn("flex h-8 w-full items-center justify-center rounded-[var(--radius-sm)] transition-all",
+                  iconName === ic ? "bg-[var(--brand-primary)]/12 ring-1 ring-[var(--brand-primary)]/40" : "hover:bg-[var(--glass-bg-strong)]")}>
+                <DeptIcon name={ic} size={17} color={iconName === ic ? color : undefined}
+                  className={iconName === ic ? undefined : "text-[var(--text-muted)]"} />
               </button>
-              <ButtonGlass type="submit" variant="primary" disabled={!name.trim() || createMutation.isPending}>
-                {createMutation.isPending ? "Criando…" : "Criar"}
-              </ButtonGlass>
-            </div>
+            ))}
           </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <p className="mt-1.5 text-center font-body text-[11px] text-[var(--text-muted)]">
+            {DEPT_ICONS.find((i) => i.name === iconName)?.label}
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Cor</label>
+          <div className="flex flex-wrap gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+            {DEPT_COLORS.map((c) => (
+              <button key={c} type="button" onClick={() => setColor(c)}
+                className={cn("relative size-6 rounded-full transition-all hover:scale-110", color === c && "scale-110 ring-2 ring-offset-2")}
+                style={{ backgroundColor: c, ...(color === c ? { ringColor: c } : {}) }}
+                aria-label={c}>
+                {color === c && <IconCheck size={12} strokeWidth={3} className="absolute inset-0 m-auto text-white" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      </form>
+    </FormSheet>
   );
 }
 
@@ -331,24 +316,27 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   }
 
   return (
-    <Dialog open={!!dept} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent size="md">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          {dept && (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
-              style={{ background: `${color}18`, border: `1.5px solid ${color}40` }}>
-              <DeptIcon name={icon} size={18} color={color} />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-display text-[15px] font-bold text-[var(--text-primary)]">Editar departamento</h3>
-            <p className="font-body text-[12px] text-[var(--text-muted)]">{dept?.name}</p>
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="flex flex-col gap-4">
+    <FormSheet
+      open={!!dept}
+      onOpenChange={(v) => { if (!v) onClose(); }}
+      busy={saving}
+      icon={dept ? <DeptIcon name={icon} size={20} color={color} /> : undefined}
+      title="Editar departamento"
+      description={dept?.name}
+      footer={
+        <>
+          <button type="button" onClick={onClose}
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
+            Cancelar
+          </button>
+          <ButtonGlass type="button" variant="primary" disabled={!name.trim() || saving} onClick={handleSave}>
+            {saving ? "Salvando…" : "Salvar"}
+          </ButtonGlass>
+        </>
+      }
+    >
+      {/* Form */}
+      <div className="flex flex-col gap-4">
           {/* Nome */}
           <div>
             <label className="mb-1 block font-display text-[12px] font-semibold text-[var(--text-muted)]">Nome</label>
@@ -482,19 +470,8 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose}
-            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
-            Cancelar
-          </button>
-          <ButtonGlass type="button" variant="primary" disabled={!name.trim() || saving} onClick={handleSave}>
-            {saving ? "Salvando…" : "Salvar"}
-          </ButtonGlass>
-        </div>
-        <DialogClose />
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormSheet>
   );
 }
 

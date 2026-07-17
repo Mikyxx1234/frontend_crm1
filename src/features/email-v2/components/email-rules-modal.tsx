@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
@@ -113,28 +114,23 @@ export function EmailRulesModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        size="md"
-        panelClassName="max-h-[min(90vh,640px)]"
-        bodyClassName="p-0 gap-0"
-      >
-        <form onSubmit={handleCreate} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="border-b border-[var(--glass-border)] px-5 py-4">
-          <DialogHeader>
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
-                <IconFilter size={18} stroke={2.2} />
-              </span>
-              <DialogTitle className="text-base">Regras de e-mail</DialogTitle>
-            </div>
-            <DialogDescription className="text-[13px] leading-relaxed">
-              Quando um e-mail recebido corresponder à condição, aplique a ação automaticamente na sincronização.
-            </DialogDescription>
-          </DialogHeader>
-        </div>
-
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      busy={saving}
+      icon={<IconFilter size={18} stroke={2.2} className="text-[var(--brand-primary)]" />}
+      title="Regras de e-mail"
+      description="Quando um e-mail recebido corresponder à condição, aplique a ação automaticamente na sincronização."
+      footer={
+        <>
+          <ButtonGlass type="button" variant="glass" size="sm" onClick={() => onOpenChange(false)}>Fechar</ButtonGlass>
+          <ButtonGlass type="submit" form="email-rules-form" variant="primary" size="sm" disabled={saving}>
+            {saving ? <><IconLoader2 size={14} className="animate-spin" /> Salvando…</> : "Adicionar regra"}
+          </ButtonGlass>
+        </>
+      }
+    >
+      <form id="email-rules-form" onSubmit={handleCreate} className="flex flex-col gap-4">
           {accounts.length > 1 ? (
             <FieldRow label="Conta">
               <DropdownGlass
@@ -264,28 +260,8 @@ export function EmailRulesModal({
           </div>
         </div>
 
-        <DialogFooter className="border-t border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-5 py-3">
-          <ButtonGlass
-            type="button"
-            variant="glass"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-          >
-            Fechar
-          </ButtonGlass>
-          <ButtonGlass type="submit" variant="primary" size="sm" disabled={saving}>
-            {saving ? (
-              <>
-                <IconLoader2 size={14} className="animate-spin" /> Salvando…
-              </>
-            ) : (
-              "Adicionar regra"
-            )}
-          </ButtonGlass>
-        </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </form>
+    </FormSheet>
   );
 }
 

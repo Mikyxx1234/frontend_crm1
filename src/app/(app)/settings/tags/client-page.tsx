@@ -295,14 +295,14 @@ function TagsPage() {
         </div>
       </div>
 
-      {/* ── Lista de tags ── */}
+      {/* ── Grade de tags ── */}
       <div>
         {isLoading ? (
-          <div className="space-y-px p-2">
+          <div className="grid grid-cols-1 gap-2.5 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="h-12 animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)]"
+                className="h-[68px] animate-pulse rounded-[var(--radius-lg)] bg-[var(--glass-bg-strong)]"
               />
             ))}
           </div>
@@ -323,7 +323,7 @@ function TagsPage() {
             )}
           </div>
         ) : (
-          <div className="divide-y divide-[var(--glass-border-subtle)]">
+          <div className="grid grid-cols-1 gap-2.5 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-3">
             {filtered.map((tag) => (
               <TagRowItem
                 key={tag.id}
@@ -379,129 +379,140 @@ function TagRowItem({
   const isUnused = tag.dealCount === 0 && tag.contactCount === 0;
 
   return (
-    <div className="group flex min-w-0 items-center gap-2 px-3 py-3 transition-colors hover:bg-[var(--glass-bg-overlay)] sm:gap-3 sm:px-4">
-      {/* Color dot + picker */}
-      <div className="relative">
-        <TooltipGlass label="Alterar cor" side="top">
-          <button
-            type="button"
-            onClick={() => setColorOpen((v) => !v)}
-            className="size-5 shrink-0 rounded-full transition-transform hover:scale-110"
-            style={{ backgroundColor: tag.color }}
-            aria-label="Alterar cor"
-          />
-        </TooltipGlass>
-        {colorOpen && (
-          <div className="absolute left-0 top-full z-30 mt-1 flex flex-wrap gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-2 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
-            {TAG_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => {
-                  onUpdate({ color: c });
-                  setColorOpen(false);
-                }}
-                className={cn(
-                  "size-5 rounded-full transition-all hover:scale-105",
-                  tag.color === c ? "ring-2 ring-offset-1 ring-[var(--glass-border)]" : "",
-                )}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Tag preview chip */}
+    <div className="group relative flex min-w-0 flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3 pl-4 shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]">
+      {/* Trilha de cor à esquerda */}
       <span
-        className="shrink-0 rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
-        style={{
-          background: `${tag.color}22`,
-          color: tag.color,
-          border: `1px solid ${tag.color}44`,
-        }}
-      >
-        {tag.name}
-      </span>
+        className="absolute inset-y-0 left-0 w-1.5 rounded-l-[var(--radius-lg)]"
+        style={{ backgroundColor: tag.color }}
+        aria-hidden
+      />
 
-      {/* Name (editable) */}
-      {editing ? (
-        <InputGlass
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={save}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") save();
-            if (e.key === "Escape") { setName(tag.name); setEditing(false); }
-          }}
-          className="min-w-0 flex-1"
-          autoFocus
-        />
-      ) : (
-        <span className="min-w-0 flex-1 truncate font-display text-sm font-medium text-[var(--text-primary)]">
-          {tag.name}
-        </span>
-      )}
-
-      {/* Usage pills */}
-      <div className="flex shrink-0 items-center gap-1.5">
-        {isUnused ? (
-          <span className="rounded-full border border-[var(--color-danger)]/20 bg-[var(--color-danger)]/8 px-2 py-0.5 font-display text-[10px] font-semibold text-[var(--color-danger)]">
-            Sem uso
-          </span>
-        ) : (
-          <>
-            {tag.dealCount > 0 && (
-              <TooltipGlass label={`${tag.dealCount} deal${tag.dealCount !== 1 ? "s" : ""}`} side="top">
-                <span className="flex items-center gap-1 rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
-                  <IconBriefcase size={10} />
-                  {tag.dealCount}
-                </span>
-              </TooltipGlass>
-            )}
-            {tag.contactCount > 0 && (
-              <TooltipGlass label={`${tag.contactCount} contato${tag.contactCount !== 1 ? "s" : ""}`} side="top">
-                <span className="flex items-center gap-1 rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
-                  <IconUser size={10} />
-                  {tag.contactCount}
-                </span>
-              </TooltipGlass>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-        {editing ? (
-          <button
-            type="button"
-            onClick={save}
-            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
-          >
-            <IconCheck size={14} />
-          </button>
-        ) : (
-          <TooltipGlass label="Renomear" side="top">
+      {/* Linha 1: cor + nome + ações */}
+      <div className="flex min-w-0 items-center gap-2">
+        {/* Color dot + picker */}
+        <div className="relative shrink-0">
+          <TooltipGlass label="Alterar cor" side="top">
             <button
               type="button"
-              onClick={() => { setName(tag.name); setEditing(true); }}
-              disabled={isPending}
-              className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+              onClick={() => setColorOpen((v) => !v)}
+              className="size-5 shrink-0 rounded-full transition-transform hover:scale-110"
+              style={{ backgroundColor: tag.color }}
+              aria-label="Alterar cor"
+            />
+          </TooltipGlass>
+          {colorOpen && (
+            <div className="absolute left-0 top-full z-30 mt-1 flex w-[132px] flex-wrap gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-2 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
+              {TAG_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    onUpdate({ color: c });
+                    setColorOpen(false);
+                  }}
+                  className={cn(
+                    "size-5 rounded-full transition-all hover:scale-105",
+                    tag.color === c ? "ring-2 ring-offset-1 ring-[var(--glass-border)]" : "",
+                  )}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Name (editable) */}
+        {editing ? (
+          <InputGlass
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={save}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") save();
+              if (e.key === "Escape") { setName(tag.name); setEditing(false); }
+            }}
+            className="min-w-0 flex-1"
+            autoFocus
+          />
+        ) : (
+          <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-[var(--text-primary)]">
+            {tag.name}
+          </span>
+        )}
+
+        {/* Actions */}
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          {editing ? (
+            <button
+              type="button"
+              onClick={save}
+              className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
             >
-              <IconPencil size={13} />
+              <IconCheck size={14} />
+            </button>
+          ) : (
+            <TooltipGlass label="Renomear" side="top">
+              <button
+                type="button"
+                onClick={() => { setName(tag.name); setEditing(true); }}
+                disabled={isPending}
+                className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+              >
+                <IconPencil size={13} />
+              </button>
+            </TooltipGlass>
+          )}
+          <TooltipGlass label="Excluir" side="top">
+            <button
+              type="button"
+              onClick={onDelete}
+              className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
+            >
+              <IconTrash size={13} />
             </button>
           </TooltipGlass>
-        )}
-        <TooltipGlass label="Excluir" side="top">
-          <button
-            type="button"
-            onClick={onDelete}
-            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
-          >
-            <IconTrash size={13} />
-          </button>
-        </TooltipGlass>
+        </div>
+      </div>
+
+      {/* Linha 2: chip + contadores de uso */}
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <span
+          className="min-w-0 shrink truncate rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
+          style={{
+            background: `${tag.color}22`,
+            color: tag.color,
+            border: `1px solid ${tag.color}44`,
+          }}
+        >
+          {tag.name}
+        </span>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          {isUnused ? (
+            <span className="rounded-full border border-[var(--color-danger)]/20 bg-[var(--color-danger)]/8 px-2 py-0.5 font-display text-[10px] font-semibold text-[var(--color-danger)]">
+              Sem uso
+            </span>
+          ) : (
+            <>
+              {tag.dealCount > 0 && (
+                <TooltipGlass label={`${tag.dealCount} deal${tag.dealCount !== 1 ? "s" : ""}`} side="top">
+                  <span className="flex items-center gap-1 rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
+                    <IconBriefcase size={10} />
+                    {tag.dealCount}
+                  </span>
+                </TooltipGlass>
+              )}
+              {tag.contactCount > 0 && (
+                <TooltipGlass label={`${tag.contactCount} contato${tag.contactCount !== 1 ? "s" : ""}`} side="top">
+                  <span className="flex items-center gap-1 rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
+                    <IconUser size={10} />
+                    {tag.contactCount}
+                  </span>
+                </TooltipGlass>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

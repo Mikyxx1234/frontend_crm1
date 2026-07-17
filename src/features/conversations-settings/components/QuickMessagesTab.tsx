@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import {
   useQuickReplies,
   useQuickReplyGroups,
@@ -144,20 +145,25 @@ function CreateQuickReplyModal({
   const canSubmit = title.trim().length > 0 && content.trim().length > 0;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent size="sm">
-        <DialogHeader>
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12">
-              <IconBolt size={18} className="text-[var(--brand-primary)]" />
-            </div>
-            <DialogTitle>Nova mensagem rápida</DialogTitle>
-          </div>
-        </DialogHeader>
-
-        <DialogClose />
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <FormSheet
+      open={open}
+      onOpenChange={(v) => !v && handleClose()}
+      busy={createMutation.isPending}
+      icon={<IconBolt size={18} className="text-[var(--brand-primary)]" />}
+      title="Nova mensagem rápida"
+      footer={
+        <>
+          <button type="button" onClick={handleClose}
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-2 font-display text-sm font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
+            Cancelar
+          </button>
+          <ButtonGlass type="submit" form="new-quick-msg-form" variant="primary" disabled={!canSubmit || createMutation.isPending}>
+            {createMutation.isPending ? "Criando…" : "Criar"}
+          </ButtonGlass>
+        </>
+      }
+    >
+      <form id="new-quick-msg-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Title */}
           <div>
             <label className="mb-1.5 block font-display text-[12px] font-semibold text-[var(--text-secondary)]">
@@ -214,26 +220,8 @@ function CreateQuickReplyModal({
             </select>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-2 font-display text-sm font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
-            >
-              Cancelar
-            </button>
-            <ButtonGlass
-              type="submit"
-              variant="primary"
-              disabled={!canSubmit || createMutation.isPending}
-            >
-              {createMutation.isPending ? "Criando…" : "Criar"}
-            </ButtonGlass>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </form>
+    </FormSheet>
   );
 }
 

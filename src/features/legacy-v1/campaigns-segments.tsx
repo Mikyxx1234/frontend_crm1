@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
@@ -235,18 +236,23 @@ export default function SegmentsPage({
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={(v) => !v && closeDialog()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingId ? "Editar segmento" : "Novo segmento"}
-            </DialogTitle>
-            <DialogDescription>
-              Configure os filtros para agrupar contatos.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
+      <FormSheet
+        open={dialogOpen}
+        onOpenChange={(v) => !v && closeDialog()}
+        busy={saveMutation.isPending}
+        title={editingId ? "Editar segmento" : "Novo segmento"}
+        description="Configure os filtros para agrupar contatos."
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeDialog}>Cancelar</Button>
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !segName.trim()}>
+              {saveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+              {editingId ? "Salvar" : "Criar"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
             <div className="space-y-2">
               <Label>Nome</Label>
               <Input
@@ -328,23 +334,7 @@ export default function SegmentsPage({
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="ghost" onClick={closeDialog}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || !segName.trim()}
-            >
-              {saveMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : null}
-              {editingId ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
-          <DialogClose />
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
     </div>
   );
 }

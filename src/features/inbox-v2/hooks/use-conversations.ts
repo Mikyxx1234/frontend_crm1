@@ -70,9 +70,24 @@ export function useConversations(params: {
     // página vem sem `items` (resposta malformada ou page patchada pelo
     // realtime). O `.filter(Boolean)` blinda contra buracos em `items[]`.
     // Sem isso, `rows.map((r) => r.id)` quebra com "Cannot read 'id'".
-    const items: ConversationListRow[] = pages
+    const flat = pages
       .flatMap((p) => p?.items ?? [])
       .filter(Boolean) as ConversationListRow[];
+    // Dedupe por `id`: o backend pagina por `updatedAt desc`, mas a UI
+    // reordena no cliente por `lastMessageAt`. Quando uma conversa recebe
+    // mensagem nova, ela "pula" de página no servidor e, no refetch do
+    // infinite query, o mesmo `id` aparece em duas/três páginas — gerando
+    // cards duplicados/triplicados. Mantemos a ocorrência mais recente
+    // (maior `lastMessageAt`/`lastInboundAt`).
+    const activityTs = (r: ConversationListRow) =>
+      new Date(r.lastMessageAt ?? r.lastInboundAt ?? 0).getTime();
+    const byId = new Map<string, ConversationListRow>();
+    for (const row of flat) {
+      if (!row?.id) continue;
+      const prev = byId.get(row.id);
+      if (!prev || activityTs(row) >= activityTs(prev)) byId.set(row.id, row);
+    }
+    const items: ConversationListRow[] = [...byId.values()];
     const last = pages[pages.length - 1];
     return {
       items,

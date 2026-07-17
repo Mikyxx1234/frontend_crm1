@@ -247,7 +247,7 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
     <FormSheet
       open={open}
       onOpenChange={onOpenChange}
-      size="xl"
+      size="md"
       title={isEdit ? "Editar produto" : "Novo produto"}
       description="Escolha Produto ou Serviço. As especializações (vaga, curso…) vêm das capacidades do catálogo."
       footer={

@@ -449,66 +449,67 @@ export default function MessageModelsHubPage() {
                 <p className="text-[13px] text-[var(--text-muted)]">Nenhum modelo encontrado.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[680px] border-collapse text-left">
-                  <thead>
-                    <tr className="[&>th]:px-[18px] [&>th]:py-3.5 [&>th]:text-[11px] [&>th]:font-bold [&>th]:uppercase [&>th]:tracking-[0.06em] [&>th]:text-[var(--text-muted)] [&>th]:shadow-[0_1px_0_var(--glass-border-subtle)]">
-                      <th className="w-[140px]">Tipo</th>
-                      <th>Nome / conteúdo</th>
-                      <th className="w-[260px]">Status / canal</th>
-                      <th className="w-[120px] text-right">Ação</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {overviewRows.map((r) => (
-                      <tr
-                        key={r.key}
-                        className="border-b border-[var(--glass-border-subtle)] transition-colors last:border-0 hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]"
-                      >
-                        <td className="px-[18px] py-3.5 align-middle">
-                          <OverviewTypeBadge type={r.type} />
-                        </td>
-                        <td className="px-[18px] py-3.5 align-middle">
-                          <div className="min-w-0">
-                            <div className="font-bold text-[var(--text-primary)]">{r.name}</div>
-                            {r.preview ? (
-                              <div className="mt-0.5 max-w-[520px] truncate text-[12.5px] text-[var(--text-muted)]">
-                                {r.preview}
-                              </div>
-                            ) : null}
-                            {r.vars.length ? (
-                              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                {r.vars.map((v) => (
-                                  <span
-                                    key={v}
-                                    className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--text-secondary)]"
-                                  >
-                                    {v}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="px-[18px] py-3.5 align-middle">
-                          <div className="flex flex-col gap-1.5">
-                            <StatusPill kind={r.statusKind} label={r.statusLabel} />
-                            <span className="text-[12px] text-[var(--text-secondary)]">{r.channel}</span>
-                          </div>
-                        </td>
-                        <td className="px-[18px] py-3.5 text-right align-middle">
-                          <button
-                            type="button"
-                            onClick={r.onOpen}
-                            className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
+              <div className="space-y-4 p-3 sm:p-4">
+                {OVERVIEW_GROUPS.map((g) => {
+                  const rows = overviewRows.filter((r) => r.type === g.type);
+                  if (!rows.length) return null;
+                  return (
+                    <div key={g.type} className="min-w-0">
+                      <div className="mb-2 flex items-center gap-2 px-1">
+                        <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-md)]", g.badge)}>
+                          {g.icon}
+                        </span>
+                        <span className="font-display text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                          {g.title}
+                        </span>
+                        <span className="rounded-full bg-[var(--glass-bg-strong)] px-1.5 text-[11px] font-bold text-[var(--text-secondary)]">
+                          {rows.length}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {rows.map((r) => (
+                          <div
+                            key={r.key}
+                            className="group flex min-w-0 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] transition-all hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)] sm:px-4"
                           >
-                            Abrir <ChevronRight className="size-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                            <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]", g.badge)}>
+                              {g.icon}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-[14px] font-bold text-[var(--text-primary)]">{r.name}</div>
+                              {r.preview ? (
+                                <div className="mt-0.5 truncate text-[12.5px] text-[var(--text-muted)]">{r.preview}</div>
+                              ) : null}
+                              {r.vars.length ? (
+                                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                  {r.vars.map((v) => (
+                                    <span
+                                      key={v}
+                                      className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--text-secondary)]"
+                                    >
+                                      {v}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                            <div className="hidden shrink-0 flex-col items-end gap-0.5 text-right sm:flex">
+                              <StatusPill kind={r.statusKind} label={r.statusLabel} />
+                              <span className="text-[11.5px] text-[var(--text-muted)]">{r.channel}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={r.onOpen}
+                              className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
+                            >
+                              Abrir <ChevronRight className="size-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </HubPanel>
@@ -816,32 +817,27 @@ export default function MessageModelsHubPage() {
   );
 }
 
-function OverviewTypeBadge({ type }: { type: "interno" | "waba" | "flow" }) {
-  const map = {
-    interno: {
-      label: "Interno",
-      icon: <FileText className="size-3.5" />,
-      cls: "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
-    },
-    waba: {
-      label: "WhatsApp",
-      icon: <MessageCircle className="size-3.5" />,
-      cls: "border-[color-mix(in_srgb,var(--color-success)_30%,transparent)] bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
-    },
-    flow: {
-      label: "Flow",
-      icon: <Workflow className="size-3.5" />,
-      cls: "border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-[var(--color-info)]",
-    },
-  } as const;
-  const m = map[type];
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-2.5 py-1 text-[11.5px] font-bold", m.cls)}>
-      {m.icon}
-      {m.label}
-    </span>
-  );
-}
+/** Grupos da Visão geral (cards agrupados por canal). */
+const OVERVIEW_GROUPS = [
+  {
+    type: "interno",
+    title: "Internos",
+    icon: <FileText className="size-[17px]" />,
+    badge: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+  },
+  {
+    type: "waba",
+    title: "WhatsApp",
+    icon: <MessageCircle className="size-[17px]" />,
+    badge: "bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
+  },
+  {
+    type: "flow",
+    title: "Flows",
+    icon: <Workflow className="size-[17px]" />,
+    badge: "bg-[var(--color-info-bg)] text-[var(--color-info)]",
+  },
+] as const;
 
 function StatusPill({
   kind,

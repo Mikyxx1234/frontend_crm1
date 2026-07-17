@@ -14,6 +14,7 @@ import { InputGlass } from "@/components/crm/input-glass";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import { analyzeTemplateComponents } from "@/lib/meta-whatsapp/analyze-template-components";
@@ -811,18 +812,24 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
         </ButtonGlass>
       ) : null}
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent size="xl" panelClassName="max-h-[min(90vh,720px)]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageCircle className="size-5 text-[var(--brand-primary)]" />
-              Novo template na Meta
-            </DialogTitle>
-            <DialogDescription>
-              O template segue para análise automática da Meta. Campos variáveis:{" "}
-              <code className="font-mono text-xs text-[var(--text-secondary)]">{"{{1}}"}</code> (POSITIONAL) ou nomes em NAMED, conforme a doc.
-            </DialogDescription>
-          </DialogHeader>
+      <FormSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        busy={createMutation.isPending}
+        size="xl"
+        icon={<MessageCircle className="size-5 text-[var(--brand-primary)]" />}
+        title="Novo template na Meta"
+        description={<>O template segue para análise automática da Meta. Campos variáveis: <code className="font-mono text-xs text-[var(--text-secondary)]">{"{{1}}"}</code> (POSITIONAL) ou nomes em NAMED, conforme a doc.</>}
+        footer={
+          <>
+            <ButtonGlass type="button" variant="glass" onClick={() => setCreateOpen(false)}>Cancelar</ButtonGlass>
+            <ButtonGlass type="button" variant="primary" disabled={createMutation.isPending} onClick={() => (createMode === "json" ? submitJson() : submitAssisted())}>
+              {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+              <span className={cn(createMutation.isPending && "ml-2")}>Criar na Meta</span>
+            </ButtonGlass>
+          </>
+        }
+      >
 
           <div className="flex gap-2 border-b border-[var(--glass-border-subtle)] pb-2">
             <ButtonGlass
@@ -1110,22 +1117,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] pt-4">
-            <ButtonGlass type="button" variant="glass" onClick={() => setCreateOpen(false)}>
-              Cancelar
-            </ButtonGlass>
-            <ButtonGlass
-              type="button"
-              variant="primary"
-              disabled={createMutation.isPending}
-              onClick={() => (createMode === "json" ? submitJson() : submitAssisted())}
-            >
-              {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-              <span className={cn(createMutation.isPending && "ml-2")}>Criar na Meta</span>
-            </ButtonGlass>
-          </div>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       <Dialog open={!!previewRow} onOpenChange={(open) => { if (!open) setPreviewRow(null); }}>
         <DialogContent size="xl" panelClassName="max-h-[min(88vh,640px)]">

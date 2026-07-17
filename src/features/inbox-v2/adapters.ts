@@ -381,6 +381,32 @@ export function toMessageBubble(
   dto: InboxMessageDto,
   contactName: string,
 ): Message {
+  // Separador de ticket (item sintético de ?history=1): extrai metadados do
+  // `content` JSON e devolve uma Message com `ticketInfo` populado. O
+  // `type` é irrelevante — o ChatArea verifica `messageType` antes de tentar
+  // renderizar como bolha.
+  if (dto.messageType === "ticket-separator") {
+    let info: { number: number; closedAt: string | null; isCurrent?: boolean } = {
+      number: 0,
+      closedAt: null,
+    };
+    try {
+      info = JSON.parse(dto.content ?? "{}");
+    } catch { /* fallback com valores padrão */ }
+    return {
+      id: dto.id,
+      content: "",
+      time: "",
+      type: "incoming",
+      messageType: "ticket-separator",
+      ticketInfo: {
+        number: info.number ?? 0,
+        closedAt: info.closedAt ?? null,
+        isCurrent: info.isCurrent,
+      },
+    };
+  }
+
   // Backend serializa direction em minúsculas ("in" / "out" / "system").
   // Aceitamos também as variantes UPPER por defesa (caso outro endpoint
   // ou SSE futuro mude o casing — nunca regredir o lado dos balões).

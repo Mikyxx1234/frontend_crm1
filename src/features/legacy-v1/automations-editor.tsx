@@ -62,6 +62,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1325,35 +1326,24 @@ export default function AutomationDetailPage() {
       <LogInspectModal row={inspectRow} onClose={() => setInspectRow(null)} />
 
       {/* ═══ Name edit ═══ */}
-      <Dialog open={nameDialogOpen} onOpenChange={setNameDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar nome</DialogTitle>
-            <DialogDescription>
-              Altere o nome desta automação.
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveName();
-            }}
-          />
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setNameDialogOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="button" onClick={saveName} disabled={!nameDraft.trim()}>
-              OK
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormSheet
+        open={nameDialogOpen}
+        onOpenChange={setNameDialogOpen}
+        title="Editar nome"
+        description="Altere o nome desta automação."
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setNameDialogOpen(false)}>Cancelar</Button>
+            <Button type="button" onClick={saveName} disabled={!nameDraft.trim()}>OK</Button>
+          </>
+        }
+      >
+        <Input
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") saveName(); }}
+        />
+      </FormSheet>
 
       {/* ═══ Delete confirm ═══ */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

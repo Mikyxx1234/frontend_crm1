@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -115,14 +116,20 @@ export function LossReasonDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="md" onClick={(e) => e.stopPropagation()}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3">
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      busy={isPending}
+      title={title}
+      description={description}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button type="button" onClick={submit} disabled={!canSubmit || isPending}>Confirmar perda</Button>
+        </>
+      }
+    >
+      <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
           {hasReasons ? (
             <>
               <Label className="text-xs font-semibold text-[var(--text-secondary)]">Selecione o motivo</Label>
@@ -188,15 +195,7 @@ export function LossReasonDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button type="button" onClick={submit} disabled={!canSubmit || isPending}>
-            Confirmar perda
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormSheet>
   );
 }

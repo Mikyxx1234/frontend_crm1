@@ -33,6 +33,9 @@ import {
   IconCalendarEvent,
   IconTag,
   IconSparkles,
+  IconTrophy,
+  IconUserPlus,
+  IconUserOff,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -77,29 +80,58 @@ import {
   useUpdateContact,
   useCompanies,
 } from "@/features/directory-v2/hooks";
-import type {
-  ContactFieldDefDto,
-  ContactListItemDto,
-  ContactStatsDto,
-  DuplicateContactSnap,
-  DuplicateGroup,
-  TagWithCountDto,
+import {
+  addContactTag,
+  removeContactTag,
+  type ContactFieldDefDto,
+  type ContactListItemDto,
+  type ContactStatsDto,
+  type DuplicateContactSnap,
+  type DuplicateGroup,
+  type TagWithCountDto,
 } from "@/features/directory-v2/api";
 
 const DEFAULT_PER_PAGE = 25;
 type ViewMode = "cards" | "tabela";
 type Segment = "todos" | "clientes" | "leads" | "sem-resp";
 
-/** Segmentos dos stat cards (acionáveis) → filtros reais da API. */
+/** Segmentos dos stat cards (acionáveis) → filtros reais da API.
+ *  Clientes = leads com negócios ganhos (lifecycle CUSTOMER). */
 const SEGMENTS: {
   id: Segment;
   label: string;
+  hint: string;
+  icon: React.ReactNode;
   value: (s: ContactStatsDto | undefined) => number | undefined;
 }[] = [
-  { id: "todos", label: "Todos", value: (s) => s?.total },
-  { id: "clientes", label: "Clientes", value: (s) => s?.byStage?.CUSTOMER },
-  { id: "leads", label: "Leads", value: (s) => s?.byStage?.LEAD },
-  { id: "sem-resp", label: "Sem responsável", value: (s) => s?.unassigned },
+  {
+    id: "todos",
+    label: "Todos",
+    hint: "Base completa",
+    icon: <IconUsers size={18} stroke={2.2} />,
+    value: (s) => s?.total,
+  },
+  {
+    id: "clientes",
+    label: "Clientes",
+    hint: "Leads com negócios ganhos",
+    icon: <IconTrophy size={18} stroke={2.2} />,
+    value: (s) => s?.byStage?.CUSTOMER,
+  },
+  {
+    id: "leads",
+    label: "Leads",
+    hint: "Em prospecção",
+    icon: <IconUserPlus size={18} stroke={2.2} />,
+    value: (s) => s?.byStage?.LEAD,
+  },
+  {
+    id: "sem-resp",
+    label: "Sem responsável",
+    hint: "Aguardando dono",
+    icon: <IconUserOff size={18} stroke={2.2} />,
+    value: (s) => s?.unassigned,
+  },
 ];
 
 type SortField = "name" | "createdAt" | "updatedAt" | "leadScore" | "lifecycleStage";
@@ -186,7 +218,13 @@ const NATIVE_COLUMNS: ColumnDef[] = [
 ];
 
 const DEFAULT_COLUMN_KEYS = ["phone", "company", "tags", "createdAt"];
-const COLUMNS_STORAGE_KEY = "v2:contacts:columns";
+/** Bump v2: garante Tags no header da lista Cards/Tabela. */
+const COLUMNS_STORAGE_KEY = "v2:contacts:columns:v2";
+
+function colWidthCss(width: string): string {
+  const m = width.match(/w-\[(\d+)px\]/);
+  return m ? `${m[1]}px` : "140px";
+}
 
 function customColumnKey(id: string): string {
   return `cf:${id}`;
@@ -261,7 +299,9 @@ export default function V2ContactsClientPage() {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.every((k) => typeof k === "string")) {
-          setActiveColumnKeys(parsed);
+          // Tags sempre presentes no header (pedido de produto).
+          const keys = parsed.includes("tags") ? parsed : [...parsed, "tags"];
+          setActiveColumnKeys(keys);
         }
       }
     } catch {
@@ -475,7 +515,7 @@ export default function V2ContactsClientPage() {
           }
         />
 
-        {/* Stat cards acionáveis (arquétipo B) — cada número filtra a lista */}
+        {/* Stat cards acionáveis — cada número filtra a lista */}
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {SEGMENTS.map((seg) => {
             const active = segment === seg.id;
@@ -486,16 +526,36 @@ export default function V2ContactsClientPage() {
                 type="button"
                 onClick={() => setSegment(seg.id)}
                 aria-pressed={active}
-                className={`rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-all ${
+                className={cn(
+                  "group relative overflow-hidden rounded-[18px] border px-4 py-3.5 text-left transition-all",
                   active
-                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
-                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]"
-                }`}
+                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] shadow-[0_8px_24px_rgba(91,111,245,0.12)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/30 hover:shadow-[var(--glass-shadow)]",
+                )}
               >
-                <span className="block font-display text-[21px] font-extrabold leading-none text-[var(--text-primary)]">
-                  {val === undefined ? "—" : val.toLocaleString("pt-BR")}
-                </span>
-                <span className="mt-1 block font-body text-[12px] text-[var(--text-muted)]">{seg.label}</span>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="block font-display text-[22px] font-extrabold leading-none tabular-nums text-[var(--text-primary)]">
+                      {val === undefined ? "—" : val.toLocaleString("pt-BR")}
+                    </span>
+                    <span className="mt-1.5 block font-display text-[13px] font-bold text-[var(--text-primary)]">
+                      {seg.label}
+                    </span>
+                    <span className="mt-0.5 block font-body text-[11px] text-[var(--text-muted)]">
+                      {seg.hint}
+                    </span>
+                  </div>
+                  <span
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
+                      active
+                        ? "bg-[var(--brand-primary)] text-white"
+                        : "bg-[var(--glass-bg-strong)] text-[var(--brand-primary)] group-hover:bg-[var(--color-primary-soft)]",
+                    )}
+                  >
+                    {seg.icon}
+                  </span>
+                </div>
               </button>
             );
           })}
@@ -555,6 +615,7 @@ export default function V2ContactsClientPage() {
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSort={toggleSort}
+            onEdit={setEditing}
           />
         ) : (
           <CardsView
@@ -564,6 +625,7 @@ export default function V2ContactsClientPage() {
             someChecked={someChecked}
             onToggleAll={toggleAll}
             onToggleOne={toggleOne}
+            columns={activeColumns}
             onEdit={setEditing}
           />
         )}
@@ -582,8 +644,17 @@ export default function V2ContactsClientPage() {
         />
       </main>
 
-      <CreateContactDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <EditContactDialog contact={editing} onClose={() => setEditing(null)} />
+      <ContactFormSheet
+        open={createOpen || editing !== null}
+        contact={editing}
+        availableTags={tagsQuery.data ?? []}
+        onOpenChange={(next) => {
+          if (!next) {
+            setCreateOpen(false);
+            setEditing(null);
+          }
+        }}
+      />
       <ImportSheet open={importOpen} onOpenChange={setImportOpen} />
       <DuplicatesSheet open={dupesOpen} onOpenChange={setDupesOpen} />
       <ColumnsDialog
@@ -1382,7 +1453,7 @@ function ColumnsDialog({
 
 function TabelaView({
   items, selected, allChecked, someChecked, onToggleAll, onToggleOne,
-  columns, sortBy, sortOrder, onSort,
+  columns, sortBy, sortOrder, onSort, onEdit,
 }: {
   items: ContactListItemDto[];
   selected: Set<string>;
@@ -1394,6 +1465,7 @@ function TabelaView({
   sortBy: SortField;
   sortOrder: "asc" | "desc";
   onSort: (field: SortField) => void;
+  onEdit: (c: ContactListItemDto) => void;
 }) {
   const dirFor = (f: SortField): SortDir => (sortBy === f ? sortOrder : null);
   return (
@@ -1422,9 +1494,13 @@ function TabelaView({
             {items.map((c) => (
               <div
                 key={c.id}
-                className={`flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => onEdit(c)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEdit(c); } }}
+                className={`flex cursor-pointer items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}
               >
-                <span className="w-9 shrink-0">
+                <span className="w-9 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
                 </span>
                 <div className="flex w-[240px] shrink-0 items-center gap-2.5">
@@ -1432,10 +1508,14 @@ function TabelaView({
                     {initials(c.name)}
                   </span>
                   <div className="min-w-0 leading-tight">
-                    <Link href={`/contacts/${c.id}`} className="group/name inline-flex max-w-full items-center gap-1.5 font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onEdit(c); }}
+                      className="group/name inline-flex max-w-full items-center gap-1.5 text-left font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                    >
                       <span className="truncate">{c.name}</span>
                       <IconPencil size={13} className="flex-shrink-0 opacity-0 transition-opacity group-hover/name:opacity-60" />
-                    </Link>
+                    </button>
                     <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "—"}</div>
                   </div>
                 </div>
@@ -1453,13 +1533,10 @@ function TabelaView({
   );
 }
 
-// ── Cards (card-rows do arquétipo B) ─────────────────────────────────────────
-
-// Grade compartilhada entre o cabeçalho e as linhas (colunas alinhadas).
-const CARD_COLS = "grid-cols-[32px_minmax(220px,2.4fr)_minmax(140px,1.4fr)_150px_120px_112px]";
+// ── Cards (colunas dinâmicas do configurador — Tags no header) ───────────────
 
 function CardsView({
-  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, onEdit,
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, onEdit,
 }: {
   items: ContactListItemDto[];
   selected: Set<string>;
@@ -1467,89 +1544,91 @@ function CardsView({
   someChecked: boolean;
   onToggleAll: () => void;
   onToggleOne: (id: string) => void;
+  columns: ColumnDef[];
   onEdit: (c: ContactListItemDto) => void;
 }) {
+  const gridTemplate = [
+    "32px",
+    "minmax(220px,2.4fr)",
+    ...columns.map((c) => `minmax(${colWidthCss(c.width)},1fr)`),
+    "112px",
+  ].join(" ");
+
   return (
     <div className="flex flex-col gap-2 overflow-y-auto pb-1">
-      {/* Cabeçalho de colunas alinhado às linhas — padrão de Empresas */}
-      <div className={listTableHeadRowClass(`grid ${CARD_COLS} gap-3 border border-transparent px-4 py-2`)}>
+      <div
+        className={listTableHeadRowClass("grid gap-3 border border-transparent px-4 py-2")}
+        style={{ gridTemplateColumns: gridTemplate }}
+      >
         <span>
           <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todos" />
         </span>
         <ListColumnLabel>Contato</ListColumnLabel>
-        <ListColumnLabel>Empresa</ListColumnLabel>
-        <ListColumnLabel>Telefone</ListColumnLabel>
-        <ListColumnLabel>Criado em</ListColumnLabel>
+        {columns.map((col) => (
+          <ListColumnLabel key={col.key}>{col.label}</ListColumnLabel>
+        ))}
         <ListColumnLabel align="right">Ações</ListColumnLabel>
       </div>
       {items.map((c) => {
         const isSelected = selected.has(c.id);
         return (
-        <div
-          key={c.id}
-          role="button"
-          tabIndex={0}
-          onClick={() => onEdit(c)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEdit(c); } }}
-          className={`group grid ${CARD_COLS} cursor-pointer items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)] ${
-            isSelected
-              ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
-              : "border-[var(--glass-border)] bg-[var(--glass-bg-base)]"
-          }`}
-        >
-          {/* Seleção */}
-          <span onClick={(e) => e.stopPropagation()}>
-            <CheckboxGlass checked={isSelected} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
-          </span>
-
-          {/* Contato: avatar + nome/tags + e-mail */}
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-              {initials(c.name)}
+          <div
+            key={c.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => onEdit(c)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEdit(c); } }}
+            style={{ gridTemplateColumns: gridTemplate }}
+            className={cn(
+              "group grid cursor-pointer items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+              isSelected
+                ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                : "border-[var(--glass-border)] bg-[var(--glass-bg-base)]",
+            )}
+          >
+            <span onClick={(e) => e.stopPropagation()}>
+              <CheckboxGlass checked={isSelected} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
             </span>
-            <div className="min-w-0 leading-tight">
-              <div className="flex min-w-0 items-center gap-2">
-                <Link href={`/contacts/${c.id}`} onClick={(e) => e.stopPropagation()} className="truncate font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
+
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
+                {initials(c.name)}
+              </span>
+              <div className="min-w-0 leading-tight">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onEdit(c); }}
+                  className="truncate text-left font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                >
                   {c.name}
-                </Link>
-                {(c.tags ?? []).slice(0, 2).map((t) => (
-                  <Chip key={t.id} variant="ghost" color={t.color ?? undefined}>{t.name}</Chip>
-                ))}
-                {(c.tags?.length ?? 0) > 2 && (
-                  <span className="font-display text-[11px] text-[var(--text-muted)]">+{(c.tags?.length ?? 0) - 2}</span>
-                )}
+                </button>
+                <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "—"}</div>
               </div>
-              <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "—"}</div>
+            </div>
+
+            {columns.map((col) => (
+              <div key={col.key} className="min-w-0">
+                {col.cell(c)}
+              </div>
+            ))}
+
+            <div className="flex items-center justify-end gap-1">
+              <a href={c.phone ? `tel:${c.phone}` : undefined} onClick={(e) => e.stopPropagation()} aria-label="Ligar" aria-disabled={!c.phone} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
+                <IconPhone size={16} />
+              </a>
+              <a href={c.email ? `mailto:${c.email}` : undefined} onClick={(e) => e.stopPropagation()} aria-label="Enviar e-mail" aria-disabled={!c.email} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
+                <IconMail size={16} />
+              </a>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onEdit(c); }}
+                aria-label={`Editar ${c.name}`}
+                className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
+              >
+                <IconPencil size={16} />
+              </button>
             </div>
           </div>
-
-          {/* Empresa */}
-          <div className="truncate font-display text-[13px] text-[var(--text-secondary)]">{c.company?.name ?? "—"}</div>
-
-          {/* Telefone */}
-          <div className="truncate font-display text-[13px] text-[var(--text-secondary)]">{c.phone ?? "—"}</div>
-
-          {/* Criado em */}
-          <div className="truncate font-display text-[13px] text-[var(--text-muted)]">{fmtDateBR(c.createdAt)}</div>
-
-          {/* Ações */}
-          <div className="flex items-center justify-end gap-1">
-            <a href={c.phone ? `tel:${c.phone}` : undefined} onClick={(e) => e.stopPropagation()} aria-label="Ligar" aria-disabled={!c.phone} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
-              <IconPhone size={16} />
-            </a>
-            <a href={c.email ? `mailto:${c.email}` : undefined} onClick={(e) => e.stopPropagation()} aria-label="Enviar e-mail" aria-disabled={!c.email} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
-              <IconMail size={16} />
-            </a>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onEdit(c); }}
-              aria-label={`Editar ${c.name}`}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
-            >
-              <IconPencil size={16} />
-            </button>
-          </div>
-        </div>
         );
       })}
     </div>
@@ -1588,41 +1667,129 @@ function ConfirmDeleteDialog({ open, count, pending, onCancel, onConfirm }: {
   );
 }
 
-function CreateContactDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function ContactFormSheet({
+  open, contact, availableTags, onOpenChange,
+}: {
+  open: boolean;
+  contact: ContactListItemDto | null;
+  availableTags: TagWithCountDto[];
+  onOpenChange: (open: boolean) => void;
+}) {
+  const isEdit = contact !== null;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState<string | null>(null);
+  const [lifecycleStage, setLifecycleStage] = useState("");
+  const [source, setSource] = useState("");
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [tagQuery, setTagQuery] = useState("");
+  const [saving, setSaving] = useState(false);
   const createMut = useCreateContact();
+  const updateMut = useUpdateContact();
+  const qc = useQueryClient();
 
   useEffect(() => {
-    if (!open) { setName(""); setEmail(""); setPhone(""); setCompanyId(null); setCompanyName(null); createMut.reset(); }
+    if (!open) return;
+    if (contact) {
+      setName(contact.name);
+      setEmail(contact.email ?? "");
+      setPhone(contact.phone ?? "");
+      setCompanyId(contact.company?.id ?? null);
+      setCompanyName(contact.company?.name ?? null);
+      setLifecycleStage(contact.lifecycleStage ?? "");
+      setSource(contact.source ?? "");
+      setSelectedTagIds((contact.tags ?? []).map((t) => t.id));
+    } else {
+      setName("");
+      setEmail("");
+      setPhone("");
+      setCompanyId(null);
+      setCompanyName(null);
+      setLifecycleStage("");
+      setSource("");
+      setSelectedTagIds([]);
+    }
+    setTagQuery("");
+    createMut.reset();
+    updateMut.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, contact?.id]);
 
-  function handleSubmit(e: React.FormEvent) {
+  const visibleTags = availableTags
+    .filter((t) => t.name.toLowerCase().includes(tagQuery.trim().toLowerCase()))
+    .slice(0, 40);
+  const tagSet = new Set(selectedTagIds);
+  const pending = saving || createMut.isPending || updateMut.isPending;
+
+  function toggleTag(id: string) {
+    setSelectedTagIds((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
+    );
+  }
+
+  async function syncTags(contactId: string, nextIds: string[], prevIds: string[]) {
+    const toAdd = nextIds.filter((id) => !prevIds.includes(id));
+    const toRemove = prevIds.filter((id) => !nextIds.includes(id));
+    await Promise.all([
+      ...toAdd.map((tagId) => addContactTag(contactId, tagId)),
+      ...toRemove.map((tagId) => removeContactTag(contactId, tagId)),
+    ]);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const n = name.trim();
-    if (!n) return;
-    createMut.mutate({ name: n, email: email.trim() || null, phone: phone.trim() || null, companyId }, {
-      onSuccess: () => { toast.success("Contato criado."); onOpenChange(false); },
-    });
+    if (!n || pending) return;
+    setSaving(true);
+    const body = {
+      name: n,
+      email: email.trim() || null,
+      phone: phone.trim() || null,
+      companyId,
+      lifecycleStage: lifecycleStage || null,
+      source: source.trim() || null,
+    };
+    try {
+      if (isEdit && contact) {
+        await updateMut.mutateAsync({ id: contact.id, body });
+        const prevIds = (contact.tags ?? []).map((t) => t.id);
+        await syncTags(contact.id, selectedTagIds, prevIds);
+        void qc.invalidateQueries({ queryKey: ["v2-contacts"], exact: false });
+        toast.success("Contato atualizado.");
+      } else {
+        const created = await createMut.mutateAsync(body);
+        if (selectedTagIds.length > 0) {
+          await syncTags(created.id, selectedTagIds, []);
+          void qc.invalidateQueries({ queryKey: ["v2-contacts"], exact: false });
+        }
+        toast.success("Contato criado.");
+      }
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar contato.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <FormSheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Novo contato"
+      title={isEdit ? "Editar contato" : "Novo contato"}
+      busy={pending}
       footer={
         <>
-          <ButtonGlass variant="glass" size="sm" type="button" onClick={() => onOpenChange(false)}>Cancelar</ButtonGlass>
-          <ButtonGlass variant="primary" size="sm" type="submit" form="new-contact-form" disabled={!name.trim() || createMut.isPending}>{createMut.isPending ? "Criando..." : "Criar"}</ButtonGlass>
+          <ButtonGlass variant="glass" size="sm" type="button" onClick={() => onOpenChange(false)} disabled={pending}>Cancelar</ButtonGlass>
+          <ButtonGlass variant="primary" size="sm" type="submit" form="contact-form-sheet" disabled={!name.trim() || pending}>
+            {pending ? "Salvando..." : isEdit ? "Salvar" : "Criar"}
+          </ButtonGlass>
         </>
       }
     >
-      <form id="new-contact-form" onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <form id="contact-form-sheet" onSubmit={handleSubmit} className="flex flex-col gap-3">
         <label className="block">
           <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Nome *</span>
           <InputGlass type="text" autoFocus required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Maria Silva" />
@@ -1639,72 +1806,63 @@ function CreateContactDialog({ open, onOpenChange }: { open: boolean; onOpenChan
           <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Empresa</span>
           <CompanyPicker valueId={companyId} valueName={companyName} onChange={(id, nm) => { setCompanyId(id); setCompanyName(nm); }} />
         </div>
-        {createMut.isError && (
-          <p className="text-[12px] text-[var(--color-danger-text)]">{createMut.error instanceof Error ? createMut.error.message : "Erro ao criar contato."}</p>
-        )}
-      </form>
-    </FormSheet>
-  );
-}
-
-function EditContactDialog({ contact, onClose }: { contact: ContactListItemDto | null; onClose: () => void }) {
-  const open = contact !== null;
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [companyId, setCompanyId] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState<string | null>(null);
-  const updateMut = useUpdateContact();
-
-  useEffect(() => {
-    if (contact) { setName(contact.name); setEmail(contact.email ?? ""); setPhone(contact.phone ?? ""); setCompanyId(contact.company?.id ?? null); setCompanyName(contact.company?.name ?? null); updateMut.reset(); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact?.id]);
-
-  // Sempre monta o FormSheet (como CreateContactDialog). Retornar null quando
-  // contact===null remontava o Sheet já com open=true e o showModal() se perdia.
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const n = name.trim();
-    if (!n || !contact) return;
-    updateMut.mutate({ id: contact.id, body: { name: n, email: email.trim() || null, phone: phone.trim() || null, companyId } }, {
-      onSuccess: () => { toast.success("Contato atualizado."); onClose(); },
-    });
-  }
-
-  return (
-    <FormSheet
-      open={open}
-      onOpenChange={(next) => !next && onClose()}
-      title="Editar contato"
-      footer={
-        <>
-          <ButtonGlass variant="glass" size="sm" type="button" onClick={onClose}>Cancelar</ButtonGlass>
-          <ButtonGlass variant="primary" size="sm" type="submit" form="edit-contact-form" disabled={!name.trim() || updateMut.isPending}>{updateMut.isPending ? "Salvando..." : "Salvar"}</ButtonGlass>
-        </>
-      }
-    >
-      <form id="edit-contact-form" onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <label className="block">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Nome *</span>
-          <InputGlass type="text" autoFocus required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Maria Silva" />
-        </label>
-        <label className="block">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">E-mail</span>
-          <InputGlass type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="maria@empresa.com" />
-        </label>
-        <label className="block">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Telefone</span>
-          <InputGlass type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" />
-        </label>
-        <div>
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Empresa</span>
-          <CompanyPicker valueId={companyId} valueName={companyName} onChange={(id, nm) => { setCompanyId(id); setCompanyName(nm); }} />
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Estágio</span>
+            <select
+              value={lifecycleStage}
+              onChange={(e) => setLifecycleStage(e.target.value)}
+              className="h-10 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+            >
+              <option value="">—</option>
+              {Object.entries(LIFECYCLE_LABELS).map(([k, label]) => (
+                <option key={k} value={k}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Fonte</span>
+            <InputGlass type="text" value={source} onChange={(e) => setSource(e.target.value)} placeholder="Ex.: WhatsApp" />
+          </label>
         </div>
-        {updateMut.isError && (
-          <p className="text-[12px] text-[var(--color-danger-text)]">{updateMut.error instanceof Error ? updateMut.error.message : "Erro ao atualizar contato."}</p>
-        )}
+        <div>
+          <span className="mb-1.5 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+            Tags{selectedTagIds.length > 0 ? ` (${selectedTagIds.length})` : ""}
+          </span>
+          <div className="relative mb-2">
+            <IconSearch size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+            <input
+              value={tagQuery}
+              onChange={(e) => setTagQuery(e.target.value)}
+              placeholder="Localizar tags..."
+              className="h-9 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-8 pr-3 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+            />
+          </div>
+          <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto">
+            {visibleTags.length === 0 ? (
+              <span className="px-1 py-1 font-body text-[12px] text-[var(--text-muted)]">Nenhuma tag.</span>
+            ) : visibleTags.map((t) => {
+              const on = tagSet.has(t.id);
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => toggleTag(t.id)}
+                  aria-pressed={on}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 font-display text-[12px] font-semibold transition-colors",
+                    on
+                      ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                      : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                  )}
+                >
+                  {on ? <IconCheck size={13} stroke={2.6} /> : <IconPlus size={13} stroke={2.4} />}
+                  {t.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </form>
     </FormSheet>
   );

@@ -67,6 +67,11 @@ export function SoftphoneNavIcon({
   const isError = softphone.status === "error";
   const isConnecting =
     softphone.status === "connecting" || softphone.status === "disconnected";
+  const isConnected =
+    softphone.status === "registered" ||
+    softphone.status === "call_ringing" ||
+    softphone.status === "call_active" ||
+    softphone.status === "call_held";
 
   const title = isError
     ? `Softphone: erro — ${softphone.error ?? "falha"}`
@@ -74,12 +79,14 @@ export function SoftphoneNavIcon({
       ? "Softphone: conectando…"
       : `Softphone • Ramal ${ramal}`;
 
-  const icon = (
-    <IconPhoneFilled
-      size={20}
-      className={cn(isError && "text-[var(--color-danger)]")}
-    />
-  );
+  // Verde = registrado/em chamada; cinza = offline/conectando; vermelho = erro.
+  const toneClass = isError
+    ? "text-[var(--color-danger)] hover:text-[var(--color-danger)]"
+    : isConnected
+      ? "text-[var(--color-success)] hover:text-[var(--color-success)]"
+      : "text-[var(--color-offline,#64748b)] hover:text-[var(--color-offline,#64748b)]";
+
+  const icon = <IconPhoneFilled size={20} className={toneClass} />;
 
   // Rail colapsada: mesmo tile 44×44 dos demais ícones (cabe em 72px).
   if (!expanded) {
@@ -88,7 +95,7 @@ export function SoftphoneNavIcon({
         title={title}
         onClick={requestSoftphoneExpand}
         disablePop
-        className={className}
+        className={cn(toneClass, className)}
       >
         {icon}
       </DockButton>
@@ -102,8 +109,8 @@ export function SoftphoneNavIcon({
       aria-label={title}
       title={title}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center text-[var(--nav-text-hover)] transition-colors hover:text-white",
-        isError && "text-[var(--color-danger)]",
+        "inline-flex shrink-0 items-center justify-center transition-colors",
+        toneClass,
         className,
       )}
     >

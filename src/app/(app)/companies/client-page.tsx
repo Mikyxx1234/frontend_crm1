@@ -35,6 +35,7 @@ import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { BadgeGlass } from "@/components/crm/badge-glass";
 import { InputGlass } from "@/components/crm/input-glass";
+import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -65,36 +66,36 @@ type ViewMode = "cards" | "tabela";
 const SEGMENTS: {
   id: CompanySegment;
   label: string;
-  hint: string;
+  tone: KpiTone;
   icon: React.ReactNode;
   value: (s: CompanyStatsDto | undefined) => number | undefined;
 }[] = [
   {
     id: "todos",
     label: "Todas",
-    hint: "Base completa",
-    icon: <IconBuilding size={18} stroke={2.2} />,
+    tone: "brand",
+    icon: <IconBuilding size={20} stroke={2.2} />,
     value: (s) => s?.total,
   },
   {
     id: "com-contatos",
     label: "Com contatos",
-    hint: "Vinculadas a leads",
-    icon: <IconBuildingCommunity size={18} stroke={2.2} />,
+    tone: "violet",
+    icon: <IconBuildingCommunity size={20} stroke={2.2} />,
     value: (s) => s?.withContacts,
   },
   {
     id: "sem-email",
     label: "Sem e-mail",
-    hint: "Sem domínio cadastrado",
-    icon: <IconMailOff size={18} stroke={2.2} />,
+    tone: "warning",
+    icon: <IconMailOff size={20} stroke={2.2} />,
     value: (s) => s?.withoutEmail,
   },
   {
     id: "sem-telefone",
     label: "Sem telefone",
-    hint: "Aguardando contato",
-    icon: <IconPhoneOff size={18} stroke={2.2} />,
+    tone: "neutral",
+    icon: <IconPhoneOff size={20} stroke={2.2} />,
     value: (s) => s?.withoutPhone,
   },
 ];
@@ -310,50 +311,25 @@ export default function V2CompaniesClientPage() {
           }
         />
 
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <section
+          className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
+          aria-label="Indicadores de empresas"
+        >
           {SEGMENTS.map((seg) => {
-            const active = segment === seg.id;
             const val = seg.value(statsQuery.data);
             return (
-              <button
+              <KpiCard
                 key={seg.id}
-                type="button"
+                label={seg.label}
+                value={val === undefined ? "—" : val.toLocaleString("pt-BR")}
+                icon={seg.icon}
+                tone={seg.tone}
+                active={segment === seg.id}
                 onClick={() => setSegment(seg.id)}
-                aria-pressed={active}
-                className={cn(
-                  "group relative overflow-hidden rounded-[18px] border px-4 py-3.5 text-left transition-all",
-                  active
-                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] shadow-[0_8px_24px_rgba(91,111,245,0.12)]"
-                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/30 hover:shadow-[var(--glass-shadow)]",
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="block font-display text-[22px] font-extrabold leading-none tabular-nums text-[var(--text-primary)]">
-                      {val === undefined ? "—" : val.toLocaleString("pt-BR")}
-                    </span>
-                    <span className="mt-1.5 block font-display text-[13px] font-bold text-[var(--text-primary)]">
-                      {seg.label}
-                    </span>
-                    <span className="mt-0.5 block font-body text-[11px] text-[var(--text-muted)]">
-                      {seg.hint}
-                    </span>
-                  </div>
-                  <span
-                    className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
-                      active
-                        ? "bg-[var(--brand-primary)] text-white"
-                        : "bg-[var(--glass-bg-strong)] text-[var(--brand-primary)] group-hover:bg-[var(--color-primary-soft)]",
-                    )}
-                  >
-                    {seg.icon}
-                  </span>
-                </div>
-              </button>
+              />
             );
           })}
-        </div>
+        </section>
 
         {selected.size > 0 && (
           <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 backdrop-blur-md">

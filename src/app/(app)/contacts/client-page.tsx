@@ -56,6 +56,8 @@ import {
   type DatePresetKey,
 } from "@/components/pipeline/kanban-filters/date-presets";
 import { cn } from "@/lib/utils";
+import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { AVATAR_SIZE } from "@/lib/avatar";
 import {
   Dialog,
   DialogContent,
@@ -95,41 +97,41 @@ const DEFAULT_PER_PAGE = 25;
 type ViewMode = "cards" | "tabela";
 type Segment = "todos" | "clientes" | "leads" | "sem-resp";
 
-/** Segmentos dos stat cards (acionáveis) → filtros reais da API.
+/** Segmentos dos KPI cards (acionáveis) → filtros reais da API.
  *  Clientes = leads com negócios ganhos (lifecycle CUSTOMER). */
 const SEGMENTS: {
   id: Segment;
   label: string;
-  hint: string;
+  tone: KpiTone;
   icon: React.ReactNode;
   value: (s: ContactStatsDto | undefined) => number | undefined;
 }[] = [
   {
     id: "todos",
     label: "Todos",
-    hint: "Base completa",
-    icon: <IconUsers size={18} stroke={2.2} />,
+    tone: "brand",
+    icon: <IconUsers size={20} stroke={2.2} />,
     value: (s) => s?.total,
   },
   {
     id: "clientes",
     label: "Clientes",
-    hint: "Leads com negócios ganhos",
-    icon: <IconTrophy size={18} stroke={2.2} />,
+    tone: "success",
+    icon: <IconTrophy size={20} stroke={2.2} />,
     value: (s) => s?.byStage?.CUSTOMER,
   },
   {
     id: "leads",
     label: "Leads",
-    hint: "Em prospecção",
-    icon: <IconUserPlus size={18} stroke={2.2} />,
+    tone: "violet",
+    icon: <IconUserPlus size={20} stroke={2.2} />,
     value: (s) => s?.byStage?.LEAD,
   },
   {
     id: "sem-resp",
     label: "Sem responsável",
-    hint: "Aguardando dono",
-    icon: <IconUserOff size={18} stroke={2.2} />,
+    tone: "neutral",
+    icon: <IconUserOff size={20} stroke={2.2} />,
     value: (s) => s?.unassigned,
   },
 ];
@@ -222,20 +224,6 @@ function buildCustomColumns(defs: ContactFieldDefDto[]): ColumnDef[] {
   }));
 }
 
-const AVATAR_COLORS = [
-  "var(--brand-primary)",
-  "var(--brand-secondary)",
-  "var(--color-success)",
-  "var(--brand-primary-light)",
-];
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase() || "?";
-}
-
 /** Estilo de chip com a cor da tag (selecionado = mais forte). */
 function tagChipStyle(color: string | null | undefined, selected: boolean): CSSProperties | undefined {
   if (!color) return undefined;
@@ -250,12 +238,6 @@ function tagChipStyle(color: string | null | undefined, selected: boolean): CSSP
         borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
         background: `color-mix(in srgb, ${color} 10%, transparent)`,
       };
-}
-
-function avatarColor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 const VIEW_ITEMS = [
@@ -512,51 +494,26 @@ export default function V2ContactsClientPage() {
           }
         />
 
-        {/* Stat cards acionáveis — cada número filtra a lista */}
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        {/* KPI cards acionáveis — mesmo padrão tipográfico do mini-dash de Automações */}
+        <section
+          className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
+          aria-label="Indicadores de contatos"
+        >
           {SEGMENTS.map((seg) => {
-            const active = segment === seg.id;
             const val = seg.value(statsQuery.data);
             return (
-              <button
+              <KpiCard
                 key={seg.id}
-                type="button"
+                label={seg.label}
+                value={val === undefined ? "—" : val.toLocaleString("pt-BR")}
+                icon={seg.icon}
+                tone={seg.tone}
+                active={segment === seg.id}
                 onClick={() => setSegment(seg.id)}
-                aria-pressed={active}
-                className={cn(
-                  "group relative overflow-hidden rounded-[18px] border px-4 py-3.5 text-left transition-all",
-                  active
-                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] shadow-[0_8px_24px_rgba(91,111,245,0.12)]"
-                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/30 hover:shadow-[var(--glass-shadow)]",
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="block font-display text-[22px] font-extrabold leading-none tabular-nums text-[var(--text-primary)]">
-                      {val === undefined ? "—" : val.toLocaleString("pt-BR")}
-                    </span>
-                    <span className="mt-1.5 block font-display text-[13px] font-bold text-[var(--text-primary)]">
-                      {seg.label}
-                    </span>
-                    <span className="mt-0.5 block font-body text-[11px] text-[var(--text-muted)]">
-                      {seg.hint}
-                    </span>
-                  </div>
-                  <span
-                    className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
-                      active
-                        ? "bg-[var(--brand-primary)] text-white"
-                        : "bg-[var(--glass-bg-strong)] text-[var(--brand-primary)] group-hover:bg-[var(--color-primary-soft)]",
-                    )}
-                  >
-                    {seg.icon}
-                  </span>
-                </div>
-              </button>
+              />
             );
           })}
-        </div>
+        </section>
 
         {/* Barra de seleção em massa */}
         {selected.size > 0 && (
@@ -1307,13 +1264,12 @@ function DuplicateContactRow({
 }) {
   return (
     <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2.5">
-      {/* Avatar */}
-      <span
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
-        style={{ background: avatarColor(contact.id) }}
-      >
-        {initials(contact.name)}
-      </span>
+      <ChatAvatar
+        user={{ id: contact.id, name: contact.name, imageUrl: contact.avatarUrl ?? null }}
+        phone={contact.phone}
+        channel={contact.phone ? "whatsapp" : null}
+        size={AVATAR_SIZE.sm}
+      />
 
       {/* Info */}
       <div className="min-w-0 flex-1">
@@ -1513,9 +1469,12 @@ function TabelaView({
                 <CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
               </span>
               <div className="flex w-[240px] shrink-0 items-center gap-2.5">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-                  {initials(c.name)}
-                </span>
+                <ChatAvatar
+                  user={{ id: c.id, name: c.name, imageUrl: c.avatarUrl ?? null }}
+                  phone={c.phone}
+                  channel={c.phone ? "whatsapp" : null}
+                  size={AVATAR_SIZE.sm}
+                />
                 <div className="min-w-0 leading-tight">
                   <button
                     type="button"
@@ -1599,9 +1558,12 @@ function CardsView({
             </span>
 
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-                {initials(c.name)}
-              </span>
+              <ChatAvatar
+                user={{ id: c.id, name: c.name, imageUrl: c.avatarUrl ?? null }}
+                phone={c.phone}
+                channel={c.phone ? "whatsapp" : null}
+                size={AVATAR_SIZE.md}
+              />
               <div className="min-w-0 leading-tight">
                 <button
                   type="button"

@@ -26,6 +26,7 @@ import {
 } from "@/components/crm/page-toolbar"
 import { AutomationsGallery } from "@/components/crm/automations-gallery"
 import { EmptyState } from "@/components/crm/empty-state"
+import { KpiCard } from "@/components/crm/kpi-card"
 import {
   useAutomations,
   useCreateAutomation,
@@ -38,7 +39,6 @@ import { MOCK_AUTOMATIONS_PAGE } from "@/features/automations-v2/mock-automation
 import { isPageMockMode } from "@/lib/page-mock-mode"
 import { AUTOMATION_TRIGGER_TYPES } from "@/lib/automation-workflow"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import { cn } from "@/lib/utils"
 
 const FILTERS = ["Todas", "Ativas", "Pausadas"] as const
 
@@ -437,53 +437,6 @@ export default function V2AutomationsClientPage() {
       </main>
 
       {confirmDialog}
-    </div>
-  )
-}
-
-const KPI_TONES = {
-  brand: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
-  violet: "bg-[rgba(167,139,250,0.18)] text-[var(--brand-secondary)]",
-  success: "bg-[var(--color-success-bg)] text-[var(--color-success)]",
-  neutral: "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-} as const
-
-function KpiCard({
-  label,
-  value,
-  hint,
-  icon,
-  tone,
-}: {
-  label: string
-  value: React.ReactNode
-  hint?: string
-  icon: React.ReactNode
-  tone: keyof typeof KPI_TONES
-}) {
-  return (
-    <div className="flex items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4.5 py-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <span
-        className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
-          KPI_TONES[tone],
-        )}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="font-body text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]">
-          {label}
-        </p>
-        <p className="font-display text-[24px] font-extrabold leading-tight tracking-tight text-[var(--text-primary)]">
-          {value}
-          {hint && (
-            <small className="ml-1.5 text-[13px] font-semibold text-[var(--text-muted)]">
-              {hint}
-            </small>
-          )}
-        </p>
-      </div>
     </div>
   )
 }

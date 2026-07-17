@@ -82,7 +82,9 @@ type RfPos = { x: number; y: number };
 
 const START_X = 200;
 const NODE_Y = 300;
-const GAP_X = 300;
+// Espelha `GAP_X` de `@/lib/automation-layout` — nós expandidos (~400px)
+// precisam de folga maior que 300 pra não cobrir o próximo step.
+const GAP_X = 480;
 
 function readRfPos(config: unknown): RfPos | null {
   if (typeof config !== "object" || config === null) return null;

@@ -2,16 +2,18 @@ import type { AutomationStep } from "@/lib/automation-workflow";
 
 const NONE = "__none__";
 const START_X = 200;
-const GAP_X = 300;
+// Nós com edição inline expandem pra ~340–420px. GAP_X=300 deixava o
+// próximo step por baixo do selecionado (ex.: Aguardar resposta → Mover
+// estágio). 480 = largura expandida + folga pra edge/handles.
+const GAP_X = 480;
 // 27/mai/26 — START_Y agora bate com `NODE_Y` em `workflow-canvas.tsx`
 // (=300). Antes era 140, o que jogava todo o fluxo 160px acima do nó
 // do gatilho (que fica fixo em y=300). Visualmente parecia que o
 // auto-align "subia" o canvas todo.
 const START_Y = 300;
-// Espaçamento entre lanes — bumpado pra acomodar nodes altos
-// (condition multi-branch, interactive com muitos botões) sem
-// sobreposição.
-const GAP_Y = 220;
+// Espaçamento entre lanes — acomoda nodes altos (condition multi-branch,
+// wait_for_reply + painel inline, interactive com muitos botões).
+const GAP_Y = 280;
 
 function isRealTarget(target: unknown, stepIds: Set<string>): target is string {
   return typeof target === "string" && target !== "" && target !== NONE && stepIds.has(target);

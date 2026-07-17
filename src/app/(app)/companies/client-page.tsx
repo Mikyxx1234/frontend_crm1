@@ -232,7 +232,7 @@ export default function V2CompaniesClientPage() {
   const [view, setView] = useState<ViewMode>("cards");
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
-  const [segment, setSegment] = useState<CompanySegment>("todos");
+  const [segment, setSegment] = useState<CompanySegment | null>(null);
   const [sortBy, setSortBy] = useState<CompanySortField>("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [createdFrom, setCreatedFrom] = useState("");
@@ -317,7 +317,7 @@ export default function V2CompaniesClientPage() {
     search: debounced || undefined,
     page,
     perPage,
-    segment,
+    segment: segment ?? undefined,
     sortBy,
     sortOrder,
     createdFrom: createdFrom || undefined,
@@ -433,7 +433,9 @@ export default function V2CompaniesClientPage() {
                 icon={seg.icon}
                 tone={seg.tone}
                 active={segment === seg.id}
-                onClick={() => setSegment(seg.id)}
+                onClick={() =>
+                  setSegment((prev) => (prev === seg.id ? null : seg.id))
+                }
               />
             );
           })}
@@ -473,7 +475,7 @@ export default function V2CompaniesClientPage() {
               description={
                 debounced
                   ? `Sem resultados para "${debounced}".`
-                  : segment !== "todos"
+                  : segment != null && segment !== "todos"
                     ? "Nenhuma empresa para o segmento selecionado."
                     : "Use o menu de ações para cadastrar a primeira empresa."
               }

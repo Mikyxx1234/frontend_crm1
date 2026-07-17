@@ -263,7 +263,7 @@ export default function V2ContactsClientPage() {
   const [view, setView] = useState<ViewMode>("cards");
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
-  const [segment, setSegment] = useState<Segment>("todos");
+  const [segment, setSegment] = useState<Segment | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
@@ -522,7 +522,9 @@ export default function V2ContactsClientPage() {
                 icon={seg.icon}
                 tone={seg.tone}
                 active={segment === seg.id}
-                onClick={() => setSegment(seg.id)}
+                onClick={() =>
+                  setSegment((prev) => (prev === seg.id ? null : seg.id))
+                }
               />
             );
           })}
@@ -564,7 +566,7 @@ export default function V2ContactsClientPage() {
               description={
                 debounced
                   ? `Sem resultados para "${debounced}".`
-                  : segment !== "todos" || activeFilterCount > 0
+                  : (segment != null && segment !== "todos") || activeFilterCount > 0
                     ? "Nenhum contato para os filtros selecionados."
                     : "Crie contatos no Inbox ou via API."
               }

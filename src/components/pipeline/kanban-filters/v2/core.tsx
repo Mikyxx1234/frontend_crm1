@@ -26,9 +26,12 @@ import {
   IconX as X,
 } from "@tabler/icons-react";
 
+import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
+
 import { cn } from "@/lib/utils";
 import { ds } from "@/lib/design-system";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { useModalPortalContainer } from "@/components/ui/modal-portal-context";
 import { DatePicker } from "@/components/ui/date-picker";
 import { SelectNative } from "@/components/ui/select";
 
@@ -222,6 +225,148 @@ export function ChipToggle({
   );
 }
 
+type MultiSelectOption = {
+  value: string;
+  label: React.ReactNode;
+  searchText?: string;
+};
+
+/**
+ * Dropdown multi-select para listas nos filtros.
+ * Clique no item faz toggle sem fechar o menu.
+ */
+export function MultiSelectDropdown({
+  options,
+  selected,
+  onToggle,
+  placeholder = "Selecionar…",
+  emptyLabel = "Nenhuma opção.",
+  searchable,
+  searchPlaceholder = "Buscar…",
+  leading,
+}: {
+  options: MultiSelectOption[];
+  selected: string[];
+  onToggle: (value: string) => void;
+  placeholder?: string;
+  emptyLabel?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  leading?: React.ReactNode;
+}) {
+  const [search, setSearch] = React.useState("");
+  const portalContainer = useModalPortalContainer();
+  const selectedSet = React.useMemo(() => new Set(selected), [selected]);
+
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => {
+      const hay =
+        o.searchText ??
+        (typeof o.label === "string" ? o.label : String(o.value));
+      return hay.toLowerCase().includes(q);
+    });
+  }, [options, search]);
+
+  const summary =
+    selected.length === 0
+      ? placeholder
+      : selected.length === 1
+        ? (() => {
+            const hit = options.find((o) => o.value === selected[0]);
+            return (
+              hit?.searchText ??
+              (typeof hit?.label === "string" ? hit.label : "1 selecionado")
+            );
+          })()
+        : `${selected.length} selecionados`;
+
+  return (
+    <DropdownPrimitive.Root modal={false} onOpenChange={(open) => !open && setSearch("")}>
+      <DropdownPrimitive.Trigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "group inline-flex h-9 w-full items-center gap-2 rounded-lg px-3",
+            "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]",
+            "font-display text-[13px] font-semibold transition-colors",
+            selected.length ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]",
+            "hover:bg-[var(--glass-bg-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
+            "data-[state=open]:ring-2 data-[state=open]:ring-[var(--brand-primary)]/40",
+          )}
+        >
+          <span className="min-w-0 flex-1 truncate text-left">{summary}</span>
+          <ChevronDown
+            size={15}
+            className="shrink-0 text-[var(--text-muted)] transition-transform duration-200 group-data-[state=open]:rotate-180"
+          />
+        </button>
+      </DropdownPrimitive.Trigger>
+      <DropdownPrimitive.Portal container={portalContainer ?? undefined}>
+        <DropdownPrimitive.Content
+          align="start"
+          sideOffset={6}
+          className={cn(
+            "z-50 w-[var(--radix-dropdown-menu-trigger-width)] min-w-[220px] overflow-hidden rounded-[var(--radius-lg)] p-1.5",
+            "border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg,var(--glass-bg-modal,#fff))] shadow-[var(--glass-shadow)]",
+            "max-h-[min(320px,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto",
+            "animate-in fade-in-0 zoom-in-95",
+          )}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
+          {searchable && (
+            <div className="sticky top-0 z-[1] mb-1 bg-[var(--dropdown-solid-bg,var(--glass-bg-modal,#fff))] p-1">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="h-8 w-full rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-8 pr-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-primary/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+          )}
+          {leading}
+          {filtered.length === 0 ? (
+            <p className="px-2.5 py-3 text-center text-[12px] text-[var(--text-muted)]">
+              {search.trim() ? "Nenhum resultado." : emptyLabel}
+            </p>
+          ) : (
+            filtered.map((opt) => {
+              const isOn = selectedSet.has(opt.value);
+              return (
+                <DropdownPrimitive.Item
+                  key={opt.value}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    onToggle(opt.value);
+                  }}
+                  className={cn(
+                    "flex cursor-pointer select-none items-center gap-2 rounded-[var(--radius-md)] px-2.5 py-2",
+                    "font-display text-[13px] font-semibold outline-none transition-colors",
+                    "text-[var(--text-secondary)] data-[highlighted]:bg-[var(--glass-bg-strong)] data-[highlighted]:text-[var(--text-primary)]",
+                    isOn && "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+                  )}
+                >
+                  <span className="min-w-0 flex-1 truncate">{opt.label}</span>
+                  {isOn && (
+                    <Check size={15} strokeWidth={2.5} className="shrink-0 text-[var(--brand-primary)]" />
+                  )}
+                </DropdownPrimitive.Item>
+              );
+            })
+          )}
+        </DropdownPrimitive.Content>
+      </DropdownPrimitive.Portal>
+    </DropdownPrimitive.Root>
+  );
+}
+
 /** Input texto compacto DS v2. */
 export function TextField({
   value,
@@ -310,71 +455,61 @@ export function SearchSection({ draft, setDraftField }: SectionProps) {
 }
 
 export function StatusSection({ draft, setDraftField, toggleArray }: SectionProps) {
+  const selected = draft.statuses ?? [];
   return (
-    <FieldCard label="Status" active={!!draft.statuses?.length} onClear={() => setDraftField("statuses", undefined)}>
-      <div className="flex flex-wrap gap-1.5">
-        {STATUS_OPTIONS.map((s) => (
-          <ChipToggle
-            key={s.value}
-            active={(draft.statuses ?? []).includes(s.value)}
-            onClick={() => setDraftField("statuses", toggleArray(draft.statuses, s.value) as typeof draft.statuses)}
-          >
-            {s.label}
-          </ChipToggle>
-        ))}
-      </div>
+    <FieldCard label="Status" active={!!selected.length} onClear={() => setDraftField("statuses", undefined)}>
+      <MultiSelectDropdown
+        placeholder="Selecionar status…"
+        selected={selected}
+        options={STATUS_OPTIONS.map((s) => ({ value: s.value, label: s.label, searchText: s.label }))}
+        onToggle={(v) =>
+          setDraftField("statuses", toggleArray(draft.statuses, v) as typeof draft.statuses)
+        }
+      />
     </FieldCard>
   );
 }
 
 export function StagesSection({ draft, options, optionsLoading, setDraftField, toggleArray }: SectionProps) {
   const stages = options?.pipelines.flatMap((p) => p.stages) ?? [];
+  const selected = draft.stageIds ?? [];
   return (
-    <FieldCard label="Etapas" active={!!draft.stageIds?.length} onClear={() => setDraftField("stageIds", undefined)}>
+    <FieldCard label="Etapas" active={!!selected.length} onClear={() => setDraftField("stageIds", undefined)}>
       {optionsLoading ? (
         <p className="text-[12px] text-ink-subtle">Carregando…</p>
-      ) : stages.length === 0 ? (
-        <p className="text-[12px] text-ink-subtle">Nenhuma etapa.</p>
       ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {stages.map((stage) => {
-            const active = (draft.stageIds ?? []).includes(stage.id);
-            return (
-              <button
-                key={stage.id}
-                type="button"
-                onClick={() => setDraftField("stageIds", toggleArray(draft.stageIds, stage.id))}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors",
-                  active
-                    ? "border-transparent bg-primary text-white"
-                    : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                )}
-              >
-                <span className="size-2 shrink-0 rounded-full" style={{ background: stage.color || "#94a3b8" }} />
+        <MultiSelectDropdown
+          placeholder="Selecionar etapas…"
+          emptyLabel="Nenhuma etapa."
+          searchable={stages.length > 8}
+          searchPlaceholder="Buscar etapa…"
+          selected={selected}
+          options={stages.map((stage) => ({
+            value: stage.id,
+            searchText: stage.name,
+            label: (
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ background: stage.color || "#94a3b8" }}
+                />
                 {stage.name}
-              </button>
-            );
-          })}
-        </div>
+              </span>
+            ),
+          }))}
+          onToggle={(id) => setDraftField("stageIds", toggleArray(draft.stageIds, id))}
+        />
       )}
     </FieldCard>
   );
 }
 
 export function SourcesSection({ draft, options, setDraftField, toggleArray }: SectionProps) {
-  const [search, setSearch] = React.useState("");
   const allSources = options?.sources ?? [];
-  const filtered = search
-    ? allSources.filter((s) => s.toLowerCase().includes(search.toLowerCase()))
-    : allSources;
   const selected = (draft.sources ?? []).filter((s) => s !== SOURCE_NONE);
-
-  function toggleSource(source: string) {
-    const next = toggleArray(selected, source);
-    setDraftField("sources", next);
-    setDraftField("withoutSource", undefined);
-  }
+  const selectedKeys = draft.withoutSource
+    ? ["__none__", ...selected]
+    : selected;
 
   return (
     <FieldCard
@@ -385,56 +520,35 @@ export function SourcesSection({ draft, options, setDraftField, toggleArray }: S
         setDraftField("withoutSource", undefined);
       }}
     >
-      <div className="space-y-2">
-        <TextField
-          value={search}
-          onChange={setSearch}
-          placeholder="Buscar origem…"
-          icon={<Search className="size-3.5" />}
-        />
-        <div className="max-h-40 space-y-0.5 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setDraftField("withoutSource", !draft.withoutSource || undefined);
-              setDraftField("sources", undefined);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-              draft.withoutSource ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
-            )}
-          >
-            <span className="inline-block size-2.5 shrink-0 rounded-full border border-dashed border-black/15" />
-            Sem origem
-            {draft.withoutSource && <Check className="ml-auto size-3.5" />}
-          </button>
-          {filtered.map((source) => {
-            const active = selected.includes(source);
-            return (
-              <button
-                key={source}
-                type="button"
-                onClick={() => toggleSource(source)}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-                  active ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
-                )}
-              >
-                <span className="flex-1 truncate text-left">{source}</span>
-                {active && <Check className="size-3.5 shrink-0" />}
-              </button>
-            );
-          })}
-          {filtered.length === 0 && search && (
-            <p className="px-2 py-3 text-center text-[12px] text-ink-subtle">Nenhuma origem encontrada.</p>
-          )}
-          {allSources.length === 0 && !search && (
-            <p className="px-2 py-2 text-[12px] text-ink-subtle">
-              Nenhuma origem cadastrada ainda. Use &quot;Sem origem&quot; ou cadastre a origem nos contatos.
-            </p>
-          )}
-        </div>
-      </div>
+      <MultiSelectDropdown
+        placeholder="Selecionar origem…"
+        emptyLabel="Nenhuma origem cadastrada."
+        searchable={allSources.length > 6}
+        searchPlaceholder="Buscar origem…"
+        selected={selectedKeys}
+        options={[
+          {
+            value: "__none__",
+            label: "Sem origem",
+            searchText: "Sem origem",
+          },
+          ...allSources.map((source) => ({
+            value: source,
+            label: source,
+            searchText: source,
+          })),
+        ]}
+        onToggle={(value) => {
+          if (value === "__none__") {
+            const next = !draft.withoutSource;
+            setDraftField("withoutSource", next || undefined);
+            if (next) setDraftField("sources", undefined);
+            return;
+          }
+          setDraftField("withoutSource", undefined);
+          setDraftField("sources", toggleArray(selected, value));
+        }}
+      />
     </FieldCard>
   );
 }
@@ -442,32 +556,29 @@ export function SourcesSection({ draft, options, setDraftField, toggleArray }: S
 export function LossReasonsSection({ draft, options, setDraftField, toggleArray }: SectionProps) {
   const reasons = options?.lossReasons ?? [];
   if (reasons.length === 0) return null;
+  const selected = draft.lostReasons ?? [];
   return (
     <FieldCard
       label="Motivo da perda"
-      active={!!draft.lostReasons?.length}
+      active={!!selected.length}
       onClear={() => setDraftField("lostReasons", undefined)}
     >
-      <div className="flex flex-wrap gap-1.5">
-        {reasons.map((r) => (
-          <ChipToggle
-            key={r}
-            active={(draft.lostReasons ?? []).includes(r)}
-            onClick={() => setDraftField("lostReasons", toggleArray(draft.lostReasons, r))}
-          >
-            {r}
-          </ChipToggle>
-        ))}
-      </div>
+      <MultiSelectDropdown
+        placeholder="Selecionar motivos…"
+        searchable={reasons.length > 6}
+        searchPlaceholder="Buscar motivo…"
+        selected={selected}
+        options={reasons.map((r) => ({ value: r, label: r, searchText: r }))}
+        onToggle={(r) => setDraftField("lostReasons", toggleArray(draft.lostReasons, r))}
+      />
     </FieldCard>
   );
 }
 
 export function OwnersSection({ draft, options, setDraftField }: SectionProps) {
   const users = options?.users ?? [];
-  const [search, setSearch] = React.useState("");
   const selected = (draft.ownerIds ?? []).filter((id): id is string => !!id);
-  const filtered = search ? users.filter((u) => u.name.toLowerCase().includes(search.toLowerCase())) : users;
+  const selectedKeys = draft.withoutOwner ? ["__none__", ...selected] : selected;
 
   return (
     <FieldCard
@@ -478,55 +589,53 @@ export function OwnersSection({ draft, options, setDraftField }: SectionProps) {
         setDraftField("withoutOwner", undefined);
       }}
     >
-      <div className="space-y-2">
-        <TextField value={search} onChange={setSearch} placeholder="Buscar usuário…" icon={<Search className="size-3.5" />} />
-        <div className="max-h-40 space-y-0.5 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setDraftField("ownerIds", undefined);
-              setDraftField("withoutOwner", !draft.withoutOwner || undefined);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-              draft.withoutOwner ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
-            )}
-          >
-            <span className={ds.avatar.empty + " size-6"}>
-              <X className="size-3" />
-            </span>
-            Sem responsável
-            {draft.withoutOwner && <Check className="ml-auto size-3.5" />}
-          </button>
-          {filtered.map((u) => {
-            const active = selected.includes(u.id);
-            return (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() => {
-                  const next = active ? selected.filter((x) => x !== u.id) : [...selected, u.id];
-                  setDraftField("ownerIds", next.length ? next : undefined);
-                  setDraftField("withoutOwner", undefined);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-                  active ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
-                )}
-              >
+      <MultiSelectDropdown
+        placeholder="Selecionar responsável…"
+        searchable={users.length > 6}
+        searchPlaceholder="Buscar usuário…"
+        selected={selectedKeys}
+        options={[
+          {
+            value: "__none__",
+            label: (
+              <span className="inline-flex items-center gap-2">
+                <span className={ds.avatar.empty + " size-5"}>
+                  <X className="size-2.5" />
+                </span>
+                Sem responsável
+              </span>
+            ),
+            searchText: "Sem responsável",
+          },
+          ...users.map((u) => ({
+            value: u.id,
+            searchText: u.name,
+            label: (
+              <span className="inline-flex items-center gap-2">
                 <span
-                  className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+                  className="flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white"
                   style={{ background: `hsl(${(u.name.charCodeAt(0) * 47) % 360} 55% 50%)` }}
                 >
                   {u.name[0]?.toUpperCase()}
                 </span>
-                <span className="flex-1 truncate text-left">{u.name}</span>
-                {active && <Check className="size-3.5 shrink-0" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+                {u.name}
+              </span>
+            ),
+          })),
+        ]}
+        onToggle={(value) => {
+          if (value === "__none__") {
+            const next = !draft.withoutOwner;
+            setDraftField("withoutOwner", next || undefined);
+            if (next) setDraftField("ownerIds", undefined);
+            return;
+          }
+          const active = selected.includes(value);
+          const next = active ? selected.filter((x) => x !== value) : [...selected, value];
+          setDraftField("ownerIds", next.length ? next : undefined);
+          setDraftField("withoutOwner", undefined);
+        }}
+      />
     </FieldCard>
   );
 }
@@ -1041,13 +1150,20 @@ export function ContactCustomFieldsSection(props: SectionProps) {
 // ── Tags ──
 
 export function TagsSection({ draft, options, setDraftField }: SectionProps) {
-  const [search, setSearch] = React.useState("");
   const allTags = options?.tags ?? [];
-  const filtered = search ? allTags.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())) : allTags;
   const selectedIds = draft.tagIds ?? [];
+  const selectedKeys = draft.withoutTags ? ["__none__", ...selectedIds] : selectedIds;
 
   function toggleTag(id: string) {
-    const next = selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id];
+    if (id === "__none__") {
+      const next = !draft.withoutTags;
+      setDraftField("withoutTags", next || undefined);
+      if (next) setDraftField("tagIds", undefined);
+      return;
+    }
+    const next = selectedIds.includes(id)
+      ? selectedIds.filter((x) => x !== id)
+      : [...selectedIds, id];
     setDraftField("tagIds", next.length ? next : undefined);
     setDraftField("withoutTags", undefined);
   }
@@ -1070,59 +1186,47 @@ export function TagsSection({ draft, options, setDraftField }: SectionProps) {
             triggerClassName="h-9 w-full rounded-lg text-[12px]"
           />
         )}
-        <TextField value={search} onChange={setSearch} placeholder="Localizar tags" icon={<Search className="size-3.5" />} />
-        <div className="max-h-48 space-y-0.5 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setDraftField("withoutTags", !draft.withoutTags || undefined);
-              setDraftField("tagIds", undefined);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-              draft.withoutTags ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
-            )}
-          >
-            <span className="inline-block size-2.5 shrink-0 rounded-full border border-dashed border-black/15" />
-            Sem tags
-            {draft.withoutTags && <Check className="ml-auto size-3.5" />}
-          </button>
-          {filtered.map((tag) => {
-            const isSelected = selectedIds.includes(tag.id);
-            const color = tag.color || "#6366f1";
-            return (
-              <button
-                key={tag.id}
-                type="button"
-                onClick={() => toggleTag(tag.id)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors",
-                  isSelected ? "bg-primary-soft/60" : "hover:bg-muted",
-                )}
-              >
-                <span
-                  className="max-w-[160px] truncate rounded-md px-2 py-0.5 text-[11px] font-semibold"
-                  style={{
-                    background: isSelected ? color : `${color}1f`,
-                    color: isSelected ? "#fff" : color,
-                    border: `1px solid ${color}40`,
-                  }}
-                >
-                  {tag.name}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  {tag.dealCount != null && (
-                    <span className="tabular-nums text-[11px] text-ink-subtle">{tag.dealCount.toLocaleString("pt-BR")}</span>
-                  )}
-                  {isSelected && <Check className="size-3.5 text-primary" />}
-                </span>
-              </button>
-            );
-          })}
-          {filtered.length === 0 && search && (
-            <p className="px-2 py-3 text-center text-[12px] text-ink-subtle">Nenhuma tag encontrada.</p>
-          )}
-        </div>
+        <MultiSelectDropdown
+          placeholder="Selecionar tags…"
+          emptyLabel="Nenhuma tag."
+          searchable={allTags.length > 6}
+          searchPlaceholder="Localizar tags…"
+          selected={selectedKeys}
+          options={[
+            {
+              value: "__none__",
+              label: "Sem tags",
+              searchText: "Sem tags",
+            },
+            ...allTags.map((tag) => {
+              const color = tag.color || "#6366f1";
+              return {
+                value: tag.id,
+                searchText: tag.name,
+                label: (
+                  <span className="inline-flex min-w-0 items-center gap-2">
+                    <span
+                      className="max-w-[160px] truncate rounded-md px-2 py-0.5 text-[11px] font-semibold"
+                      style={{
+                        background: `${color}1f`,
+                        color,
+                        border: `1px solid ${color}40`,
+                      }}
+                    >
+                      {tag.name}
+                    </span>
+                    {tag.dealCount != null && (
+                      <span className="tabular-nums text-[11px] text-ink-subtle">
+                        {tag.dealCount.toLocaleString("pt-BR")}
+                      </span>
+                    )}
+                  </span>
+                ),
+              };
+            }),
+          ]}
+          onToggle={toggleTag}
+        />
       </div>
     </FieldCard>
   );

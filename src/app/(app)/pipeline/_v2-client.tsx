@@ -1299,6 +1299,7 @@ export default function KanbanV2ClientPage({
         onOpenChange={(o) => {
           if (!o) setPendingLostMove(null);
         }}
+        pipelineId={pipelineId}
         // NÃO usar `moveDeal.isPending` aqui: é a mesma mutation usada na
         // reabertura do lead, então um move anterior ainda em voo deixava o
         // "Confirmar perda" desabilitado mesmo com o motivo já selecionado.

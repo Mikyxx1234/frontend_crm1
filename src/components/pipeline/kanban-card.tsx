@@ -61,6 +61,8 @@ type KanbanCardProps = {
    */
   isSelected?: boolean;
   onToggleSelect?: () => void;
+  /** Funil atual — filtra motivos de perda vinculados. */
+  pipelineId?: string | null;
 };
 
 /** Prévia curta da última mensagem do cliente (entrada). */
@@ -136,6 +138,7 @@ export function KanbanCard({
   isHighlighted,
   isSelected,
   onToggleSelect,
+  pipelineId,
 }: KanbanCardProps) {
   const queryClient = useQueryClient();
   const { data: sessionData } = useSession();
@@ -562,6 +565,7 @@ export function KanbanCard({
       <LossReasonDialog
         open={lostOpen}
         onOpenChange={setLostOpen}
+        pipelineId={pipelineId}
         onConfirm={submitLost}
       />
     </>

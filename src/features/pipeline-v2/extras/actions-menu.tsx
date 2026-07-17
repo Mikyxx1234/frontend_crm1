@@ -186,6 +186,7 @@ export function DealActionsMenu({
       <LossReasonDialog
         open={lostDialogOpen}
         onOpenChange={setLostDialogOpen}
+        pipelineId={pipelineId}
         isPending={setStatus.isPending}
         onConfirm={(reason) => {
           apply("LOST", reason);

@@ -419,6 +419,7 @@ export function BulkActionsBar({
       <LossReasonDialog
         open={lostOpen}
         onOpenChange={setLostOpen}
+        pipelineId={pipelineId}
         onConfirm={(reason) => {
           mutation.mutate({ dealIds, action: "mark_lost", lostReason: reason });
           setLostOpen(false);
@@ -433,6 +434,7 @@ export function BulkActionsBar({
         onOpenChange={(o) => {
           if (!o) setPendingLostMoveStage(null);
         }}
+        pipelineId={pipelineId}
         onConfirm={(reason) => {
           if (!pendingLostMoveStage) return;
           mutation.mutate({

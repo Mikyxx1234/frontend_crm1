@@ -5,12 +5,17 @@ import { IconClock as Clock, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { NodeInlineConfig } from "./node-inline-config";
 
 export type BusinessHoursNodeData = {
   label: string;
   summary: string;
   stepIndex?: number;
   onDelete?: () => void;
+  stepType?: string;
+  config?: Record<string, unknown>;
+  stepOptions?: Array<{ value: string; label: string }>;
+  onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
 /**
@@ -86,6 +91,17 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
       <span className="pointer-events-none absolute bottom-0 left-1/2 inline-flex -translate-x-1/2 items-center rounded-full bg-[var(--color-danger-bg)] px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-[var(--color-danger-text)] ring-1 ring-rose-100">
         FORA
       </span>
+      {selected && (
+        <div className="mt-3 w-[340px] rounded-lg border border-[var(--color-warning)]/40 bg-[var(--color-bg-card)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)]">
+          <NodeInlineConfig
+            selected={selected}
+            stepType={data.stepType ?? "business_hours"}
+            config={data.config}
+            stepOptions={data.stepOptions ?? []}
+            onChange={(next) => data.onConfigChange?.(next)}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -181,13 +181,14 @@ function ContactTagsTray({
 const DEFAULT_FILTERS: InboxFilters = {};
 
 // Ordem das tabs alinhada ao legado (`conversation-list.tsx`
-// TAB_ORDER). MVP expõe 5 — automacao/erro voltam depois se houver
-// demanda real.
+// TAB_ORDER). "Automação" lista conversas cujo contato tem automação
+// RUNNING (fila de automação). "erro" volta depois se houver demanda.
 const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "todos", label: "Todas" },
   { id: "esperando", label: "Aguardando" },
   { id: "entrada", label: "Entrada" },
   { id: "respondidas", label: "Respondidas" },
+  { id: "automacao", label: "Automação" },
   { id: "finalizados", label: "Resolvidas" },
 ];
 

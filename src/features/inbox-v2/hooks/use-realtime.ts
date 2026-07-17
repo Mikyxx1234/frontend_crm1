@@ -131,6 +131,9 @@ export function useInboxRealtime(options: {
             qc.invalidateQueries({
               queryKey: ["active-automations-contact", data.contactId],
             });
+            qc.invalidateQueries({
+              queryKey: ["automation-history-contact", data.contactId],
+            });
           }
         } catch {
           /* ignore */

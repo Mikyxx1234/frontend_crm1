@@ -255,7 +255,32 @@ export async function getContactActiveAutomations(
   return data as { items: ActiveAutomationDto[] };
 }
 
-/** DELETE /api/contacts/:id/active-automations/:contextId — interromper robô */
+export type AutomationHistoryDto = {
+  contextId: string;
+  automationId: string;
+  name: string;
+  status: "COMPLETED" | "TIMED_OUT";
+  startedAt: string;
+  finishedAt: string;
+};
+
+/** GET /api/contacts/:id/automation-history — histórico de execuções encerradas */
+export async function getContactAutomationHistory(
+  contactId: string,
+): Promise<{ items: AutomationHistoryDto[] }> {
+  const res = await fetch(
+    apiUrl(`/api/contacts/${contactId}/automation-history`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao carregar histórico",
+    );
+  }
+  return data as { items: AutomationHistoryDto[] };
+}
+
+/** DELETE /api/contacts/:id/active-automations/:contextId — interromper automação */
 export async function cancelContactAutomation(
   contactId: string,
   contextId: string,

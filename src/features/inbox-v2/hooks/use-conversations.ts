@@ -13,8 +13,10 @@ import {
   fetchTabCounts,
   getActiveAutomations,
   getContactActiveAutomations,
+  getContactAutomationHistory,
   listConversations,
   type ActiveAutomationDto,
+  type AutomationHistoryDto,
   type ConversationListResponse,
   type ConversationListRow,
   type InboxFilters,
@@ -163,7 +165,25 @@ export function useContactActiveAutomations(contactId: string | null) {
   });
 }
 
-/** Interrompe manualmente um robô e revalida a lista do contato. */
+/** QueryKey do histórico de execuções (por contato). */
+export const contactAutomationHistoryKey = (contactId: string | null) =>
+  ["automation-history-contact", contactId] as const;
+
+/** Histórico de execuções encerradas (COMPLETED/TIMED_OUT) do contato. */
+export function useContactAutomationHistory(
+  contactId: string | null,
+  enabled = true,
+) {
+  return useQuery<{ items: AutomationHistoryDto[] }, Error, AutomationHistoryDto[]>({
+    queryKey: contactAutomationHistoryKey(contactId),
+    queryFn: () => getContactAutomationHistory(contactId as string),
+    enabled: Boolean(contactId) && enabled && !isPreviewMode(),
+    staleTime: 15_000,
+    select: (d) => d.items,
+  });
+}
+
+/** Interrompe manualmente uma automação e revalida a lista + histórico. */
 export function useCancelAutomation(contactId: string | null) {
   const qc = useQueryClient();
   return useMutation<void, Error, string>({
@@ -171,6 +191,7 @@ export function useCancelAutomation(contactId: string | null) {
       cancelContactAutomation(contactId as string, contextId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: contactActiveAutomationsKey(contactId) });
+      qc.invalidateQueries({ queryKey: contactAutomationHistoryKey(contactId) });
     },
   });
 }

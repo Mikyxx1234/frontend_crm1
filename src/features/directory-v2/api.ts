@@ -191,6 +191,48 @@ export function fetchTagsWithCounts(): Promise<TagWithCountDto[]> {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Duplicatas de contatos
+// ─────────────────────────────────────────────────────────────────
+
+export interface DuplicateContactSnap {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+  company: { id: string; name: string } | null;
+  assignedTo: { id: string; name: string } | null;
+}
+
+export interface DuplicateGroup {
+  key: string;
+  field: "phone" | "email";
+  contacts: DuplicateContactSnap[];
+}
+
+export interface DuplicatesResponseDto {
+  groups: DuplicateGroup[];
+}
+
+export function fetchDuplicates(): Promise<DuplicatesResponseDto> {
+  return getJson<DuplicatesResponseDto>(
+    "/api/contacts/duplicates",
+    "Erro ao localizar duplicatas.",
+  );
+}
+
+export function mergeContacts(keepId: string, removeId: string): Promise<{ ok: true }> {
+  return sendJson<{ ok: true }>(
+    "/api/contacts/merge",
+    "POST",
+    { keepId, removeId },
+    "Erro ao mesclar contatos.",
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Contato — detalhe + mutations
 // ─────────────────────────────────────────────────────────────────
 

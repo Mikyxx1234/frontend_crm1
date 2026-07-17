@@ -18,7 +18,9 @@ import {
   fetchContacts,
   fetchContactFieldDefs,
   fetchContactStats,
+  fetchDuplicates,
   fetchTagsWithCounts,
+  mergeContacts,
   removeContactTag,
   updateActivity,
   updateCompany,
@@ -35,6 +37,7 @@ import {
   type ContactFieldDefDto,
   type ContactStatsDto,
   type ContactWriteBody,
+  type DuplicatesResponseDto,
   type TagWithCountDto,
   type CreateActivityPayload,
   type UpdateActivityPayload,
@@ -133,6 +136,27 @@ export function useContactFieldDefs(enabled?: boolean) {
     enabled: resolveEnabled(enabled),
     staleTime: 5 * 60_000,
     placeholderData: (prev) => prev,
+  });
+}
+
+export function useContactDuplicates(enabled?: boolean) {
+  return useQuery<DuplicatesResponseDto>({
+    queryKey: ["v2-contact-duplicates"],
+    queryFn: fetchDuplicates,
+    enabled: resolveEnabled(enabled),
+    staleTime: 30_000,
+  });
+}
+
+export function useMergeContacts() {
+  const qc = useQueryClient();
+  return useMutation<{ ok: true }, Error, { keepId: string; removeId: string }>({
+    mutationFn: ({ keepId, removeId }) => mergeContacts(keepId, removeId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["v2-contacts"], exact: false });
+      qc.invalidateQueries({ queryKey: ["v2-contact-stats"] });
+      qc.invalidateQueries({ queryKey: ["v2-contact-duplicates"] });
+    },
   });
 }
 

@@ -26,6 +26,9 @@ import {
   IconDownload,
   IconFileImport,
   IconSettings,
+  IconUsersGroup,
+  IconArrowMerge,
+  IconLoader2,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -57,12 +60,21 @@ import {
   useContactStats,
   useContactTags,
   useContactFieldDefs,
+  useContactDuplicates,
+  useMergeContacts,
   useCreateContact,
   useDeleteContact,
   useUpdateContact,
   useCompanies,
 } from "@/features/directory-v2/hooks";
-import type { ContactFieldDefDto, ContactListItemDto, ContactStatsDto, TagWithCountDto } from "@/features/directory-v2/api";
+import type {
+  ContactFieldDefDto,
+  ContactListItemDto,
+  ContactStatsDto,
+  DuplicateContactSnap,
+  DuplicateGroup,
+  TagWithCountDto,
+} from "@/features/directory-v2/api";
 
 const DEFAULT_PER_PAGE = 25;
 type ViewMode = "cards" | "tabela";
@@ -217,6 +229,7 @@ export default function V2ContactsClientPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
+  const [dupesOpen, setDupesOpen] = useState(false);
   const [editing, setEditing] = useState<ContactListItemDto | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -437,6 +450,7 @@ export default function V2ContactsClientPage() {
                 }}
                 onImport={() => setImportOpen(true)}
                 onColumns={() => setColumnsOpen(true)}
+                onDupes={() => setDupesOpen(true)}
               />
             </div>
           }
@@ -549,6 +563,7 @@ export default function V2ContactsClientPage() {
       <CreateContactDialog open={createOpen} onOpenChange={setCreateOpen} />
       <EditContactDialog contact={editing} onClose={() => setEditing(null)} />
       <ImportSheet open={importOpen} onOpenChange={setImportOpen} />
+      <DuplicatesSheet open={dupesOpen} onOpenChange={setDupesOpen} />
       <ColumnsDialog
         open={columnsOpen}
         onOpenChange={setColumnsOpen}
@@ -746,12 +761,13 @@ function SearchFilterBar({
 // ── Menu de ações (hambúrguer estilo Kommo) ──────────────────────────────────
 
 function ActionsMenu({
-  onAdd, onExport, onImport, onColumns,
+  onAdd, onExport, onImport, onColumns, onDupes,
 }: {
   onAdd: () => void;
   onExport: () => void;
   onImport: () => void;
   onColumns: () => void;
+  onDupes: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -765,11 +781,12 @@ function ActionsMenu({
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  const items: { icon: React.ReactNode; label: string; onClick: () => void }[] = [
+  const items: { icon: React.ReactNode; label: string; onClick: () => void; divider?: boolean }[] = [
     { icon: <IconPlus size={16} />, label: "Adicionar contato", onClick: onAdd },
     { icon: <IconDownload size={16} />, label: "Exportar", onClick: onExport },
     { icon: <IconFileImport size={16} />, label: "Importar", onClick: onImport },
-    { icon: <IconSettings size={16} />, label: "Configurações da lista", onClick: onColumns },
+    { icon: <IconSettings size={16} />, label: "Configurações da lista", onClick: onColumns, divider: true },
+    { icon: <IconUsersGroup size={16} />, label: "Localizar duplicadas", onClick: onDupes },
   ];
 
   return (
@@ -780,18 +797,200 @@ function ActionsMenu({
       {open && (
         <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
           {items.map((it) => (
-            <button
-              key={it.label}
-              type="button"
-              onClick={() => { setOpen(false); it.onClick(); }}
-              className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-            >
-              <span className="text-[var(--text-muted)]">{it.icon}</span>
-              {it.label}
-            </button>
+            <div key={it.label}>
+              {it.divider && <div className="my-1 h-px bg-[var(--glass-border)]" />}
+              <button
+                type="button"
+                onClick={() => { setOpen(false); it.onClick(); }}
+                className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+              >
+                <span className="text-[var(--text-muted)]">{it.icon}</span>
+                {it.label}
+              </button>
+            </div>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Localizar duplicadas ─────────────────────────────────────────────────────
+
+function DuplicatesSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const { data, isLoading, refetch } = useContactDuplicates(open);
+  const mergeMut = useMergeContacts();
+  const [merging, setMerging] = useState<string | null>(null); // grupo sendo mesclado
+  const [done, setDone] = useState<Set<string>>(new Set()); // chaves já resolvidas
+
+  useEffect(() => {
+    if (open) { setDone(new Set()); void refetch(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const groups = (data?.groups ?? []).filter((g) => !done.has(`${g.field}:${g.key}`));
+
+  async function handleMerge(group: DuplicateGroup, keepId: string) {
+    const sig = `${group.field}:${group.key}`;
+    setMerging(sig);
+    const removeIds = group.contacts.filter((c) => c.id !== keepId).map((c) => c.id);
+    let ok = 0;
+    let fail = 0;
+    for (const removeId of removeIds) {
+      try {
+        await mergeMut.mutateAsync({ keepId, removeId });
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    setMerging(null);
+    if (fail === 0) {
+      toast.success(`${ok} contato(s) mesclado(s) com sucesso.`);
+      setDone((prev) => new Set(prev).add(sig));
+    } else {
+      toast.error(`${ok} mesclado(s), ${fail} falha(s). Verifique suas permissões (requer Administrador).`);
+    }
+  }
+
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Localizar duplicadas"
+      size="lg"
+    >
+      <div className="flex flex-col gap-4">
+        {/* Summary */}
+        <p className="font-body text-[13px] leading-relaxed text-[var(--text-muted)]">
+          Contatos com o mesmo telefone ou e-mail são exibidos abaixo. Escolha qual manter — os outros serão mesclados nele (conversas, negócios e notas são preservados).
+        </p>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-10 text-[var(--text-muted)]">
+            <IconLoader2 size={20} className="animate-spin" />
+            <span className="font-body text-[13px]">Analisando contatos…</span>
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-12 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success-text)]">
+              <IconCheck size={24} />
+            </span>
+            <p className="font-display text-[15px] font-bold text-[var(--text-primary)]">Nenhuma duplicata encontrada</p>
+            <p className="font-body text-[13px] text-[var(--text-muted)]">Todos os contatos têm telefone e e-mail únicos.</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+                {groups.length} grupo{groups.length > 1 ? "s" : ""} encontrado{groups.length > 1 ? "s" : ""}
+              </span>
+              <span className="font-body text-[12px] text-[var(--text-muted)]">Clique em "Manter" para preservar o contato</span>
+            </div>
+            <div className="flex flex-col gap-3 overflow-y-auto">
+              {groups.map((group) => {
+                const sig = `${group.field}:${group.key}`;
+                const isMerging = merging === sig;
+                return (
+                  <div
+                    key={sig}
+                    className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-4"
+                  >
+                    {/* Header do grupo */}
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className={`flex h-6 items-center gap-1 rounded-full border px-2.5 font-display text-[11px] font-bold uppercase tracking-wider ${
+                        group.field === "phone"
+                          ? "border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
+                          : "border-[var(--color-success)]/30 bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
+                      }`}>
+                        {group.field === "phone" ? <IconPhone size={11} /> : <IconMail size={11} />}
+                        {group.field === "phone" ? "Telefone" : "E-mail"}
+                      </span>
+                      <span className="font-mono text-[13px] font-semibold text-[var(--text-primary)]">{group.key}</span>
+                      <span className="font-body text-[12px] text-[var(--text-muted)]">· {group.contacts.length} contatos</span>
+                    </div>
+
+                    {/* Contatos do grupo */}
+                    <div className="flex flex-col gap-2">
+                      {group.contacts.map((c) => (
+                        <DuplicateContactRow
+                          key={c.id}
+                          contact={c}
+                          disabled={isMerging}
+                          onKeep={() => void handleMerge(group, c.id)}
+                        />
+                      ))}
+                    </div>
+
+                    {isMerging && (
+                      <div className="mt-2 flex items-center gap-2 pt-1 text-[var(--text-muted)]">
+                        <IconLoader2 size={14} className="animate-spin" />
+                        <span className="font-body text-[12px]">Mesclando…</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </FormSheet>
+  );
+}
+
+function DuplicateContactRow({
+  contact, disabled, onKeep,
+}: {
+  contact: DuplicateContactSnap;
+  disabled: boolean;
+  onKeep: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2.5">
+      {/* Avatar */}
+      <span
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
+        style={{ background: avatarColor(contact.id) }}
+      >
+        {initials(contact.name)}
+      </span>
+
+      {/* Info */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/contacts/${contact.id}`}
+            className="truncate font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+          >
+            {contact.name}
+          </Link>
+          {contact.company && (
+            <span className="truncate font-body text-[12px] text-[var(--text-muted)]">
+              · {contact.company.name}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-3 font-body text-[12px] text-[var(--text-muted)]">
+          {contact.email && <span className="truncate">{contact.email}</span>}
+          {contact.phone && <span className="truncate">{contact.phone}</span>}
+          <span>Criado {fmtDateBR(contact.createdAt)}</span>
+          {contact.assignedTo && <span>· {contact.assignedTo.name}</span>}
+        </div>
+      </div>
+
+      {/* Ação */}
+      <ButtonGlass
+        variant="primary"
+        size="sm"
+        type="button"
+        disabled={disabled}
+        onClick={onKeep}
+        className="shrink-0"
+      >
+        <IconArrowMerge size={14} />
+        Manter este
+      </ButtonGlass>
     </div>
   );
 }

@@ -627,10 +627,10 @@ function WorkflowCanvasInner({
             patchStepConfigRef.current(step.id, next),
         };
 
-        // dragHandle: só o header arrasta — clique nos campos do editor
-        // inline não inicia drag do node (bug "só edita se segurar").
-        const dragHandle = ".node-drag-handle";
-
+        // Card inteiro arrasta (sem dragHandle) — os campos do editor
+        // inline têm `nodrag`/stopPropagation, então digitar/clicar em
+        // inputs não move o node. `nodeDragThreshold` no <ReactFlow>
+        // garante que o clique de seleção não vire micro-drag.
         if (isInteractiveStep(step.type)) {
           const cfg = step.config as Record<string, unknown>;
           const buttons = Array.isArray(cfg.buttons) ? cfg.buttons : [];
@@ -638,7 +638,6 @@ function WorkflowCanvasInner({
             id: step.id,
             type: "interactive" as const,
             position: pos,
-            dragHandle,
             data: {
               ...baseData,
               buttons,
@@ -654,7 +653,6 @@ function WorkflowCanvasInner({
             id: step.id,
             type: "condition" as const,
             position: pos,
-            dragHandle,
             data: {
               ...baseData,
               branches: condCfg.branches,
@@ -680,7 +678,6 @@ function WorkflowCanvasInner({
             id: step.id,
             type: "wait" as const,
             position: pos,
-            dragHandle,
             data: {
               ...baseData,
               hasReceivedGoto: !!(cfg.receivedGotoStepId),
@@ -694,7 +691,6 @@ function WorkflowCanvasInner({
           id: step.id,
           type: rfNodeType(step.type),
           position: pos,
-          dragHandle,
           data: baseData,
         } as Node;
       });
@@ -1547,6 +1543,9 @@ function WorkflowCanvasInner({
           edgeTypes={edgeTypes}
           fitView
           fitViewOptions={{ padding: 0.2 }}
+          // Card inteiro arrasta; o threshold evita que o clique de
+          // seleção (com 1-2px de tremida) vire um micro-drag.
+          nodeDragThreshold={4}
           proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={{ style: { cursor: "pointer" } }}
         >

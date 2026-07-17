@@ -903,7 +903,7 @@
 }
 
 /* ===== EDIÇÃO INLINE ===== */
-.ds-flow .n-config {
+:is(.ds-flow, .automation-editor) .n-config {
   display: flex;
   flex-direction: column;
   gap: 11px;
@@ -911,13 +911,13 @@
   border-top: 1px dashed var(--glass-border);
   cursor: default;
 }
-.ds-flow .cfg-field {
+:is(.ds-flow, .automation-editor) .cfg-field {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 /* Labels — DS v2 (sentence case, Plus Jakarta Sans) */
-.ds-flow .cfg-label {
+:is(.ds-flow, .automation-editor) .cfg-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -929,7 +929,7 @@
   text-transform: none;
   color: var(--text-secondary);
 }
-.ds-flow .cfg-opt {
+:is(.ds-flow, .automation-editor) .cfg-opt {
   font-family: var(--font-body, "DM Sans", system-ui, sans-serif);
   font-style: normal;
   font-size: 11px;
@@ -939,7 +939,7 @@
   color: var(--text-muted);
 }
 /* Inputs legados (time, combo tag) + fallback */
-.ds-flow .cfg-input {
+:is(.ds-flow, .automation-editor) .cfg-input {
   width: 100%;
   min-width: 0;
   padding: 10px 14px;
@@ -955,14 +955,14 @@
   -webkit-backdrop-filter: blur(8px);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.ds-flow .cfg-input::placeholder {
+:is(.ds-flow, .automation-editor) .cfg-input::placeholder {
   color: var(--text-muted);
 }
-.ds-flow .cfg-input:focus {
+:is(.ds-flow, .automation-editor) .cfg-input:focus {
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 20%, transparent);
 }
-.ds-flow .cfg-textarea {
+:is(.ds-flow, .automation-editor) .cfg-textarea {
   width: 100%;
   min-width: 0;
   resize: vertical;
@@ -980,27 +980,27 @@
   -webkit-backdrop-filter: blur(8px);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.ds-flow .cfg-textarea::placeholder {
+:is(.ds-flow, .automation-editor) .cfg-textarea::placeholder {
   color: var(--text-muted);
 }
-.ds-flow .cfg-textarea:focus {
+:is(.ds-flow, .automation-editor) .cfg-textarea:focus {
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 20%, transparent);
 }
-.ds-flow .cfg-select-wrap {
+:is(.ds-flow, .automation-editor) .cfg-select-wrap {
   width: 100%;
 }
-.ds-flow .cfg-select-wrap > button {
+:is(.ds-flow, .automation-editor) .cfg-select-wrap > button {
   width: 100%;
   justify-content: space-between;
 }
-.ds-flow .cfg-hint {
+:is(.ds-flow, .automation-editor) .cfg-hint {
   font-family: var(--font-body, "DM Sans", system-ui, sans-serif);
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.4;
 }
-.ds-flow .cfg-info {
+:is(.ds-flow, .automation-editor) .cfg-info {
   font-size: 12px;
   color: var(--text-secondary);
   background: var(--glass-bg-overlay);
@@ -1009,46 +1009,46 @@
   padding: 9px 11px;
   line-height: 1.45;
 }
-.ds-flow .cfg-row {
+:is(.ds-flow, .automation-editor) .cfg-row {
   display: flex;
   gap: 6px;
   align-items: center;
 }
-.ds-flow .cfg-row .cfg-input {
+:is(.ds-flow, .automation-editor) .cfg-row .cfg-input {
   flex: 1;
 }
-.ds-flow .cfg-dash {
+:is(.ds-flow, .automation-editor) .cfg-dash {
   color: var(--text-muted);
   flex-shrink: 0;
 }
-.ds-flow .cfg-affix {
+:is(.ds-flow, .automation-editor) .cfg-affix {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.ds-flow .cfg-affix .cfg-input {
+:is(.ds-flow, .automation-editor) .cfg-affix .cfg-input {
   flex: 1;
 }
-.ds-flow .cfg-suffix {
+:is(.ds-flow, .automation-editor) .cfg-suffix {
   font-size: 11px;
   font-weight: 700;
   color: var(--text-muted);
   white-space: nowrap;
 }
-.ds-flow .cfg-duration {
+:is(.ds-flow, .automation-editor) .cfg-duration {
   display: flex;
   gap: 6px;
 }
-.ds-flow .cfg-duration .cfg-affix {
+:is(.ds-flow, .automation-editor) .cfg-duration .cfg-affix {
   flex: 1;
 }
-.ds-flow .cfg-list {
+:is(.ds-flow, .automation-editor) .cfg-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.ds-flow .cfg-item,
-.ds-flow .cfg-branch {
+:is(.ds-flow, .automation-editor) .cfg-item,
+:is(.ds-flow, .automation-editor) .cfg-branch {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1057,27 +1057,27 @@
   border-radius: var(--radius-md);
   background: var(--glass-bg-overlay);
 }
-.ds-flow .cfg-item-head {
+:is(.ds-flow, .automation-editor) .cfg-item-head {
   display: flex;
   gap: 6px;
   align-items: center;
 }
-.ds-flow .cfg-item-head > :first-child {
+:is(.ds-flow, .automation-editor) .cfg-item-head > :first-child {
   flex: 1;
   min-width: 0;
 }
-.ds-flow .cfg-rule {
+:is(.ds-flow, .automation-editor) .cfg-rule {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
   align-items: center;
 }
-.ds-flow .cfg-rule > input,
-.ds-flow .cfg-rule > .cfg-select-wrap {
+:is(.ds-flow, .automation-editor) .cfg-rule > input,
+:is(.ds-flow, .automation-editor) .cfg-rule > .cfg-select-wrap {
   flex: 1;
   min-width: 70px;
 }
-.ds-flow .cfg-x {
+:is(.ds-flow, .automation-editor) .cfg-x {
   flex-shrink: 0;
   width: 24px;
   height: 24px;
@@ -1093,12 +1093,12 @@
   cursor: pointer;
   transition: 0.12s;
 }
-.ds-flow .cfg-x:hover {
+:is(.ds-flow, .automation-editor) .cfg-x:hover {
   background: var(--color-danger-bg);
   border-color: var(--color-danger);
   color: var(--color-danger);
 }
-.ds-flow .cfg-add {
+:is(.ds-flow, .automation-editor) .cfg-add {
   align-self: flex-start;
   padding: 5px 11px;
   border-radius: var(--radius-full);
@@ -1110,19 +1110,19 @@
   cursor: pointer;
   transition: 0.12s;
 }
-.ds-flow .cfg-add:hover {
+:is(.ds-flow, .automation-editor) .cfg-add:hover {
   background: var(--color-enterprise-bg);
   border-color: var(--brand-primary-light);
 }
-.ds-flow .cfg-add.sm {
+:is(.ds-flow, .automation-editor) .cfg-add.sm {
   padding: 3px 9px;
   font-size: 11px;
 }
-.ds-flow .cfg-days {
+:is(.ds-flow, .automation-editor) .cfg-days {
   display: flex;
   gap: 4px;
 }
-.ds-flow .cfg-day {
+:is(.ds-flow, .automation-editor) .cfg-day {
   width: 26px;
   height: 26px;
   border-radius: var(--radius-sm);
@@ -1134,15 +1134,15 @@
   cursor: pointer;
   transition: 0.12s;
 }
-.ds-flow .cfg-day.on {
+:is(.ds-flow, .automation-editor) .cfg-day.on {
   background: var(--brand-primary);
   border-color: var(--brand-primary);
   color: #fff;
 }
-.ds-flow .cfg-combo {
+:is(.ds-flow, .automation-editor) .cfg-combo {
   position: relative;
 }
-.ds-flow .cfg-pop {
+:is(.ds-flow, .automation-editor) .cfg-pop {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -1156,7 +1156,7 @@
   background: var(--glass-bg-modal);
   box-shadow: var(--glass-shadow-lg);
 }
-.ds-flow .cfg-pop-item {
+:is(.ds-flow, .automation-editor) .cfg-pop-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1172,36 +1172,36 @@
   cursor: pointer;
   transition: 0.1s;
 }
-.ds-flow .cfg-pop-item:hover {
+:is(.ds-flow, .automation-editor) .cfg-pop-item:hover {
   background: var(--color-enterprise-bg);
   color: var(--text-primary);
 }
-.ds-flow .cfg-pop-item.on {
+:is(.ds-flow, .automation-editor) .cfg-pop-item.on {
   color: var(--brand-primary);
 }
-.ds-flow .cfg-pop-item.create {
+:is(.ds-flow, .automation-editor) .cfg-pop-item.create {
   color: var(--brand-primary);
   font-weight: 700;
 }
-.ds-flow .cfg-pop-dot {
+:is(.ds-flow, .automation-editor) .cfg-pop-dot {
   width: 7px;
   height: 7px;
   border-radius: var(--radius-full);
   background: var(--color-success);
   flex-shrink: 0;
 }
-.ds-flow .cfg-pop-empty {
+:is(.ds-flow, .automation-editor) .cfg-pop-empty {
   padding: 9px 10px;
   font-size: 12px;
   color: var(--text-muted);
 }
-.ds-flow .cfg-subrow {
+:is(.ds-flow, .automation-editor) .cfg-subrow {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-top: 2px;
 }
-.ds-flow .cfg-sublabel {
+:is(.ds-flow, .automation-editor) .cfg-sublabel {
   font-family: var(--font-display, "Plus Jakarta Sans", system-ui, sans-serif);
   font-size: 11.5px;
   font-weight: 600;

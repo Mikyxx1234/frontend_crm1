@@ -5,6 +5,7 @@ import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, Ic
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { NodeInlineConfig } from "./node-inline-config";
 
 export type InteractiveButton = {
   text?: string;
@@ -26,6 +27,9 @@ export type InteractiveNodeData = {
   onDelete?: () => void;
   stats?: { success: number; failed: number; skipped: number };
   onStatsClick?: () => void;
+  config?: Record<string, unknown>;
+  stepOptions?: Array<{ value: string; label: string }>;
+  onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
 function buttonLabel(btn: InteractiveButton, idx: number): string {
@@ -62,7 +66,8 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
   return (
     <div
       className={cn(
-        "group/node relative min-w-[260px] max-w-[320px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        selected ? "min-w-[360px] max-w-[420px]" : "min-w-[260px] max-w-[320px]",
         selected
           ? cn(accentBorder, "ring-2", accentRing, accentShadow.split(" ")[0])
           : cn(
@@ -214,6 +219,13 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           </button>
         </TooltipHost>
       )}
+      <NodeInlineConfig
+        selected={selected}
+        stepType={data.stepType}
+        config={data.config}
+        stepOptions={data.stepOptions ?? []}
+        onChange={(next) => data.onConfigChange?.(next)}
+      />
     </div>
   );
 }

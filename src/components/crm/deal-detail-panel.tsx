@@ -972,6 +972,20 @@ export function DealDetailPanel({
                                         {viewMode === "compact" ? (
                                         /* ── Compact: flat rows (mesmo padrão dos campos de negócio) ── */
                                         <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] overflow-hidden mt-1">
+                                          {/* Nome */}
+                                          <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
+                                            <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Nome</span>
+                                            <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                                              {deal.contactId ? (
+                                                <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)]" />
+                                              ) : (
+                                                <span className="block min-w-0 truncate font-display text-[12px] font-semibold text-[var(--brand-primary)]" title={deal.name}>{deal.name || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
+                                              )}
+                                              {deal.contactNumber != null && (
+                                                <span className="shrink-0 font-mono text-[10px] font-semibold text-[var(--text-muted)]">#{deal.contactNumber}</span>
+                                              )}
+                                            </div>
+                                          </div>
                                           {/* Telefone */}
                                           <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
                                             <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Telefone</span>
@@ -1021,6 +1035,20 @@ export function DealDetailPanel({
                                       ) : (
                                         /* ── Focus: grid 2 colunas de cards ── */
                                         <div className="py-2 grid grid-cols-2 gap-1.5">
+                                          {/* Nome */}
+                                          <div className="col-span-2 flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
+                                            <span className="text-[10px] font-medium text-[var(--text-muted)]">Nome</span>
+                                            <div className="flex min-w-0 items-center gap-1.5">
+                                              {deal.contactId ? (
+                                                <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
+                                              ) : (
+                                                <span className="block min-w-0 truncate font-display text-[12.5px] font-bold text-[var(--brand-primary)]" title={deal.name}>{deal.name || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
+                                              )}
+                                              {deal.contactNumber != null && (
+                                                <span className="shrink-0 font-mono text-[10px] font-semibold text-[var(--text-muted)]">#{deal.contactNumber}</span>
+                                              )}
+                                            </div>
+                                          </div>
                                           {/* Telefone — col-span-2 para não truncar
                                               números formatados (+55 (11) 98888-0123)
                                               na aside estreita; Email já faz o mesmo

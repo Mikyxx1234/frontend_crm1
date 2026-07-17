@@ -908,7 +908,7 @@ export function ContactAside({
                                       editMode={contactEditMode}
                                       invalidateKeys={contactInvalidateKeys}
                                       onSaved={(v) => setNativeValues((p) => ({ ...p, name: v }))}
-                                      textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                      textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
                                     />
                                     {contact.contactNumber != null && (
                                       <span className="shrink-0 font-mono text-[10px] font-semibold text-[var(--text-muted)]">
@@ -933,7 +933,7 @@ export function ContactAside({
                                     editMode={contactEditMode}
                                     invalidateKeys={contactInvalidateKeys}
                                     onSaved={(v) => setNativeValues((p) => ({ ...p, phone: v }))}
-                                    textClassName="font-display text-[12px] font-bold text-[var(--text-primary)] text-right"
+                                    textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right"
                                   />
                                 </Row>
                                 <Row label="Email" compact={viewMode === "compact"}>

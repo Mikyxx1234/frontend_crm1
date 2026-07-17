@@ -820,10 +820,8 @@ export default function KanbanV2ClientPage({
                 aria-label="Ações do pipeline"
                 aria-expanded={kebabOpen}
                 className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
-                  kebabOpen
-                    ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-                    : "text-[var(--brand-primary)] hover:bg-[var(--color-primary-soft)]",
+                  "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
+                  kebabOpen && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
                 )}
               >
                 <IconMenu2 size={18} stroke={2.2} />

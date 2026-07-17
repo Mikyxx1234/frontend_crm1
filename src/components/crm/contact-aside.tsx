@@ -324,7 +324,7 @@ function Row({
     <div
       className={cn(
         "flex items-baseline gap-2 px-3",
-        compact ? "py-1.5" : "py-2",
+        compact ? "py-1" : "py-1.5",
         !isLast && "border-b border-[var(--glass-border-subtle)]",
         className,
       )}
@@ -1008,7 +1008,7 @@ export function ContactAside({
                                         key={f.fieldId}
                                         className={cn(
                                           "flex items-baseline gap-2 px-3",
-                                          isCompact ? "py-1.5" : "py-2",
+                                          isCompact ? "py-1" : "py-1.5",
                                           i < resolvedContactPanelFields.length - 1 &&
                                             "border-b border-[var(--glass-border-subtle)]",
                                         )}
@@ -1170,7 +1170,7 @@ export function ContactAside({
                                           <div
                                             key={f.fieldId}
                                             className={cn(
-                                              "flex items-baseline gap-2 px-3 py-1.5",
+                                              "flex items-baseline gap-2 px-3 py-1",
                                               idx < resolvedDealPanelFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
                                             )}
                                           >

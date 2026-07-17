@@ -977,56 +977,56 @@ export function DealDetailPanel({
                                           </div>
                                         )}
                                         {viewMode === "compact" ? (
-                                        /* ── Compact: flat rows (mesmo padrão dos campos de negócio) ── */
-                                        <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] overflow-hidden mt-1">
+                                        /* ── Compact: rows densas (mesmo Row do contact-aside inbox) ── */
+                                        <>
                                           {/* Nome */}
-                                          <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                            <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Nome</span>
-                                            <div className="min-w-0 flex-1">
+                                          <div className="flex items-baseline gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-1">
+                                            <span className="w-[32%] shrink-0 text-[11px] font-medium leading-tight text-[var(--text-muted)]">Nome</span>
+                                            <div className="flex min-w-0 flex-1 justify-end">
                                               {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)]" />
+                                                <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right" />
                                               ) : (
-                                                <span className="block min-w-0 truncate font-display text-[12px] font-semibold text-[var(--brand-primary)]" title={deal.name}>{deal.name || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
+                                                <span className="min-w-0 truncate text-right font-display text-[12px] font-bold text-[var(--brand-primary)]" title={deal.name}>{deal.name || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
                                               )}
                                             </div>
                                           </div>
                                           {/* Telefone */}
-                                          <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                            <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Telefone</span>
-                                            <div className="min-w-0 flex-1">
+                                          <div className="flex items-baseline gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-1">
+                                            <span className="w-[32%] shrink-0 text-[11px] font-medium leading-tight text-[var(--text-muted)]">Telefone</span>
+                                            <div className="flex min-w-0 flex-1 justify-end">
                                               {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)]" />
+                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right" />
                                               ) : (
-                                                <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12px] font-semibold text-[var(--brand-primary)]">{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
+                                                <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right">{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
                                               )}
                                             </div>
                                           </div>
                                           {/* Email */}
-                                          <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                            <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Email</span>
-                                            <div className="min-w-0 flex-1">
+                                          <div className="flex items-baseline gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-1">
+                                            <span className="w-[32%] shrink-0 text-[11px] font-medium leading-tight text-[var(--text-muted)]">Email</span>
+                                            <div className="flex min-w-0 flex-1 justify-end">
                                               {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)] break-all" />
+                                                <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right" />
                                               ) : (
-                                                <span className="block min-w-0 truncate font-display text-[12px] font-semibold text-[var(--brand-primary)]" title={deal.email ?? undefined}>{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
+                                                <span className="min-w-0 truncate text-right font-display text-[12px] font-bold text-[var(--brand-primary)]" title={deal.email ?? undefined}>{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
                                               )}
                                             </div>
                                           </div>
                                           {/* @ WhatsApp — só leitura, vem do webhook Meta */}
                                           {deal.whatsappUsername && (
-                                            <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                              <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">@ WhatsApp</span>
-                                              <div className="min-w-0 flex-1">
-                                                <span className="block min-w-0 truncate font-display text-[12px] font-semibold text-[var(--text-primary)]" title={`@${deal.whatsappUsername.replace(/^@/, "")}`}>@{deal.whatsappUsername.replace(/^@/, "")}</span>
+                                            <div className="flex items-baseline gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-1">
+                                              <span className="w-[32%] shrink-0 text-[11px] font-medium leading-tight text-[var(--text-muted)]">@ WhatsApp</span>
+                                              <div className="flex min-w-0 flex-1 justify-end">
+                                                <span className="min-w-0 truncate text-right font-display text-[12px] font-semibold text-[var(--text-primary)]" title={`@${deal.whatsappUsername.replace(/^@/, "")}`}>@{deal.whatsappUsername.replace(/^@/, "")}</span>
                                               </div>
                                             </div>
                                           )}
                                           {/* Canal */}
-                                          <div className="flex items-baseline gap-2 px-3 py-1.5">
-                                            <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Canal</span>
-                                            <div className="min-w-0 flex-1">
+                                          <div className="flex items-baseline gap-2 px-3 py-1">
+                                            <span className="w-[32%] shrink-0 text-[11px] font-medium leading-tight text-[var(--text-muted)]">Canal</span>
+                                            <div className="flex min-w-0 flex-1 justify-end">
                                               {connection ? (
-                                                <span className="inline-flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-primary)]">
+                                                <span className="inline-flex items-center gap-1 font-display text-[12px] font-bold text-[var(--text-primary)]">
                                                   <IconAffiliate size={11} className="shrink-0 text-[var(--brand-primary)]" />
                                                   {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
                                                 </span>
@@ -1035,10 +1035,10 @@ export function DealDetailPanel({
                                               )}
                                             </div>
                                           </div>
-                                        </div>
+                                        </>
                                       ) : (
                                         /* ── Focus: grid 2 colunas de cards ── */
-                                        <div className="py-2 grid grid-cols-2 gap-1.5">
+                                        <div className="grid grid-cols-2 gap-1.5 px-3.5 py-1.5">
                                           {/* Nome */}
                                           <div className="col-span-2 flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
                                             <span className="text-[10px] font-medium text-[var(--text-muted)]">Nome</span>
@@ -1182,24 +1182,24 @@ export function DealDetailPanel({
                                         </div>
                                       )}
                                       {viewMode === "compact" ? (
-                                        /* ── Compact: flat rows ── */
-                                        <div className="divide-y divide-[var(--glass-border-subtle)] py-1">
+                                        /* ── Compact: rows densas (paridade inbox) ── */
+                                        <div className="divide-y divide-[var(--glass-border-subtle)]">
                                           {(customFieldsSlot ?? []).map((field) => {
                                             const currentValue = fieldValues[field.fieldId] ?? field.value
                                             const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
                                             const canEdit = !!field.entityType && !!field.entityId
                                             return (
-                                              <div key={field.fieldId} className="flex items-baseline gap-2 px-1 py-1.5">
-                                                <span className="w-[38%] shrink-0 text-[11px] text-[var(--text-muted)] leading-tight">{field.label}</span>
-                                                <div className="min-w-0 flex-1">
+                                              <div key={field.fieldId} className="flex items-baseline gap-2 px-3 py-1">
+                                                <span className="w-[32%] shrink-0 text-[11px] font-medium leading-tight text-[var(--text-muted)]">{field.label}</span>
+                                                <div className="flex min-w-0 flex-1 justify-end">
                                                   {dealCustomEditMode && canEdit ? (
-                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
+                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
                                                   ) : hl ? (
                                                     <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
                                                   ) : canEdit ? (
-                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
+                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
                                                   ) : (
-                                                    <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || <span className="italic text-[var(--text-muted)]">—</span>}</span>
+                                                    <span className="text-right font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || <span className="italic text-[var(--text-muted)]">—</span>}</span>
                                                   )}
                                                 </div>
                                               </div>
@@ -1208,7 +1208,7 @@ export function DealDetailPanel({
                                         </div>
                                       ) : (
                                         /* ── Focus (padrão): grid de cards ── */
-                                        <div className="grid grid-cols-2 gap-1.5 py-2">
+                                        <div className="grid grid-cols-2 gap-1.5 px-3.5 py-1.5">
                                           {(customFieldsSlot ?? []).map((field) => {
                                             const currentValue = fieldValues[field.fieldId] ?? field.value
                                             const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
@@ -1805,7 +1805,10 @@ function FieldCard({
           </div>
         )}
       </div>
-      <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4">
+      {/* Sem px no wrapper — rows/cards internos controlam o padding
+          (paridade com contact-aside do inbox; evita card-dentro-de-card
+          com intervalo vertical exagerado). */}
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]">
         {children}
       </div>
     </section>

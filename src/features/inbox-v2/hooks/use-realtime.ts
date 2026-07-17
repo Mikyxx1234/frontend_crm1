@@ -80,7 +80,10 @@ export function useInboxRealtime(options: {
         try {
           const data = JSON.parse((e as MessageEvent).data) as {
             conversationId?: string;
+            /** Id da bolha (= externalId/wamid no Meta). */
             messageId?: string;
+            /** UUID interno — fallback p/ payloads antigos. */
+            internalId?: string;
             status?: string;
           };
           if (data.conversationId) {
@@ -95,6 +98,8 @@ export function useInboxRealtime(options: {
                 failed: "FAILED",
               } as Record<string, string>)[data.status.toLowerCase()];
               if (mapped) {
+                const bubbleId = data.messageId;
+                const internalId = data.internalId;
                 qc.setQueryData(
                   messagesKey(data.conversationId),
                   (old: { messages?: Array<{ id: string; status?: string; sendStatus?: string | null }> } | undefined) => {
@@ -102,7 +107,7 @@ export function useInboxRealtime(options: {
                     return {
                       ...old,
                       messages: old.messages.map((m) =>
-                        m.id === data.messageId
+                        m.id === bubbleId || (internalId != null && m.id === internalId)
                           ? { ...m, status: mapped, sendStatus: data.status!.toLowerCase() }
                           : m,
                       ),

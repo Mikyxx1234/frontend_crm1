@@ -95,7 +95,7 @@ export function DropdownGlass({
               "shadow-[var(--glass-shadow-sm)] transition-colors",
               "font-display text-[13px] font-semibold",
               selected ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]",
-              "hover:bg-[var(--glass-bg-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
+              "hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
               "data-[state=open]:ring-2 data-[state=open]:ring-[var(--brand-primary)]/40 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
               triggerClassName,
             )}

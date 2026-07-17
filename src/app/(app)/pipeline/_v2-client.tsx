@@ -1451,7 +1451,7 @@ function StageDropdown({
                       "flex w-full items-center gap-2.5 px-3.5 py-2 text-left font-display text-[13px] font-semibold transition-colors",
                       isActive
                         ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                        : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
+                        : "text-[var(--text-primary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
                     )}
                   >
                     <span
@@ -1603,7 +1603,7 @@ function CardMoveDropdown({
                     "flex w-full items-center gap-2 px-3 py-2 text-left font-display text-[12px] font-semibold transition-colors",
                     isActive
                       ? "cursor-default bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                      : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
+                      : "text-[var(--text-primary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
                   )}
                 >
                   <span
@@ -2040,7 +2040,7 @@ function PipelineKebabMenu({
           "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold transition-colors",
           selectionMode
             ? "bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
-            : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+            : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
         )}
       >
         <IconCheckbox size={13} className="shrink-0" />
@@ -2059,7 +2059,7 @@ function PipelineKebabMenu({
         <button
           type="button"
           onClick={onImport}
-          className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
         >
           <IconUpload size={13} className="shrink-0" />
           Importar CSV
@@ -2069,7 +2069,7 @@ function PipelineKebabMenu({
         <button
           type="button"
           onClick={onExport}
-          className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
         >
           <IconDownload size={13} className="shrink-0" />
           Exportar CSV
@@ -2082,7 +2082,7 @@ function PipelineKebabMenu({
       <button
         type="button"
         onClick={onChannels}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
       >
         <IconAntenna size={13} className="shrink-0" />
         Canais do funil
@@ -2090,7 +2090,7 @@ function PipelineKebabMenu({
       <button
         type="button"
         onClick={onSettings}
-        className="flex w-full items-center gap-2.5 px-3 py-2 pb-3 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+        className="flex w-full items-center gap-2.5 px-3 py-2 pb-3 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
       >
         <IconSettings size={13} className="shrink-0" />
         Configurar pipeline

@@ -158,7 +158,7 @@ export function DealActionsMenu({
               type="button"
               disabled={setStatus.isPending}
               onClick={() => apply("OPEN")}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)] disabled:opacity-50"
             >
               <IconRefresh size={15} strokeWidth={2} />
               Reabrir negócio

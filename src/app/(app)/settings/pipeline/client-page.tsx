@@ -408,7 +408,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(automation); }}
-                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-muted"
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
               >
                 <IconPencil size={13} className="text-ink-subtle" />
                 Editar gatilho
@@ -584,7 +584,7 @@ function StageOptionsMenu({
           <button
             type="button"
             onClick={() => { onRename(); close(); }}
-            className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-muted"
+            className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
           >
             <IconPencil size={14} className="text-ink-subtle" />
             Renomear estágio
@@ -594,7 +594,7 @@ function StageOptionsMenu({
           <button
             type="button"
             onClick={() => setShowColors((v) => !v)}
-            className="flex w-full cursor-pointer items-center justify-between gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-muted"
+            className="flex w-full cursor-pointer items-center justify-between gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
           >
             <span className="flex items-center gap-2.5">
               <IconPalette size={14} className="text-ink-subtle" />

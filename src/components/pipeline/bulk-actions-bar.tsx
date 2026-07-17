@@ -311,7 +311,7 @@ export function BulkActionsBar({
                   <button
                     key={s.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-accent hover:text-accent-foreground"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
                     onClick={() => {
                       // Perdido: pede motivo só se tabulação estiver Ativa no funil.
                       if (s.isLost && lossReasonsActive) {
@@ -363,7 +363,7 @@ export function BulkActionsBar({
                   <button
                     key={u.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-accent hover:text-accent-foreground"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
                     onClick={() => {
                       mutation.mutate({ dealIds, action: "change_owner", ownerId: u.id });
                       setOwnerOpen(false);

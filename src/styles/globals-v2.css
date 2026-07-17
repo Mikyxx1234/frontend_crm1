@@ -316,6 +316,31 @@
   --channel-telegram:  #229ed9;
   --channel-email:     var(--brand-primary);
   --channel-webchat:   var(--brand-primary);
+
+  /* ── Avatar (contato = sólido; interno = glass) ─────────────────────────── */
+  --avatar-fallback-1: #2563eb;
+  --avatar-fallback-2: #059669;
+  --avatar-fallback-3: #7c3aed;
+  --avatar-fallback-4: #db2777;
+  --avatar-fallback-5: #0891b2;
+  --avatar-fallback-6: #d97706;
+  --avatar-fallback-7: #dc2626;
+  --avatar-fallback-8: #0f766e;
+  --avatar-bot-bg:     #475569;
+  --avatar-unread-bg:  #22c55e;
+  --avatar-ring:       var(--color-background, #fff);
+  --avatar-size-xs:    24px;
+  --avatar-size-sm:    28px;
+  --avatar-size-md:    36px;
+  --avatar-size-lg:    44px;
+  --avatar-size-xl:    56px;
+  --avatar-size-inbox: 48px;
+  --avatar-glass-blue:   linear-gradient(to bottom right, #5DFF7B, color-mix(in srgb, #5DFF7B 60%, transparent), #356823);
+  --avatar-glass-teal:   linear-gradient(to bottom right, #5D90FF, color-mix(in srgb, #5D90FF 60%, transparent), #37A5FF);
+  --avatar-glass-orange: linear-gradient(to bottom right, #FAFF5D, color-mix(in srgb, #FAFF5D 60%, transparent), #FF6C37);
+  --avatar-glass-purple: linear-gradient(to bottom right, #D15DFF, color-mix(in srgb, #D15DFF 60%, transparent), #AF37FF);
+  --avatar-glass-pink:   linear-gradient(to bottom right, #FF5DFC, color-mix(in srgb, #FF5DFC 60%, transparent), #3752FF);
+  --avatar-glass-coral:  linear-gradient(to bottom right, #FF5D6D, color-mix(in srgb, #FF5D6D 60%, transparent), #FFC037);
 }
 
 /* ──────────────────────────────────────────────────────────────────

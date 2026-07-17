@@ -12,7 +12,8 @@ import { ChannelBadge } from "@/components/inbox/channel-badge";
 import { ChatWindow } from "@/components/inbox/chat-window";
 import { NewConversationButton } from "@/components/inbox/new-conversation";
 import { CustomFieldsSection } from "@/components/contacts/custom-fields-section";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { AVATAR_SIZE } from "@/lib/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { dt } from "@/lib/design-tokens";
-import { cn, formatCurrency, formatDateTime, getInitials, tagPillStyle, tagStyle } from "@/lib/utils";
+import { cn, formatCurrency, formatDateTime, tagPillStyle, tagStyle } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────
 
@@ -238,11 +239,12 @@ function ContactHeader({ contact }: { contact: ContactDetail }) {
   return (
     <div className="shrink-0 border-b border-border/60 bg-background px-5 py-3">
       <div className="flex items-center gap-4 pr-8">
-        <Avatar className="size-11 border-2 border-border shadow-sm">
-          <AvatarFallback className="bg-primary/10 text-sm font-bold text-primary">
-            {getInitials(contact.name)}
-          </AvatarFallback>
-        </Avatar>
+        <ChatAvatar
+          user={{ id: contact.id, name: contact.name, imageUrl: contact.avatarUrl }}
+          phone={contact.phone}
+          channel={contact.phone ? "whatsapp" : null}
+          size={AVATAR_SIZE.lg}
+        />
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold leading-tight text-foreground">{contact.name}</h2>
           <div className="mt-0.5 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">

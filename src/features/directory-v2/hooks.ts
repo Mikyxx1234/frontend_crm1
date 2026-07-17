@@ -14,6 +14,7 @@ import {
   fetchActivities,
   fetchCompanies,
   fetchCompany,
+  fetchCompanyFacets,
   fetchCompanyStats,
   fetchContact,
   fetchContacts,
@@ -30,8 +31,10 @@ import {
   type ActivityListPage,
   type ActivityTypeDto,
   type CompanyDetailDto,
+  type CompanyFacetsDto,
   type CompanyListPage,
   type CompanySegment,
+  type CompanySortField,
   type CompanyStatsDto,
   type CompanyWriteBody,
   type ContactDetailDto,
@@ -231,15 +234,47 @@ export function useCompanies(params: {
   page?: number;
   perPage?: number;
   segment?: CompanySegment;
+  city?: string;
+  state?: string;
+  industry?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  sortBy?: CompanySortField;
+  sortOrder?: "asc" | "desc";
   enabled?: boolean;
 }) {
   const page = params.page ?? 1;
   const perPage = params.perPage ?? 30;
   const segment = params.segment ?? "todos";
   return useQuery<CompanyListPage>({
-    queryKey: ["v2-companies", params.search ?? "", page, perPage, segment],
+    queryKey: [
+      "v2-companies",
+      params.search ?? "",
+      page,
+      perPage,
+      segment,
+      params.city ?? "",
+      params.state ?? "",
+      params.industry ?? "",
+      params.createdFrom ?? "",
+      params.createdTo ?? "",
+      params.sortBy ?? "name",
+      params.sortOrder ?? "asc",
+    ],
     queryFn: () =>
-      fetchCompanies({ search: params.search, page, perPage, segment }),
+      fetchCompanies({
+        search: params.search,
+        page,
+        perPage,
+        segment,
+        city: params.city,
+        state: params.state,
+        industry: params.industry,
+        createdFrom: params.createdFrom,
+        createdTo: params.createdTo,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
+      }),
     enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,
     placeholderData: (prev) => prev,
@@ -252,6 +287,16 @@ export function useCompanyStats(enabled?: boolean) {
     queryFn: fetchCompanyStats,
     enabled: resolveEnabled(enabled),
     staleTime: 30_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useCompanyFacets(enabled?: boolean) {
+  return useQuery<CompanyFacetsDto>({
+    queryKey: ["v2-company-facets"],
+    queryFn: fetchCompanyFacets,
+    enabled: resolveEnabled(enabled),
+    staleTime: 60_000,
     placeholderData: (prev) => prev,
   });
 }

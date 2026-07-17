@@ -28,6 +28,7 @@ import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { useMoveMutation } from "@/components/sales-hub/deal-actions";
 import { SUBTLE_SPRING } from "@/lib/design-system";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
+import { AvatarGlass } from "@/components/crm/avatar-glass";
 import { SidebarField } from "@/components/ui/sidebar-field";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { dt } from "@/lib/design-tokens";
@@ -1026,15 +1027,12 @@ function DealCard({
 
         {deal.owner ? (
           <div className="mt-0.5 shrink-0 self-start">
-            <ChatAvatar
-              user={{
-                id: deal.owner.id,
-                name: deal.owner.name,
-                imageUrl: deal.owner.avatarUrl ?? null,
-              }}
-              size={20}
-              channel={null}
-              hideCartoon
+            <AvatarGlass
+              name={deal.owner.name}
+              seed={deal.owner.id}
+              imageUrl={deal.owner.avatarUrl ?? null}
+              size="sm"
+              className="!h-5 !w-5 !text-[9px]"
             />
           </div>
         ) : null}
@@ -1219,15 +1217,12 @@ function DealCard({
                       <Loader2 className="size-3.5 shrink-0 animate-spin text-[var(--text-muted)]" />
                     ) : deal.owner ? (
                       <>
-                        <ChatAvatar
-                          user={{
-                            id: deal.owner.id,
-                            name: deal.owner.name,
-                            imageUrl: deal.owner.avatarUrl ?? null,
-                          }}
-                          size={20}
-                          channel={null}
-                          hideCartoon
+                        <AvatarGlass
+                          name={deal.owner.name}
+                          seed={deal.owner.id}
+                          imageUrl={deal.owner.avatarUrl ?? null}
+                          size="sm"
+                          className="!h-5 !w-5 !text-[9px]"
                         />
                         <span className="text-[11px] font-medium text-[var(--text-secondary)]">{deal.owner.name}</span>
                       </>
@@ -1361,14 +1356,15 @@ function DealCard({
                       )}
                     >
                       <div className="relative">
-                        <ChatAvatar
-                          user={{ id: u.id, name: u.name, imageUrl: u.avatarUrl ?? null }}
-                          size={24}
-                          channel={null}
-                          hideCartoon
+                        <AvatarGlass
+                          name={u.name}
+                          seed={u.id}
+                          imageUrl={u.avatarUrl ?? null}
+                          size="sm"
+                          className="!h-6 !w-6 !text-[10px]"
                         />
                         <span
-                          className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-white"
+                          className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-[var(--avatar-ring)]"
                           style={{ backgroundColor: dotBg }}
                         />
                       </div>

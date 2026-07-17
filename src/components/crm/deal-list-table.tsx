@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 
-import { IconBrandWhatsapp } from "@tabler/icons-react";
-
 import { cn } from "@/lib/utils";
+import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { AVATAR_SIZE } from "@/lib/avatar";
 
 import { BadgeGlass } from "./badge-glass";
 import { CheckboxGlass } from "./checkbox-glass";
@@ -184,21 +184,11 @@ export function DealListTable({
                 {d.dealTitle}
               </span>
               <div className="flex min-w-0 items-center gap-2.5">
-                <div className="relative shrink-0">
-                  <div
-                    className={cn(
-                      d.avatarColor,
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
-                    )}
-                  >
-                    {d.contactInitials}
-                  </div>
-                  {d.channel === "whatsapp" && (
-                    <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border-[1.5px] border-[var(--glass-bg-base)] bg-[var(--channel-whatsapp)]">
-                      <IconBrandWhatsapp size={8} className="text-white" />
-                    </span>
-                  )}
-                </div>
+                <ChatAvatar
+                  user={{ id: d.id, name: d.contactName }}
+                  channel={d.channel ?? null}
+                  size={AVATAR_SIZE.sm}
+                />
                 <span className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
                   {d.contactName}
                 </span>

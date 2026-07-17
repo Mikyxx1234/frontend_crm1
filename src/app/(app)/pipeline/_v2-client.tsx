@@ -41,6 +41,7 @@ import { DealCallButton } from "@/features/softphone/components/deal-call-button
 import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { Chip } from "@/components/crm/chip";
+import { AvatarGlass } from "@/components/crm/avatar-glass";
 
 import {
   toKanbanColumns,
@@ -1756,23 +1757,19 @@ function DroppableColumn({
                           statusFilter={statusFilter}
                           trigger={
                             raw?.owner?.name ? (
-                              // Owner: mini-avatar colorido (paleta av-* por hash do
-                              // nome) + nome. Devolve identidade que o antigo Chip
-                              // monocromático indigo tinha suprimido; o círculo
-                              // colorido diferencia responsáveis "de relance".
+                              // Owner: AvatarGlass (pessoa interna) — sem badge de canal.
                               <span
                                 className="inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-px pl-px pr-2 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]"
                                 title={raw.owner.name}
                               >
-                                <span
-                                  className={cn(
-                                    `av-${deal.owner.avatarColor}`,
-                                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-full font-display text-[8px] font-bold text-white",
-                                  )}
-                                  aria-hidden
-                                >
-                                  {deal.owner.initials}
-                                </span>
+                                <AvatarGlass
+                                  name={raw.owner.name}
+                                  seed={raw.owner.id ?? raw.owner.name}
+                                  imageUrl={raw.owner.avatarUrl ?? null}
+                                  initials={deal.owner.initials}
+                                  size="sm"
+                                  className="!h-4 !w-4 !border !text-[8px]"
+                                />
                                 <span className="min-w-0 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
                                   {raw.owner.name}
                                 </span>

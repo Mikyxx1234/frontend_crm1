@@ -362,6 +362,9 @@ export interface CompanyListItemDto {
   size: string | null;
   phone: string | null;
   address: string | null;
+  cep: string | null;
+  city: string | null;
+  state: string | null;
   createdAt: string;
   _count: { contacts: number };
 }
@@ -375,11 +378,36 @@ export interface CompanyListPage {
 
 export type CompanySegment = "todos" | "com-contatos" | "sem-email" | "sem-telefone";
 
+export type CompanySortField = "name" | "createdAt" | "updatedAt";
+
 export interface FetchCompaniesParams {
   search?: string;
   page?: number;
   perPage?: number;
   segment?: CompanySegment;
+  city?: string;
+  state?: string;
+  industry?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  sortBy?: CompanySortField;
+  sortOrder?: "asc" | "desc";
+}
+
+export interface CompanyFacetsDto {
+  states: string[];
+  cities: string[];
+  industries: string[];
+}
+
+export function fetchCompanyFacets(): Promise<CompanyFacetsDto> {
+  if (isDirectoryMock()) {
+    return Promise.resolve({ states: [], cities: [], industries: [] });
+  }
+  return getJson<CompanyFacetsDto>(
+    "/api/companies/facets",
+    "Erro ao carregar filtros de empresas.",
+  );
 }
 
 export interface CompanyStatsDto {
@@ -411,6 +439,13 @@ export function fetchCompanies(params: FetchCompaniesParams = {}): Promise<Compa
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
   if (params.segment && params.segment !== "todos") sp.set("segment", params.segment);
+  if (params.city) sp.set("city", params.city);
+  if (params.state) sp.set("state", params.state);
+  if (params.industry) sp.set("industry", params.industry);
+  if (params.createdFrom) sp.set("createdFrom", params.createdFrom);
+  if (params.createdTo) sp.set("createdTo", params.createdTo);
+  if (params.sortBy) sp.set("sortBy", params.sortBy);
+  if (params.sortOrder) sp.set("sortOrder", params.sortOrder);
   const qs = sp.toString();
   return getJson<CompanyListPage>(
     `/api/companies${qs ? `?${qs}` : ""}`,
@@ -437,6 +472,9 @@ export interface CompanyDetailDto {
   size: string | null;
   phone: string | null;
   address: string | null;
+  cep: string | null;
+  city: string | null;
+  state: string | null;
   createdAt: string;
   updatedAt: string;
   contacts: CompanyContactDto[];
@@ -457,6 +495,9 @@ export interface CompanyWriteBody {
   size?: string | null;
   phone?: string | null;
   address?: string | null;
+  cep?: string | null;
+  city?: string | null;
+  state?: string | null;
 }
 
 export function createCompany(body: CompanyWriteBody): Promise<CompanyDetailDto> {

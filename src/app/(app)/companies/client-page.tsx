@@ -37,6 +37,8 @@ import { BadgeGlass } from "@/components/crm/badge-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
 import { cn } from "@/lib/utils";
+import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { AVATAR_SIZE } from "@/lib/avatar";
 import {
   Dialog,
   DialogContent,
@@ -139,26 +141,6 @@ function fmtDateBR(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("pt-BR");
-}
-
-const AVATAR_COLORS = [
-  "var(--brand-primary)",
-  "var(--brand-secondary)",
-  "var(--color-success)",
-  "var(--brand-primary-light)",
-];
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase() || "?";
-}
-
-function avatarColor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 const VIEW_ITEMS = [
@@ -607,9 +589,11 @@ function TabelaView({
                 <CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
               </span>
               <div className="flex w-[240px] shrink-0 items-center gap-2.5">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-                  {initials(c.name)}
-                </span>
+                <ChatAvatar
+                  user={{ id: c.id, name: c.name }}
+                  channel={null}
+                  size={AVATAR_SIZE.sm}
+                />
                 <div className="min-w-0 leading-tight">
                   <button
                     type="button"
@@ -693,9 +677,11 @@ function CardsView({
             </span>
 
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-                {initials(c.name)}
-              </span>
+              <ChatAvatar
+                user={{ id: c.id, name: c.name }}
+                channel={null}
+                size={AVATAR_SIZE.md}
+              />
               <div className="min-w-0 leading-tight">
                 <button
                   type="button"

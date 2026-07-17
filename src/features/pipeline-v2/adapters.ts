@@ -151,6 +151,10 @@ export function toDealCard(deal: BoardDealDto): Deal {
       deal.status === "LOST" && deal.lostReason?.trim()
         ? deal.lostReason.trim()
         : undefined,
+    channel: deal.channel ?? (deal.contact?.phone ? "whatsapp" : null),
+    contactId: deal.contact?.id ?? null,
+    avatarUrl: deal.contact?.avatarUrl ?? null,
+    phone: deal.contact?.phone ?? null,
   };
 }
 

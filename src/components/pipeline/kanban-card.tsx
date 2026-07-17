@@ -28,6 +28,7 @@ import {
 import { ds } from "@/lib/design-system";
 import { dt } from "@/lib/design-tokens";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
+import { AvatarGlass } from "@/components/crm/avatar-glass";
 import { TooltipHost } from "@/components/ui/tooltip";
 
 type KanbanCardProps = {
@@ -692,13 +693,9 @@ function CardOwnerSelector({
 }
 
 /**
- * OwnerAvatar — avatar 24px do agente (kanban / sales hub / lista).
- * Wrapper do `ChatAvatar` com defaults pra owner: `channel={null}`
- * (sem badge whatsapp), `hideCartoon` (sem ilustração de cliente) e
- * fallback para iniciais sólidas. Sobrepõe o `PresenceDot` no canto
- * inferior direito pra indicar status do agente em todos os lugares
- * onde o avatar do responsável aparece — mesma identidade visual em
- * todo o app.
+ * OwnerAvatar — avatar do agente (kanban / sales hub / lista).
+ * Pessoa interna → `AvatarGlass` (gradiente), sem badge de canal.
+ * PresenceDot indica ONLINE / OFFLINE / AWAY.
  */
 function OwnerAvatar({
   id,
@@ -714,12 +711,13 @@ function OwnerAvatar({
   size?: number;
 }) {
   return (
-    <div className="relative shrink-0">
-      <ChatAvatar
-        user={{ id: id ?? name ?? "?", name: name ?? "?", imageUrl: imageUrl ?? null }}
-        size={size}
-        channel={null}
-        hideCartoon
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <AvatarGlass
+        name={name ?? "?"}
+        seed={id ?? name ?? "?"}
+        imageUrl={imageUrl ?? null}
+        size="sm"
+        className="!h-full !w-full !text-[10px]"
       />
       <PresenceDot
         status={status}

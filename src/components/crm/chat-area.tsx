@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
-import { avatarGradients, channelBadge } from "./conversation-card"
+import { ChatAvatar } from "@/components/inbox/chat-avatar"
+import { AVATAR_SIZE } from "@/lib/avatar"
 import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
 import {
@@ -53,18 +54,12 @@ interface ChatContact {
   badge?: "enterprise" | "lead" | "success"
   badgeLabel?: string
   initials?: string
-  /** Chave do gradiente (sunset/forest/ocean/dusk/blue/teal/orange/purple/pink/coral)
-      OU string CSS raw (compat com chamadores legados). Quando bater
-      com uma chave do `avatarGradients`, renderiza o mesmo gradiente
-      da conversation-card — mantendo identidade visual entre a lista
-      de conversas e o header do chat. */
+  /** @deprecated — ChatAvatar usa sólido determinístico; mantido por compat. */
   avatarColor?: string
   status?: string
   phone?: string
   contactId?: string
-  /** Canal (whatsapp/instagram/facebook/email/…) — quando presente,
-      renderiza o badge do canal no canto inferior direito do avatar,
-      idêntico ao card da lista de conversas. */
+  /** Canal — badge no canto inferior direito (padrão Inbox / ChatAvatar). */
   channel?: string | null
 }
 
@@ -288,34 +283,15 @@ export function ChatArea({
       <header className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]">
         <div className="flex items-center gap-3 px-4 py-2">
           <TooltipGlass label={contact.name} side="bottom">
-            {(() => {
-              const bg =
-                (contact.avatarColor && avatarGradients[contact.avatarColor]) ||
-                contact.avatarColor ||
-                "var(--brand-primary)"
-              const ch =
-                (contact.channel ?? connection?.type ?? null) as string | null
-              const badge = channelBadge(ch)
-              return (
-                <span
-                  className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white shadow-[0_2px_8px_rgba(15,20,40,0.18)]"
-                  style={{ background: bg }}
-                  aria-label={contact.name}
-                >
-                  {contact.initials || contact.name.slice(0, 2).toUpperCase()}
-                  {badge && (
-                    <span
-                      title={badge.title}
-                      aria-label={badge.title}
-                      className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full ring-2 ring-[var(--glass-bg-overlay)]"
-                      style={{ background: badge.bg, color: badge.fg }}
-                    >
-                      <badge.Icon size={9} stroke={2.5} />
-                    </span>
-                  )}
-                </span>
-              )
-            })()}
+            <ChatAvatar
+              user={{
+                id: contact.contactId ?? contact.name,
+                name: contact.name,
+              }}
+              phone={contact.phone}
+              channel={contact.channel ?? connection?.type ?? null}
+              size={AVATAR_SIZE.md}
+            />
           </TooltipGlass>
 
           {/* Header enxuto (pedido 16/jul/26): sem badge de tipo (CLIENTE/

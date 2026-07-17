@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
-import { BadgeGlass } from "./badge-glass"
 import { avatarGradients, channelBadge } from "./conversation-card"
 import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
@@ -201,7 +200,6 @@ export function ChatArea({
   onFavoriteMessage,
   pinnedMessages,
   onUnpinMessage,
-  conversationNumber,
   conversationResolved,
   conversationClosedAt,
 }: ChatAreaProps) {
@@ -312,49 +310,10 @@ export function ChatArea({
             })()}
           </TooltipGlass>
 
-          {contact.badge && (
-            <BadgeGlass variant={contact.badge}>
-              {contact.badgeLabel ??
-                (contact.badge === "enterprise"
-                  ? "ENTERPRISE"
-                  : contact.badge === "lead"
-                    ? "LEAD"
-                    : "CLIENTE")}
-            </BadgeGlass>
-          )}
-
-          {/* Chip minimalista com o "ticket number" da conversa. Fica em
-              linha com o avatar e o BadgeGlass, sem card lateral: assim o
-              operador enxerga o #N dentro do proprio chat, referenciavel
-              em logs/handoff. Padrao Contact.number / Deal.number (#N por
-              organizacao). Ver AGENT.md "ID de conversa + logs + gatilho". */}
-          {typeof conversationNumber === "number" && (
-            <span
-              title={`Conversa #${conversationNumber}`}
-              aria-label={`Conversa numero ${conversationNumber}`}
-              className="font-mono text-[11px] font-medium tabular-nums text-[var(--text-muted)] select-all"
-            >
-              #{conversationNumber}
-            </span>
-          )}
-
-          {/* Chip "Encerrada" no header — indica status resolvido de
-              relance, sem depender do usuario abrir o kebab. Mesmo padrao
-              tipografico do #N (mono/muted) pra nao competir com o nome
-              do contato. Renderiza mesmo quando #N ausente (backend legado). */}
-          {conversationResolved && (
-            <span
-              title={
-                conversationClosedAt
-                  ? `Encerrada em ${new Date(conversationClosedAt).toLocaleString("pt-BR")}`
-                  : "Conversa encerrada"
-              }
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
-            >
-              <IconLock size={10} />
-              Encerrada
-            </span>
-          )}
+          {/* Header enxuto (pedido 16/jul/26): sem badge de tipo (CLIENTE/
+              LEAD), sem #N e sem chip "Encerrada". O status resolvido passou
+              a ser sinalizado pela faixa verde sutil abaixo do header — o
+              #N continua acessivel no separador de ticket da timeline. */}
 
           {tabsEnabled && (
             <ChatTabsBar
@@ -388,6 +347,27 @@ export function ChatArea({
           </div>
         </div>
       </header>
+
+      {/* Faixa sutil de conversa resolvida — substitui o chip "ENCERRADA"
+          do header. Verde suave, discreta, colada abaixo do header. */}
+      {conversationResolved && (
+        <div
+          role="status"
+          className="flex shrink-0 items-center justify-center gap-1.5 border-b border-emerald-500/15 bg-emerald-500/10 px-4 py-1 text-[11px] font-medium text-emerald-700 v2-dark:text-emerald-400"
+        >
+          <IconLock size={11} className="shrink-0" />
+          Conversa resolvida
+          {conversationClosedAt && (() => {
+            const d = new Date(conversationClosedAt)
+            if (Number.isNaN(d.getTime())) return null
+            const dd = String(d.getDate()).padStart(2, "0")
+            const mm = String(d.getMonth() + 1).padStart(2, "0")
+            const hh = String(d.getHours()).padStart(2, "0")
+            const mi = String(d.getMinutes()).padStart(2, "0")
+            return <span className="text-emerald-700/70 v2-dark:text-emerald-400/70">· {dd}/{mm} às {hh}:{mi}</span>
+          })()}
+        </div>
+      )}
 
       {tabsEnabled && activeTab !== "conversa" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">

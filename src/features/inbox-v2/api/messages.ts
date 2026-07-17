@@ -97,7 +97,7 @@ export async function sendAttachment(
     /** Mesma semântica do `channelId` em `sendMessage` (override por mensagem). */
     channelId?: string | null;
   },
-): Promise<{ message: InboxMessageDto }> {
+): Promise<{ message: InboxMessageDto; reopenedConversationId?: string }> {
   const form = new FormData();
   form.append(
     "file",
@@ -121,7 +121,7 @@ export async function sendAttachment(
       `Salvo localmente, mas falhou via WhatsApp: ${data.metaError}`,
     );
   }
-  return data as { message: InboxMessageDto };
+  return data as { message: InboxMessageDto; reopenedConversationId?: string };
 }
 
 /** POST /api/messages/:id/reactions */
@@ -185,7 +185,7 @@ export async function sendTemplate(
     flowActionData?: Record<string, unknown> | null;
     templateGraphId?: string | null;
   },
-): Promise<{ message: InboxMessageDto }> {
+): Promise<{ message: InboxMessageDto; reopenedConversationId?: string }> {
   const res = await fetch(apiUrl(`/api/conversations/${conversationId}/template`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -200,7 +200,10 @@ export async function sendTemplate(
       ...(vars.templateGraphId ? { templateGraphId: vars.templateGraphId } : {}),
     }),
   });
-  return parseApiResponse<{ message: InboxMessageDto }>(res, "Erro ao enviar template");
+  return parseApiResponse<{ message: InboxMessageDto; reopenedConversationId?: string }>(
+    res,
+    "Erro ao enviar template",
+  );
 }
 
 /** POST /api/media/transcribe */

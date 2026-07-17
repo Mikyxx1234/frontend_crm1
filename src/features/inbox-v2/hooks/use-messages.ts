@@ -196,11 +196,27 @@ export function useFavoriteMessagesList(
   });
 }
 
+/**
+ * Nome do evento global disparado quando um envio reabre uma conversa
+ * encerrada como NOVO ticket. O `_v2-client` escuta e troca o chat ativo.
+ * (Evento em vez de prop-drilling: os botões de anexo/áudio ficam 3 níveis
+ * abaixo do orquestrador.)
+ */
+export const CONVERSATION_REOPENED_EVENT = "inbox:conversation-reopened";
+
+export function emitConversationReopened(newId: string) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(CONVERSATION_REOPENED_EVENT, { detail: { newId } }),
+    );
+  }
+}
+
 /** Mutation: enviar anexo (arquivo, áudio, imagem). */
 export function useSendAttachment(conversationId: string | null) {
   const qc = useQueryClient();
   return useMutation<
-    { message: InboxMessageDto },
+    { message: InboxMessageDto; reopenedConversationId?: string },
     Error,
     {
       file: File | Blob;
@@ -215,9 +231,13 @@ export function useSendAttachment(conversationId: string | null) {
         fileName: vars.fileName,
         channelId: vars.channelId,
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      if (data.reopenedConversationId) {
+        qc.invalidateQueries({ queryKey: messagesKey(data.reopenedConversationId) });
+        emitConversationReopened(data.reopenedConversationId);
+      }
     },
   });
 }

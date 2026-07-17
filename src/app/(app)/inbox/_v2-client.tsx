@@ -58,6 +58,7 @@ import {
   useSendMessage,
   useTabCounts,
   useWhatsappChannels,
+  CONVERSATION_REOPENED_EVENT,
 } from "@/features/inbox-v2/hooks";
 import {
   AssigneePopover,
@@ -365,6 +366,18 @@ export default function InboxV2ClientPage({
 
   // ── Realtime ────────────────────────────────────────────────────
   useInboxRealtime({ activeConversationId: activeId, enabled: isAuthenticated });
+
+  // Envio (texto/anexo/áudio) numa conversa encerrada reabre como NOVO
+  // ticket — os botões de anexo disparam este evento global (estão fundos
+  // demais na árvore pra prop-drilling). Troca o chat ativo pro id novo.
+  useEffect(() => {
+    function onReopened(e: Event) {
+      const newId = (e as CustomEvent<{ newId: string }>).detail?.newId;
+      if (newId) setActiveId(newId);
+    }
+    window.addEventListener(CONVERSATION_REOPENED_EVENT, onReopened);
+    return () => window.removeEventListener(CONVERSATION_REOPENED_EVENT, onReopened);
+  }, []);
 
   // ── Mutations ───────────────────────────────────────────────────
   const sendMessage = useSendMessage(activeId);

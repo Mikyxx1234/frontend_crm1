@@ -29,14 +29,16 @@ import {
   IconUsersGroup,
   IconArrowMerge,
   IconLoader2,
+  IconArrowsSort,
+  IconCalendarEvent,
+  IconTag,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { PageSegmentedControl } from "@/components/crm/page-toolbar";
+import { pagePrimaryButtonClass, PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { ListColumnLabel, SortableHeader, listTableHeadRowClass, type SortDir } from "@/components/crm/sortable-header";
-import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
@@ -94,13 +96,21 @@ const SEGMENTS: {
 
 type SortField = "name" | "createdAt" | "updatedAt" | "leadScore" | "lifecycleStage";
 
-/** Presets de ordenação (campo:direção) para o dropdown "Ordenar". */
+/** Presets de ordenação (campo:direção) — aba Ordenar do painel de filtros. */
 const SORT_OPTIONS = [
   { value: "createdAt:desc", label: "Mais recentes" },
   { value: "createdAt:asc", label: "Mais antigos" },
   { value: "name:asc", label: "Nome (A–Z)" },
   { value: "name:desc", label: "Nome (Z–A)" },
-  { value: "leadScore:desc", label: "Maior lead score" },
+  { value: "updatedAt:desc", label: "Modificados recentemente" },
+] as const;
+
+type FilterPanelTab = "ordenar" | "periodo" | "tags";
+
+const FILTER_TABS: { id: FilterPanelTab; label: string; icon: React.ReactNode }[] = [
+  { id: "ordenar", label: "Ordenar", icon: <IconArrowsSort size={14} stroke={2.2} /> },
+  { id: "periodo", label: "Período", icon: <IconCalendarEvent size={14} stroke={2.2} /> },
+  { id: "tags", label: "Tags", icon: <IconTag size={14} stroke={2.2} /> },
 ];
 
 function fmtDateBR(iso: string | null | undefined): string {
@@ -335,10 +345,6 @@ export default function V2ContactsClientPage() {
     setUpdatedTo("");
   }
 
-  function toggleTag(id: string) {
-    setTagIds((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
-  }
-
   /** Alterna a ordenação por uma coluna (usado pelos cabeçalhos da Tabela). */
   function toggleSort(field: SortField) {
     if (sortBy === field) {
@@ -416,20 +422,23 @@ export default function V2ContactsClientPage() {
               onSearch={setSearch}
               tags={tagsQuery.data ?? []}
               tagIds={tagIds}
-              onToggleTag={toggleTag}
               createdFrom={createdFrom}
               createdTo={createdTo}
               updatedFrom={updatedFrom}
               updatedTo={updatedTo}
-              onCreatedFrom={setCreatedFrom}
-              onCreatedTo={setCreatedTo}
-              onUpdatedFrom={setUpdatedFrom}
-              onUpdatedTo={setUpdatedTo}
               sortBy={sortBy}
               sortOrder={sortOrder}
-              onSortChange={(f, o) => { setSortBy(f); setSortOrder(o); }}
               activeCount={activeFilterCount}
               onClear={clearPanelFilters}
+              onApply={(next) => {
+                setSortBy(next.sortBy);
+                setSortOrder(next.sortOrder);
+                setTagIds(next.tagIds);
+                setCreatedFrom(next.createdFrom);
+                setCreatedTo(next.createdTo);
+                setUpdatedFrom(next.updatedFrom);
+                setUpdatedTo(next.updatedTo);
+              }}
             />
           }
           actions={
@@ -582,10 +591,10 @@ export default function V2ContactsClientPage() {
   );
 }
 
-// ── Busca + painel de filtros (abre ao focar a busca — estilo Kommo) ─────────
+// ── Busca + painel de filtros segmentado (DS v2) ─────────────────────────────
 
 const FILTER_INPUT_CLASS =
-  "h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--brand-primary)]";
+  "h-9 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--brand-primary)]";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -595,34 +604,48 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+type ContactFilterDraft = {
+  sortBy: SortField;
+  sortOrder: "asc" | "desc";
+  tagIds: string[];
+  createdFrom: string;
+  createdTo: string;
+  updatedFrom: string;
+  updatedTo: string;
+};
+
 function SearchFilterBar({
-  search, onSearch, tags, tagIds, onToggleTag,
+  search, onSearch, tags, tagIds,
   createdFrom, createdTo, updatedFrom, updatedTo,
-  onCreatedFrom, onCreatedTo, onUpdatedFrom, onUpdatedTo,
-  sortBy, sortOrder, onSortChange, activeCount, onClear,
+  sortBy, sortOrder, activeCount, onClear, onApply,
 }: {
   search: string;
   onSearch: (v: string) => void;
   tags: TagWithCountDto[];
   tagIds: string[];
-  onToggleTag: (id: string) => void;
   createdFrom: string;
   createdTo: string;
   updatedFrom: string;
   updatedTo: string;
-  onCreatedFrom: (v: string) => void;
-  onCreatedTo: (v: string) => void;
-  onUpdatedFrom: (v: string) => void;
-  onUpdatedTo: (v: string) => void;
   sortBy: SortField;
   sortOrder: "asc" | "desc";
-  onSortChange: (f: SortField, o: "asc" | "desc") => void;
   activeCount: number;
   onClear: () => void;
+  onApply: (next: ContactFilterDraft) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<FilterPanelTab>("ordenar");
   const [tagQuery, setTagQuery] = useState("");
+  const [draft, setDraft] = useState<ContactFilterDraft>({
+    sortBy, sortOrder, tagIds, createdFrom, createdTo, updatedFrom, updatedTo,
+  });
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setDraft({ sortBy, sortOrder, tagIds, createdFrom, createdTo, updatedFrom, updatedTo });
+    setTagQuery("");
+  }, [open, sortBy, sortOrder, tagIds, createdFrom, createdTo, updatedFrom, updatedTo]);
 
   useEffect(() => {
     if (!open) return;
@@ -636,11 +659,42 @@ function SearchFilterBar({
   const visibleTags = (tags ?? [])
     .filter((t) => t.contactCount > 0)
     .filter((t) => t.name.toLowerCase().includes(tagQuery.trim().toLowerCase()));
-  const tagSet = new Set(tagIds);
+  const tagSet = new Set(draft.tagIds);
+  const sortKey = `${draft.sortBy}:${draft.sortOrder}`;
+
+  const draftActiveCount =
+    draft.tagIds.length +
+    (draft.createdFrom || draft.createdTo ? 1 : 0) +
+    (draft.updatedFrom || draft.updatedTo ? 1 : 0);
+
+  function toggleDraftTag(id: string) {
+    setDraft((prev) => ({
+      ...prev,
+      tagIds: prev.tagIds.includes(id)
+        ? prev.tagIds.filter((t) => t !== id)
+        : [...prev.tagIds, id],
+    }));
+  }
+
+  function handleClear() {
+    setDraft((prev) => ({
+      ...prev,
+      tagIds: [],
+      createdFrom: "",
+      createdTo: "",
+      updatedFrom: "",
+      updatedTo: "",
+    }));
+    onClear();
+  }
+
+  function handleApply() {
+    onApply(draft);
+    setOpen(false);
+  }
 
   return (
     <div ref={ref} className="relative w-full max-w-md">
-      {/* Busca — foco abre o painel */}
       <IconSearch size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
       <input
         type="search"
@@ -668,89 +722,155 @@ function SearchFilterBar({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 max-h-[70vh] overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-4 text-left shadow-[var(--glass-shadow)] backdrop-blur-md">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">Filtros</span>
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 flex max-h-[min(70vh,480px)] w-full min-w-[300px] flex-col overflow-hidden rounded-[20px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md sm:min-w-[340px]">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
+            <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">Filtros</span>
             <button
               type="button"
-              onClick={onClear}
-              disabled={activeCount === 0}
-              className="flex items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)] disabled:opacity-40"
+              onClick={handleClear}
+              disabled={draftActiveCount === 0 && activeCount === 0}
+              className="flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)] disabled:opacity-40"
             >
-              <IconRotateClockwise size={12} /> Limpar filtros
+              <IconRotateClockwise size={13} /> Limpar
             </button>
           </div>
 
-          {/* Ordenação */}
-          <div className="mb-4">
-            <FieldLabel>Ordenar por</FieldLabel>
-            <DropdownGlass
-              options={SORT_OPTIONS}
-              value={`${sortBy}:${sortOrder}`}
-              onValueChange={(v) => {
-                const [f, o] = v.split(":");
-                onSortChange(f as SortField, o as "asc" | "desc");
-              }}
-              triggerClassName="w-full"
-            />
-          </div>
-
-          {/* Datas */}
-          <div className="mb-4 grid grid-cols-2 gap-3">
-            <div>
-              <FieldLabel>Criado — de</FieldLabel>
-              <input type="date" value={createdFrom} onChange={(e) => onCreatedFrom(e.target.value)} className={FILTER_INPUT_CLASS} />
-            </div>
-            <div>
-              <FieldLabel>Criado — até</FieldLabel>
-              <input type="date" value={createdTo} onChange={(e) => onCreatedTo(e.target.value)} className={FILTER_INPUT_CLASS} />
-            </div>
-            <div>
-              <FieldLabel>Modificado — de</FieldLabel>
-              <input type="date" value={updatedFrom} onChange={(e) => onUpdatedFrom(e.target.value)} className={FILTER_INPUT_CLASS} />
-            </div>
-            <div>
-              <FieldLabel>Modificado — até</FieldLabel>
-              <input type="date" value={updatedTo} onChange={(e) => onUpdatedTo(e.target.value)} className={FILTER_INPUT_CLASS} />
-            </div>
-          </div>
-
-          {/* Tags (multi) */}
-          <div>
-            <FieldLabel>Tags{tagIds.length > 0 ? ` (${tagIds.length})` : ""}</FieldLabel>
-            <div className="relative mb-2">
-              <IconSearch size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-              <input
-                value={tagQuery}
-                onChange={(e) => setTagQuery(e.target.value)}
-                placeholder="Localizar tags..."
-                className={`${FILTER_INPUT_CLASS} pl-8`}
-              />
-            </div>
-            <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
-              {visibleTags.length === 0 ? (
-                <span className="px-1 py-1 font-body text-[12px] text-[var(--text-muted)]">Nenhuma tag.</span>
-              ) : visibleTags.map((t) => {
-                const on = tagSet.has(t.id);
+          {/* Segmented tabs */}
+          <div className="px-4 pb-3">
+            <div
+              role="tablist"
+              aria-label="Seções do filtro"
+              className="flex items-center gap-0.5 rounded-full bg-[var(--glass-bg-strong)] p-1"
+            >
+              {FILTER_TABS.map((t) => {
+                const active = tab === t.id;
                 return (
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => onToggleTag(t.id)}
-                    aria-pressed={on}
-                    className={`flex items-center gap-1.5 rounded-[var(--radius-md)] border px-2.5 py-1.5 font-display text-[12px] font-semibold transition-colors ${
-                      on
-                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                        : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(t.id)}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2.5 py-1.5 font-display text-[12px] font-bold transition-all ${
+                      active
+                        ? "bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                     }`}
                   >
-                    {on ? <IconCheck size={13} stroke={2.6} /> : <IconPlus size={13} stroke={2.4} />}
-                    {t.name}
-                    <span className={on ? "text-white/70" : "text-[var(--text-muted)]"}>{t.contactCount}</span>
+                    <span className={active ? "text-[var(--brand-primary)]" : undefined}>{t.icon}</span>
+                    {t.label}
                   </button>
                 );
               })}
             </div>
+          </div>
+
+          {/* Body */}
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3">
+            {tab === "ordenar" && (
+              <div className="flex flex-col gap-2" role="listbox" aria-label="Ordenar por">
+                {SORT_OPTIONS.map((opt) => {
+                  const selected = sortKey === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => {
+                        const [f, o] = opt.value.split(":");
+                        setDraft((prev) => ({
+                          ...prev,
+                          sortBy: f as SortField,
+                          sortOrder: o as "asc" | "desc",
+                        }));
+                      }}
+                      className={`flex w-full items-center justify-between rounded-full border px-4 py-2.5 text-left font-display text-[13px] font-semibold transition-colors ${
+                        selected
+                          ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]"
+                      }`}
+                    >
+                      {opt.label}
+                      {selected && <IconCheck size={16} stroke={2.6} className="shrink-0 text-[var(--brand-primary)]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {tab === "periodo" && (
+              <div className="grid grid-cols-2 gap-3">
+                {(
+                  [
+                    ["Criado — de", draft.createdFrom, (v: string) => setDraft((p) => ({ ...p, createdFrom: v }))],
+                    ["Criado — até", draft.createdTo, (v: string) => setDraft((p) => ({ ...p, createdTo: v }))],
+                    ["Modificado — de", draft.updatedFrom, (v: string) => setDraft((p) => ({ ...p, updatedFrom: v }))],
+                    ["Modificado — até", draft.updatedTo, (v: string) => setDraft((p) => ({ ...p, updatedTo: v }))],
+                  ] as const
+                ).map(([label, value, set]) => (
+                  <div key={label}>
+                    <FieldLabel>{label}</FieldLabel>
+                    <input
+                      type="date"
+                      value={value}
+                      onChange={(e) => set(e.target.value)}
+                      className={FILTER_INPUT_CLASS}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {tab === "tags" && (
+              <div>
+                <div className="relative mb-2.5">
+                  <IconSearch size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                  <input
+                    value={tagQuery}
+                    onChange={(e) => setTagQuery(e.target.value)}
+                    placeholder="Localizar tags..."
+                    className={`${FILTER_INPUT_CLASS} pl-8`}
+                  />
+                </div>
+                <div className="flex max-h-52 flex-wrap gap-1.5 overflow-y-auto">
+                  {visibleTags.length === 0 ? (
+                    <span className="px-1 py-1 font-body text-[12px] text-[var(--text-muted)]">Nenhuma tag.</span>
+                  ) : visibleTags.map((t) => {
+                    const on = tagSet.has(t.id);
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => toggleDraftTag(t.id)}
+                        aria-pressed={on}
+                        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 font-display text-[12px] font-semibold transition-colors ${
+                          on
+                            ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                            : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]"
+                        }`}
+                      >
+                        {on ? <IconCheck size={13} stroke={2.6} /> : <IconPlus size={13} stroke={2.4} />}
+                        {t.name}
+                        <span className={on ? "text-[var(--brand-primary)]/70" : "text-[var(--text-muted)]"}>{t.contactCount}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-[var(--glass-border-subtle)] px-4 py-3">
+            <button
+              type="button"
+              onClick={handleApply}
+              className={`${pagePrimaryButtonClass} h-10 w-full justify-center text-[14px]`}
+            >
+              Aplicar
+            </button>
           </div>
         </div>
       )}

@@ -103,7 +103,6 @@ const SIDEBAR_TAB_ITEMS = [
 ] as const
 import { ChatArea } from "./chat-area"
 import { type Message } from "./message-bubble"
-import { ActiveBotsButton } from "@/features/inbox-v2/extras"
 import { resolveHighlight, SEVERITY_COLORS } from "@/lib/highlight"
 import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
 import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
@@ -1305,9 +1304,6 @@ export function DealDetailPanel({
                 !isDesktop && "min-h-0 flex-1",
               )}
             >
-              {/* Botão flutuante "Robôs ativos" (canto inf. direito, ao
-                  lado da composer) — mesmo componente do inbox. */}
-              <ActiveBotsButton contactId={deal.contactId ?? null} />
               <TabsBar
                 activeTab={activeTab}
                 onChange={setActiveTab}

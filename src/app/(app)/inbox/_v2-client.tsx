@@ -61,7 +61,6 @@ import {
   CONVERSATION_REOPENED_EVENT,
 } from "@/features/inbox-v2/hooks";
 import {
-  ActiveBotsButton,
   AssigneePopover,
   Composer,
   ConversationActionsMenu,
@@ -939,7 +938,6 @@ export default function InboxV2ClientPage({
         conversationNumber={activeRow?.number ?? null}
         conversationResolved={activeRow?.status === "RESOLVED"}
         conversationClosedAt={activeRow?.closedAt ?? null}
-        activeBotsSlot={<ActiveBotsButton contactId={activeContactId} />}
         onUseTemplate={() => setTemplateOpen(true)}
         onReactMessage={handleReactMessage}
         onPinMessage={handlePinMessage}

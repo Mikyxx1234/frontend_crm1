@@ -25,6 +25,7 @@ import {
 import { getContact } from "@/features/inbox-v2/api/misc";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
+import { ActiveBotsButton } from "./active-bots-button";
 import { AudioRecorderButton, type AudioRecordState } from "./audio-recorder-button";
 import { ChannelSelector } from "./channel-selector";
 import { ComposerMenu } from "./composer-menu";
@@ -619,6 +620,11 @@ export function Composer({
             className="h-9 w-9 shrink-0"
             onStateChange={setAudioRecState}
           />
+        )}
+
+        {/* Automações em execução — botão ao lado do enviar (inbox e deal). */}
+        {!isAudioActive && contactId && (
+          <ActiveBotsButton inline contactId={contactId} />
         )}
 
         {/* Botão enviar — oculto durante gravação (AudioRecorderButton tem o seu próprio) */}

@@ -28,7 +28,13 @@ import {
 
 interface ActiveBotsButtonProps {
   contactId: string | null;
-  /** Ajuste fino de posicionamento absoluto (default: junto ao composer). */
+  /**
+   * `inline` = renderiza como um botão comum na barra do composer (ao lado
+   * do enviar). Sem `inline` = overlay absoluto (uso legado). O popover
+   * usa portal com posição calculada, então funciona nos dois modos.
+   */
+  inline?: boolean;
+  /** Ajuste fino de posicionamento/estilo do wrapper. */
   className?: string;
 }
 
@@ -42,7 +48,7 @@ function formatWhen(iso: string): string {
   return `${dd}/${mm} ${hh}:${mi}`;
 }
 
-export function ActiveBotsButton({ contactId, className }: ActiveBotsButtonProps) {
+export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsButtonProps) {
   const { open, rect, triggerRef, popoverRef, toggle, close } = usePortalPopover();
   const { data: active = [], isLoading } = useContactActiveAutomations(contactId);
   // Histórico só carrega quando o card abre (evita request em toda conversa).
@@ -55,8 +61,13 @@ export function ActiveBotsButton({ contactId, className }: ActiveBotsButtonProps
   const pos = computePopoverPosition(rect, 360, 320);
 
   return (
-    <div className={cn("absolute bottom-[4.75rem] right-6 z-20", className)}>
-      <TooltipGlass label="Automações" side="left">
+    <div
+      className={cn(
+        inline ? "relative shrink-0" : "absolute bottom-[4.75rem] right-6 z-20",
+        className,
+      )}
+    >
+      <TooltipGlass label="Automações" side="top">
         <button
           ref={triggerRef}
           type="button"
@@ -70,7 +81,10 @@ export function ActiveBotsButton({ contactId, className }: ActiveBotsButtonProps
             hasActive ? `${count} automação(ões) em execução` : "Automações"
           }
           className={cn(
-            "relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border shadow-(--glass-shadow-sm) backdrop-blur-md transition-all hover:scale-[1.06]",
+            "relative flex cursor-pointer items-center justify-center rounded-full border transition-all",
+            inline
+              ? "h-9 w-9"
+              : "h-10 w-10 shadow-(--glass-shadow-sm) backdrop-blur-md hover:scale-[1.06]",
             hasActive
               ? "border-violet-500/30 bg-violet-500/15 text-violet-600 v2-dark:text-violet-300"
               : "border-(--glass-border) bg-(--glass-bg-overlay) text-(--text-muted) hover:text-(--brand-primary)",

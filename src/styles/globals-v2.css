@@ -507,6 +507,47 @@ html[data-nav-expanded="true"] {
   scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
 }
 
+/* ── Listas Contatos/Empresas: scrollbar horizontal bem visível ──
+   Sobrescreve o thumb de 6px transparente — aqui o usuário PRECISA
+   perceber que há colunas fora da viewport. */
+.v2-root .list-hscroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: color-mix(in srgb, var(--brand-primary) 55%, transparent)
+    color-mix(in srgb, var(--brand-primary) 10%, transparent);
+}
+.v2-root .list-hscroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.v2-root .list-hscroll::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--brand-primary) 8%, transparent);
+  border-radius: 9999px;
+  margin: 0 4px;
+}
+.v2-root .list-hscroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--brand-primary) 45%, transparent);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.v2-root .list-hscroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--brand-primary) 70%, transparent);
+  background-clip: padding-box;
+}
+.v2-dark .v2-root .list-hscroll {
+  scrollbar-color: rgba(148, 163, 255, 0.55) rgba(148, 163, 255, 0.12);
+}
+.v2-dark .v2-root .list-hscroll::-webkit-scrollbar-track {
+  background: rgba(148, 163, 255, 0.10);
+}
+.v2-dark .v2-root .list-hscroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 255, 0.45);
+}
+.v2-dark .v2-root .list-hscroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 255, 0.7);
+}
+
 /* ══════════════════════════════════════════════════════════════════
    DARK MODE v2 — ativado pela classe .v2-dark no <html>
    ══════════════════════════════════════════════════════════════════ */

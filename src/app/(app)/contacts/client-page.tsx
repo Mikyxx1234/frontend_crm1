@@ -56,6 +56,7 @@ import { ButtonGlass } from "@/components/crm/button-glass";
 import { Chip } from "@/components/crm/chip";
 import { InputGlass } from "@/components/crm/input-glass";
 import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
+import { ListHScroll } from "@/components/crm/list-hscroll";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   dateRangeFromPreset,
@@ -1445,8 +1446,8 @@ function TabelaView({
   const nameW = getWidth(NAME_COL_KEY, 240);
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
-      {/* Scroll X+Y no mesmo container — header sticky acompanha o h-scroll. */}
-      <div className="scrollbar-thin min-h-0 flex-1 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+      {/* Scroll X+Y com fades + scrollbar evidente (ListHScroll). */}
+      <ListHScroll>
         <div className="flex w-max min-w-full flex-col">
           <div
             className={listTableHeadRowClass(
@@ -1520,7 +1521,7 @@ function TabelaView({
             </div>
           ))}
         </div>
-      </div>
+      </ListHScroll>
     </div>
   );
 }
@@ -1550,7 +1551,7 @@ function CardsView({
   ].join(" ");
 
   return (
-    <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain pb-1 [-webkit-overflow-scrolling:touch]">
+    <ListHScroll scrollerClassName="pb-1">
     <div className="flex w-max min-w-full flex-col gap-2">
       <div
         className={listTableHeadRowClass("grid gap-3 border border-transparent px-4 py-2")}
@@ -1640,7 +1641,7 @@ function CardsView({
         );
       })}
     </div>
-    </div>
+    </ListHScroll>
   );
 }
 

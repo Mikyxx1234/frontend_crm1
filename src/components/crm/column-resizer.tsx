@@ -87,6 +87,7 @@ export function ColumnResizer({
     <button
       type="button"
       aria-label="Redimensionar coluna"
+      title="Arrastar para tornar mais estreito ou mais largo"
       onPointerDown={onPointerDown}
       className={cn(
         "group absolute top-0 z-20 flex h-full w-3 cursor-col-resize items-center justify-center",
@@ -94,10 +95,13 @@ export function ColumnResizer({
         className,
       )}
     >
+      {/* Alça sempre visível (sinaliza resize); reforça no hover / arrasto. */}
       <span
         className={cn(
-          "h-12 w-[3px] rounded-full bg-[var(--glass-border)] opacity-0 transition-all group-hover:opacity-100",
-          dragging && "bg-[var(--brand-primary)] opacity-100",
+          "h-[58%] min-h-3 w-[2px] rounded-full transition-all",
+          "bg-[color-mix(in_srgb,var(--text-muted)_45%,transparent)]",
+          "group-hover:h-[70%] group-hover:w-[3px] group-hover:bg-[var(--brand-primary)]",
+          dragging && "h-[70%] w-[3px] bg-[var(--brand-primary)]",
         )}
       />
     </button>

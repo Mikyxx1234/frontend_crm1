@@ -216,6 +216,7 @@ const formatCurrency = (v: number) =>
 
 function SectionHeader({
   children,
+  meta,
   dragHandleProps,
   actions,
   icon,
@@ -223,6 +224,8 @@ function SectionHeader({
   onToggle,
 }: {
   children: React.ReactNode
+  /** Sufixo ao lado do título (ex.: #123 do contato/negócio). */
+  meta?: React.ReactNode
   dragHandleProps?: React.HTMLAttributes<HTMLElement>
   actions?: React.ReactNode
   icon?: React.ReactNode
@@ -243,16 +246,16 @@ function SectionHeader({
         onClick={onToggle}
         disabled={!onToggle}
         className={cn(
-          // Tipografia padronizada — mesma usada em "Campos de Negocio":
-          // font-display 10px bold uppercase, tracking 0.12em, muted.
-          // Aplica a TODOS os cabeçalhos (Detalhes de Contato, Produtos,
-          // Campos de Negocio) pra evitar variação visual entre secoes.
-          "flex items-center gap-1.5 rounded font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]",
+          // Tipografia padronizada — title case (sem caixa alta).
+          "flex items-center gap-1.5 rounded font-display text-[11px] font-semibold tracking-wide text-[var(--text-muted)]",
           onToggle && "cursor-pointer hover:text-[var(--text-primary)]",
         )}
       >
         {icon}
-        {children}
+        <span className="flex min-w-0 items-baseline gap-1.5">
+          {children}
+          {meta}
+        </span>
         {onToggle && (
           <IconChevronDown
             size={12}
@@ -569,9 +572,14 @@ function DealInline({
 
       {fields.length > 0 && (
         <div className="mt-2 mb-2">
-          <div className="mb-1 flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <div className="mb-1 flex items-center gap-1.5 font-display text-[11px] font-semibold tracking-wide text-[var(--text-muted)]">
             <IconSparkles size={12} />
-            Informações do Negócio
+            <span className="flex items-baseline gap-1.5">
+              Informações do Negócio
+              {deal.number != null && (
+                <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">#{deal.number}</span>
+              )}
+            </span>
           </div>
           {/* Layout responsivo: grid 2-col; valores muito longos (>18 chars ou com espaco)
               ganham col-span-2 (ocupam linha inteira sozinhos) — layout compacto sem
@@ -859,6 +867,13 @@ export function ContactAside({
                                 icon={<IconUser size={12} />}
                                 open={contactSectionOpen}
                                 onToggle={() => setContactSectionOpen((v) => !v)}
+                                meta={
+                                  contact.contactNumber != null ? (
+                                    <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                      #{contact.contactNumber}
+                                    </span>
+                                  ) : undefined
+                                }
                                 actions={
                                   <>
                                     <HeaderBtn
@@ -899,23 +914,16 @@ export function ContactAside({
                                   : "bg-[var(--glass-bg-overlay)] px-3.5 py-1"
                               )}>
                                 <Row label="Nome" compact={viewMode === "compact"}>
-                                  <div className="flex items-center gap-1.5">
-                                    <InlineNativeEditor
-                                      value={native("name", contact.name)}
-                                      entityType="contact"
-                                      entityId={contact.contactId}
-                                      fieldKey="name"
-                                      editMode={contactEditMode}
-                                      invalidateKeys={contactInvalidateKeys}
-                                      onSaved={(v) => setNativeValues((p) => ({ ...p, name: v }))}
-                                      textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
-                                    />
-                                    {contact.contactNumber != null && (
-                                      <span className="shrink-0 font-mono text-[10px] font-semibold text-[var(--text-muted)]">
-                                        #{contact.contactNumber}
-                                      </span>
-                                    )}
-                                  </div>
+                                  <InlineNativeEditor
+                                    value={native("name", contact.name)}
+                                    entityType="contact"
+                                    entityId={contact.contactId}
+                                    fieldKey="name"
+                                    editMode={contactEditMode}
+                                    invalidateKeys={contactInvalidateKeys}
+                                    onSaved={(v) => setNativeValues((p) => ({ ...p, name: v }))}
+                                    textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                  />
                                 </Row>
                                 {/* Telefone (formatado). Campos basicos
                                     garantidos no aside: Nome, Telefone, Email
@@ -1111,6 +1119,13 @@ export function ContactAside({
                                   icon={<IconSparkles size={12} />}
                                   open={dealFieldsSectionOpen}
                                   onToggle={() => setDealFieldsSectionOpen((v) => !v)}
+                                  meta={
+                                    deals[0]?.number != null ? (
+                                      <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                        #{deals[0].number}
+                                      </span>
+                                    ) : undefined
+                                  }
                                   actions={
                                   <>
                                     <HeaderBtn

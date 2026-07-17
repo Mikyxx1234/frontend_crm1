@@ -929,6 +929,13 @@ export function DealDetailPanel({
                                   {sectionId === "contato" && (
                                     <FieldCard
                                       title="Informações do Contato"
+                                      titleMeta={
+                                        deal.contactNumber != null ? (
+                                          <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                            #{deal.contactNumber}
+                                          </span>
+                                        ) : undefined
+                                      }
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                       titleActions={
                                         (contactEditSlot || resolvedContactConfig) && (
@@ -975,14 +982,11 @@ export function DealDetailPanel({
                                           {/* Nome */}
                                           <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
                                             <span className="w-[30%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Nome</span>
-                                            <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                                            <div className="min-w-0 flex-1">
                                               {deal.contactId ? (
                                                 <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)]" />
                                               ) : (
                                                 <span className="block min-w-0 truncate font-display text-[12px] font-semibold text-[var(--brand-primary)]" title={deal.name}>{deal.name || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
-                                              )}
-                                              {deal.contactNumber != null && (
-                                                <span className="shrink-0 font-mono text-[10px] font-semibold text-[var(--text-muted)]">#{deal.contactNumber}</span>
                                               )}
                                             </div>
                                           </div>
@@ -1038,16 +1042,11 @@ export function DealDetailPanel({
                                           {/* Nome */}
                                           <div className="col-span-2 flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
                                             <span className="text-[10px] font-medium text-[var(--text-muted)]">Nome</span>
-                                            <div className="flex min-w-0 items-center gap-1.5">
-                                              {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
-                                              ) : (
-                                                <span className="block min-w-0 truncate font-display text-[12.5px] font-bold text-[var(--brand-primary)]" title={deal.name}>{deal.name || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
-                                              )}
-                                              {deal.contactNumber != null && (
-                                                <span className="shrink-0 font-mono text-[10px] font-semibold text-[var(--text-muted)]">#{deal.contactNumber}</span>
-                                              )}
-                                            </div>
+                                            {deal.contactId ? (
+                                              <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
+                                            ) : (
+                                              <span className="block min-w-0 truncate font-display text-[12.5px] font-bold text-[var(--brand-primary)]" title={deal.name}>{deal.name || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
+                                            )}
                                           </div>
                                           {/* Telefone — col-span-2 para não truncar
                                               números formatados (+55 (11) 98888-0123)
@@ -1127,6 +1126,13 @@ export function DealDetailPanel({
                                       resolvedDealConfig) && (
                                     <FieldCard
                                       title="Informações do Negócio"
+                                      titleMeta={
+                                        deal.number != null ? (
+                                          <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                            #{deal.number}
+                                          </span>
+                                        ) : undefined
+                                      }
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                       titleActions={
                                         <>
@@ -1758,12 +1764,15 @@ function HighlightBadge({
  *  Quando `dragHandleProps` é fornecido, exibe alça de arraste no header. */
 function FieldCard({
   title,
+  titleMeta,
   dragLabel,
   dragHandleProps,
   titleActions,
   children,
 }: {
   title?: string
+  /** Sufixo ao lado do título (ex.: #123 do contato/negócio). */
+  titleMeta?: React.ReactNode
   /** Texto acessível para a alça quando não há título. */
   dragLabel?: string
   dragHandleProps?: React.HTMLAttributes<HTMLElement>
@@ -1785,8 +1794,9 @@ function FieldCard({
           </span>
         )}
         {title && (
-          <span className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <span className="flex items-baseline gap-1.5 font-display text-[11px] font-semibold tracking-wide text-[var(--text-muted)]">
             {title}
+            {titleMeta}
           </span>
         )}
         {titleActions && (

@@ -1289,6 +1289,27 @@ export function DealDetailPanel({
                 callButtonSlot={callButtonSlot}
               />
 
+              {/* Faixa verde sutil de conversa resolvida — substitui o chip
+                  "ENCERRADA" do TabsBar. Mesmo padrao do ChatArea (inbox). */}
+              {isResolved && (
+                <div
+                  role="status"
+                  className="flex shrink-0 items-center justify-center gap-1.5 border-b border-emerald-500/15 bg-emerald-500/10 px-4 py-1 text-[11px] font-medium text-emerald-700 v2-dark:text-emerald-400"
+                >
+                  <IconLock size={11} className="shrink-0" />
+                  Conversa resolvida
+                  {conversationClosedAt && (() => {
+                    const d = new Date(conversationClosedAt)
+                    if (Number.isNaN(d.getTime())) return null
+                    const dd = String(d.getDate()).padStart(2, "0")
+                    const mm = String(d.getMonth() + 1).padStart(2, "0")
+                    const hh = String(d.getHours()).padStart(2, "0")
+                    const mi = String(d.getMinutes()).padStart(2, "0")
+                    return <span className="text-emerald-700/70 v2-dark:text-emerald-400/70">· {dd}/{mm} às {hh}:{mi}</span>
+                  })()}
+                </div>
+              )}
+
               {pinnedMessageSlot}
 
               <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
@@ -1429,35 +1450,10 @@ function TabsBar({
           </div>
         )}
 
-        {/* Chip minimalista com o "ticket number" da conversa. Fica logo
-            apos os pills de aba, dentro do proprio TabsBar — sem card
-            lateral. Padrao Contact.number / Deal.number (#N por org).
-            Ver AGENT.md "ID de conversa + logs + gatilho". */}
-        {!(searchOpen && activeTab === "conversa") && typeof conversationNumber === "number" && (
-          <span
-            title={`Conversa #${conversationNumber}`}
-            aria-label={`Conversa numero ${conversationNumber}`}
-            className="shrink-0 font-mono text-[11px] font-medium tabular-nums text-[var(--text-muted)] select-all"
-          >
-            #{conversationNumber}
-          </span>
-        )}
-
-        {/* Chip "Encerrada" — indica de relance o status resolvido, sem
-            depender de abrir o kebab. Fica em linha com o #N no TabsBar. */}
-        {!(searchOpen && activeTab === "conversa") && isResolved && (
-          <span
-            title={
-              conversationClosedAt
-                ? `Encerrada em ${new Date(conversationClosedAt).toLocaleString("pt-BR")}`
-                : "Conversa encerrada"
-            }
-            className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
-          >
-            <IconLock size={10} />
-            Encerrada
-          </span>
-        )}
+        {/* Header enxuto (pedido 17/jul/26): sem chip #N e sem chip
+            "Encerrada" no TabsBar. O status resolvido virou faixa verde
+            sutil abaixo do TabsBar; o #N segue acessivel no separador de
+            ticket da timeline da conversa. */}
 
         {/* Busca inline — ocupa o flex-1 quando aberta */}
         {searchOpen && activeTab === "conversa" ? (

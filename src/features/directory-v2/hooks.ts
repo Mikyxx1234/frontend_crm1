@@ -14,6 +14,7 @@ import {
   fetchActivities,
   fetchCompanies,
   fetchCompany,
+  fetchCompanyStats,
   fetchContact,
   fetchContacts,
   fetchContactFieldDefs,
@@ -30,6 +31,8 @@ import {
   type ActivityTypeDto,
   type CompanyDetailDto,
   type CompanyListPage,
+  type CompanySegment,
+  type CompanyStatsDto,
   type CompanyWriteBody,
   type ContactDetailDto,
   type ContactListPage,
@@ -227,15 +230,28 @@ export function useCompanies(params: {
   search?: string;
   page?: number;
   perPage?: number;
+  segment?: CompanySegment;
   enabled?: boolean;
 }) {
   const page = params.page ?? 1;
   const perPage = params.perPage ?? 30;
+  const segment = params.segment ?? "todos";
   return useQuery<CompanyListPage>({
-    queryKey: ["v2-companies", params.search ?? "", page, perPage],
-    queryFn: () => fetchCompanies({ search: params.search, page, perPage }),
+    queryKey: ["v2-companies", params.search ?? "", page, perPage, segment],
+    queryFn: () =>
+      fetchCompanies({ search: params.search, page, perPage, segment }),
     enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useCompanyStats(enabled?: boolean) {
+  return useQuery<CompanyStatsDto>({
+    queryKey: ["v2-company-stats"],
+    queryFn: fetchCompanyStats,
+    enabled: resolveEnabled(enabled),
+    staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
 }
@@ -251,6 +267,7 @@ export function useCompany(id: string | null) {
 
 function invalidateCompanies(qc: ReturnType<typeof useQueryClient>, id?: string) {
   qc.invalidateQueries({ queryKey: ["v2-companies"], exact: false });
+  qc.invalidateQueries({ queryKey: ["v2-company-stats"] });
   if (id) qc.invalidateQueries({ queryKey: ["v2-company", id] });
 }
 

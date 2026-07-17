@@ -373,10 +373,35 @@ export interface CompanyListPage {
   perPage: number;
 }
 
+export type CompanySegment = "todos" | "com-contatos" | "sem-email" | "sem-telefone";
+
 export interface FetchCompaniesParams {
   search?: string;
   page?: number;
   perPage?: number;
+  segment?: CompanySegment;
+}
+
+export interface CompanyStatsDto {
+  total: number;
+  withContacts: number;
+  withoutEmail: number;
+  withoutPhone: number;
+}
+
+export function fetchCompanyStats(): Promise<CompanyStatsDto> {
+  if (isDirectoryMock()) {
+    return Promise.resolve({
+      total: 24,
+      withContacts: 20,
+      withoutEmail: 4,
+      withoutPhone: 6,
+    });
+  }
+  return getJson<CompanyStatsDto>(
+    "/api/companies/stats",
+    "Erro ao carregar estatísticas de empresas.",
+  );
 }
 
 export function fetchCompanies(params: FetchCompaniesParams = {}): Promise<CompanyListPage> {
@@ -385,6 +410,7 @@ export function fetchCompanies(params: FetchCompaniesParams = {}): Promise<Compa
   if (params.search) sp.set("search", params.search);
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
+  if (params.segment && params.segment !== "todos") sp.set("segment", params.segment);
   const qs = sp.toString();
   return getJson<CompanyListPage>(
     `/api/companies${qs ? `?${qs}` : ""}`,

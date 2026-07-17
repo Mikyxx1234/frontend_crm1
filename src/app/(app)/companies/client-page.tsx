@@ -1,41 +1,137 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import {
   IconBuilding,
   IconPlus,
+  IconTrash,
+  IconAlertTriangle,
   IconPencil,
   IconPhone,
   IconMail,
   IconUsers,
-  IconLayoutGrid,
-  IconList,
+  IconTable,
+  IconLayoutList,
   IconMenu2,
+  IconSettings,
+  IconCheck,
+  IconColumns,
+  IconRotateClockwise,
+  IconBuildingCommunity,
+  IconMailOff,
+  IconPhoneOff,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 import { PageSearchBar, PageSegmentedControl } from "@/components/crm/page-toolbar";
+import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { BadgeGlass } from "@/components/crm/badge-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { FormSheet } from "@/components/ui/form-sheet";
 
 import {
   useCompanies,
+  useCompanyStats,
   useCreateCompany,
+  useDeleteCompany,
   useUpdateCompany,
 } from "@/features/directory-v2/hooks";
-import type { CompanyListItemDto } from "@/features/directory-v2/api";
+import type {
+  CompanyListItemDto,
+  CompanySegment,
+  CompanyStatsDto,
+} from "@/features/directory-v2/api";
 
 const DEFAULT_PER_PAGE = 25;
-type ViewMode = "cartoes" | "lista";
+type ViewMode = "cards" | "tabela";
+
+const SEGMENTS: {
+  id: CompanySegment;
+  label: string;
+  hint: string;
+  icon: React.ReactNode;
+  value: (s: CompanyStatsDto | undefined) => number | undefined;
+}[] = [
+  {
+    id: "todos",
+    label: "Todas",
+    hint: "Base completa",
+    icon: <IconBuilding size={18} stroke={2.2} />,
+    value: (s) => s?.total,
+  },
+  {
+    id: "com-contatos",
+    label: "Com contatos",
+    hint: "Vinculadas a leads",
+    icon: <IconBuildingCommunity size={18} stroke={2.2} />,
+    value: (s) => s?.withContacts,
+  },
+  {
+    id: "sem-email",
+    label: "Sem e-mail",
+    hint: "Sem domínio cadastrado",
+    icon: <IconMailOff size={18} stroke={2.2} />,
+    value: (s) => s?.withoutEmail,
+  },
+  {
+    id: "sem-telefone",
+    label: "Sem telefone",
+    hint: "Aguardando contato",
+    icon: <IconPhoneOff size={18} stroke={2.2} />,
+    value: (s) => s?.withoutPhone,
+  },
+];
+
+interface ColumnDef {
+  key: string;
+  label: string;
+  width: string;
+  cell: (c: CompanyListItemDto) => React.ReactNode;
+}
+
+function txtCell(v: React.ReactNode) {
+  return <span className="block truncate font-display text-[13px] text-[var(--text-secondary)]">{v}</span>;
+}
+
+const NATIVE_COLUMNS: ColumnDef[] = [
+  { key: "phone", label: "Telefone", width: "w-[150px]", cell: (c) => txtCell(c.phone ?? "—") },
+  { key: "domain", label: "E-mail", width: "w-[180px]", cell: (c) => txtCell(c.domain ?? "—") },
+  { key: "size", label: "CNPJ", width: "w-[150px]", cell: (c) => txtCell(c.size ?? "—") },
+  { key: "industry", label: "Setor", width: "w-[140px]", cell: (c) => txtCell(c.industry ?? "—") },
+  { key: "address", label: "Endereço", width: "w-[200px]", cell: (c) => txtCell(c.address ?? "—") },
+  {
+    key: "contacts",
+    label: "Contatos",
+    width: "w-[100px]",
+    cell: (c) => <BadgeGlass variant="enterprise">{c._count.contacts}</BadgeGlass>,
+  },
+  { key: "createdAt", label: "Criado em", width: "w-[130px]", cell: (c) => txtCell(fmtDateBR(c.createdAt)) },
+];
+
+const DEFAULT_COLUMN_KEYS = ["phone", "domain", "contacts", "createdAt"];
+const COLUMNS_STORAGE_KEY = "v2:companies:columns:v1";
+
+function colWidthCss(width: string): string {
+  const m = width.match(/w-\[(\d+)px\]/);
+  return m ? `${m[1]}px` : "140px";
+}
 
 function fmtDateBR(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -65,31 +161,116 @@ function avatarColor(seed: string): string {
 }
 
 const VIEW_ITEMS = [
-  { value: "cartoes", label: <span className="flex items-center gap-1.5"><IconLayoutGrid size={14} />Cartões</span> },
-  { value: "lista", label: <span className="flex items-center gap-1.5"><IconList size={14} />Lista</span> },
+  { value: "cards", label: <span className="flex items-center gap-1.5"><IconLayoutList size={14} />Cards</span> },
+  { value: "tabela", label: <span className="flex items-center gap-1.5"><IconTable size={14} />Tabela</span> },
 ] as const;
 
 export default function V2CompaniesClientPage() {
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
 
-  const [view, setView] = useState<ViewMode>("cartoes");
+  const [view, setView] = useState<ViewMode>("cards");
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [segment, setSegment] = useState<CompanySegment>("todos");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [createOpen, setCreateOpen] = useState(false);
+  const [columnsOpen, setColumnsOpen] = useState(false);
   const [editing, setEditing] = useState<CompanyListItemDto | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const deleteMut = useDeleteCompany();
+
+  const [activeColumnKeys, setActiveColumnKeys] = useState<string[]>(DEFAULT_COLUMN_KEYS);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLUMNS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.every((k) => typeof k === "string")) {
+          setActiveColumnKeys(parsed);
+        }
+      }
+    } catch {
+      /* localStorage indisponível */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(activeColumnKeys));
+    } catch {
+      /* ignore */
+    }
+  }, [activeColumnKeys]);
 
   useEffect(() => {
     const t = setTimeout(() => { setDebounced(search.trim()); setPage(1); }, 300);
     return () => clearTimeout(t);
   }, [search]);
 
-  const query = useCompanies({ search: debounced || undefined, page, perPage, enabled: isAuthenticated });
+  useEffect(() => { setSelected(new Set()); }, [debounced, page, segment]);
+  useEffect(() => { setPage(1); }, [segment]);
+
+  const activeColumns = useMemo(
+    () =>
+      activeColumnKeys
+        .map((k) => NATIVE_COLUMNS.find((c) => c.key === k))
+        .filter((c): c is ColumnDef => Boolean(c)),
+    [activeColumnKeys],
+  );
+
+  function toggleColumn(key: string) {
+    setActiveColumnKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  }
+
+  const statsQuery = useCompanyStats(isAuthenticated);
+  const query = useCompanies({
+    search: debounced || undefined,
+    page,
+    perPage,
+    segment,
+    enabled: isAuthenticated,
+  });
   const items = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / perPage));
+  const allChecked = items.length > 0 && items.every((c) => selected.has(c.id));
+  const someChecked = items.some((c) => selected.has(c.id));
+
+  function toggleAll() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allChecked) items.forEach((c) => next.delete(c.id));
+      else items.forEach((c) => next.add(c.id));
+      return next;
+    });
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleConfirmDelete() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    let ok = 0; let fail = 0;
+    for (const id of ids) {
+      try { await deleteMut.mutateAsync(id); ok += 1; } catch { fail += 1; }
+    }
+    setConfirmOpen(false);
+    setSelected(new Set());
+    if (fail === 0) toast.success(ok === 1 ? "Empresa excluída." : `${ok} empresas excluídas.`);
+    else if (ok === 0) toast.error("Não foi possível excluir as empresas selecionadas.");
+    else toast.error(`${ok} excluída(s), ${fail} falharam.`);
+  }
 
   const isLoading = query.isLoading && items.length === 0;
 
@@ -102,7 +283,15 @@ export default function V2CompaniesClientPage() {
           icon={<IconBuilding size={22} stroke={2.2} />}
           title="Empresas"
           center={
-            <PageSearchBar variant="compact" value={search} onChange={setSearch} placeholder="Buscar por nome, e-mail..." aria-label="Buscar empresas" />
+            <div className="flex w-full max-w-md justify-start">
+              <PageSearchBar
+                variant="compact"
+                value={search}
+                onChange={setSearch}
+                placeholder="Buscar por nome, e-mail..."
+                aria-label="Buscar empresas"
+              />
+            </div>
           }
           actions={
             <div className="flex items-center gap-2">
@@ -113,10 +302,78 @@ export default function V2CompaniesClientPage() {
                 aria-label="Modo de visualização"
                 size="compact"
               />
-              <ActionsMenu onAdd={() => setCreateOpen(true)} />
+              <ActionsMenu
+                onAdd={() => setCreateOpen(true)}
+                onColumns={() => setColumnsOpen(true)}
+              />
             </div>
           }
         />
+
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          {SEGMENTS.map((seg) => {
+            const active = segment === seg.id;
+            const val = seg.value(statsQuery.data);
+            return (
+              <button
+                key={seg.id}
+                type="button"
+                onClick={() => setSegment(seg.id)}
+                aria-pressed={active}
+                className={cn(
+                  "group relative overflow-hidden rounded-[18px] border px-4 py-3.5 text-left transition-all",
+                  active
+                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] shadow-[0_8px_24px_rgba(91,111,245,0.12)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/30 hover:shadow-[var(--glass-shadow)]",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="block font-display text-[22px] font-extrabold leading-none tabular-nums text-[var(--text-primary)]">
+                      {val === undefined ? "—" : val.toLocaleString("pt-BR")}
+                    </span>
+                    <span className="mt-1.5 block font-display text-[13px] font-bold text-[var(--text-primary)]">
+                      {seg.label}
+                    </span>
+                    <span className="mt-0.5 block font-body text-[11px] text-[var(--text-muted)]">
+                      {seg.hint}
+                    </span>
+                  </div>
+                  <span
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
+                      active
+                        ? "bg-[var(--brand-primary)] text-white"
+                        : "bg-[var(--glass-bg-strong)] text-[var(--brand-primary)] group-hover:bg-[var(--color-primary-soft)]",
+                    )}
+                  >
+                    {seg.icon}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {selected.size > 0 && (
+          <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 backdrop-blur-md">
+            <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+              {selected.size} selecionada{selected.size > 1 ? "s" : ""}
+            </span>
+            <div className="flex items-center gap-2">
+              <ButtonGlass
+                variant="glass" size="sm" type="button"
+                onClick={() => setSelected(new Set())}
+                className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+              >
+                Limpar
+              </ButtonGlass>
+              <ButtonGlass variant="danger" size="sm" type="button" onClick={() => setConfirmOpen(true)}>
+                <IconTrash size={14} /> Excluir
+              </ButtonGlass>
+            </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
@@ -129,18 +386,46 @@ export default function V2CompaniesClientPage() {
             <EmptyState
               icon={<IconBuilding size={28} />}
               title="Nenhuma empresa encontrada"
-              description={debounced ? `Sem resultados para "${debounced}".` : "Use o menu de ações para cadastrar a primeira empresa."}
+              description={
+                debounced
+                  ? `Sem resultados para "${debounced}".`
+                  : segment !== "todos"
+                    ? "Nenhuma empresa para o segmento selecionado."
+                    : "Use o menu de ações para cadastrar a primeira empresa."
+              }
             />
           </div>
-        ) : view === "cartoes" ? (
-          <CartaoView items={items} onEdit={setEditing} />
+        ) : view === "tabela" ? (
+          <TabelaView
+            items={items}
+            selected={selected}
+            allChecked={allChecked}
+            someChecked={someChecked}
+            onToggleAll={toggleAll}
+            onToggleOne={toggleOne}
+            columns={activeColumns}
+            onEdit={setEditing}
+          />
         ) : (
-          <ListaView items={items} onEdit={setEditing} />
+          <CardsView
+            items={items}
+            selected={selected}
+            allChecked={allChecked}
+            someChecked={someChecked}
+            onToggleAll={toggleAll}
+            onToggleOne={toggleOne}
+            columns={activeColumns}
+            onEdit={setEditing}
+          />
         )}
 
         <PaginationGlass
-          label={`${total.toLocaleString("pt-BR")} empresas — página ${page} de ${lastPage}`}
-          canPrev={page > 1} canNext={page < lastPage}
+          total={total}
+          entityLabel="empresas"
+          page={page}
+          lastPage={lastPage}
+          canPrev={page > 1}
+          canNext={page < lastPage}
           onPrev={() => setPage((p) => Math.max(1, p - 1))}
           onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
           perPage={perPage}
@@ -150,13 +435,33 @@ export default function V2CompaniesClientPage() {
 
       <CreateCompanyDialog open={createOpen} onOpenChange={setCreateOpen} />
       <EditCompanyDialog company={editing} onClose={() => setEditing(null)} />
+      <ColumnsDialog
+        open={columnsOpen}
+        onOpenChange={setColumnsOpen}
+        nativeColumns={NATIVE_COLUMNS}
+        activeKeys={activeColumnKeys}
+        onToggle={toggleColumn}
+        onReset={() => setActiveColumnKeys(DEFAULT_COLUMN_KEYS)}
+      />
+      <ConfirmDeleteDialog
+        open={confirmOpen}
+        count={selected.size}
+        pending={deleteMut.isPending}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
 
 // ── Menu de ações (hambúrguer — espelha Contatos) ────────────────────────────
 
-function ActionsMenu({ onAdd }: { onAdd: () => void }) {
+function ActionsMenu({
+  onAdd, onColumns,
+}: {
+  onAdd: () => void;
+  onColumns: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -168,6 +473,11 @@ function ActionsMenu({ onAdd }: { onAdd: () => void }) {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
+
+  const items: { icon: React.ReactNode; label: string; onClick: () => void; divider?: boolean }[] = [
+    { icon: <IconPlus size={16} />, label: "Adicionar empresa", onClick: onAdd },
+    { icon: <IconSettings size={16} />, label: "Configurações da lista", onClick: onColumns, divider: true },
+  ];
 
   return (
     <div ref={ref} className="relative">
@@ -187,40 +497,230 @@ function ActionsMenu({ onAdd }: { onAdd: () => void }) {
       </button>
       {open && (
         <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onAdd(); }}
-            className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-          >
-            <span className="text-[var(--text-muted)]"><IconPlus size={16} /></span>
-            Adicionar empresa
-          </button>
+          {items.map((it) => (
+            <div key={it.label}>
+              {it.divider && <div className="my-1 h-px bg-[var(--glass-border)]" />}
+              <button
+                type="button"
+                onClick={() => { setOpen(false); it.onClick(); }}
+                className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+              >
+                <span className="text-[var(--text-muted)]">{it.icon}</span>
+                {it.label}
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// ── Cartões ─────────────────────────────────────────────────────────────────
+// ── Configurações da lista ───────────────────────────────────────────────────
 
-function CartaoView({ items, onEdit }: { items: CompanyListItemDto[]; onEdit: (c: CompanyListItemDto) => void }) {
+function ColumnsDialog({
+  open, onOpenChange, nativeColumns, activeKeys, onToggle, onReset,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  nativeColumns: ColumnDef[];
+  activeKeys: string[];
+  onToggle: (key: string) => void;
+  onReset: () => void;
+}) {
+  const activeSet = new Set(activeKeys);
+
+  function renderChip(col: ColumnDef) {
+    const on = activeSet.has(col.key);
+    return (
+      <button
+        key={col.key}
+        type="button"
+        onClick={() => onToggle(col.key)}
+        aria-pressed={on}
+        className={`flex items-center gap-1.5 rounded-[var(--radius-md)] border px-2.5 py-1.5 font-display text-[12px] font-semibold transition-colors ${
+          on
+            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]"
+        }`}
+      >
+        {on ? <IconCheck size={13} stroke={2.6} /> : <IconPlus size={13} stroke={2.4} />}
+        {col.label}
+      </button>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-2 gap-3 overflow-y-auto pb-1 lg:grid-cols-3 xl:grid-cols-4">
-      {items.map((c) => (
-        <div
-          key={c.id}
-          role="button"
-          tabIndex={0}
-          onClick={() => onEdit(c)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEdit(c); } }}
-          className="group flex cursor-pointer flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-shadow hover:shadow-[var(--glass-shadow)]"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] font-display text-[13px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="md">
+        <DialogHeader>
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-[var(--brand-primary)]">
+              <IconColumns size={18} />
+            </span>
+            <DialogTitle className="text-base">Configurações da lista</DialogTitle>
+          </div>
+          <DialogDescription className="text-[13px] leading-relaxed">
+            Escolha as colunas exibidas na visão Cards e Tabela. Suas escolhas ficam salvas neste navegador.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3 py-1">
+          <div className="flex items-center justify-between">
+            <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Colunas</span>
+            <button
+              type="button"
+              onClick={onReset}
+              className="flex items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+            >
+              <IconRotateClockwise size={12} /> Restaurar padrão
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">{nativeColumns.map(renderChip)}</div>
+        </div>
+        <DialogFooter>
+          <ButtonGlass variant="primary" size="sm" type="button" onClick={() => onOpenChange(false)}>
+            Concluído
+          </ButtonGlass>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Tabela ───────────────────────────────────────────────────────────────────
+
+function TabelaView({
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, onEdit,
+}: {
+  items: CompanyListItemDto[];
+  selected: Set<string>;
+  allChecked: boolean;
+  someChecked: boolean;
+  onToggleAll: () => void;
+  onToggleOne: (id: string) => void;
+  columns: ColumnDef[];
+  onEdit: (c: CompanyListItemDto) => void;
+}) {
+  return (
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <div className="scrollbar-thin min-h-0 flex-1 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+        <div className="flex w-max min-w-full flex-col">
+          <div className={listTableHeadRowClass("sticky top-0 z-[1] flex w-max min-w-full items-center gap-3 px-3 py-2")}>
+            <span className="w-9 shrink-0">
+              <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todas" />
+            </span>
+            <div className="w-[240px] shrink-0">
+              <ListColumnLabel className="whitespace-nowrap">Empresa</ListColumnLabel>
+            </div>
+            {columns.map((col) => (
+              <div key={col.key} className={`${col.width} shrink-0`}>
+                <ListColumnLabel className="whitespace-nowrap">{col.label}</ListColumnLabel>
+              </div>
+            ))}
+          </div>
+          {items.map((c) => (
+            <div
+              key={c.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onEdit(c)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEdit(c); } }}
+              className={`flex w-max min-w-full cursor-pointer items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}
+            >
+              <span className="w-9 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
+              </span>
+              <div className="flex w-[240px] shrink-0 items-center gap-2.5">
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
+                  {initials(c.name)}
+                </span>
+                <div className="min-w-0 leading-tight">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onEdit(c); }}
+                    className="group/name inline-flex max-w-full items-center gap-1.5 text-left font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                  >
+                    <span className="truncate">{c.name}</span>
+                    <IconPencil size={13} className="flex-shrink-0 opacity-0 transition-opacity group-hover/name:opacity-60" />
+                  </button>
+                  <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.domain ?? "—"}</div>
+                </div>
+              </div>
+              {columns.map((col) => (
+                <div key={col.key} className={`${col.width} min-w-0 shrink-0`}>
+                  {col.cell(c)}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Cards (linhas horizontais — padrão Contatos) ─────────────────────────────
+
+function CardsView({
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, onEdit,
+}: {
+  items: CompanyListItemDto[];
+  selected: Set<string>;
+  allChecked: boolean;
+  someChecked: boolean;
+  onToggleAll: () => void;
+  onToggleOne: (id: string) => void;
+  columns: ColumnDef[];
+  onEdit: (c: CompanyListItemDto) => void;
+}) {
+  const gridTemplate = [
+    "32px",
+    "minmax(220px,2.4fr)",
+    ...columns.map((c) => `minmax(${colWidthCss(c.width)},1fr)`),
+    "112px",
+  ].join(" ");
+
+  return (
+    <div className="flex flex-col gap-2 overflow-y-auto pb-1">
+      <div
+        className={listTableHeadRowClass("grid gap-3 border border-transparent px-4 py-2")}
+        style={{ gridTemplateColumns: gridTemplate }}
+      >
+        <span>
+          <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todas" />
+        </span>
+        <ListColumnLabel>Empresa</ListColumnLabel>
+        {columns.map((col) => (
+          <ListColumnLabel key={col.key}>{col.label}</ListColumnLabel>
+        ))}
+        <ListColumnLabel align="right">Ações</ListColumnLabel>
+      </div>
+      {items.map((c) => {
+        const isSelected = selected.has(c.id);
+        return (
+          <div
+            key={c.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => onEdit(c)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEdit(c); } }}
+            style={{ gridTemplateColumns: gridTemplate }}
+            className={cn(
+              "group grid cursor-pointer items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+              isSelected
+                ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                : "border-[var(--glass-border)] bg-[var(--glass-bg-base)]",
+            )}
+          >
+            <span onClick={(e) => e.stopPropagation()}>
+              <CheckboxGlass checked={isSelected} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
+            </span>
+
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
                 {initials(c.name)}
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 leading-tight">
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onEdit(c); }}
@@ -228,124 +728,68 @@ function CartaoView({ items, onEdit }: { items: CompanyListItemDto[]; onEdit: (c
                 >
                   {c.name}
                 </button>
-                <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.domain ?? c.industry ?? "Sem e-mail"}</div>
+                <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.domain ?? "—"}</div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onEdit(c); }}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] opacity-0 transition-all group-hover:opacity-100 hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-              aria-label={`Editar ${c.name}`}
-            >
-              <IconPencil size={14} />
-            </button>
-          </div>
 
-          <div className="flex flex-col gap-1.5 text-[12px]">
-            {c.phone && (
-              <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-                <IconPhone size={13} className="shrink-0 text-[var(--text-muted)]" />
-                <span className="truncate">{c.phone}</span>
+            {columns.map((col) => (
+              <div key={col.key} className="min-w-0">
+                {col.cell(c)}
               </div>
-            )}
-            {c.address && (
-              <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-                <IconBuilding size={13} className="shrink-0 text-[var(--text-muted)]" />
-                <span className="truncate">{c.address}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-              <IconUsers size={13} className="shrink-0 text-[var(--text-muted)]" />
-              <span>{c._count.contacts} contato{c._count.contacts !== 1 ? "s" : ""}</span>
+            ))}
+
+            <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+              <a href={c.phone ? `tel:${c.phone}` : undefined} aria-label="Ligar" aria-disabled={!c.phone} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
+                <IconPhone size={16} />
+              </a>
+              <a href={c.domain ? `mailto:${c.domain}` : undefined} aria-label="Enviar e-mail" aria-disabled={!c.domain} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
+                <IconMail size={16} />
+              </a>
+              <button
+                type="button"
+                onClick={() => onEdit(c)}
+                aria-label={`Editar ${c.name}`}
+                className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
+              >
+                <IconPencil size={16} />
+              </button>
             </div>
           </div>
-
-          <div className="mt-auto border-t border-[var(--glass-border-subtle)] pt-2.5 font-body text-[11px] text-[var(--text-muted)]">
-            Criado em {fmtDateBR(c.createdAt)}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Lista ────────────────────────────────────────────────────────────────────
-
-function ListaView({ items, onEdit }: { items: CompanyListItemDto[]; onEdit: (c: CompanyListItemDto) => void }) {
-  return (
-    <div className="flex flex-col gap-2 overflow-y-auto pb-1">
-      {items.map((c) => (
-        <div
-          key={c.id}
-          role="button"
-          tabIndex={0}
-          onClick={() => onEdit(c)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEdit(c); } }}
-          className="flex cursor-pointer items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-shadow hover:shadow-[var(--glass-shadow)]"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-            {initials(c.name)}
-          </span>
-
-          <div className="min-w-0 flex-1 leading-tight">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onEdit(c); }}
-              className="block w-full truncate text-left font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
-            >
-              {c.name}
-            </button>
-            <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.domain ?? "—"}</div>
-          </div>
-
-          {c.phone && (
-            <div className="hidden shrink-0 items-center gap-1.5 font-display text-[13px] text-[var(--text-muted)] sm:flex">
-              <IconPhone size={14} className="shrink-0" />
-              <span>{c.phone}</span>
-            </div>
-          )}
-
-          <div className="hidden shrink-0 md:block">
-            <BadgeGlass variant="enterprise">{c._count.contacts}</BadgeGlass>
-          </div>
-
-          <div className="hidden w-[80px] shrink-0 text-right font-display text-[12px] text-[var(--text-muted)] lg:block">
-            {fmtDateBR(c.createdAt)}
-          </div>
-
-          <div className="flex shrink-0 items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-            <a
-              href={c.phone ? `tel:${c.phone}` : undefined}
-              aria-label="Ligar"
-              aria-disabled={!c.phone}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-            >
-              <IconPhone size={16} />
-            </a>
-            <a
-              href={c.domain ? `mailto:${c.domain}` : undefined}
-              aria-label="Enviar e-mail"
-              aria-disabled={!c.domain}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-            >
-              <IconMail size={16} />
-            </a>
-            <button
-              type="button"
-              onClick={() => onEdit(c)}
-              aria-label={`Editar ${c.name}`}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
-            >
-              <IconPencil size={16} />
-            </button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
 // ── Dialogs ──────────────────────────────────────────────────────────────────
+
+function ConfirmDeleteDialog({ open, count, pending, onCancel, onConfirm }: {
+  open: boolean; count: number; pending: boolean; onCancel: () => void; onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-destructive)_12%,transparent)] text-[var(--color-destructive)]">
+              <IconAlertTriangle size={18} />
+            </span>
+            <DialogTitle className="text-base">{`Excluir ${count === 1 ? "empresa" : `${count} empresas`}?`}</DialogTitle>
+          </div>
+          <DialogDescription className="text-[13px] leading-relaxed">
+            Esta ação não pode ser desfeita. Os contatos vinculados são preservados (ficam sem empresa).
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <ButtonGlass variant="glass" size="sm" type="button" onClick={onCancel} disabled={pending} className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]">Cancelar</ButtonGlass>
+          <ButtonGlass variant="danger" size="sm" type="button" onClick={onConfirm} disabled={pending}>
+            <IconTrash size={14} /> {pending ? "Excluindo..." : "Excluir"}
+          </ButtonGlass>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function CreateCompanyDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [name, setName] = useState("");
@@ -410,8 +854,6 @@ function EditCompanyDialog({ company, onClose }: { company: CompanyListItemDto |
     if (company) { setName(company.name); setCnpj(company.size ?? ""); setPhone(company.phone ?? ""); setEmail(company.domain ?? ""); setAddress(company.address ?? ""); updateMut.reset(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
-
-  // Sempre monta o FormSheet — evitar return null com open=true (showModal se perde).
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

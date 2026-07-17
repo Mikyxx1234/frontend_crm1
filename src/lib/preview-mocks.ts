@@ -1103,6 +1103,15 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
     },
   },
   {
+    test: (u) => u.pathname === "/api/companies/stats",
+    handler: () => ({
+      total: COMPANIES_LIST.length,
+      withContacts: COMPANIES_LIST.filter((c) => (c._count?.contacts ?? 0) > 0).length,
+      withoutEmail: COMPANIES_LIST.filter((c) => !c.domain).length,
+      withoutPhone: COMPANIES_LIST.filter((c) => !c.phone).length,
+    }),
+  },
+  {
     test: (u) => u.pathname === "/api/companies",
     handler: () => ({
       items: COMPANIES_LIST,

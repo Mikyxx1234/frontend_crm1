@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
-import { IconAdjustments as Settings2, IconChevronRight as ChevronRight, IconChevronDown as ChevronDown, IconSelector as ChevronsDownUp, IconSelector as ChevronsUpDown } from "@tabler/icons-react";
+import { IconAdjustments as Settings2, IconChevronRight as ChevronRight, IconChevronDown as ChevronDown } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
@@ -39,8 +39,6 @@ export default function SettingsClientPageV2() {
 
   // Estado de colapso por seção (apenas visual — não altera rotas/dados).
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const allIds = settingsGroups.map((g) => g.id);
-  const allCollapsed = collapsed.size >= allIds.length;
 
   const toggleGroup = (id: string) =>
     setCollapsed((prev) => {
@@ -48,9 +46,6 @@ export default function SettingsClientPageV2() {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-
-  const toggleAll = () =>
-    setCollapsed(allCollapsed ? new Set() : new Set(allIds));
 
   return (
     <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
@@ -73,39 +68,6 @@ export default function SettingsClientPageV2() {
               <PersonalShortcut key={item.id} item={item} pathname={pathname} />
             ))}
           </section>
-
-          {/* Barra de seções + ação de expandir/recolher tudo */}
-          <div className="flex min-w-0 items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span
-                className="h-4 w-1 rounded-full"
-                style={{ background: "var(--brand-primary)" }}
-              />
-              <h2
-                className="font-display text-[13px] font-bold uppercase tracking-[0.08em]"
-                style={{ color: "var(--text-muted)" }}
-              >
-                Seções
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={toggleAll}
-              className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors duration-150"
-              style={{
-                borderColor: "var(--glass-border)",
-                background: "var(--glass-bg-base)",
-                color: "var(--text-muted)",
-              }}
-            >
-              {allCollapsed ? (
-                <ChevronsUpDown size={13} />
-              ) : (
-                <ChevronsDownUp size={13} />
-              )}
-              {allCollapsed ? "Expandir tudo" : "Recolher tudo"}
-            </button>
-          </div>
 
           {/* Grupos de configuração */}
           <div className="grid min-w-0 grid-cols-1 items-start gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">

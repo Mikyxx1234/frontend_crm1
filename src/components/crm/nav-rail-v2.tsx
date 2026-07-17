@@ -59,6 +59,12 @@ import { SoftphoneNavIcon } from "@/features/softphone/components/softphone-nav-
 const SIDEBAR_PREFS_CACHE = "crm:sidebar-prefs-items";
 const SIDEBAR_EXPANDED_CACHE = "crm:sidebar-expanded";
 
+/** Menus Conta/Perfil — branco sólido (não glass cinza do `bg-popover`). */
+const ACCOUNT_MENU_CONTENT =
+  "z-(--z-popover) w-60 rounded-xl border border-black/5 bg-[var(--color-bg-card)] p-1 text-[var(--color-popover-foreground)] shadow-[0_8px_32px_rgba(0,0,0,0.10)] dark:border-white/10";
+const ACCOUNT_MENU_ITEM =
+  "gap-2 px-2 py-1.5 text-[13px] text-[var(--color-popover-foreground)] hover:bg-muted focus:bg-muted";
+
 function readCachedSidebarItems(): SidebarItemPreference[] | undefined {
   if (typeof window === "undefined") return undefined;
   try {
@@ -366,13 +372,13 @@ export function NavRailV2({ className }: { className?: string }) {
             {companyInitials}
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="start" className="w-60">
+          <DropdownMenuContent align="start" className={ACCOUNT_MENU_CONTENT}>
             <div className="flex items-center gap-3 px-2 py-2">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[13px] font-bold text-white">
                 {companyInitials}
               </div>
               <div className="min-w-0">
-                <p className="truncate font-display text-[13px] font-bold text-foreground">
+                <p className="truncate font-display text-[13px] font-bold text-[var(--color-popover-foreground)]">
                   {companyName || "Minha empresa"}
                 </p>
                 <p className="truncate text-[11px] text-muted-foreground">
@@ -384,15 +390,19 @@ export function NavRailV2({ className }: { className?: string }) {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
+              className={ACCOUNT_MENU_ITEM}
               onClick={() => void copyAccountId()}
               disabled={!accountId}
             >
-              <IconCopy size={16} className="text-muted-foreground" />
+              <IconCopy size={16} className="shrink-0" />
               <span className="font-medium">Copiar ID da conta</span>
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={() => router.push("/dashboard")}>
-              <IconHome size={16} className="text-muted-foreground" />
+            <DropdownMenuItem
+              className={ACCOUNT_MENU_ITEM}
+              onClick={() => router.push("/dashboard")}
+            >
+              <IconHome size={16} className="shrink-0" />
               <span className="font-medium">Início</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -589,13 +599,13 @@ export function NavRailV2({ className }: { className?: string }) {
           )}
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="start" className="w-60">
+        <DropdownMenuContent align="start" className={ACCOUNT_MENU_CONTENT}>
           <div className="flex items-center gap-3 px-2 py-2">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[11px] font-bold text-white">
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="truncate font-display text-[13px] font-bold text-foreground">
+              <p className="truncate font-display text-[13px] font-bold text-[var(--color-popover-foreground)]">
                 {displayName}
               </p>
               {email && (
@@ -606,7 +616,10 @@ export function NavRailV2({ className }: { className?: string }) {
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => setStatusPopupOpen(true)}>
+          <DropdownMenuItem
+            className={ACCOUNT_MENU_ITEM}
+            onClick={() => setStatusPopupOpen(true)}
+          >
             <span
               className="inline-flex h-4 w-4 items-center justify-center"
               aria-hidden
@@ -619,19 +632,22 @@ export function NavRailV2({ className }: { className?: string }) {
             <span className="font-medium">Status: {statusMeta.label}</span>
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
-            <IconUserCircle size={16} className="text-muted-foreground" />
+          <DropdownMenuItem
+            className={ACCOUNT_MENU_ITEM}
+            onClick={() => router.push("/settings/profile")}
+          >
+            <IconUserCircle size={16} className="shrink-0" />
             <span className="font-medium">Meu perfil</span>
           </DropdownMenuItem>
 
           {/* Toggle de tema migrado do trilho pro dropdown de perfil —
               reduz a quantidade de icones visíveis na NavRail sem esconder
               a funcionalidade. */}
-          <DropdownMenuItem onClick={toggle}>
+          <DropdownMenuItem className={ACCOUNT_MENU_ITEM} onClick={toggle}>
             {theme === "light" ? (
-              <IconMoon size={16} className="text-muted-foreground" />
+              <IconMoon size={16} className="shrink-0" />
             ) : (
-              <IconSun size={16} className="text-muted-foreground" />
+              <IconSun size={16} className="shrink-0" />
             )}
             <span className="font-medium">
               {theme === "light" ? "Modo escuro" : "Modo claro"}
@@ -642,9 +658,12 @@ export function NavRailV2({ className }: { className?: string }) {
 
           <DropdownMenuItem
             onClick={() => void signOut({ callbackUrl: "/login" })}
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
+            className={cn(
+              ACCOUNT_MENU_ITEM,
+              "text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive",
+            )}
           >
-            <IconLogout size={16} />
+            <IconLogout size={16} className="shrink-0" />
             <span className="font-medium">Sair</span>
           </DropdownMenuItem>
           </DropdownMenuContent>

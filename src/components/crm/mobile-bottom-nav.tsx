@@ -49,6 +49,12 @@ import { cn } from "@/lib/utils";
 
 const SIDEBAR_PREFS_CACHE = "crm:sidebar-prefs-items";
 
+/** Mesmo padrão sólido dos menus Conta/Perfil da NavRail. */
+const ACCOUNT_MENU_CONTENT =
+  "z-(--z-popover) mb-2 w-60 rounded-xl border border-black/5 bg-[var(--color-bg-card)] p-1 text-[var(--color-popover-foreground)] shadow-[0_8px_32px_rgba(0,0,0,0.10)] dark:border-white/10";
+const ACCOUNT_MENU_ITEM =
+  "gap-2 px-2 py-1.5 text-[13px] text-[var(--color-popover-foreground)] hover:bg-muted focus:bg-muted";
+
 function readCachedSidebarItems(): SidebarItemPreference[] | undefined {
   if (typeof window === "undefined") return undefined;
   try {
@@ -292,13 +298,13 @@ export function MobileBottomNav() {
                 <span className="max-w-[4.5rem] truncate">Conta</span>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" side="top" className="mb-2 w-60">
+              <DropdownMenuContent align="end" side="top" className={ACCOUNT_MENU_CONTENT}>
                 <div className="flex items-center gap-3 px-2 py-2">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[11px] font-bold text-white">
                     {initials}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate font-display text-[13px] font-bold text-foreground">
+                    <p className="truncate font-display text-[13px] font-bold text-[var(--color-popover-foreground)]">
                       {displayName}
                     </p>
                     {email && (
@@ -309,7 +315,10 @@ export function MobileBottomNav() {
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem onClick={() => setStatusPopupOpen(true)}>
+                <DropdownMenuItem
+                  className={ACCOUNT_MENU_ITEM}
+                  onClick={() => setStatusPopupOpen(true)}
+                >
                   <span className="inline-flex h-4 w-4 items-center justify-center" aria-hidden>
                     <span
                       className="h-2.5 w-2.5 rounded-full"
@@ -319,16 +328,19 @@ export function MobileBottomNav() {
                   <span className="font-medium">Status: {statusMeta.label}</span>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
-                  <IconUserCircle size={16} className="text-muted-foreground" />
+                <DropdownMenuItem
+                  className={ACCOUNT_MENU_ITEM}
+                  onClick={() => router.push("/settings/profile")}
+                >
+                  <IconUserCircle size={16} className="shrink-0" />
                   <span className="font-medium">Meu perfil</span>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem onClick={toggle}>
+                <DropdownMenuItem className={ACCOUNT_MENU_ITEM} onClick={toggle}>
                   {theme === "light" ? (
-                    <IconMoon size={16} className="text-muted-foreground" />
+                    <IconMoon size={16} className="shrink-0" />
                   ) : (
-                    <IconSun size={16} className="text-muted-foreground" />
+                    <IconSun size={16} className="shrink-0" />
                   )}
                   <span className="font-medium">
                     {theme === "light" ? "Modo escuro" : "Modo claro"}
@@ -339,9 +351,12 @@ export function MobileBottomNav() {
 
                 <DropdownMenuItem
                   onClick={() => void signOut({ callbackUrl: "/login" })}
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
+                  className={cn(
+                    ACCOUNT_MENU_ITEM,
+                    "text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive",
+                  )}
                 >
-                  <IconLogout size={16} />
+                  <IconLogout size={16} className="shrink-0" />
                   <span className="font-medium">Sair</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>

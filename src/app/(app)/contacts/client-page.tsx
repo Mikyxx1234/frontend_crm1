@@ -599,6 +599,9 @@ export default function V2ContactsClientPage() {
             columns={activeColumns}
             getWidth={getWidth}
             setWidth={setWidth}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={toggleSort}
             onEdit={setEditing}
           />
         )}
@@ -1531,7 +1534,7 @@ function TabelaView({
 // ── Cards (colunas dinâmicas do configurador — Tags no header) ───────────────
 
 function CardsView({
-  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, getWidth, setWidth, onEdit,
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, getWidth, setWidth, sortBy, sortOrder, onSort, onEdit,
 }: {
   items: ContactListItemDto[];
   selected: Set<string>;
@@ -1542,8 +1545,12 @@ function CardsView({
   columns: ColumnDef[];
   getWidth: (key: string, fallback?: number) => number;
   setWidth: (key: string, px: number) => void;
+  sortBy: SortField;
+  sortOrder: "asc" | "desc";
+  onSort: (field: SortField) => void;
   onEdit: (c: ContactListItemDto) => void;
 }) {
+  const dirFor = (f: SortField): SortDir => (sortBy === f ? sortOrder : null);
   const nameW = getWidth(NAME_COL_KEY, 240);
   const gridTemplate = [
     "32px",
@@ -1563,14 +1570,22 @@ function CardsView({
           <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todos" />
         </span>
         <div className="relative min-w-0 overflow-hidden pr-1">
-          <ListColumnLabel>Contato</ListColumnLabel>
+          <SortableHeader label="Contato" sort={dirFor("name")} onSort={() => onSort("name")} />
           <ColumnResizer value={nameW} onChange={(px) => setWidth(NAME_COL_KEY, px)} min={160} max={420} />
         </div>
         {columns.map((col) => {
           const w = getWidth(col.key, parseWidthClass(col.width));
           return (
             <div key={col.key} className="relative min-w-0 overflow-hidden pr-1">
-              <ListColumnLabel>{col.label}</ListColumnLabel>
+              {col.sortField ? (
+                <SortableHeader
+                  label={col.label}
+                  sort={dirFor(col.sortField)}
+                  onSort={() => onSort(col.sortField as SortField)}
+                />
+              ) : (
+                <ListColumnLabel>{col.label}</ListColumnLabel>
+              )}
               <ColumnResizer value={w} onChange={(px) => setWidth(col.key, px)} min={72} max={480} />
             </div>
           );

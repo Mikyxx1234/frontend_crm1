@@ -8,6 +8,7 @@ import { AVATAR_SIZE } from "@/lib/avatar";
 
 import { BadgeGlass } from "./badge-glass";
 import { CheckboxGlass } from "./checkbox-glass";
+import { ColumnResizer, useColumnWidths } from "./column-resizer";
 import { ListHScroll } from "./list-hscroll";
 import { SortableHeader, type SortDir, listTableHeadRowClass } from "./sortable-header";
 import { StageDot } from "./stage-dot";
@@ -59,6 +60,17 @@ export const DEAL_LIST_COLUMNS: {
 export const DEFAULT_DEAL_LIST_COLUMN_KEYS: DealListColumnKey[] =
   DEAL_LIST_COLUMNS.map((c) => c.key);
 
+const WIDTHS_STORAGE_KEY = "v2:deals:col-widths:v1";
+const COLUMN_WIDTH_DEFAULTS: Record<string, number> = {
+  dealTitle: 240,
+  contactName: 200,
+  value: 120,
+  stageName: 170,
+  ownerName: 160,
+  createdAt: 130,
+  status: 120,
+};
+
 type SortKey = DealListColumnKey;
 
 interface DealListTableProps {
@@ -106,12 +118,13 @@ export function DealListTable({
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { getWidth, setWidth } = useColumnWidths(WIDTHS_STORAGE_KEY, COLUMN_WIDTH_DEFAULTS);
 
   const columns = useMemo(() => resolveColumns(visibleColumns), [visibleColumns]);
-  const gridTemplate = useMemo(
-    () => ["42px", ...columns.map((c) => `minmax(${c.minPx}px, ${c.fr})`)].join(" "),
-    [columns],
-  );
+  const gridTemplate = [
+    "42px",
+    ...columns.map((c) => `${getWidth(c.key, c.minPx)}px`),
+  ].join(" ");
 
   const filtered = useMemo(() => {
     const base =
@@ -237,14 +250,24 @@ export function DealListTable({
               aria-label="Selecionar todos"
             />
           </span>
-          {columns.map((col) => (
-            <SortableHeader
-              key={col.key}
-              label={col.label}
-              sort={sortFor(col.key)}
-              onSort={() => handleSort(col.key)}
-            />
-          ))}
+          {columns.map((col) => {
+            const w = getWidth(col.key, col.minPx);
+            return (
+              <div key={col.key} className="relative min-w-0 overflow-hidden pr-1">
+                <SortableHeader
+                  label={col.label}
+                  sort={sortFor(col.key)}
+                  onSort={() => handleSort(col.key)}
+                />
+                <ColumnResizer
+                  value={w}
+                  onChange={(px) => setWidth(col.key, px)}
+                  min={col.minPx}
+                  max={480}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {filtered.length === 0 ? (

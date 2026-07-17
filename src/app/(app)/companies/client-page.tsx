@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 import { pagePrimaryButtonClass, PageSegmentedControl } from "@/components/crm/page-toolbar";
-import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
+import { ListColumnLabel, SortableHeader, listTableHeadRowClass, type SortDir } from "@/components/crm/sortable-header";
 import {
   ColumnResizer,
   parseWidthClass,
@@ -127,6 +127,8 @@ interface ColumnDef {
   key: string;
   label: string;
   width: string;
+  /** Campo de ordenação server-side, quando aplicável. */
+  sortField?: CompanySortField;
   cell: (c: CompanyListItemDto) => React.ReactNode;
 }
 
@@ -149,7 +151,7 @@ const NATIVE_COLUMNS: ColumnDef[] = [
     width: "w-[100px]",
     cell: (c) => <BadgeGlass variant="enterprise">{c._count.contacts}</BadgeGlass>,
   },
-  { key: "createdAt", label: "Criado em", width: "w-[130px]", cell: (c) => txtCell(fmtDateBR(c.createdAt)) },
+  { key: "createdAt", label: "Criado em", width: "w-[130px]", sortField: "createdAt", cell: (c) => txtCell(fmtDateBR(c.createdAt)) },
 ];
 
 const DEFAULT_COLUMN_KEYS = ["phone", "domain", "city", "state", "contacts", "createdAt"];
@@ -351,6 +353,15 @@ export default function V2CompaniesClientPage() {
     });
   }
 
+  function toggleSort(field: CompanySortField) {
+    if (sortBy === field) {
+      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === "name" ? "asc" : "desc");
+    }
+  }
+
   async function handleConfirmDelete() {
     const ids = [...selected];
     if (ids.length === 0) return;
@@ -492,6 +503,9 @@ export default function V2CompaniesClientPage() {
             columns={activeColumns}
             getWidth={getWidth}
             setWidth={setWidth}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={toggleSort}
             onEdit={setEditing}
           />
         ) : (
@@ -505,6 +519,9 @@ export default function V2CompaniesClientPage() {
             columns={activeColumns}
             getWidth={getWidth}
             setWidth={setWidth}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={toggleSort}
             onEdit={setEditing}
           />
         )}
@@ -982,7 +999,7 @@ function ColumnsDialog({
 // ── Tabela ───────────────────────────────────────────────────────────────────
 
 function TabelaView({
-  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, getWidth, setWidth, onEdit,
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, getWidth, setWidth, sortBy, sortOrder, onSort, onEdit,
 }: {
   items: CompanyListItemDto[];
   selected: Set<string>;
@@ -993,8 +1010,12 @@ function TabelaView({
   columns: ColumnDef[];
   getWidth: (key: string, fallback?: number) => number;
   setWidth: (key: string, px: number) => void;
+  sortBy: CompanySortField;
+  sortOrder: "asc" | "desc";
+  onSort: (field: CompanySortField) => void;
   onEdit: (c: CompanyListItemDto) => void;
 }) {
+  const dirFor = (f: CompanySortField): SortDir => (sortBy === f ? sortOrder : null);
   const nameW = getWidth(NAME_COL_KEY, 240);
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
@@ -1005,7 +1026,7 @@ function TabelaView({
               <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todas" />
             </span>
             <ResizableColumnHead width={nameW} onResize={(px) => setWidth(NAME_COL_KEY, px)} min={160} max={420}>
-              <ListColumnLabel className="whitespace-nowrap">Empresa</ListColumnLabel>
+              <SortableHeader label="Empresa" sort={dirFor("name")} onSort={() => onSort("name")} className="whitespace-nowrap" />
             </ResizableColumnHead>
             {columns.map((col) => (
               <ResizableColumnHead
@@ -1013,7 +1034,16 @@ function TabelaView({
                 width={getWidth(col.key, parseWidthClass(col.width))}
                 onResize={(px) => setWidth(col.key, px)}
               >
-                <ListColumnLabel className="whitespace-nowrap">{col.label}</ListColumnLabel>
+                {col.sortField ? (
+                  <SortableHeader
+                    label={col.label}
+                    sort={dirFor(col.sortField)}
+                    onSort={() => onSort(col.sortField!)}
+                    className="whitespace-nowrap"
+                  />
+                ) : (
+                  <ListColumnLabel className="whitespace-nowrap">{col.label}</ListColumnLabel>
+                )}
               </ResizableColumnHead>
             ))}
           </div>
@@ -1066,7 +1096,7 @@ function TabelaView({
 // ── Cards (linhas horizontais — padrão Contatos) ─────────────────────────────
 
 function CardsView({
-  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, getWidth, setWidth, onEdit,
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, getWidth, setWidth, sortBy, sortOrder, onSort, onEdit,
 }: {
   items: CompanyListItemDto[];
   selected: Set<string>;
@@ -1077,8 +1107,12 @@ function CardsView({
   columns: ColumnDef[];
   getWidth: (key: string, fallback?: number) => number;
   setWidth: (key: string, px: number) => void;
+  sortBy: CompanySortField;
+  sortOrder: "asc" | "desc";
+  onSort: (field: CompanySortField) => void;
   onEdit: (c: CompanyListItemDto) => void;
 }) {
+  const dirFor = (f: CompanySortField): SortDir => (sortBy === f ? sortOrder : null);
   const nameW = getWidth(NAME_COL_KEY, 240);
   const gridTemplate = [
     "32px",
@@ -1098,14 +1132,22 @@ function CardsView({
           <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todas" />
         </span>
         <div className="relative min-w-0 overflow-hidden pr-1">
-          <ListColumnLabel>Empresa</ListColumnLabel>
+          <SortableHeader label="Empresa" sort={dirFor("name")} onSort={() => onSort("name")} />
           <ColumnResizer value={nameW} onChange={(px) => setWidth(NAME_COL_KEY, px)} min={160} max={420} />
         </div>
         {columns.map((col) => {
           const w = getWidth(col.key, parseWidthClass(col.width));
           return (
             <div key={col.key} className="relative min-w-0 overflow-hidden pr-1">
-              <ListColumnLabel>{col.label}</ListColumnLabel>
+              {col.sortField ? (
+                <SortableHeader
+                  label={col.label}
+                  sort={dirFor(col.sortField)}
+                  onSort={() => onSort(col.sortField!)}
+                />
+              ) : (
+                <ListColumnLabel>{col.label}</ListColumnLabel>
+              )}
               <ColumnResizer value={w} onChange={(px) => setWidth(col.key, px)} min={72} max={480} />
             </div>
           );

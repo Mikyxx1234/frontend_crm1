@@ -17,8 +17,8 @@ import {
   IconPhone,
   IconMail,
   IconTable,
-  IconLayoutGrid,
-  IconList,
+  IconLayoutList,
+  IconChevronRight,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -45,7 +45,6 @@ import { FormSheet } from "@/components/ui/form-sheet";
 import {
   useContacts,
   useContactStats,
-  useContactTags,
   useCreateContact,
   useDeleteContact,
   useUpdateContact,
@@ -54,7 +53,7 @@ import {
 import type { ContactListItemDto, ContactStatsDto } from "@/features/directory-v2/api";
 
 const DEFAULT_PER_PAGE = 25;
-type ViewMode = "tabela" | "cartoes" | "lista";
+type ViewMode = "cards" | "tabela";
 type Segment = "todos" | "clientes" | "leads" | "sem-resp";
 
 /** Segmentos dos stat cards (acionáveis) → filtros reais da API. */
@@ -97,20 +96,18 @@ function avatarColor(seed: string): string {
 }
 
 const VIEW_ITEMS = [
+  { value: "cards", label: <span className="flex items-center gap-1.5"><IconLayoutList size={14} />Cards</span> },
   { value: "tabela", label: <span className="flex items-center gap-1.5"><IconTable size={14} />Tabela</span> },
-  { value: "cartoes", label: <span className="flex items-center gap-1.5"><IconLayoutGrid size={14} />Cartões</span> },
-  { value: "lista", label: <span className="flex items-center gap-1.5"><IconList size={14} />Lista</span> },
 ] as const;
 
 export default function V2ContactsClientPage() {
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
 
-  const [view, setView] = useState<ViewMode>("tabela");
+  const [view, setView] = useState<ViewMode>("cards");
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [segment, setSegment] = useState<Segment>("todos");
-  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [createOpen, setCreateOpen] = useState(false);
@@ -133,13 +130,12 @@ export default function V2ContactsClientPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [segment, tagFilter]);
+  }, [segment]);
 
   const stageFilter = segment === "clientes" ? "CUSTOMER" : segment === "leads" ? "LEAD" : undefined;
   const unassignedFilter = segment === "sem-resp";
 
   const statsQuery = useContactStats(isAuthenticated);
-  const tagsQuery = useContactTags(isAuthenticated);
 
   const query = useContacts({
     search: debounced || undefined,
@@ -147,13 +143,8 @@ export default function V2ContactsClientPage() {
     perPage,
     lifecycleStage: stageFilter,
     unassigned: unassignedFilter,
-    tagIds: tagFilter,
     enabled: isAuthenticated,
   });
-
-  function toggleTag(id: string) {
-    setTagFilter((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
-  }
 
   const items = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
@@ -241,71 +232,30 @@ export default function V2ContactsClientPage() {
           }
         />
 
-        {/* Stat cards acionáveis + filtro por tag (arquétipo B) */}
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            {SEGMENTS.map((seg) => {
-              const active = segment === seg.id;
-              const val = seg.value(statsQuery.data);
-              return (
-                <button
-                  key={seg.id}
-                  type="button"
-                  onClick={() => setSegment(seg.id)}
-                  aria-pressed={active}
-                  className={`rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-all ${
-                    active
-                      ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
-                      : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]"
-                  }`}
-                >
-                  <span className="block font-display text-[21px] font-extrabold leading-none text-[var(--text-primary)]">
-                    {val === undefined ? "—" : val.toLocaleString("pt-BR")}
-                  </span>
-                  <span className="mt-1 block font-body text-[12px] text-[var(--text-muted)]">{seg.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {(tagsQuery.data ?? []).some((t) => t.contactCount > 0) && (
-            <div className="flex flex-wrap items-center gap-2">
+        {/* Stat cards acionáveis (arquétipo B) — cada número filtra a lista */}
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          {SEGMENTS.map((seg) => {
+            const active = segment === seg.id;
+            const val = seg.value(statsQuery.data);
+            return (
               <button
+                key={seg.id}
                 type="button"
-                onClick={() => setTagFilter([])}
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-colors ${
-                  tagFilter.length === 0
-                    ? "border-[var(--text-primary)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
-                    : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]"
+                onClick={() => setSegment(seg.id)}
+                aria-pressed={active}
+                className={`rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-all ${
+                  active
+                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]"
                 }`}
               >
-                Todas as tags
+                <span className="block font-display text-[21px] font-extrabold leading-none text-[var(--text-primary)]">
+                  {val === undefined ? "—" : val.toLocaleString("pt-BR")}
+                </span>
+                <span className="mt-1 block font-body text-[12px] text-[var(--text-muted)]">{seg.label}</span>
               </button>
-              {(tagsQuery.data ?? [])
-                .filter((t) => t.contactCount > 0)
-                .map((t) => {
-                  const active = tagFilter.includes(t.id);
-                  const color = t.color ?? "var(--brand-primary)";
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => toggleTag(t.id)}
-                      aria-pressed={active}
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-colors ${
-                        active
-                          ? "border-[var(--text-primary)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
-                          : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]"
-                      }`}
-                    >
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
-                      <span className="truncate">{t.name}</span>
-                      <span className="text-[var(--text-muted)]">{t.contactCount}</span>
-                    </button>
-                  );
-                })}
-            </div>
-          )}
+            );
+          })}
         </div>
 
         {/* Barra de seleção em massa */}
@@ -344,7 +294,7 @@ export default function V2ContactsClientPage() {
               description={
                 debounced
                   ? `Sem resultados para "${debounced}".`
-                  : segment !== "todos" || tagFilter.length > 0
+                  : segment !== "todos"
                     ? "Nenhum contato para os filtros selecionados."
                     : "Crie contatos no Inbox ou via API."
               }
@@ -360,10 +310,8 @@ export default function V2ContactsClientPage() {
             onToggleOne={toggleOne}
             onEdit={setEditing}
           />
-        ) : view === "cartoes" ? (
-          <CartaoView items={items} onEdit={setEditing} />
         ) : (
-          <ListaView items={items} onEdit={setEditing} />
+          <CardsView items={items} onEdit={setEditing} />
         )}
 
         <PaginationGlass
@@ -459,111 +407,43 @@ function TabelaView({
   );
 }
 
-// ── Cartões ─────────────────────────────────────────────────────────────────
+// ── Cards (card-rows do arquétipo B) ─────────────────────────────────────────
 
-function CartaoView({ items, onEdit }: { items: ContactListItemDto[]; onEdit: (c: ContactListItemDto) => void }) {
-  return (
-    <div className="grid grid-cols-2 gap-3 overflow-y-auto pb-1 lg:grid-cols-3 xl:grid-cols-4">
-      {items.map((c) => (
-        <div
-          key={c.id}
-          className="group flex flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-shadow hover:shadow-[var(--glass-shadow)]"
-        >
-          {/* Avatar + ação */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-                {initials(c.name)}
-              </span>
-              <div className="min-w-0">
-                <Link href={`/contacts/${c.id}`} className="truncate font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
-                  {c.name}
-                </Link>
-                <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "Sem e-mail"}</div>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onEdit(c)}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] opacity-0 transition-all group-hover:opacity-100 hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-              aria-label={`Editar ${c.name}`}
-            >
-              <IconPencil size={14} />
-            </button>
-          </div>
-
-          {/* Informações */}
-          <div className="flex flex-col gap-1.5 text-[12px]">
-            {c.phone && (
-              <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-                <IconPhone size={13} className="shrink-0 text-[var(--text-muted)]" />
-                <span className="truncate">{c.phone}</span>
-              </div>
-            )}
-            {c.company && (
-              <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-                <IconBuilding size={13} className="shrink-0 text-[var(--text-muted)]" />
-                <span className="truncate">{c.company.name}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Tags */}
-          {(c.tags?.length ?? 0) > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {(c.tags ?? []).slice(0, 4).map((t) => (
-                <Chip key={t.id} variant="ghost" color={t.color ?? undefined}>{t.name}</Chip>
-              ))}
-              {(c.tags?.length ?? 0) > 4 && (
-                <span className="font-display text-[11px] text-[var(--text-muted)]">+{(c.tags?.length ?? 0) - 4}</span>
-              )}
-            </div>
-          )}
-
-          {/* Data */}
-          <div className="mt-auto border-t border-[var(--glass-border-subtle)] pt-2.5 font-body text-[11px] text-[var(--text-muted)]">
-            Criado em {fmtDateBR(c.createdAt)}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Lista ────────────────────────────────────────────────────────────────────
-
-function ListaView({ items, onEdit }: { items: ContactListItemDto[]; onEdit: (c: ContactListItemDto) => void }) {
+function CardsView({ items, onEdit }: { items: ContactListItemDto[]; onEdit: (c: ContactListItemDto) => void }) {
   return (
     <div className="flex flex-col gap-2 overflow-y-auto pb-1">
       {items.map((c) => (
         <div
           key={c.id}
-          className="flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-shadow hover:shadow-[var(--glass-shadow)]"
+          className="group flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]"
         >
           {/* Avatar */}
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
             {initials(c.name)}
           </span>
 
-          {/* Nome + email */}
+          {/* Nome + tags inline + prévia (email/telefone) */}
           <div className="min-w-0 flex-1 leading-tight">
-            <Link href={`/contacts/${c.id}`} className="block truncate font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
-              {c.name}
-            </Link>
-            <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "—"}</div>
+            <div className="flex min-w-0 items-center gap-2">
+              <Link href={`/contacts/${c.id}`} className="truncate font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
+                {c.name}
+              </Link>
+              {(c.tags ?? []).slice(0, 2).map((t) => (
+                <Chip key={t.id} variant="ghost" color={t.color ?? undefined}>{t.name}</Chip>
+              ))}
+              {(c.tags?.length ?? 0) > 2 && (
+                <span className="font-display text-[11px] text-[var(--text-muted)]">+{(c.tags?.length ?? 0) - 2}</span>
+              )}
+            </div>
+            <div className="mt-0.5 truncate font-body text-[12px] text-[var(--text-muted)]">
+              {c.email ?? c.phone ?? "—"}
+            </div>
           </div>
 
-          {/* Telefone com ícone */}
-          {c.phone && (
-            <div className="hidden shrink-0 items-center gap-1.5 font-display text-[13px] text-[var(--text-muted)] sm:flex">
-              <IconPhone size={14} className="shrink-0" />
-              <span>{c.phone}</span>
-            </div>
-          )}
-
-          {/* Data */}
-          <div className="hidden w-[80px] shrink-0 text-right font-display text-[12px] text-[var(--text-muted)] md:block">
-            {fmtDateBR(c.createdAt)}
+          {/* Metadados à direita: empresa + criado em */}
+          <div className="hidden shrink-0 text-right leading-tight md:block">
+            <div className="max-w-[180px] truncate font-display text-[13px] font-semibold text-[var(--text-secondary)]">{c.company?.name ?? "—"}</div>
+            <div className="font-body text-[11px] text-[var(--text-muted)]">Criado em {fmtDateBR(c.createdAt)}</div>
           </div>
 
           {/* Ações rápidas */}
@@ -592,6 +472,7 @@ function ListaView({ items, onEdit }: { items: ContactListItemDto[]; onEdit: (c:
             >
               <IconPencil size={16} />
             </button>
+            <IconChevronRight size={16} className="ml-1 shrink-0 text-[var(--text-muted)] opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
         </div>
       ))}

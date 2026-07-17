@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
 
 import {
@@ -10,21 +9,18 @@ import {
   IconCircleX,
   IconClock,
   IconGridDots,
-  IconLayoutKanban,
   IconList,
+  IconMenu2,
+  IconSettings,
 } from "@tabler/icons-react";
 
-import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
-import { PageHeader } from "@/components/crm/page-header";
-import {
-  PAGE_FILTER_DROPDOWN_CLASS,
-  PageFilterBar,
-  PageSearchBar,
-  PageSegmentedControl,
-} from "@/components/crm/page-toolbar";
+import { PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
+import { PipelineHeader } from "@/components/crm/pipeline-header";
+import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
   DealListTable,
   type DealListTab,
@@ -49,12 +45,14 @@ export default function V2PipelineListClientPage() {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
-  const [pipelineId, setPipelineId] = useState<string | undefined>(undefined);
+  const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [statusTab, setStatusTab] = useState<DealListTab>("abertos");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -74,8 +72,19 @@ export default function V2PipelineListClientPage() {
     }
   }, [pipelines, pipelineId]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDown(e: MouseEvent) {
+      if (menuWrapRef.current && !menuWrapRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [menuOpen]);
+
   const dealsQuery = useDealsList({
-    pipelineId,
+    pipelineId: pipelineId ?? undefined,
     search: debounced || undefined,
     page,
     perPage,
@@ -102,51 +111,80 @@ export default function V2PipelineListClientPage() {
       <NavRailV2 />
 
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
-        <PageHeader
-          icon={<IconLayoutKanban size={22} stroke={2.2} />}
-          title="Pipeline"
-          center={
-            <PageSearchBar
-              variant="compact"
-              value={search}
-              onChange={setSearch}
-              placeholder="Buscar por título, contato, CPF, RGM…"
-              aria-label="Buscar negócios"
+        <PipelineHeader
+          activeView="list"
+          onViewChange={(view) => {
+            if (view === "kanban") router.push("/pipeline");
+          }}
+          titleAccessory={
+            <PipelineSwitcher
+              variant="icon"
+              selectedId={pipelineId}
+              onChange={(id) => {
+                setPipelineId(id);
+                setPage(1);
+              }}
             />
           }
-          actions={<ViewSwitcher current="list" />}
-        />
-
-        <PageFilterBar className="w-full flex-wrap items-center justify-between gap-3">
-          <DropdownGlass
-            options={pipelines.map((p) => ({ value: p.id, label: p.name }))}
-            value={pipelineId ?? ""}
-            onValueChange={(v) => {
-              setPipelineId(v || undefined);
-              setPage(1);
-            }}
-            menuLabel="Pipeline"
-            triggerClassName={PAGE_FILTER_DROPDOWN_CLASS}
-          />
-          <PageSegmentedControl
-            size="compact"
-            aria-label="Filtrar negócios por status"
-            items={STATUS_TABS.map((t) => ({
-              value: t.id,
-              label: (
-                <span className="inline-flex items-center gap-1.5">
-                  {t.icon}
-                  {t.label}
-                  <span className="min-w-[18px] rounded-full bg-[var(--glass-bg-strong)] px-1.5 text-center text-[10px] font-bold tabular-nums text-[var(--text-muted)]">
-                    {tabCounts[t.id]}
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Buscar por título, contato, CPF, RGM…"
+          tabsOverride={
+            <PageSegmentedControl
+              size="compact"
+              aria-label="Filtrar negócios por status"
+              items={STATUS_TABS.map((t) => ({
+                value: t.id,
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    {t.icon}
+                    {t.label}
+                    <span className="min-w-[18px] rounded-full bg-[var(--glass-bg-strong)] px-1.5 text-center text-[10px] font-bold tabular-nums text-[var(--text-muted)]">
+                      {tabCounts[t.id]}
+                    </span>
                   </span>
-                </span>
-              ),
-            }))}
-            value={statusTab}
-            onChange={(v) => setStatusTab(v as DealListTab)}
-          />
-        </PageFilterBar>
+                ),
+              }))}
+              value={statusTab}
+              onChange={(v) => setStatusTab(v as DealListTab)}
+            />
+          }
+          menuSlot={
+            <div ref={menuWrapRef} className="relative">
+              <TooltipGlass label="Ações do pipeline" side="bottom">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-label="Ações do pipeline"
+                  aria-expanded={menuOpen}
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+                    menuOpen
+                      ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+                      : "text-[var(--brand-primary)] hover:bg-[var(--color-primary-soft)]",
+                  )}
+                >
+                  <IconMenu2 size={18} stroke={2.2} />
+                </button>
+              </TooltipGlass>
+              {menuOpen && (
+                <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      router.push("/settings/pipeline");
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+                  >
+                    <IconSettings size={15} className="shrink-0 text-[var(--brand-primary)]" />
+                    Configurar pipeline
+                  </button>
+                </div>
+              )}
+            </div>
+          }
+        />
 
         {dealsQuery.isLoading && rows.length === 0 ? (
           <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
@@ -189,37 +227,6 @@ export default function V2PipelineListClientPage() {
           }}
         />
       </main>
-    </div>
-  );
-}
-
-function ViewSwitcher({ current }: { current: "kanban" | "list" }) {
-  return (
-    <div className="inline-flex rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
-      <Link
-        href="/pipeline"
-        className={cn(
-          "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-display text-xs font-bold transition-colors",
-          current === "kanban"
-            ? "bg-[var(--brand-primary)] text-white"
-            : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-        )}
-      >
-        <IconLayoutKanban size={13} />
-        Kanban
-      </Link>
-      <Link
-        href="/pipeline/list"
-        className={cn(
-          "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-display text-xs font-bold transition-colors",
-          current === "list"
-            ? "bg-[var(--brand-primary)] text-white"
-            : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-        )}
-      >
-        <IconList size={13} />
-        Lista
-      </Link>
     </div>
   );
 }

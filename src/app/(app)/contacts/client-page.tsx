@@ -697,6 +697,9 @@ function TabelaView({
 
 // ── Cards (card-rows do arquétipo B) ─────────────────────────────────────────
 
+// Grade compartilhada entre o cabeçalho e as linhas (colunas alinhadas).
+const CARD_COLS = "grid-cols-[32px_minmax(220px,2.4fr)_minmax(140px,1.4fr)_150px_120px_100px]";
+
 function CardsView({
   items, selected, allChecked, someChecked, onToggleAll, onToggleOne, onEdit,
 }: {
@@ -710,13 +713,16 @@ function CardsView({
 }) {
   return (
     <div className="flex flex-col gap-2 overflow-y-auto pb-1">
-      {/* Cabeçalho: selecionar todos (à esquerda) + rótulos de coluna */}
-      <div className="flex items-center gap-4 px-4 pb-1 pt-0.5">
-        <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todos" />
-        <span className="w-10 shrink-0" aria-hidden />
-        <span className="flex-1 font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Contato</span>
-        <span className="hidden w-[180px] text-right font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] md:block">Empresa · Criado em</span>
-        <span className="w-[100px] text-right font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Ações</span>
+      {/* Cabeçalho de colunas alinhado às linhas — padrão de Empresas */}
+      <div className={listTableHeadRowClass(`grid ${CARD_COLS} gap-3 border border-transparent px-4 py-2`)}>
+        <span>
+          <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todos" />
+        </span>
+        <ListColumnLabel>Contato</ListColumnLabel>
+        <ListColumnLabel>Empresa</ListColumnLabel>
+        <ListColumnLabel>Telefone</ListColumnLabel>
+        <ListColumnLabel>Criado em</ListColumnLabel>
+        <ListColumnLabel align="right">Ações</ListColumnLabel>
       </div>
       {items.map((c) => {
         const isSelected = selected.has(c.id);
@@ -727,72 +733,56 @@ function CardsView({
           tabIndex={0}
           onClick={() => onEdit(c)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEdit(c); } }}
-          className={`group flex cursor-pointer items-center gap-4 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)] ${
+          className={`group grid ${CARD_COLS} cursor-pointer items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)] ${
             isSelected
               ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
               : "border-[var(--glass-border)] bg-[var(--glass-bg-base)]"
           }`}
         >
-          {/* Checkbox de seleção */}
+          {/* Seleção */}
           <span onClick={(e) => e.stopPropagation()}>
             <CheckboxGlass checked={isSelected} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
           </span>
 
-          {/* Avatar */}
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-            {initials(c.name)}
-          </span>
-
-          {/* Nome + tags inline + prévia (email/telefone) */}
-          <div className="min-w-0 flex-1 leading-tight">
-            <div className="flex min-w-0 items-center gap-2">
-              <Link href={`/contacts/${c.id}`} onClick={(e) => e.stopPropagation()} className="truncate font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
-                {c.name}
-              </Link>
-              {(c.tags ?? []).slice(0, 2).map((t) => (
-                <Chip key={t.id} variant="ghost" color={t.color ?? undefined}>{t.name}</Chip>
-              ))}
-              {(c.tags?.length ?? 0) > 2 && (
-                <span className="font-display text-[11px] text-[var(--text-muted)]">+{(c.tags?.length ?? 0) - 2}</span>
-              )}
-            </div>
-            <div className="mt-0.5 truncate font-body text-[12px] text-[var(--text-muted)]">
-              {c.email ?? c.phone ?? "—"}
+          {/* Contato: avatar + nome/tags + e-mail */}
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
+              {initials(c.name)}
+            </span>
+            <div className="min-w-0 leading-tight">
+              <div className="flex min-w-0 items-center gap-2">
+                <Link href={`/contacts/${c.id}`} onClick={(e) => e.stopPropagation()} className="truncate font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
+                  {c.name}
+                </Link>
+                {(c.tags ?? []).slice(0, 2).map((t) => (
+                  <Chip key={t.id} variant="ghost" color={t.color ?? undefined}>{t.name}</Chip>
+                ))}
+                {(c.tags?.length ?? 0) > 2 && (
+                  <span className="font-display text-[11px] text-[var(--text-muted)]">+{(c.tags?.length ?? 0) - 2}</span>
+                )}
+              </div>
+              <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "—"}</div>
             </div>
           </div>
 
-          {/* Metadados à direita: empresa + criado em */}
-          <div className="hidden w-[180px] shrink-0 text-right leading-tight md:block">
-            <div className="truncate font-display text-[13px] font-semibold text-[var(--text-secondary)]">{c.company?.name ?? "—"}</div>
-            <div className="font-body text-[11px] text-[var(--text-muted)]">Criado em {fmtDateBR(c.createdAt)}</div>
-          </div>
+          {/* Empresa */}
+          <div className="truncate font-display text-[13px] text-[var(--text-secondary)]">{c.company?.name ?? "—"}</div>
 
-          {/* Ações rápidas */}
-          <div className="flex w-[100px] shrink-0 items-center justify-end gap-0.5">
-            <a
-              href={c.phone ? `tel:${c.phone}` : undefined}
-              onClick={(e) => e.stopPropagation()}
-              aria-label="Ligar"
-              aria-disabled={!c.phone}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-            >
+          {/* Telefone */}
+          <div className="truncate font-display text-[13px] text-[var(--text-secondary)]">{c.phone ?? "—"}</div>
+
+          {/* Criado em */}
+          <div className="truncate font-display text-[13px] text-[var(--text-muted)]">{fmtDateBR(c.createdAt)}</div>
+
+          {/* Ações */}
+          <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
+            <a href={c.phone ? `tel:${c.phone}` : undefined} aria-label="Ligar" aria-disabled={!c.phone} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
               <IconPhone size={16} />
             </a>
-            <a
-              href={c.email ? `mailto:${c.email}` : undefined}
-              onClick={(e) => e.stopPropagation()}
-              aria-label="Enviar e-mail"
-              aria-disabled={!c.email}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-            >
+            <a href={c.email ? `mailto:${c.email}` : undefined} aria-label="Enviar e-mail" aria-disabled={!c.email} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
               <IconMail size={16} />
             </a>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onEdit(c); }}
-              aria-label={`Editar ${c.name}`}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
-            >
+            <button type="button" onClick={() => onEdit(c)} aria-label={`Editar ${c.name}`} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
               <IconPencil size={16} />
             </button>
           </div>

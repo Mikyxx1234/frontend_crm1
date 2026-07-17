@@ -102,7 +102,6 @@ export default function WidgetsClientPage({
         <PageHeader
           icon={<IconLayoutGrid size={22} />}
           title="Widgets"
-          description="Central de extensões — instale recursos extras na sua organização"
           center={
             <PageSearchBar
               variant="compact"

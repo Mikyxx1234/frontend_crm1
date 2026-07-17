@@ -105,7 +105,6 @@ export default function V2PipelineListClientPage() {
         <PageHeader
           icon={<IconLayoutKanban size={22} stroke={2.2} />}
           title="Pipeline"
-          description="Lista completa de negócios — alterne entre Kanban e Lista"
           center={
             <PageSearchBar
               variant="compact"

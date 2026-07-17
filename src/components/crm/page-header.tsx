@@ -21,17 +21,19 @@ export type PageHeaderBack = {
  *
  * Mobile (< lg): título numa linha; busca + ações numa faixa
  * `toolbar-hscroll` (mesmo padrão do Pipeline / kanban).
- * Desktop (lg+): grid de 3 colunas (identidade | busca | ações).
+ * Desktop (lg+): grid de 3 colunas (identidade | busca à esquerda | ações).
+ * Descrições de página foram removidas do padrão NavRail.
  */
 interface PageHeaderProps {
   icon: React.ReactNode
   title: string
+  /** @deprecated Ignorado — NavRail não exibe mais descrição sob o título. */
   description?: string
   /** Voltar à lista pai — botão quadrado ghost à esquerda do ícone. */
   back?: PageHeaderBack
   /**
-   * Busca — renderizada no CENTRO em desktop; na faixa rolável no mobile.
-   * Tipicamente um `<SearchInput />`.
+   * Busca — alinhada à ESQUERDA (logo após o título) em desktop;
+   * na faixa rolável no mobile. Tipicamente um `<SearchInput />`.
    */
   center?: React.ReactNode
   /**
@@ -45,12 +47,10 @@ interface PageHeaderProps {
 function Identity({
   icon,
   title,
-  description,
   back,
 }: {
   icon: React.ReactNode
   title: string
-  description?: string
   back?: PageHeaderBack
 }) {
   return (
@@ -73,11 +73,6 @@ function Identity({
         <h1 className="font-display text-[22px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
           {title}
         </h1>
-        {description ? (
-          <p className="hidden truncate font-body text-[13px] text-[var(--text-muted)] sm:block">
-            {description}
-          </p>
-        ) : null}
       </div>
     </div>
   )
@@ -86,7 +81,6 @@ function Identity({
 export function PageHeader({
   icon,
   title,
-  description,
   back,
   center,
   actions,
@@ -96,16 +90,16 @@ export function PageHeader({
 
   return (
     <div className={cn("flex flex-col gap-2 px-1", className)}>
-      {/* Desktop: grid clássico */}
+      {/* Desktop: título | busca (esq.) | ações */}
       <div
         className={cn(
           "hidden items-center gap-4 lg:grid",
           hasControls ? "grid-cols-[auto_1fr_auto]" : "grid-cols-[auto_1fr]",
         )}
       >
-        <Identity icon={icon} title={title} description={description} back={back} />
+        <Identity icon={icon} title={title} back={back} />
         {center ? (
-          <div className="flex min-w-0 flex-1 items-center justify-center px-4">
+          <div className="flex min-w-0 flex-1 items-center justify-start">
             {center}
           </div>
         ) : (
@@ -118,7 +112,7 @@ export function PageHeader({
 
       {/* Mobile / tablet: título + faixa horizontal rolável */}
       <div className="flex flex-col gap-2 lg:hidden">
-        <Identity icon={icon} title={title} description={description} back={back} />
+        <Identity icon={icon} title={title} back={back} />
         {hasControls ? (
           <div className="toolbar-hscroll flex max-w-full flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
             {center ? (

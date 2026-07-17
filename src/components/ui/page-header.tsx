@@ -86,13 +86,13 @@ type PageHeaderProps = {
  */
 export function PageHeader({
   title,
-  description,
+  description: _description,
   eyebrow,
   icon,
   actions,
   className,
   titleClassName,
-  descriptionClassName,
+  descriptionClassName: _descriptionClassName,
   bordered = false,
 }: PageHeaderProps) {
   return (
@@ -115,16 +115,7 @@ export function PageHeader({
             <h1 className={cn(pageHeaderTitleClass, titleClassName)}>
               {title}
             </h1>
-            {description ? (
-              <p
-                className={cn(
-                  pageHeaderDescriptionClass,
-                  descriptionClassName,
-                )}
-              >
-                {description}
-              </p>
-            ) : null}
+            {/* Descrição de página removida do padrão NavRail / headers. */}
           </div>
         </div>
       </div>

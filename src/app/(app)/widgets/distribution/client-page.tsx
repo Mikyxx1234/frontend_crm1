@@ -143,7 +143,6 @@ export default function DistributionClientPage({
         <PageHeader
           icon={<IconRoute size={22} />}
           title="Distribuição"
-          description="Distribua leads entre consultores com regras de disponibilidade, fila e equilíbrio"
           actions={
             smartInstalled ? (
               <PagePrimaryButton

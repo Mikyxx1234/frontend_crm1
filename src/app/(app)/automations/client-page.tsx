@@ -300,7 +300,6 @@ export default function V2AutomationsClientPage() {
         <PageHeader
           icon={<IconBolt size={22} stroke={2.2} />}
           title="Automações"
-          description="Fluxos disparados por eventos do CRM."
           center={
             <PageSearchBar
               variant="compact"

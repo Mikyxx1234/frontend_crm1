@@ -180,7 +180,6 @@ export function PipelineHeader({
         back={back}
         icon={<IconLayoutKanban size={22} stroke={2.2} />}
         title="Pipeline"
-        description="Acompanhe e mova seus negócios pelas etapas do funil."
         center={
           onSearchChange ? (
             <SearchInput

@@ -103,7 +103,6 @@ export default function CampaignsClientPage() {
         <PageHeader
           icon={<IconSpeakerphone size={22} stroke={2.2} />}
           title="Campanhas"
-          description="Disparos em massa via WhatsApp (Meta Cloud API) com rastreamento completo"
           center={
             <PageSearchBar
               variant="compact"

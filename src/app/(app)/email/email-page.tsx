@@ -691,7 +691,6 @@ export function EmailPage() {
           <PageHeader
             icon={<IconMail size={22} />}
             title="E-mail"
-            description="Caixa de entrada conectada ao CRM"
             center={
               <PageSearchBar
                 variant="compact"
@@ -849,8 +848,6 @@ export function EmailPage() {
           icon={<IconMail size={22} />}
 
           title="E-mail"
-
-          description="Caixa de entrada conectada ao CRM"
 
           center={
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -254,6 +254,22 @@ function initials(name: string): string {
   return (first + last).toUpperCase() || "?";
 }
 
+/** Estilo de chip com a cor da tag (selecionado = mais forte). */
+function tagChipStyle(color: string | null | undefined, selected: boolean): CSSProperties | undefined {
+  if (!color) return undefined;
+  return selected
+    ? {
+        color,
+        borderColor: color,
+        background: `color-mix(in srgb, ${color} 20%, transparent)`,
+      }
+    : {
+        color,
+        borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+        background: `color-mix(in srgb, ${color} 10%, transparent)`,
+      };
+}
+
 function avatarColor(seed: string): string {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
@@ -463,9 +479,8 @@ export default function V2ContactsClientPage() {
         <PageHeader
           icon={<IconUsers size={22} stroke={2.2} />}
           title="Contatos"
-          description="Diretório de contatos vinculados ao CRM"
           center={
-            <div className="flex w-full max-w-md justify-center">
+            <div className="flex w-full max-w-md justify-start">
               <SearchFilterBar
                 search={search}
                 onSearch={setSearch}
@@ -1066,22 +1081,25 @@ function SearchFilterBar({
                     <span className="px-1 py-1 font-body text-[12px] text-[var(--text-muted)]">Nenhuma tag.</span>
                   ) : visibleTags.map((t) => {
                     const on = tagSet.has(t.id);
+                    const colored = Boolean(t.color);
                     return (
                       <button
                         key={t.id}
                         type="button"
                         onClick={() => toggleDraftTag(t.id)}
                         aria-pressed={on}
+                        style={tagChipStyle(t.color, on)}
                         className={cn(
                           "flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 font-display text-[12px] font-semibold transition-colors",
-                          on
-                            ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
-                            : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                          !colored &&
+                            (on
+                              ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                              : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]"),
                         )}
                       >
                         {on ? <IconCheck size={13} stroke={2.6} /> : <IconPlus size={13} stroke={2.4} />}
                         {t.name}
-                        <span className={on ? "text-[var(--brand-primary)]/70" : "text-[var(--text-muted)]"}>{t.contactCount}</span>
+                        <span className={colored ? "opacity-70" : on ? "text-[var(--brand-primary)]/70" : "text-[var(--text-muted)]"}>{t.contactCount}</span>
                       </button>
                     );
                   })}
@@ -1681,8 +1699,6 @@ function ContactFormSheet({
   const [phone, setPhone] = useState("");
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState<string | null>(null);
-  const [lifecycleStage, setLifecycleStage] = useState("");
-  const [source, setSource] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [tagQuery, setTagQuery] = useState("");
   const [saving, setSaving] = useState(false);
@@ -1698,8 +1714,6 @@ function ContactFormSheet({
       setPhone(contact.phone ?? "");
       setCompanyId(contact.company?.id ?? null);
       setCompanyName(contact.company?.name ?? null);
-      setLifecycleStage(contact.lifecycleStage ?? "");
-      setSource(contact.source ?? "");
       setSelectedTagIds((contact.tags ?? []).map((t) => t.id));
     } else {
       setName("");
@@ -1707,8 +1721,6 @@ function ContactFormSheet({
       setPhone("");
       setCompanyId(null);
       setCompanyName(null);
-      setLifecycleStage("");
-      setSource("");
       setSelectedTagIds([]);
     }
     setTagQuery("");
@@ -1748,8 +1760,6 @@ function ContactFormSheet({
       email: email.trim() || null,
       phone: phone.trim() || null,
       companyId,
-      lifecycleStage: lifecycleStage || null,
-      source: source.trim() || null,
     };
     try {
       if (isEdit && contact) {
@@ -1806,25 +1816,6 @@ function ContactFormSheet({
           <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Empresa</span>
           <CompanyPicker valueId={companyId} valueName={companyName} onChange={(id, nm) => { setCompanyId(id); setCompanyName(nm); }} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Estágio</span>
-            <select
-              value={lifecycleStage}
-              onChange={(e) => setLifecycleStage(e.target.value)}
-              className="h-10 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
-            >
-              <option value="">—</option>
-              {Object.entries(LIFECYCLE_LABELS).map(([k, label]) => (
-                <option key={k} value={k}>{label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Fonte</span>
-            <InputGlass type="text" value={source} onChange={(e) => setSource(e.target.value)} placeholder="Ex.: WhatsApp" />
-          </label>
-        </div>
         <div>
           <span className="mb-1.5 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Tags{selectedTagIds.length > 0 ? ` (${selectedTagIds.length})` : ""}
@@ -1843,17 +1834,20 @@ function ContactFormSheet({
               <span className="px-1 py-1 font-body text-[12px] text-[var(--text-muted)]">Nenhuma tag.</span>
             ) : visibleTags.map((t) => {
               const on = tagSet.has(t.id);
+              const colored = Boolean(t.color);
               return (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => toggleTag(t.id)}
                   aria-pressed={on}
+                  style={tagChipStyle(t.color, on)}
                   className={cn(
                     "flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 font-display text-[12px] font-semibold transition-colors",
-                    on
-                      ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
-                      : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                    !colored &&
+                      (on
+                        ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                        : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]"),
                   )}
                 >
                   {on ? <IconCheck size={13} stroke={2.6} /> : <IconPlus size={13} stroke={2.4} />}

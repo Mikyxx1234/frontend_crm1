@@ -418,7 +418,6 @@ export default function JobOpeningsClientPage() {
         <PageHeader
           icon={<IconBriefcase size={22} />}
           title="Vagas"
-          description="Processos seletivos com alocação de posições"
           actions={
             <div className="flex items-center gap-2">
               <div className="flex gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-0.5">

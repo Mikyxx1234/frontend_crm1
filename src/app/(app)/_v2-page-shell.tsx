@@ -52,7 +52,6 @@ export function AppV2PageShell({
         <PageHeader
           icon={icon}
           title={title}
-          description={description}
           actions={headerActions}
         />
 

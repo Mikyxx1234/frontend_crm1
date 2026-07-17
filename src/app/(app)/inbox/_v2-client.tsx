@@ -211,7 +211,6 @@ interface InboxV2ClientPageProps {
   pageHeader?: {
     icon: React.ReactNode;
     title: string;
-    description?: string;
   };
 }
 
@@ -1095,7 +1094,6 @@ export default function InboxV2ClientPage({
             <PageHeader
               icon={pageHeader.icon}
               title={pageHeader.title}
-              description={pageHeader.description}
               center={
                 <PageSearchBar
                   variant="compact"
@@ -1175,7 +1173,6 @@ export default function InboxV2ClientPage({
           <PageHeader
             icon={pageHeader.icon}
             title={pageHeader.title}
-            description={pageHeader.description}
             center={
               <PageSearchBar
                 variant="compact"

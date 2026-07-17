@@ -210,7 +210,6 @@ export default function V2ActivitiesClientPage() {
         <PageHeader
           icon={<IconCalendarEvent size={22} stroke={2.2} />}
           title="Tarefas"
-          description="Agende e acompanhe tarefas, reuniões, ligações e eventos."
           actions={
             <PagePrimaryButton type="button" onClick={() => setComposerOpen(true)}>
               <IconPlus size={15} stroke={2.4} /> Nova tarefa

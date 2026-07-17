@@ -17,7 +17,6 @@ export default function AIAgentsV2ClientPage() {
   return (
     <AppV2PageShell
       title="Agentes de IA"
-      description="Configure assistentes, prompts e fila de rascunhos"
       icon={<IconRobot size={22} />}
     >
       <div className="min-w-0 overflow-x-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-3 backdrop-blur-md sm:p-4">

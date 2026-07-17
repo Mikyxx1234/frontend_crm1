@@ -91,7 +91,6 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
         <PageHeader
           icon={<IconPhone size={22} stroke={2.2} />}
           title="Chamadas"
-          description="Histórico de chamadas recebidas, realizadas e perdidas."
           center={
             <PageSearchBar
               variant="compact"

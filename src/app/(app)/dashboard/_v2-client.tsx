@@ -89,7 +89,6 @@ export default function DashboardV2ClientPage({
         <PageHeader
           icon={<IconLayoutDashboard size={22} stroke={2.2} />}
           title="Dashboard"
-          description="Visão geral de negócios e atendimento"
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
               <PageSegmentedControl

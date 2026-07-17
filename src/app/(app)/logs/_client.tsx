@@ -330,7 +330,6 @@ export default function LogsClientPage() {
         <PageHeader
           icon={<IconClipboardList size={22} stroke={2.2} />}
           title="Logs"
-          description="Histórico completo da operação — humanos, IA, automações e integrações."
           center={
             isFeed ? (
               <PageSearchBar

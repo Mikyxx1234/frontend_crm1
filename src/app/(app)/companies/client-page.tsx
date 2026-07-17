@@ -154,7 +154,6 @@ export default function V2CompaniesClientPage() {
         <PageHeader
           icon={<IconBuilding size={22} stroke={2.2} />}
           title="Empresas"
-          description="Empresas cadastradas no CRM"
           center={
             <PageSearchBar variant="compact" value={search} onChange={setSearch} placeholder="Buscar por nome, e-mail..." aria-label="Buscar empresas" />
           }

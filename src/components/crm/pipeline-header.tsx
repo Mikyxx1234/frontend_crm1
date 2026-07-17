@@ -5,13 +5,10 @@ import { cn } from "@/lib/utils"
 import { PageHeader, type PageHeaderBack } from "@/components/crm/page-header"
 import { SearchInput } from "@/components/crm/search-input"
 import {
-  PageGhostButton,
   PagePrimaryButton,
   PageSegmentedControl,
 } from "@/components/crm/page-toolbar"
 import {
-  IconFilter,
-  IconBookmark,
   IconLayoutKanban,
   IconList,
   IconPlus,
@@ -55,24 +52,33 @@ interface PipelineHeaderProps {
   activeView?: ViewType
   onViewChange?: (view: ViewType) => void
   /**
-   * Slot opcional que substitui o nome "Pipeline Principal" hardcoded
-   * — use para plugar um seletor real (ex.: PipelineSwitcher).
+   * Slot renderizado ao lado do título ("Pipeline") no PageHeader.
+   * Usado para o dropdown de troca de funil no padrão Contatos.
+   */
+  titleAccessory?: React.ReactNode
+  /**
+   * @deprecated Antes usado na faixa secundária. Preferir `titleAccessory`.
+   * Se ainda passado, é renderizado na faixa secundária (compat Settings).
    */
   pipelineNameSlot?: React.ReactNode
   /** Counts dinamicos por aba. Quando undefined, mantem o "14" mock do v0. */
   tabCounts?: Partial<Record<TabId, number>>
-  /** Ref no botao Filtros para ancorar popovers. */
-  filtersButtonRef?: React.Ref<HTMLButtonElement>
-  /** Handler do botao Filtros. Quando ausente, botao fica decorativo. */
-  onFiltersClick?: () => void
-  /** Numero de filtros ativos — exibe badge ao lado do icone. */
-  activeFiltersCount?: number
-  /** Valor da busca. Quando `onSearchChange` existe, exibe a barra padrao. */
+  /** Valor da busca. Sem `onSearchChange` a barra padrao nao renderiza. */
   search?: string
-  /** Handler da busca. Sem ele, a barra de busca nao e renderizada. */
+  /** Handler da busca padrao (SearchInput). */
   onSearchChange?: (value: string) => void
-  /** Placeholder da busca. */
+  /** Placeholder da busca padrao. */
   searchPlaceholder?: string
+  /**
+   * Substitui a barra de busca padrão por um nó arbitrário — usado no kanban
+   * para plugar a `PipelineSearchFilterBar` (busca + filtros segmentados).
+   */
+  searchSlot?: React.ReactNode
+  /**
+   * Slot livre à direita das ações, exibido após o toggle Kanban/Lista e
+   * antes do botão "+ Novo". Padrão do kanban: hambúrguer azul.
+   */
+  menuSlot?: React.ReactNode
   /**
    * Substitui toda a faixa de abas de status (Abertos/Ganhos/Perdidos/Todos)
    * por um nó arbitrário. Útil para reutilizar o shell do PipelineHeader em
@@ -80,15 +86,13 @@ interface PipelineHeaderProps {
    */
   tabsOverride?: React.ReactNode
   /**
-   * Slot para ícone/botão de configurações — renderizado inline na barra
-   * secundária, logo após o separador do pipelineNameSlot. Posição correta
-   * conforme protótipo v0: colado ao PipelineSwitcher, antes das tabs.
+   * Slot para ícone/botão de configurações — renderizado na faixa secundária,
+   * após o separador do pipelineNameSlot. Continua disponível para Settings.
    */
   settingsSlot?: React.ReactNode
   /**
-   * Quando true, suprime os botões de ação do header (Filtros, Salvos,
-   * toggle kanban/lista e +Novo). Útil em telas de configuração onde
-   * esses controles não fazem sentido.
+   * Quando true, suprime os botões de ação do header (toggle kanban/lista e
+   * +Novo). Útil em telas de configuração.
    */
   hideActions?: boolean
   /**
@@ -105,14 +109,14 @@ export function PipelineHeader({
   onTabChange,
   activeView = "kanban",
   onViewChange,
+  titleAccessory,
   pipelineNameSlot,
   tabCounts,
-  filtersButtonRef,
-  onFiltersClick,
-  activeFiltersCount = 0,
   search,
   onSearchChange,
   searchPlaceholder = "Buscar por título, contato, CPF, RGM…",
+  searchSlot,
+  menuSlot,
   tabsOverride,
   settingsSlot,
   hideActions = false,
@@ -141,23 +145,6 @@ export function PipelineHeader({
 
   const actionButtons = !hideActions ? (
     <>
-      <PageGhostButton
-        ref={filtersButtonRef}
-        type="button"
-        onClick={onFiltersClick}
-        active={activeFiltersCount > 0}
-        className={cn("shrink-0", activeFiltersCount > 0 ? "px-3.5" : undefined)}
-      >
-        <IconFilter size={15} /> Filtros
-        {activeFiltersCount > 0 && (
-          <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 text-[10px] font-bold tabular-nums text-white">
-            {activeFiltersCount}
-          </span>
-        )}
-      </PageGhostButton>
-      <PageGhostButton type="button" className="shrink-0 px-3.5">
-        <IconBookmark size={15} /> Salvos
-      </PageGhostButton>
       <PageSegmentedControl
         items={VIEW_ITEMS}
         value={view}
@@ -169,74 +156,90 @@ export function PipelineHeader({
       <PagePrimaryButton type="button" onClick={onNewDeal} disabled={!onNewDeal} className="shrink-0">
         <IconPlus size={15} stroke={2.4} /> Novo
       </PagePrimaryButton>
+      {menuSlot}
     </>
   ) : null
 
+  // Se tabsOverride não foi fornecido, renderizamos as tabs padrão.
+  // Se veio como `<></>` (kanban), tratamos como "sem tabs".
+  const overrideProvided = tabsOverride !== undefined
+  const overrideEmpty =
+    overrideProvided &&
+    typeof tabsOverride === "object" &&
+    tabsOverride !== null &&
+    (tabsOverride as { props?: { children?: unknown } }).props?.children === undefined
+
+  const defaultTabs = (
+    <div className="flex shrink-0 items-center gap-0.5">
+      {tabs.map((t) => {
+        const isActive = tab === t.id
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => handleTabChange(t.id)}
+            className={cn(
+              "-mb-px inline-flex cursor-pointer items-center gap-1.5 border-b-2 bg-transparent px-3.5 py-2 font-display text-[12px] font-bold tracking-[0.04em] transition-all",
+              isActive
+                ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
+                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+            )}
+          >
+            {t.icon}
+            {t.label}
+            {t.count !== undefined && (
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-px font-display text-[10px] font-bold",
+                  isActive
+                    ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                    : "bg-black/[0.06] text-[var(--text-muted)]",
+                )}
+              >
+                {t.count}
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+
+  const secondaryTabs = overrideProvided ? tabsOverride : defaultTabs
+  const hasTabs = overrideProvided ? !overrideEmpty : true
+  const hasSecondary = Boolean(pipelineNameSlot || settingsSlot || hasTabs)
+
+  const center = searchSlot ??
+    (onSearchChange ? (
+      <SearchInput
+        value={search ?? ""}
+        onChange={onSearchChange}
+        placeholder={searchPlaceholder}
+      />
+    ) : undefined)
+
   return (
     <div className="flex flex-col gap-2">
-      {/* Desktop (lg+): título | busca | ações na mesma linha (PageHeader).
-          Mobile: título + faixa rolável — mantido pelo próprio PageHeader. */}
       <PageHeader
         back={back}
         icon={<IconLayoutKanban size={22} stroke={2.2} />}
         title="Pipeline"
-        center={
-          onSearchChange ? (
-            <SearchInput
-              value={search ?? ""}
-              onChange={onSearchChange}
-              placeholder={searchPlaceholder}
-            />
-          ) : undefined
-        }
+        titleAccessory={titleAccessory}
+        center={center}
         actions={actionButtons ? <div className="flex items-center gap-2">{actionButtons}</div> : undefined}
       />
 
-      {/* Secondary row: pipeline switcher + status tabs */}
-      <div className="toolbar-hscroll flex flex-nowrap items-center gap-2 px-1">
-        {pipelineNameSlot && (
-          <div className="mr-1.5 flex shrink-0 items-center gap-1.5 border-r border-black/[0.06] pr-2.5">
-            {pipelineNameSlot}
-            {settingsSlot}
-          </div>
-        )}
-
-        {tabsOverride ?? (
-          <div className="flex shrink-0 items-center gap-0.5">
-            {tabs.map((t) => {
-              const isActive = tab === t.id
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => handleTabChange(t.id)}
-                  className={cn(
-                    "-mb-px inline-flex cursor-pointer items-center gap-1.5 border-b-2 bg-transparent px-3.5 py-2 font-display text-[12px] font-bold tracking-[0.04em] transition-all",
-                    isActive
-                      ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
-                      : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                  )}
-                >
-                  {t.icon}
-                  {t.label}
-                  {t.count !== undefined && (
-                    <span
-                      className={cn(
-                        "rounded-full px-1.5 py-px font-display text-[10px] font-bold",
-                        isActive
-                          ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                          : "bg-black/[0.06] text-[var(--text-muted)]",
-                      )}
-                    >
-                      {t.count}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
+      {hasSecondary && (
+        <div className="toolbar-hscroll flex flex-nowrap items-center gap-2 px-1">
+          {pipelineNameSlot && (
+            <div className="mr-1.5 flex shrink-0 items-center gap-1.5 border-r border-black/[0.06] pr-2.5">
+              {pipelineNameSlot}
+              {settingsSlot}
+            </div>
+          )}
+          {secondaryTabs}
+        </div>
+      )}
     </div>
   )
 }

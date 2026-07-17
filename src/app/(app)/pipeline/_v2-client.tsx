@@ -23,6 +23,7 @@ import {
   IconClock,
   IconDotsVertical,
   IconDownload,
+  IconMenu2,
   IconPencil,
   IconPlus,
   IconSettings,
@@ -100,10 +101,9 @@ import {
 import { PipelineChannelsModal } from "@/features/pipeline-v2/extras/pipeline-channels-modal";
 import { computePopoverPosition } from "@/features/pipeline-v2/extras/use-portal-popover";
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
-import { FilterModalThreeCol } from "@/components/pipeline/kanban-filters/v2";
+import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import {
-  countActiveFilters,
   isEmptyFilters,
   hasServerSideFilters,
   type AdvancedDealFilters,
@@ -196,11 +196,9 @@ export default function KanbanV2ClientPage({
     null,
   );
   const [filters, setFilters] = useState<AdvancedDealFilters>({});
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filterOptions, setFilterOptions] = useState<import("@/components/pipeline/kanban-filters/types").FilterOptionsResponse | null>(null);
   const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
-  const filtersBtnRef = useRef<HTMLButtonElement>(null);
   const kebabBtnRef = useRef<HTMLButtonElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
@@ -380,7 +378,7 @@ export default function KanbanV2ClientPage({
   // da primeira abertura nunca apareciam sem dar reload na página.
   // Mantém as opções anteriores em caso de erro (não pisca pra vazio).
   useEffect(() => {
-    if (!filtersOpen) return;
+    if (!isAuthenticated) return;
     let cancelled = false;
     setFilterOptionsLoading(true);
     fetchFilterOptions()
@@ -388,7 +386,7 @@ export default function KanbanV2ClientPage({
       .catch(() => { /* mantém opções já carregadas */ })
       .finally(() => { if (!cancelled) setFilterOptionsLoading(false); });
     return () => { cancelled = true; };
-  }, [filtersOpen]);
+  }, [isAuthenticated]);
 
   // Aplica filtros client-side ANTES de virar colunas.
   const filteredBoard = useMemo(() => {
@@ -708,22 +706,41 @@ export default function KanbanV2ClientPage({
           onViewChange={(view) => {
             if (view === "list" && listHref) router.push(listHref);
           }}
-          pipelineNameSlot={
+          titleAccessory={
             <PipelineSwitcher
+              variant="icon"
               selectedId={pipelineId}
               onChange={(id) => setPipelineId(id)}
             />
           }
-          settingsSlot={
+          searchSlot={
+            <PipelineSearchFilterBar
+              search={search}
+              onSearch={setSearch}
+              filters={filters}
+              onApplyFilters={setFilters}
+              onClearFilters={() => setFilters({})}
+              options={filterOptions}
+              optionsLoading={filterOptionsLoading}
+            />
+          }
+          menuSlot={
             <div>
               <TooltipGlass label="Ordenar, importar e exportar" side="bottom">
                 <button
                   ref={kebabBtnRef}
                   type="button"
                   onClick={() => setKebabOpen((v) => !v)}
-                  className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+                  aria-label="Ações do pipeline"
+                  aria-expanded={kebabOpen}
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+                    kebabOpen
+                      ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+                      : "text-[var(--brand-primary)] hover:bg-[var(--color-primary-soft)]",
+                  )}
                 >
-                  <IconDotsVertical size={15} />
+                  <IconMenu2 size={18} stroke={2.2} />
                 </button>
               </TooltipGlass>
               <PipelineKebabMenu
@@ -748,11 +765,6 @@ export default function KanbanV2ClientPage({
               />
             </div>
           }
-          filtersButtonRef={filtersBtnRef}
-          onFiltersClick={() => setFiltersOpen((v) => !v)}
-          activeFiltersCount={countActiveFilters(filters) + (search.trim() ? 1 : 0)}
-          search={search}
-          onSearchChange={setSearch}
           onNewDeal={
             columns.length > 0
               ? () =>
@@ -762,15 +774,6 @@ export default function KanbanV2ClientPage({
                   })
               : undefined
           }
-        />
-        <FilterModalThreeCol
-          open={filtersOpen}
-          onOpenChange={setFiltersOpen}
-          value={filters}
-          options={filterOptions}
-          optionsLoading={filterOptionsLoading}
-          onApply={setFilters}
-          onClear={() => setFilters({})}
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>

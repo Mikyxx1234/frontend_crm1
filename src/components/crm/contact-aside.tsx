@@ -35,6 +35,7 @@ import { resolveHighlight, SEVERITY_COLORS, type HighlightSeverity } from "@/lib
 import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
 import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
 import { useContactSources } from "@/hooks/use-contact-sources"
+import { formatPhoneDisplay } from "@/lib/phone"
 import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
@@ -68,6 +69,8 @@ export interface ContactDetails {
   entry?: string
   phone?: string
   email?: string
+  /** @ do WhatsApp (Contact.whatsappUsername), quando disponível. */
+  whatsappUsername?: string
   cpf?: string
   rg?: string
   cep?: string
@@ -910,12 +913,25 @@ export function ContactAside({
                                     )}
                                   </div>
                                 </Row>
-                                {/* Row "Telefone" movida daqui pro header
-                                    do ChatArea (proximo ao kebab). Reduz
-                                    duplicidade de campo e coloca o numero
-                                    a um clique da acao de ligar. Edicao
-                                    inline continua acessivel via botao de
-                                    edit do painel (Nome/Email etc.). */}
+                                {/* Telefone (formatado). Campos basicos
+                                    garantidos no aside: Nome, Telefone, Email
+                                    e @ do WhatsApp. Edicao inline salva o valor
+                                    cru; exibicao usa mascara BR. */}
+                                <Row label="Telefone" compact={viewMode === "compact"}>
+                                  <InlineNativeEditor
+                                    value={native("phone", contact.phone)}
+                                    entityType="contact"
+                                    entityId={contact.contactId}
+                                    fieldKey="phone"
+                                    inputType="tel"
+                                    placeholder="Adicionar telefone"
+                                    formatDisplay={(v) => formatPhoneDisplay(v)}
+                                    editMode={contactEditMode}
+                                    invalidateKeys={contactInvalidateKeys}
+                                    onSaved={(v) => setNativeValues((p) => ({ ...p, phone: v }))}
+                                    textClassName="font-display text-[12px] font-bold text-[var(--text-primary)] text-right"
+                                  />
+                                </Row>
                                 <Row label="Email" compact={viewMode === "compact"}>
                                   <InlineNativeEditor
                                     value={native("email", contact.email)}
@@ -930,6 +946,16 @@ export function ContactAside({
                                     textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right"
                                   />
                                 </Row>
+                                {/* @ do WhatsApp — somente leitura (vem do
+                                    webhook Meta, nao editavel). So aparece
+                                    quando o contato tem username capturado. */}
+                                {isFilled(contact.whatsappUsername) && (
+                                  <Row
+                                    label="@ WhatsApp"
+                                    value={`@${contact.whatsappUsername!.replace(/^@/, "")}`}
+                                    compact={viewMode === "compact"}
+                                  />
+                                )}
                                 {contact.connection && (
                                   <Row label="Canal" compact={viewMode === "compact"}>
                                     <TooltipGlass

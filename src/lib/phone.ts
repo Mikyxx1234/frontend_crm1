@@ -56,3 +56,31 @@ function normalizeBrLocal(local: string): string | null {
   }
   return null;
 }
+
+/**
+ * Formata um telefone para exibição amigável (BR-first).
+ *   - `+5511987654321` → `+55 (11) 98765-4321`
+ *   - `+551133224455`  → `+55 (11) 3322-4455`
+ * Números não-BR (DDI ≠ 55) ou sem tamanho reconhecido caem no
+ * formato E.164 (`+<digits>`); entrada vazia devolve string vazia.
+ */
+export function formatPhoneDisplay(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("55") && (digits.length === 13 || digits.length === 12)) {
+    const ddd = digits.slice(2, 4);
+    const rest = digits.slice(4);
+    const mid = rest.length === 9 ? rest.slice(0, 5) : rest.slice(0, 4);
+    const end = rest.length === 9 ? rest.slice(5) : rest.slice(4);
+    return `+55 (${ddd}) ${mid}-${end}`;
+  }
+  if (digits.length === 11 || digits.length === 10) {
+    const ddd = digits.slice(0, 2);
+    const rest = digits.slice(2);
+    const mid = rest.length === 9 ? rest.slice(0, 5) : rest.slice(0, 4);
+    const end = rest.length === 9 ? rest.slice(5) : rest.slice(4);
+    return `+55 (${ddd}) ${mid}-${end}`;
+  }
+  return `+${digits}`;
+}

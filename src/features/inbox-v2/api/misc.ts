@@ -159,6 +159,8 @@ export interface ContactDetail {
   name: string;
   phone?: string | null;
   email?: string | null;
+  /** @ do WhatsApp (Contact.whatsappUsername), quando o cliente adotou username. */
+  whatsappUsername?: string | null;
   /** Origem do lead (Contact.source). */
   source?: string | null;
   avatarUrl?: string | null;

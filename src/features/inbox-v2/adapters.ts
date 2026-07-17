@@ -624,6 +624,8 @@ export interface ContactAsideView {
   entry: string;
   phone: string;
   email: string;
+  /** @ do WhatsApp (Contact.whatsappUsername), quando disponível. */
+  whatsappUsername?: string;
   cpf: string;
   rg: string;
   cep: string;
@@ -800,6 +802,7 @@ export function toContactAside(
     entry: FALLBACK_FIELD,
     phone: contact?.phone ?? row.contact?.phone ?? FALLBACK_FIELD,
     email: contact?.email ?? row.contact?.email ?? FALLBACK_FIELD,
+    whatsappUsername: contact?.whatsappUsername ?? undefined,
     cpf: contact?.cpf ?? FALLBACK_FIELD,
     rg: contact?.rg ?? FALLBACK_FIELD,
     cep: contact?.cep ?? FALLBACK_FIELD,

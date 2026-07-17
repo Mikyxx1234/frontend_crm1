@@ -595,6 +595,8 @@ export default function KanbanV2ClientPage({
       avatarColor: avatarColorSlugFromName(contactName),
       phone: dealDetail.contact?.phone ?? undefined,
       email: dealDetail.contact?.email ?? null,
+      whatsappUsername:
+        (dealDetail.contact as { whatsappUsername?: string | null } | null)?.whatsappUsername ?? null,
       contactSource:
         (dealDetail.contact as { source?: string | null } | null)?.source ?? null,
       value: dealDetail.value ?? null,

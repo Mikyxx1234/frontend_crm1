@@ -14,6 +14,15 @@ import { StageDot } from "./stage-dot";
 export type DealListStatus = "OPEN" | "WON" | "LOST";
 export type DealListTab = "abertos" | "ganhos" | "perdidos" | "todos";
 
+export type DealListColumnKey =
+  | "dealTitle"
+  | "contactName"
+  | "value"
+  | "stageName"
+  | "ownerName"
+  | "createdAt"
+  | "status";
+
 export interface DealListRow {
   id: string;
   dealTitle: string;
@@ -29,25 +38,33 @@ export interface DealListRow {
   status: DealListStatus;
 }
 
-type SortKey =
-  | "dealTitle"
-  | "contactName"
-  | "value"
-  | "stageName"
-  | "ownerName"
-  | "createdAt"
-  | "status";
+export const DEAL_LIST_COLUMNS: {
+  key: DealListColumnKey;
+  label: string;
+  fr: string;
+  locked?: boolean;
+}[] = [
+  { key: "dealTitle", label: "Negócio", fr: "1.6fr", locked: true },
+  { key: "contactName", label: "Contato", fr: "1.6fr" },
+  { key: "value", label: "Valor", fr: "0.9fr" },
+  { key: "stageName", label: "Etapa", fr: "1.2fr" },
+  { key: "ownerName", label: "Responsável", fr: "1.1fr" },
+  { key: "createdAt", label: "Criado em", fr: "1fr" },
+  { key: "status", label: "Status", fr: "0.9fr" },
+];
+
+export const DEFAULT_DEAL_LIST_COLUMN_KEYS: DealListColumnKey[] =
+  DEAL_LIST_COLUMNS.map((c) => c.key);
+
+type SortKey = DealListColumnKey;
 
 interface DealListTableProps {
   deals: DealListRow[];
   statusTab?: DealListTab;
+  visibleColumns?: DealListColumnKey[];
   onRowClick?: (id: string) => void;
   className?: string;
 }
-
-/** Mesmo template do header e dos cards — evita desalinhamento. */
-const DEAL_GRID_TEMPLATE =
-  "42px 1.6fr 1.6fr 0.9fr 1.2fr 1.1fr 1fr 0.9fr";
 
 const statusToTab: Record<DealListStatus, Exclude<DealListTab, "todos">> = {
   OPEN: "abertos",
@@ -64,15 +81,34 @@ const statusBadge: Record<
   LOST: { variant: "lead", label: "Perdido" },
 };
 
+function resolveColumns(keys?: DealListColumnKey[]) {
+  const ordered = keys?.length
+    ? DEAL_LIST_COLUMNS.filter((c) => keys.includes(c.key) || c.locked)
+    : DEAL_LIST_COLUMNS;
+  // garante Negócio sempre presente e na ordem canônica
+  const seen = new Set(ordered.map((c) => c.key));
+  if (!seen.has("dealTitle")) {
+    return [DEAL_LIST_COLUMNS[0], ...ordered];
+  }
+  return ordered;
+}
+
 export function DealListTable({
   deals,
   statusTab = "abertos",
+  visibleColumns,
   onRowClick,
   className,
 }: DealListTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const columns = useMemo(() => resolveColumns(visibleColumns), [visibleColumns]);
+  const gridTemplate = useMemo(
+    () => ["42px", ...columns.map((c) => c.fr)].join(" "),
+    [columns],
+  );
 
   const filtered = useMemo(() => {
     const base =
@@ -122,6 +158,66 @@ export function DealListTable({
     });
   };
 
+  function renderCell(d: DealListRow, key: DealListColumnKey) {
+    switch (key) {
+      case "dealTitle":
+        return (
+          <div className="min-w-0 leading-tight">
+            <span className="block truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+              {d.dealTitle}
+            </span>
+          </div>
+        );
+      case "contactName":
+        return (
+          <div className="flex min-w-0 items-center gap-2.5">
+            <ChatAvatar
+              user={{ id: d.id, name: d.contactName }}
+              channel={d.channel ?? null}
+              size={AVATAR_SIZE.md}
+            />
+            <span className="truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+              {d.contactName}
+            </span>
+          </div>
+        );
+      case "value":
+        return (
+          <span className="truncate font-display text-[13px] font-semibold text-[var(--text-secondary)]">
+            {d.value}
+          </span>
+        );
+      case "stageName":
+        return (
+          <div className="min-w-0">
+            <StageDot color={d.stageColor} label={d.stageName} />
+          </div>
+        );
+      case "ownerName":
+        return (
+          <span className="truncate font-display text-[13px] text-[var(--text-muted)]">
+            {d.ownerName ?? "—"}
+          </span>
+        );
+      case "createdAt":
+        return (
+          <span className="truncate font-display text-[13px] text-[var(--text-muted)]">
+            {d.createdAt}
+          </span>
+        );
+      case "status": {
+        const badge = statusBadge[d.status];
+        return (
+          <div>
+            <BadgeGlass variant={badge.variant}>{badge.label}</BadgeGlass>
+          </div>
+        );
+      }
+      default:
+        return null;
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -130,10 +226,9 @@ export function DealListTable({
       )}
     >
       <div className="flex w-full min-w-0 flex-col gap-2">
-        {/* Header — mesmo padrão visual da lista Cards de Contatos */}
         <div
           className={listTableHeadRowClass("grid gap-3 border border-transparent px-4 py-2")}
-          style={{ gridTemplateColumns: DEAL_GRID_TEMPLATE }}
+          style={{ gridTemplateColumns: gridTemplate }}
         >
           <span>
             <CheckboxGlass
@@ -143,13 +238,14 @@ export function DealListTable({
               aria-label="Selecionar todos"
             />
           </span>
-          <SortableHeader label="Negócio" sort={sortFor("dealTitle")} onSort={() => handleSort("dealTitle")} />
-          <SortableHeader label="Contato" sort={sortFor("contactName")} onSort={() => handleSort("contactName")} />
-          <SortableHeader label="Valor" sort={sortFor("value")} onSort={() => handleSort("value")} />
-          <SortableHeader label="Etapa" sort={sortFor("stageName")} onSort={() => handleSort("stageName")} />
-          <SortableHeader label="Responsável" sort={sortFor("ownerName")} onSort={() => handleSort("ownerName")} />
-          <SortableHeader label="Criado em" sort={sortFor("createdAt")} onSort={() => handleSort("createdAt")} />
-          <SortableHeader label="Status" sort={sortFor("status")} onSort={() => handleSort("status")} />
+          {columns.map((col) => (
+            <SortableHeader
+              key={col.key}
+              label={col.label}
+              sort={sortFor(col.key)}
+              onSort={() => handleSort(col.key)}
+            />
+          ))}
         </div>
 
         {filtered.length === 0 ? (
@@ -158,7 +254,6 @@ export function DealListTable({
           </p>
         ) : (
           filtered.map((d) => {
-            const badge = statusBadge[d.status];
             const isChecked = selected.has(d.id);
             return (
               <div
@@ -172,7 +267,7 @@ export function DealListTable({
                     onRowClick?.(d.id);
                   }
                 }}
-                style={{ gridTemplateColumns: DEAL_GRID_TEMPLATE }}
+                style={{ gridTemplateColumns: gridTemplate }}
                 className={cn(
                   "group grid cursor-pointer items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
                   isChecked
@@ -187,36 +282,11 @@ export function DealListTable({
                     aria-label={`Selecionar ${d.dealTitle}`}
                   />
                 </span>
-                <div className="min-w-0 leading-tight">
-                  <span className="block truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
-                    {d.dealTitle}
-                  </span>
-                </div>
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <ChatAvatar
-                    user={{ id: d.id, name: d.contactName }}
-                    channel={d.channel ?? null}
-                    size={AVATAR_SIZE.md}
-                  />
-                  <span className="truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
-                    {d.contactName}
-                  </span>
-                </div>
-                <span className="truncate font-display text-[13px] font-semibold text-[var(--text-secondary)]">
-                  {d.value}
-                </span>
-                <div className="min-w-0">
-                  <StageDot color={d.stageColor} label={d.stageName} />
-                </div>
-                <span className="truncate font-display text-[13px] text-[var(--text-muted)]">
-                  {d.ownerName ?? "—"}
-                </span>
-                <span className="truncate font-display text-[13px] text-[var(--text-muted)]">
-                  {d.createdAt}
-                </span>
-                <div>
-                  <BadgeGlass variant={badge.variant}>{badge.label}</BadgeGlass>
-                </div>
+                {columns.map((col) => (
+                  <div key={col.key} className="min-w-0">
+                    {renderCell(d, col.key)}
+                  </div>
+                ))}
               </div>
             );
           })

@@ -1421,8 +1421,10 @@ function WorkflowCanvasInner({
 
   return (
     <div className={cn("automation-editor flex w-full", className)}>
-      {/* Canvas area — radial gradients no fundo dão profundidade
-          "engenharia premium" sem competir com os nodes. */}
+      {/* Palette — esquerda (antes do canvas) */}
+      <NodePalette className="w-[240px] shrink-0" />
+
+      {/* Canvas area */}
       <div
         className="automation-canvas relative min-h-0 min-w-0 flex-1 bg-[var(--bg-base)]"
         onDrop={onDrop}
@@ -1529,9 +1531,6 @@ function WorkflowCanvasInner({
           </>
         )}
       </div>
-
-      {/* Palette */}
-      <NodePalette className="w-[240px] shrink-0" />
 
       {/* Step config */}
       <StepConfigPanel

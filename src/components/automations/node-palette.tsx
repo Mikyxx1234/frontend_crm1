@@ -73,16 +73,15 @@ const GROUPS: { title: string; items: PaletteItem[] }[] = [
 ];
 
 /**
- * NodePalette — sidebar direita do editor de automação com os blocos
- * arrastáveis. Visual premium glassmorphism + ícones vibrantes por
- * tipo (mesma palette `stepColor` usada no AddStepNode e ActionNode,
- * pra coerência visual entre arrastar / dropar / ver no canvas).
+ * NodePalette — sidebar esquerda do editor de automação com os blocos
+ * arrastáveis. Visual glass + ícones por tipo (mesma `stepColor` do
+ * AddStepNode/ActionNode).
  */
 export function NodePalette({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "scrollbar-thin flex flex-col gap-4 overflow-y-auto border-l border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] p-4 backdrop-blur-xl",
+        "scrollbar-thin flex flex-col gap-4 overflow-y-auto border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] p-4 backdrop-blur-xl",
         className
       )}
     >

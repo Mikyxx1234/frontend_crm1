@@ -57,8 +57,18 @@ export function useInboxRealtime(options: {
           const data = JSON.parse((e as MessageEvent).data) as {
             conversationId?: string;
           };
-          if (data.conversationId && data.conversationId === activeRef.current) {
-            qc.invalidateQueries({ queryKey: messagesKey(activeRef.current) });
+          if (data.conversationId) {
+            if (data.conversationId === activeRef.current) {
+              // Conversa aberta: refetch imediato para exibir a mensagem.
+              qc.invalidateQueries({ queryKey: messagesKey(activeRef.current) });
+            } else {
+              // Outra conversa: marca stale sem refetch imediato.
+              // Quando o operador navegar até ela, verá dados frescos.
+              qc.invalidateQueries({
+                queryKey: messagesKey(data.conversationId),
+                refetchType: "none",
+              });
+            }
           }
           scheduleInboxRefresh();
         } catch {
@@ -71,8 +81,13 @@ export function useInboxRealtime(options: {
           const data = JSON.parse((e as MessageEvent).data) as {
             conversationId?: string;
           };
-          if (data.conversationId && data.conversationId === activeRef.current) {
-            qc.invalidateQueries({ queryKey: messagesKey(activeRef.current) });
+          if (data.conversationId) {
+            // Sempre invalida — ticks azuis precisam atualizar mesmo quando
+            // o operador não está na conversa no momento do evento.
+            qc.invalidateQueries({
+              queryKey: messagesKey(data.conversationId),
+              refetchType: data.conversationId === activeRef.current ? "active" : "none",
+            });
           }
           scheduleInboxRefresh();
         } catch {

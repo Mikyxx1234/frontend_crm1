@@ -30,6 +30,9 @@ export function useMessages(conversationId: string | null) {
     queryFn: () => getMessages(conversationId as string),
     enabled: !!conversationId,
     staleTime: 5_000,
+    // Fallback para quando um evento SSE é perdido (reconexão, rede instável).
+    // Valor alto para não sobrecarregar: o SSE é o caminho primário.
+    refetchInterval: 30_000,
   });
 }
 

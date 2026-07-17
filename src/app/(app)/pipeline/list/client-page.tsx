@@ -366,7 +366,12 @@ export default function V2PipelineListClientPage() {
           <DealListTable
             deals={rows}
             statusTab={statusTab}
-            onRowClick={(id) => router.push(`/pipeline/${id}`)}
+            onRowClick={(id) => {
+              const item = items.find((d) => d.id === id);
+              const param =
+                item?.number != null ? String(item.number) : id;
+              router.push(`/pipeline?deal=${encodeURIComponent(param)}`);
+            }}
           />
         )}
 

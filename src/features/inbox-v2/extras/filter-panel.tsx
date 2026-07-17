@@ -34,8 +34,10 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
   ChipToggle,
   FieldCard,
+  MultiSelectDropdown,
   TextField,
 } from "@/components/pipeline/kanban-filters/v2/core";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { useTeamUsers } from "@/features/inbox-v2/hooks";
 import {
   getPipelineBoard,
@@ -562,23 +564,21 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                         setDraft((d) => ({ ...d, channel: undefined }))
                       }
                     >
-                      <div className="flex flex-wrap gap-1.5">
-                        {channelOptions.map((o) => (
-                          <ChipToggle
-                            key={o.value}
-                            active={draft.channel === o.value}
-                            onClick={() =>
-                              setDraft((d) => ({
-                                ...d,
-                                channel:
-                                  d.channel === o.value ? undefined : o.value,
-                              }))
-                            }
-                          >
-                            {o.label}
-                          </ChipToggle>
-                        ))}
-                      </div>
+                      <DropdownGlass
+                        placeholder="Selecionar canal…"
+                        options={channelOptions.map((o) => ({
+                          value: o.value,
+                          label: o.label,
+                        }))}
+                        value={draft.channel}
+                        onValueChange={(v) =>
+                          setDraft((d) => ({
+                            ...d,
+                            channel: d.channel === v ? undefined : v,
+                          }))
+                        }
+                        triggerClassName="h-9 w-full rounded-lg text-[13px]"
+                      />
                     </FieldCard>
 
                     <FieldCard
@@ -588,25 +588,24 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                         setDraft((d) => ({ ...d, windowState: undefined }))
                       }
                     >
-                      <div className="flex flex-wrap gap-1.5">
-                        {WINDOW_OPTIONS.map((o) => (
-                          <ChipToggle
-                            key={o.value}
-                            active={draft.windowState === o.value}
-                            onClick={() =>
-                              setDraft((d) => ({
-                                ...d,
-                                windowState:
-                                  d.windowState === o.value
-                                    ? undefined
-                                    : o.value,
-                              }))
-                            }
-                          >
-                            {o.label}
-                          </ChipToggle>
-                        ))}
-                      </div>
+                      <DropdownGlass
+                        placeholder="Selecionar janela…"
+                        options={WINDOW_OPTIONS.map((o) => ({
+                          value: o.value,
+                          label: o.label,
+                        }))}
+                        value={draft.windowState}
+                        onValueChange={(v) =>
+                          setDraft((d) => ({
+                            ...d,
+                            windowState:
+                              d.windowState === v
+                                ? undefined
+                                : (v as "open" | "closed"),
+                          }))
+                        }
+                        triggerClassName="h-9 w-full rounded-lg text-[13px]"
+                      />
                     </FieldCard>
                   </>
                 )}
@@ -620,28 +619,25 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                         setDraft((d) => ({ ...d, stageId: undefined }))
                       }
                     >
-                      {stages.length === 0 ? (
-                        <p className="text-[12px] text-[var(--text-muted)]">
+                      <DropdownGlass
+                        placeholder="Selecionar etapa…"
+                        options={stages.map((s) => ({
+                          value: s.id,
+                          label: s.name,
+                        }))}
+                        value={draft.stageId}
+                        onValueChange={(v) =>
+                          setDraft((d) => ({
+                            ...d,
+                            stageId: d.stageId === v ? undefined : v,
+                          }))
+                        }
+                        triggerClassName="h-9 w-full rounded-lg text-[13px]"
+                      />
+                      {stages.length === 0 && (
+                        <p className="mt-1.5 text-[12px] text-[var(--text-muted)]">
                           Nenhuma etapa.
                         </p>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {stages.map((s) => (
-                            <ChipToggle
-                              key={s.id}
-                              active={draft.stageId === s.id}
-                              onClick={() =>
-                                setDraft((d) => ({
-                                  ...d,
-                                  stageId:
-                                    d.stageId === s.id ? undefined : s.id,
-                                }))
-                              }
-                            >
-                              {s.name}
-                            </ChipToggle>
-                          ))}
-                        </div>
                       )}
                     </FieldCard>
 
@@ -652,47 +648,26 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                         setDraft((d) => ({ ...d, sources: undefined }))
                       }
                     >
-                      <div className="max-h-44 space-y-0.5 overflow-y-auto">
-                        <button
-                          type="button"
-                          onClick={() => toggleSource(SOURCE_NONE)}
-                          className={cn(
-                            "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]",
-                            selectedSources.includes(SOURCE_NONE) &&
-                              "bg-[var(--color-primary-soft)]",
-                          )}
-                        >
-                          <CheckBox selected={selectedSources.includes(SOURCE_NONE)} />
-                          <span className="truncate font-display text-[13px] text-[var(--text-primary)]">
-                            Sem origem
-                          </span>
-                        </button>
-                        {contactSources.length === 0 ? (
-                          <p className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                            Nenhuma origem cadastrada.
-                          </p>
-                        ) : (
-                          contactSources.map((source) => {
-                            const selected = selectedSources.includes(source);
-                            return (
-                              <button
-                                key={source}
-                                type="button"
-                                onClick={() => toggleSource(source)}
-                                className={cn(
-                                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]",
-                                  selected && "bg-[var(--color-primary-soft)]",
-                                )}
-                              >
-                                <CheckBox selected={selected} />
-                                <span className="truncate font-display text-[13px] text-[var(--text-primary)]">
-                                  {source}
-                                </span>
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
+                      <MultiSelectDropdown
+                        placeholder="Selecionar origem…"
+                        emptyLabel="Nenhuma origem cadastrada."
+                        searchable={contactSources.length > 6}
+                        searchPlaceholder="Buscar origem…"
+                        selected={selectedSources}
+                        options={[
+                          {
+                            value: SOURCE_NONE,
+                            label: "Sem origem",
+                            searchText: "Sem origem",
+                          },
+                          ...contactSources.map((source) => ({
+                            value: source,
+                            label: source,
+                            searchText: source,
+                          })),
+                        ]}
+                        onToggle={toggleSource}
+                      />
                     </FieldCard>
                   </>
                 )}
@@ -705,39 +680,29 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                       setDraft((d) => ({ ...d, tagIds: undefined }))
                     }
                   >
-                    <div className="max-h-52 space-y-0.5 overflow-y-auto">
-                      {tags.length === 0 ? (
-                        <p className="text-[12px] text-[var(--text-muted)]">
-                          Nenhuma tag cadastrada.
-                        </p>
-                      ) : (
-                        tags.map((t) => {
-                          const selected = selectedTagIds.includes(t.id);
-                          return (
-                            <button
-                              key={t.id}
-                              type="button"
-                              onClick={() => toggleTag(t.id)}
-                              className={cn(
-                                "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]",
-                                selected && "bg-[var(--color-primary-soft)]",
-                              )}
-                            >
-                              <CheckBox selected={selected} />
-                              <span
-                                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                style={{
-                                  background: t.color ?? "var(--brand-primary)",
-                                }}
-                              />
-                              <span className="truncate font-display text-[13px] text-[var(--text-primary)]">
-                                {t.name}
-                              </span>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
+                    <MultiSelectDropdown
+                      placeholder="Selecionar tags…"
+                      emptyLabel="Nenhuma tag cadastrada."
+                      searchable={tags.length > 6}
+                      searchPlaceholder="Localizar tags…"
+                      selected={selectedTagIds}
+                      options={tags.map((t) => ({
+                        value: t.id,
+                        searchText: t.name,
+                        label: (
+                          <span className="inline-flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{
+                                background: t.color ?? "var(--brand-primary)",
+                              }}
+                            />
+                            {t.name}
+                          </span>
+                        ),
+                      }))}
+                      onToggle={toggleTag}
+                    />
                   </FieldCard>
                 )}
               </div>

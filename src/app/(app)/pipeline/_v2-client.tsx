@@ -610,11 +610,6 @@ export default function KanbanV2ClientPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealDetail?.id]);
 
-  // Campos personalizados: mesma fonte do contact-aside (inboxLeadPanelFields + dealInboxPanelFields).
-  // O contactId vem do dealDetail para garantir que está sempre associado ao deal aberto.
-  const dealContactId = dealDetail?.contact?.id ?? null;
-  const { data: dealContact } = useContactSidebar(dealContactId);
-
   // Encontra o stage corrente do deal aberto pra alimentar o header de pills.
   const activeDealStage = useMemo(() => {
     if (!activeDealId) return undefined;
@@ -623,43 +618,89 @@ export default function KanbanV2ClientPage({
   const activeDealStageName = activeDealStage?.name;
   const activeDealStageId = activeDealStage?.id ?? null;
 
+  // Seed otimista a partir do card do board — o painel abre no layout final
+  // com nome/telefone/etapa já preenchidos, sem esperar GET /deals/:id.
+  const boardDealSeed = useMemo(() => {
+    if (!activeDealId) return null;
+    return dealById.get(activeDealId) ?? null;
+  }, [activeDealId, dealById]);
+
+  // Campos personalizados: mesma fonte do contact-aside (inboxLeadPanelFields + dealInboxPanelFields).
+  // Prefer contactId do detail; no loading usa o do card do board.
+  const dealContactId =
+    dealDetail?.contact?.id ?? boardDealSeed?.contact?.id ?? null;
+  const { data: dealContact } = useContactSidebar(dealContactId);
+
   const dealDetailVm: DealDetail | null = useMemo(() => {
-    if (!dealDetail) return null;
-    // Contato = pessoa; título do deal ("Negócio …") nunca vira nome de contato.
+    if (dealDetail) {
+      // Contato = pessoa; título do deal ("Negócio …") nunca vira nome de contato.
+      const contactName =
+        sanitizeContactName(dealDetail.contact?.name) ||
+        personNameFromDealTitle(dealDetail.title) ||
+        "Sem nome";
+      const ownerName = dealDetail.owner?.name?.trim() || "Sem responsavel";
+      return {
+        id: dealDetail.id,
+        number: (dealDetail as { number?: number }).number ?? null,
+        contactId: dealDetail.contact?.id ?? null,
+        contactNumber: (dealDetail.contact as { number?: number } | null)?.number ?? null,
+        name: contactName,
+        initials: avatarInitials(contactName),
+        avatarColor: avatarColorSlugFromName(contactName),
+        phone: dealDetail.contact?.phone ?? undefined,
+        email: dealDetail.contact?.email ?? null,
+        whatsappUsername:
+          (dealDetail.contact as { whatsappUsername?: string | null } | null)?.whatsappUsername ?? null,
+        contactSource:
+          (dealDetail.contact as { source?: string | null } | null)?.source ?? null,
+        value: dealDetail.value ?? null,
+        online: undefined,
+        stage: activeDealStageName,
+        pipelineName:
+          (dealDetail as { stage?: { pipeline?: { name?: string } } }).stage?.pipeline?.name ?? null,
+        owner: {
+          initials: avatarInitials(ownerName),
+          name: ownerName,
+          avatarColor: avatarColorSlugFromName(ownerName),
+        },
+        status: (dealDetail as { status?: "OPEN" | "WON" | "LOST" }).status ?? null,
+        lostReason:
+          (dealDetail as { lostReason?: string | null }).lostReason ?? null,
+      };
+    }
+
+    // Enquanto a API não responde: monta VM parcial do card do kanban.
+    if (!boardDealSeed) return null;
     const contactName =
-      sanitizeContactName(dealDetail.contact?.name) ||
-      personNameFromDealTitle(dealDetail.title) ||
+      sanitizeContactName(boardDealSeed.contact?.name) ||
+      personNameFromDealTitle(boardDealSeed.title) ||
       "Sem nome";
-    const ownerName = dealDetail.owner?.name?.trim() || "Sem responsavel";
+    const ownerName = boardDealSeed.owner?.name?.trim() || "Sem responsavel";
     return {
-      id: dealDetail.id,
-      number: (dealDetail as { number?: number }).number ?? null,
-      contactId: dealDetail.contact?.id ?? null,
-      contactNumber: (dealDetail.contact as { number?: number } | null)?.number ?? null,
+      id: boardDealSeed.id,
+      number: boardDealSeed.number ?? null,
+      contactId: boardDealSeed.contact?.id ?? null,
+      contactNumber: boardDealSeed.contact?.number ?? null,
       name: contactName,
       initials: avatarInitials(contactName),
       avatarColor: avatarColorSlugFromName(contactName),
-      phone: dealDetail.contact?.phone ?? undefined,
-      email: dealDetail.contact?.email ?? null,
-      whatsappUsername:
-        (dealDetail.contact as { whatsappUsername?: string | null } | null)?.whatsappUsername ?? null,
-      contactSource:
-        (dealDetail.contact as { source?: string | null } | null)?.source ?? null,
-      value: dealDetail.value ?? null,
+      phone: boardDealSeed.contact?.phone ?? undefined,
+      email: boardDealSeed.contact?.email ?? null,
+      whatsappUsername: null,
+      contactSource: null,
+      value: boardDealSeed.value ?? null,
       online: undefined,
       stage: activeDealStageName,
-      pipelineName:
-        (dealDetail as { stage?: { pipeline?: { name?: string } } }).stage?.pipeline?.name ?? null,
+      pipelineName: pipelines?.find((p) => p.id === pipelineId)?.name ?? null,
       owner: {
         initials: avatarInitials(ownerName),
         name: ownerName,
         avatarColor: avatarColorSlugFromName(ownerName),
       },
-      status: (dealDetail as { status?: "OPEN" | "WON" | "LOST" }).status ?? null,
-      lostReason:
-        (dealDetail as { lostReason?: string | null }).lostReason ?? null,
+      status: (boardDealSeed.status as "OPEN" | "WON" | "LOST" | undefined) ?? null,
+      lostReason: boardDealSeed.lostReason ?? null,
     };
-  }, [dealDetail, activeDealStageName]);
+  }, [dealDetail, boardDealSeed, activeDealStageName, pipelines, pipelineId]);
 
   // Negócio SEM contato vinculado: cria um contato com o telefone/email
   // digitado e vincula ao deal (o painel chama isso via customSave do

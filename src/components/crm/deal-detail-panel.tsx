@@ -503,7 +503,9 @@ export function DealDetailPanel({
   }, [onResizeMove, onResizeEnd])
 
   // Enquanto isOpen=true mas o detail ainda está carregando (API assíncrona),
-  // mostra o frame do painel com skeleton para dar feedback imediato ao clique.
+  // mostra o MESMO frame do painel carregado (hero na sidebar + área de
+  // conversa) — o skeleton antigo (barra de topo glass) gerava flash de
+  // "layout legado" a cada clique.
   if (!deal) {
     if (!isOpen) return null;
     return (
@@ -516,31 +518,72 @@ export function DealDetailPanel({
         }}
       >
         <div className="flex h-full flex-col gap-3.5 overflow-hidden p-4">
-          <header className="flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-5.5 py-3.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
-            <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]">
-              <IconX size={18} />
-            </button>
-            <div className="h-9 w-9 animate-pulse rounded-full bg-[var(--glass-bg-strong)]" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-4 w-40 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
-              <div className="h-3 w-24 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
-            </div>
-          </header>
-          <div className="flex min-h-0 flex-1 gap-3.5">
-            <div className="flex w-[320px] shrink-0 flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-5 backdrop-blur-md">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="space-y-1">
-                  <div className="h-2.5 w-16 animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
-                  <div className="h-4 w-full animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
+          <div
+            className={cn(
+              "min-h-0 flex-1 overflow-hidden",
+              isDesktop ? "grid gap-1" : "flex flex-col gap-2",
+            )}
+            style={isDesktop ? { gridTemplateColumns: `${sidebarWidth}px 8px 1fr` } : undefined}
+          >
+            {(isDesktop || mobilePane === "detalhes") && (
+              <aside
+                aria-label="Carregando detalhes do negócio"
+                aria-busy="true"
+                className={cn(
+                  "flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+                  !isDesktop && "flex-1",
+                )}
+              >
+                <div className="shrink-0 px-3 pt-2">
+                  <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] bg-[var(--nav-bg)] px-3.5 pb-3.5 pt-3 text-white">
+                    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-t-[var(--radius-xl)]">
+                      <div className="absolute -right-8 -top-10 size-28 rounded-full bg-white/10" />
+                      <div className="absolute -bottom-10 -left-6 size-24 rounded-full bg-white/10" />
+                    </div>
+                    <div className="relative flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Voltar"
+                        className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-white backdrop-blur-sm transition-all hover:bg-white/25 hover:border-white/40"
+                      >
+                        <IconArrowLeft size={13} strokeWidth={2.5} />
+                        <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
+                      </button>
+                    </div>
+                    <div className="relative mt-3 flex items-center gap-3">
+                      <div className="size-11 animate-pulse rounded-full bg-white/20" />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="h-4 w-36 animate-pulse rounded bg-white/25" />
+                        <div className="h-3 w-20 animate-pulse rounded bg-white/15" />
+                      </div>
+                    </div>
+                  </header>
                 </div>
-              ))}
-            </div>
-            <div className="flex flex-1 items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md">
-              <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--glass-border)] border-t-[var(--brand-primary)]" />
-                <span className="font-display text-[12px]">Carregando…</span>
+                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3.5 pb-4 pt-1">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div className="h-2.5 w-16 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
+                      <div className="h-8 w-full animate-pulse rounded-lg bg-[var(--glass-bg-strong)]" />
+                    </div>
+                  ))}
+                </div>
+              </aside>
+            )}
+            {isDesktop && <div aria-hidden className="w-2" />}
+            {(isDesktop || mobilePane === "conversa") && (
+              <div
+                className={cn(
+                  "flex min-h-0 flex-col items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+                  !isDesktop && "min-h-0 flex-1",
+                )}
+              >
+                <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--glass-border)] border-t-[var(--brand-primary)]" />
+                  <span className="font-display text-[12px]">Carregando negócio…</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,20 +1,17 @@
 "use client";
 
 /**
- * Hook para OAuth Facebook Login (produto Messenger / Instagram Messaging).
+ * Hook para Facebook Login for Business (produto Messenger).
  *
- * Espelha `use-embedded-signup` (WhatsApp) mas usa `scope` classico ao inves
- * do `config_id` do Embedded Signup — Embedded Signup e' especifico do
- * fluxo WhatsApp Business. Para IG/Messenger usamos `FB.login` regular
- * com response_type=code, e depois o backend troca por Page Access Token.
+ * Desde 2024 a Meta exige `config_id` para permissoes business
+ * (pages_messaging etc.) — o padrao `FB.login({ scope: ... })` cru foi
+ * deprecado para esses escopos. Este hook espelha `useEmbeddedSignup`
+ * (WhatsApp), trocando o config_id (uma "Login for Business Configuration"
+ * dedicada ao Messenger criada no painel Meta).
  *
- * Escopos:
- *   - pages_show_list        : listar Paginas do usuario
- *   - pages_messaging        : enviar/receber DMs pelo Messenger
- *   - pages_manage_metadata  : subscribed_apps (assinar webhooks da Pagina)
- *   - business_management    : ver estrutura Business Manager (opcional)
- *   - instagram_basic        : ler dados da conta IG Business
- *   - instagram_manage_messages : enviar/receber DMs Instagram
+ * Instagram NAO usa este hook: fluxo OAuth por redirect direto em
+ * instagram.com/oauth/authorize — ver create-channel-dialog e as rotas
+ * /api/channels/instagram/oauth/*.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -32,8 +29,10 @@ declare global {
       login: (
         callback: (response: FBLoginResponse) => void,
         options: {
-          scope: string;
+          config_id: string;
           response_type: string;
+          override_default_response_type: boolean;
+          extras: { setup: Record<string, unknown> };
         },
       ) => void;
     };
@@ -45,8 +44,6 @@ type FBLoginResponse = {
   authResponse?: { code?: string } | null;
   status?: string;
 };
-
-export type FacebookLoginPlatform = "messenger" | "instagram";
 
 export type FacebookLoginResult = { code: string };
 
@@ -97,23 +94,6 @@ function loadFBSDK(appId: string): Promise<void> {
   });
 }
 
-const SCOPES: Record<FacebookLoginPlatform, string> = {
-  messenger: [
-    "pages_show_list",
-    "pages_messaging",
-    "pages_manage_metadata",
-    "business_management",
-  ].join(","),
-  instagram: [
-    "pages_show_list",
-    "pages_messaging",
-    "pages_manage_metadata",
-    "business_management",
-    "instagram_basic",
-    "instagram_manage_messages",
-  ].join(","),
-};
-
 export function useFacebookLogin() {
   const [state, setState] = useState<State>({
     sdkReady: false,
@@ -122,17 +102,23 @@ export function useFacebookLogin() {
     isConfigured: false,
   });
 
-  const appIdRef = useRef<string | null>(null);
+  const configRef = useRef<{ appId: string; configId: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetch(apiUrl("/api/config/public"))
       .then((r) => r.json())
-      .then((data: { metaAppId?: string }) => {
+      .then((data: {
+        metaAppId?: string;
+        metaMessengerConfigId?: string;
+        messengerLoginConfigured?: boolean;
+      }) => {
         if (cancelled) return;
+        if (!data.messengerLoginConfigured) return;
         const appId = data.metaAppId?.trim();
-        if (!appId) return;
-        appIdRef.current = appId;
+        const configId = data.metaMessengerConfigId?.trim();
+        if (!appId || !configId) return;
+        configRef.current = { appId, configId };
         setState((s) => ({ ...s, isConfigured: true }));
         loadFBSDK(appId)
           .then(() => {
@@ -154,35 +140,34 @@ export function useFacebookLogin() {
     };
   }, []);
 
-  const launchLogin = useCallback(
-    (platform: FacebookLoginPlatform): Promise<FacebookLoginResult> => {
-      return new Promise((resolve, reject) => {
-        if (!window.FB) {
-          reject(new Error("Facebook SDK nao carregado."));
-          return;
-        }
-        setState((s) => ({ ...s, loading: true, error: null }));
-        window.FB.login(
-          (response: FBLoginResponse) => {
-            setState((s) => ({ ...s, loading: false }));
-            const code = response.authResponse?.code;
-            if (!code) {
-              const err = new Error("Login cancelado ou sem autorizacao.");
-              setState((s) => ({ ...s, error: err.message }));
-              reject(err);
-              return;
-            }
-            resolve({ code });
-          },
-          {
-            scope: SCOPES[platform],
-            response_type: "code",
-          },
-        );
-      });
-    },
-    [],
-  );
+  const launchLogin = useCallback((): Promise<FacebookLoginResult> => {
+    return new Promise((resolve, reject) => {
+      if (!window.FB || !configRef.current) {
+        reject(new Error("Facebook SDK / config nao carregado."));
+        return;
+      }
+      setState((s) => ({ ...s, loading: true, error: null }));
+      window.FB.login(
+        (response: FBLoginResponse) => {
+          setState((s) => ({ ...s, loading: false }));
+          const code = response.authResponse?.code;
+          if (!code) {
+            const err = new Error("Login cancelado ou sem autorizacao.");
+            setState((s) => ({ ...s, error: err.message }));
+            reject(err);
+            return;
+          }
+          resolve({ code });
+        },
+        {
+          config_id: configRef.current.configId,
+          response_type: "code",
+          override_default_response_type: true,
+          extras: { setup: {} },
+        },
+      );
+    });
+  }, []);
 
   const reset = useCallback(() => {
     setState((s) => ({ ...s, loading: false, error: null }));

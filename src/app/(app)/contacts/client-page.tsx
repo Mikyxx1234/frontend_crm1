@@ -160,21 +160,6 @@ function fmtDateBR(iso: string | null | undefined): string {
   return d.toLocaleDateString("pt-BR");
 }
 
-const LIFECYCLE_LABELS: Record<string, string> = {
-  LEAD: "Lead",
-  MQL: "MQL",
-  SQL: "SQL",
-  OPPORTUNITY: "Oportunidade",
-  CUSTOMER: "Cliente",
-  EVANGELIST: "Evangelista",
-  OTHER: "Outro",
-};
-
-function stageLabel(v: string | null): string {
-  if (!v) return "—";
-  return LIFECYCLE_LABELS[v] ?? v;
-}
-
 // ── Configurador de colunas (estilo Kommo) ───────────────────────────────────
 
 interface ColumnDef {
@@ -209,9 +194,6 @@ const NATIVE_COLUMNS: ColumnDef[] = [
       </div>
     ),
   },
-  { key: "lifecycleStage", label: "Estágio", width: "w-[130px]", sortField: "lifecycleStage", cell: (c) => txtCell(stageLabel(c.lifecycleStage)) },
-  { key: "leadScore", label: "Lead score", width: "w-[110px]", sortField: "leadScore", cell: (c) => txtCell(c.leadScore ?? "—") },
-  { key: "source", label: "Fonte", width: "w-[150px]", cell: (c) => txtCell(c.source ?? "—") },
   { key: "assignedTo", label: "Responsável", width: "w-[170px]", cell: (c) => txtCell(c.assignedTo?.name ?? "—") },
   { key: "createdAt", label: "Criado em", width: "w-[130px]", sortField: "createdAt", cell: (c) => txtCell(fmtDateBR(c.createdAt)) },
   { key: "updatedAt", label: "Modificado em", width: "w-[130px]", sortField: "updatedAt", cell: (c) => txtCell(fmtDateBR(c.updatedAt)) },
@@ -1488,63 +1470,71 @@ function TabelaView({
   const dirFor = (f: SortField): SortDir => (sortBy === f ? sortOrder : null);
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
-      {/* H-scroll único: header + linhas andam juntos */}
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-        <div className="flex min-h-0 w-max min-w-full flex-1 flex-col">
-          <div className={listTableHeadRowClass("flex items-center gap-3 px-3 py-2")}>
+      {/* Scroll X+Y no mesmo container — header sticky acompanha o h-scroll.
+          Colunas com width fixa + w-max: não comprime "Responsável" etc. */}
+      <div className="scrollbar-thin min-h-0 flex-1 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+        <div className="flex w-max min-w-full flex-col">
+          <div
+            className={listTableHeadRowClass(
+              "sticky top-0 z-[1] flex w-max min-w-full items-center gap-3 px-3 py-2",
+            )}
+          >
             <span className="w-9 shrink-0">
               <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todos" />
             </span>
             <div className="w-[240px] shrink-0">
-              <SortableHeader label="Nome / E-mail" sort={dirFor("name")} onSort={() => onSort("name")} />
+              <SortableHeader label="Nome / E-mail" sort={dirFor("name")} onSort={() => onSort("name")} className="whitespace-nowrap" />
             </div>
             {columns.map((col) => (
               <div key={col.key} className={`${col.width} shrink-0`}>
                 {col.sortField ? (
-                  <SortableHeader label={col.label} sort={dirFor(col.sortField)} onSort={() => onSort(col.sortField as SortField)} />
+                  <SortableHeader
+                    label={col.label}
+                    sort={dirFor(col.sortField)}
+                    onSort={() => onSort(col.sortField as SortField)}
+                    className="whitespace-nowrap"
+                  />
                 ) : (
-                  <ListColumnLabel>{col.label}</ListColumnLabel>
+                  <ListColumnLabel className="whitespace-nowrap">{col.label}</ListColumnLabel>
                 )}
               </div>
             ))}
           </div>
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            {items.map((c) => (
-              <div
-                key={c.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => onEdit(c)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEdit(c); } }}
-                className={`flex cursor-pointer items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}
-              >
-                <span className="w-9 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
+          {items.map((c) => (
+            <div
+              key={c.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onEdit(c)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEdit(c); } }}
+              className={`flex w-max min-w-full cursor-pointer items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}
+            >
+              <span className="w-9 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
+              </span>
+              <div className="flex w-[240px] shrink-0 items-center gap-2.5">
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
+                  {initials(c.name)}
                 </span>
-                <div className="flex w-[240px] shrink-0 items-center gap-2.5">
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-                    {initials(c.name)}
-                  </span>
-                  <div className="min-w-0 leading-tight">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); onEdit(c); }}
-                      className="group/name inline-flex max-w-full items-center gap-1.5 text-left font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
-                    >
-                      <span className="truncate">{c.name}</span>
-                      <IconPencil size={13} className="flex-shrink-0 opacity-0 transition-opacity group-hover/name:opacity-60" />
-                    </button>
-                    <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "—"}</div>
-                  </div>
+                <div className="min-w-0 leading-tight">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onEdit(c); }}
+                    className="group/name inline-flex max-w-full items-center gap-1.5 text-left font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                  >
+                    <span className="truncate">{c.name}</span>
+                    <IconPencil size={13} className="flex-shrink-0 opacity-0 transition-opacity group-hover/name:opacity-60" />
+                  </button>
+                  <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "—"}</div>
                 </div>
-                {columns.map((col) => (
-                  <div key={col.key} className={`${col.width} min-w-0 shrink-0`}>
-                    {col.cell(c)}
-                  </div>
-                ))}
               </div>
-            ))}
-          </div>
+              {columns.map((col) => (
+                <div key={col.key} className={`${col.width} min-w-0 shrink-0`}>
+                  {col.cell(c)}
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
     </div>

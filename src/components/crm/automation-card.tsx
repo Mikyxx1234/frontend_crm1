@@ -66,8 +66,9 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
         aria-hidden
       />
 
-      {/* Nome flexível: trunca no mobile para o switch não ser cortado */}
-      <div className="relative z-10 min-w-0 flex-1 pl-2 sm:pl-2.5 lg:min-w-[200px] lg:flex-none lg:shrink-0">
+      {/* Nome flexível: trunca no mobile para o switch não ser cortado.
+          pointer-events-none deixa o clique atravessar até o <Link> de fundo. */}
+      <div className="pointer-events-none relative z-10 min-w-0 flex-1 pl-2 sm:pl-2.5 lg:min-w-[200px] lg:flex-none lg:shrink-0">
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
@@ -90,11 +91,11 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
         </div>
       </div>
 
-      <div className="relative z-10 hidden min-w-0 flex-1 lg:block">
+      <div className="pointer-events-none relative z-10 hidden min-w-0 flex-1 lg:block">
         <MiniFlow steps={steps} max={5} size="sm" connected={false} />
       </div>
 
-      <div className="relative z-10 hidden shrink-0 items-center gap-6.5 md:flex">
+      <div className="pointer-events-none relative z-10 hidden shrink-0 items-center gap-6.5 md:flex">
         <RowMetric
           icon={<IconCircleCheck size={13} />}
           value={`${automation.successRate}%`}

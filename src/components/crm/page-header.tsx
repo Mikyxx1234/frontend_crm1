@@ -31,6 +31,8 @@ interface PageHeaderProps {
   description?: string
   /** Voltar à lista pai — botão quadrado ghost à esquerda do ícone. */
   back?: PageHeaderBack
+  /** Elemento renderizado ao lado do título (ex.: dropdown de funis). */
+  titleAccessory?: React.ReactNode
   /**
    * Busca — alinhada à ESQUERDA (logo após o título) em desktop;
    * na faixa rolável no mobile. Tipicamente um `<SearchInput />`.
@@ -48,10 +50,12 @@ function Identity({
   icon,
   title,
   back,
+  titleAccessory,
 }: {
   icon: React.ReactNode
   title: string
   back?: PageHeaderBack
+  titleAccessory?: React.ReactNode
 }) {
   return (
     <div className="flex min-w-0 shrink-0 items-center gap-3">
@@ -69,10 +73,11 @@ function Identity({
         {icon}
       </div>
 
-      <div className="flex min-w-0 flex-col">
+      <div className="flex min-w-0 items-center gap-2">
         <h1 className="font-display text-[22px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
           {title}
         </h1>
+        {titleAccessory ? <div className="flex shrink-0 items-center">{titleAccessory}</div> : null}
       </div>
     </div>
   )
@@ -82,6 +87,7 @@ export function PageHeader({
   icon,
   title,
   back,
+  titleAccessory,
   center,
   actions,
   className,
@@ -92,7 +98,7 @@ export function PageHeader({
     <div className={cn("flex flex-col gap-2 px-1", className)}>
       {/* Desktop: título → busca (colada à esq.) → spacer → ações */}
       <div className="hidden items-center gap-3 lg:flex">
-        <Identity icon={icon} title={title} back={back} />
+        <Identity icon={icon} title={title} back={back} titleAccessory={titleAccessory} />
         {center ? <div className="min-w-0 shrink-0">{center}</div> : null}
         <div className="min-w-0 flex-1" />
         {actions ? (
@@ -102,7 +108,7 @@ export function PageHeader({
 
       {/* Mobile / tablet: título + faixa horizontal rolável */}
       <div className="flex flex-col gap-2 lg:hidden">
-        <Identity icon={icon} title={title} back={back} />
+        <Identity icon={icon} title={title} back={back} titleAccessory={titleAccessory} />
         {hasControls ? (
           <div className="toolbar-hscroll flex max-w-full flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
             {center ? (

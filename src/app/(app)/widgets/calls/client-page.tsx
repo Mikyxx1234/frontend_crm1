@@ -24,14 +24,10 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { PageFilterBar, PageGhostButton, PageSearchBar, pageGhostButtonClass } from "@/components/crm/page-toolbar";
-import { CallHistoryFilters } from "@/features/softphone/components/call-history-filters";
-import { CallHistoryList } from "@/features/softphone/components/call-history-list";
+import { PageGhostButton, PageSearchBar, pageGhostButtonClass } from "@/components/crm/page-toolbar";
+import { CallHistoryTimeline } from "@/features/softphone/components/call-history-timeline";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
 import { syncCalls } from "@/features/softphone/api/extensions";
-import type { ListCallsFilters } from "@/features/softphone/api/types";
-
-const DEFAULT_FILTERS: ListCallsFilters = { page: 1, perPage: 25 };
 
 interface CallsClientPageProps {
   navRail?: React.ReactNode;
@@ -42,16 +38,14 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
   const isAuthenticated = sessionStatus === "authenticated";
   const callsWidget = useCallsWidget(isAuthenticated);
 
-  const [filters, setFilters] = useState<ListCallsFilters>(DEFAULT_FILTERS);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const queryClient = useQueryClient();
   const autoSyncedRef = useRef(false);
 
-  // Debounce search → filters
+  // Debounce search → query
   useEffect(() => {
-    const t = setTimeout(() => {
-      setFilters((f) => ({ ...f, search: search.trim() || undefined, page: 1 }));
-    }, 300);
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(t);
   }, [search]);
 
@@ -135,12 +129,7 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
         ) : callsWidget.enabled !== true ? (
           <NotEnabledState />
         ) : (
-          <>
-            <PageFilterBar className="toolbar-hscroll max-w-full flex-nowrap overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
-              <CallHistoryFilters filters={filters} onChange={setFilters} />
-            </PageFilterBar>
-            <CallHistoryList filters={filters} onFiltersChange={setFilters} />
-          </>
+          <CallHistoryTimeline search={debouncedSearch} />
         )}
       </main>
     </div>

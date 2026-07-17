@@ -273,7 +273,7 @@ function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
 //     e inicia no mesmo ponto da coluna "Contato/Telefone"
 //   • padding-right = px-3 (mesmo das linhas da tabela)
 
-function AudioPlayer({ src, onEnded }: { src: string; onEnded: () => void }) {
+export function AudioPlayer({ src, onEnded }: { src: string; onEnded: () => void }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);

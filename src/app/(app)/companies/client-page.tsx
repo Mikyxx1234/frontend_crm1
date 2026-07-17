@@ -33,6 +33,12 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 import { pagePrimaryButtonClass, PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
+import {
+  ColumnResizer,
+  parseWidthClass,
+  ResizableColumnHead,
+  useColumnWidths,
+} from "@/components/crm/column-resizer";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
@@ -147,6 +153,13 @@ const NATIVE_COLUMNS: ColumnDef[] = [
 
 const DEFAULT_COLUMN_KEYS = ["phone", "domain", "city", "state", "contacts", "createdAt"];
 const COLUMNS_STORAGE_KEY = "v2:companies:columns:v1";
+const WIDTHS_STORAGE_KEY = "v2:companies:col-widths:v1";
+const NAME_COL_KEY = "__name__";
+
+const COLUMN_WIDTH_DEFAULTS: Record<string, number> = {
+  [NAME_COL_KEY]: 240,
+  ...Object.fromEntries(NATIVE_COLUMNS.map((c) => [c.key, parseWidthClass(c.width)])),
+};
 
 // ── Filtro (padrão Contatos) ─────────────────────────────────────────────────
 
@@ -197,11 +210,6 @@ function FilterCountBadge({ count }: { count: number }) {
       {count}
     </span>
   );
-}
-
-function colWidthCss(width: string): string {
-  const m = width.match(/w-\[(\d+)px\]/);
-  return m ? `${m[1]}px` : "140px";
 }
 
 function fmtDateBR(iso: string | null | undefined): string {
@@ -293,6 +301,8 @@ export default function V2CompaniesClientPage() {
         .filter((c): c is ColumnDef => Boolean(c)),
     [activeColumnKeys],
   );
+
+  const { getWidth, setWidth } = useColumnWidths(WIDTHS_STORAGE_KEY, COLUMN_WIDTH_DEFAULTS);
 
   function toggleColumn(key: string) {
     setActiveColumnKeys((prev) =>
@@ -477,6 +487,8 @@ export default function V2CompaniesClientPage() {
             onToggleAll={toggleAll}
             onToggleOne={toggleOne}
             columns={activeColumns}
+            getWidth={getWidth}
+            setWidth={setWidth}
             onEdit={setEditing}
           />
         ) : (
@@ -488,6 +500,8 @@ export default function V2CompaniesClientPage() {
             onToggleAll={toggleAll}
             onToggleOne={toggleOne}
             columns={activeColumns}
+            getWidth={getWidth}
+            setWidth={setWidth}
             onEdit={setEditing}
           />
         )}
@@ -965,7 +979,7 @@ function ColumnsDialog({
 // ── Tabela ───────────────────────────────────────────────────────────────────
 
 function TabelaView({
-  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, onEdit,
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, getWidth, setWidth, onEdit,
 }: {
   items: CompanyListItemDto[];
   selected: Set<string>;
@@ -974,8 +988,11 @@ function TabelaView({
   onToggleAll: () => void;
   onToggleOne: (id: string) => void;
   columns: ColumnDef[];
+  getWidth: (key: string, fallback?: number) => number;
+  setWidth: (key: string, px: number) => void;
   onEdit: (c: CompanyListItemDto) => void;
 }) {
+  const nameW = getWidth(NAME_COL_KEY, 240);
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
       <div className="scrollbar-thin min-h-0 flex-1 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
@@ -984,13 +1001,17 @@ function TabelaView({
             <span className="w-9 shrink-0">
               <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todas" />
             </span>
-            <div className="w-[240px] shrink-0">
+            <ResizableColumnHead width={nameW} onResize={(px) => setWidth(NAME_COL_KEY, px)} min={160} max={420}>
               <ListColumnLabel className="whitespace-nowrap">Empresa</ListColumnLabel>
-            </div>
+            </ResizableColumnHead>
             {columns.map((col) => (
-              <div key={col.key} className={`${col.width} shrink-0`}>
+              <ResizableColumnHead
+                key={col.key}
+                width={getWidth(col.key, parseWidthClass(col.width))}
+                onResize={(px) => setWidth(col.key, px)}
+              >
                 <ListColumnLabel className="whitespace-nowrap">{col.label}</ListColumnLabel>
-              </div>
+              </ResizableColumnHead>
             ))}
           </div>
           {items.map((c) => (
@@ -1005,7 +1026,7 @@ function TabelaView({
               <span className="w-9 shrink-0" onClick={(e) => e.stopPropagation()}>
                 <CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
               </span>
-              <div className="flex w-[240px] shrink-0 items-center gap-2.5">
+              <div className="flex shrink-0 items-center gap-2.5 overflow-hidden" style={{ width: nameW, minWidth: nameW, maxWidth: nameW }}>
                 <ChatAvatar
                   user={{ id: c.id, name: c.name }}
                   channel={null}
@@ -1023,11 +1044,14 @@ function TabelaView({
                   <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.domain ?? "—"}</div>
                 </div>
               </div>
-              {columns.map((col) => (
-                <div key={col.key} className={`${col.width} min-w-0 shrink-0`}>
-                  {col.cell(c)}
-                </div>
-              ))}
+              {columns.map((col) => {
+                const w = getWidth(col.key, parseWidthClass(col.width));
+                return (
+                  <div key={col.key} className="min-w-0 shrink-0 overflow-hidden" style={{ width: w, minWidth: w, maxWidth: w }}>
+                    {col.cell(c)}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -1039,7 +1063,7 @@ function TabelaView({
 // ── Cards (linhas horizontais — padrão Contatos) ─────────────────────────────
 
 function CardsView({
-  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, onEdit,
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, getWidth, setWidth, onEdit,
 }: {
   items: CompanyListItemDto[];
   selected: Set<string>;
@@ -1048,12 +1072,15 @@ function CardsView({
   onToggleAll: () => void;
   onToggleOne: (id: string) => void;
   columns: ColumnDef[];
+  getWidth: (key: string, fallback?: number) => number;
+  setWidth: (key: string, px: number) => void;
   onEdit: (c: CompanyListItemDto) => void;
 }) {
+  const nameW = getWidth(NAME_COL_KEY, 240);
   const gridTemplate = [
     "32px",
-    "minmax(220px,2.4fr)",
-    ...columns.map((c) => `minmax(${colWidthCss(c.width)},1fr)`),
+    `${nameW}px`,
+    ...columns.map((c) => `${getWidth(c.key, parseWidthClass(c.width))}px`),
     "112px",
   ].join(" ");
 
@@ -1067,10 +1094,19 @@ function CardsView({
         <span>
           <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todas" />
         </span>
-        <ListColumnLabel>Empresa</ListColumnLabel>
-        {columns.map((col) => (
-          <ListColumnLabel key={col.key}>{col.label}</ListColumnLabel>
-        ))}
+        <div className="relative min-w-0 overflow-hidden pr-1">
+          <ListColumnLabel>Empresa</ListColumnLabel>
+          <ColumnResizer value={nameW} onChange={(px) => setWidth(NAME_COL_KEY, px)} min={160} max={420} />
+        </div>
+        {columns.map((col) => {
+          const w = getWidth(col.key, parseWidthClass(col.width));
+          return (
+            <div key={col.key} className="relative min-w-0 overflow-hidden pr-1">
+              <ListColumnLabel>{col.label}</ListColumnLabel>
+              <ColumnResizer value={w} onChange={(px) => setWidth(col.key, px)} min={72} max={480} />
+            </div>
+          );
+        })}
         <ListColumnLabel align="right">Ações</ListColumnLabel>
       </div>
       {items.map((c) => {

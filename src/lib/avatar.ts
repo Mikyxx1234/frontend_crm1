@@ -3,6 +3,13 @@
  * e pessoa interna (gradiente glass via AvatarGlass).
  */
 
+import { sanitizeContactName } from "@/lib/display-name";
+
+/** Primeiro grafema seguro (evita surrogate pair quebrado de emoji). */
+function firstGrapheme(s: string): string {
+  return Array.from(s)[0] ?? "";
+}
+
 export const AVATAR_FALLBACK_COLORS = [
   "var(--avatar-fallback-1)",
   "var(--avatar-fallback-2)",
@@ -51,11 +58,14 @@ export function getAvatarGlassColor(seed: string): AvatarGlassColor {
 }
 
 export function avatarInitials(name: string | null | undefined): string {
-  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  const parts = sanitizeContactName(name).split(/\s+/).filter(Boolean);
   if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return (
+      firstGrapheme(parts[0]) + firstGrapheme(parts[parts.length - 1])
+    ).toUpperCase();
   }
-  return (parts[0]?.slice(0, 2) || "?").toUpperCase();
+  const chars = Array.from(parts[0] ?? "");
+  return (chars.slice(0, 2).join("") || "?").toUpperCase();
 }
 
 /** Tamanhos canônicos (px) — espelham `--avatar-size-*`. */

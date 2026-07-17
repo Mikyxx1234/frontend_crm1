@@ -17,9 +17,22 @@ export function personNameFromDealTitle(
   return rest;
 }
 
-/** Remove prefixo "Negócio" do nome do contato, se presente. */
+/**
+ * Remove emojis/decoradores do nome (ex.: "🌻🌵 Jéssica" → "Jéssica").
+ * Preserva letras acentuadas. Usa Extended_Pictographic + ZWJ/VS16.
+ */
+export function stripNameDecorators(name: string): string {
+  return name
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/[\uFE0F\u200D]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Remove prefixo "Negócio" e emojis/decoradores do nome do contato. */
 export function sanitizeContactName(name: string | null | undefined): string {
   const t = (name ?? "").trim();
   if (!t) return t;
-  return personNameFromDealTitle(t) ?? t;
+  const withoutDeal = personNameFromDealTitle(t) ?? t;
+  return stripNameDecorators(withoutDeal);
 }

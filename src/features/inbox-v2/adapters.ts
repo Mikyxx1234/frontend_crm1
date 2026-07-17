@@ -11,7 +11,9 @@
 
 import type { Conversation, LastMessageType } from "@/components/crm/conversation-card";
 import type { Message, FormField } from "@/components/crm/message-bubble";
+import { avatarInitials as avatarInitialsFromLib } from "@/lib/avatar";
 import type { ConnectionRef } from "@/lib/connection-label";
+import { sanitizeContactName } from "@/lib/display-name";
 
 import type {
   ContactDetail,
@@ -47,17 +49,9 @@ export function colorFromName(name: string | null | undefined): Conversation["av
   return CONV_COLORS[sum % CONV_COLORS.length];
 }
 
-/** Iniciais (até 2 chars maiúsculas) — "Ana Silva" → "AS". */
+/** Iniciais (até 2 chars maiúsculas) — "Ana Silva" → "AS"; ignora emojis. */
 export function avatarInitials(name: string | null | undefined): string {
-  const safe = (name ?? "").trim();
-  if (!safe) return "?";
-  return safe
-    .split(/\s+/)
-    .map((w) => w[0] ?? "")
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  return avatarInitialsFromLib(name);
 }
 
 /** "Agora", "5min", "2h", "14:20", "ontem", "3d", "2sem", "10/03". */
@@ -227,7 +221,10 @@ export function toConversationCard(
   row: ConversationListRow,
   options?: { active?: boolean },
 ): Conversation {
-  const name = row.contact?.name?.trim() || "Sem nome";
+  const name =
+    sanitizeContactName(row.contact?.name) ||
+    row.contact?.name?.trim() ||
+    "Sem nome";
   const lastActivity = row.lastMessageAt ?? row.lastInboundAt ?? null;
   // Sessao da Meta (24h da ultima mensagem inbound do cliente).
   const sess = sessionRemainingFromInbound(row.lastInboundAt);
@@ -535,7 +532,10 @@ export interface ChatContactView {
 }
 
 export function toChatContact(row: ConversationListRow): ChatContactView {
-  const name = row.contact?.name?.trim() || "Sem nome";
+  const name =
+    sanitizeContactName(row.contact?.name) ||
+    row.contact?.name?.trim() ||
+    "Sem nome";
   return {
     name,
     initials: avatarInitials(name),
@@ -691,7 +691,8 @@ export function toContactAside(
   row: ConversationListRow,
   connection?: ContactConnection | null,
 ): ContactAsideView {
-  const name = contact?.name ?? row.contact?.name ?? "Sem nome";
+  const rawName = contact?.name ?? row.contact?.name ?? "Sem nome";
+  const name = sanitizeContactName(rawName) || rawName;
   const financial = toFinancialStatus(row);
   const tags = contact?.tags ?? row.tags ?? [];
   const firstDeal = contact?.deals?.[0];

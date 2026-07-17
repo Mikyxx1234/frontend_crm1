@@ -90,21 +90,11 @@ export function PageHeader({
 
   return (
     <div className={cn("flex flex-col gap-2 px-1", className)}>
-      {/* Desktop: título | busca (esq.) | ações */}
-      <div
-        className={cn(
-          "hidden items-center gap-4 lg:grid",
-          hasControls ? "grid-cols-[auto_1fr_auto]" : "grid-cols-[auto_1fr]",
-        )}
-      >
+      {/* Desktop: título → busca (colada à esq.) → spacer → ações */}
+      <div className="hidden items-center gap-3 lg:flex">
         <Identity icon={icon} title={title} back={back} />
-        {center ? (
-          <div className="flex min-w-0 flex-1 items-center justify-start">
-            {center}
-          </div>
-        ) : (
-          <div />
-        )}
+        {center ? <div className="min-w-0 shrink-0">{center}</div> : null}
+        <div className="min-w-0 flex-1" />
         {actions ? (
           <div className="flex shrink-0 items-center gap-2">{actions}</div>
         ) : null}

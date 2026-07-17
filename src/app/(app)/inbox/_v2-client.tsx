@@ -510,9 +510,14 @@ export default function InboxV2ClientPage({
           : {}),
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
           setDraft("");
           setReplyTo(null);
+          // Conversa estava encerrada e o envio reabriu como NOVO ticket:
+          // troca o chat ativo para o id novo (regra "reabrir = novo id").
+          if (data.reopenedConversationId) {
+            setActiveId(data.reopenedConversationId);
+          }
         },
         onError: (err) => toast.error(err.message || "Falha ao enviar"),
       },

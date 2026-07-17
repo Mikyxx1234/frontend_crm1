@@ -73,10 +73,18 @@ export async function sendMessage(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return parseApiResponse<{ message: InboxMessageDto; metaError?: string }>(
-    res,
-    "Erro ao enviar mensagem",
-  );
+  return parseApiResponse<{
+    message: InboxMessageDto;
+    metaError?: string;
+    /** Id da conversa onde a mensagem foi de fato gravada. */
+    conversationId?: string;
+    /**
+     * Presente quando a conversa estava ENCERRADA e o envio reabriu como
+     * NOVO ticket (regra "reabrir = novo id"). O frontend deve trocar o
+     * chat ativo para este id.
+     */
+    reopenedConversationId?: string;
+  }>(res, "Erro ao enviar mensagem");
 }
 
 /** POST /api/conversations/:id/attachments — multipart/form-data */

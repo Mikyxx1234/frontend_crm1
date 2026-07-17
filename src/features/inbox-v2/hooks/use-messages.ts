@@ -37,7 +37,12 @@ export function useMessages(conversationId: string | null) {
 export function useSendMessage(conversationId: string | null) {
   const qc = useQueryClient();
   return useMutation<
-    { message: InboxMessageDto; metaError?: string },
+    {
+      message: InboxMessageDto;
+      metaError?: string;
+      conversationId?: string;
+      reopenedConversationId?: string;
+    },
     Error,
     {
       content: string;
@@ -48,9 +53,15 @@ export function useSendMessage(conversationId: string | null) {
   >({
     mutationFn: (vars) =>
       sendMessage(conversationId as string, vars),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
+      // Reabriu como novo ticket: invalida também o histórico do id novo
+      // para o chat carregar a linha do tempo já com a mensagem enviada.
+      if (data.reopenedConversationId) {
+        qc.invalidateQueries({ queryKey: messagesKey(data.reopenedConversationId) });
+      }
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
     },
   });
 }

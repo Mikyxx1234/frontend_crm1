@@ -45,8 +45,9 @@ interface DealListTableProps {
   className?: string;
 }
 
-const DEAL_GRID =
-  "grid-cols-[42px_1.6fr_1.6fr_0.9fr_1.2fr_1.1fr_1fr_0.9fr]";
+/** Mesmo template do header e dos cards — evita desalinhamento. */
+const DEAL_GRID_TEMPLATE =
+  "42px 1.6fr 1.6fr 0.9fr 1.2fr 1.1fr 1fr 0.9fr";
 
 const statusToTab: Record<DealListStatus, Exclude<DealListTab, "todos">> = {
   OPEN: "abertos",
@@ -124,92 +125,100 @@ export function DealListTable({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain pb-1 [-webkit-overflow-scrolling:touch]",
         className,
       )}
     >
-      <div className={listTableHeadRowClass(cn(DEAL_GRID, "gap-3 px-3 py-2"))}>
-        <span>
-          <CheckboxGlass
-            checked={allChecked}
-            indeterminate={!allChecked && someChecked}
-            onChange={toggleAll}
-            aria-label="Selecionar todos"
-          />
-        </span>
-        <SortableHeader label="Negócio" sort={sortFor("dealTitle")} onSort={() => handleSort("dealTitle")} />
-        <SortableHeader label="Contato" sort={sortFor("contactName")} onSort={() => handleSort("contactName")} />
-        <SortableHeader label="Valor" sort={sortFor("value")} onSort={() => handleSort("value")} />
-        <SortableHeader label="Etapa" sort={sortFor("stageName")} onSort={() => handleSort("stageName")} />
-        <SortableHeader label="Responsável" sort={sortFor("ownerName")} onSort={() => handleSort("ownerName")} />
-        <SortableHeader label="Criado em" sort={sortFor("createdAt")} onSort={() => handleSort("createdAt")} />
-        <SortableHeader label="Status" sort={sortFor("status")} onSort={() => handleSort("status")} />
-      </div>
+      <div className="flex w-full min-w-0 flex-col gap-2">
+        {/* Header — mesmo padrão visual da lista Cards de Contatos */}
+        <div
+          className={listTableHeadRowClass("grid gap-3 border border-transparent px-4 py-2")}
+          style={{ gridTemplateColumns: DEAL_GRID_TEMPLATE }}
+        >
+          <span>
+            <CheckboxGlass
+              checked={allChecked}
+              indeterminate={!allChecked && someChecked}
+              onChange={toggleAll}
+              aria-label="Selecionar todos"
+            />
+          </span>
+          <SortableHeader label="Negócio" sort={sortFor("dealTitle")} onSort={() => handleSort("dealTitle")} />
+          <SortableHeader label="Contato" sort={sortFor("contactName")} onSort={() => handleSort("contactName")} />
+          <SortableHeader label="Valor" sort={sortFor("value")} onSort={() => handleSort("value")} />
+          <SortableHeader label="Etapa" sort={sortFor("stageName")} onSort={() => handleSort("stageName")} />
+          <SortableHeader label="Responsável" sort={sortFor("ownerName")} onSort={() => handleSort("ownerName")} />
+          <SortableHeader label="Criado em" sort={sortFor("createdAt")} onSort={() => handleSort("createdAt")} />
+          <SortableHeader label="Status" sort={sortFor("status")} onSort={() => handleSort("status")} />
+        </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {filtered.length === 0 ? (
           <p className="py-10 text-center font-body text-[13px] text-[var(--text-muted)]">
             Nenhum negócio neste status nesta página.
           </p>
         ) : (
           filtered.map((d) => {
-          const badge = statusBadge[d.status];
-          const isChecked = selected.has(d.id);
-          return (
-            <div
-              key={d.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => onRowClick?.(d.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onRowClick?.(d.id);
-                }
-              }}
-              className={cn(
-                "grid cursor-pointer items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]",
-                DEAL_GRID,
-                isChecked && "bg-[var(--color-primary-soft)]",
-              )}
-            >
-              <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                <CheckboxGlass
-                  checked={isChecked}
-                  onChange={() => toggleOne(d.id)}
-                  aria-label={`Selecionar ${d.dealTitle}`}
-                />
-              </span>
-              <span className="truncate font-display text-sm font-bold text-[var(--text-primary)]">
-                {d.dealTitle}
-              </span>
-              <div className="flex min-w-0 items-center gap-2.5">
-                <ChatAvatar
-                  user={{ id: d.id, name: d.contactName }}
-                  channel={d.channel ?? null}
-                  size={AVATAR_SIZE.sm}
-                />
-                <span className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
-                  {d.contactName}
+            const badge = statusBadge[d.status];
+            const isChecked = selected.has(d.id);
+            return (
+              <div
+                key={d.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onRowClick?.(d.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onRowClick?.(d.id);
+                  }
+                }}
+                style={{ gridTemplateColumns: DEAL_GRID_TEMPLATE }}
+                className={cn(
+                  "group grid cursor-pointer items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+                  isChecked
+                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)]",
+                )}
+              >
+                <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  <CheckboxGlass
+                    checked={isChecked}
+                    onChange={() => toggleOne(d.id)}
+                    aria-label={`Selecionar ${d.dealTitle}`}
+                  />
                 </span>
+                <div className="min-w-0 leading-tight">
+                  <span className="block truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+                    {d.dealTitle}
+                  </span>
+                </div>
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <ChatAvatar
+                    user={{ id: d.id, name: d.contactName }}
+                    channel={d.channel ?? null}
+                    size={AVATAR_SIZE.md}
+                  />
+                  <span className="truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+                    {d.contactName}
+                  </span>
+                </div>
+                <span className="truncate font-display text-[13px] font-semibold text-[var(--text-secondary)]">
+                  {d.value}
+                </span>
+                <div className="min-w-0">
+                  <StageDot color={d.stageColor} label={d.stageName} />
+                </div>
+                <span className="truncate font-display text-[13px] text-[var(--text-muted)]">
+                  {d.ownerName ?? "—"}
+                </span>
+                <span className="truncate font-display text-[13px] text-[var(--text-muted)]">
+                  {d.createdAt}
+                </span>
+                <div>
+                  <BadgeGlass variant={badge.variant}>{badge.label}</BadgeGlass>
+                </div>
               </div>
-              <span className="truncate font-display text-[13px] text-[var(--text-secondary)]">
-                {d.value}
-              </span>
-              <div className="min-w-0">
-                <StageDot color={d.stageColor} label={d.stageName} />
-              </div>
-              <span className="truncate font-display text-[13px] text-[var(--text-muted)]">
-                {d.ownerName ?? "—"}
-              </span>
-              <span className="truncate font-display text-[13px] text-[var(--text-muted)]">
-                {d.createdAt}
-              </span>
-              <div>
-                <BadgeGlass variant={badge.variant}>{badge.label}</BadgeGlass>
-              </div>
-            </div>
-          );
+            );
           })
         )}
       </div>

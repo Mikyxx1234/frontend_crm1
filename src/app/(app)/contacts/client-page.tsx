@@ -425,29 +425,31 @@ export default function V2ContactsClientPage() {
           title="Contatos"
           description="Diretório de contatos vinculados ao CRM"
           center={
-            <SearchFilterBar
-              search={search}
-              onSearch={setSearch}
-              tags={tagsQuery.data ?? []}
-              tagIds={tagIds}
-              createdFrom={createdFrom}
-              createdTo={createdTo}
-              updatedFrom={updatedFrom}
-              updatedTo={updatedTo}
-              sortBy={sortBy}
-              sortOrder={sortOrder}
-              activeCount={activeFilterCount}
-              onClear={clearPanelFilters}
-              onApply={(next) => {
-                setSortBy(next.sortBy);
-                setSortOrder(next.sortOrder);
-                setTagIds(next.tagIds);
-                setCreatedFrom(next.createdFrom);
-                setCreatedTo(next.createdTo);
-                setUpdatedFrom(next.updatedFrom);
-                setUpdatedTo(next.updatedTo);
-              }}
-            />
+            <div className="flex w-full max-w-md justify-center">
+              <SearchFilterBar
+                search={search}
+                onSearch={setSearch}
+                tags={tagsQuery.data ?? []}
+                tagIds={tagIds}
+                createdFrom={createdFrom}
+                createdTo={createdTo}
+                updatedFrom={updatedFrom}
+                updatedTo={updatedTo}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                activeCount={activeFilterCount}
+                onClear={clearPanelFilters}
+                onApply={(next) => {
+                  setSortBy(next.sortBy);
+                  setSortOrder(next.sortOrder);
+                  setTagIds(next.tagIds);
+                  setCreatedFrom(next.createdFrom);
+                  setCreatedTo(next.createdTo);
+                  setUpdatedFrom(next.updatedFrom);
+                  setUpdatedTo(next.updatedTo);
+                }}
+              />
+            </div>
           }
           actions={
             <div className="flex items-center gap-2">
@@ -567,7 +569,10 @@ export default function V2ContactsClientPage() {
         )}
 
         <PaginationGlass
-          label={`${total.toLocaleString("pt-BR")} contatos — página ${page} de ${lastPage}`}
+          total={total}
+          entityLabel="contatos"
+          page={page}
+          lastPage={lastPage}
           canPrev={page > 1}
           canNext={page < lastPage}
           onPrev={() => setPage((p) => Math.max(1, p - 1))}
@@ -1063,9 +1068,20 @@ function ActionsMenu({
 
   return (
     <div ref={ref} className="relative">
-      <ButtonGlass variant="glass" size="sm" type="button" onClick={() => setOpen((o) => !o)} aria-label="Ações">
-        <IconMenu2 size={16} /> Ações
-      </ButtonGlass>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Ações"
+        aria-expanded={open}
+        className={cn(
+          "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+          open
+            ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+            : "text-[var(--brand-primary)] hover:bg-[var(--color-primary-soft)]",
+        )}
+      >
+        <IconMenu2 size={18} stroke={2.2} />
+      </button>
       {open && (
         <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
           {items.map((it) => (

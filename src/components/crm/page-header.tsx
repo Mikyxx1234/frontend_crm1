@@ -105,7 +105,7 @@ export function PageHeader({
       >
         <Identity icon={icon} title={title} description={description} back={back} />
         {center ? (
-          <div className="flex min-w-0 flex-1 items-center justify-end px-4">
+          <div className="flex min-w-0 flex-1 items-center justify-center px-4">
             {center}
           </div>
         ) : (

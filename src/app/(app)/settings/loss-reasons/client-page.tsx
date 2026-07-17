@@ -358,7 +358,7 @@ export default function LossReasonsV2ClientPage() {
     : funnelItems.map((r) => ({
         id: r.id,
         label: r.label,
-        meta: "Neste funil",
+        meta: null as string | null,
       }));
 
   const scopeLabel = pipelineId
@@ -384,46 +384,23 @@ export default function LossReasonsV2ClientPage() {
             <IconPlus size={16} stroke={2.2} />
             <span className="hidden sm:inline">Novo motivo</span>
           </ButtonGlass>
-          <ActionsMenu
-            onAdd={() => setAddOpen(true)}
-            onAssign={pipelineId ? () => setAssignOpen(true) : undefined}
-            onSettings={() => setSettingsOpen(true)}
-          />
+          <ActionsMenu onSettings={() => setSettingsOpen(true)} />
         </div>
       }
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-        <div className="flex shrink-0 flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <p className="font-display text-[12px] font-semibold text-[var(--text-muted)]">
-              Escopo
-            </p>
-            <DropdownGlass
-              options={scopeOptions}
-              value={scope ?? ""}
-              onValueChange={(v) => setScope(v as Scope)}
-              placeholder={
-                pipelinesQuery.isLoading ? "Carregando funis…" : "Selecione o funil"
-              }
-              className="w-full max-w-md"
-            />
-            <p className="text-[12px] text-[var(--text-muted)]">
-              {pipelineId
-                ? "Motivos listados abaixo valem só para este funil. O mesmo motivo pode ser vinculado a vários funis."
-                : "Catálogo compartilhado — vincule cada motivo aos funis que devem usá-lo."}
-            </p>
-          </div>
-
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <DropdownGlass
+            options={scopeOptions}
+            value={scope ?? ""}
+            onValueChange={(v) => setScope(v as Scope)}
+            placeholder={
+              pipelinesQuery.isLoading ? "Carregando funis…" : "Selecione o funil"
+            }
+            className="w-full sm:max-w-xs"
+          />
           {pipelineId && (
-            <div className="flex shrink-0 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
-              <div className="min-w-0">
-                <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-                  Obrigatório
-                </p>
-                <p className="text-[11px] text-[var(--text-muted)]">
-                  Exige motivo ao marcar perdido
-                </p>
-              </div>
+            <label className="flex shrink-0 items-center gap-2.5 text-[13px] text-[var(--text-secondary)]">
               <SwitchGlass
                 checked={Boolean(pipelineMeta?.lossReasonRequired)}
                 onChange={(v) =>
@@ -432,60 +409,70 @@ export default function LossReasonsV2ClientPage() {
                 disabled={pipelineMetaQuery.isLoading || savePipelineMut.isPending}
                 aria-label={`Motivo obrigatório em ${scopeLabel}`}
               />
-            </div>
+              <span className="font-display font-semibold text-[var(--text-primary)]">
+                Obrigatório
+              </span>
+            </label>
+          )}
+          {pipelineId && (
+            <ButtonGlass
+              type="button"
+              variant="glass"
+              className="h-9 gap-1.5 px-2.5 text-[12px] sm:ml-auto"
+              onClick={() => setAssignOpen(true)}
+            >
+              <IconLink size={14} />
+              Vincular do catálogo
+            </ButtonGlass>
           )}
         </div>
+        <p className="shrink-0 text-[12px] text-[var(--text-muted)]">
+          {pipelineId
+            ? "Lista deste funil. O mesmo motivo pode ser vinculado a vários funis."
+            : "Catálogo compartilhado — vincule cada motivo aos funis que devem usá-lo."}
+        </p>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-2 shadow-[var(--glass-shadow)]">
-          <div className="flex shrink-0 items-center justify-between gap-2 px-2 py-1.5">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--glass-border)] px-3 py-2">
             <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
               {scopeLabel}
               <span className="ml-2 font-normal text-[var(--text-muted)]">
                 · {listItems.length}
               </span>
             </p>
-            {pipelineId && (
-              <ButtonGlass
-                type="button"
-                variant="glass"
-                className="h-8 gap-1.5 px-2.5 text-[12px]"
-                onClick={() => setAssignOpen(true)}
-              >
-                <IconLink size={14} />
-                Vincular do catálogo
-              </ButtonGlass>
-            )}
           </div>
 
           {reasonsQuery.isLoading ||
           pipelinesQuery.isLoading ||
           (pipelineId && pipelineMetaQuery.isLoading) ? (
-            <div className="h-40 animate-pulse rounded-[var(--radius-lg)] bg-[var(--glass-bg-subtle)]" />
+            <div className="m-2 h-32 animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-subtle)]" />
           ) : listItems.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
-              <IconThumbDown size={28} className="text-[var(--text-muted)]" />
-              <p className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-12 text-center">
+              <IconThumbDown size={24} className="text-[var(--text-muted)]" />
+              <p className="font-display text-[14px] font-bold text-[var(--text-primary)]">
                 {pipelineId
                   ? "Nenhum motivo neste funil"
                   : "Nenhum motivo no catálogo"}
               </p>
-              <p className="max-w-sm text-[13px] text-[var(--text-muted)]">
+              <p className="max-w-sm text-[12px] text-[var(--text-muted)]">
                 {pipelineId
-                  ? "Crie um motivo novo (já fica vinculado) ou vincule itens do catálogo global."
+                  ? "Crie um motivo novo (já fica vinculado) ou vincule itens do catálogo."
                   : "Crie motivos reutilizáveis e vincule-os a cada funil."}
               </p>
-              <div className="mt-3 flex flex-wrap justify-center gap-2">
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
                 <ButtonGlass
                   type="button"
                   variant="primary"
+                  className="h-8 gap-1.5 px-3 text-[12px]"
                   onClick={() => setAddOpen(true)}
                 >
-                  <IconPlus size={16} /> Novo motivo
+                  <IconPlus size={14} /> Novo motivo
                 </ButtonGlass>
                 {pipelineId && (
                   <ButtonGlass
                     type="button"
                     variant="glass"
+                    className="h-8 gap-1.5 px-3 text-[12px]"
                     onClick={() => setAssignOpen(true)}
                   >
                     Vincular do catálogo
@@ -500,7 +487,7 @@ export default function LossReasonsV2ClientPage() {
                   <div
                     ref={drop.innerRef}
                     {...drop.droppableProps}
-                    className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-1.5"
+                    className="min-h-0 flex-1 divide-y divide-[var(--glass-border)] overflow-y-auto"
                   >
                     {listItems.map((item, index) => (
                       <Draggable
@@ -513,19 +500,19 @@ export default function LossReasonsV2ClientPage() {
                             ref={drag.innerRef}
                             {...drag.draggableProps}
                             className={cn(
-                              "flex items-center gap-3 rounded-[var(--radius-xl)] border px-3 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-shadow",
+                              "flex items-center gap-2 px-2 py-1.5 transition-colors",
                               snapshot.isDragging
-                                ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] shadow-[var(--glass-shadow)]"
-                                : "border-[var(--glass-border)] bg-[var(--glass-bg-base)]",
+                                ? "bg-[var(--color-primary-soft)] shadow-[var(--glass-shadow-sm)]"
+                                : "hover:bg-[var(--glass-bg-overlay)]",
                             )}
                           >
                             <button
                               type="button"
                               aria-label="Arrastar para reordenar"
-                              className="flex size-9 shrink-0 cursor-grab items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)] active:cursor-grabbing"
+                              className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-base)] hover:text-[var(--brand-primary)] active:cursor-grabbing"
                               {...drag.dragHandleProps}
                             >
-                              <IconGripVertical size={18} stroke={2.2} />
+                              <IconGripVertical size={16} stroke={2} />
                             </button>
                             <EditableLabel
                               value={item.label}
@@ -533,15 +520,17 @@ export default function LossReasonsV2ClientPage() {
                                 renameMut.mutate({ id: item.id, label })
                               }
                             />
-                            <span className="hidden shrink-0 text-[11px] text-[var(--text-muted)] sm:inline">
-                              {item.meta}
-                            </span>
+                            {item.meta && (
+                              <span className="hidden shrink-0 text-[11px] text-[var(--text-muted)] sm:inline">
+                                {item.meta}
+                              </span>
+                            )}
                             {pipelineId ? (
                               <button
                                 type="button"
                                 title="Desvincular deste funil"
                                 aria-label="Desvincular"
-                                className="ml-auto flex size-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
+                                className="ml-auto flex size-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
                                 onClick={() => {
                                   const next = funnelItems
                                     .filter((r) => r.id !== item.id)
@@ -549,17 +538,17 @@ export default function LossReasonsV2ClientPage() {
                                   savePipelineMut.mutate({ reasonIds: next });
                                 }}
                               >
-                                <IconUnlink size={16} />
+                                <IconUnlink size={15} />
                               </button>
                             ) : (
                               <button
                                 type="button"
                                 title="Excluir do catálogo"
                                 aria-label="Excluir"
-                                className="ml-auto flex size-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
+                                className="ml-auto flex size-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
                                 onClick={() => deleteMut.mutate(item.id)}
                               >
-                                <IconTrash size={16} />
+                                <IconTrash size={15} />
                               </button>
                             )}
                           </div>
@@ -672,7 +661,7 @@ function EditableLabel({
     return (
       <button
         type="button"
-        className="min-w-0 flex-1 truncate text-left font-display text-[14.5px] font-bold text-[var(--text-primary)] hover:text-[var(--brand-primary)]"
+        className="min-w-0 flex-1 truncate text-left font-display text-[13.5px] font-semibold text-[var(--text-primary)] hover:text-[var(--brand-primary)]"
         onClick={() => setEditing(true)}
         title="Clique para editar"
       >
@@ -794,16 +783,8 @@ function AssignDialog({
   );
 }
 
-/** Menu em portal — o header tem overflow e cortava o dropdown. */
-function ActionsMenu({
-  onAdd,
-  onAssign,
-  onSettings,
-}: {
-  onAdd: () => void;
-  onAssign?: () => void;
-  onSettings: () => void;
-}) {
+/** Overflow só para Configurações — CTAs principais ficam no header/toolbar. */
+function ActionsMenu({ onSettings }: { onSettings: () => void }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -836,39 +817,20 @@ function ActionsMenu({
     };
   }, [open]);
 
-  const items = [
-    { icon: <IconPlus size={16} />, label: "Adicionar motivo", onClick: onAdd },
-    ...(onAssign
-      ? [
-          {
-            icon: <IconLink size={16} />,
-            label: "Vincular do catálogo",
-            onClick: onAssign,
-          },
-        ]
-      : []),
-    {
-      icon: <IconSettings size={16} />,
-      label: "Configurações",
-      onClick: onSettings,
-      divider: true as const,
-    },
-  ];
-
   return (
     <>
       <button
         ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-label="Ações"
+        aria-label="Mais opções"
         aria-expanded={open}
         className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
-          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
+          "flex h-9 w-9 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]",
+          open && "border-[var(--brand-primary)] text-[var(--brand-primary)]",
         )}
       >
-        <IconMenu2 size={18} stroke={2.2} />
+        <IconMenu2 size={18} stroke={2} />
       </button>
       {open &&
         pos &&
@@ -876,26 +838,21 @@ function ActionsMenu({
           <div
             ref={menuRef}
             style={{ top: pos.top, right: pos.right }}
-            className="fixed z-[200] w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md"
+            className="fixed z-[200] w-[200px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md"
           >
-            {items.map((it) => (
-              <div key={it.label}>
-                {"divider" in it && it.divider && (
-                  <div className="my-1 h-px bg-[var(--glass-border)]" />
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    it.onClick();
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-                >
-                  <span className="text-[var(--text-muted)]">{it.icon}</span>
-                  {it.label}
-                </button>
-              </div>
-            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onSettings();
+              }}
+              className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+            >
+              <span className="text-[var(--text-muted)]">
+                <IconSettings size={16} />
+              </span>
+              Configurações
+            </button>
           </div>,
           document.body,
         )}

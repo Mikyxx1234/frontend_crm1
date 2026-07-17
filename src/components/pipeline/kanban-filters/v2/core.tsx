@@ -38,7 +38,7 @@ import {
   detectPreset,
   type DatePresetKey,
 } from "../date-presets";
-import { fetchSavedFilters } from "../api";
+import { fetchSavedFilters, searchContactsForFilter, type ContactFilterHit } from "../api";
 import type {
   AdvancedDealFilters,
   CustomField,
@@ -532,12 +532,42 @@ export function OwnersSection({ draft, options, setDraftField }: SectionProps) {
 }
 
 export function ContactSection({ draft, setDraftField }: SectionProps) {
+  const search = draft.contactSearch ?? "";
+  const [debounced, setDebounced] = React.useState("");
+  const [hits, setHits] = React.useState<ContactFilterHit[]>([]);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const t = window.setTimeout(() => setDebounced(search.trim()), 250);
+    return () => window.clearTimeout(t);
+  }, [search]);
+
+  React.useEffect(() => {
+    if (debounced.length < 2) {
+      setHits([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    void searchContactsForFilter(debounced).then((rows) => {
+      if (cancelled) return;
+      setHits(rows);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [debounced]);
+
   const active = !!(
     draft.contactSearch ||
     draft.contactHasPhone != null ||
     draft.contactHasEmail != null ||
     draft.withoutContact
   );
+  const showResults = debounced.length >= 2;
+
   return (
     <FieldCard
       label="Contato"
@@ -551,10 +581,55 @@ export function ContactSection({ draft, setDraftField }: SectionProps) {
     >
       <div className="space-y-2">
         <TextField
-          value={draft.contactSearch ?? ""}
+          value={search}
           onChange={(v) => setDraftField("contactSearch", v || undefined)}
           placeholder="Nome, telefone, e-mail…"
+          icon={<Search className="size-3.5" />}
         />
+        {showResults && (
+          <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1">
+            {loading ? (
+              <p className="px-2 py-1.5 text-[12px] text-ink-subtle">Buscando…</p>
+            ) : hits.length === 0 ? (
+              <p className="px-2 py-1.5 text-[12px] text-ink-subtle">Nenhum contato encontrado.</p>
+            ) : (
+              hits.map((c) => {
+                const selected = search.trim().toLowerCase() === c.name.trim().toLowerCase();
+                const subtitle = [c.phone, c.email].filter(Boolean).join(" · ");
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setDraftField("contactSearch", c.name);
+                      setDraftField("withoutContact", undefined);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
+                      selected
+                        ? "bg-primary-soft font-medium text-primary-dark"
+                        : "text-ink-soft hover:bg-muted",
+                    )}
+                  >
+                    <span
+                      className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+                      style={{ background: `hsl(${(c.name.charCodeAt(0) * 47) % 360} 55% 50%)` }}
+                    >
+                      {c.name[0]?.toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1 text-left">
+                      <span className="block truncate">{c.name}</span>
+                      {subtitle ? (
+                        <span className="block truncate text-[11px] text-ink-subtle">{subtitle}</span>
+                      ) : null}
+                    </span>
+                    {selected && <Check className="size-3.5 shrink-0" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap gap-1.5">
           {[
             { label: "Tem telefone", field: "contactHasPhone" as const },

@@ -252,6 +252,32 @@ export async function fetchFilterOptions(): Promise<FilterOptionsResponse> {
   } as FilterOptionsResponse;
 }
 
+/** Typeahead de contatos no filtro Pessoas (Kanban). */
+export type ContactFilterHit = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+};
+
+export async function searchContactsForFilter(search: string): Promise<ContactFilterHit[]> {
+  const q = search.trim();
+  if (q.length < 2) return [];
+  const res = await fetch(apiUrl(`/api/contacts?perPage=10&search=${encodeURIComponent(q)}`), {
+    cache: "no-store",
+    credentials: "include",
+  });
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => ({}));
+  const list = Array.isArray(data) ? data : data.items ?? data.contacts ?? [];
+  return (list as ContactFilterHit[]).map((c) => ({
+    id: c.id,
+    name: c.name,
+    email: c.email ?? null,
+    phone: c.phone ?? null,
+  }));
+}
+
 export async function fetchBoardWithFilters(
   pipelineId: string,
   status: string,

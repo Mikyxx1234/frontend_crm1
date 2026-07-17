@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import {
-  IconCheck,
   IconChevronDown,
   IconChevronsLeft,
   IconChevronsRight,
@@ -17,6 +16,7 @@ import {
   IconUserCircle,
 } from "@tabler/icons-react";
 import { signOut, useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 import { useEffect, useRef, useState } from "react";
 
@@ -142,15 +142,13 @@ export function NavRailV2({ className }: { className?: string }) {
     (session?.user as { organizationId?: string | null } | undefined)
       ?.organizationId ??
     "";
-  const [accountIdCopied, setAccountIdCopied] = useState(false);
   async function copyAccountId() {
     if (!accountId) return;
     try {
       await navigator.clipboard.writeText(accountId);
-      setAccountIdCopied(true);
-      window.setTimeout(() => setAccountIdCopied(false), 1500);
+      toast.success("ID da conta copiado");
     } catch {
-      /* clipboard indisponível — ignora */
+      toast.error("Não foi possível copiar o ID");
     }
   }
 
@@ -340,7 +338,7 @@ export function NavRailV2({ className }: { className?: string }) {
       </button>
 
       {/* Avatar da empresa: iniciais do nome da org (estilo Kommo). Ao clicar,
-          abre um popover com o nome e o ID da conta (copiável) + atalho Início.
+          abre menu no mesmo padrão do avatar do usuário (header + itens).
           Gate `mounted` idêntico ao avatar do usuário: no SSR/1o render usamos
           um Link estático (preserva navegação sem JS) e trocamos pelo dropdown
           após o mount, evitando hydration mismatch do useId. */}
@@ -368,7 +366,7 @@ export function NavRailV2({ className }: { className?: string }) {
             {companyInitials}
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="start" className="w-64">
+          <DropdownMenuContent align="start" className="w-60">
             <div className="flex items-center gap-3 px-2 py-2">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[13px] font-bold text-white">
                 {companyInitials}
@@ -377,38 +375,21 @@ export function NavRailV2({ className }: { className?: string }) {
                 <p className="truncate font-display text-[13px] font-bold text-foreground">
                   {companyName || "Minha empresa"}
                 </p>
-                <p className="text-[11px] text-muted-foreground">Conta</p>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  {accountId || "Conta"}
+                </p>
               </div>
             </div>
 
             <DropdownMenuSeparator />
 
-            <div className="px-2 py-1.5">
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                ID da conta
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="min-w-0 flex-1 truncate rounded bg-muted px-1.5 py-1 font-mono text-[11px] text-foreground">
-                  {accountId || "—"}
-                </code>
-                <button
-                  type="button"
-                  onClick={copyAccountId}
-                  disabled={!accountId}
-                  aria-label="Copiar ID da conta"
-                  title={accountIdCopied ? "Copiado!" : "Copiar ID da conta"}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
-                >
-                  {accountIdCopied ? (
-                    <IconCheck size={14} className="text-[var(--color-success,#16a34a)]" />
-                  ) : (
-                    <IconCopy size={14} />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => void copyAccountId()}
+              disabled={!accountId}
+            >
+              <IconCopy size={16} className="text-muted-foreground" />
+              <span className="font-medium">Copiar ID da conta</span>
+            </DropdownMenuItem>
 
             <DropdownMenuItem onClick={() => router.push("/dashboard")}>
               <IconHome size={16} className="text-muted-foreground" />

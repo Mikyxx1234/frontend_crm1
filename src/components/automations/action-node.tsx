@@ -8,6 +8,7 @@ import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import { stepColor } from "./add-step-node";
+import { NodeInlineConfig } from "./node-inline-config";
 
 export type ActionNodeData = {
   stepType: string;
@@ -19,6 +20,10 @@ export type ActionNodeData = {
   onDelete?: () => void;
   stats?: { success: number; failed: number; skipped: number };
   onStatsClick?: () => void;
+  /** Edição inline (populado por buildNodes no workflow-canvas). */
+  config?: Record<string, unknown>;
+  stepOptions?: Array<{ value: string; label: string }>;
+  onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
 const iconMap: Record<string, ComponentType<{ className?: string; strokeWidth?: number }>> = {
@@ -75,7 +80,8 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[230px] max-w-[290px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        selected ? "min-w-[340px] max-w-[400px]" : "min-w-[230px] max-w-[290px]",
         selected
           ? "border-primary/50 shadow-[var(--shadow-indigo-glow)] ring-2 ring-primary/25"
           : data.incomplete
@@ -158,6 +164,13 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
           </button>
         </TooltipHost>
       )}
+      <NodeInlineConfig
+        selected={selected}
+        stepType={data.stepType}
+        config={data.config}
+        stepOptions={data.stepOptions ?? []}
+        onChange={(next) => data.onConfigChange?.(next)}
+      />
       <Handle
         type="source"
         position={Position.Right}

@@ -5,6 +5,7 @@ import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, Ic
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { NodeInlineConfig } from "./node-inline-config";
 
 export type WaitNodeData = {
   label: string;
@@ -16,6 +17,10 @@ export type WaitNodeData = {
   onDelete?: () => void;
   stats?: { success: number; failed: number; skipped: number };
   onStatsClick?: () => void;
+  stepType?: string;
+  config?: Record<string, unknown>;
+  stepOptions?: Array<{ value: string; label: string }>;
+  onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
 /**
@@ -30,7 +35,8 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[250px] max-w-[310px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        selected ? "min-w-[340px] max-w-[400px]" : "min-w-[250px] max-w-[310px]",
         selected
           ? "border-orange-400/60 ring-2 ring-orange-300/30 shadow-[0_10px_30px_-10px_rgba(249,115,22,0.4)]"
           : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-orange-300/50 hover:shadow-[0_10px_30px_-10px_rgba(249,115,22,0.3)]"
@@ -144,6 +150,13 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
           </button>
         </TooltipHost>
       )}
+      <NodeInlineConfig
+        selected={selected}
+        stepType={data.stepType ?? "wait_for_reply"}
+        config={data.config}
+        stepOptions={data.stepOptions ?? []}
+        onChange={(next) => data.onConfigChange?.(next)}
+      />
     </div>
   );
 }

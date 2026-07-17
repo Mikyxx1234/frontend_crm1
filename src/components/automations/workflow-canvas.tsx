@@ -52,7 +52,6 @@ import { InteractiveNode } from "./interactive-node";
 import { NodePalette, readPaletteDragType } from "./node-palette";
 import { QuestionNode } from "./question-node";
 import { WaitNode } from "./wait-node";
-import { StepConfigPanel } from "./step-config-panel";
 import { TriggerNode } from "./trigger-node";
 import { VariableNode } from "./variable-node";
 
@@ -454,8 +453,6 @@ function WorkflowCanvasInner({
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { theme } = useThemeV2();
   const isDark = theme === "dark";
-  const [configOpen, setConfigOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<AutomationStep | null>(null);
   const stepsRef = useRef(steps);
   stepsRef.current = steps;
 
@@ -583,6 +580,24 @@ function WorkflowCanvasInner({
       const stepIndexById = new Map<string, number>();
       list.forEach((s, i) => stepIndexById.set(s.id, i + 1));
 
+      // stepOptions p/ campos `kind: "step"` do editor inline —
+      // exclui o próprio nó pra evitar auto-referência acidental.
+      const buildStepOptions = (currentId: string) =>
+        list
+          .filter((s) => s.id !== currentId)
+          .map((s, i) => ({ value: s.id, label: `${i + 1}. ${stepTypeLabel(s.type)}` }));
+
+      // Mescla config do editor inline preservando __rfPos e outras
+      // chaves internas (o Editor faz spread da config atual, então
+      // essas chaves já vem no `next`; mesmo assim garantimos ao setar).
+      const patchStepConfig = (stepId: string, next: Record<string, unknown>) => {
+        const cur = stepsRef.current;
+        const updated = cur.map((s) =>
+          s.id === stepId ? { ...s, config: next } : s
+        );
+        onStepsChange(updated);
+      };
+
       const stepNodes: Node[] = list.map((step, index) => {
         const saved = readRfPos(step.config);
         const pos = saved ?? { x: START_X + index * GAP_X, y: NODE_Y };
@@ -605,6 +620,12 @@ function WorkflowCanvasInner({
           onDelete: () => onDelete(step.id),
           stats: ss ? { success: ss.success, failed: ss.failed, skipped: ss.skipped } : undefined,
           onStatsClick: () => onStepLogsOpenRef.current?.(step.id),
+          // Edição inline — o slot NodeInlineConfig dentro de cada
+          // node component consome estes props quando `selected`.
+          config: (step.config ?? {}) as Record<string, unknown>,
+          stepOptions: buildStepOptions(step.id),
+          onConfigChange: (next: Record<string, unknown>) =>
+            patchStepConfig(step.id, next),
         };
 
         if (isInteractiveStep(step.type)) {
@@ -715,7 +736,7 @@ function WorkflowCanvasInner({
 
       return [triggerNode, ...stepNodes, ...addStepNodes];
     },
-    [triggerConfig, triggerType, stats, stageNameLookup]
+    [triggerConfig, triggerType, stats, stageNameLookup, onStepsChange]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -1245,11 +1266,9 @@ function WorkflowCanvasInner({
       onTriggerClickRef.current?.();
       return;
     }
-    const st = stepsRef.current.find((s) => s.id === node.id);
-    if (st) {
-      setSelectedStep(st);
-      setConfigOpen(true);
-    }
+    // Edição inline: o clique só seleciona; o próprio node expande o
+    // NodeConfigEditor quando `selected === true` (React Flow gerencia
+    // a seleção internamente via onNodesChange).
   }, []);
 
   const onEdgeClick = useCallback(
@@ -1408,17 +1427,6 @@ function WorkflowCanvasInner({
     e.dataTransfer.dropEffect = "copy";
   }, []);
 
-  const handleSaveStep = useCallback(
-    (updated: AutomationStep) => {
-      const next = stepsRef.current.map((s) =>
-        s.id === updated.id ? updated : s
-      );
-      onStepsChange(next);
-      setSelectedStep(updated);
-    },
-    [onStepsChange]
-  );
-
   return (
     <div className={cn("automation-editor flex w-full", className)}>
       {/* Palette — esquerda (antes do canvas) */}
@@ -1531,15 +1539,6 @@ function WorkflowCanvasInner({
           </>
         )}
       </div>
-
-      {/* Step config */}
-      <StepConfigPanel
-        open={configOpen}
-        onOpenChange={setConfigOpen}
-        step={selectedStep}
-        onSave={handleSaveStep}
-        allSteps={steps}
-      />
     </div>
   );
 }

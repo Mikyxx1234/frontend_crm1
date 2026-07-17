@@ -14,7 +14,7 @@ import {
   IconArrowsSort,
   IconBolt,
   IconBriefcase,
-  IconCalendarStats,
+  IconCalendarEvent,
   IconCheck,
   IconRotateClockwise,
   IconSearch,
@@ -78,7 +78,7 @@ const BASE_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "atalhos", label: "Atalhos", icon: <IconBolt size={13} stroke={2.2} /> },
   { id: "negocio", label: "Negócio", icon: <IconBriefcase size={13} stroke={2.2} /> },
   { id: "pessoas", label: "Pessoas", icon: <IconUsers size={13} stroke={2.2} /> },
-  { id: "datas", label: "Datas", icon: <IconCalendarStats size={13} stroke={2.2} /> },
+  { id: "datas", label: "Datas", icon: <IconCalendarEvent size={13} stroke={2.2} /> },
   { id: "tags", label: "Tags", icon: <IconTag size={13} stroke={2.2} /> },
   { id: "custom", label: "Personalizado", icon: <IconWand size={13} stroke={2.2} /> },
 ];
@@ -258,7 +258,13 @@ export function PipelineSearchFilterBar({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,720px)] flex-col rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
+        <div
+          className={cn(
+            "absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,720px)] flex-col rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md",
+            // DatePicker abre em absolute — overflow clipped corta o calendário.
+            tab === "datas" ? "overflow-visible" : "overflow-hidden",
+          )}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
             <div className="flex items-center gap-2">
@@ -281,12 +287,12 @@ export function PipelineSearchFilterBar({
             </button>
           </div>
 
-          {/* Abas segmentadas — painel largo o bastante pra caber sem scroll */}
+          {/* Abas: largura pelo conteúdo (flex-1 criava vão falso entre Datas e Tags) */}
           <div className="px-4 pb-3">
             <div
               role="tablist"
               aria-label="Seções do filtro"
-              className="flex items-center gap-0.5 rounded-full bg-[var(--glass-bg-strong)] p-1"
+              className="flex items-center gap-1 overflow-x-auto rounded-full bg-[var(--glass-bg-strong)] p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
               {tabs.map((t) => {
                 const active = tab === t.id;
@@ -299,18 +305,20 @@ export function PipelineSearchFilterBar({
                     aria-selected={active}
                     onClick={() => setTab(t.id)}
                     className={cn(
-                      "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-1.5 py-1.5 font-display text-[11.5px] font-bold transition-all sm:gap-1.5 sm:px-2",
+                      "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 py-1.5 font-display text-[11.5px] font-bold leading-none transition-all",
                       active
                         ? "bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
                         : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                     )}
                   >
-                    {t.icon}
-                    <span>{t.label}</span>
+                    <span className="inline-flex shrink-0 items-center justify-center [&_svg]:block">
+                      {t.icon}
+                    </span>
+                    <span className="leading-none">{t.label}</span>
                     {badge > 0 && (
                       <span
                         className={cn(
-                          "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold",
+                          "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none",
                           active
                             ? "bg-[var(--brand-primary)] text-white"
                             : "bg-[var(--glass-border)] text-[var(--text-secondary)]",
@@ -326,7 +334,14 @@ export function PipelineSearchFilterBar({
           </div>
 
           {/* Conteúdo da aba */}
-          <div className="max-h-[min(70vh,520px)] space-y-3 overflow-y-auto px-4 pb-3">
+          <div
+            className={cn(
+              "space-y-3 px-4 pb-3",
+              tab === "datas"
+                ? "overflow-visible"
+                : "max-h-[min(70vh,520px)] overflow-y-auto",
+            )}
+          >
             {tab === "ordenar" && (
               <div className="flex flex-col gap-1">
                 {SORT_OPTIONS.map((opt) => {

@@ -1,4 +1,4 @@
-import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconBuilding as Building, IconClock as Clock, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutKanban as Kanban, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPhone as Phone, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconArrowsShuffle as Shuffle, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconUsers as Users } from "@tabler/icons-react";
+import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconBuilding as Building, IconClock as Clock, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPhone as Phone, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconArrowsShuffle as Shuffle, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconUsers as Users } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { UserRole } from "@/lib/prisma-enum-types";
 
@@ -185,43 +185,10 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
   },
 
   {
-    id: "vendas",
-    label: "Vendas & Pipeline",
-    icon: Kanban,
-    description: "Funis, regras e distribuição",
-    items: [
-      {
-        id: "pipeline",
-        label: "Pipeline",
-        description: "Estágios e regras de movimentação",
-        icon: Kanban,
-        href: "/settings/pipeline",
-        allowedRoles: GESTAO,
-        // manage_stages (e nao pipeline:view): a tela administra estagios.
-        requiredPermission: "pipeline:manage_stages",
-      },
-      {
-        id: "distribution",
-        label: "Distribuição",
-        description: "Round-robin, priorização e regras",
-        icon: Shuffle,
-        href: "/settings/distribution",
-        allowedRoles: GESTAO,
-        // distribution:manage e key DEDICADA do modulo (so ADMIN/MANAGER tem
-        // por default). Antes usavamos conversation:reassign_others, mas
-        // operadores senior tambem ganham essa permissao (pra puxar leads
-        // pra si na inbox) — usar essa key vazava o item de Distribuicao
-        // pra qualquer atendente, contrariando "Distribuicao = gestao".
-        requiredPermission: "distribution:manage",
-      },
-    ],
-  },
-
-  {
     id: "equipe-operacao",
     label: "Equipe & Operação",
     icon: Headphones,
-    description: "Pessoas e expediente",
+    description: "Pessoas, distribuição e expediente",
     items: [
       {
         id: "team",
@@ -239,6 +206,20 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         icon: Building,
         href: "/settings/departments",
         allowedRoles: GESTAO,
+      },
+      {
+        id: "distribution",
+        label: "Distribuição",
+        description: "Round-robin, priorização e regras",
+        icon: Shuffle,
+        href: "/settings/distribution",
+        allowedRoles: GESTAO,
+        // distribution:manage e key DEDICADA do modulo (so ADMIN/MANAGER tem
+        // por default). Antes usavamos conversation:reassign_others, mas
+        // operadores senior tambem ganham essa permissao (pra puxar leads
+        // pra si na inbox) — usar essa key vazava o item de Distribuicao
+        // pra qualquer atendente, contrariando "Distribuicao = gestao".
+        requiredPermission: "distribution:manage",
       },
       {
         id: "schedules",

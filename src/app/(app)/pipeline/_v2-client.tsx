@@ -729,6 +729,7 @@ export default function KanbanV2ClientPage({
               <button
                 ref={kebabBtnRef}
                 type="button"
+                data-pipeline-kebab-trigger=""
                 onClick={() => setKebabOpen((v) => !v)}
                 aria-label="Ações do pipeline"
                 aria-expanded={kebabOpen}
@@ -1844,6 +1845,19 @@ function PipelineKebabMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
+  // O `menuSlot` do PageHeader é montado em dois blocos (desktop/mobile),
+  // então o ref anexado ao botão pode terminar apontando pra cópia oculta.
+  // `resolveAnchor` procura, em tempo real, o botão visível pelo data-attr.
+  const resolveAnchor = useCallback((): HTMLElement | null => {
+    const nodes = document.querySelectorAll<HTMLElement>(
+      "[data-pipeline-kebab-trigger]",
+    );
+    for (const el of Array.from(nodes)) {
+      if (el.offsetParent !== null) return el;
+    }
+    return anchorRef.current;
+  }, [anchorRef]);
+
   // useLayoutEffect: mede o anchor antes do paint para não piscar em (0,0).
   useLayoutEffect(() => {
     if (!open) {
@@ -1851,7 +1865,8 @@ function PipelineKebabMenu({
       return;
     }
     function updateRect() {
-      if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect());
+      const el = resolveAnchor();
+      if (el) setRect(el.getBoundingClientRect());
     }
     updateRect();
     window.addEventListener("scroll", updateRect, true);
@@ -1860,25 +1875,26 @@ function PipelineKebabMenu({
       window.removeEventListener("scroll", updateRect, true);
       window.removeEventListener("resize", updateRect);
     };
-  }, [open, anchorRef]);
+  }, [open, resolveAnchor]);
 
   useEffect(() => {
     if (!open) return;
     const fn = (e: MouseEvent) => {
       const t = e.target as Node;
       if (!document.contains(t)) return;
+      const anchor = resolveAnchor();
       if (
         menuRef.current &&
         !menuRef.current.contains(t) &&
-        anchorRef.current &&
-        !anchorRef.current.contains(t)
+        anchor &&
+        !anchor.contains(t)
       ) {
         onClose();
       }
     };
     document.addEventListener("mousedown", fn, true);
     return () => document.removeEventListener("mousedown", fn, true);
-  }, [open, onClose, anchorRef]);
+  }, [open, onClose, resolveAnchor]);
 
   if (!open || !rect) return null;
 

@@ -60,52 +60,67 @@ export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsBut
   const hasActive = count > 0;
   const pos = computePopoverPosition(rect, 360, 320);
 
+  const button = (
+    <button
+      ref={triggerRef}
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        toggle();
+      }}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-label={
+        hasActive ? `${count} automação(ões) em execução` : "Automações"
+      }
+      title="Automações"
+      className={cn(
+        "flex cursor-pointer items-center justify-center rounded-full border transition-all",
+        // Inline: absolute inset-0 dentro do box 36×36 — badges ficam
+        // fora do fluxo e não deslocam o alinhamento do composer.
+        inline
+          ? "absolute inset-0"
+          : "relative h-10 w-10 shadow-(--glass-shadow-sm) backdrop-blur-md hover:scale-[1.06]",
+        hasActive
+          ? "border-violet-500/30 bg-violet-500/15 text-violet-600 v2-dark:text-violet-300"
+          : "border-(--glass-border) bg-(--glass-bg-overlay) text-(--text-muted) hover:text-(--brand-primary)",
+      )}
+    >
+      <IconRobot size={inline ? 18 : 19} />
+    </button>
+  );
+
+  const badges = hasActive ? (
+    <>
+      <span className="pointer-events-none absolute -right-0.5 -top-0.5 z-10 flex h-1.5 w-1.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-70" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-500" />
+      </span>
+      <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 z-10 grid min-h-3.5 min-w-3.5 place-items-center rounded-full bg-violet-600 px-0.5 text-[9px] font-bold leading-none text-white ring-2 ring-(--glass-bg-strong)">
+        {count}
+      </span>
+    </>
+  ) : null;
+
   return (
     <div
       className={cn(
+        // size-9 fixo = mesmo footprint do mic/enviar (36px). overflow
+        // visible só pra badges; o flex item do form não cresce.
         inline
-          ? "relative flex h-9 w-9 shrink-0 items-center justify-center self-center"
+          ? "relative size-9 shrink-0 overflow-visible"
           : "absolute bottom-[4.75rem] right-6 z-20",
         className,
       )}
     >
-      <TooltipGlass label="Automações" side="top">
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggle();
-          }}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          aria-label={
-            hasActive ? `${count} automação(ões) em execução` : "Automações"
-          }
-          className={cn(
-            "relative flex cursor-pointer items-center justify-center rounded-full border transition-all",
-            inline
-              ? "h-9 w-9"
-              : "h-10 w-10 shadow-(--glass-shadow-sm) backdrop-blur-md hover:scale-[1.06]",
-            hasActive
-              ? "border-violet-500/30 bg-violet-500/15 text-violet-600 v2-dark:text-violet-300"
-              : "border-(--glass-border) bg-(--glass-bg-overlay) text-(--text-muted) hover:text-(--brand-primary)",
-          )}
-        >
-          <IconRobot size={19} />
-          {hasActive && (
-            <>
-              <span className="absolute -right-0.5 -top-0.5 flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-70" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-500" />
-              </span>
-              <span className="absolute -bottom-1 -right-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-violet-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-(--glass-bg-overlay)">
-                {count}
-              </span>
-            </>
-          )}
-        </button>
-      </TooltipGlass>
+      {inline ? (
+        button
+      ) : (
+        <TooltipGlass label="Automações" side="top">
+          {button}
+        </TooltipGlass>
+      )}
+      {badges}
 
       {open && typeof document !== "undefined"
         ? createPortal(

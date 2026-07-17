@@ -32,7 +32,6 @@ import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
-  ChipToggle,
   FieldCard,
   MultiSelectDropdown,
   TextField,
@@ -175,25 +174,6 @@ function OptionRow({
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {active && <IconCheck size={14} stroke={2.6} className="shrink-0" />}
     </button>
-  );
-}
-
-function CheckBox({ selected }: { selected: boolean }) {
-  return (
-    <span
-      className={cn(
-        "flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
-        selected
-          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-          : "border-[var(--glass-border)]",
-      )}
-    >
-      {selected && (
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
-      )}
-    </span>
   );
 }
 

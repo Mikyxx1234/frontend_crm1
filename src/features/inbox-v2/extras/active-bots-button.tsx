@@ -76,8 +76,8 @@ export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsBut
       title="Automações"
       className={cn(
         "flex cursor-pointer items-center justify-center rounded-full border transition-all",
-        // Inline: absolute inset-0 dentro do box 36×36 — badges ficam
-        // fora do fluxo e não deslocam o alinhamento do composer.
+        // Inline: absolute inset-0 dentro do box — badges ficam fora do
+        // fluxo e não deslocam o alinhamento do composer.
         inline
           ? "absolute inset-0"
           : "relative h-10 w-10 shadow-(--glass-shadow-sm) backdrop-blur-md hover:scale-[1.06]",
@@ -86,7 +86,12 @@ export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsBut
           : "border-(--glass-border) bg-(--glass-bg-overlay) text-(--text-muted) hover:text-(--brand-primary)",
       )}
     >
-      <IconRobot size={inline ? 18 : 19} />
+      {/* Inline: ~22% maior que mic/emoji (20) para equilíbrio óptico do glyph. */}
+      <IconRobot
+        size={inline ? 24 : 19}
+        stroke={1.75}
+        className={inline ? "block shrink-0" : undefined}
+      />
     </button>
   );
 
@@ -105,10 +110,10 @@ export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsBut
   return (
     <div
       className={cn(
-        // size-9 fixo = mesmo footprint do mic/enviar (36px). overflow
-        // visible só pra badges; o flex item do form não cresce.
+        // size-9 = mesmo footprint do mic/enviar (36px); self-center
+        // alinha no eixo do form. overflow visible só pra badges.
         inline
-          ? "relative size-9 shrink-0 overflow-visible"
+          ? "relative flex size-9 shrink-0 items-center justify-center self-center overflow-visible"
           : "absolute bottom-[4.75rem] right-6 z-20",
         className,
       )}

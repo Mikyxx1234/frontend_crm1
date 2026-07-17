@@ -126,6 +126,12 @@ export interface FetchContactsParams {
   tagIds?: string[];
   /** Somente contatos sem responsável atribuído. */
   unassigned?: boolean;
+  /** Intervalo de criação (YYYY-MM-DD). */
+  createdFrom?: string;
+  createdTo?: string;
+  /** Intervalo de modificação (YYYY-MM-DD). */
+  updatedFrom?: string;
+  updatedTo?: string;
   /** Campo de ordenação. */
   sortBy?: "name" | "email" | "createdAt" | "updatedAt" | "leadScore" | "lifecycleStage";
   /** Direção da ordenação. */
@@ -141,6 +147,10 @@ export function fetchContacts(params: FetchContactsParams = {}): Promise<Contact
   if (params.lifecycleStage) sp.set("lifecycleStage", params.lifecycleStage);
   if (params.tagIds && params.tagIds.length > 0) sp.set("tagIds", params.tagIds.join(","));
   if (params.unassigned) sp.set("unassigned", "1");
+  if (params.createdFrom) sp.set("createdFrom", params.createdFrom);
+  if (params.createdTo) sp.set("createdTo", params.createdTo);
+  if (params.updatedFrom) sp.set("updatedFrom", params.updatedFrom);
+  if (params.updatedTo) sp.set("updatedTo", params.updatedTo);
   if (params.sortBy) sp.set("sortBy", params.sortBy);
   if (params.sortOrder) sp.set("sortOrder", params.sortOrder);
   const qs = sp.toString();

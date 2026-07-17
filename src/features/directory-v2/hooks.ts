@@ -58,6 +58,10 @@ export function useContacts(params: {
   lifecycleStage?: string;
   tagIds?: string[];
   unassigned?: boolean;
+  createdFrom?: string;
+  createdTo?: string;
+  updatedFrom?: string;
+  updatedTo?: string;
   sortBy?: "name" | "email" | "createdAt" | "updatedAt" | "leadScore" | "lifecycleStage";
   sortOrder?: "asc" | "desc";
   enabled?: boolean;
@@ -74,6 +78,10 @@ export function useContacts(params: {
       params.lifecycleStage ?? "",
       tagIds.join(","),
       params.unassigned ? "1" : "",
+      params.createdFrom ?? "",
+      params.createdTo ?? "",
+      params.updatedFrom ?? "",
+      params.updatedTo ?? "",
       params.sortBy ?? "",
       params.sortOrder ?? "",
     ],
@@ -85,6 +93,10 @@ export function useContacts(params: {
         lifecycleStage: params.lifecycleStage,
         tagIds: tagIds.length > 0 ? tagIds : undefined,
         unassigned: params.unassigned,
+        createdFrom: params.createdFrom,
+        createdTo: params.createdTo,
+        updatedFrom: params.updatedFrom,
+        updatedTo: params.updatedTo,
         sortBy: params.sortBy,
         sortOrder: params.sortOrder,
       }),

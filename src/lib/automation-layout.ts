@@ -1,11 +1,16 @@
 import type { AutomationStep } from "@/lib/automation-workflow";
 
 const NONE = "__none__";
-const START_X = 200;
+// O nó do gatilho fica fixo em x=32 e tem até ~280px de largura. A 1ª
+// coluna de passos precisa começar DEPOIS dele (32 + 280 + folga), senão
+// o primeiro passo fica por baixo do gatilho após o auto-alinhar.
+const TRIGGER_X = 32;
+const TRIGGER_W = 280;
 // Folga horizontal fixa ENTRE colunas (somada à largura real do nó mais
 // largo de cada coluna). Mantém respiro pra edge/handles sem depender de
 // um GAP_X único que ora sobra (nós recolhidos), ora falta (expandidos).
 const COL_GAP = 140;
+const START_X = TRIGGER_X + TRIGGER_W + COL_GAP; // = 452
 // 27/mai/26 — START_Y agora bate com `NODE_Y` em `workflow-canvas.tsx`
 // (=300). Antes era 140, o que jogava todo o fluxo 160px acima do nó
 // do gatilho (que fica fixo em y=300). Visualmente parecia que o

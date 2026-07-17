@@ -3,15 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   IconAlertTriangle,
-  IconAntennaBars5,
-  IconBan,
   IconEye,
+  IconEyeOff,
   IconKey,
   IconLayoutSidebar,
   IconLoader2,
-  IconMessagePlus,
-  IconSend,
-  IconSettings,
   IconShield,
   IconUsers,
 } from "@tabler/icons-react";
@@ -27,17 +23,13 @@ import {
   useDeleteRole,
   usePermissionsCatalog,
   useRole,
-  useRoleScopeGrants,
-  useScopeChannelOptions,
   useUpdateRole,
-  useUpdateRoleScopeGrants,
 } from "./hooks";
 import type { RoleSidebarItem } from "./types";
 import {
   RolePermissionsEditor,
   type PermissionsEditorMode,
 } from "./role-permissions-editor";
-import { ScopeMultiSelect, normalizeScope } from "./user-permissions-view";
 import {
   SidebarItemsEditor,
   toEditorItems,
@@ -66,6 +58,27 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   const [mode, setMode] = useState<PermissionsEditorMode>("levels");
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  // Ocultar/exibir o painel de detalhes (identidade) — preferência persistida.
+  const [showIdentity, setShowIdentity] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("perm.roleEditor.showIdentity") === "0") {
+        setShowIdentity(false);
+      }
+    } catch {
+      /* localStorage indisponível — mantém padrão visível */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "perm.roleEditor.showIdentity",
+        showIdentity ? "1" : "0",
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [showIdentity]);
   // Menu lateral do papel — controlado localmente e enviado no save. Quando
   // o admin nunca mexeu, `sidebarOverride` fica false: nao envia `sidebarItems`
   // no payload (backend mantem `null` = usa catalogo padrao). Ao habilitar o
@@ -173,8 +186,14 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   const fieldsDisabled = isSystem && !isNew;
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
-      {/* ── COLUNA ESQUERDA: identidade do role (fixa) ─────────────────── */}
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-5 lg:items-start",
+        showIdentity && "lg:grid-cols-[320px_minmax(0,1fr)]",
+      )}
+    >
+      {/* ── COLUNA ESQUERDA: identidade do role (ocultável) ─────────────── */}
+      {showIdentity && (
       <aside className="flex flex-col gap-3 lg:sticky lg:top-2">
         <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow-sm)]">
           {/* Cabeçalho: ícone + nome + badge de preset */}
@@ -285,9 +304,55 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
           </div>
         )}
       </aside>
+      )}
 
       {/* ── COLUNA DIREITA: matriz de permissões (painéis soltos, DS v2) ── */}
       <div className="flex min-w-0 flex-col gap-4">
+        {/* Barra: ocultar/exibir o painel de detalhes */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setShowIdentity((v) => !v)}
+            aria-pressed={!showIdentity}
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+          >
+            {showIdentity ? <IconEyeOff size={14} /> : <IconEye size={14} />}
+            {showIdentity ? "Ocultar detalhes" : "Mostrar detalhes"}
+          </button>
+
+          {!showIdentity && (
+            <div className="flex items-center gap-2">
+              <span className="mr-1 max-w-[220px] truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+                {isNew ? "Novo role" : (role?.name ?? "")}
+              </span>
+              <Button
+                size="sm"
+                onClick={() => void handleSave()}
+                disabled={saving || (!isNew && !name.trim())}
+                className="h-8 text-xs"
+              >
+                {saving && <IconLoader2 className="mr-1.5 size-3 animate-spin" />}
+                Salvar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onClose}
+                className="h-8 text-xs"
+              >
+                Cancelar
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {!showIdentity && error && (
+          <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-destructive)] bg-[var(--color-destructive-soft)] px-3 py-2 text-xs text-[var(--color-destructive)]">
+            <IconAlertTriangle className="size-3.5 shrink-0" />
+            {error}
+          </div>
+        )}
+
         <RolePermissionsEditor
           resources={editorResources}
           checked={checked}
@@ -302,10 +367,6 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
             <code className="font-mono">*</code>) — as permissões não são editáveis.
           </p>
         )}
-
-        {/* Canais por papel: só faz sentido para papéis não-admin já criados
-            (precisa de roleId para persistir o grant). */}
-        {!isNew && !isAdminPreset && roleId && <RoleChannelScope roleId={roleId} />}
 
         {/* Menu lateral do papel — decisão 14/jul/26 (ver AGENT.md). Salvo
             no mesmo submit do papel; usuários com este papel veem esta config
@@ -381,139 +442,3 @@ function RoleSidebarSection({
   );
 }
 
-/**
- * Escopo de CANAIS por papel. Concede a todos os usuários com este papel acesso
- * a ver / enviar nos canais selecionados (eixo aditivo ao override por usuário).
- * Persiste em `permissions.scope.grants.v1` via
- * `PUT /api/roles/[id]/scope-grants`. Só tem efeito real com a flag
- * `rbac_granular_scope_v1` ativa.
- */
-function RoleChannelScope({ roleId }: { roleId: string }) {
-  const { data, isLoading } = useRoleScopeGrants(roleId);
-  const channels = useScopeChannelOptions();
-  const update = useUpdateRoleScopeGrants(roleId);
-
-  const [channelViewIds, setChannelViewIds] = useState<string[] | null>(null);
-  const [channelSendIds, setChannelSendIds] = useState<string[] | null>(null);
-  const [channelInitiateIds, setChannelInitiateIds] = useState<string[] | null>(null);
-  const [channelManageIds, setChannelManageIds] = useState<string[] | null>(null);
-  const [channelDenyIds, setChannelDenyIds] = useState<string[] | null>(null);
-  const [dirty, setDirty] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!data) return;
-    setChannelViewIds(normalizeScope(data.channelViewIds));
-    setChannelSendIds(normalizeScope(data.channelSendIds));
-    setChannelInitiateIds(normalizeScope(data.channelInitiateIds));
-    setChannelManageIds(normalizeScope(data.channelManageIds));
-    setChannelDenyIds(normalizeScope(data.channelDenyIds));
-    setDirty(false);
-  }, [data]);
-
-  const markDirty = (setter: (v: string[] | null) => void) => (v: string[] | null) => {
-    setter(v);
-    setDirty(true);
-    setSaved(false);
-  };
-
-  async function handleSave() {
-    setErr(null);
-    try {
-      await update.mutateAsync({
-        channelViewIds,
-        channelSendIds,
-        channelInitiateIds,
-        channelManageIds,
-        channelDenyIds,
-      });
-      setDirty(false);
-      setSaved(true);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Erro ao salvar canais.");
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow)]">
-      <div className="flex items-center gap-1.5">
-        <IconAntennaBars5 size={14} className="text-[var(--text-muted)]" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-          Canais deste papel
-        </span>
-      </div>
-      <p className="text-[11px] text-[var(--text-muted)]">
-        Define quais canais os usuários com este papel podem ver/usar. Some-se ao
-        que cada usuário já tenha liberado individualmente.
-      </p>
-
-      <ScopeMultiSelect
-        label="Canais — ver mensagens"
-        icon={<IconEye size={12} className="text-[var(--text-muted)]" />}
-        options={channels.data ?? []}
-        value={channelViewIds}
-        onChange={markDirty(setChannelViewIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais — responder mensagens"
-        icon={<IconSend size={12} className="text-[var(--text-muted)]" />}
-        options={channels.data ?? []}
-        value={channelSendIds}
-        onChange={markDirty(setChannelSendIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais — iniciar nova conversa"
-        icon={<IconMessagePlus size={12} className="text-[var(--text-muted)]" />}
-        options={channels.data ?? []}
-        value={channelInitiateIds}
-        onChange={markDirty(setChannelInitiateIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais — administrar (configurar/conectar)"
-        icon={<IconSettings size={12} className="text-[var(--text-muted)]" />}
-        options={channels.data ?? []}
-        value={channelManageIds}
-        onChange={markDirty(setChannelManageIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais bloqueados (nega tudo, exceto se também administra o canal)"
-        icon={<IconBan size={12} className="text-[var(--text-muted)]" />}
-        options={channels.data ?? []}
-        value={channelDenyIds}
-        onChange={markDirty(setChannelDenyIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Nenhum canal bloqueado"
-      />
-
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => void handleSave()}
-          disabled={!dirty || update.isPending}
-          className="h-7 shrink-0 gap-1 text-[11px]"
-        >
-          {update.isPending ? <IconLoader2 className="size-3 animate-spin" /> : null}
-          Salvar canais
-        </Button>
-        {saved && !dirty && (
-          <span className="text-[11px] text-[var(--text-muted)]">Salvo</span>
-        )}
-        {err && <span className="text-[11px] text-[var(--color-destructive)]">{err}</span>}
-      </div>
-    </div>
-  );
-}

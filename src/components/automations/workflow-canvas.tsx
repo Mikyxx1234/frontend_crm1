@@ -871,7 +871,20 @@ function WorkflowCanvasInner({
   onAddStepRef.current = addStepAfter;
 
   useEffect(() => {
-    setNodes(buildNodes(steps, removeStep, addStepAfter));
+    // Rebuild preservando `selected` (React Flow guarda seleção no
+    // próprio node object; se recriamos os nós do zero, a seleção do
+    // card editado some ao soltar o mouse quando algum re-render
+    // dispara este effect).
+    setNodes((prev) => {
+      const selectedIds = new Set(
+        prev.filter((n) => n.selected).map((n) => n.id)
+      );
+      const next = buildNodes(steps, removeStep, addStepAfter);
+      if (selectedIds.size === 0) return next;
+      return next.map((n) =>
+        selectedIds.has(n.id) ? { ...n, selected: true } : n
+      );
+    });
   }, [steps, buildNodes, removeStep, addStepAfter, setNodes]);
 
   // Recentraliza o viewport após "Auto alinhar". Espera o React Flow

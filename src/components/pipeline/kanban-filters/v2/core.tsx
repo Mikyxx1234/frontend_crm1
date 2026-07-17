@@ -1167,7 +1167,7 @@ export function QuickFiltersList({
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors",
                 active
-                  ? "border-transparent bg-primary text-white"
+                  ? "border-transparent bg-[var(--brand-primary)] text-white shadow-sm"
                   : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-ink-soft hover:text-foreground",
               )}
             >
@@ -1191,7 +1191,9 @@ export function QuickFiltersList({
             onClick={() => onApply(qf.filters)}
             className={cn(
               "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors",
-              active ? "bg-primary-soft font-semibold text-primary-dark" : "text-ink-soft hover:bg-muted hover:text-foreground",
+              active
+                ? "bg-[var(--brand-primary)]/12 font-semibold text-[var(--brand-primary)] ring-1 ring-inset ring-[var(--brand-primary)]/25"
+                : "text-ink-soft hover:bg-muted hover:text-foreground",
             )}
           >
             {qf.dot && <span className="size-2 shrink-0 rounded-full" style={{ background: qf.dot }} />}
@@ -1213,7 +1215,9 @@ export function QuickFiltersList({
                 onClick={() => onApply(sf.filterConfig as AdvancedDealFilters)}
                 className={cn(
                   "group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors",
-                  active ? "bg-primary-soft font-semibold text-primary-dark" : "text-ink-soft hover:bg-muted hover:text-foreground",
+                  active
+                    ? "bg-[var(--brand-primary)]/12 font-semibold text-[var(--brand-primary)] ring-1 ring-inset ring-[var(--brand-primary)]/25"
+                    : "text-ink-soft hover:bg-muted hover:text-foreground",
                 )}
               >
                 <Bookmark className="size-3.5 shrink-0 text-primary/60" />

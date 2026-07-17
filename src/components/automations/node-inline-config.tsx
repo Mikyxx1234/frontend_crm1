@@ -32,12 +32,17 @@ export function NodeInlineConfig({
 }) {
   if (!selected) return null;
   if (!STEP_FIELDS[stepType]) return null;
+  // Escopo `.ds-flow` isola os estilos `.n-config` / `.cfg-*` definidos
+  // em flow-editor.css sem depender do wrapper externo (o canvas de
+  // produção usa `.automation-editor`, não `.ds-flow`).
   return (
-    <NodeConfigEditor
-      stepType={stepType}
-      config={config ?? {}}
-      steps={stepOptions}
-      onChange={onChange}
-    />
+    <div className="ds-flow contents">
+      <NodeConfigEditor
+        stepType={stepType}
+        config={config ?? {}}
+        steps={stepOptions}
+        onChange={onChange}
+      />
+    </div>
   );
 }

@@ -116,7 +116,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       },
       {
         id: "softphone",
-        label: "Softphone",
+        label: "Telefonia IP",
         description: "Ramal SIP e provedor de chamadas",
         icon: Phone,
         href: "/settings/softphone",

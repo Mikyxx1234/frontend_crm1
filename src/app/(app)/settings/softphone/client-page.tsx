@@ -110,7 +110,7 @@ export default function SoftphoneSettingsClientPage() {
   return (
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
-      title="Telefonia VoIP"
+      title="Telefonia IP"
       description="Chamadas no navegador — tudo dentro do CRM"
       icon={<Phone size={22} />}
     >

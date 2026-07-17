@@ -5,12 +5,17 @@ import { IconCircleCheck as CircleCheckBig, IconCircleOff as CircleSlash, IconRo
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { NodeInlineConfig } from "./node-inline-config";
 
 export type DistributionNodeData = {
   label: string;
   summary: string;
   stepIndex?: number;
   onDelete?: () => void;
+  stepType?: string;
+  config?: Record<string, unknown>;
+  stepOptions?: Array<{ value: string; label: string }>;
+  onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
 /**
@@ -30,7 +35,8 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
   return (
     <div
       className={cn(
-        "group/node relative min-w-[244px] max-w-[300px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        selected ? "min-w-[340px] max-w-[400px]" : "min-w-[244px] max-w-[300px]",
         selected
           ? "border-indigo-400/60 shadow-[0_10px_30px_-10px_rgba(99,102,241,0.4)] ring-2 ring-indigo-300/30"
           : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-indigo-400/60 hover:shadow-[0_10px_30px_-10px_rgba(99,102,241,0.3)]"
@@ -104,6 +110,13 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
           />
         </div>
       </div>
+      <NodeInlineConfig
+        selected={selected}
+        stepType={data.stepType ?? "execute_distribution"}
+        config={data.config}
+        stepOptions={data.stepOptions ?? []}
+        onChange={(next) => data.onConfigChange?.(next)}
+      />
     </div>
   );
 }

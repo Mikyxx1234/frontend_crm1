@@ -28,10 +28,9 @@ import { cn } from "@/lib/utils";
 import {
   ContactCustomFieldsSection,
   ContactSection,
-  CreatedAtSection,
+  DatesPeriodSection,
   DealCustomFieldsSection,
   LossReasonsSection,
-  OtherDatesSection,
   OwnersSection,
   QuickFiltersList,
   SearchSection,
@@ -111,9 +110,7 @@ function tabCount(id: TabId, f: AdvancedDealFilters): number {
     case "datas": {
       let n = 0;
       if (f.createdAt?.from || f.createdAt?.to) n++;
-      if (f.updatedAt?.from || f.updatedAt?.to) n++;
       if (f.closedAt?.from || f.closedAt?.to) n++;
-      if (f.lastInteractionAt?.from || f.lastInteractionAt?.to) n++;
       return n;
     }
     case "tags":
@@ -372,12 +369,7 @@ export function PipelineSearchFilterBar({
                 <ContactSection {...section} />
               </>
             )}
-            {tab === "datas" && (
-              <>
-                <CreatedAtSection {...section} />
-                <OtherDatesSection {...section} />
-              </>
-            )}
+            {tab === "datas" && <DatesPeriodSection {...section} />}
             {tab === "tags" && <TagsSection {...section} />}
             {tab === "custom" && (
               <>

@@ -18,10 +18,9 @@ import {
   ActiveCountBadge,
   ContactCustomFieldsSection,
   ContactSection,
-  CreatedAtSection,
+  DatesPeriodSection,
   DealCustomFieldsSection,
   FilterHeaderActions,
-  OtherDatesSection,
   OwnersSection,
   QuickFiltersList,
   SearchSection,
@@ -59,9 +58,7 @@ function groupCount(id: GroupId, f: AdvancedDealFilters): number {
       break;
     case "dates":
       if (f.createdAt?.from || f.createdAt?.to) n++;
-      if (f.updatedAt?.from || f.updatedAt?.to) n++;
       if (f.closedAt?.from || f.closedAt?.to) n++;
-      if (f.lastInteractionAt?.from || f.lastInteractionAt?.to) n++;
       break;
     case "people":
       if (f.ownerIds?.length || f.withoutOwner) n++;
@@ -214,8 +211,7 @@ export function FilterModalTwoCol({
             )}
             {group === "dates" && (
               <>
-                <CreatedAtSection {...section} />
-                <OtherDatesSection {...section} />
+                <DatesPeriodSection {...section} />
               </>
             )}
             {group === "people" && (

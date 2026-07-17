@@ -19,11 +19,10 @@ import {
   ActiveCountBadge,
   ContactCustomFieldsSection,
   ContactSection,
-  CreatedAtSection,
+  DatesPeriodSection,
   DealCustomFieldsSection,
   FilterHeaderActions,
   LossReasonsSection,
-  OtherDatesSection,
   OwnersSection,
   QuickFiltersList,
   SearchSection,
@@ -66,9 +65,7 @@ function groupCount(id: GroupId, f: AdvancedDealFilters): number {
       break;
     case "dates":
       if (f.createdAt?.from || f.createdAt?.to) n++;
-      if (f.updatedAt?.from || f.updatedAt?.to) n++;
       if (f.closedAt?.from || f.closedAt?.to) n++;
-      if (f.lastInteractionAt?.from || f.lastInteractionAt?.to) n++;
       break;
     case "tags":
       if (f.tagIds?.length || f.withoutTags) n++;
@@ -226,8 +223,7 @@ export function FilterModalThreeCol({
                       )}
                       {g.id === "dates" && (
                         <>
-                          <CreatedAtSection {...section} />
-                          <OtherDatesSection {...section} />
+                          <DatesPeriodSection {...section} />
                         </>
                       )}
                       {g.id === "tags" && <TagsSection {...section} />}
@@ -323,8 +319,7 @@ export function FilterModalThreeCol({
               <div className="space-y-3">
                 <OwnersSection {...section} />
                 <ContactSection {...section} />
-                <CreatedAtSection {...section} />
-                <OtherDatesSection {...section} />
+                <DatesPeriodSection {...section} />
                 <DealCustomFieldsSection {...section} />
                 <ContactCustomFieldsSection {...section} />
               </div>

@@ -12,11 +12,24 @@
 "use client";
 
 import * as React from "react";
-import { IconCheck as Check, IconChevronDown as ChevronDown, IconSearch as Search, IconDeviceFloppy as Save, IconTrash as Trash2, IconBookmark as Bookmark, IconLock as Lock, IconUsers as UsersIcon, IconX as X } from "@tabler/icons-react";
+import {
+  IconCheck as Check,
+  IconChevronDown as ChevronDown,
+  IconFlag,
+  IconSearch as Search,
+  IconDeviceFloppy as Save,
+  IconSparkles,
+  IconTrash as Trash2,
+  IconBookmark as Bookmark,
+  IconLock as Lock,
+  IconUsers as UsersIcon,
+  IconX as X,
+} from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { ds } from "@/lib/design-system";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { DatePicker } from "@/components/ui/date-picker";
 import { SelectNative } from "@/components/ui/select";
 
 import {
@@ -593,51 +606,155 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
   );
 }
 
-export function CreatedAtSection({ draft, setDraftField }: SectionProps) {
+/** Presets rápidos — mesmos do filtro de Contatos (aba Período). */
+const CREATED_PRESETS: { key: DatePresetKey; label: string }[] = [
+  { key: "today", label: "Hoje" },
+  { key: "last_7", label: "Últimos 7 dias" },
+  { key: "last_30", label: "Últimos 30 dias" },
+  { key: "this_month", label: "Este mês" },
+];
+
+const DATE_TRIGGER_CLASS =
+  "h-9 rounded-full border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 shadow-none";
+
+function patchDateSide(
+  current: DateRangeValue | undefined,
+  side: "from" | "to",
+  raw: string,
+): DateRangeValue | undefined {
+  const next: DateRangeValue = { ...current, [side]: raw || null };
+  if (!next.from && !next.to) return undefined;
+  return next;
+}
+
+/**
+ * Aba Datas no modelo Contatos: atalhos (criação) + ranges Criação / Fechamento.
+ * Substitui os dropdowns "Qualquer data" anteriores.
+ */
+export function DatesPeriodSection({ draft, setDraftField }: SectionProps) {
+  const createdActive = !!(draft.createdAt?.from || draft.createdAt?.to);
+  const closedActive = !!(draft.closedAt?.from || draft.closedAt?.to);
+  const createdPreset = detectPreset(draft.createdAt);
+
+  function applyCreatedPreset(key: DatePresetKey) {
+    const range = dateRangeFromPreset(key);
+    if (!range) return;
+    setDraftField("createdAt", range);
+  }
+
   return (
-    <FieldCard
-      label="Data de criação"
-      active={!!(draft.createdAt?.from || draft.createdAt?.to)}
-      onClear={() => setDraftField("createdAt", undefined)}
-    >
-      <DateRangeField value={draft.createdAt} onChange={(v) => setDraftField("createdAt", v)} />
-    </FieldCard>
+    <div className="flex flex-col gap-3">
+      <div>
+        <p className="mb-2 font-display text-[11px] font-semibold text-[var(--text-muted)]">
+          Atalhos rápidos (data de criação)
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {CREATED_PRESETS.map((p) => {
+            const on = createdPreset === p.key;
+            return (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => applyCreatedPreset(p.key)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                  on
+                    ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.3)]"
+                    : "border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                )}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Criação */}
+      <div
+        className={cn(
+          "rounded-[16px] border p-3",
+          createdActive
+            ? "border-[var(--brand-primary)]/35 bg-[var(--color-primary-soft)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
+        )}
+      >
+        <div className="mb-2.5 flex items-center gap-1.5">
+          <IconSparkles
+            size={14}
+            className={createdActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}
+          />
+          <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            Criação
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <DatePicker
+            value={draft.createdAt?.from ?? null}
+            onChange={(v) => setDraftField("createdAt", patchDateSide(draft.createdAt, "from", v))}
+            placeholder="dd/mm/aaaa"
+            className="min-w-0 flex-1"
+            triggerClassName={DATE_TRIGGER_CLASS}
+          />
+          <span className="shrink-0 font-body text-[12px] text-[var(--text-muted)]">até</span>
+          <DatePicker
+            value={draft.createdAt?.to ?? null}
+            onChange={(v) => setDraftField("createdAt", patchDateSide(draft.createdAt, "to", v))}
+            placeholder="dd/mm/aaaa"
+            className="min-w-0 flex-1"
+            triggerClassName={DATE_TRIGGER_CLASS}
+          />
+        </div>
+      </div>
+
+      {/* Fechamento */}
+      <div
+        className={cn(
+          "rounded-[16px] border p-3",
+          closedActive
+            ? "border-[var(--brand-primary)]/35 bg-[var(--color-primary-soft)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
+        )}
+      >
+        <div className="mb-2.5 flex items-center gap-1.5">
+          <IconFlag
+            size={14}
+            className={closedActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}
+          />
+          <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            Fechamento
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <DatePicker
+            value={draft.closedAt?.from ?? null}
+            onChange={(v) => setDraftField("closedAt", patchDateSide(draft.closedAt, "from", v))}
+            placeholder="dd/mm/aaaa"
+            className="min-w-0 flex-1"
+            triggerClassName={DATE_TRIGGER_CLASS}
+          />
+          <span className="shrink-0 font-body text-[12px] text-[var(--text-muted)]">até</span>
+          <DatePicker
+            value={draft.closedAt?.to ?? null}
+            onChange={(v) => setDraftField("closedAt", patchDateSide(draft.closedAt, "to", v))}
+            placeholder="dd/mm/aaaa"
+            className="min-w-0 flex-1"
+            triggerClassName={DATE_TRIGGER_CLASS}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
-export function OtherDatesSection({ draft, setDraftField }: SectionProps) {
-  const active = !!(
-    draft.updatedAt?.from ||
-    draft.updatedAt?.to ||
-    draft.closedAt?.from ||
-    draft.closedAt?.to ||
-    draft.lastInteractionAt?.from ||
-    draft.lastInteractionAt?.to
-  );
-  return (
-    <FieldCard
-      label="Outras datas"
-      active={active}
-      onClear={() => {
-        setDraftField("updatedAt", undefined);
-        setDraftField("closedAt", undefined);
-        setDraftField("lastInteractionAt", undefined);
-      }}
-    >
-      <div className="space-y-2.5">
-        {[
-          { label: "Atualizado em", key: "updatedAt" as const },
-          { label: "Fechado em", key: "closedAt" as const },
-          { label: "Última interação", key: "lastInteractionAt" as const },
-        ].map(({ label, key }) => (
-          <div key={key}>
-            <span className="mb-1 block text-[11px] text-ink-subtle">{label}</span>
-            <DateRangeField value={draft[key]} onChange={(v) => setDraftField(key, v)} />
-          </div>
-        ))}
-      </div>
-    </FieldCard>
-  );
+/** @deprecated Use `DatesPeriodSection` — mantido para imports legados. */
+export function CreatedAtSection(props: SectionProps) {
+  return <DatesPeriodSection {...props} />;
+}
+
+/** @deprecated Conteúdo migrado para `DatesPeriodSection`. */
+export function OtherDatesSection(_props: SectionProps) {
+  return null;
 }
 
 // ── Custom fields ──

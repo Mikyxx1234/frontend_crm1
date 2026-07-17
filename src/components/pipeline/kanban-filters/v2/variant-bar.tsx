@@ -17,9 +17,8 @@ import {
   ActiveCountBadge,
   ContactCustomFieldsSection,
   ContactSection,
-  CreatedAtSection,
+  DatesPeriodSection,
   DealCustomFieldsSection,
-  OtherDatesSection,
   OwnersSection,
   QuickFiltersList,
   SearchSection,
@@ -117,8 +116,7 @@ export function FilterBar({
               <ContactCustomFieldsSection {...section} />
             </div>
             <div className="space-y-3">
-              <CreatedAtSection {...section} />
-              <OtherDatesSection {...section} />
+              <DatesPeriodSection {...section} />
               <TagsSection {...section} />
             </div>
           </div>

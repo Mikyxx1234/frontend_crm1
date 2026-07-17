@@ -17,9 +17,8 @@ import {
   ActiveCountBadge,
   ContactCustomFieldsSection,
   ContactSection,
-  CreatedAtSection,
+  DatesPeriodSection,
   DealCustomFieldsSection,
-  OtherDatesSection,
   OwnersSection,
   QuickFiltersList,
   SearchSection,
@@ -110,8 +109,7 @@ export function FilterDrawer({
           <OwnersSection {...section} />
           <ContactSection {...section} />
           <ValueSection {...section} />
-          <CreatedAtSection {...section} />
-          <OtherDatesSection {...section} />
+          <DatesPeriodSection {...section} />
           <DealCustomFieldsSection {...section} />
           <ContactCustomFieldsSection {...section} />
           <TagsSection {...section} />

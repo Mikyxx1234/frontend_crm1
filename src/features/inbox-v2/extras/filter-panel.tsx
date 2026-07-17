@@ -8,7 +8,8 @@
  * withoutOwner, channel, stageId, tagIds, sources. Já a ORDEM e a
  * JANELA de 24h são aplicadas CLIENT-SIDE no client-page.
  *
- * Overlay via `usePortalPopover`. Estado em DRAFT — só aplica em "Aplicar".
+ * Controles usam FieldCard + chips/lista inline (sem DropdownGlass),
+ * igual ao painel de filtros do funil — evita portal/z-index quebrado.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,17 +20,22 @@ import {
   IconArrowsSort,
   IconBriefcase,
   IconCheck,
-  IconChevronDown,
   IconFilter,
   IconMessageCircle,
   IconRotateClockwise,
   IconTag,
+  IconUserOff,
   IconX,
 } from "@tabler/icons-react";
+import { Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
-import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import {
+  ChipToggle,
+  FieldCard,
+  TextField,
+} from "@/components/pipeline/kanban-filters/v2/core";
 import { useTeamUsers } from "@/features/inbox-v2/hooks";
 import {
   getPipelineBoard,
@@ -52,7 +58,6 @@ interface InboxFilterButtonProps {
 
 /** Tipos de canal suportados pelo filtro `channel` do backend. */
 const CHANNEL_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: "", label: "Todos" },
   { value: "whatsapp", label: "WhatsApp" },
   { value: "instagram", label: "Instagram" },
   { value: "meta", label: "Messenger" },
@@ -62,8 +67,7 @@ const CHANNEL_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
 ];
 
 /** Conversa aberta/fechada (janela 24h Meta/WhatsApp) — client-side. */
-const WINDOW_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: "", label: "Todas" },
+const WINDOW_OPTIONS: ReadonlyArray<{ value: "open" | "closed"; label: string }> = [
   { value: "open", label: "Aberta" },
   { value: "closed", label: "Fechada" },
 ];
@@ -81,7 +85,6 @@ const SORT_OPTIONS: ReadonlyArray<{
 ];
 
 const DEFAULT_SORT_ID = "recent";
-const OWNER_NONE = "__none__";
 
 type FilterTab = "ordenar" | "conversa" | "negocio" | "tags";
 
@@ -100,7 +103,6 @@ function sortIdFromFilters(f: InboxFilters): string {
   return match?.id ?? DEFAULT_SORT_ID;
 }
 
-/** Conta filtros ativos (ignora ordenação no default) para o badge. */
 function countActive(f: InboxFilters): number {
   let n = 0;
   if (f.ownerId || f.withoutOwner) n += 1;
@@ -135,14 +137,6 @@ function tabCount(id: FilterTab, f: InboxFilters): number {
   }
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="mb-1 block font-display text-[9.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
-      {children}
-    </span>
-  );
-}
-
 function FilterCountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
@@ -152,18 +146,67 @@ function FilterCountBadge({ count }: { count: number }) {
   );
 }
 
+/** Linha de opção single-select (padrão lista do funil). */
+function OptionRow({
+  active,
+  onClick,
+  children,
+  leading,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  leading?: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left font-display text-[13px] transition-colors",
+        active
+          ? "bg-[var(--color-primary-soft)] font-medium text-[var(--brand-primary)]"
+          : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+      )}
+    >
+      {leading}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {active && <IconCheck size={14} stroke={2.6} className="shrink-0" />}
+    </button>
+  );
+}
+
+function CheckBox({ selected }: { selected: boolean }) {
+  return (
+    <span
+      className={cn(
+        "flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
+        selected
+          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+          : "border-[var(--glass-border)]",
+      )}
+    >
+      {selected && (
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
 export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
   const { open, rect, triggerRef, popoverRef, toggle, close } =
     usePortalPopover();
   const [draft, setDraft] = useState<InboxFilters>(value);
   const [tab, setTab] = useState<FilterTab>("ordenar");
-  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [ownerSearch, setOwnerSearch] = useState("");
 
   useEffect(() => {
     if (open) {
       setDraft(value);
       setTab("ordenar");
-      setSourcesOpen(false);
+      setOwnerSearch("");
     }
   }, [open, value]);
 
@@ -204,7 +247,6 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
       channels.map((c) => (c.kind ?? "").toLowerCase()).filter(Boolean),
     );
     const filtered = CHANNEL_OPTIONS.filter((o) => {
-      if (o.value === "") return true;
       if (kinds.size > 0 && !kinds.has(o.value)) return false;
       if (channelGrants.length > 0) {
         return channelGrants.some(
@@ -213,20 +255,19 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
       }
       return true;
     });
-    return filtered.length > 1 ? filtered : CHANNEL_OPTIONS;
+    return filtered.length > 0 ? filtered : CHANNEL_OPTIONS;
   }, [channels, channelGrants]);
+
+  const filteredUsers = useMemo(() => {
+    const q = ownerSearch.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) =>
+      (u.name || u.email || "").toLowerCase().includes(q),
+    );
+  }, [users, ownerSearch]);
 
   const selectedTagIds = draft.tagIds ?? [];
   const selectedSources = draft.sources ?? [];
-  const selectedSourcesLabel =
-    selectedSources.length === 0
-      ? "Todas"
-      : selectedSources.length === 1
-        ? selectedSources[0] === SOURCE_NONE
-          ? "Sem origem"
-          : selectedSources[0]
-        : `${selectedSources.length} selecionadas`;
-
   const activeCount = countActive(value);
   const draftCount = countActive(draft);
   const pos = computePopoverPosition(rect, 560, 400);
@@ -258,12 +299,10 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
 
   function clear() {
     setDraft({});
-    setSourcesOpen(false);
+    setOwnerSearch("");
   }
 
-  const ownerValue = draft.withoutOwner
-    ? OWNER_NONE
-    : (draft.ownerId ?? "");
+  const ownerActive = Boolean(draft.ownerId || draft.withoutOwner);
 
   return (
     <>
@@ -306,7 +345,6 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
               }}
               className="z-(--z-popover) flex max-h-[80vh] flex-col overflow-hidden rounded-[22px] border border-[var(--glass-border)] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.13)] v2-dark:bg-[var(--glass-bg-modal)] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
             >
-              {/* Header */}
               <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
                 <div className="flex items-center gap-2">
                   <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">
@@ -334,7 +372,6 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 </div>
               </div>
 
-              {/* Abas segmentadas */}
               <div className="px-4 pb-3">
                 <div
                   role="tablist"
@@ -350,10 +387,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                         type="button"
                         role="tab"
                         aria-selected={active}
-                        onClick={() => {
-                          setTab(t.id);
-                          setSourcesOpen(false);
-                        }}
+                        onClick={() => setTab(t.id)}
                         className={cn(
                           "flex flex-1 items-center justify-center gap-1 rounded-full px-1.5 py-1.5 font-display text-[11px] font-bold transition-all",
                           active
@@ -383,7 +417,6 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 </div>
               </div>
 
-              {/* Conteúdo da aba */}
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 pb-3">
                 {tab === "ordenar" && (
                   <div className="flex flex-col gap-2" role="listbox" aria-label="Ordenar por">
@@ -436,234 +469,274 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
 
                 {tab === "conversa" && (
                   <>
-                    <div>
-                      <FieldLabel>Responsável</FieldLabel>
-                      <DropdownGlass
-                        triggerClassName="w-full h-8 px-2.5 text-xs"
-                        itemClassName="text-xs py-1.5"
-                        value={ownerValue}
-                        onValueChange={(v) => {
-                          if (v === OWNER_NONE) {
-                            setDraft((d) => ({
-                              ...d,
-                              ownerId: undefined,
-                              withoutOwner: true,
-                            }));
-                          } else {
-                            setDraft((d) => ({
-                              ...d,
-                              ownerId: v || undefined,
-                              withoutOwner: undefined,
-                            }));
-                          }
-                        }}
-                        options={[
-                          { value: "", label: "Todos" },
-                          { value: OWNER_NONE, label: "Sem responsável" },
-                          ...users.map((u) => ({
-                            value: u.id,
-                            label: u.name || u.email,
-                          })),
-                        ]}
-                      />
-                    </div>
+                    <FieldCard
+                      label="Responsável"
+                      active={ownerActive}
+                      onClear={() =>
+                        setDraft((d) => ({
+                          ...d,
+                          ownerId: undefined,
+                          withoutOwner: undefined,
+                        }))
+                      }
+                    >
+                      <div className="space-y-2">
+                        <TextField
+                          value={ownerSearch}
+                          onChange={setOwnerSearch}
+                          placeholder="Buscar usuário…"
+                          icon={<Search className="size-3.5" />}
+                        />
+                        <div className="max-h-40 space-y-0.5 overflow-y-auto">
+                          <OptionRow
+                            active={!ownerActive}
+                            onClick={() =>
+                              setDraft((d) => ({
+                                ...d,
+                                ownerId: undefined,
+                                withoutOwner: undefined,
+                              }))
+                            }
+                          >
+                            Todos
+                          </OptionRow>
+                          <OptionRow
+                            active={Boolean(draft.withoutOwner)}
+                            onClick={() =>
+                              setDraft((d) => ({
+                                ...d,
+                                ownerId: undefined,
+                                withoutOwner: d.withoutOwner ? undefined : true,
+                              }))
+                            }
+                            leading={
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] text-[var(--text-muted)]">
+                                <IconUserOff size={13} stroke={2.2} />
+                              </span>
+                            }
+                          >
+                            Sem responsável
+                          </OptionRow>
+                          {filteredUsers.map((u) => {
+                            const active = draft.ownerId === u.id;
+                            const name = u.name || u.email;
+                            return (
+                              <OptionRow
+                                key={u.id}
+                                active={active}
+                                onClick={() =>
+                                  setDraft((d) => ({
+                                    ...d,
+                                    ownerId: active ? undefined : u.id,
+                                    withoutOwner: undefined,
+                                  }))
+                                }
+                                leading={
+                                  <span
+                                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+                                    style={{
+                                      background: `hsl(${(name.charCodeAt(0) * 47) % 360} 55% 50%)`,
+                                    }}
+                                  >
+                                    {name[0]?.toUpperCase()}
+                                  </span>
+                                }
+                              >
+                                {name}
+                              </OptionRow>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </FieldCard>
 
-                    <div>
-                      <FieldLabel>Canal</FieldLabel>
-                      <DropdownGlass
-                        triggerClassName="w-full h-8 px-2.5 text-xs"
-                        itemClassName="text-xs py-1.5"
-                        value={draft.channel ?? ""}
-                        onValueChange={(v) =>
-                          setDraft((d) => ({ ...d, channel: v || undefined }))
-                        }
-                        options={channelOptions.map((o) => ({
-                          value: o.value,
-                          label: o.label,
-                        }))}
-                      />
-                    </div>
+                    <FieldCard
+                      label="Canal"
+                      active={Boolean(draft.channel)}
+                      onClear={() =>
+                        setDraft((d) => ({ ...d, channel: undefined }))
+                      }
+                    >
+                      <div className="flex flex-wrap gap-1.5">
+                        {channelOptions.map((o) => (
+                          <ChipToggle
+                            key={o.value}
+                            active={draft.channel === o.value}
+                            onClick={() =>
+                              setDraft((d) => ({
+                                ...d,
+                                channel:
+                                  d.channel === o.value ? undefined : o.value,
+                              }))
+                            }
+                          >
+                            {o.label}
+                          </ChipToggle>
+                        ))}
+                      </div>
+                    </FieldCard>
 
-                    <div>
-                      <FieldLabel>Conversa</FieldLabel>
-                      <DropdownGlass
-                        triggerClassName="w-full h-8 px-2.5 text-xs"
-                        itemClassName="text-xs py-1.5"
-                        value={draft.windowState ?? ""}
-                        onValueChange={(v) =>
-                          setDraft((d) => ({
-                            ...d,
-                            windowState: (v as "open" | "closed") || undefined,
-                          }))
-                        }
-                        options={WINDOW_OPTIONS.map((o) => ({
-                          value: o.value,
-                          label: o.label,
-                        }))}
-                      />
-                    </div>
+                    <FieldCard
+                      label="Conversa"
+                      active={Boolean(draft.windowState)}
+                      onClear={() =>
+                        setDraft((d) => ({ ...d, windowState: undefined }))
+                      }
+                    >
+                      <div className="flex flex-wrap gap-1.5">
+                        {WINDOW_OPTIONS.map((o) => (
+                          <ChipToggle
+                            key={o.value}
+                            active={draft.windowState === o.value}
+                            onClick={() =>
+                              setDraft((d) => ({
+                                ...d,
+                                windowState:
+                                  d.windowState === o.value
+                                    ? undefined
+                                    : o.value,
+                              }))
+                            }
+                          >
+                            {o.label}
+                          </ChipToggle>
+                        ))}
+                      </div>
+                    </FieldCard>
                   </>
                 )}
 
                 {tab === "negocio" && (
                   <>
-                    <div>
-                      <FieldLabel>Negócio na etapa</FieldLabel>
-                      <DropdownGlass
-                        triggerClassName="w-full h-8 px-2.5 text-xs"
-                        itemClassName="text-xs py-1.5"
-                        value={draft.stageId ?? ""}
-                        onValueChange={(v) =>
-                          setDraft((d) => ({ ...d, stageId: v || undefined }))
-                        }
-                        disabled={stages.length === 0}
-                        options={[
-                          { value: "", label: "Nenhum selecionado" },
-                          ...stages.map((s) => ({ value: s.id, label: s.name })),
-                        ]}
-                      />
-                    </div>
-
-                    <div>
-                      <FieldLabel>Origem</FieldLabel>
-                      <button
-                        type="button"
-                        onClick={() => setSourcesOpen((v) => !v)}
-                        aria-expanded={sourcesOpen}
-                        className="group inline-flex h-8 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 font-display text-[12px] font-semibold shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-colors hover:bg-[var(--glass-bg-strong)] data-[state=open]:ring-2 data-[state=open]:ring-[var(--brand-primary)]/40"
-                      >
-                        <span
-                          className={cn(
-                            "truncate",
-                            selectedSources.length === 0 && "text-[var(--text-muted)]",
-                          )}
-                        >
-                          {selectedSourcesLabel}
-                        </span>
-                        <IconChevronDown
-                          size={15}
-                          className={cn(
-                            "ml-auto shrink-0 text-[var(--text-muted)] transition-transform",
-                            sourcesOpen && "rotate-180",
-                          )}
-                        />
-                      </button>
-
-                      {sourcesOpen && (
-                        <div className="mt-1 max-h-44 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white p-1 v2-dark:bg-[var(--glass-bg-modal)]">
-                          <button
-                            type="button"
-                            onClick={() => toggleSource(SOURCE_NONE)}
-                            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]"
-                          >
-                            <span
-                              className={cn(
-                                "flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
-                                selectedSources.includes(SOURCE_NONE)
-                                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                                  : "border-[var(--glass-border)]",
-                              )}
+                    <FieldCard
+                      label="Negócio na etapa"
+                      active={Boolean(draft.stageId)}
+                      onClear={() =>
+                        setDraft((d) => ({ ...d, stageId: undefined }))
+                      }
+                    >
+                      {stages.length === 0 ? (
+                        <p className="text-[12px] text-[var(--text-muted)]">
+                          Nenhuma etapa.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {stages.map((s) => (
+                            <ChipToggle
+                              key={s.id}
+                              active={draft.stageId === s.id}
+                              onClick={() =>
+                                setDraft((d) => ({
+                                  ...d,
+                                  stageId:
+                                    d.stageId === s.id ? undefined : s.id,
+                                }))
+                              }
                             >
-                              {selectedSources.includes(SOURCE_NONE) && (
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              )}
-                            </span>
-                            <span className="truncate font-display text-xs text-[var(--text-primary)]">
-                              Sem origem
-                            </span>
-                          </button>
-                          {contactSources.length === 0 ? (
-                            <p className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                              Nenhuma origem cadastrada.
-                            </p>
-                          ) : (
-                            contactSources.map((source) => {
-                              const selected = selectedSources.includes(source);
-                              return (
-                                <button
-                                  key={source}
-                                  type="button"
-                                  onClick={() => toggleSource(source)}
-                                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]"
-                                >
-                                  <span
-                                    className={cn(
-                                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
-                                      selected
-                                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                                        : "border-[var(--glass-border)]",
-                                    )}
-                                  >
-                                    {selected && (
-                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                        <path d="M20 6 9 17l-5-5" />
-                                      </svg>
-                                    )}
-                                  </span>
-                                  <span className="truncate font-display text-xs text-[var(--text-primary)]">
-                                    {source}
-                                  </span>
-                                </button>
-                              );
-                            })
-                          )}
+                              {s.name}
+                            </ChipToggle>
+                          ))}
                         </div>
                       )}
-                    </div>
+                    </FieldCard>
+
+                    <FieldCard
+                      label="Origem"
+                      active={selectedSources.length > 0}
+                      onClear={() =>
+                        setDraft((d) => ({ ...d, sources: undefined }))
+                      }
+                    >
+                      <div className="max-h-44 space-y-0.5 overflow-y-auto">
+                        <button
+                          type="button"
+                          onClick={() => toggleSource(SOURCE_NONE)}
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]",
+                            selectedSources.includes(SOURCE_NONE) &&
+                              "bg-[var(--color-primary-soft)]",
+                          )}
+                        >
+                          <CheckBox selected={selectedSources.includes(SOURCE_NONE)} />
+                          <span className="truncate font-display text-[13px] text-[var(--text-primary)]">
+                            Sem origem
+                          </span>
+                        </button>
+                        {contactSources.length === 0 ? (
+                          <p className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
+                            Nenhuma origem cadastrada.
+                          </p>
+                        ) : (
+                          contactSources.map((source) => {
+                            const selected = selectedSources.includes(source);
+                            return (
+                              <button
+                                key={source}
+                                type="button"
+                                onClick={() => toggleSource(source)}
+                                className={cn(
+                                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]",
+                                  selected && "bg-[var(--color-primary-soft)]",
+                                )}
+                              >
+                                <CheckBox selected={selected} />
+                                <span className="truncate font-display text-[13px] text-[var(--text-primary)]">
+                                  {source}
+                                </span>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </FieldCard>
                   </>
                 )}
 
                 {tab === "tags" && (
-                  <div className="max-h-52 space-y-0.5 overflow-y-auto">
-                    {tags.length === 0 ? (
-                      <p className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                        Nenhuma tag cadastrada.
-                      </p>
-                    ) : (
-                      tags.map((t) => {
-                        const selected = selectedTagIds.includes(t.id);
-                        return (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => toggleTag(t.id)}
-                            className={cn(
-                              "flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]",
-                              selected && "bg-[var(--color-primary-soft)]",
-                            )}
-                          >
-                            <span
+                  <FieldCard
+                    label="Tags"
+                    active={selectedTagIds.length > 0}
+                    onClear={() =>
+                      setDraft((d) => ({ ...d, tagIds: undefined }))
+                    }
+                  >
+                    <div className="max-h-52 space-y-0.5 overflow-y-auto">
+                      {tags.length === 0 ? (
+                        <p className="text-[12px] text-[var(--text-muted)]">
+                          Nenhuma tag cadastrada.
+                        </p>
+                      ) : (
+                        tags.map((t) => {
+                          const selected = selectedTagIds.includes(t.id);
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => toggleTag(t.id)}
                               className={cn(
-                                "flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
-                                selected
-                                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                                  : "border-[var(--glass-border)]",
+                                "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]",
+                                selected && "bg-[var(--color-primary-soft)]",
                               )}
                             >
-                              {selected && (
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              )}
-                            </span>
-                            <span
-                              className="h-2.5 w-2.5 shrink-0 rounded-full"
-                              style={{ background: t.color ?? "var(--brand-primary)" }}
-                            />
-                            <span className="truncate font-display text-xs text-[var(--text-primary)]">
-                              {t.name}
-                            </span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
+                              <CheckBox selected={selected} />
+                              <span
+                                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                style={{
+                                  background: t.color ?? "var(--brand-primary)",
+                                }}
+                              />
+                              <span className="truncate font-display text-[13px] text-[var(--text-primary)]">
+                                {t.name}
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </FieldCard>
                 )}
               </div>
 
-              {/* Footer */}
               <div className="border-t border-[var(--glass-border-subtle)] px-4 py-3">
                 <button
                   type="button"

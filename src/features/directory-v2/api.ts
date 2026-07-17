@@ -99,6 +99,12 @@ export interface FetchContactsParams {
   search?: string;
   page?: number;
   perPage?: number;
+  /** Estágio do ciclo de vida (LEAD, CUSTOMER…). */
+  lifecycleStage?: string;
+  /** Filtra por tags (OR entre elas). */
+  tagIds?: string[];
+  /** Somente contatos sem responsável atribuído. */
+  unassigned?: boolean;
 }
 
 export function fetchContacts(params: FetchContactsParams = {}): Promise<ContactListPage> {
@@ -107,10 +113,43 @@ export function fetchContacts(params: FetchContactsParams = {}): Promise<Contact
   if (params.search) sp.set("search", params.search);
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
+  if (params.lifecycleStage) sp.set("lifecycleStage", params.lifecycleStage);
+  if (params.tagIds && params.tagIds.length > 0) sp.set("tagIds", params.tagIds.join(","));
+  if (params.unassigned) sp.set("unassigned", "1");
   const qs = sp.toString();
   return getJson<ContactListPage>(
     `/api/contacts${qs ? `?${qs}` : ""}`,
     "Erro ao carregar contatos.",
+  );
+}
+
+// Contagens agregadas por segmento (stat cards do diretório).
+export interface ContactStatsDto {
+  total: number;
+  unassigned: number;
+  byStage: Record<string, number>;
+}
+
+export function fetchContactStats(): Promise<ContactStatsDto> {
+  return getJson<ContactStatsDto>(
+    "/api/contacts/stats",
+    "Erro ao carregar estatísticas de contatos.",
+  );
+}
+
+// Tags da organização com contagem de uso (chips de filtro).
+export interface TagWithCountDto {
+  id: string;
+  name: string;
+  color: string | null;
+  dealCount: number;
+  contactCount: number;
+}
+
+export function fetchTagsWithCounts(): Promise<TagWithCountDto[]> {
+  return getJson<TagWithCountDto[]>(
+    "/api/tags?counts=1",
+    "Erro ao carregar tags.",
   );
 }
 

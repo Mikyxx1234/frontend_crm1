@@ -5,7 +5,9 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import {
   fetchTabCounts,
+  getActiveAutomations,
   listConversations,
+  type ActiveAutomationDto,
   type ConversationListResponse,
   type ConversationListRow,
   type InboxFilters,
@@ -106,6 +108,24 @@ export function useConversations(params: {
     hasNextPage: query.hasNextPage ?? false,
     isFetchingNextPage: query.isFetchingNextPage,
   };
+}
+
+export const activeAutomationsKey = (conversationId: string | null) =>
+  ["active-automations", conversationId] as const;
+
+/**
+ * Automações vivas (RUNNING/PAUSED) do contato da conversa ativa — chip
+ * "robô em execução" no header do chat. Invalidado em tempo real pelo
+ * evento SSE `automation_state` (ver use-realtime.ts).
+ */
+export function useActiveAutomations(conversationId: string | null) {
+  return useQuery<{ items: ActiveAutomationDto[] }, Error, ActiveAutomationDto[]>({
+    queryKey: activeAutomationsKey(conversationId),
+    queryFn: () => getActiveAutomations(conversationId as string),
+    enabled: Boolean(conversationId) && !isPreviewMode(),
+    staleTime: 15_000,
+    select: (d) => d.items,
+  });
 }
 
 /** Counts das abas (badges no header). */

@@ -16,6 +16,8 @@ import {
   fetchCompany,
   fetchContact,
   fetchContacts,
+  fetchContactStats,
+  fetchTagsWithCounts,
   removeContactTag,
   updateActivity,
   updateCompany,
@@ -29,7 +31,9 @@ import {
   type ContactDetailDto,
   type ContactListPage,
   type ContactNoteDto,
+  type ContactStatsDto,
   type ContactWriteBody,
+  type TagWithCountDto,
   type CreateActivityPayload,
   type UpdateActivityPayload,
 } from "./api";
@@ -49,15 +53,55 @@ export function useContacts(params: {
   search?: string;
   page?: number;
   perPage?: number;
+  lifecycleStage?: string;
+  tagIds?: string[];
+  unassigned?: boolean;
   enabled?: boolean;
 }) {
   const page = params.page ?? 1;
   const perPage = params.perPage ?? 30;
+  const tagIds = params.tagIds ?? [];
   return useQuery<ContactListPage>({
-    queryKey: ["v2-contacts", params.search ?? "", page, perPage],
-    queryFn: () => fetchContacts({ search: params.search, page, perPage }),
+    queryKey: [
+      "v2-contacts",
+      params.search ?? "",
+      page,
+      perPage,
+      params.lifecycleStage ?? "",
+      tagIds.join(","),
+      params.unassigned ? "1" : "",
+    ],
+    queryFn: () =>
+      fetchContacts({
+        search: params.search,
+        page,
+        perPage,
+        lifecycleStage: params.lifecycleStage,
+        tagIds: tagIds.length > 0 ? tagIds : undefined,
+        unassigned: params.unassigned,
+      }),
     enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useContactStats(enabled?: boolean) {
+  return useQuery<ContactStatsDto>({
+    queryKey: ["v2-contact-stats"],
+    queryFn: fetchContactStats,
+    enabled: resolveEnabled(enabled),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useContactTags(enabled?: boolean) {
+  return useQuery<TagWithCountDto[]>({
+    queryKey: ["v2-contact-tags"],
+    queryFn: fetchTagsWithCounts,
+    enabled: resolveEnabled(enabled),
+    staleTime: 60_000,
     placeholderData: (prev) => prev,
   });
 }
@@ -73,6 +117,7 @@ export function useContact(id: string | null) {
 
 function invalidateContacts(qc: ReturnType<typeof useQueryClient>, id?: string) {
   qc.invalidateQueries({ queryKey: ["v2-contacts"], exact: false });
+  qc.invalidateQueries({ queryKey: ["v2-contact-stats"] });
   if (id) qc.invalidateQueries({ queryKey: ["v2-contact", id] });
 }
 

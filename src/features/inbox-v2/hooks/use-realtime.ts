@@ -115,6 +115,19 @@ export function useInboxRealtime(options: {
         qc.invalidateQueries({ queryKey: ["my-agent-status"] });
       });
 
+      // Ciclo de vida de automações (robô iniciou/avançou/terminou) —
+      // atualiza o chip "robô em execução" do chat aberto. O evento traz
+      // contactId (contexto não referencia conversa), então invalidamos a
+      // query da conversa ativa; se o contato não for o mesmo, o refetch
+      // é barato e o resultado idêntico.
+      es.addEventListener("automation_state", () => {
+        if (activeRef.current) {
+          qc.invalidateQueries({
+            queryKey: ["active-automations", activeRef.current],
+          });
+        }
+      });
+
       es.onerror = () => {
         es?.close();
         retry = setTimeout(connect, 5_000);

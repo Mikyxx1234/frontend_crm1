@@ -44,15 +44,30 @@ import { FormSheet } from "@/components/ui/form-sheet";
 
 import {
   useContacts,
+  useContactStats,
+  useContactTags,
   useCreateContact,
   useDeleteContact,
   useUpdateContact,
   useCompanies,
 } from "@/features/directory-v2/hooks";
-import type { ContactListItemDto } from "@/features/directory-v2/api";
+import type { ContactListItemDto, ContactStatsDto } from "@/features/directory-v2/api";
 
 const DEFAULT_PER_PAGE = 25;
 type ViewMode = "tabela" | "cartoes" | "lista";
+type Segment = "todos" | "clientes" | "leads" | "sem-resp";
+
+/** Segmentos dos stat cards (acionáveis) → filtros reais da API. */
+const SEGMENTS: {
+  id: Segment;
+  label: string;
+  value: (s: ContactStatsDto | undefined) => number | undefined;
+}[] = [
+  { id: "todos", label: "Todos", value: (s) => s?.total },
+  { id: "clientes", label: "Clientes", value: (s) => s?.byStage?.CUSTOMER },
+  { id: "leads", label: "Leads", value: (s) => s?.byStage?.LEAD },
+  { id: "sem-resp", label: "Sem responsável", value: (s) => s?.unassigned },
+];
 
 function fmtDateBR(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -94,6 +109,8 @@ export default function V2ContactsClientPage() {
   const [view, setView] = useState<ViewMode>("tabela");
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [segment, setSegment] = useState<Segment>("todos");
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [createOpen, setCreateOpen] = useState(false);
@@ -114,12 +131,29 @@ export default function V2ContactsClientPage() {
     setSelected(new Set());
   }, [debounced, page]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [segment, tagFilter]);
+
+  const stageFilter = segment === "clientes" ? "CUSTOMER" : segment === "leads" ? "LEAD" : undefined;
+  const unassignedFilter = segment === "sem-resp";
+
+  const statsQuery = useContactStats(isAuthenticated);
+  const tagsQuery = useContactTags(isAuthenticated);
+
   const query = useContacts({
     search: debounced || undefined,
     page,
     perPage,
+    lifecycleStage: stageFilter,
+    unassigned: unassignedFilter,
+    tagIds: tagFilter,
     enabled: isAuthenticated,
   });
+
+  function toggleTag(id: string) {
+    setTagFilter((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+  }
 
   const items = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
@@ -207,6 +241,73 @@ export default function V2ContactsClientPage() {
           }
         />
 
+        {/* Stat cards acionáveis + filtro por tag (arquétipo B) */}
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            {SEGMENTS.map((seg) => {
+              const active = segment === seg.id;
+              const val = seg.value(statsQuery.data);
+              return (
+                <button
+                  key={seg.id}
+                  type="button"
+                  onClick={() => setSegment(seg.id)}
+                  aria-pressed={active}
+                  className={`rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-all ${
+                    active
+                      ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                      : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]"
+                  }`}
+                >
+                  <span className="block font-display text-[21px] font-extrabold leading-none text-[var(--text-primary)]">
+                    {val === undefined ? "—" : val.toLocaleString("pt-BR")}
+                  </span>
+                  <span className="mt-1 block font-body text-[12px] text-[var(--text-muted)]">{seg.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {(tagsQuery.data ?? []).some((t) => t.contactCount > 0) && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTagFilter([])}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-colors ${
+                  tagFilter.length === 0
+                    ? "border-[var(--text-primary)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]"
+                }`}
+              >
+                Todas as tags
+              </button>
+              {(tagsQuery.data ?? [])
+                .filter((t) => t.contactCount > 0)
+                .map((t) => {
+                  const active = tagFilter.includes(t.id);
+                  const color = t.color ?? "var(--brand-primary)";
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => toggleTag(t.id)}
+                      aria-pressed={active}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-colors ${
+                        active
+                          ? "border-[var(--text-primary)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]"
+                      }`}
+                    >
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
+                      <span className="truncate">{t.name}</span>
+                      <span className="text-[var(--text-muted)]">{t.contactCount}</span>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+
         {/* Barra de seleção em massa */}
         {selected.size > 0 && (
           <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 backdrop-blur-md">
@@ -240,7 +341,13 @@ export default function V2ContactsClientPage() {
             <EmptyState
               icon={<IconUsers size={28} />}
               title="Nenhum contato encontrado"
-              description={debounced ? `Sem resultados para "${debounced}".` : "Crie contatos no Inbox ou via API."}
+              description={
+                debounced
+                  ? `Sem resultados para "${debounced}".`
+                  : segment !== "todos" || tagFilter.length > 0
+                    ? "Nenhum contato para os filtros selecionados."
+                    : "Crie contatos no Inbox ou via API."
+              }
             />
           </div>
         ) : view === "tabela" ? (

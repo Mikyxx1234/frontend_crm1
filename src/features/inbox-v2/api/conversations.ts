@@ -213,6 +213,32 @@ export async function postBulkAction(
   return (data ?? {}) as BulkActionResult;
 }
 
+export type ActiveAutomationDto = {
+  contextId: string;
+  automationId: string;
+  name: string;
+  status: "RUNNING" | "PAUSED";
+  stepLabel: string | null;
+  timeoutAt: string | null;
+  updatedAt: string;
+};
+
+/** GET /api/conversations/:id/active-automations — chip "robô em execução" */
+export async function getActiveAutomations(
+  conversationId: string,
+): Promise<{ items: ActiveAutomationDto[] }> {
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/active-automations`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao carregar automações ativas",
+    );
+  }
+  return data as { items: ActiveAutomationDto[] };
+}
+
 /** POST /api/conversations/create */
 export async function createConversation(payload: {
   contactId?: string;

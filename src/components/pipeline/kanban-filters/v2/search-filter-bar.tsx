@@ -11,9 +11,11 @@
 import * as React from "react";
 import {
   IconAdjustmentsHorizontal,
+  IconArrowsSort,
   IconBolt,
   IconBriefcase,
   IconCalendarStats,
+  IconCheck,
   IconRotateClockwise,
   IconSearch,
   IconTag,
@@ -44,9 +46,36 @@ import {
 import type { AdvancedDealFilters, FilterOptionsResponse } from "../types";
 import { countActiveFilters } from "../types";
 
-type TabId = "atalhos" | "negocio" | "pessoas" | "datas" | "tags" | "custom";
+export type PipelineSortKey =
+  | "default"
+  | "interaction_newest"
+  | "interaction_oldest"
+  | "name_az"
+  | "name_za"
+  | "created_newest"
+  | "created_oldest";
 
-const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+const SORT_OPTIONS: { key: PipelineSortKey; label: string }[] = [
+  { key: "default", label: "Padrão (posição)" },
+  { key: "interaction_newest", label: "Última interação: mais recente" },
+  { key: "interaction_oldest", label: "Última interação: mais antiga" },
+  { key: "name_az", label: "Nome: A → Z" },
+  { key: "name_za", label: "Nome: Z → A" },
+  { key: "created_newest", label: "Criação: mais recente" },
+  { key: "created_oldest", label: "Criação: mais antiga" },
+];
+
+type TabId =
+  | "ordenar"
+  | "atalhos"
+  | "negocio"
+  | "pessoas"
+  | "datas"
+  | "tags"
+  | "custom";
+
+const BASE_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+  { id: "ordenar", label: "Ordenar", icon: <IconArrowsSort size={13} stroke={2.2} /> },
   { id: "atalhos", label: "Atalhos", icon: <IconBolt size={13} stroke={2.2} /> },
   { id: "negocio", label: "Negócio", icon: <IconBriefcase size={13} stroke={2.2} /> },
   { id: "pessoas", label: "Pessoas", icon: <IconUsers size={13} stroke={2.2} /> },
@@ -105,6 +134,8 @@ interface PipelineSearchFilterBarProps {
   options: FilterOptionsResponse | null;
   optionsLoading: boolean;
   optionsError?: string | null;
+  sortKey?: PipelineSortKey;
+  onSortKeyChange?: (key: PipelineSortKey) => void;
   placeholder?: string;
   className?: string;
 }
@@ -118,11 +149,27 @@ export function PipelineSearchFilterBar({
   options,
   optionsLoading,
   optionsError,
+  sortKey = "default",
+  onSortKeyChange,
   placeholder = "Pesquisar e filtrar...",
   className,
 }: PipelineSearchFilterBarProps) {
   const [open, setOpen] = React.useState(false);
-  const [tab, setTab] = React.useState<TabId>("atalhos");
+  const [tab, setTab] = React.useState<TabId>("ordenar");
+
+  const hasCustomFields =
+    (options?.dealCustomFields?.length ?? 0) > 0 ||
+    (options?.contactCustomFields?.length ?? 0) > 0;
+
+  const tabs = React.useMemo(
+    () => BASE_TABS.filter((t) => (t.id === "custom" ? hasCustomFields : true)),
+    [hasCustomFields],
+  );
+
+  // Se a aba ativa deixar de existir (ex.: sem custom fields), volta pra Ordenar.
+  React.useEffect(() => {
+    if (!tabs.some((t) => t.id === tab)) setTab("ordenar");
+  }, [tabs, tab]);
   const wrapRef = React.useRef<HTMLDivElement>(null);
 
   const { draft, setDraftField, applyWhole, toggleArray, reset } = useFilterDraft(
@@ -227,7 +274,7 @@ export function PipelineSearchFilterBar({
               aria-label="Seções do filtro"
               className="flex items-center gap-0.5 rounded-full bg-[var(--glass-bg-strong)] p-1"
             >
-              {TABS.map((t) => {
+              {tabs.map((t) => {
                 const active = tab === t.id;
                 const badge = tabCount(t.id, draft);
                 return (
@@ -266,6 +313,29 @@ export function PipelineSearchFilterBar({
 
           {/* Conteúdo da aba */}
           <div className="max-h-[min(70vh,520px)] space-y-3 overflow-y-auto px-4 pb-3">
+            {tab === "ordenar" && (
+              <div className="flex flex-col gap-1">
+                {SORT_OPTIONS.map((opt) => {
+                  const active = sortKey === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => onSortKeyChange?.(opt.key)}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold transition-colors",
+                        active
+                          ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                          : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                      )}
+                    >
+                      <span>{opt.label}</span>
+                      {active && <IconCheck size={14} stroke={2.6} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {tab === "atalhos" && (
               <QuickFiltersList draft={draft} onApply={applyWhole} orientation="vertical" />
             )}

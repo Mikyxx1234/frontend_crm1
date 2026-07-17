@@ -665,76 +665,88 @@ function CustomFieldRow({
       ? (filter.value as DateRangeValue)
       : {};
 
+  const solidPanel = "bg-[var(--dropdown-solid-bg)]";
+  const inputCls =
+    "h-8 rounded-md border border-[var(--glass-border)] bg-white px-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20";
+
   return (
-    <div className="space-y-2 rounded-lg border border-[var(--glass-border)] bg-muted/60 p-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[12px] font-semibold text-ink-soft">{field.label}</span>
-        <button type="button" onClick={onRemove} className="text-ink-subtle transition-colors hover:text-destructive" aria-label="Remover">
-          <X className="size-3.5" />
-        </button>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <DropdownGlass
-          options={allowedOps.map((op) => ({
-            value: op,
-            label: CUSTOM_OPERATORS.find((o) => o.value === op)?.label ?? op,
-          }))}
-          value={currentOp}
-          onValueChange={(v) => onChange({ ...filter, operator: v as CustomFieldOperator, value: undefined })}
-          triggerClassName="h-9 w-full rounded-lg text-[12px]"
-        />
-        {opDef?.needsValue ? (
-          currentOp === "between" ? (
-            <div className="col-span-1 grid grid-cols-2 gap-1">
-              <input
-                type="date"
-                value={dateVal.from ?? ""}
-                onChange={(e) => onChange({ ...filter, value: { ...dateVal, from: e.target.value || null } })}
-                className="h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[12px] text-[var(--text-primary)] outline-none focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
-              />
-              <input
-                type="date"
-                value={dateVal.to ?? ""}
-                onChange={(e) => onChange({ ...filter, value: { ...dateVal, to: e.target.value || null } })}
-                className="h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[12px] text-[var(--text-primary)] outline-none focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
-              />
-            </div>
-          ) : hasOptions ? (
-            isMulti ? (
-              <SelectNative
-                multiple
-                value={Array.isArray(filter.value) ? filter.value : []}
-                onChange={(e) => onChange({ ...filter, value: Array.from(e.target.selectedOptions).map((o) => o.value) })}
-                className="h-20 rounded-lg text-[12px]"
-              >
-                {field.options.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </SelectNative>
-            ) : (
-              <DropdownGlass
-                options={field.options.map((o) => ({ value: o, label: o }))}
-                value={typeof filter.value === "string" ? filter.value || undefined : undefined}
-                onValueChange={(v) => onChange({ ...filter, value: v })}
-                placeholder="— escolha —"
-                triggerClassName="h-9 w-full rounded-lg text-[12px]"
-              />
-            )
-          ) : (
+    <div className="flex items-center gap-1.5 rounded-lg border border-[var(--glass-border)] bg-white/70 px-2 py-1.5">
+      <span
+        className="shrink-0 truncate rounded-md bg-[var(--brand-primary)]/8 px-2 py-1 text-[12px] font-semibold text-[var(--brand-primary)]"
+        title={field.label}
+      >
+        {field.label}
+      </span>
+      <DropdownGlass
+        options={allowedOps.map((op) => ({
+          value: op,
+          label: CUSTOM_OPERATORS.find((o) => o.value === op)?.label ?? op,
+        }))}
+        value={currentOp}
+        onValueChange={(v) => onChange({ ...filter, operator: v as CustomFieldOperator, value: undefined })}
+        triggerClassName="h-8 w-[92px] shrink-0 rounded-md text-[12px] px-2"
+        className={solidPanel}
+      />
+      {opDef?.needsValue ? (
+        currentOp === "between" ? (
+          <div className="grid min-w-0 flex-1 grid-cols-2 gap-1">
             <input
-              type={inputType}
-              value={typeof filter.value === "string" ? filter.value : ""}
-              onChange={(e) => onChange({ ...filter, value: e.target.value })}
-              placeholder="Valor"
-              className="h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[12px] text-[var(--text-primary)] outline-none focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+              type="date"
+              value={dateVal.from ?? ""}
+              onChange={(e) => onChange({ ...filter, value: { ...dateVal, from: e.target.value || null } })}
+              className={inputCls}
+            />
+            <input
+              type="date"
+              value={dateVal.to ?? ""}
+              onChange={(e) => onChange({ ...filter, value: { ...dateVal, to: e.target.value || null } })}
+              className={inputCls}
+            />
+          </div>
+        ) : hasOptions ? (
+          isMulti ? (
+            <SelectNative
+              multiple
+              value={Array.isArray(filter.value) ? filter.value : []}
+              onChange={(e) => onChange({ ...filter, value: Array.from(e.target.selectedOptions).map((o) => o.value) })}
+              className="min-w-0 flex-1 rounded-md text-[12px]"
+            >
+              {field.options.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </SelectNative>
+          ) : (
+            <DropdownGlass
+              options={field.options.map((o) => ({ value: o, label: o }))}
+              value={typeof filter.value === "string" ? filter.value || undefined : undefined}
+              onValueChange={(v) => onChange({ ...filter, value: v })}
+              placeholder="— valor —"
+              triggerClassName="h-8 min-w-0 flex-1 rounded-md text-[12px] px-2"
+              className={solidPanel}
             />
           )
         ) : (
-          <span className="self-center text-[11px] italic text-ink-subtle">sem valor</span>
-        )}
-      </div>
+          <input
+            type={inputType}
+            value={typeof filter.value === "string" ? filter.value : ""}
+            onChange={(e) => onChange({ ...filter, value: e.target.value })}
+            placeholder="Valor"
+            className={cn(inputCls, "min-w-0 flex-1")}
+          />
+        )
+      ) : (
+        <span className="flex-1 text-[11px] italic text-[var(--text-muted)]">sem valor</span>
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/8 hover:text-[var(--color-danger)]"
+        aria-label={`Remover ${field.label}`}
+      >
+        <X className="size-3.5" />
+      </button>
     </div>
   );
 }
@@ -780,13 +792,14 @@ function CustomFieldsSection({
               value={pick || undefined}
               onValueChange={setPick}
               placeholder="+ Adicionar critério…"
-              triggerClassName="h-9 flex-1 rounded-lg text-[12px]"
+              triggerClassName="h-9 flex-1 rounded-lg text-[12px] bg-white"
+              className="bg-[var(--dropdown-solid-bg)]"
             />
             <button
               type="button"
               onClick={addField}
               disabled={!pick}
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-muted px-3 text-[13px] font-medium text-ink-soft transition-colors hover:bg-subtle disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 px-3 text-[13px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/20 disabled:opacity-40"
             >
               +
             </button>

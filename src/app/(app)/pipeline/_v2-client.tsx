@@ -12,15 +12,10 @@ import {
 } from "@hello-pangea/dnd";
 
 import {
-  IconAbc,
   IconAntenna,
-  IconArrowNarrowDown,
-  IconArrowNarrowUp,
   IconArrowsExchange,
-  IconArrowsSort,
   IconCheckbox,
   IconChevronDown,
-  IconClock,
   IconDotsVertical,
   IconDownload,
   IconMenu2,
@@ -722,6 +717,8 @@ export default function KanbanV2ClientPage({
               onClearFilters={() => setFilters({})}
               options={filterOptions}
               optionsLoading={filterOptionsLoading}
+              sortKey={sortKey}
+              onSortKeyChange={(k) => setSortKey(k)}
             />
           }
           menuSlot={
@@ -753,8 +750,6 @@ export default function KanbanV2ClientPage({
         <PipelineKebabMenu
           open={kebabOpen}
           anchorRef={kebabBtnRef}
-          sortKey={sortKey}
-          onSortChange={(k) => { setSortKey(k); setKebabOpen(false); }}
           onNewDeal={
             columns.length > 0
               ? () => {
@@ -1803,21 +1798,9 @@ function avatarColorSlugFromName(name: string | null | undefined): string {
 
 // ─── PipelineKebabMenu ─────────────────────────────────────���──────
 
-const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
-  { key: "default",             label: "Padrão (posição)",            icon: <IconArrowsSort size={13} /> },
-  { key: "interaction_newest",  label: "Última interação: mais recente", icon: <IconArrowNarrowDown size={13} /> },
-  { key: "interaction_oldest",  label: "Última interação: mais antiga",  icon: <IconArrowNarrowUp size={13} /> },
-  { key: "name_az",             label: "Nome: A → Z",                 icon: <IconAbc size={13} /> },
-  { key: "name_za",             label: "Nome: Z → A",                 icon: <IconAbc size={13} /> },
-  { key: "created_newest",      label: "Criação: mais recente",       icon: <IconClock size={13} /> },
-  { key: "created_oldest",      label: "Criação: mais antigo",        icon: <IconClock size={13} /> },
-];
-
 interface PipelineKebabMenuProps {
   open: boolean;
   anchorRef: React.RefObject<HTMLButtonElement | null>;
-  sortKey: SortKey;
-  onSortChange: (k: SortKey) => void;
   onNewDeal?: () => void;
   onImport: () => void;
   onExport: () => void;
@@ -1831,8 +1814,6 @@ interface PipelineKebabMenuProps {
 function PipelineKebabMenu({
   open,
   anchorRef,
-  sortKey,
-  onSortChange,
   onNewDeal,
   onImport,
   onExport,
@@ -1932,36 +1913,6 @@ function PipelineKebabMenu({
           <div className="mx-3 my-1 h-px bg-[var(--glass-border-subtle)]" />
         </>
       )}
-
-      {/* Seção: ordenar */}
-      <div className="px-3 pb-1 pt-2.5">
-        <p className="font-display text-[9.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
-          Ordenar cards
-        </p>
-      </div>
-      {SORT_OPTIONS.map((opt) => (
-        <button
-          key={opt.key}
-          type="button"
-          onClick={() => onSortChange(opt.key)}
-          className={cn(
-            "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold transition-colors",
-            sortKey === opt.key
-              ? "bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
-              : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
-          )}
-        >
-          <span className={cn("shrink-0", sortKey === opt.key && "text-[var(--brand-primary)]")}>
-            {opt.icon}
-          </span>
-          {opt.label}
-          {sortKey === opt.key && (
-            <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-primary)]" />
-          )}
-        </button>
-      ))}
-
-      <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
 
       {/* Seção: seleção */}
       <button

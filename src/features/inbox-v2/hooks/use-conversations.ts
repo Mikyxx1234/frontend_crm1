@@ -82,21 +82,30 @@ export function useConversations(params: {
     const flat = pages
       .flatMap((p) => p?.items ?? [])
       .filter(Boolean) as ConversationListRow[];
-    // Dedupe por `id`: o backend pagina por `updatedAt desc`, mas a UI
-    // reordena no cliente por `lastMessageAt`. Quando uma conversa recebe
-    // mensagem nova, ela "pula" de página no servidor e, no refetch do
-    // infinite query, o mesmo `id` aparece em duas/três páginas — gerando
-    // cards duplicados/triplicados. Mantemos a ocorrência mais recente
-    // (maior `lastMessageAt`/`lastInboundAt`).
+    // Colapsa por CONTATO+CANAL (não por `id`): no modelo de ticket, reabrir
+    // uma conversa encerrada gera um NOVO id (ticket B), e o ticket A
+    // (RESOLVED) continuava aparecendo como um segundo card do mesmo número.
+    // Regra do operador: 1 card por número — o histórico dos tickets antigos
+    // fica acessível na timeline contínua do chat (separadores de ticket),
+    // não como cards separados. Mantemos, por contato+canal, o ticket com
+    // atividade mais recente (o ativo; os resolvidos ficam congelados pois
+    // qualquer nova mensagem reabre como ticket novo). Também cobre o dedupe
+    // antigo por `id` (mesma conversa repetida entre páginas do infinite
+    // scroll quando ela "pula" de página no servidor).
     const activityTs = (r: ConversationListRow) =>
-      new Date(r.lastMessageAt ?? r.lastInboundAt ?? 0).getTime();
-    const byId = new Map<string, ConversationListRow>();
+      new Date(r.lastMessageAt ?? r.lastInboundAt ?? r.updatedAt ?? 0).getTime();
+    const channelKey = (c: ConversationListRow["channel"]) =>
+      typeof c === "string" ? c : JSON.stringify(c ?? "");
+    const groupKey = (r: ConversationListRow) =>
+      r.contact?.id ? `c:${r.contact.id}::${channelKey(r.channel)}` : `id:${r.id}`;
+    const byGroup = new Map<string, ConversationListRow>();
     for (const row of flat) {
       if (!row?.id) continue;
-      const prev = byId.get(row.id);
-      if (!prev || activityTs(row) >= activityTs(prev)) byId.set(row.id, row);
+      const key = groupKey(row);
+      const prev = byGroup.get(key);
+      if (!prev || activityTs(row) >= activityTs(prev)) byGroup.set(key, row);
     }
-    const items: ConversationListRow[] = [...byId.values()];
+    const items: ConversationListRow[] = [...byGroup.values()];
     const last = pages[pages.length - 1];
     return {
       items,

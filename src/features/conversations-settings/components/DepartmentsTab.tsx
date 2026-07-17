@@ -29,17 +29,16 @@ import {
   IconPencil,
   IconCheck,
   IconChevronRight,
-  IconTable,
-  IconLayoutGrid,
-  IconLayoutList,
+  IconArrowLeft,
+  IconShieldLock,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
-import { PageSearchBar, PageSegmentedControl, PagePrimaryButton } from "@/components/crm/page-toolbar";
-import { listTableHeadRowClass, ListColumnLabel } from "@/components/crm/sortable-header";
+import { PageSearchBar, PagePrimaryButton } from "@/components/crm/page-toolbar";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { FormSheet } from "@/components/ui/form-sheet";
 import {
@@ -124,10 +123,6 @@ function formatDate(iso: string) {
     return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(iso));
   } catch { return iso; }
 }
-
-// ─── View mode ────────────────────────────────────────────────────────────────
-
-type ViewMode = "tabela" | "cards" | "compacta";
 
 // ─── Create modal ─────────────────────────────────────────────────────────────
 
@@ -473,275 +468,316 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   );
 }
 
-// ─── Row views ────────────────────────────────────────────────────────────────
+// ─── List row (master) ─────────────────────────────────────────────────────────
 
-function CompactaRow({ dept, onDelete, onEdit }: { dept: Department; onDelete: () => void; onEdit: () => void }) {
+function DeptListRow({ dept, active, onSelect }: { dept: Department; active: boolean; onSelect: () => void }) {
+  const members = dept._count?.members;
   return (
-    <div
-      className="group flex cursor-pointer items-center gap-3 rounded-[var(--radius-lg)] border border-white/70 bg-white/80 px-4 py-3 shadow-[0_1px_3px_rgba(100,130,180,0.08)] backdrop-blur-sm transition-all hover:bg-white hover:shadow-[0_2px_8px_rgba(100,130,180,0.13)]"
-      onClick={onEdit}
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "group flex w-full items-center gap-3 rounded-[var(--radius-lg)] border px-3 py-2.5 text-left transition-all",
+        active
+          ? "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/8 shadow-[0_2px_8px_rgba(100,130,180,0.12)]"
+          : "border-transparent hover:bg-white/60",
+      )}
     >
-      <DeptIconBadge dept={dept} size={40} />
-
+      <DeptIconBadge dept={dept} size={38} />
       <div className="min-w-0 flex-1">
-        <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">{dept.name}</p>
-        <p className="font-body text-[12px] text-[var(--text-muted)]">
-          {typeof dept._count?.members === "number"
-            ? `${dept._count.members} ${dept._count.members === 1 ? "membro" : "membros"} · `
-            : ""}
-          Criado em {formatDate(dept.createdAt)}
+        <p className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">{dept.name}</p>
+        <p className="truncate font-body text-[12px] text-[var(--text-muted)]">
+          {typeof members === "number" ? `${members} ${members === 1 ? "membro" : "membros"}` : "Sem membros"}
         </p>
       </div>
+      <IconChevronRight
+        size={15}
+        className={cn(
+          "shrink-0 text-[var(--brand-primary)] transition-opacity",
+          active ? "opacity-80" : "opacity-0 group-hover:opacity-50",
+        )}
+      />
+    </button>
+  );
+}
 
-      <span className="shrink-0 rounded-full bg-[var(--color-success)]/12 px-2.5 py-0.5 font-display text-[11.5px] font-semibold text-[var(--color-success)]">
-        Ativo
-      </span>
+// ─── Detail (master-detail right pane) ─────────────────────────────────────────
 
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-red-50 hover:text-red-500 transition-colors">
-          <IconTrash size={13} />
-        </button>
-      </div>
-
-      <IconChevronRight size={14} className="shrink-0 text-[var(--brand-primary)] opacity-30 group-hover:opacity-80 transition-opacity" />
+function StatBox({ value, label }: { value: React.ReactNode; label: string }) {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+      <p className="font-display text-[22px] font-extrabold leading-none text-[var(--text-primary)]">{value}</p>
+      <p className="mt-1 font-body text-[11.5px] text-[var(--text-muted)]">{label}</p>
     </div>
   );
 }
 
-function TabelaRow({ dept, onDelete, onEdit, selected, onToggle }: { dept: Department; onDelete: () => void; onEdit: () => void; selected: boolean; onToggle: () => void }) {
-  return (
-    <div className={cn(
-      "group grid grid-cols-[2rem_2.5rem_1fr_6rem_5.5rem_3.5rem] cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-white/60",
-      selected && "bg-[var(--brand-primary)]/5",
-    )}
-    onClick={onEdit}
-    >
-      <input type="checkbox" checked={selected} onChange={onToggle} className="size-4 rounded accent-[var(--brand-primary)]" />
-      <DeptIconBadge dept={dept} size={32} />
-      <div>
-        <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">{dept.name}</p>
-      </div>
-      <span className="hidden font-body text-[12px] tabular-nums text-[var(--text-muted)] sm:block">{formatDate(dept.createdAt)}</span>
-      <span className="hidden rounded-full bg-[var(--color-success)]/12 px-2 py-0.5 text-center font-display text-[11px] font-semibold text-[var(--color-success)] sm:block">
-        Ativo
-      </span>
-      <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-red-50 hover:text-red-500 transition-colors">
-          <IconTrash size={13} />
-        </button>
-      </div>
-    </div>
-  );
-}
+function DepartmentDetail({
+  dept,
+  onEdit,
+  onDelete,
+  onBack,
+}: {
+  dept: Department | null;
+  onEdit: () => void;
+  onDelete: () => void;
+  onBack: () => void;
+}) {
+  const { data: members = [], isLoading } = useDepartmentMembers(dept?.id ?? null);
 
-function CardView({ dept, onDelete, onEdit }: { dept: Department; onDelete: () => void; onEdit: () => void }) {
-  return (
-    <div
-      className="group relative flex cursor-pointer flex-col items-center gap-3 rounded-[var(--radius-xl)] border border-white/70 bg-white/80 p-5 text-center shadow-[0_1px_3px_rgba(100,130,180,0.08)] backdrop-blur-sm transition-all hover:bg-white hover:shadow-[0_2px_8px_rgba(100,130,180,0.13)]"
-      onClick={onEdit}
-    >
-      <DeptIconBadge dept={dept} size={52} />
-      <div>
-        <p className="font-display text-[14px] font-bold text-[var(--text-primary)]">{dept.name}</p>
-        <p className="mt-0.5 font-body text-[11.5px] text-[var(--text-muted)]">
-          {typeof dept._count?.members === "number"
-            ? `${dept._count.members} ${dept._count.members === 1 ? "membro" : "membros"}`
-            : formatDate(dept.createdAt)}
+  if (!dept) {
+    return (
+      <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">
+          <IconBuilding size={24} className="text-[var(--text-muted)] opacity-50" />
+        </div>
+        <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">Selecione um departamento</p>
+        <p className="max-w-[38ch] font-body text-[12.5px] text-[var(--text-muted)]">
+          Escolha um departamento na lista para ver membros, isolamento de dados e ações.
         </p>
       </div>
-      <span className="rounded-full bg-[var(--color-success)]/12 px-3 py-0.5 font-display text-[11px] font-semibold text-[var(--color-success)]">
-        Ativo
-      </span>
-      <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-red-50 hover:text-red-500 transition-colors">
-          <IconTrash size={13} />
+    );
+  }
+
+  const memberCount = members.length || dept._count?.members || 0;
+  const conversations = dept._count?.conversations ?? 0;
+
+  return (
+    <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow,0_8px_32px_rgba(100,130,180,0.18))]">
+      {/* Header */}
+      <div className="flex items-start gap-4 border-b border-[var(--glass-border-subtle)] p-5">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] lg:hidden"
+          aria-label="Voltar"
+        >
+          <IconArrowLeft size={18} />
         </button>
+        <DeptIconBadge dept={dept} size={52} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-display text-[19px] font-extrabold tracking-[-0.02em] text-[var(--text-primary)]">{dept.name}</h2>
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success)]/12 px-2.5 py-0.5 font-display text-[11px] font-bold text-[var(--color-success)]">
+              <IconShieldLock size={12} /> Isolado
+            </span>
+          </div>
+          <p className="mt-1 font-body text-[12.5px] text-[var(--text-muted)]">Criado em {formatDate(dept.createdAt)}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <ButtonGlass variant="glass" size="sm" onClick={onEdit} className="gap-1.5">
+            <IconPencil size={13} /> Editar
+          </ButtonGlass>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] text-[var(--text-muted)] transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+            aria-label="Excluir"
+          >
+            <IconTrash size={14} />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-6 p-5">
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          <StatBox value={memberCount} label="Membros" />
+          <StatBox value={conversations} label="Conversas" />
+          <StatBox value={dept.requireTabulationOnClose ? "Sim" : "Não"} label="Tabular ao fechar" />
+        </div>
+
+        {/* Isolation note */}
+        <div className="flex items-start gap-2.5 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/6 px-4 py-3">
+          <IconInfoCircle size={16} className="mt-0.5 shrink-0 text-[var(--brand-primary)]" />
+          <p className="font-body text-[12.5px] leading-relaxed text-[var(--text-secondary,var(--text-muted))]">
+            <strong className="font-semibold text-[var(--text-primary)]">Isolamento de dados:</strong> atendentes escopados a este
+            departamento só veem as conversas dele. O escopo de caixa de entrada é definido em{" "}
+            <strong className="font-semibold text-[var(--text-primary)]">Conversas → Atendentes</strong> (departamentos permitidos).
+            O vínculo de membros abaixo define a composição do time.
+          </p>
+        </div>
+
+        {/* Members */}
+        <div>
+          <div className="mb-2.5 flex items-center gap-2">
+            <span className="font-display text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--text-muted)]">Membros</span>
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] px-1.5 font-display text-[10.5px] font-bold text-[var(--text-muted)]">
+              {memberCount}
+            </span>
+          </div>
+
+          {isLoading ? (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-[52px] animate-pulse rounded-[var(--radius-lg)] bg-[var(--glass-bg-strong)]" />
+              ))}
+            </div>
+          ) : members.length === 0 ? (
+            <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-6 text-center">
+              <IconUsers size={18} className="mx-auto mb-1.5 text-[var(--text-muted)] opacity-40" />
+              <p className="font-body text-[12.5px] text-[var(--text-muted)]">Nenhum membro vinculado ainda.</p>
+              <button
+                type="button"
+                onClick={onEdit}
+                className="mt-2 font-display text-[12.5px] font-semibold text-[var(--brand-primary)] hover:underline"
+              >
+                Adicionar membros →
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)]">
+              <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)]">
+                {members.map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 bg-[var(--glass-bg-overlay)] px-4 py-2.5">
+                    {m.user.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={m.user.avatarUrl} alt={m.user.name} className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 font-display text-[12px] font-bold text-[var(--brand-primary)]">
+                        {m.user.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">{m.user.name}</p>
+                      <p className="truncate font-body text-[11.5px] text-[var(--text-muted)]">{m.user.email}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main component (master-detail) ─────────────────────────────────────────────
 
 export function DepartmentsTab() {
   const { data: departments = [], isLoading } = useDepartments();
   const deleteMutation = useDeleteDepartment();
 
   const [search, setSearch] = React.useState("");
-  const [viewMode, setViewMode] = React.useState<ViewMode>("compacta");
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [mobileDetail, setMobileDetail] = React.useState(false);
   const [showCreate, setShowCreate] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<Department | null>(null);
   const [deleteError, setDeleteError] = React.useState<string | undefined>();
   const [editTarget, setEditTarget] = React.useState<Department | null>(null);
-  const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
   const filtered = React.useMemo(() => {
     const q = search.toLowerCase().trim();
     return q ? departments.filter((d) => d.name.toLowerCase().includes(q)) : departments;
   }, [departments, search]);
 
-  const allSelected = filtered.length > 0 && selected.size === filtered.length;
-  const someSelected = selected.size > 0 && !allSelected;
+  // Auto-seleciona o primeiro no desktop; mantém seleção válida após filtro/exclusão.
+  React.useEffect(() => {
+    if (filtered.length === 0) {
+      if (selectedId !== null) setSelectedId(null);
+      return;
+    }
+    if (!selectedId || !filtered.some((d) => d.id === selectedId)) {
+      setSelectedId(filtered[0].id);
+    }
+  }, [filtered, selectedId]);
 
-  function toggleSelect(id: string) {
-    setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  }
-  function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(filtered.map((d) => d.id)));
+  const selected = filtered.find((d) => d.id === selectedId) ?? null;
+
+  function selectDept(id: string) {
+    setSelectedId(id);
+    setMobileDetail(true);
   }
 
   function confirmDelete() {
     if (!deleteTarget) return;
     deleteMutation.mutate(deleteTarget.id, {
-      onSuccess: () => { toast.success("Departamento excluído"); setDeleteTarget(null); setDeleteError(undefined); },
+      onSuccess: () => {
+        toast.success("Departamento excluído");
+        setDeleteTarget(null);
+        setDeleteError(undefined);
+        setMobileDetail(false);
+      },
       onError: (err: unknown) => setDeleteError((err as Error).message),
     });
   }
 
-  const VIEW_SEGMENT_ITEMS = [
-    { value: "tabela",   label: <span className="flex items-center gap-1.5"><IconTable size={13} />Tabela</span> },
-    { value: "cards",    label: <span className="flex items-center gap-1.5"><IconLayoutGrid size={13} />Cards</span> },
-    { value: "compacta", label: <span className="flex items-center gap-1.5"><IconLayoutList size={13} />Compacta</span> },
-  ] as const;
-
   return (
     <div className="min-w-0 w-full max-w-full">
-      {/* ── Toolbar ── */}
-      <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <PageSearchBar
-          value={search}
-          onChange={setSearch}
-          placeholder="Buscar departamento…"
-          variant="compact"
-          className="w-full sm:min-w-[180px] sm:max-w-xs sm:flex-1"
-        />
-
-        <div className="toolbar-hscroll min-w-0 max-w-full sm:ml-auto sm:max-w-none sm:overflow-visible">
-          <div className="flex w-max flex-nowrap items-center gap-2">
-            <PageSegmentedControl
-              items={VIEW_SEGMENT_ITEMS}
-              value={viewMode}
-              onChange={(v) => setViewMode(v as ViewMode)}
-              aria-label="Modo de visualização"
-              size="compact"
+      <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+        {/* ── Master: lista ── */}
+        <div className={cn("min-w-0 flex-col gap-3", mobileDetail ? "hidden lg:flex" : "flex")}>
+          <div className="flex items-center gap-2">
+            <PageSearchBar
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar departamento…"
+              variant="compact"
+              className="min-w-0 flex-1"
             />
-
             <PagePrimaryButton onClick={() => setShowCreate(true)} className="shrink-0 gap-1.5">
               <IconPlus size={14} />
               Criar
             </PagePrimaryButton>
           </div>
-        </div>
-      </div>
 
-      {/* ── Bulk action bar ── */}
-      {selected.size > 0 && (
-        <div className="mb-3 flex items-center gap-2 rounded-[var(--radius-lg)] border border-red-100 bg-red-50 px-4 py-2.5">
-          <span className="flex-1 font-display text-[13px] text-red-600">
-            {selected.size} selecionado{selected.size !== 1 ? "s" : ""}
-          </span>
-          <button type="button" className="flex items-center gap-1.5 font-display text-[12.5px] font-semibold text-red-600 hover:underline">
-            <IconTrash size={13} /> Excluir selecionados
-          </button>
-        </div>
-      )}
-
-      {/* ── Content ── */}
-      {isLoading ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-[60px] animate-pulse rounded-[var(--radius-lg)] bg-[var(--glass-bg-strong)]" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">
-            <IconBuilding size={24} className="text-[var(--text-muted)] opacity-50" />
-          </div>
-          <div>
-            <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
-              {search ? "Nenhum departamento encontrado" : "Nenhum departamento cadastrado"}
-            </p>
-            <p className="mt-1 font-body text-[12.5px] text-[var(--text-muted)]">
-              {search ? "Tente um termo diferente." : "Crie o primeiro departamento para começar."}
-            </p>
-          </div>
-          {!search && (
-            <ButtonGlass variant="primary" size="sm" onClick={() => setShowCreate(true)} className="gap-1.5 mt-1">
-              <IconPlus size={13} /> Criar departamento
-            </ButtonGlass>
-          )}
-        </div>
-      ) : viewMode === "compacta" ? (
-        /* ── Compacta ── */
-        <div className="flex flex-col gap-2">
-          {filtered.map((dept) => (
-            <CompactaRow
-              key={dept.id}
-              dept={dept}
-              onDelete={() => { setDeleteError(undefined); setDeleteTarget(dept); }}
-              onEdit={() => setEditTarget(dept)}
-            />
-          ))}
-        </div>
-      ) : viewMode === "cards" ? (
-        /* ── Cards ── */
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {filtered.map((dept) => (
-            <CardView
-              key={dept.id}
-              dept={dept}
-              onDelete={() => { setDeleteError(undefined); setDeleteTarget(dept); }}
-              onEdit={() => setEditTarget(dept)}
-            />
-          ))}
-        </div>
-      ) : (
-        /* ── Tabela ── */
-        <div className="overflow-x-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
-          <div className="min-w-[420px]">
-            {/* Table header */}
-            <div className={listTableHeadRowClass("grid grid-cols-[2rem_2.5rem_1fr_6rem_5.5rem_3.5rem] rounded-none border-b-0 border-x-0 border-t-0")}>
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={(el) => { if (el) el.indeterminate = someSelected; }}
-                onChange={toggleAll}
-                className="size-4 rounded accent-[var(--brand-primary)]"
-              />
-              <span />
-              <ListColumnLabel>Nome</ListColumnLabel>
-              <ListColumnLabel className="hidden sm:block">Criado em</ListColumnLabel>
-              <ListColumnLabel className="hidden sm:block">Status</ListColumnLabel>
-              <span />
-            </div>
-
-            <div className="divide-y divide-[var(--glass-border-subtle)]">
-              {filtered.map((dept) => (
-                <TabelaRow
-                  key={dept.id}
-                  dept={dept}
-                  selected={selected.has(dept.id)}
-                  onToggle={() => toggleSelect(dept.id)}
-                  onDelete={() => { setDeleteError(undefined); setDeleteTarget(dept); }}
-                  onEdit={() => setEditTarget(dept)}
-                />
+          {isLoading ? (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-[58px] animate-pulse rounded-[var(--radius-lg)] bg-[var(--glass-bg-strong)]" />
               ))}
             </div>
-          </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-16 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">
+                <IconBuilding size={24} className="text-[var(--text-muted)] opacity-50" />
+              </div>
+              <div>
+                <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
+                  {search ? "Nenhum resultado" : "Nenhum departamento"}
+                </p>
+                <p className="mt-1 font-body text-[12.5px] text-[var(--text-muted)]">
+                  {search ? "Tente outro termo." : "Crie o primeiro para começar."}
+                </p>
+              </div>
+              {!search && (
+                <ButtonGlass variant="primary" size="sm" onClick={() => setShowCreate(true)} className="mt-1 gap-1.5">
+                  <IconPlus size={13} /> Criar departamento
+                </ButtonGlass>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {filtered.map((dept) => (
+                <DeptListRow
+                  key={dept.id}
+                  dept={dept}
+                  active={dept.id === selectedId}
+                  onSelect={() => selectDept(dept.id)}
+                />
+              ))}
+              <p className="mt-1 px-1 font-body text-[12px] text-[var(--text-muted)]">
+                {filtered.length} departamento{filtered.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* ── Footer count ── */}
-      {!isLoading && filtered.length > 0 && (
-        <p className="mt-3 font-body text-[12px] text-[var(--text-muted)]">
-          {filtered.length} departamento{filtered.length !== 1 ? "s" : ""}
-          {selected.size > 0 && ` · ${selected.size} selecionado${selected.size !== 1 ? "s" : ""}`}
-        </p>
-      )}
+        {/* ── Detail ── */}
+        <div className={cn("min-w-0", mobileDetail ? "block" : "hidden lg:block")}>
+          <DepartmentDetail
+            dept={selected}
+            onBack={() => setMobileDetail(false)}
+            onEdit={() => selected && setEditTarget(selected)}
+            onDelete={() => {
+              if (!selected) return;
+              setDeleteError(undefined);
+              setDeleteTarget(selected);
+            }}
+          />
+        </div>
+      </div>
 
       {/* ── Modals ── */}
       <CreateDepartmentModal open={showCreate} onClose={() => setShowCreate(false)} />

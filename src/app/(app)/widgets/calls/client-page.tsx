@@ -24,8 +24,12 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { PageGhostButton, PageSearchBar, pageGhostButtonClass } from "@/components/crm/page-toolbar";
+import { PageGhostButton, pageGhostButtonClass } from "@/components/crm/page-toolbar";
 import { CallHistoryTimeline } from "@/features/softphone/components/call-history-timeline";
+import {
+  CallsSearchFilterBar,
+  type CallsFilterState,
+} from "@/features/softphone/components/calls-search-filter-bar";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
 import { syncCalls } from "@/features/softphone/api/extensions";
 
@@ -40,6 +44,7 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filters, setFilters] = useState<CallsFilterState>({});
   const queryClient = useQueryClient();
   const autoSyncedRef = useRef(false);
 
@@ -86,13 +91,14 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
           icon={<IconPhone size={22} stroke={2.2} />}
           title="Chamadas"
           center={
-            <PageSearchBar
-              variant="compact"
-              value={search}
-              onChange={setSearch}
-              placeholder="Buscar por contato ou telefone..."
-              aria-label="Buscar chamadas"
-            />
+            <div className="flex w-full justify-start">
+              <CallsSearchFilterBar
+                search={search}
+                onSearch={setSearch}
+                filters={filters}
+                onFiltersChange={setFilters}
+              />
+            </div>
           }
           actions={
             <div className="flex shrink-0 items-center gap-2">
@@ -129,7 +135,7 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
         ) : callsWidget.enabled !== true ? (
           <NotEnabledState />
         ) : (
-          <CallHistoryTimeline search={debouncedSearch} />
+          <CallHistoryTimeline search={debouncedSearch} filters={filters} />
         )}
       </main>
     </div>

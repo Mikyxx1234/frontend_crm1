@@ -261,7 +261,7 @@ export function PipelineSearchFilterBar({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,520px)] flex-col rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
+        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,720px)] flex-col rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
           {/* Header */}
           <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
             <div className="flex items-center gap-2">
@@ -284,12 +284,12 @@ export function PipelineSearchFilterBar({
             </button>
           </div>
 
-          {/* Abas segmentadas — scroll horizontal pra não cortar "Personalizado" */}
+          {/* Abas segmentadas — painel largo o bastante pra caber sem scroll */}
           <div className="px-4 pb-3">
             <div
               role="tablist"
               aria-label="Seções do filtro"
-              className="flex items-center gap-0.5 overflow-x-auto overscroll-x-contain rounded-full bg-[var(--glass-bg-strong)] p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              className="flex items-center gap-0.5 rounded-full bg-[var(--glass-bg-strong)] p-1"
             >
               {tabs.map((t) => {
                 const active = tab === t.id;
@@ -302,7 +302,7 @@ export function PipelineSearchFilterBar({
                     aria-selected={active}
                     onClick={() => setTab(t.id)}
                     className={cn(
-                      "flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1.5 font-display text-[11.5px] font-bold transition-all",
+                      "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-1.5 py-1.5 font-display text-[11.5px] font-bold transition-all sm:gap-1.5 sm:px-2",
                       active
                         ? "bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
                         : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",

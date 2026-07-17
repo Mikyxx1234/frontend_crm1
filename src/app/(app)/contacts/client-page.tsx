@@ -462,7 +462,7 @@ export default function V2ContactsClientPage() {
           icon={<IconUsers size={22} stroke={2.2} />}
           title="Contatos"
           center={
-            <div className="flex w-full max-w-md justify-start">
+            <div className="flex w-full justify-start">
               <SearchFilterBar
                 search={search}
                 onSearch={setSearch}
@@ -808,7 +808,7 @@ function SearchFilterBar({
   };
 
   return (
-    <div ref={ref} className="relative w-full max-w-md">
+    <div ref={ref} className="relative w-full">
       <IconSearch size={15} className="absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]" />
       <input
         type="search"

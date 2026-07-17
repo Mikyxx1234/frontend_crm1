@@ -8,7 +8,8 @@ import {
 export type SearchInputProps = Omit<PageSearchBarProps, "variant">;
 
 /**
- * Alias legado — busca compacta (`w-80`, `h-10`) para o centro do PageHeader.
+ * Alias legado — busca compacta (`h-10`) para o centro do PageHeader.
+ * A largura vem do slot `center` do PageHeader (`w-[32rem]` no desktop).
  * Novas telas com busca em linha própria devem usar `PageSearchBar` variant toolbar.
  */
 export function SearchInput(props: SearchInputProps) {

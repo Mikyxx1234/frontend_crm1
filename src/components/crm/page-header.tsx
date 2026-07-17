@@ -21,9 +21,17 @@ export type PageHeaderBack = {
  *
  * Mobile (< lg): título numa linha; busca + ações numa faixa
  * `toolbar-hscroll` (mesmo padrão do Pipeline / kanban).
- * Desktop (lg+): grid de 3 colunas (identidade | busca à esquerda | ações).
+ * Desktop (lg+): identidade com largura fixa → busca com largura fixa →
+ * spacer → ações. Assim a barra começa sempre na mesma coluna, independente
+ * do tamanho do título.
  * Descrições de página foram removidas do padrão NavRail.
  */
+
+/** Largura da coluna de identidade (ícone + título) — alinha a busca entre páginas. */
+const IDENTITY_COL = "w-[18rem]"
+/** Largura da barra de busca no header. */
+const SEARCH_COL = "w-[32rem]"
+
 interface PageHeaderProps {
   icon: React.ReactNode
   title: string
@@ -58,7 +66,7 @@ function Identity({
   titleAccessory?: React.ReactNode
 }) {
   return (
-    <div className="flex min-w-0 shrink-0 items-center gap-3">
+    <div className="flex min-w-0 w-full items-center gap-3">
       {back ? (
         <Link
           href={back.href}
@@ -74,7 +82,7 @@ function Identity({
       </div>
 
       <div className="flex min-w-0 items-center gap-2">
-        <h1 className="font-display text-[22px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
+        <h1 className="truncate font-display text-[22px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
           {title}
         </h1>
         {titleAccessory ? <div className="flex shrink-0 items-center">{titleAccessory}</div> : null}
@@ -96,10 +104,16 @@ export function PageHeader({
 
   return (
     <div className={cn("flex flex-col gap-2 px-1", className)}>
-      {/* Desktop: título → busca (colada à esq.) → spacer → ações */}
-      <div className="hidden items-center gap-3 lg:flex">
-        <Identity icon={icon} title={title} back={back} titleAccessory={titleAccessory} />
-        {center ? <div className="min-w-0 shrink-0">{center}</div> : null}
+      {/* Desktop: identidade (largura fixa) → busca (largura fixa) → spacer → ações */}
+      <div className="hidden items-center gap-4 lg:flex">
+        <div className={cn(IDENTITY_COL, "shrink-0")}>
+          <Identity icon={icon} title={title} back={back} titleAccessory={titleAccessory} />
+        </div>
+        {center ? (
+          <div className={cn(SEARCH_COL, "min-w-0 shrink-0 [&_.relative]:!w-full [&_.relative]:!max-w-none")}>
+            {center}
+          </div>
+        ) : null}
         <div className="min-w-0 flex-1" />
         {actions ? (
           <div className="flex shrink-0 items-center gap-2">{actions}</div>
@@ -112,7 +126,7 @@ export function PageHeader({
         {hasControls ? (
           <div className="toolbar-hscroll flex max-w-full flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
             {center ? (
-              <div className="shrink-0 [&_.relative]:!w-[min(220px,70vw)] [&_.relative]:!max-w-none">
+              <div className="shrink-0 [&_.relative]:!w-[min(280px,75vw)] [&_.relative]:!max-w-none">
                 {center}
               </div>
             ) : null}

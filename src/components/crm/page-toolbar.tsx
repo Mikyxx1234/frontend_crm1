@@ -76,7 +76,7 @@ export function PageSearchBar({
 }: PageSearchBarProps) {
   if (variant === "compact") {
     return (
-      <div className={cn("relative w-full max-w-md", className)}>
+      <div className={cn("relative w-full", className)}>
         <IconSearch
           size={15}
           className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"

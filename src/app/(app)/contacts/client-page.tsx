@@ -1373,7 +1373,8 @@ function EditContactDialog({ contact, onClose }: { contact: ContactListItemDto |
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contact?.id]);
 
-  if (!contact) return null;
+  // Sempre monta o FormSheet (como CreateContactDialog). Retornar null quando
+  // contact===null remontava o Sheet já com open=true e o showModal() se perdia.
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

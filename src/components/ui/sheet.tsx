@@ -132,7 +132,12 @@ const SheetContent = React.forwardRef<HTMLDialogElement, SheetContentProps>(
     const [mounted, setMounted] = React.useState(false);
     React.useEffect(() => setMounted(true), []);
 
+    // Depende de `mounted`: no primeiro paint o portal ainda não existe
+    // (return null acima). Sem isso, abrir um Sheet já montado com open=true
+    // (ex.: EditContactDialog) chama este effect com el=null e nunca chama
+    // showModal() de novo — o drawer fica invisível.
     React.useEffect(() => {
+      if (!mounted) return;
       const el = internalRef.current;
       if (!el) return;
       if (open) {
@@ -140,7 +145,7 @@ const SheetContent = React.forwardRef<HTMLDialogElement, SheetContentProps>(
       } else if (el.open) {
         el.close();
       }
-    }, [open]);
+    }, [open, mounted]);
 
     React.useEffect(() => {
       const el = internalRef.current;

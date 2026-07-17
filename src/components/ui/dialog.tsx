@@ -122,7 +122,9 @@ const DialogContent = React.forwardRef<HTMLDialogElement, DialogContentProps>(
     const [mounted, setMounted] = React.useState(false);
     React.useEffect(() => setMounted(true), []);
 
+    // Reexecuta quando `mounted` fica true — o portal só existe após isso.
     React.useEffect(() => {
+      if (!mounted) return;
       const el = internalRef.current;
       if (!el) return;
       if (open) {

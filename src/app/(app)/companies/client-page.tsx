@@ -498,7 +498,7 @@ function EditCompanyDialog({ company, onClose }: { company: CompanyListItemDto |
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
 
-  if (!company) return null;
+  // Sempre monta o FormSheet — evitar return null com open=true (showModal se perde).
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

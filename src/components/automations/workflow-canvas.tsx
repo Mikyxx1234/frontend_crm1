@@ -456,6 +456,13 @@ function WorkflowCanvasInner({
   const isDark = theme === "dark";
   const stepsRef = useRef(steps);
   stepsRef.current = steps;
+  // Quando a edição inline altera só a config, patchamos o node in-place
+  // e pulamos o rebuild completo (senão o React Flow remonta o input e
+  // o foco some a cada tecla — "só edita se clicar e segurar").
+  const skipStepsSyncRef = useRef(false);
+  const patchStepConfigRef = useRef<
+    (stepId: string, next: Record<string, unknown>) => void
+  >(() => {});
 
   // Posição inicial do nó ao começar um arraste — usada pra distinguir
   // clique (sem movimento) de arraste real na pílula "+ adicionar passo".
@@ -588,17 +595,6 @@ function WorkflowCanvasInner({
           .filter((s) => s.id !== currentId)
           .map((s, i) => ({ value: s.id, label: `${i + 1}. ${stepTypeLabel(s.type)}` }));
 
-      // Mescla config do editor inline preservando __rfPos e outras
-      // chaves internas (o Editor faz spread da config atual, então
-      // essas chaves já vem no `next`; mesmo assim garantimos ao setar).
-      const patchStepConfig = (stepId: string, next: Record<string, unknown>) => {
-        const cur = stepsRef.current;
-        const updated = cur.map((s) =>
-          s.id === stepId ? { ...s, config: next } : s
-        );
-        onStepsChange(updated);
-      };
-
       const stepNodes: Node[] = list.map((step, index) => {
         const saved = readRfPos(step.config);
         const pos = saved ?? { x: START_X + index * GAP_X, y: NODE_Y };
@@ -626,8 +622,12 @@ function WorkflowCanvasInner({
           config: (step.config ?? {}) as Record<string, unknown>,
           stepOptions: buildStepOptions(step.id),
           onConfigChange: (next: Record<string, unknown>) =>
-            patchStepConfig(step.id, next),
+            patchStepConfigRef.current(step.id, next),
         };
+
+        // dragHandle: só o header arrasta — clique nos campos do editor
+        // inline não inicia drag do node (bug "só edita se segurar").
+        const dragHandle = ".node-drag-handle";
 
         if (isInteractiveStep(step.type)) {
           const cfg = step.config as Record<string, unknown>;
@@ -636,6 +636,7 @@ function WorkflowCanvasInner({
             id: step.id,
             type: "interactive" as const,
             position: pos,
+            dragHandle,
             data: {
               ...baseData,
               buttons,
@@ -651,6 +652,7 @@ function WorkflowCanvasInner({
             id: step.id,
             type: "condition" as const,
             position: pos,
+            dragHandle,
             data: {
               ...baseData,
               branches: condCfg.branches,
@@ -676,6 +678,7 @@ function WorkflowCanvasInner({
             id: step.id,
             type: "wait" as const,
             position: pos,
+            dragHandle,
             data: {
               ...baseData,
               hasReceivedGoto: !!(cfg.receivedGotoStepId),
@@ -689,6 +692,7 @@ function WorkflowCanvasInner({
           id: step.id,
           type: rfNodeType(step.type),
           position: pos,
+          dragHandle,
           data: baseData,
         } as Node;
       });
@@ -737,10 +741,72 @@ function WorkflowCanvasInner({
 
       return [triggerNode, ...stepNodes, ...addStepNodes];
     },
-    [triggerConfig, triggerType, stats, stageNameLookup, onStepsChange]
+    [triggerConfig, triggerType, stats, stageNameLookup]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
+
+  const patchStepConfig = useCallback(
+    (stepId: string, next: Record<string, unknown>) => {
+      const cur = stepsRef.current;
+      const step = cur.find((s) => s.id === stepId);
+      if (!step) return;
+      const updated = cur.map((s) =>
+        s.id === stepId ? { ...s, config: next } : s
+      );
+      stepsRef.current = updated;
+      skipStepsSyncRef.current = true;
+      onStepsChange(updated);
+
+      const stepIndexById = new Map<string, number>();
+      updated.forEach((s, i) => stepIndexById.set(s.id, i + 1));
+
+      let summary = summarizeStepConfig(step.type, next, stageNameLookup);
+      if (step.type === "goto") {
+        const tgt = typeof next.targetStepId === "string" ? next.targetStepId : "";
+        const tgtIdx = tgt ? stepIndexById.get(tgt) : undefined;
+        summary = tgtIdx != null ? `Ir para: passo ${tgtIdx}` : summary;
+      }
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id !== stepId) return n;
+          const data: Record<string, unknown> = {
+            ...(n.data as Record<string, unknown>),
+            config: next,
+            summary,
+            incomplete: isStepIncomplete(step.type, next),
+          };
+          if (isInteractiveStep(step.type)) {
+            data.buttons = Array.isArray(next.buttons) ? next.buttons : [];
+          }
+          if (step.type === "condition") {
+            data.branches = normalizeConditionConfig(next).branches;
+          }
+          if (step.type === "wait_for_reply") {
+            const tMs = Number(next.timeoutMs ?? 0);
+            let timeoutLabel = "Cronômetro";
+            if (tMs > 0) {
+              const h = Math.floor(tMs / 3_600_000);
+              const m = Math.floor((tMs % 3_600_000) / 60_000);
+              const s = Math.floor((tMs % 60_000) / 1000);
+              const parts: string[] = [];
+              if (h > 0) parts.push(`${h} horas`);
+              if (m > 0) parts.push(`${m} min`);
+              if (s > 0) parts.push(`${s} seg`);
+              timeoutLabel = `Cronômetro: ${parts.join(" ")}`;
+            }
+            data.hasReceivedGoto = !!next.receivedGotoStepId;
+            data.hasTimeoutGoto = !!next.timeoutGotoStepId;
+            data.timeoutLabel = timeoutLabel;
+          }
+          return { ...n, data };
+        })
+      );
+    },
+    [onStepsChange, setNodes, stageNameLookup]
+  );
+  patchStepConfigRef.current = patchStepConfig;
 
   const removeStep = useCallback(
     (id: string) => {
@@ -871,6 +937,11 @@ function WorkflowCanvasInner({
   onAddStepRef.current = addStepAfter;
 
   useEffect(() => {
+    // Edição inline já patchou o node — não rebuildar (preserva foco).
+    if (skipStepsSyncRef.current) {
+      skipStepsSyncRef.current = false;
+      return;
+    }
     // Rebuild preservando `selected` (React Flow guarda seleção no
     // próprio node object; se recriamos os nós do zero, a seleção do
     // card editado some ao soltar o mouse quando algum re-render

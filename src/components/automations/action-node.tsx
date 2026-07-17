@@ -106,7 +106,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
         position={Position.Left}
         className="size-3! border-2! border-white! bg-[var(--glass-border)]!"
       />
-      <div className="flex items-start gap-3 px-3.5 py-3">
+      <div className="node-drag-handle flex cursor-grab items-start gap-3 px-3.5 py-3 active:cursor-grabbing">
         <span
           className={cn(
             "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl ring-1",

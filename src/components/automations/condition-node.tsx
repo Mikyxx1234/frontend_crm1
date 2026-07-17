@@ -89,7 +89,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
         )}
       >
         {/* Header */}
-        <div className="flex items-center gap-2 border-b border-[var(--color-cyan)]/70 bg-[var(--color-cyan-soft)] px-3 py-2">
+        <div className="node-drag-handle flex cursor-grab items-center gap-2 border-b border-[var(--color-cyan)]/70 bg-[var(--color-cyan-soft)] px-3 py-2 active:cursor-grabbing">
           <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--color-bg-card)] text-[var(--color-cyan)] ring-1 ring-[var(--color-cyan)]/15">
             <GitBranch className="size-3.5" strokeWidth={2.4} />
           </span>

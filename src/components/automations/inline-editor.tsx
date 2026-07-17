@@ -65,6 +65,8 @@ export function NodeConfigEditor({
   return (
     <div
       className="n-config nodrag nopan nowheel"
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
     >

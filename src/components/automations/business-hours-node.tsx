@@ -38,7 +38,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
       />
       <div
         className={cn(
-          "relative mx-auto flex h-[120px] w-[120px] rotate-45 items-center justify-center rounded-lg border-2 bg-[var(--color-bg-card)] transition-all duration-200",
+          "node-drag-handle relative mx-auto flex h-[120px] w-[120px] rotate-45 cursor-grab items-center justify-center rounded-lg border-2 bg-[var(--color-bg-card)] transition-all duration-200 active:cursor-grabbing",
           selected
             ? "border-[var(--color-warning)] shadow-[0_0_24px_-4px_rgba(245,158,11,0.5)] ring-2 ring-[var(--color-warning)]/30"
             : "border-[var(--color-warning)]/60 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-[var(--color-warning)]"

@@ -54,7 +54,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
       />
 
       {/* Header */}
-      <div className="flex items-start gap-3 px-3.5 py-3">
+      <div className="node-drag-handle flex cursor-grab items-start gap-3 px-3.5 py-3 active:cursor-grabbing">
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-info-bg)] text-[var(--brand-primary)] ring-1 ring-indigo-100">
           <Route className="size-4" strokeWidth={2.4} />
         </span>

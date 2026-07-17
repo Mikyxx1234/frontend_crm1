@@ -44,7 +44,7 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
         position={Position.Left}
         className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
-      <div className="flex items-start gap-3 px-3.5 py-3">
+      <div className="node-drag-handle flex cursor-grab items-start gap-3 px-3.5 py-3 active:cursor-grabbing">
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-warn-subtle)] text-[var(--color-warn-text)] ring-1 ring-[var(--color-warn-subtle)]">
           <Timer className="size-4" strokeWidth={2.4} aria-hidden />
         </span>

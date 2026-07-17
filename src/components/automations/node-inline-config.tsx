@@ -13,6 +13,10 @@ import { STEP_FIELDS } from "./editor-fields";
 
 type StepOpt = { value: string; label: string };
 
+function stopFlowPointer(e: React.SyntheticEvent) {
+  e.stopPropagation();
+}
+
 export function hasInlineEditor(stepType: string): boolean {
   return Boolean(STEP_FIELDS[stepType]);
 }
@@ -33,10 +37,16 @@ export function NodeInlineConfig({
   if (!selected) return null;
   if (!STEP_FIELDS[stepType]) return null;
   // Escopo `.ds-flow` isola os estilos `.n-config` / `.cfg-*` definidos
-  // em flow-editor.css sem depender do wrapper externo (o canvas de
-  // produção usa `.automation-editor`, não `.ds-flow`).
+  // em flow-editor.css. stopPropagation no pointer impede o React Flow
+  // de tratar o clique no campo como início de drag/seleção.
   return (
-    <div className="ds-flow contents">
+    <div
+      className="ds-flow"
+      onPointerDown={stopFlowPointer}
+      onMouseDown={stopFlowPointer}
+      onClick={stopFlowPointer}
+      onDoubleClick={stopFlowPointer}
+    >
       <NodeConfigEditor
         stepType={stepType}
         config={config ?? {}}

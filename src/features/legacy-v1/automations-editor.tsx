@@ -35,7 +35,7 @@ const WorkflowCanvas = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center bg-[var(--color-primary-soft)]">
+      <div className="flex h-full w-full items-center justify-center bg-[var(--bg-base)]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     ),
@@ -956,12 +956,9 @@ export default function AutomationDetailPage() {
   }
 
   return (
-    <div className="-m-6 flex h-[calc(100dvh-0px)] flex-col overflow-hidden md:-m-8">
-      {/* ═══ Top bar premium ═══
-          glassmorphism + pill buttons + glow no Salvar — alinhado ao
-          design system EduIT Premium. ActiveSwitch local mantido pra
-          não desalinhar com os outros usos no Config dialog. */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border/60 bg-[var(--glass-bg-overlay)] px-4 py-2.5 shadow-[0_1px_0_rgba(13,27,62,0.04)] backdrop-blur-xl">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+      {/* ═══ Top bar — glass (padrão PageHeader / builder-topbar v2) ═══ */}
+      <div className="flex shrink-0 items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
         {/* Breadcrumb */}
         <Link
           href={listHref}
@@ -1110,8 +1107,8 @@ export default function AutomationDetailPage() {
       )}
 
       {/* ═══ Canvas + Copilot lateral ═══ */}
-      <div className="flex min-h-0 flex-1">
-        <div className="min-w-0 flex-1">
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]">
+        <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
           {hydrated ? (
             <WorkflowCanvas
               steps={steps}

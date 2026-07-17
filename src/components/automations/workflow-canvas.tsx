@@ -1422,7 +1422,7 @@ function WorkflowCanvasInner({
       {/* Canvas area — radial gradients no fundo dão profundidade
           "engenharia premium" sem competir com os nodes. */}
       <div
-        className="automation-canvas relative min-h-0 min-w-0 flex-1 bg-[var(--color-primary-soft)] bg-[radial-gradient(ellipse_at_top_left,rgba(80,125,241,0.08)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.06)_0%,transparent_55%)]"
+        className="automation-canvas relative min-h-0 min-w-0 flex-1 bg-[var(--bg-base)]"
         onDrop={onDrop}
         onDragOver={onDragOver}
       >

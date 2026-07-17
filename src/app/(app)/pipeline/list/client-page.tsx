@@ -25,6 +25,15 @@ import {
   DealListTable,
   type DealListTab,
 } from "@/components/crm/deal-list-table";
+import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
+import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
+import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
+import { useKanbanFilters } from "@/components/pipeline/kanban-filters/use-kanban-filters";
+import {
+  isEmptyFilters,
+  type AdvancedDealFilters,
+  type FilterOptionsResponse,
+} from "@/components/pipeline/kanban-filters/types";
 
 import { useDealsList, usePipelines } from "@/features/pipeline-v2/hooks";
 import { toDealListRow } from "@/features/pipeline-v2/adapters";
@@ -32,6 +41,17 @@ import { toDealListRow } from "@/features/pipeline-v2/adapters";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_PER_PAGE = 25;
+const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
+const PIPELINE_SORT_LS = "kanban-pipeline-sort:v1";
+
+type SortKey =
+  | "default"
+  | "interaction_newest"
+  | "interaction_oldest"
+  | "name_az"
+  | "name_za"
+  | "created_newest"
+  | "created_oldest";
 
 const STATUS_TABS: { id: DealListTab; label: string; icon: React.ReactNode }[] = [
   { id: "abertos", label: "Abertos", icon: <IconClock size={13} /> },
@@ -40,19 +60,57 @@ const STATUS_TABS: { id: DealListTab; label: string; icon: React.ReactNode }[] =
   { id: "todos", label: "Todos", icon: <IconGridDots size={13} /> },
 ];
 
+function statusFromTab(tab: DealListTab): "OPEN" | "WON" | "LOST" | undefined {
+  if (tab === "abertos") return "OPEN";
+  if (tab === "ganhos") return "WON";
+  if (tab === "perdidos") return "LOST";
+  return undefined;
+}
+
 export default function V2PipelineListClientPage() {
   const router = useRouter();
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
   const [pipelineId, setPipelineId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [debounced, setDebounced] = useState("");
+  const [search, setSearch] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return localStorage.getItem(PIPELINE_SEARCH_LS) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [debounced, setDebounced] = useState(search);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [statusTab, setStatusTab] = useState<DealListTab>("abertos");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuWrapRef = useRef<HTMLDivElement>(null);
+
+  const { filters, setFilters, patch: patchFilters, clear: clearFilters } = useKanbanFilters();
+  const [filterOptions, setFilterOptions] = useState<FilterOptionsResponse | null>(null);
+  const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    if (typeof window === "undefined") return "default";
+    try {
+      const raw = localStorage.getItem(PIPELINE_SORT_LS);
+      if (
+        raw === "default" ||
+        raw === "interaction_newest" ||
+        raw === "interaction_oldest" ||
+        raw === "name_az" ||
+        raw === "name_za" ||
+        raw === "created_newest" ||
+        raw === "created_oldest"
+      ) {
+        return raw;
+      }
+    } catch {
+      /* noop */
+    }
+    return "default";
+  });
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -61,6 +119,26 @@ export default function V2PipelineListClientPage() {
     }, 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PIPELINE_SEARCH_LS, search);
+    } catch {
+      /* noop */
+    }
+  }, [search]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PIPELINE_SORT_LS, sortKey);
+    } catch {
+      /* noop */
+    }
+  }, [sortKey]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
 
   const pipelinesQuery = usePipelines(isAuthenticated);
   const pipelines = pipelinesQuery.data ?? [];
@@ -83,11 +161,39 @@ export default function V2PipelineListClientPage() {
     return () => document.removeEventListener("mousedown", onDown);
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    setFilterOptionsLoading(true);
+    fetchFilterOptions()
+      .then((opts) => {
+        if (!cancelled) setFilterOptions(opts);
+      })
+      .catch(() => {
+        /* mantém opções já carregadas */
+      })
+      .finally(() => {
+        if (!cancelled) setFilterOptionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  // Busca vai no query `search`; demais critérios no JSON `filters`
+  // (evita AND duplicado do mesmo termo).
+  const advancedForList = useMemo(() => {
+    const { search: _ignore, ...rest } = filters;
+    return rest;
+  }, [filters]);
+
   const dealsQuery = useDealsList({
     pipelineId: pipelineId ?? undefined,
     search: debounced || undefined,
+    status: statusFromTab(statusTab),
     page,
     perPage,
+    filters: isEmptyFilters(advancedForList) ? undefined : advancedForList,
     enabled: isAuthenticated && !!pipelineId,
   });
 
@@ -105,6 +211,8 @@ export default function V2PipelineListClientPage() {
     }),
     [rows],
   );
+
+  const hasActiveFilters = !isEmptyFilters(filters) || !!search.trim();
 
   return (
     <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
@@ -126,9 +234,23 @@ export default function V2PipelineListClientPage() {
               }}
             />
           }
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por título, contato, CPF, RGM…"
+          searchSlot={
+            <PipelineSearchFilterBar
+              search={search}
+              onSearch={setSearch}
+              filters={filters}
+              onApplyFilters={setFilters}
+              onClearFilters={() => {
+                clearFilters();
+                setSearch("");
+              }}
+              options={filterOptions}
+              optionsLoading={filterOptionsLoading}
+              sortKey={sortKey}
+              onSortKeyChange={setSortKey}
+              placeholder="Buscar por título, contato, CPF, RGM…"
+            />
+          }
           tabsOverride={
             <PageSegmentedControl
               size="compact"
@@ -186,6 +308,40 @@ export default function V2PipelineListClientPage() {
           }
         />
 
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2 px-0.5">
+            <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+              Filtros ativos
+            </span>
+            {!isEmptyFilters(filters) && (
+              <FilterChips
+                filters={filters}
+                options={filterOptions}
+                onPatch={patchFilters}
+              />
+            )}
+            {search.trim() && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-[var(--color-primary-soft)] px-2.5 py-0.5 text-[11px] font-medium text-primary"
+              >
+                Busca: {search.trim()}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                clearFilters();
+                setSearch("");
+              }}
+              className="font-display text-[11px] font-semibold text-[var(--text-muted)] underline-offset-2 hover:text-[var(--brand-primary)] hover:underline"
+            >
+              Limpar todos
+            </button>
+          </div>
+        )}
+
         {dealsQuery.isLoading && rows.length === 0 ? (
           <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
         ) : dealsQuery.error ? (
@@ -200,8 +356,8 @@ export default function V2PipelineListClientPage() {
               icon={<IconList size={28} />}
               title="Nenhum negócio encontrado"
               description={
-                debounced
-                  ? `Sem resultados para "${debounced}". Tente outros termos.`
+                hasActiveFilters
+                  ? "Nenhum negócio corresponde aos filtros. Ajuste ou limpe os critérios."
                   : "Crie um novo negócio no Kanban para vê-lo aqui."
               }
             />

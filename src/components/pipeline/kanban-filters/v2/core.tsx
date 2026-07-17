@@ -670,83 +670,87 @@ function CustomFieldRow({
     "h-8 rounded-md border border-[var(--glass-border)] bg-white px-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20";
 
   return (
-    <div className="flex items-center gap-1.5 rounded-lg border border-[var(--glass-border)] bg-white/70 px-2 py-1.5">
-      <span
-        className="shrink-0 truncate rounded-md bg-[var(--brand-primary)]/8 px-2 py-1 text-[12px] font-semibold text-[var(--brand-primary)]"
-        title={field.label}
-      >
-        {field.label}
-      </span>
-      <DropdownGlass
-        options={allowedOps.map((op) => ({
-          value: op,
-          label: CUSTOM_OPERATORS.find((o) => o.value === op)?.label ?? op,
-        }))}
-        value={currentOp}
-        onValueChange={(v) => onChange({ ...filter, operator: v as CustomFieldOperator, value: undefined })}
-        triggerClassName="h-8 w-[92px] shrink-0 rounded-md text-[12px] px-2"
-        className={solidPanel}
-      />
-      {opDef?.needsValue ? (
-        currentOp === "between" ? (
-          <div className="grid min-w-0 flex-1 grid-cols-2 gap-1">
-            <input
-              type="date"
-              value={dateVal.from ?? ""}
-              onChange={(e) => onChange({ ...filter, value: { ...dateVal, from: e.target.value || null } })}
-              className={inputCls}
-            />
-            <input
-              type="date"
-              value={dateVal.to ?? ""}
-              onChange={(e) => onChange({ ...filter, value: { ...dateVal, to: e.target.value || null } })}
-              className={inputCls}
-            />
-          </div>
-        ) : hasOptions ? (
-          isMulti ? (
-            <SelectNative
-              multiple
-              value={Array.isArray(filter.value) ? filter.value : []}
-              onChange={(e) => onChange({ ...filter, value: Array.from(e.target.selectedOptions).map((o) => o.value) })}
-              className="min-w-0 flex-1 rounded-md text-[12px]"
-            >
-              {field.options.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </SelectNative>
+    <div className="space-y-1.5 rounded-lg border border-[var(--glass-border)] bg-white/70 px-2 py-2">
+      <div className="flex items-center gap-1.5">
+        <span
+          className="min-w-0 flex-1 truncate rounded-md bg-[var(--brand-primary)]/8 px-2 py-1 text-[12px] font-semibold text-[var(--brand-primary)]"
+          title={field.label}
+        >
+          {field.label}
+        </span>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/8 hover:text-[var(--color-danger)]"
+          aria-label={`Remover ${field.label}`}
+        >
+          <X className="size-3.5" />
+        </button>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <DropdownGlass
+          options={allowedOps.map((op) => ({
+            value: op,
+            label: CUSTOM_OPERATORS.find((o) => o.value === op)?.label ?? op,
+          }))}
+          value={currentOp}
+          onValueChange={(v) => onChange({ ...filter, operator: v as CustomFieldOperator, value: undefined })}
+          triggerClassName="h-8 w-[120px] shrink-0 rounded-md text-[12px] px-2"
+          className={solidPanel}
+        />
+        {opDef?.needsValue ? (
+          currentOp === "between" ? (
+            <div className="grid min-w-0 flex-1 basis-full grid-cols-2 gap-1">
+              <input
+                type="date"
+                value={dateVal.from ?? ""}
+                onChange={(e) => onChange({ ...filter, value: { ...dateVal, from: e.target.value || null } })}
+                className={inputCls}
+              />
+              <input
+                type="date"
+                value={dateVal.to ?? ""}
+                onChange={(e) => onChange({ ...filter, value: { ...dateVal, to: e.target.value || null } })}
+                className={inputCls}
+              />
+            </div>
+          ) : hasOptions ? (
+            isMulti ? (
+              <SelectNative
+                multiple
+                value={Array.isArray(filter.value) ? filter.value : []}
+                onChange={(e) => onChange({ ...filter, value: Array.from(e.target.selectedOptions).map((o) => o.value) })}
+                className="min-w-0 flex-1 basis-[140px] rounded-md text-[12px]"
+              >
+                {field.options.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </SelectNative>
+            ) : (
+              <DropdownGlass
+                options={field.options.map((o) => ({ value: o, label: o }))}
+                value={typeof filter.value === "string" ? filter.value || undefined : undefined}
+                onValueChange={(v) => onChange({ ...filter, value: v })}
+                placeholder="— valor —"
+                triggerClassName="h-8 min-w-0 flex-1 basis-[140px] rounded-md text-[12px] px-2"
+                className={solidPanel}
+              />
+            )
           ) : (
-            <DropdownGlass
-              options={field.options.map((o) => ({ value: o, label: o }))}
-              value={typeof filter.value === "string" ? filter.value || undefined : undefined}
-              onValueChange={(v) => onChange({ ...filter, value: v })}
-              placeholder="— valor —"
-              triggerClassName="h-8 min-w-0 flex-1 rounded-md text-[12px] px-2"
-              className={solidPanel}
+            <input
+              type={inputType}
+              value={typeof filter.value === "string" ? filter.value : ""}
+              onChange={(e) => onChange({ ...filter, value: e.target.value })}
+              placeholder="Valor"
+              className={cn(inputCls, "min-w-0 flex-1 basis-[140px]")}
             />
           )
         ) : (
-          <input
-            type={inputType}
-            value={typeof filter.value === "string" ? filter.value : ""}
-            onChange={(e) => onChange({ ...filter, value: e.target.value })}
-            placeholder="Valor"
-            className={cn(inputCls, "min-w-0 flex-1")}
-          />
-        )
-      ) : (
-        <span className="flex-1 text-[11px] italic text-[var(--text-muted)]">sem valor</span>
-      )}
-      <button
-        type="button"
-        onClick={onRemove}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/8 hover:text-[var(--color-danger)]"
-        aria-label={`Remover ${field.label}`}
-      >
-        <X className="size-3.5" />
-      </button>
+          <span className="flex-1 text-[11px] italic text-[var(--text-muted)]">sem valor</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -764,20 +768,20 @@ function CustomFieldsSection({
   entityKey: "dealCustomFields" | "contactCustomFields";
   fieldsKey: "dealCustomFields" | "contactCustomFields";
 }) {
-  const [pick, setPick] = React.useState("");
   const available = options?.[entityKey] ?? [];
   const selected = draft[fieldsKey] ?? [];
   if (available.length === 0 && selected.length === 0) return null;
 
-  function addField() {
-    const cf = available.find((d) => d.id === pick);
+  const unused = available.filter((cf) => !selected.some((x) => x.name === cf.name));
+
+  function addFieldById(id: string) {
+    const cf = available.find((d) => d.id === id);
     if (!cf) return;
-    if (selected.some((x) => x.name === cf.name)) {
-      setPick("");
-      return;
-    }
-    setDraftField(fieldsKey, [...selected, { name: cf.name, operator: operatorsForType(cf.type)[0], value: "" }]);
-    setPick("");
+    if (selected.some((x) => x.name === cf.name)) return;
+    setDraftField(fieldsKey, [
+      ...selected,
+      { name: cf.name, operator: operatorsForType(cf.type)[0], value: "" },
+    ]);
   }
 
   return (
@@ -785,25 +789,17 @@ function CustomFieldsSection({
       <div className="space-y-2">
         {optionsLoading ? (
           <p className="text-[12px] text-ink-subtle">Carregando…</p>
+        ) : unused.length > 0 ? (
+          <DropdownGlass
+            options={unused.map((cf) => ({ value: cf.id, label: cf.label }))}
+            value={undefined}
+            onValueChange={addFieldById}
+            placeholder="+ Escolher campo…"
+            triggerClassName="h-9 w-full rounded-lg text-[12px] bg-white"
+            className="bg-[var(--dropdown-solid-bg)]"
+          />
         ) : (
-          <div className="flex items-center gap-2">
-            <DropdownGlass
-              options={available.map((cf) => ({ value: cf.id, label: cf.label }))}
-              value={pick || undefined}
-              onValueChange={setPick}
-              placeholder="+ Adicionar critério…"
-              triggerClassName="h-9 flex-1 rounded-lg text-[12px] bg-white"
-              className="bg-[var(--dropdown-solid-bg)]"
-            />
-            <button
-              type="button"
-              onClick={addField}
-              disabled={!pick}
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 px-3 text-[13px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/20 disabled:opacity-40"
-            >
-              +
-            </button>
-          </div>
+          <p className="text-[12px] text-[var(--text-muted)]">Todos os campos já foram adicionados.</p>
         )}
         {selected.map((cf) => {
           const def = available.find((d) => d.name === cf.name);
@@ -818,6 +814,11 @@ function CustomFieldsSection({
             />
           );
         })}
+        {selected.length > 0 && (
+          <p className="text-[11px] text-[var(--text-muted)]">
+            Defina operador e valor em cada linha — o filtro fica ativo na hora.
+          </p>
+        )}
       </div>
     </FieldCard>
   );

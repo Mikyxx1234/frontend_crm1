@@ -81,7 +81,7 @@ const BASE_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "pessoas", label: "Pessoas", icon: <IconUsers size={13} stroke={2.2} /> },
   { id: "datas", label: "Datas", icon: <IconCalendarStats size={13} stroke={2.2} /> },
   { id: "tags", label: "Tags", icon: <IconTag size={13} stroke={2.2} /> },
-  { id: "custom", label: "Custom", icon: <IconWand size={13} stroke={2.2} /> },
+  { id: "custom", label: "Personalizado", icon: <IconWand size={13} stroke={2.2} /> },
 ];
 
 function tabCount(id: TabId, f: AdvancedDealFilters): number {
@@ -186,7 +186,17 @@ export function PipelineSearchFilterBar({
   React.useEffect(() => {
     if (!open) return;
     function onDown(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as HTMLElement | null;
+      // DropdownGlass / Radix portam o menu pro body — clique neles
+      // não deve fechar o painel (senão dá pra escolher campo/valor).
+      if (
+        target?.closest?.(
+          "[data-radix-popper-content-wrapper], [data-radix-menu-content], [role='menu'], [role='listbox']",
+        )
+      ) {
+        return;
+      }
+      if (wrapRef.current && target && !wrapRef.current.contains(target)) setOpen(false);
     }
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -232,15 +242,22 @@ export function PipelineSearchFilterBar({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-label="Filtros"
+        aria-label={activeCount > 0 ? `Filtros (${activeCount} ativos)` : "Filtros"}
+        title={activeCount > 0 ? `${activeCount} filtro(s) ativo(s)` : "Filtros"}
         className={cn(
-          "absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors",
+          "absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center gap-0.5 rounded-full transition-colors",
+          activeCount > 0 ? "min-w-7 px-1.5" : "w-7",
           activeCount > 0 || open
             ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
             : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
         )}
       >
         <IconAdjustmentsHorizontal size={15} />
+        {activeCount > 0 && (
+          <span className="font-display text-[10px] font-bold leading-none tabular-nums">
+            {activeCount}
+          </span>
+        )}
       </button>
 
       {open && (
@@ -267,12 +284,12 @@ export function PipelineSearchFilterBar({
             </button>
           </div>
 
-          {/* Abas segmentadas */}
+          {/* Abas segmentadas — scroll horizontal pra não cortar "Personalizado" */}
           <div className="px-4 pb-3">
             <div
               role="tablist"
               aria-label="Seções do filtro"
-              className="flex items-center gap-0.5 rounded-full bg-[var(--glass-bg-strong)] p-1"
+              className="flex items-center gap-0.5 overflow-x-auto overscroll-x-contain rounded-full bg-[var(--glass-bg-strong)] p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             >
               {tabs.map((t) => {
                 const active = tab === t.id;
@@ -285,7 +302,7 @@ export function PipelineSearchFilterBar({
                     aria-selected={active}
                     onClick={() => setTab(t.id)}
                     className={cn(
-                      "flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1.5 font-display text-[11.5px] font-bold transition-all",
+                      "flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1.5 font-display text-[11.5px] font-bold transition-all",
                       active
                         ? "bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
                         : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",

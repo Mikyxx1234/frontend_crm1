@@ -97,12 +97,17 @@ import { PipelineChannelsModal } from "@/features/pipeline-v2/extras/pipeline-ch
 import { computePopoverPosition } from "@/features/pipeline-v2/extras/use-portal-popover";
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
 import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
+import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
+import { useKanbanFilters } from "@/components/pipeline/kanban-filters/use-kanban-filters";
 import {
   isEmptyFilters,
   hasServerSideFilters,
   type AdvancedDealFilters,
 } from "@/components/pipeline/kanban-filters/types";
+
+const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
+const PIPELINE_SORT_LS = "kanban-pipeline-sort:v1";
 
 type SortKey =
   | "default"
@@ -190,8 +195,15 @@ export default function KanbanV2ClientPage({
   const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
     null,
   );
-  const [filters, setFilters] = useState<AdvancedDealFilters>({});
-  const [search, setSearch] = useState("");
+  const { filters, setFilters, patch: patchFilters, clear: clearFilters } = useKanbanFilters();
+  const [search, setSearch] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return localStorage.getItem(PIPELINE_SEARCH_LS) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [filterOptions, setFilterOptions] = useState<import("@/components/pipeline/kanban-filters/types").FilterOptionsResponse | null>(null);
   const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
   const kebabBtnRef = useRef<HTMLButtonElement>(null);
@@ -211,7 +223,42 @@ export default function KanbanV2ClientPage({
   // >100 registros. Os sorts `name_*` continuam client-side (o backend
   // ainda não expõe esses campos como sort) — limitação conhecida e
   // documentada no AGENT.md.
-  const [sortKey, setSortKey] = useState<SortKey>("default");
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    if (typeof window === "undefined") return "default";
+    try {
+      const raw = localStorage.getItem(PIPELINE_SORT_LS);
+      if (
+        raw === "default" ||
+        raw === "interaction_newest" ||
+        raw === "interaction_oldest" ||
+        raw === "name_az" ||
+        raw === "name_za" ||
+        raw === "created_newest" ||
+        raw === "created_oldest"
+      ) {
+        return raw;
+      }
+    } catch {
+      /* noop */
+    }
+    return "default";
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PIPELINE_SEARCH_LS, search);
+    } catch {
+      /* noop */
+    }
+  }, [search]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PIPELINE_SORT_LS, sortKey);
+    } catch {
+      /* noop */
+    }
+  }, [sortKey]);
 
   const status = BOARD_STATUS;
   const { data: pipelines } = usePipelines(isAuthenticated);
@@ -714,7 +761,7 @@ export default function KanbanV2ClientPage({
               onSearch={setSearch}
               filters={filters}
               onApplyFilters={setFilters}
-              onClearFilters={() => setFilters({})}
+              onClearFilters={clearFilters}
               options={filterOptions}
               optionsLoading={filterOptionsLoading}
               sortKey={sortKey}
@@ -773,6 +820,26 @@ export default function KanbanV2ClientPage({
           }}
           onClose={() => setKebabOpen(false)}
         />
+
+        {!isEmptyFilters(filters) && (
+          <div className="flex flex-wrap items-center gap-2 px-0.5">
+            <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+              Filtros ativos
+            </span>
+            <FilterChips
+              filters={filters}
+              options={filterOptions}
+              onPatch={patchFilters}
+            />
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="font-display text-[11px] font-semibold text-[var(--text-muted)] underline-offset-2 hover:text-[var(--brand-primary)] hover:underline"
+            >
+              Limpar todos
+            </button>
+          </div>
+        )}
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

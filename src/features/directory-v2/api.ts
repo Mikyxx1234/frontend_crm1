@@ -105,6 +105,10 @@ export interface FetchContactsParams {
   tagIds?: string[];
   /** Somente contatos sem responsável atribuído. */
   unassigned?: boolean;
+  /** Campo de ordenação. */
+  sortBy?: "name" | "email" | "createdAt" | "updatedAt" | "leadScore" | "lifecycleStage";
+  /** Direção da ordenação. */
+  sortOrder?: "asc" | "desc";
 }
 
 export function fetchContacts(params: FetchContactsParams = {}): Promise<ContactListPage> {
@@ -116,6 +120,8 @@ export function fetchContacts(params: FetchContactsParams = {}): Promise<Contact
   if (params.lifecycleStage) sp.set("lifecycleStage", params.lifecycleStage);
   if (params.tagIds && params.tagIds.length > 0) sp.set("tagIds", params.tagIds.join(","));
   if (params.unassigned) sp.set("unassigned", "1");
+  if (params.sortBy) sp.set("sortBy", params.sortBy);
+  if (params.sortOrder) sp.set("sortOrder", params.sortOrder);
   const qs = sp.toString();
   return getJson<ContactListPage>(
     `/api/contacts${qs ? `?${qs}` : ""}`,

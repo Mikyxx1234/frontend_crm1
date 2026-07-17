@@ -56,6 +56,8 @@ export function useContacts(params: {
   lifecycleStage?: string;
   tagIds?: string[];
   unassigned?: boolean;
+  sortBy?: "name" | "email" | "createdAt" | "updatedAt" | "leadScore" | "lifecycleStage";
+  sortOrder?: "asc" | "desc";
   enabled?: boolean;
 }) {
   const page = params.page ?? 1;
@@ -70,6 +72,8 @@ export function useContacts(params: {
       params.lifecycleStage ?? "",
       tagIds.join(","),
       params.unassigned ? "1" : "",
+      params.sortBy ?? "",
+      params.sortOrder ?? "",
     ],
     queryFn: () =>
       fetchContacts({
@@ -79,6 +83,8 @@ export function useContacts(params: {
         lifecycleStage: params.lifecycleStage,
         tagIds: tagIds.length > 0 ? tagIds : undefined,
         unassigned: params.unassigned,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
       }),
     enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,

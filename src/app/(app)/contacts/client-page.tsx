@@ -24,8 +24,9 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { PagePrimaryButton, PageSearchBar, PageSegmentedControl } from "@/components/crm/page-toolbar";
-import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
+import { PageFilterBar, PagePrimaryButton, PageSearchBar, PageSegmentedControl } from "@/components/crm/page-toolbar";
+import { ListColumnLabel, SortableHeader, listTableHeadRowClass, type SortDir } from "@/components/crm/sortable-header";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
@@ -45,6 +46,7 @@ import { FormSheet } from "@/components/ui/form-sheet";
 import {
   useContacts,
   useContactStats,
+  useContactTags,
   useCreateContact,
   useDeleteContact,
   useUpdateContact,
@@ -66,6 +68,17 @@ const SEGMENTS: {
   { id: "clientes", label: "Clientes", value: (s) => s?.byStage?.CUSTOMER },
   { id: "leads", label: "Leads", value: (s) => s?.byStage?.LEAD },
   { id: "sem-resp", label: "Sem responsável", value: (s) => s?.unassigned },
+];
+
+type SortField = "name" | "createdAt" | "leadScore";
+
+/** Presets de ordenação (campo:direção) para o dropdown "Ordenar". */
+const SORT_OPTIONS = [
+  { value: "createdAt:desc", label: "Mais recentes" },
+  { value: "createdAt:asc", label: "Mais antigos" },
+  { value: "name:asc", label: "Nome (A–Z)" },
+  { value: "name:desc", label: "Nome (Z–A)" },
+  { value: "leadScore:desc", label: "Maior lead score" },
 ];
 
 function fmtDateBR(iso: string | null | undefined): string {
@@ -108,6 +121,9 @@ export default function V2ContactsClientPage() {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [segment, setSegment] = useState<Segment>("todos");
+  const [tagId, setTagId] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<SortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [createOpen, setCreateOpen] = useState(false);
@@ -130,12 +146,13 @@ export default function V2ContactsClientPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [segment]);
+  }, [segment, tagId, sortBy, sortOrder]);
 
   const stageFilter = segment === "clientes" ? "CUSTOMER" : segment === "leads" ? "LEAD" : undefined;
   const unassignedFilter = segment === "sem-resp";
 
   const statsQuery = useContactStats(isAuthenticated);
+  const tagsQuery = useContactTags(isAuthenticated);
 
   const query = useContacts({
     search: debounced || undefined,
@@ -143,8 +160,28 @@ export default function V2ContactsClientPage() {
     perPage,
     lifecycleStage: stageFilter,
     unassigned: unassignedFilter,
+    tagIds: tagId !== "all" ? [tagId] : undefined,
+    sortBy,
+    sortOrder,
     enabled: isAuthenticated,
   });
+
+  /** Alterna a ordenação por uma coluna (usado pelos cabeçalhos da Tabela). */
+  function toggleSort(field: SortField) {
+    if (sortBy === field) {
+      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === "name" ? "asc" : "desc");
+    }
+  }
+
+  const tagOptions = [
+    { value: "all", label: "Todas as tags" },
+    ...(tagsQuery.data ?? [])
+      .filter((t) => t.contactCount > 0)
+      .map((t) => ({ value: t.id, label: `${t.name} (${t.contactCount})` })),
+  ];
 
   const items = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
@@ -258,6 +295,28 @@ export default function V2ContactsClientPage() {
           })}
         </div>
 
+        {/* Barra de filtros: tag + ordenação */}
+        <PageFilterBar>
+          <DropdownGlass
+            options={tagOptions}
+            value={tagId}
+            onValueChange={setTagId}
+            menuLabel="Filtrar por tag"
+            triggerClassName="min-w-[180px]"
+          />
+          <DropdownGlass
+            options={SORT_OPTIONS}
+            value={`${sortBy}:${sortOrder}`}
+            onValueChange={(v) => {
+              const [f, o] = v.split(":");
+              setSortBy(f as SortField);
+              setSortOrder(o as "asc" | "desc");
+            }}
+            menuLabel="Ordenar por"
+            triggerClassName="min-w-[170px]"
+          />
+        </PageFilterBar>
+
         {/* Barra de seleção em massa */}
         {selected.size > 0 && (
           <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 backdrop-blur-md">
@@ -294,7 +353,7 @@ export default function V2ContactsClientPage() {
               description={
                 debounced
                   ? `Sem resultados para "${debounced}".`
-                  : segment !== "todos"
+                  : segment !== "todos" || tagId !== "all"
                     ? "Nenhum contato para os filtros selecionados."
                     : "Crie contatos no Inbox ou via API."
               }
@@ -309,9 +368,20 @@ export default function V2ContactsClientPage() {
             onToggleAll={toggleAll}
             onToggleOne={toggleOne}
             onEdit={setEditing}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={toggleSort}
           />
         ) : (
-          <CardsView items={items} onEdit={setEditing} />
+          <CardsView
+            items={items}
+            selected={selected}
+            allChecked={allChecked}
+            someChecked={someChecked}
+            onToggleAll={toggleAll}
+            onToggleOne={toggleOne}
+            onEdit={setEditing}
+          />
         )}
 
         <PaginationGlass
@@ -342,6 +412,7 @@ const TABELA_COLS = "grid-cols-[36px_minmax(180px,2fr)_140px_minmax(120px,1.2fr)
 
 function TabelaView({
   items, selected, allChecked, someChecked, onToggleAll, onToggleOne, onEdit,
+  sortBy, sortOrder, onSort,
 }: {
   items: ContactListItemDto[];
   selected: Set<string>;
@@ -350,7 +421,11 @@ function TabelaView({
   onToggleAll: () => void;
   onToggleOne: (id: string) => void;
   onEdit: (c: ContactListItemDto) => void;
+  sortBy: SortField;
+  sortOrder: "asc" | "desc";
+  onSort: (field: SortField) => void;
 }) {
+  const dirFor = (f: SortField): SortDir => (sortBy === f ? sortOrder : null);
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
       {/* H-scroll único: header + linhas andam juntos */}
@@ -360,11 +435,11 @@ function TabelaView({
             <span>
               <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todos" />
             </span>
-            <ListColumnLabel>Nome / E-mail</ListColumnLabel>
+            <SortableHeader label="Nome / E-mail" sort={dirFor("name")} onSort={() => onSort("name")} />
             <ListColumnLabel>Telefone</ListColumnLabel>
             <ListColumnLabel>Empresa</ListColumnLabel>
             <ListColumnLabel>Tags</ListColumnLabel>
-            <ListColumnLabel>Criado em</ListColumnLabel>
+            <SortableHeader label="Criado em" sort={dirFor("createdAt")} onSort={() => onSort("createdAt")} />
           </div>
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             {items.map((c) => (
@@ -409,14 +484,38 @@ function TabelaView({
 
 // ── Cards (card-rows do arquétipo B) ─────────────────────────────────────────
 
-function CardsView({ items, onEdit }: { items: ContactListItemDto[]; onEdit: (c: ContactListItemDto) => void }) {
+function CardsView({
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, onEdit,
+}: {
+  items: ContactListItemDto[];
+  selected: Set<string>;
+  allChecked: boolean;
+  someChecked: boolean;
+  onToggleAll: () => void;
+  onToggleOne: (id: string) => void;
+  onEdit: (c: ContactListItemDto) => void;
+}) {
   return (
     <div className="flex flex-col gap-2 overflow-y-auto pb-1">
-      {items.map((c) => (
+      {/* Selecionar todos */}
+      <label className="flex w-fit cursor-pointer items-center gap-2 px-1 pb-0.5 font-display text-[12px] font-semibold text-[var(--text-muted)]">
+        <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todos" />
+        Selecionar todos
+      </label>
+      {items.map((c) => {
+        const isSelected = selected.has(c.id);
+        return (
         <div
           key={c.id}
-          className="group flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]"
+          className={`group flex items-center gap-4 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)] ${
+            isSelected
+              ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+              : "border-[var(--glass-border)] bg-[var(--glass-bg-base)]"
+          }`}
         >
+          {/* Checkbox de seleção */}
+          <CheckboxGlass checked={isSelected} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
+
           {/* Avatar */}
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
             {initials(c.name)}
@@ -475,7 +574,8 @@ function CardsView({ items, onEdit }: { items: ContactListItemDto[]; onEdit: (c:
             <IconChevronRight size={16} className="ml-1 shrink-0 text-[var(--text-muted)] opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

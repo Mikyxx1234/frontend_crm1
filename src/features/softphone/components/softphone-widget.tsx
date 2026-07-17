@@ -30,7 +30,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import {
-  IconPhone,
+  IconPhoneFilled,
   IconPhoneIncoming,
   IconPhoneOff,
   IconMicrophone,
@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { useSoftphone } from "../hooks/use-softphone";
 import { useCallsWidget } from "../hooks/use-calls-widget";
 import { getMyCredentials } from "../api/extensions";
+import { SOFTPHONE_EXPAND_EVENT } from "./softphone-nav-icon";
 
 function formatDuration(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -80,6 +81,8 @@ export function SoftphoneWidget() {
 
   const softphone = useSoftphone();
   const [hidden, setHidden] = React.useState(false);
+  /** Detalhe do softphone (ramal/erro) só sob demanda — ícone idle vive na NavRail. */
+  const [detailOpen, setDetailOpen] = React.useState(false);
 
   // Auto-connect quando temos credenciais E ainda não estamos conectados.
   // `useSoftphone` é idempotente: chamar `connect()` com `moduleUA` já
@@ -92,6 +95,21 @@ export function SoftphoneWidget() {
     // Intencional: rodar quando as credenciais carregam OU quando o
     // status volta a `disconnected` (ex.: erro de rede que matou o UA).
   }, [credentialsQuery.data, softphone.status, softphone]);
+
+  // NavRail dispara expand do detalhe (ícone de telefonia ao lado do wifi).
+  React.useEffect(() => {
+    const onExpand = () => {
+      setHidden(false);
+      setDetailOpen(true);
+    };
+    window.addEventListener(SOFTPHONE_EXPAND_EVENT, onExpand);
+    return () => window.removeEventListener(SOFTPHONE_EXPAND_EVENT, onExpand);
+  }, []);
+
+  // Erro: mostra o detalhe automaticamente pra o operador ver a falha.
+  React.useEffect(() => {
+    if (softphone.status === "error") setDetailOpen(true);
+  }, [softphone.status]);
 
   if (sessionStatus !== "authenticated") return null;
   if (callsWidget.enabled !== true) return null;
@@ -106,6 +124,12 @@ export function SoftphoneWidget() {
     softphone.status === "call_ringing" ||
     softphone.status === "call_active" ||
     softphone.status === "call_held";
+
+  // Idle registrado: sem FAB no canto — status fica na NavRail (wifi | phone).
+  // Detalhe (ramal) só quando o ícone da rail pede expand ou há erro/chamada.
+  const showIdleDetail =
+    !hasActiveCall &&
+    (detailOpen || softphone.status === "error" || softphone.status === "connecting");
 
   return (
     <div
@@ -128,13 +152,16 @@ export function SoftphoneWidget() {
         />
       )}
 
-      {!hasActiveCall && (
+      {showIdleDetail && (
         <StatusChip
           status={softphone.status}
           ramal={ramal}
           error={softphone.error}
           onReconnect={() => void softphone.connect()}
-          onHide={() => setHidden(true)}
+          onHide={() => {
+            setHidden(false);
+            setDetailOpen(false);
+          }}
         />
       )}
     </div>
@@ -151,12 +178,13 @@ interface StatusChipProps {
   onHide: () => void;
 }
 
-// localStorage pra lembrar a preferência do operador entre sessões — quem
-// gosta de ver "Softphone ativo • 1079" full não precisa colapsar de novo
-// toda vez que dá F5; quem prefere só o ícone idem.
-const COLLAPSED_STORAGE_KEY = "crm:softphone-chip.collapsed";
-
-function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipProps) {
+function StatusChip({
+  status,
+  ramal,
+  error,
+  onReconnect,
+  onHide,
+}: StatusChipProps) {
   // Disconnected aparece só durante a janela curta antes do auto-connect
   // disparar; tratamos como "Conectando" pra não confundir o usuário com
   // estado falso-negativo.
@@ -164,64 +192,18 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
   const isRegistered = status === "registered";
   const isError = status === "error";
 
-  // Modo colapsado: só o estado Registered colapsa pra ícone redondo. Erros
-  // continuam expandidos (precisa ler a mensagem) e Connecting é transiente.
-  const [collapsed, setCollapsed] = React.useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1";
-  });
-  const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(COLLAPSED_STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        /* fail-silent */
-      }
-      return next;
-    });
-  };
-  const showCollapsed = collapsed && isRegistered;
-
-  // Colapsado: tile quadrado (rounded) discreto com ping pulsante — espelha
-  // o ícone do card expandido pra manter coesão visual (DS v2). Clique
-  // reexpande o card completo.
-  if (showCollapsed) {
-    return (
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        aria-label={`Expandir status do softphone (ramal ${ramal})`}
-        title={`Softphone ativo • Ramal ${ramal} — clique para expandir`}
-        className="group relative inline-flex size-9 items-center justify-center rounded-xl border border-[var(--color-success)]/20 bg-[var(--color-success-bg)] text-[var(--color-success-text)] shadow-sm backdrop-blur-md transition hover:bg-[var(--color-success)]/20 dark:border-[var(--color-success)]/20 dark:bg-[var(--color-success)]/15 dark:text-[var(--color-success)]"
-      >
-        <span className="absolute -right-0.5 -top-0.5 flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-success)] opacity-60" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--color-success)]" />
-        </span>
-        <IconPhone size={16} stroke={2.2} />
-      </button>
-    );
-  }
-
-  // Registrado (expandido): card com tile de ícone verde, selo "REGISTRADO"
-  // + ramal e botão vermelho pra colapsar. Fiel ao mockup fornecido.
+  // Registrado: card com telefone sólido (sem ping/badge de status).
+  // Fechar volta o idle só pro ícone da NavRail.
   if (isRegistered) {
     return (
       <div className="flex items-center gap-2.5 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2 shadow-lg backdrop-blur-md dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-panel)]">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-success-bg)] text-[var(--color-success-text)] dark:bg-[var(--color-success)]/15 dark:text-[var(--color-success)]">
-          <IconPhone size={18} stroke={2.2} />
+          <IconPhoneFilled size={18} />
         </span>
 
         <div className="min-w-0 pr-0.5">
-          <div className="flex items-center gap-1.5">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-success)] opacity-60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--color-success)]" />
-            </span>
-            <span className="text-[10.5px] font-bold uppercase tracking-[0.7px] text-[var(--color-success-text)] dark:text-[var(--color-success)]">
-              Registrado
-            </span>
+          <div className="text-[10.5px] font-bold uppercase tracking-[0.7px] text-[var(--color-success-text)] dark:text-[var(--color-success)]">
+            Registrado
           </div>
           <div className="text-[14px] font-bold leading-tight tabular-nums text-[var(--text-primary)]">
             Ramal {ramal}
@@ -230,9 +212,9 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
 
         <button
           type="button"
-          onClick={toggleCollapsed}
-          aria-label="Colapsar chip do softphone"
-          title="Colapsar"
+          onClick={onHide}
+          aria-label="Fechar detalhe do softphone"
+          title="Fechar"
           className="ml-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] transition hover:bg-[var(--color-danger)]/20 dark:bg-[var(--color-danger)]/15 dark:text-[var(--color-danger)]"
         >
           <IconX size={16} strokeWidth={2.4} />

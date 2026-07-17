@@ -47,6 +47,7 @@ import {
 import { useSidebarPreferences } from "@/features/sidebar/hooks";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { useOrganization } from "@/hooks/use-organization";
+import { SoftphoneNavIcon } from "@/features/softphone/components/softphone-nav-icon";
 
 /**
  * Cache local da preferencia da sidebar. O react-query perde o cache a cada
@@ -482,40 +483,34 @@ export function NavRailV2({ className }: { className?: string }) {
         )}
       </div>
 
-      {/* Ícones inferiores: status + settings + avatar.
-          Dark/light mode migrou pro dropdown do perfil (reduz ruido). */}
+      {/* Ícones inferiores: status do agente | telefonia + settings + avatar.
+          Sem badge/ping no softphone — o idle fica só no ícone sólido da rail. */}
       <div className={cn("flex w-full shrink-0 flex-col gap-2 px-3", expanded ? "items-stretch" : "items-center")}>
-      {/* Status do agente (Online / Ausente / Offline) */}
+      {/* Status do agente + telefonia (wifi | phone sólido) — sem badge de status */}
       {expanded ? (
-        <button
-          type="button"
-          onClick={() => setStatusPopupOpen(true)}
-          aria-label={`Status: ${statusMeta.label}`}
-          className={cn(expandedItemBase, expandedItemIdle)}
-        >
-          <span className="relative inline-flex shrink-0">
-            <StatusIcon size={20} style={{ color: statusMeta.color }} />
-            <span
-              className="absolute -bottom-0.5 -right-0.5 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-panel)]"
-              style={{ backgroundColor: statusMeta.color }}
-            />
-          </span>
-          <span className="truncate">Status: {statusMeta.label}</span>
-        </button>
+        <div className={cn(expandedItemBase, expandedItemIdle, "cursor-default hover:bg-transparent")}>
+          <button
+            type="button"
+            onClick={() => setStatusPopupOpen(true)}
+            aria-label={`Status: ${statusMeta.label}`}
+            className="inline-flex min-w-0 flex-1 items-center gap-3 text-left"
+          >
+            <StatusIcon size={20} className="shrink-0" style={{ color: statusMeta.color }} />
+            <span className="truncate">Status: {statusMeta.label}</span>
+          </button>
+          <SoftphoneNavIcon expanded withPipe className="ml-1" />
+        </div>
       ) : (
-        <DockButton
-          title={`Status: ${statusMeta.label}`}
-          onClick={() => setStatusPopupOpen(true)}
-          disablePop
-        >
-          <span className="relative inline-flex">
+        <div className="flex items-center gap-1.5">
+          <DockButton
+            title={`Status: ${statusMeta.label}`}
+            onClick={() => setStatusPopupOpen(true)}
+            disablePop
+          >
             <StatusIcon size={20} style={{ color: statusMeta.color }} />
-            <span
-              className="absolute -bottom-0.5 -right-0.5 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-panel)]"
-              style={{ backgroundColor: statusMeta.color }}
-            />
-          </span>
-        </DockButton>
+          </DockButton>
+          <SoftphoneNavIcon withPipe />
+        </div>
       )}
 
       {/* Configurações */}

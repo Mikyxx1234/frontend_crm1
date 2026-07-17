@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useEmbeddedSignup } from "@/hooks/use-embedded-signup";
+import { useFacebookLogin } from "@/hooks/use-facebook-login";
 
 type Step = 1 | 2 | 3;
 
@@ -115,8 +116,15 @@ export function CreateChannelDialog({
   // assinatura x-hub-signature-256 dos POSTs recebidos). Coletado no modal
   // Webhook porque o fluxo manual usa o App Meta proprio do cliente.
   const [appSecret, setAppSecret] = useState("");
+  // Estado do fluxo Facebook Login (Messenger / Instagram): armazena o
+  // code OAuth, a lista de Paginas devolvida pelo backend e a Pagina
+  // selecionada pelo usuario antes de confirmar o provisionamento.
+  const [fbLoginCode, setFbLoginCode] = useState<string | null>(null);
+  const [fbPages, setFbPages] = useState<{ id: string; name: string }[]>([]);
+  const [fbSelectedPageId, setFbSelectedPageId] = useState<string>("");
 
   const embeddedSignup = useEmbeddedSignup();
+  const facebookLogin = useFacebookLogin();
 
   function reset() {
     setStep(1);
@@ -135,7 +143,11 @@ export function CreateChannelDialog({
     setWebhookModalOpen(false);
     setCopiedField(null);
     setAppSecret("");
+    setFbLoginCode(null);
+    setFbPages([]);
+    setFbSelectedPageId("");
     embeddedSignup.reset();
+    facebookLogin.reset();
   }
 
   async function fetchWebhookInfo() {
@@ -231,6 +243,75 @@ export function CreateChannelDialog({
       handleOpenChange(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Erro no Embedded Signup.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleMessagingLogin() {
+    if (channelType !== "FACEBOOK" && channelType !== "INSTAGRAM") return;
+    const platform = channelType === "INSTAGRAM" ? "instagram" : "messenger";
+    setError(null);
+    setSubmitting(true);
+    try {
+      const { code } = await facebookLogin.launchLogin(platform);
+      // Primeiro POST: sem pageId -> backend devolve lista de Paginas.
+      const res = await fetch(apiUrl("/api/channels/meta-messaging/connect"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, platform }),
+      });
+      const data = (await res.json()) as {
+        needsPageSelection?: boolean;
+        pages?: { id: string; name: string }[];
+        message?: string;
+      };
+      if (!res.ok) {
+        throw new Error(data.message ?? "Falha ao conectar com o Facebook.");
+      }
+      const pages = data.pages ?? [];
+      if (pages.length === 0) {
+        throw new Error(
+          "Nenhuma Pagina do Facebook encontrada na sua conta (verifique permissoes).",
+        );
+      }
+      setFbLoginCode(code);
+      setFbPages(pages);
+      setFbSelectedPageId(pages[0]?.id ?? "");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Falha no login do Facebook.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitMessagingConnect() {
+    if (!fbLoginCode || !fbSelectedPageId) {
+      setError("Selecione uma Pagina para conectar.");
+      return;
+    }
+    const platform = channelType === "INSTAGRAM" ? "instagram" : "messenger";
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch(apiUrl("/api/channels/meta-messaging/connect"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: fbLoginCode,
+          platform,
+          pageId: fbSelectedPageId,
+          name: name.trim() || undefined,
+        }),
+      });
+      const data = (await res.json()) as { message?: string };
+      if (!res.ok) {
+        throw new Error(data.message ?? "Erro ao conectar canal.");
+      }
+      onCreated?.();
+      handleOpenChange(false);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erro ao conectar canal.");
     } finally {
       setSubmitting(false);
     }
@@ -353,7 +434,9 @@ export function CreateChannelDialog({
         </Button>
       ) : null}
       <div className="flex flex-1 flex-wrap justify-end gap-2">
-        {step === 3 && effectiveProvider === "META_CLOUD_API" ? (
+        {step === 3 &&
+        effectiveProvider === "META_CLOUD_API" &&
+        channelType === "WHATSAPP" ? (
           <Button
             type="button"
             variant="outline"
@@ -387,7 +470,9 @@ export function CreateChannelDialog({
           >
             Continuar
           </Button>
-        ) : (showEmbeddedSignup && !showManualConfig) ? null : (
+        ) : (showEmbeddedSignup && !showManualConfig) ||
+          channelType === "FACEBOOK" ||
+          channelType === "INSTAGRAM" ? null : (
           <Button type="button" onClick={() => void submit()} disabled={submitting}>
             {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
             Criar canal
@@ -508,7 +593,92 @@ export function CreateChannelDialog({
                   />
                 </div>
 
-                {effectiveProvider === "META_CLOUD_API" ? (
+                {(channelType === "FACEBOOK" || channelType === "INSTAGRAM") ? (
+                  <div className="space-y-3">
+                    <div className="rounded-xl border-2 border-[var(--color-brand-primary)]/20 bg-[var(--color-info)]/5 p-4">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        Conectar com Facebook
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        {channelType === "INSTAGRAM"
+                          ? "Autorize o acesso a sua conta Instagram Business (vinculada a uma Pagina do Facebook)."
+                          : "Autorize o acesso as suas Paginas do Facebook. Voce escolhe qual Pagina conectar."}
+                      </p>
+                      {fbPages.length === 0 ? (
+                        <Button
+                          type="button"
+                          className="mt-3 w-full gap-2 bg-[var(--channel-facebook)] text-white hover:bg-[var(--channel-facebook)]"
+                          disabled={submitting || !facebookLogin.sdkReady || !facebookLogin.isConfigured}
+                          onClick={() => void handleMessagingLogin()}
+                        >
+                          {submitting ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <svg
+                              className="size-4"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                            </svg>
+                          )}
+                          Entrar com Facebook
+                        </Button>
+                      ) : null}
+                      {!facebookLogin.isConfigured ? (
+                        <p className="mt-2 text-[11px] text-[var(--color-warn-text)]">
+                          App Meta nao configurado (NEXT_PUBLIC_META_APP_ID ausente).
+                        </p>
+                      ) : null}
+                    </div>
+
+                    {fbPages.length > 0 ? (
+                      <div className="space-y-2 rounded-lg border bg-[var(--glass-bg-overlay)] p-3">
+                        <Label>
+                          {channelType === "INSTAGRAM"
+                            ? "Escolha a Pagina do Facebook vinculada ao Instagram"
+                            : "Escolha a Pagina do Facebook"}
+                        </Label>
+                        <div className="max-h-60 space-y-1 overflow-auto">
+                          {fbPages.map((p) => (
+                            <label
+                              key={p.id}
+                              className={cn(
+                                "flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm",
+                                fbSelectedPageId === p.id
+                                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/5"
+                                  : "border-transparent hover:bg-[var(--glass-bg-overlay)]",
+                              )}
+                            >
+                              <input
+                                type="radio"
+                                name="fb-page"
+                                value={p.id}
+                                checked={fbSelectedPageId === p.id}
+                                onChange={() => setFbSelectedPageId(p.id)}
+                              />
+                              <span className="flex-1">{p.name}</span>
+                              <span className="text-[10px] text-[var(--text-muted)]">
+                                {p.id}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          className="mt-2 w-full gap-2"
+                          disabled={submitting || !fbSelectedPageId}
+                          onClick={() => void submitMessagingConnect()}
+                        >
+                          {submitting ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : null}
+                          Conectar canal
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : effectiveProvider === "META_CLOUD_API" ? (
                   <>
                     {showEmbeddedSignup ? (
                       <div className="space-y-3">

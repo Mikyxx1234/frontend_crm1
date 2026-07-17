@@ -698,7 +698,7 @@ function TabelaView({
 // ── Cards (card-rows do arquétipo B) ─────────────────────────────────────────
 
 // Grade compartilhada entre o cabeçalho e as linhas (colunas alinhadas).
-const CARD_COLS = "grid-cols-[32px_minmax(220px,2.4fr)_minmax(140px,1.4fr)_150px_120px_100px]";
+const CARD_COLS = "grid-cols-[32px_minmax(220px,2.4fr)_minmax(140px,1.4fr)_150px_120px_112px]";
 
 function CardsView({
   items, selected, allChecked, someChecked, onToggleAll, onToggleOne, onEdit,
@@ -775,14 +775,19 @@ function CardsView({
           <div className="truncate font-display text-[13px] text-[var(--text-muted)]">{fmtDateBR(c.createdAt)}</div>
 
           {/* Ações */}
-          <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
-            <a href={c.phone ? `tel:${c.phone}` : undefined} aria-label="Ligar" aria-disabled={!c.phone} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
+          <div className="flex items-center justify-end gap-1">
+            <a href={c.phone ? `tel:${c.phone}` : undefined} onClick={(e) => e.stopPropagation()} aria-label="Ligar" aria-disabled={!c.phone} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
               <IconPhone size={16} />
             </a>
-            <a href={c.email ? `mailto:${c.email}` : undefined} aria-label="Enviar e-mail" aria-disabled={!c.email} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
+            <a href={c.email ? `mailto:${c.email}` : undefined} onClick={(e) => e.stopPropagation()} aria-label="Enviar e-mail" aria-disabled={!c.email} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
               <IconMail size={16} />
             </a>
-            <button type="button" onClick={() => onEdit(c)} aria-label={`Editar ${c.name}`} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onEdit(c); }}
+              aria-label={`Editar ${c.name}`}
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
+            >
               <IconPencil size={16} />
             </button>
           </div>

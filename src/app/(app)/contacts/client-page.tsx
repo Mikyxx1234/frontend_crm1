@@ -49,6 +49,7 @@ import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { Chip } from "@/components/crm/chip";
 import { InputGlass } from "@/components/crm/input-glass";
+import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   dateRangeFromPreset,
@@ -56,6 +57,7 @@ import {
   type DatePresetKey,
 } from "@/components/pipeline/kanban-filters/date-presets";
 import { cn } from "@/lib/utils";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
 import { AVATAR_SIZE } from "@/lib/avatar";
 import {
@@ -179,7 +181,7 @@ function txtCell(v: React.ReactNode) {
 
 /** Colunas nativas opcionais (a coluna Nome/E-mail é fixa e não entra aqui). */
 const NATIVE_COLUMNS: ColumnDef[] = [
-  { key: "phone", label: "Telefone", width: "w-[150px]", cell: (c) => txtCell(c.phone ?? "—") },
+  { key: "phone", label: "Telefone", width: "w-[160px]", cell: (c) => txtCell(c.phone ? formatPhoneDisplay(c.phone) : "—") },
   { key: "company", label: "Empresa", width: "w-[180px]", cell: (c) => txtCell(c.company?.name ?? "—") },
   {
     key: "tags",
@@ -1288,7 +1290,7 @@ function DuplicateContactRow({
         </div>
         <div className="flex gap-3 font-body text-[12px] text-[var(--text-muted)]">
           {contact.email && <span className="truncate">{contact.email}</span>}
-          {contact.phone && <span className="truncate">{contact.phone}</span>}
+          {contact.phone && <span className="truncate">{formatPhoneDisplay(contact.phone)}</span>}
           <span>Criado {fmtDateBR(contact.createdAt)}</span>
           {contact.assignedTo && <span>· {contact.assignedTo.name}</span>}
         </div>

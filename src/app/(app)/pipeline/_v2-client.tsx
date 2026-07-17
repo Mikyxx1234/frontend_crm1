@@ -72,6 +72,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { updateDeal } from "@/features/pipeline-v2/api";
 import { createContact } from "@/features/directory-v2/api";
+import { personNameFromDealTitle, sanitizeContactName } from "@/lib/display-name";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
@@ -583,7 +584,11 @@ export default function KanbanV2ClientPage({
 
   const dealDetailVm: DealDetail | null = useMemo(() => {
     if (!dealDetail) return null;
-    const contactName = dealDetail.contact?.name?.trim() || dealDetail.title || "Sem nome";
+    // Contato = pessoa; título do deal ("Negócio …") nunca vira nome de contato.
+    const contactName =
+      sanitizeContactName(dealDetail.contact?.name) ||
+      personNameFromDealTitle(dealDetail.title) ||
+      "Sem nome";
     const ownerName = dealDetail.owner?.name?.trim() || "Sem responsavel";
     return {
       id: dealDetail.id,
@@ -624,8 +629,10 @@ export default function KanbanV2ClientPage({
       const v = value.trim();
       if (!v) return;
       try {
+        // Nunca gravar "Negócio …" como nome do contato — só o nome da pessoa.
         const name =
-          dealDetail?.title?.trim() || (field === "email" ? "Novo contato" : v);
+          personNameFromDealTitle(dealDetail?.title) ||
+          (field === "email" ? "Novo contato" : v);
         const contact = await createContact({
           name,
           ...(field === "phone" ? { phone: v } : { email: v }),
@@ -655,7 +662,9 @@ export default function KanbanV2ClientPage({
     )?.conversations?.[0] ?? null;
   const dealConversationId = dealConversation?.id ?? null;
   const dealContactName =
-    dealDetail?.contact?.name?.trim() || dealDetail?.title || "Contato";
+    sanitizeContactName(dealDetail?.contact?.name) ||
+    personNameFromDealTitle(dealDetail?.title) ||
+    "Contato";
   const { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote, pinnedMessageSlot, connection: dealConnection } =
     useDealChatBinding({
       conversationId: dealConversationId,

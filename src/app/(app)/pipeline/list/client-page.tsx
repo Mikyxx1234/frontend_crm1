@@ -215,7 +215,10 @@ export default function V2PipelineListClientPage() {
         )}
 
         <PaginationGlass
-          label={`${total.toLocaleString("pt-BR")} negócios — página ${page} de ${lastPage}`}
+          total={total}
+          entityLabel="negócios"
+          page={page}
+          lastPage={lastPage}
           canPrev={page > 1}
           canNext={page < lastPage}
           onPrev={() => setPage((p) => Math.max(1, p - 1))}

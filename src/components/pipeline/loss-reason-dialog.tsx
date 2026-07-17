@@ -194,8 +194,6 @@ export function LossReasonDialog({
             </div>
           )}
         </div>
-
-      </div>
     </FormSheet>
   );
 }

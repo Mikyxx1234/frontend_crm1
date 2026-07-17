@@ -645,8 +645,6 @@ function FieldFormDialog({
               </div>
             )}
           </div>
-
-        </div>
       </form>
     </FormSheet>
   );

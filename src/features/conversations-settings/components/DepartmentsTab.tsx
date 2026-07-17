@@ -469,8 +469,6 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
             </p>
           </div>
         </div>
-
-      </div>
     </FormSheet>
   );
 }

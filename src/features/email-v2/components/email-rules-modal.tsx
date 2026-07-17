@@ -258,8 +258,6 @@ export function EmailRulesModal({
               </ul>
             )}
           </div>
-        </div>
-
       </form>
     </FormSheet>
   );

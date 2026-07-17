@@ -12,6 +12,8 @@ type DatePickerProps = {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  /** Classes extras no botão gatilho (borda, altura, radius…). */
+  triggerClassName?: string;
   disabled?: boolean;
 };
 
@@ -26,6 +28,7 @@ export function DatePicker({
   onChange,
   placeholder = "Selecionar data",
   className,
+  triggerClassName,
   disabled,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
@@ -68,6 +71,7 @@ export function DatePicker({
           "flex h-8 w-full items-center justify-between rounded-lg border border-border bg-[var(--color-bg-card)] px-2.5 text-left text-[13px] text-foreground transition",
           "hover:border-[var(--glass-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-border)]",
           disabled && "cursor-not-allowed opacity-60",
+          triggerClassName,
         )}
       >
         <span className={cn("truncate", !selectedDate && "text-[var(--color-ink-muted)]")}>

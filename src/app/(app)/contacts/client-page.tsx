@@ -32,6 +32,7 @@ import {
   IconArrowsSort,
   IconCalendarEvent,
   IconTag,
+  IconSparkles,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -45,6 +46,13 @@ import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { Chip } from "@/components/crm/chip";
 import { InputGlass } from "@/components/crm/input-glass";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  dateRangeFromPreset,
+  detectPreset,
+  type DatePresetKey,
+} from "@/components/pipeline/kanban-filters/date-presets";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -594,12 +602,23 @@ export default function V2ContactsClientPage() {
 // ── Busca + painel de filtros segmentado (DS v2) ─────────────────────────────
 
 const FILTER_INPUT_CLASS =
-  "h-9 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--brand-primary)]";
+  "h-9 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--brand-primary)]";
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
+const DATE_TRIGGER_CLASS =
+  "h-9 rounded-full border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 shadow-none";
+
+const CREATED_PRESETS: { key: DatePresetKey; label: string }[] = [
+  { key: "today", label: "Hoje" },
+  { key: "last_7", label: "Últimos 7 dias" },
+  { key: "last_30", label: "Últimos 30 dias" },
+  { key: "this_month", label: "Este mês" },
+];
+
+function FilterCountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
   return (
-    <span className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-      {children}
+    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[10px] font-bold leading-none text-white">
+      {count}
     </span>
   );
 }
@@ -662,10 +681,26 @@ function SearchFilterBar({
   const tagSet = new Set(draft.tagIds);
   const sortKey = `${draft.sortBy}:${draft.sortOrder}`;
 
-  const draftActiveCount =
-    draft.tagIds.length +
-    (draft.createdFrom || draft.createdTo ? 1 : 0) +
-    (draft.updatedFrom || draft.updatedTo ? 1 : 0);
+  const createdActive = !!(draft.createdFrom || draft.createdTo);
+  const updatedActive = !!(draft.updatedFrom || draft.updatedTo);
+  const periodCount = (createdActive ? 1 : 0) + (updatedActive ? 1 : 0);
+  const tagsCount = draft.tagIds.length;
+  const draftActiveCount = tagsCount + periodCount;
+
+  const createdPreset = detectPreset({
+    from: draft.createdFrom || null,
+    to: draft.createdTo || null,
+  });
+
+  function applyCreatedPreset(key: DatePresetKey) {
+    const range = dateRangeFromPreset(key);
+    if (!range) return;
+    setDraft((prev) => ({
+      ...prev,
+      createdFrom: range.from ?? "",
+      createdTo: range.to ?? "",
+    }));
+  }
 
   function toggleDraftTag(id: string) {
     setDraft((prev) => ({
@@ -693,9 +728,15 @@ function SearchFilterBar({
     setOpen(false);
   }
 
+  const tabBadge = (id: FilterPanelTab) => {
+    if (id === "periodo") return periodCount;
+    if (id === "tags") return tagsCount;
+    return 0;
+  };
+
   return (
     <div ref={ref} className="relative w-full max-w-md">
-      <IconSearch size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+      <IconSearch size={15} className="absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]" />
       <input
         type="search"
         value={search}
@@ -709,23 +750,29 @@ function SearchFilterBar({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label="Filtros"
-        className={`absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center gap-1 rounded-full px-2 transition-colors ${
+        className={cn(
+          "absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors",
           activeCount > 0 || open
-            ? "bg-[var(--brand-primary)] text-white"
-            : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]"
-        }`}
+            ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+            : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
+        )}
       >
         <IconAdjustmentsHorizontal size={15} />
-        {activeCount > 0 && (
-          <span className="font-display text-[11px] font-bold">{activeCount}</span>
-        )}
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 flex max-h-[min(70vh,480px)] w-full min-w-[300px] flex-col overflow-hidden rounded-[20px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md sm:min-w-[340px]">
+        <div
+          className={cn(
+            "absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,380px)] flex-col rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md",
+            tab === "periodo" ? "overflow-visible" : "max-h-[min(78vh,560px)] overflow-hidden",
+          )}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
-            <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">Filtros</span>
+            <div className="flex items-center gap-2">
+              <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">Filtros</span>
+              <FilterCountBadge count={draftActiveCount || activeCount} />
+            </div>
             <button
               type="button"
               onClick={handleClear}
@@ -745,6 +792,7 @@ function SearchFilterBar({
             >
               {FILTER_TABS.map((t) => {
                 const active = tab === t.id;
+                const badge = tabBadge(t.id);
                 return (
                   <button
                     key={t.id}
@@ -752,14 +800,16 @@ function SearchFilterBar({
                     role="tab"
                     aria-selected={active}
                     onClick={() => setTab(t.id)}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2.5 py-1.5 font-display text-[12px] font-bold transition-all ${
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1.5 font-display text-[12px] font-bold transition-all",
                       active
                         ? "bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
-                    }`}
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
                   >
                     <span className={active ? "text-[var(--brand-primary)]" : undefined}>{t.icon}</span>
                     {t.label}
+                    <FilterCountBadge count={badge} />
                   </button>
                 );
               })}
@@ -767,9 +817,17 @@ function SearchFilterBar({
           </div>
 
           {/* Body */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3">
+          <div
+            className={cn(
+              "px-4 pb-3",
+              tab === "periodo" ? "overflow-visible" : "min-h-0 flex-1 overflow-y-auto",
+            )}
+          >
             {tab === "ordenar" && (
               <div className="flex flex-col gap-2" role="listbox" aria-label="Ordenar por">
+                <p className="mb-0.5 font-display text-[12px] font-semibold text-[var(--text-muted)]">
+                  Ordenar resultados por
+                </p>
                 {SORT_OPTIONS.map((opt) => {
                   const selected = sortKey === opt.value;
                   return (
@@ -786,14 +844,26 @@ function SearchFilterBar({
                           sortOrder: o as "asc" | "desc",
                         }));
                       }}
-                      className={`flex w-full items-center justify-between rounded-full border px-4 py-2.5 text-left font-display text-[13px] font-semibold transition-colors ${
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-[14px] border px-3.5 py-2.5 text-left font-display text-[13px] font-semibold transition-colors",
                         selected
-                          ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
-                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]"
-                      }`}
+                          ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--text-primary)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                      )}
                     >
+                      <span
+                        className={cn(
+                          "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2",
+                          selected
+                            ? "border-[var(--brand-primary)]"
+                            : "border-[var(--glass-border)]",
+                        )}
+                      >
+                        {selected && (
+                          <span className="h-2 w-2 rounded-full bg-[var(--brand-primary)]" />
+                        )}
+                      </span>
                       {opt.label}
-                      {selected && <IconCheck size={16} stroke={2.6} className="shrink-0 text-[var(--brand-primary)]" />}
                     </button>
                   );
                 })}
@@ -801,25 +871,106 @@ function SearchFilterBar({
             )}
 
             {tab === "periodo" && (
-              <div className="grid grid-cols-2 gap-3">
-                {(
-                  [
-                    ["Criado — de", draft.createdFrom, (v: string) => setDraft((p) => ({ ...p, createdFrom: v }))],
-                    ["Criado — até", draft.createdTo, (v: string) => setDraft((p) => ({ ...p, createdTo: v }))],
-                    ["Modificado — de", draft.updatedFrom, (v: string) => setDraft((p) => ({ ...p, updatedFrom: v }))],
-                    ["Modificado — até", draft.updatedTo, (v: string) => setDraft((p) => ({ ...p, updatedTo: v }))],
-                  ] as const
-                ).map(([label, value, set]) => (
-                  <div key={label}>
-                    <FieldLabel>{label}</FieldLabel>
-                    <input
-                      type="date"
-                      value={value}
-                      onChange={(e) => set(e.target.value)}
-                      className={FILTER_INPUT_CLASS}
+              <div className="flex flex-col gap-3">
+                <div>
+                  <p className="mb-2 font-display text-[11px] font-semibold text-[var(--text-muted)]">
+                    Atalhos rápidos (data de criação)
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CREATED_PRESETS.map((p) => {
+                      const on = createdPreset === p.key;
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => applyCreatedPreset(p.key)}
+                          className={cn(
+                            "rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                            on
+                              ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.3)]"
+                              : "border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                          )}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Criação */}
+                <div
+                  className={cn(
+                    "rounded-[16px] border p-3",
+                    createdActive
+                      ? "border-[var(--brand-primary)]/35 bg-[var(--color-primary-soft)]"
+                      : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
+                  )}
+                >
+                  <div className="mb-2.5 flex items-center gap-1.5">
+                    <IconSparkles
+                      size={14}
+                      className={createdActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}
+                    />
+                    <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                      Criação
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DatePicker
+                      value={draft.createdFrom || null}
+                      onChange={(v) => setDraft((p) => ({ ...p, createdFrom: v }))}
+                      placeholder="dd/mm/aaaa"
+                      className="min-w-0 flex-1"
+                      triggerClassName={DATE_TRIGGER_CLASS}
+                    />
+                    <span className="shrink-0 font-body text-[12px] text-[var(--text-muted)]">até</span>
+                    <DatePicker
+                      value={draft.createdTo || null}
+                      onChange={(v) => setDraft((p) => ({ ...p, createdTo: v }))}
+                      placeholder="dd/mm/aaaa"
+                      className="min-w-0 flex-1"
+                      triggerClassName={DATE_TRIGGER_CLASS}
                     />
                   </div>
-                ))}
+                </div>
+
+                {/* Modificação */}
+                <div
+                  className={cn(
+                    "rounded-[16px] border p-3",
+                    updatedActive
+                      ? "border-[var(--brand-primary)]/35 bg-[var(--color-primary-soft)]"
+                      : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
+                  )}
+                >
+                  <div className="mb-2.5 flex items-center gap-1.5">
+                    <IconPencil
+                      size={14}
+                      className={updatedActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}
+                    />
+                    <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                      Modificação
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DatePicker
+                      value={draft.updatedFrom || null}
+                      onChange={(v) => setDraft((p) => ({ ...p, updatedFrom: v }))}
+                      placeholder="dd/mm/aaaa"
+                      className="min-w-0 flex-1"
+                      triggerClassName={DATE_TRIGGER_CLASS}
+                    />
+                    <span className="shrink-0 font-body text-[12px] text-[var(--text-muted)]">até</span>
+                    <DatePicker
+                      value={draft.updatedTo || null}
+                      onChange={(v) => setDraft((p) => ({ ...p, updatedTo: v }))}
+                      placeholder="dd/mm/aaaa"
+                      className="min-w-0 flex-1"
+                      triggerClassName={DATE_TRIGGER_CLASS}
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -845,11 +996,12 @@ function SearchFilterBar({
                         type="button"
                         onClick={() => toggleDraftTag(t.id)}
                         aria-pressed={on}
-                        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 font-display text-[12px] font-semibold transition-colors ${
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 font-display text-[12px] font-semibold transition-colors",
                           on
                             ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
-                            : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]"
-                        }`}
+                            : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                        )}
                       >
                         {on ? <IconCheck size={13} stroke={2.6} /> : <IconPlus size={13} stroke={2.4} />}
                         {t.name}
@@ -869,7 +1021,7 @@ function SearchFilterBar({
               onClick={handleApply}
               className={`${pagePrimaryButtonClass} h-10 w-full justify-center text-[14px]`}
             >
-              Aplicar
+              {draftActiveCount > 0 ? `Aplicar (${draftActiveCount})` : "Aplicar"}
             </button>
           </div>
         </div>

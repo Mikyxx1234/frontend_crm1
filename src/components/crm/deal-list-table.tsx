@@ -8,6 +8,7 @@ import { AVATAR_SIZE } from "@/lib/avatar";
 
 import { BadgeGlass } from "./badge-glass";
 import { CheckboxGlass } from "./checkbox-glass";
+import { ListHScroll } from "./list-hscroll";
 import { SortableHeader, type SortDir, listTableHeadRowClass } from "./sortable-header";
 import { StageDot } from "./stage-dot";
 
@@ -42,15 +43,17 @@ export const DEAL_LIST_COLUMNS: {
   key: DealListColumnKey;
   label: string;
   fr: string;
+  /** Largura mínima — garante overflow horizontal quando cabem muitas colunas. */
+  minPx: number;
   locked?: boolean;
 }[] = [
-  { key: "dealTitle", label: "Negócio", fr: "1.6fr", locked: true },
-  { key: "contactName", label: "Contato", fr: "1.6fr" },
-  { key: "value", label: "Valor", fr: "0.9fr" },
-  { key: "stageName", label: "Etapa", fr: "1.2fr" },
-  { key: "ownerName", label: "Responsável", fr: "1.1fr" },
-  { key: "createdAt", label: "Criado em", fr: "1fr" },
-  { key: "status", label: "Status", fr: "0.9fr" },
+  { key: "dealTitle", label: "Negócio", fr: "1.6fr", minPx: 200, locked: true },
+  { key: "contactName", label: "Contato", fr: "1.6fr", minPx: 180 },
+  { key: "value", label: "Valor", fr: "0.9fr", minPx: 110 },
+  { key: "stageName", label: "Etapa", fr: "1.2fr", minPx: 150 },
+  { key: "ownerName", label: "Responsável", fr: "1.1fr", minPx: 150 },
+  { key: "createdAt", label: "Criado em", fr: "1fr", minPx: 120 },
+  { key: "status", label: "Status", fr: "0.9fr", minPx: 110 },
 ];
 
 export const DEFAULT_DEAL_LIST_COLUMN_KEYS: DealListColumnKey[] =
@@ -106,7 +109,7 @@ export function DealListTable({
 
   const columns = useMemo(() => resolveColumns(visibleColumns), [visibleColumns]);
   const gridTemplate = useMemo(
-    () => ["42px", ...columns.map((c) => c.fr)].join(" "),
+    () => ["42px", ...columns.map((c) => `minmax(${c.minPx}px, ${c.fr})`)].join(" "),
     [columns],
   );
 
@@ -219,13 +222,9 @@ export function DealListTable({
   }
 
   return (
-    <div
-      className={cn(
-        "scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain pb-1 [-webkit-overflow-scrolling:touch]",
-        className,
-      )}
-    >
-      <div className="flex w-full min-w-0 flex-col gap-2">
+    <ListHScroll className={className} scrollerClassName="pb-1">
+      {/* w-max + minmax nas colunas: overflow X real (igual Contatos/Empresas). */}
+      <div className="flex w-max min-w-full flex-col gap-2">
         <div
           className={listTableHeadRowClass("grid gap-3 border border-transparent px-4 py-2")}
           style={{ gridTemplateColumns: gridTemplate }}
@@ -292,6 +291,6 @@ export function DealListTable({
           })
         )}
       </div>
-    </div>
+    </ListHScroll>
   );
 }

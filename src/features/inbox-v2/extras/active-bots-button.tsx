@@ -63,7 +63,9 @@ export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsBut
   return (
     <div
       className={cn(
-        inline ? "relative shrink-0" : "absolute bottom-[4.75rem] right-6 z-20",
+        inline
+          ? "relative flex h-9 w-9 shrink-0 items-center justify-center self-center"
+          : "absolute bottom-[4.75rem] right-6 z-20",
         className,
       )}
     >

@@ -4,14 +4,10 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { PageHeader, type PageHeaderBack } from "@/components/crm/page-header"
 import { SearchInput } from "@/components/crm/search-input"
-import {
-  PagePrimaryButton,
-  PageSegmentedControl,
-} from "@/components/crm/page-toolbar"
+import { PageSegmentedControl } from "@/components/crm/page-toolbar"
 import {
   IconLayoutKanban,
   IconList,
-  IconPlus,
   IconClock,
   IconCircleCheck,
   IconCircleX,
@@ -143,6 +139,9 @@ export function PipelineHeader({
     { id: "todos", label: "Todos", icon: <IconGridDots size={14} />, count: tabCounts?.todos },
   ]
 
+  // `onNewDeal` continua na API por compat; hoje a ação "Novo" vive dentro
+  // do hambúrguer (menuSlot), então o botão dedicado foi removido.
+  void onNewDeal
   const actionButtons = !hideActions ? (
     <>
       <PageSegmentedControl
@@ -153,9 +152,6 @@ export function PipelineHeader({
         size="compact"
         className="shrink-0"
       />
-      <PagePrimaryButton type="button" onClick={onNewDeal} disabled={!onNewDeal} className="shrink-0">
-        <IconPlus size={15} stroke={2.4} /> Novo
-      </PagePrimaryButton>
       {menuSlot}
     </>
   ) : null

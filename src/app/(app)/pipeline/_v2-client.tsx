@@ -725,55 +725,57 @@ export default function KanbanV2ClientPage({
             />
           }
           menuSlot={
-            <div>
-              <TooltipGlass label="Ordenar, importar e exportar" side="bottom">
-                <button
-                  ref={kebabBtnRef}
-                  type="button"
-                  onClick={() => setKebabOpen((v) => !v)}
-                  aria-label="Ações do pipeline"
-                  aria-expanded={kebabOpen}
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
-                    kebabOpen
-                      ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-                      : "text-[var(--brand-primary)] hover:bg-[var(--color-primary-soft)]",
-                  )}
-                >
-                  <IconMenu2 size={18} stroke={2.2} />
-                </button>
-              </TooltipGlass>
-              <PipelineKebabMenu
-                open={kebabOpen}
-                anchorRef={kebabBtnRef}
-                sortKey={sortKey}
-                onSortChange={(k) => { setSortKey(k); setKebabOpen(false); }}
-                onImport={() => { setImportExportOpen("import"); setKebabOpen(false); }}
-                onExport={() => { setImportExportOpen("export"); setKebabOpen(false); }}
-                onChannels={() => { setChannelsModalOpen(true); setKebabOpen(false); }}
-                onSettings={() => { router.push("/settings/pipeline"); setKebabOpen(false); }}
-                selectionMode={selectionMode}
-                onToggleSelectionMode={() => {
-                  setSelectionMode((v) => {
-                    const next = !v;
-                    if (!next) setSelectedIds(new Set());
-                    return next;
-                  });
-                  setKebabOpen(false);
-                }}
-                onClose={() => setKebabOpen(false)}
-              />
-            </div>
+            <TooltipGlass label="Ordenar, importar e exportar" side="bottom">
+              <button
+                ref={kebabBtnRef}
+                type="button"
+                onClick={() => setKebabOpen((v) => !v)}
+                aria-label="Ações do pipeline"
+                aria-expanded={kebabOpen}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+                  kebabOpen
+                    ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+                    : "text-[var(--brand-primary)] hover:bg-[var(--color-primary-soft)]",
+                )}
+              >
+                <IconMenu2 size={18} stroke={2.2} />
+              </button>
+            </TooltipGlass>
           }
+        />
+        {/*
+         * PipelineKebabMenu vive FORA do PageHeader porque este renderiza
+         * `actions` em dois blocos (desktop `lg:flex` + mobile `lg:hidden`) —
+         * colocá-lo dentro do menuSlot duplicaria o portal do menu.
+         */}
+        <PipelineKebabMenu
+          open={kebabOpen}
+          anchorRef={kebabBtnRef}
+          sortKey={sortKey}
+          onSortChange={(k) => { setSortKey(k); setKebabOpen(false); }}
           onNewDeal={
             columns.length > 0
-              ? () =>
-                  setAddStage({
-                    id: columns[0].stageId,
-                    name: columns[0].title,
-                  })
+              ? () => {
+                  setAddStage({ id: columns[0].stageId, name: columns[0].title });
+                  setKebabOpen(false);
+                }
               : undefined
           }
+          onImport={() => { setImportExportOpen("import"); setKebabOpen(false); }}
+          onExport={() => { setImportExportOpen("export"); setKebabOpen(false); }}
+          onChannels={() => { setChannelsModalOpen(true); setKebabOpen(false); }}
+          onSettings={() => { router.push("/settings/pipeline"); setKebabOpen(false); }}
+          selectionMode={selectionMode}
+          onToggleSelectionMode={() => {
+            setSelectionMode((v) => {
+              const next = !v;
+              if (!next) setSelectedIds(new Set());
+              return next;
+            });
+            setKebabOpen(false);
+          }}
+          onClose={() => setKebabOpen(false)}
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -1815,6 +1817,7 @@ interface PipelineKebabMenuProps {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
   sortKey: SortKey;
   onSortChange: (k: SortKey) => void;
+  onNewDeal?: () => void;
   onImport: () => void;
   onExport: () => void;
   onChannels: () => void;
@@ -1829,6 +1832,7 @@ function PipelineKebabMenu({
   anchorRef,
   sortKey,
   onSortChange,
+  onNewDeal,
   onImport,
   onExport,
   onChannels,
@@ -1899,6 +1903,20 @@ function PipelineKebabMenu({
       style={{ top, left, maxHeight }}
       className="scrollbar-thin fixed z-[60] w-52 overflow-y-auto overscroll-contain rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[0_8px_28px_rgba(15,23,42,0.13)] [-webkit-overflow-scrolling:touch] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
     >
+      {onNewDeal && (
+        <>
+          <button
+            type="button"
+            onClick={onNewDeal}
+            className="flex w-full items-center gap-2.5 px-3 pb-2 pt-3 text-left font-display text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/8"
+          >
+            <IconPlus size={14} stroke={2.6} className="shrink-0" />
+            Adicionar negócio
+          </button>
+          <div className="mx-3 my-1 h-px bg-[var(--glass-border-subtle)]" />
+        </>
+      )}
+
       {/* Seção: ordenar */}
       <div className="px-3 pb-1 pt-2.5">
         <p className="font-display text-[9.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">

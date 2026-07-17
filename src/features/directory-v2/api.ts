@@ -81,11 +81,32 @@ export interface ContactListItemDto {
   avatarUrl: string | null;
   leadScore: number | null;
   lifecycleStage: string | null;
+  source: string | null;
   createdAt: string;
+  updatedAt: string;
+  assignedTo: { id: string; name: string; avatarUrl: string | null } | null;
   company: { id: string; name: string; domain: string | null } | null;
   // O backend (getContacts) ja achata as tags: `tags: c.tags.map((t) => t.tag)`,
   // entao a resposta vem como [{ id, name, color }], NAO [{ tag: {...} }].
   tags: { id: string; name: string; color: string | null }[];
+  // Valores de campos customizados achatados por id: { [customFieldId]: value }.
+  customFields: Record<string, string>;
+}
+
+// Definição de um campo customizado de contato (para o configurador de colunas).
+export interface ContactFieldDefDto {
+  id: string;
+  name: string;
+  label: string;
+  type: string;
+  options: string[];
+}
+
+export function fetchContactFieldDefs(): Promise<ContactFieldDefDto[]> {
+  return getJson<ContactFieldDefDto[]>(
+    "/api/custom-fields?entity=contact",
+    "Erro ao carregar campos personalizados.",
+  );
 }
 
 export interface ContactListPage {

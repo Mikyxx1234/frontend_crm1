@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
@@ -19,6 +19,8 @@ import {
   IconTable,
   IconLayoutList,
   IconChevronRight,
+  IconColumns,
+  IconRotateClockwise,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -47,12 +49,13 @@ import {
   useContacts,
   useContactStats,
   useContactTags,
+  useContactFieldDefs,
   useCreateContact,
   useDeleteContact,
   useUpdateContact,
   useCompanies,
 } from "@/features/directory-v2/hooks";
-import type { ContactListItemDto, ContactStatsDto } from "@/features/directory-v2/api";
+import type { ContactFieldDefDto, ContactListItemDto, ContactStatsDto } from "@/features/directory-v2/api";
 
 const DEFAULT_PER_PAGE = 25;
 type ViewMode = "cards" | "tabela";
@@ -70,7 +73,7 @@ const SEGMENTS: {
   { id: "sem-resp", label: "Sem responsável", value: (s) => s?.unassigned },
 ];
 
-type SortField = "name" | "createdAt" | "leadScore";
+type SortField = "name" | "createdAt" | "updatedAt" | "leadScore" | "lifecycleStage";
 
 /** Presets de ordenação (campo:direção) para o dropdown "Ordenar". */
 const SORT_OPTIONS = [
@@ -86,6 +89,80 @@ function fmtDateBR(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("pt-BR");
+}
+
+const LIFECYCLE_LABELS: Record<string, string> = {
+  LEAD: "Lead",
+  MQL: "MQL",
+  SQL: "SQL",
+  OPPORTUNITY: "Oportunidade",
+  CUSTOMER: "Cliente",
+  EVANGELIST: "Evangelista",
+  OTHER: "Outro",
+};
+
+function stageLabel(v: string | null): string {
+  if (!v) return "—";
+  return LIFECYCLE_LABELS[v] ?? v;
+}
+
+// ── Configurador de colunas (estilo Kommo) ───────────────────────────────────
+
+interface ColumnDef {
+  key: string;
+  label: string;
+  width: string;
+  sortField?: SortField;
+  cell: (c: ContactListItemDto) => React.ReactNode;
+}
+
+/** Célula de texto padrão (truncada) das colunas da Tabela. */
+function txtCell(v: React.ReactNode) {
+  return <span className="block truncate font-display text-[13px] text-[var(--text-secondary)]">{v}</span>;
+}
+
+/** Colunas nativas opcionais (a coluna Nome/E-mail é fixa e não entra aqui). */
+const NATIVE_COLUMNS: ColumnDef[] = [
+  { key: "phone", label: "Telefone", width: "w-[150px]", cell: (c) => txtCell(c.phone ?? "—") },
+  { key: "company", label: "Empresa", width: "w-[180px]", cell: (c) => txtCell(c.company?.name ?? "—") },
+  {
+    key: "tags",
+    label: "Tags",
+    width: "w-[220px]",
+    cell: (c) => (
+      <div className="flex flex-wrap gap-1">
+        {(c.tags ?? []).slice(0, 3).map((t) => (
+          <Chip key={t.id} variant="ghost" color={t.color ?? undefined}>{t.name}</Chip>
+        ))}
+        {(c.tags?.length ?? 0) > 3 && (
+          <span className="font-display text-[11px] text-[var(--text-muted)]">+{(c.tags?.length ?? 0) - 3}</span>
+        )}
+      </div>
+    ),
+  },
+  { key: "lifecycleStage", label: "Estágio", width: "w-[130px]", sortField: "lifecycleStage", cell: (c) => txtCell(stageLabel(c.lifecycleStage)) },
+  { key: "leadScore", label: "Lead score", width: "w-[110px]", sortField: "leadScore", cell: (c) => txtCell(c.leadScore ?? "—") },
+  { key: "source", label: "Fonte", width: "w-[150px]", cell: (c) => txtCell(c.source ?? "—") },
+  { key: "assignedTo", label: "Responsável", width: "w-[170px]", cell: (c) => txtCell(c.assignedTo?.name ?? "—") },
+  { key: "createdAt", label: "Criado em", width: "w-[130px]", sortField: "createdAt", cell: (c) => txtCell(fmtDateBR(c.createdAt)) },
+  { key: "updatedAt", label: "Modificado em", width: "w-[130px]", sortField: "updatedAt", cell: (c) => txtCell(fmtDateBR(c.updatedAt)) },
+];
+
+const DEFAULT_COLUMN_KEYS = ["phone", "company", "tags", "createdAt"];
+const COLUMNS_STORAGE_KEY = "v2:contacts:columns";
+
+function customColumnKey(id: string): string {
+  return `cf:${id}`;
+}
+
+/** Constrói os ColumnDef dos campos customizados a partir das definições. */
+function buildCustomColumns(defs: ContactFieldDefDto[]): ColumnDef[] {
+  return defs.map((f) => ({
+    key: customColumnKey(f.id),
+    label: f.label,
+    width: "w-[160px]",
+    cell: (c) => txtCell(c.customFields?.[f.id] ?? "—"),
+  }));
 }
 
 const AVATAR_COLORS = [
@@ -132,6 +209,29 @@ export default function V2ContactsClientPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const deleteMut = useDeleteContact();
 
+  // Colunas visíveis da Tabela (persistidas no navegador).
+  const [activeColumnKeys, setActiveColumnKeys] = useState<string[]>(DEFAULT_COLUMN_KEYS);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLUMNS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.every((k) => typeof k === "string")) {
+          setActiveColumnKeys(parsed);
+        }
+      }
+    } catch {
+      /* localStorage indisponível — mantém o padrão */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(activeColumnKeys));
+    } catch {
+      /* ignore */
+    }
+  }, [activeColumnKeys]);
+
   useEffect(() => {
     const t = setTimeout(() => {
       setDebounced(search.trim());
@@ -153,6 +253,31 @@ export default function V2ContactsClientPage() {
 
   const statsQuery = useContactStats(isAuthenticated);
   const tagsQuery = useContactTags(isAuthenticated);
+  const fieldDefsQuery = useContactFieldDefs(isAuthenticated);
+
+  const customColumns = useMemo(
+    () => buildCustomColumns(fieldDefsQuery.data ?? []),
+    [fieldDefsQuery.data],
+  );
+  // Todas as colunas opcionais disponíveis (nativas + customizadas).
+  const allOptionalColumns = useMemo(
+    () => [...NATIVE_COLUMNS, ...customColumns],
+    [customColumns],
+  );
+  // Colunas ativas, na ordem escolhida, ignorando chaves que não existem mais.
+  const activeColumns = useMemo(
+    () =>
+      activeColumnKeys
+        .map((k) => allOptionalColumns.find((c) => c.key === k))
+        .filter((c): c is ColumnDef => Boolean(c)),
+    [activeColumnKeys, allOptionalColumns],
+  );
+
+  function toggleColumn(key: string) {
+    setActiveColumnKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  }
 
   const query = useContacts({
     search: debounced || undefined,
@@ -315,6 +440,15 @@ export default function V2ContactsClientPage() {
             menuLabel="Ordenar por"
             triggerClassName="min-w-[170px]"
           />
+          {view === "tabela" && (
+            <ColumnPicker
+              nativeColumns={NATIVE_COLUMNS}
+              customColumns={customColumns}
+              activeKeys={activeColumnKeys}
+              onToggle={toggleColumn}
+              onReset={() => setActiveColumnKeys(DEFAULT_COLUMN_KEYS)}
+            />
+          )}
         </PageFilterBar>
 
         {/* Barra de seleção em massa */}
@@ -367,7 +501,7 @@ export default function V2ContactsClientPage() {
             someChecked={someChecked}
             onToggleAll={toggleAll}
             onToggleOne={toggleOne}
-            onEdit={setEditing}
+            columns={activeColumns}
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSort={toggleSort}
@@ -406,13 +540,92 @@ export default function V2ContactsClientPage() {
   );
 }
 
-// ── Tabela ──────────────────────────────────────────────────────────────────
+// ── Configurador de colunas (popover estilo Kommo) ───────────────────────────
 
-const TABELA_COLS = "grid-cols-[36px_minmax(180px,2fr)_140px_minmax(120px,1.2fr)_minmax(140px,1.4fr)_100px]";
+function ColumnPicker({
+  nativeColumns, customColumns, activeKeys, onToggle, onReset,
+}: {
+  nativeColumns: ColumnDef[];
+  customColumns: ColumnDef[];
+  activeKeys: string[];
+  onToggle: (key: string) => void;
+  onReset: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const activeSet = new Set(activeKeys);
+  const activeCount = nativeColumns.concat(customColumns).filter((c) => activeSet.has(c.key)).length;
+
+  function renderChip(col: ColumnDef) {
+    const on = activeSet.has(col.key);
+    return (
+      <button
+        key={col.key}
+        type="button"
+        onClick={() => onToggle(col.key)}
+        aria-pressed={on}
+        className={`flex items-center gap-1.5 rounded-[var(--radius-md)] border px-2.5 py-1.5 font-display text-[12px] font-semibold transition-colors ${
+          on
+            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]"
+        }`}
+      >
+        {on ? <IconCheck size={13} stroke={2.6} /> : <IconPlus size={13} stroke={2.4} />}
+        {col.label}
+      </button>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <ButtonGlass variant="glass" size="sm" type="button" onClick={() => setOpen((o) => !o)}>
+        <IconColumns size={15} /> Colunas
+        {activeCount > 0 && (
+          <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[10px] font-bold text-white">
+            {activeCount}
+          </span>
+        )}
+      </ButtonGlass>
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-[340px] rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Colunas disponíveis</span>
+            <button
+              type="button"
+              onClick={onReset}
+              className="flex items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+            >
+              <IconRotateClockwise size={12} /> Restaurar padrão
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">{nativeColumns.map(renderChip)}</div>
+          {customColumns.length > 0 && (
+            <>
+              <div className="mb-1.5 mt-3 font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Campos personalizados</div>
+              <div className="flex flex-wrap gap-1.5">{customColumns.map(renderChip)}</div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Tabela (colunas dinâmicas) ───────────────────────────────────────────────
 
 function TabelaView({
-  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, onEdit,
-  sortBy, sortOrder, onSort,
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne,
+  columns, sortBy, sortOrder, onSort,
 }: {
   items: ContactListItemDto[];
   selected: Set<string>;
@@ -420,7 +633,7 @@ function TabelaView({
   someChecked: boolean;
   onToggleAll: () => void;
   onToggleOne: (id: string) => void;
-  onEdit: (c: ContactListItemDto) => void;
+  columns: ColumnDef[];
   sortBy: SortField;
   sortOrder: "asc" | "desc";
   onSort: (field: SortField) => void;
@@ -430,27 +643,34 @@ function TabelaView({
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
       {/* H-scroll único: header + linhas andam juntos */}
       <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-        <div className="flex min-h-0 min-w-[860px] flex-1 flex-col">
-          <div className={listTableHeadRowClass(`grid ${TABELA_COLS} gap-3 px-3 py-2`)}>
-            <span>
+        <div className="flex min-h-0 w-max min-w-full flex-1 flex-col">
+          <div className={listTableHeadRowClass("flex items-center gap-3 px-3 py-2")}>
+            <span className="w-9 shrink-0">
               <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todos" />
             </span>
-            <SortableHeader label="Nome / E-mail" sort={dirFor("name")} onSort={() => onSort("name")} />
-            <ListColumnLabel>Telefone</ListColumnLabel>
-            <ListColumnLabel>Empresa</ListColumnLabel>
-            <ListColumnLabel>Tags</ListColumnLabel>
-            <SortableHeader label="Criado em" sort={dirFor("createdAt")} onSort={() => onSort("createdAt")} />
+            <div className="w-[240px] shrink-0">
+              <SortableHeader label="Nome / E-mail" sort={dirFor("name")} onSort={() => onSort("name")} />
+            </div>
+            {columns.map((col) => (
+              <div key={col.key} className={`${col.width} shrink-0`}>
+                {col.sortField ? (
+                  <SortableHeader label={col.label} sort={dirFor(col.sortField)} onSort={() => onSort(col.sortField as SortField)} />
+                ) : (
+                  <ListColumnLabel>{col.label}</ListColumnLabel>
+                )}
+              </div>
+            ))}
           </div>
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             {items.map((c) => (
               <div
                 key={c.id}
-                className={`grid ${TABELA_COLS} items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}
+                className={`flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}
               >
-                <span>
+                <span className="w-9 shrink-0">
                   <CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
                 </span>
-                <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex w-[240px] shrink-0 items-center gap-2.5">
                   <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
                     {initials(c.name)}
                   </span>
@@ -462,17 +682,11 @@ function TabelaView({
                     <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "—"}</div>
                   </div>
                 </div>
-                <div className="truncate font-display text-[13px] text-[var(--text-secondary)]">{c.phone ?? "—"}</div>
-                <div className="truncate font-display text-[13px] text-[var(--text-secondary)]">{c.company?.name ?? "—"}</div>
-                <div className="flex flex-wrap gap-1">
-                  {(c.tags ?? []).slice(0, 3).map((t) => (
-                    <Chip key={t.id} variant="ghost" color={t.color ?? undefined}>{t.name}</Chip>
-                  ))}
-                  {(c.tags?.length ?? 0) > 3 && (
-                    <span className="font-display text-[11px] text-[var(--text-muted)]">+{(c.tags?.length ?? 0) - 3}</span>
-                  )}
-                </div>
-                <div className="font-display text-[13px] text-[var(--text-muted)]">{fmtDateBR(c.createdAt)}</div>
+                {columns.map((col) => (
+                  <div key={col.key} className={`${col.width} min-w-0 shrink-0`}>
+                    {col.cell(c)}
+                  </div>
+                ))}
               </div>
             ))}
           </div>

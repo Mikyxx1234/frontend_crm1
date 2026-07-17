@@ -16,6 +16,7 @@ import {
   fetchCompany,
   fetchContact,
   fetchContacts,
+  fetchContactFieldDefs,
   fetchContactStats,
   fetchTagsWithCounts,
   removeContactTag,
@@ -31,6 +32,7 @@ import {
   type ContactDetailDto,
   type ContactListPage,
   type ContactNoteDto,
+  type ContactFieldDefDto,
   type ContactStatsDto,
   type ContactWriteBody,
   type TagWithCountDto,
@@ -108,6 +110,16 @@ export function useContactTags(enabled?: boolean) {
     queryFn: fetchTagsWithCounts,
     enabled: resolveEnabled(enabled),
     staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useContactFieldDefs(enabled?: boolean) {
+  return useQuery<ContactFieldDefDto[]>({
+    queryKey: ["v2-contact-field-defs"],
+    queryFn: fetchContactFieldDefs,
+    enabled: resolveEnabled(enabled),
+    staleTime: 5 * 60_000,
     placeholderData: (prev) => prev,
   });
 }

@@ -129,6 +129,8 @@ export interface TabCounts {
 
 export interface InboxFilters {
   ownerId?: string;
+  /** true = só conversas sem responsável (`assignedToId` null). */
+  withoutOwner?: boolean;
   channel?: string;
   stageId?: string;
   tagIds?: string[];
@@ -152,6 +154,7 @@ export function hasInboxServerFilters(
   const { sortBy: _sb, sortOrder: _so, windowState: _ws, ...server } = f;
   return (
     Boolean(server.ownerId) ||
+    Boolean(server.withoutOwner) ||
     Boolean(server.channel) ||
     Boolean(server.stageId) ||
     (server.tagIds?.length ?? 0) > 0 ||

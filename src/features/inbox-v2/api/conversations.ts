@@ -30,7 +30,8 @@ function buildConversationsUrl(p: ListConversationsParams): string {
     tab: p.tab,
   });
   if (p.page && p.page > 1) q.set("page", String(p.page));
-  if (p.ownerId) q.set("ownerId", p.ownerId);
+  if (p.withoutOwner) q.set("withoutOwner", "1");
+  else if (p.ownerId) q.set("ownerId", p.ownerId);
   if (p.channel) q.set("channel", p.channel);
   if (p.stageId) q.set("stageId", p.stageId);
   if (p.tagIds?.length) q.set("tagIds", p.tagIds.join(","));

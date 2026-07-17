@@ -65,7 +65,7 @@ import {
   type MoveVars,
 } from "@/features/pipeline-v2/hooks";
 import { dealDetailKey } from "@/features/pipeline-v2/hooks/use-deal-detail";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { updateDeal } from "@/features/pipeline-v2/api";
 import { createContact } from "@/features/directory-v2/api";
@@ -75,6 +75,7 @@ import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
 import type { BulkScopeContext } from "@/components/pipeline/bulk-edit-fields-dialog";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
+import { apiUrl } from "@/lib/api";
 import type {
   BoardDealDto,
   BoardSortParam,
@@ -347,27 +348,40 @@ export default function KanbanV2ClientPage({
   const moveDeal = useMoveDeal(pipelineId, status);
 
   // ── Tabulação de motivo da perda ─────────────────────────────────
-  // Mover para o estágio Perdido exige motivo: o move fica pendente até
-  // o usuário confirmar no LossReasonDialog (cancelar = não move).
+  // Só pede motivo se a etapa Perdido do funil estiver com tabulação
+  // Ativa (pipelines.lossReasonRequired). Cancelar = não move.
   const [pendingLostMove, setPendingLostMove] = useState<MoveVars | null>(null);
+
+  const lossMetaQuery = useQuery({
+    queryKey: ["pipeline-loss-reasons", pipelineId],
+    queryFn: async () => {
+      const res = await fetch(
+        apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),
+      );
+      if (!res.ok) return { lossReasonRequired: false };
+      return res.json() as Promise<{ lossReasonRequired?: boolean }>;
+    },
+    enabled: !!pipelineId,
+    staleTime: 30_000,
+  });
+  const lossReasonsActive = Boolean(lossMetaQuery.data?.lossReasonRequired);
 
   const requestMove = useCallback(
     (vars: MoveVars) => {
       const target = board.find((s) => s.id === vars.toStageId);
-      // Entrar no estágio Perdido (vindo de OUTRA etapa) sempre pede o
-      // motivo. Baseamos em `fromStageId !== toStageId` em vez do
-      // `status` do card — esse último fica defasado logo após uma
-      // reabertura otimista (o onMutate move o card mas não atualiza o
-      // status), o que fazia a tabulação ser pulada ou bugar ao mover um
-      // lead reaberto de volta pra Perdido. Reordenar dentro da própria
-      // coluna Perdido (from === to) não dispara o diálogo.
-      if (target?.isLost && vars.fromStageId !== vars.toStageId) {
+      // Entrar no estágio Perdido (vindo de OUTRA etapa) pede motivo
+      // só quando a tabulação está Ativa neste funil.
+      if (
+        target?.isLost &&
+        vars.fromStageId !== vars.toStageId &&
+        lossReasonsActive
+      ) {
         setPendingLostMove(vars);
         return;
       }
       moveDeal.mutate(vars);
     },
-    [board, moveDeal],
+    [board, moveDeal, lossReasonsActive],
   );
 
   // ── Seleção em massa (resgatada da versão antiga) ────────────────

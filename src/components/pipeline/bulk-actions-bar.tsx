@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconArrowsLeftRight as ArrowRightLeft, IconCircleCheck as CheckCircle2, IconChevronDown as ChevronDown, IconLoader2 as Loader2, IconPencil as Pencil, IconTrash as Trash2, IconTrophy as Trophy, IconUserCog as UserCog, IconX as X, IconCircleX as XCircle } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -171,6 +171,20 @@ export function BulkActionsBar({
   const [pendingLostMoveStage, setPendingLostMoveStage] =
     React.useState<StageOption | null>(null);
 
+  const { data: lossMeta } = useQuery({
+    queryKey: ["pipeline-loss-reasons", pipelineId],
+    queryFn: async () => {
+      const res = await fetch(
+        apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),
+      );
+      if (!res.ok) return { lossReasonRequired: false };
+      return res.json() as Promise<{ lossReasonRequired?: boolean }>;
+    },
+    enabled: !!pipelineId,
+    staleTime: 30_000,
+  });
+  const lossReasonsActive = Boolean(lossMeta?.lossReasonRequired);
+
   // ID e total da BulkOperation atualmente acompanhada. Quando setado,
   // o `BulkOperationProgressDialog` abre e faz polling no backend.
   const [progressOperationId, setProgressOperationId] = React.useState<string | null>(null);
@@ -299,8 +313,8 @@ export function BulkActionsBar({
                     type="button"
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                     onClick={() => {
-                      // Estágio Perdido: pede a tabulação do motivo antes.
-                      if (s.isLost) {
+                      // Perdido: pede motivo só se tabulação estiver Ativa no funil.
+                      if (s.isLost && lossReasonsActive) {
                         setPendingLostMoveStage(s);
                       } else {
                         mutation.mutate({ dealIds, action: "move_stage", stageId: s.id });
@@ -393,7 +407,10 @@ export function BulkActionsBar({
             size="sm"
             className="h-8 gap-1.5 rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-bg)] text-[12px] text-[var(--color-danger-text)] shadow-none hover:bg-[var(--color-danger-bg)] dark:border-[var(--color-danger)]/40 dark:bg-[var(--color-danger)]/15 dark:text-[var(--color-danger)] dark:hover:bg-[var(--color-danger)]/25"
             disabled={mutation.isPending}
-            onClick={() => setLostOpen(true)}
+            onClick={() => {
+              if (lossReasonsActive) setLostOpen(true);
+              else mutation.mutate({ dealIds, action: "mark_lost" });
+            }}
           >
             <XCircle className="size-3.5" />
             Perdido

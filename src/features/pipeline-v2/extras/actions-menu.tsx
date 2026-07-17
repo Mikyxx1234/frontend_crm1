@@ -13,12 +13,14 @@ import {
   IconCircleCheck,
   IconRefresh,
 } from "@tabler/icons-react";
+import { useQuery } from "@tanstack/react-query";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
 import { useDeleteDeal, useSetDealStatus } from "@/features/pipeline-v2/hooks";
 import type { DealStatus, StatusFilter } from "@/features/pipeline-v2/api";
+import { apiUrl } from "@/lib/api";
 
 interface DealActionsMenuProps {
   dealId: string | null;
@@ -47,6 +49,20 @@ export function DealActionsMenu({
   const setStatus = useSetDealStatus(pipelineId, statusFilter);
   const deleteDealMut = useDeleteDeal(pipelineId, statusFilter);
   const { confirm, dialog } = useConfirm();
+
+  const { data: lossMeta } = useQuery({
+    queryKey: ["pipeline-loss-reasons", pipelineId],
+    queryFn: async () => {
+      const res = await fetch(
+        apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),
+      );
+      if (!res.ok) return { lossReasonRequired: false };
+      return res.json() as Promise<{ lossReasonRequired?: boolean }>;
+    },
+    enabled: !!pipelineId,
+    staleTime: 30_000,
+  });
+  const lossReasonsActive = Boolean(lossMeta?.lossReasonRequired);
 
   useEffect(() => {
     if (!open) return;
@@ -115,7 +131,11 @@ export function DealActionsMenu({
             <button
               type="button"
               disabled={setStatus.isPending}
-              onClick={() => { setOpen(false); setLostDialogOpen(true); }}
+              onClick={() => {
+                setOpen(false);
+                if (lossReasonsActive) setLostDialogOpen(true);
+                else apply("LOST");
+              }}
               className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[13px] font-semibold text-[#dc2626] transition-colors hover:bg-red-50 disabled:opacity-50"
             >
               <IconCircleX size={15} strokeWidth={2} />

@@ -35,6 +35,7 @@ import { useAutomations } from "@/features/automations-v2/hooks";
 import { apiUrl } from "@/lib/api";
 import { SETTINGS_HUB_BACK } from "../_v2-shell";
 import { AddAutomationDrawer } from "./add-automation-drawer";
+import { LostStageReasonsPanel } from "./lost-stage-reasons";
 import {
   conditionsEqual,
   parseConditions,
@@ -875,6 +876,7 @@ function AddStageModal({
 
 interface StageColumnProps {
   stage: StageConfig;
+  pipelineId: string | null;
   isFirst: boolean;
   isLast: boolean;
   isDragOver: boolean;
@@ -896,6 +898,7 @@ interface StageColumnProps {
 
 function StageColumn({
   stage,
+  pipelineId,
   isFirst,
   isLast,
   isDragOver,
@@ -915,6 +918,7 @@ function StageColumn({
   onDragEnd,
 }: StageColumnProps) {
   const locked = isTerminalStage(stage);
+  const isLost = Boolean(stage.isLost);
   return (
     <section
       aria-label={`Estágio ${stage.name}`}
@@ -924,7 +928,8 @@ function StageColumn({
       onDrop={(e) => { e.preventDefault(); onDrop(stage.id); }}
       onDragEnd={onDragEnd}
       className={cn(
-        "kanban-col flex w-[300px] shrink-0 flex-col rounded-xl border bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md transition-all duration-150",
+        "kanban-col flex shrink-0 flex-col rounded-xl border bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md transition-all duration-150",
+        isLost ? "w-[360px]" : "w-[300px]",
         isDragOver
           ? "scale-[1.02] border-[var(--brand-primary)] shadow-[0_0_0_2px_rgba(91,111,245,0.25),var(--glass-shadow)]"
           : "border-[var(--glass-border)]",
@@ -991,6 +996,9 @@ function StageColumn({
 
       {/* Lista de cards */}
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+        {isLost && pipelineId && (
+          <LostStageReasonsPanel pipelineId={pipelineId} />
+        )}
         {stage.automations.map((auto) => (
           <AutomationCard
             key={auto.id}
@@ -2044,6 +2052,7 @@ export default function PipelineSettingsClientPage() {
                 <StageColumn
                   key={stage.id}
                   stage={stage}
+                  pipelineId={pipelineId}
                   isFirst={idx === 0}
                   isLast={idx === stages.length - 1 || isTerminalStage(stages[idx + 1])}
                   isDragOver={dragOverId === stage.id}

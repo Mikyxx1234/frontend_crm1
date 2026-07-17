@@ -22,20 +22,23 @@ async function fetchCatalogReasons(): Promise<LossReason[]> {
 async function fetchPipelineReasons(pipelineId: string): Promise<{
   reasons: LossReason[];
   required: boolean;
+  allowOther: boolean;
 }> {
   const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`));
-  if (!res.ok) return { reasons: [], required: false };
+  if (!res.ok) return { reasons: [], required: false, allowOther: true };
   const data = (await res.json()) as {
     reasons?: LossReason[];
     lossReasonRequired?: boolean;
+    lossReasonAllowOther?: boolean;
   };
   return {
     reasons: Array.isArray(data.reasons) ? data.reasons : [],
     required: Boolean(data.lossReasonRequired),
+    allowOther: data.lossReasonAllowOther !== false,
   };
 }
 
-async function fetchAllowOther(): Promise<boolean> {
+async function fetchOrgAllowOther(): Promise<boolean> {
   try {
     const res = await fetch(
       apiUrl("/api/settings/org?key=deals.loss_reason_allow_other"),
@@ -86,12 +89,12 @@ export function LossReasonDialog({
     enabled: open && !!pipelineId,
   });
 
-  const { data: allowOther = true } = useQuery({
+  const orgAllowOtherQuery = useQuery({
     queryKey: ["org-setting", "deals.loss_reason_allow_other"],
-    queryFn: fetchAllowOther,
+    queryFn: fetchOrgAllowOther,
     staleTime: 0,
     refetchOnMount: "always",
-    enabled: open,
+    enabled: open && !pipelineId,
   });
 
   const reasons = pipelineId
@@ -100,6 +103,9 @@ export function LossReasonDialog({
   const required = pipelineId
     ? Boolean(pipelineQuery.data?.required)
     : true;
+  const allowOther = pipelineId
+    ? (pipelineQuery.data?.allowOther ?? true)
+    : (orgAllowOtherQuery.data ?? true);
 
   React.useEffect(() => {
     if (open) {
@@ -223,8 +229,8 @@ export function LossReasonDialog({
         ) : (
           <div className="rounded-lg border border-[var(--color-warning)] bg-[var(--color-warning-bg)] px-3 py-2.5 text-xs text-[var(--color-warning-text)]">
             {pipelineId
-              ? "Este funil não tem motivos vinculados. Configure em Configurações → Motivos de perda."
-              : "Nenhum motivo cadastrado. Configure em Configurações → Motivos de perda ou habilite “Permitir motivo personalizado”."}
+              ? "Este funil não tem motivos ativos. Configure na etapa Perdido em Configurações → Pipeline."
+              : "Nenhum motivo cadastrado. Configure na etapa Perdido em Configurações → Pipeline."}
           </div>
         )}
       </div>

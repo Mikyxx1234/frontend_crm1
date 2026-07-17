@@ -1,4 +1,4 @@
-import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconBuilding as Building, IconClock as Clock, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutKanban as Kanban, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPhone as Phone, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconArrowsShuffle as Shuffle, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconThumbDown as ThumbsDown, IconUsers as Users } from "@tabler/icons-react";
+import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconBuilding as Building, IconClock as Clock, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutKanban as Kanban, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPhone as Phone, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconArrowsShuffle as Shuffle, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconUsers as Users } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { UserRole } from "@/lib/prisma-enum-types";
 
@@ -198,16 +198,6 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         href: "/settings/pipeline",
         allowedRoles: GESTAO,
         // manage_stages (e nao pipeline:view): a tela administra estagios.
-        requiredPermission: "pipeline:manage_stages",
-      },
-      {
-        id: "loss-reasons",
-        label: "Motivos de perda",
-        description: "Razões padrão ao marcar perdido",
-        icon: ThumbsDown,
-        href: "/settings/loss-reasons",
-        allowedRoles: GESTAO,
-        // Configuracao do funil — mesma permission da tela de Pipeline.
         requiredPermission: "pipeline:manage_stages",
       },
       {

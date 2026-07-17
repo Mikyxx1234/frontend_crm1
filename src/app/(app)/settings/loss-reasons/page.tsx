@@ -1,13 +1,6 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import LossReasonsV2ClientPage from "./client-page";
-
-export const dynamic = "force-dynamic";
-
+/** Motivos de perda ficam na etapa Perdido em Configurações → Pipeline. */
 export default function LossReasonsPage() {
-  return (
-    <Suspense fallback={null}>
-      <LossReasonsV2ClientPage />
-    </Suspense>
-  );
+  redirect("/settings/pipeline");
 }

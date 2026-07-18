@@ -26,10 +26,15 @@ import { ButtonGlass } from "@/components/crm/button-glass";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
+import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import { useDepartments, type Department } from "@/features/conversations-settings/hooks/use-departments";
 import { DeptGlyph } from "@/features/conversations-settings/department-icons";
 
-import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
+import {
+  SETTINGS_HUB_BACK,
+  SettingsV2Shell,
+  useSettingsHeaderSlots,
+} from "../_v2-shell";
 
 type TabulationNode = {
   id: string;
@@ -160,6 +165,20 @@ function parseCsv(text: string): Record<string, string>[] {
 }
 
 export default function TabulationsClientPage() {
+  return (
+    <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
+      title="Tabulações"
+      description="Motivos hierárquicos escolhidos ao encerrar conversas"
+      icon={<IconLayoutList size={22} />}
+    >
+      <TabulationsBody />
+    </SettingsV2Shell>
+  );
+}
+
+function TabulationsBody() {
+  const slots = useSettingsHeaderSlots();
   const qc = useQueryClient();
   const departmentsQuery = useDepartments();
   const departments = departmentsQuery.data ?? [];
@@ -278,6 +297,7 @@ export default function TabulationsClientPage() {
   });
 
   const selectedDept = departments.find((d) => d.id === effectiveDeptId) ?? null;
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
     const rows = flattenTree(tree);
@@ -324,80 +344,137 @@ export default function TabulationsClientPage() {
     importCsv.mutate(rows);
   };
 
-  return (
-    <SettingsV2Shell
-      back={SETTINGS_HUB_BACK}
-      title="Tabulações"
-      description="Motivos hierárquicos escolhidos ao encerrar conversas"
-      icon={<IconLayoutList size={22} />}
-    >
-      <div className="flex w-full min-w-0 flex-col gap-4 px-1 pb-8">
-        {/* ── Departamento + exigência ─────────────────────────────── */}
-        <GlassCard variant="panel" className="relative z-30 min-w-0 overflow-visible p-4 sm:p-5">
-          <div className="flex flex-col gap-4">
-            <div className="max-w-[520px]">
-              <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                Departamento
-              </p>
-              <DeptSelect
-                departments={departments}
-                selected={selectedDept}
-                onSelect={(id) => setDepartmentId(id)}
-              />
-              {departments.length === 0 ? (
-                <p className="mt-2 font-body text-[12px] text-[var(--text-muted)]">
-                  Nenhum departamento ainda.{" "}
-                  <Link
-                    href="/settings/departments"
-                    className="font-semibold text-[var(--brand-primary)] underline-offset-2 hover:underline"
-                  >
-                    Cadastrar em Equipe &amp; Operação › Departamentos
-                  </Link>
-                  .
-                </p>
-              ) : null}
-            </div>
+  // Seletor de departamento no centro do PageHeader (troca preservada).
+  const centerNode = useMemo(
+    () => (
+      <DeptSelect
+        departments={departments}
+        selected={selectedDept}
+        onSelect={(id) => setDepartmentId(id)}
+      />
+    ),
+    [departments, selectedDept],
+  );
 
-            {effectiveDeptId ? (
-              <div className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
-                <div className="min-w-0">
-                  <div className="font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
-                    Exigir tabulação ao encerrar
-                  </div>
-                  <div className="mt-0.5 font-body text-[12px] text-[var(--text-muted)]">
-                    Quando ativado, o agente escolhe um nível final antes de resolver a conversa
-                    deste departamento.
-                  </div>
-                </div>
-                <SwitchGlass
-                  checked={requireOnClose}
-                  onChange={(v) => toggleRequire.mutate(v)}
-                  disabled={toggleRequire.isPending}
-                  size="list"
-                  aria-label="Exigir tabulação ao encerrar"
-                />
-              </div>
-            ) : null}
+  // CTAs de CSV no hambúrguer à direita do PageHeader.
+  const actionsNode = useMemo(
+    () => (
+      <PageActionsMenu
+        aria-label="Ações de tabulações"
+        items={[
+          {
+            icon: <IconUpload size={16} />,
+            label: importCsv.isPending ? "Importando…" : "Importar CSV",
+            onClick: () => fileRef.current?.click(),
+            disabled: importCsv.isPending,
+          },
+          {
+            icon: <IconDownload size={16} />,
+            label: "Exportar CSV",
+            onClick: handleExport,
+            disabled: tree.length === 0,
+            divider: true,
+          },
+        ]}
+      />
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [importCsv.isPending, tree],
+  );
+
+  useEffect(() => {
+    if (!slots) return;
+    slots.setCenter(centerNode);
+    slots.setActions(actionsNode);
+    return () => {
+      slots.setCenter(null);
+      slots.setActions(null);
+    };
+  }, [slots, centerNode, actionsNode]);
+
+  return (
+    <div className="flex w-full min-w-0 flex-col gap-4 px-1 pb-8">
+      {/* Import CSV escondido — acionado pelo hambúrguer do header. */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleImportFile(f);
+          e.target.value = "";
+        }}
+      />
+
+      {/* Fallback do seletor de departamento quando fora do shell (sem slots). */}
+      {!slots ? (
+        <GlassCard variant="panel" className="relative z-30 min-w-0 overflow-visible p-4 sm:p-5">
+          <div className="max-w-[520px]">
+            <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+              Departamento
+            </p>
+            <DeptSelect
+              departments={departments}
+              selected={selectedDept}
+              onSelect={(id) => setDepartmentId(id)}
+            />
           </div>
         </GlassCard>
+      ) : null}
 
-        {/* ── Árvore de tabulações ─────────────────────────────────── */}
-        {effectiveDeptId ? (
-          <TreeEditor
-            tree={tree}
-            loading={treeQuery.isLoading}
-            nodeCount={nodeCount}
-            importing={importCsv.isPending}
-            onExport={handleExport}
-            onImportFile={handleImportFile}
-            onCreate={(parentId, name) => createNode.mutate({ parentId, name })}
-            onRename={(id, name) => updateNode.mutate({ id, name })}
-            onToggleActive={(id, active) => updateNode.mutate({ id, active })}
-            onDelete={(id) => deleteNode.mutate(id)}
-          />
-        ) : null}
-      </div>
-    </SettingsV2Shell>
+      {departments.length === 0 ? (
+        <GlassCard variant="panel" className="min-w-0 p-4 sm:p-5">
+          <p className="font-body text-[12px] text-[var(--text-muted)]">
+            Nenhum departamento ainda.{" "}
+            <Link
+              href="/settings/departments"
+              className="font-semibold text-[var(--brand-primary)] underline-offset-2 hover:underline"
+            >
+              Cadastrar em Equipe &amp; Operação › Departamentos
+            </Link>
+            .
+          </p>
+        </GlassCard>
+      ) : null}
+
+      {/* ── Exigência de tabulação ─────────────────────────────────── */}
+      {effectiveDeptId ? (
+        <GlassCard variant="panel" className="min-w-0 p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+            <div className="min-w-0">
+              <div className="font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
+                Exigir tabulação ao encerrar
+              </div>
+              <div className="mt-0.5 font-body text-[12px] text-[var(--text-muted)]">
+                Quando ativado, o agente escolhe um nível final antes de resolver a conversa
+                deste departamento.
+              </div>
+            </div>
+            <SwitchGlass
+              checked={requireOnClose}
+              onChange={(v) => toggleRequire.mutate(v)}
+              disabled={toggleRequire.isPending}
+              size="list"
+              aria-label="Exigir tabulação ao encerrar"
+            />
+          </div>
+        </GlassCard>
+      ) : null}
+
+      {/* ── Árvore de tabulações ─────────────────────────────────── */}
+      {effectiveDeptId ? (
+        <TreeEditor
+          tree={tree}
+          loading={treeQuery.isLoading}
+          nodeCount={nodeCount}
+          onCreate={(parentId, name) => createNode.mutate({ parentId, name })}
+          onRename={(id, name) => updateNode.mutate({ id, name })}
+          onToggleActive={(id, active) => updateNode.mutate({ id, active })}
+          onDelete={(id) => deleteNode.mutate(id)}
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -503,16 +580,12 @@ function TreeEditor(props: {
   tree: TabulationNode[];
   loading: boolean;
   nodeCount: number;
-  importing: boolean;
-  onExport: () => void;
-  onImportFile: (file: File) => void;
   onCreate: (parentId: string | null, name: string) => void;
   onRename: (id: string, name: string) => void;
   onToggleActive: (id: string, active: boolean) => void;
   onDelete: (id: string) => void;
 }) {
   const [newRootName, setNewRootName] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const submitRoot = () => {
     const name = newRootName.trim();
@@ -540,39 +613,6 @@ function TreeEditor(props: {
           <IconSparkles size={14} className="text-[var(--brand-primary)]" />
           {props.nodeCount} {props.nodeCount === 1 ? "nível" : "níveis"}
         </span>
-        <div className="flex shrink-0 items-center gap-2">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) props.onImportFile(f);
-              e.target.value = "";
-            }}
-          />
-          <ButtonGlass
-            type="button"
-            variant="glass"
-            size="sm"
-            onClick={() => fileRef.current?.click()}
-            disabled={props.importing}
-            title="Atualiza por id (round-trip) e cria linhas sem id. Não apaga o que ficar de fora."
-          >
-            <IconUpload size={15} /> {props.importing ? "Importando…" : "Importar CSV"}
-          </ButtonGlass>
-          <ButtonGlass
-            type="button"
-            variant="glass"
-            size="sm"
-            onClick={props.onExport}
-            disabled={props.tree.length === 0}
-            title="Exporta a árvore com os ids para atualização por id"
-          >
-            <IconDownload size={15} /> Exportar CSV
-          </ButtonGlass>
-        </div>
       </div>
 
       {/* Nova categoria raiz */}
@@ -665,8 +705,10 @@ function TreeCard(props: {
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] transition-colors",
-        node.active ? "border-[var(--glass-border)]" : "border-dashed border-[var(--glass-border)] opacity-75",
+        "rounded-[var(--radius-lg)] border bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]",
+        node.active
+          ? "border-[var(--glass-border)]"
+          : "border-dashed border-[var(--glass-border)] opacity-75",
       )}
     >
       <div className="group flex items-center gap-3 p-2.5">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   IconPhone as Phone,
   IconPhoneCheck,
@@ -11,9 +11,13 @@ import {
 } from "@tabler/icons-react";
 
 import { GlassCard } from "@/components/crm/glass-card";
+import { PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
-import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
+import {
+  SETTINGS_HUB_BACK,
+  SettingsV2Shell,
+  useSettingsHeaderSlots,
+} from "../_v2-shell";
 import {
   Api4ComConnectForm,
   Api4ComStatusCard,
@@ -56,57 +60,7 @@ function SectionCard({
   );
 }
 
-/** Card selecionável do seletor de tipo de ramal (Api4Com / PBX). */
-function TypeSelectCard({
-  active,
-  onClick,
-  icon,
-  title,
-  description,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-lg)] border p-3.5 text-left transition-colors",
-        active
-          ? "border-[var(--brand-primary)] bg-[var(--color-enterprise-bg)]"
-          : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] hover:border-[var(--input-border-focus)]",
-      )}
-    >
-      <span
-        className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-colors",
-          active
-            ? "bg-[var(--brand-primary)] text-white"
-            : "border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] text-[var(--text-muted)]",
-        )}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <div className="truncate text-[13.5px] font-bold text-[var(--text-primary)]">
-          {title}
-        </div>
-        <div className="mt-0.5 text-pretty break-words text-[12px] text-[var(--text-muted)]">
-          {description}
-        </div>
-      </div>
-    </button>
-  );
-}
-
 export default function SoftphoneSettingsClientPage() {
-  const [ramalType, setRamalType] = useState<RamalType>("api4com");
-
   return (
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
@@ -114,56 +68,115 @@ export default function SoftphoneSettingsClientPage() {
       description="Chamadas no navegador — tudo dentro do CRM"
       icon={<Phone size={22} />}
     >
-      <div className="flex min-w-0 w-full max-w-full flex-col gap-3 sm:gap-4">
-        <SectionCard
-          icon={<IconPhoneCheck size={18} />}
-          title="Status da conexão"
-          description="Situação atual do seu ramal e do registro de chamadas."
-        >
-          <Api4ComStatusCard onReconnect={() => setRamalType("api4com")} />
-        </SectionCard>
-
-        <SectionCard
-          icon={<IconKey size={18} />}
-          title="Configuração do ramal"
-          description="Escolha o tipo de conexão e informe as credenciais do seu ramal."
-        >
-          <div className="flex min-w-0 flex-col gap-4">
-            <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row">
-              <TypeSelectCard
-                active={ramalType === "api4com"}
-                onClick={() => setRamalType("api4com")}
-                icon={<IconCloud size={20} />}
-                title="Api4Com"
-                description="Conexão gerenciada, pronta para usar."
-              />
-              <TypeSelectCard
-                active={ramalType === "pbx"}
-                onClick={() => setRamalType("pbx")}
-                icon={<IconServer size={20} />}
-                title="PBX genérico (avançado)"
-                description="WebSocket SIP: Asterisk, FreePBX, etc."
-              />
-            </div>
-
-            <p className="rounded-[var(--radius-md)] bg-[var(--glass-bg-subtle)] px-3.5 py-2.5 text-pretty break-words text-[12.5px] text-[var(--text-muted)]">
-              {ramalType === "api4com"
-                ? "Conexão gerenciada Api4Com. Informe e-mail e senha — o CRM detecta o ramal vinculado e configura o webhook automaticamente."
-                : "Para qualquer PBX com WebSocket SIP (Asterisk, FreePBX, etc.). Informe manualmente wss://, ramal e senha SIP."}
-            </p>
-
-            {ramalType === "api4com" ? <Api4ComConnectForm /> : <ExtensionSettingsForm />}
-          </div>
-        </SectionCard>
-
-        <SectionCard
-          icon={<IconWebhook size={18} />}
-          title="Provedor / Webhook"
-          description="Configuração de webhook para o histórico de chamadas (nível organização). Para Api4Com, cole a URL gerada no painel de integrações (evento channel-hangup)."
-        >
-          <ProviderConfigForm />
-        </SectionCard>
-      </div>
+      <SoftphoneBody />
     </SettingsV2Shell>
+  );
+}
+
+function SoftphoneBody() {
+  const slots = useSettingsHeaderSlots();
+  const [ramalType, setRamalType] = useState<RamalType>("api4com");
+
+  // Pills de página (Api4Com / PBX) no slot de ações do PageHeader —
+  // controlam qual formulário de configuração é exibido.
+  const actionsNode = useMemo(
+    () => (
+      <PageSegmentedControl
+        items={[
+          {
+            value: "api4com",
+            label: (
+              <span className="inline-flex items-center gap-1.5">
+                <IconCloud size={14} /> Api4Com
+              </span>
+            ),
+          },
+          {
+            value: "pbx",
+            label: (
+              <span className="inline-flex items-center gap-1.5">
+                <IconServer size={14} /> PBX
+              </span>
+            ),
+          },
+        ]}
+        value={ramalType}
+        onChange={(v) => setRamalType(v as RamalType)}
+        size="compact"
+        aria-label="Tipo de ramal"
+      />
+    ),
+    [ramalType],
+  );
+
+  useEffect(() => {
+    if (!slots) return;
+    slots.setActions(actionsNode);
+    return () => slots.setActions(null);
+  }, [slots, actionsNode]);
+
+  return (
+    <div className="flex min-w-0 w-full max-w-full flex-col gap-3 sm:gap-4">
+      <SectionCard
+        icon={<IconPhoneCheck size={18} />}
+        title="Status da conexão"
+        description="Situação atual do seu ramal e do registro de chamadas."
+      >
+        <Api4ComStatusCard onReconnect={() => setRamalType("api4com")} />
+      </SectionCard>
+
+      <SectionCard
+        icon={<IconKey size={18} />}
+        title="Configuração do ramal"
+        description="Escolha o tipo de conexão (nas pills do topo) e informe as credenciais do seu ramal."
+      >
+        <div className="flex min-w-0 flex-col gap-4">
+          {/* Fallback do seletor quando fora do shell (sem slots de header). */}
+          {!slots ? (
+            <PageSegmentedControl
+              items={[
+                {
+                  value: "api4com",
+                  label: (
+                    <span className="inline-flex items-center gap-1.5">
+                      <IconCloud size={14} /> Api4Com
+                    </span>
+                  ),
+                },
+                {
+                  value: "pbx",
+                  label: (
+                    <span className="inline-flex items-center gap-1.5">
+                      <IconServer size={14} /> PBX
+                    </span>
+                  ),
+                },
+              ]}
+              value={ramalType}
+              onChange={(v) => setRamalType(v as RamalType)}
+              size="compact"
+              aria-label="Tipo de ramal"
+              className="self-start"
+            />
+          ) : null}
+
+          <p className="rounded-[var(--radius-md)] bg-[var(--glass-bg-subtle)] px-3.5 py-2.5 text-pretty break-words text-[12.5px] text-[var(--text-muted)]">
+            {ramalType === "api4com"
+              ? "Conexão gerenciada Api4Com. Informe e-mail e senha — o CRM detecta o ramal vinculado e configura o webhook automaticamente."
+              : "Para qualquer PBX com WebSocket SIP (Asterisk, FreePBX, etc.). Informe manualmente wss://, ramal e senha SIP."}
+          </p>
+
+          {ramalType === "api4com" ? <Api4ComConnectForm /> : <ExtensionSettingsForm />}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        icon={<IconWebhook size={18} />}
+        title="Provedor / Webhook"
+        description="Configuração de webhook para o histórico de chamadas (nível organização). Para Api4Com, cole a URL gerada no painel de integrações (evento channel-hangup)."
+      >
+        <ProviderConfigForm />
+      </SectionCard>
+    </div>
   );
 }

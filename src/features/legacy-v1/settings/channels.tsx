@@ -4,7 +4,7 @@ import { apiUrl } from "@/lib/api";
 
 import { useConfirm } from "@/hooks/use-confirm";
 import { IconPlus as Plus, IconRadio as Radio } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ChannelCard } from "@/components/channels/channel-card";
@@ -26,6 +26,12 @@ import {
 import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  SettingsListFilterBar,
+  type SettingsFilterGroup,
+} from "@/components/crm/settings-filter-bar";
+import { PageActionsMenu } from "@/components/crm/page-toolbar";
+import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
 
 async function fetchChannels(): Promise<ApiChannel[]> {
   const res = await fetch(apiUrl("/api/channels"));
@@ -64,9 +70,12 @@ export default function SettingsChannelsPage({
 } = {}) {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
+  const slots = useSettingsHeaderSlots();
   const [createOpenInternal, setCreateOpenInternal] = useState(false);
   const createOpen = createOpenProp ?? createOpenInternal;
   const setCreateOpen = onCreateOpenChange ?? setCreateOpenInternal;
+  const [search, setSearch] = useState(searchProp ?? "");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [qrChannel, setQrChannel] = useState<ApiChannel | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [qrInitial, setQrInitial] = useState<string | null>(null);
@@ -182,30 +191,92 @@ export default function SettingsChannelsPage({
     setQrOpen(true);
   }
 
-  const normalizedSearch = (searchProp ?? "").trim().toLowerCase();
-  const filteredChannels = normalizedSearch
-    ? channels.filter((c) =>
-        [c.name, c.phoneNumber, c.provider, c.type]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedSearch),
-      )
-    : channels;
+  const statusCounts = useMemo(() => {
+    const acc: Record<string, number> = {};
+    for (const c of channels) acc[c.status] = (acc[c.status] ?? 0) + 1;
+    return acc;
+  }, [channels]);
+
+  const filterGroups = useMemo<SettingsFilterGroup[]>(
+    () => [
+      {
+        key: "status",
+        label: "Filtrar por status",
+        value: statusFilter,
+        onChange: setStatusFilter,
+        options: [
+          { value: "all", label: "Todos", count: channels.length },
+          { value: "CONNECTED", label: "Conectado", count: statusCounts.CONNECTED },
+          { value: "DISCONNECTED", label: "Desconectado", count: statusCounts.DISCONNECTED },
+          { value: "CONNECTING", label: "Conectando", count: statusCounts.CONNECTING },
+          { value: "QR_READY", label: "Aguardando QR", count: statusCounts.QR_READY },
+          { value: "FAILED", label: "Falha", count: statusCounts.FAILED },
+        ],
+      },
+    ],
+    [statusFilter, statusCounts, channels.length],
+  );
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredChannels = channels.filter((c) => {
+    if (statusFilter !== "all" && c.status !== statusFilter) return false;
+    if (!normalizedSearch) return true;
+    return [c.name, c.phoneNumber, c.provider, c.type]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedSearch);
+  });
+
+  const searchNode = useMemo(
+    () => (
+      <SettingsListFilterBar
+        search={search}
+        onSearch={setSearch}
+        placeholder="Buscar canais por nome, telefone..."
+        ariaLabel="Buscar canais"
+        groups={filterGroups}
+        onClearAll={() => {
+          setSearch("");
+          setStatusFilter("all");
+        }}
+      />
+    ),
+    [search, filterGroups],
+  );
+
+  const actionsNode = useMemo(
+    () => (
+      <PageActionsMenu
+        items={[
+          {
+            icon: <Plus size={16} />,
+            label: "Novo canal",
+            onClick: () => setCreateOpen(true),
+            primary: true,
+          },
+        ]}
+      />
+    ),
+    [setCreateOpen],
+  );
+
+  useEffect(() => {
+    if (!slots) return;
+    slots.setCenter(searchNode);
+    slots.setActions(actionsNode);
+    return () => {
+      slots.setCenter(null);
+      slots.setActions(null);
+    };
+  }, [slots, searchNode, actionsNode]);
 
   return (
     <div className="min-w-0 w-full shrink-0 space-y-6">
-      {!hideToolbar ? (
-        <div className="flex justify-end">
-          <ButtonGlass
-            type="button"
-            variant="primary"
-            className="shrink-0"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus className="size-4" />
-            Novo Canal
-          </ButtonGlass>
+      {!slots && !hideToolbar ? (
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">{searchNode}</div>
+          {actionsNode}
         </div>
       ) : null}
 

@@ -2,30 +2,14 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  IconBriefcase,
-  IconBuildingStore,
-  IconCash,
-  IconLoader2,
-  IconPackage,
-  IconPencil,
-  IconPlus,
-  IconSchool,
-} from "@tabler/icons-react";
+import { IconPackage, IconPencil, IconPlus } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
-import { Chip } from "@/components/crm/chip";
-import { StatusPill } from "@/components/crm/status-pill";
+import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import {
-  PageSearchBar,
-  PageSegmentedControl,
-  PagePrimaryButton,
-  type PageSegmentItem,
-} from "@/components/crm/page-toolbar";
-import {
-  ListColumnLabel,
-  listTableHeadRowClass,
-} from "@/components/crm/sortable-header";
+  SettingsListFilterBar,
+  type SettingsFilterGroup,
+} from "@/components/crm/settings-filter-bar";
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
 import { apiUrl } from "@/lib/api";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -44,25 +28,9 @@ type ProductRow = {
   isActive: boolean;
 };
 
-const KIND_ICON: Record<ProductKind, React.ReactNode> = {
-  PHYSICAL: <IconBuildingStore size={12} />,
-  SERVICE: <IconCash size={12} />,
-  COURSE: <IconSchool size={12} />,
-  JOB_OPENING: <IconBriefcase size={12} />,
-};
-
-/** Pills de filtro por tipo — "Todos" + cada ProductKind. */
-const KIND_FILTER_ITEMS: readonly PageSegmentItem[] = [
-  { value: "", label: "Todos" },
-  ...(Object.keys(KIND_LABEL) as ProductKind[]).map((k) => ({
-    value: k,
-    label: KIND_LABEL[k],
-  })),
-];
-
-/** Colunas da tabela glass — minmax garante legibilidade ao rolar lateralmente. */
-const TABELA_COLS =
-  "grid-cols-[minmax(200px,1fr)_minmax(120px,120px)_minmax(120px,120px)_minmax(120px,120px)_minmax(100px,100px)_72px]";
+/** Card canônico: glass, hover elevado com borda de foco. */
+const CARD_CLASS =
+  "group relative flex min-w-0 items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]";
 
 async function fetchProducts(search: string): Promise<ProductRow[]> {
   const params = new URLSearchParams();
@@ -90,55 +58,101 @@ export function ProductsV2Page() {
     ? products.filter((p) => p.kind === kindFilter)
     : products;
 
-  const openCreate = () => {
+  const openCreate = React.useCallback(() => {
     setEditingId(null);
     setDialogOpen(true);
-  };
-  const openEdit = (id: string) => {
+  }, []);
+  const openEdit = React.useCallback((id: string) => {
     setEditingId(id);
     setDialogOpen(true);
-  };
+  }, []);
 
-  /* Injeta busca (center) + filtros/ação (actions) no PageHeader do
-     SettingsV2Shell — padrão canônico /contacts. */
+  /* Contagem por tipo — alimenta os badges do popover de filtros. */
+  const kindCounts = React.useMemo(() => {
+    const acc: Record<string, number> = {};
+    for (const p of products) acc[p.kind] = (acc[p.kind] ?? 0) + 1;
+    return acc;
+  }, [products]);
+
+  const filterGroups = React.useMemo<SettingsFilterGroup[]>(
+    () => [
+      {
+        key: "kind",
+        label: "Filtrar por tipo",
+        value: kindFilter,
+        onChange: (v) => setKindFilter(v as ProductKind | ""),
+        options: [
+          { value: "", label: "Todos" },
+          ...(Object.keys(KIND_LABEL) as ProductKind[]).map((k) => ({
+            value: k,
+            label: KIND_LABEL[k],
+            count: kindCounts[k] ?? 0,
+          })),
+        ],
+      },
+    ],
+    [kindFilter, kindCounts],
+  );
+
+  const searchNode = React.useMemo(
+    () => (
+      <SettingsListFilterBar
+        search={search}
+        onSearch={setSearch}
+        placeholder="Buscar por nome ou SKU…"
+        ariaLabel="Buscar produtos"
+        groups={filterGroups}
+        onClearAll={() => {
+          setSearch("");
+          setKindFilter("");
+        }}
+        popoverTitle="Filtros"
+      />
+    ),
+    [search, filterGroups],
+  );
+
+  const actionsNode = React.useMemo(
+    () => (
+      <PageActionsMenu
+        items={[
+          {
+            icon: <IconPlus size={16} />,
+            label: "Novo produto",
+            onClick: openCreate,
+            primary: true,
+          },
+        ]}
+      />
+    ),
+    [openCreate],
+  );
+
+  /* Injeta busca (center) + ações (actions) no PageHeader do
+     SettingsV2Shell — padrão canônico. */
   React.useEffect(() => {
     if (!slots) return;
-    slots.setCenter(
-      <PageSearchBar
-        variant="compact"
-        value={search}
-        onChange={setSearch}
-        placeholder="Buscar por nome ou SKU…"
-      />,
-    );
-    slots.setActions(
-      <div className="flex items-center gap-2">
-        <PageSegmentedControl
-          items={KIND_FILTER_ITEMS}
-          value={kindFilter}
-          onChange={(v) => setKindFilter(v as ProductKind | "")}
-          size="compact"
-          aria-label="Filtrar por tipo de produto"
-        />
-        <PagePrimaryButton onClick={openCreate}>
-          <IconPlus size={15} /> Novo produto
-        </PagePrimaryButton>
-      </div>,
-    );
+    slots.setCenter(searchNode);
+    slots.setActions(actionsNode);
     return () => {
       slots.setCenter(null);
       slots.setActions(null);
     };
-  }, [slots, search, kindFilter]);
+  }, [slots, searchNode, actionsNode]);
 
   return (
     <div className="w-full min-w-0">
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <IconLoader2 size={24} className="animate-spin text-[var(--text-muted)]" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[68px] animate-pulse rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
+            />
+          ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16">
           <IconPackage size={40} className="text-[var(--text-muted)] opacity-40" />
           <p className="text-sm text-[var(--text-muted)]">Nenhum produto encontrado.</p>
           <ButtonGlass variant="glass" size="sm" onClick={openCreate}>
@@ -146,74 +160,40 @@ export function ProductsV2Page() {
           </ButtonGlass>
         </div>
       ) : (
-        /* Outer card: ocupa largura disponível sem vazar da viewport */
-        <div className="w-full min-w-0 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          {/* Scroll horizontal touch-friendly: ativa quando viewport < min-w interno */}
-          <div className="scrollbar-thin overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-            {/* Conteúdo interno com largura mínima — header + linhas rolam juntos */}
-            <div className="flex min-w-[900px] flex-col">
-              <div className={listTableHeadRowClass(`grid ${TABELA_COLS} gap-3 px-3 py-2`)}>
-                <ListColumnLabel>Nome</ListColumnLabel>
-                <ListColumnLabel>Tipo</ListColumnLabel>
-                <ListColumnLabel>SKU</ListColumnLabel>
-                <ListColumnLabel align="right">Preço base</ListColumnLabel>
-                <ListColumnLabel className="text-center">Status</ListColumnLabel>
-                <ListColumnLabel align="right">Ações</ListColumnLabel>
-              </div>
-
-              <div className="flex flex-col">
-                {filtered.map((p) => (
-                  <div
-                    key={p.id}
-                    className={cn(
-                      "grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-0 hover:bg-[var(--glass-bg-overlay)]",
-                      TABELA_COLS,
-                      !p.isActive && "opacity-55",
-                    )}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((p) => {
+            const infos = [
+              formatCurrency(Number(p.price)),
+              KIND_LABEL[p.kind],
+              p.sku || null,
+              !p.isActive ? "Inativo" : null,
+            ].filter(Boolean);
+            return (
+              <div
+                key={p.id}
+                className={cn(CARD_CLASS, !p.isActive && "opacity-55")}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">
+                    {p.name}
+                  </p>
+                  <p className="mt-0.5 truncate text-[12px] text-[var(--text-muted)]">
+                    {infos.join(" · ")}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(p.id)}
+                    aria-label={`Editar ${p.name}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
-                        {p.name}
-                      </p>
-                      {p.description && (
-                        <p className="mt-0.5 truncate text-[12px] text-[var(--text-muted)]">
-                          {p.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <Chip variant="ghost">
-                        {KIND_ICON[p.kind]} {KIND_LABEL[p.kind]}
-                      </Chip>
-                    </div>
-                    <div className="truncate font-mono text-[12px] text-[var(--text-muted)]">
-                      {p.sku || "—"}
-                    </div>
-                    <div className="text-right font-display text-[13px] font-bold tabular-nums text-[var(--text-primary)]">
-                      {formatCurrency(Number(p.price))}
-                    </div>
-                    <div className="flex justify-center">
-                      {p.isActive ? (
-                        <StatusPill variant="success">Ativo</StatusPill>
-                      ) : (
-                        <Chip variant="ghost">Inativo</Chip>
-                      )}
-                    </div>
-                    <div className="flex justify-end">
-                      <ButtonGlass
-                        variant="icon"
-                        size="icon"
-                        onClick={() => openEdit(p.id)}
-                        aria-label={`Editar ${p.name}`}
-                      >
-                        <IconPencil size={14} />
-                      </ButtonGlass>
-                    </div>
-                  </div>
-                ))}
+                    <IconPencil size={15} />
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
 

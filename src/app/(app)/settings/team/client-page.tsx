@@ -32,14 +32,11 @@ import { SwitchGlass } from "@/components/crm/switch-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
+import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import {
-  listTableHeadRowClass,
-  ListColumnLabel,
-} from "@/components/crm/sortable-header";
-import {
-  PagePrimaryButton,
-  PageSearchBar,
-} from "@/components/crm/page-toolbar";
+  SettingsListFilterBar,
+  type SettingsFilterGroup,
+} from "@/components/crm/settings-filter-bar";
 import { cn } from "@/lib/utils";
 import {
   CRM_ACTION_KEYS,
@@ -51,7 +48,11 @@ import {
 import { useRoles } from "@/features/permissions/hooks";
 import { useIsDesktop } from "@/hooks/use-media-query";
 
-import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
+import {
+  SETTINGS_HUB_BACK,
+  SettingsV2Shell,
+  useSettingsHeaderSlots,
+} from "../_v2-shell";
 import { TelephonyToggle } from "@/features/telephony/telephony-toggle";
 
 type UserRole = "ADMIN" | "MANAGER" | "MEMBER";
@@ -135,6 +136,18 @@ async function fetchUsers(): Promise<UserRow[]> {
 }
 
 export default function TeamV2ClientPage() {
+  return (
+    <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
+      title="Equipe"
+      description="Usuários, convites e permissões CRM"
+    >
+      <TeamContent />
+    </SettingsV2Shell>
+  );
+}
+
+function TeamContent() {
   const qc = useQueryClient();
   const { data: session, status } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
@@ -159,6 +172,7 @@ export default function TeamV2ClientPage() {
   );
 
   const [search, setSearch] = React.useState("");
+  const [roleFilter, setRoleFilter] = React.useState("all");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(DEFAULT_PER_PAGE);
@@ -194,21 +208,28 @@ export default function TeamV2ClientPage() {
 
   // ─── Derivados: busca client-side ──────────────────────────────────────
   const term = search.trim().toLowerCase();
-  const filtered = React.useMemo(() => {
-    if (!term) return users;
-    return users.filter(
-      (u) =>
-        u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term),
-    );
-  }, [users, term]);
+  const filtered = React.useMemo(
+    () =>
+      users.filter((u) => {
+        if (roleFilter !== "all" && u.role !== roleFilter) return false;
+        if (
+          term &&
+          !u.name.toLowerCase().includes(term) &&
+          !u.email.toLowerCase().includes(term)
+        )
+          return false;
+        return true;
+      }),
+    [users, term, roleFilter],
+  );
 
   React.useEffect(() => {
     setSelected(new Set());
-  }, [term]);
+  }, [term, roleFilter]);
 
   React.useEffect(() => {
     setPage(1);
-  }, [term, perPage]);
+  }, [term, roleFilter, perPage]);
 
   const total = filtered.length;
   const lastPage = Math.max(1, Math.ceil(total / perPage));
@@ -430,28 +451,82 @@ export default function TeamV2ClientPage() {
     }
   }
 
+  const headerSlots = useSettingsHeaderSlots();
+
+  const roleFilterGroup = React.useMemo<SettingsFilterGroup>(
+    () => ({
+      key: "role",
+      label: "Filtrar por função",
+      value: roleFilter,
+      onChange: setRoleFilter,
+      options: [
+        { value: "all", label: "Todos", count: users.length },
+        {
+          value: "ADMIN",
+          label: "Admin",
+          count: users.filter((u) => u.role === "ADMIN").length,
+        },
+        {
+          value: "MANAGER",
+          label: "Gerente",
+          count: users.filter((u) => u.role === "MANAGER").length,
+        },
+        {
+          value: "MEMBER",
+          label: "Atendente",
+          count: users.filter((u) => u.role === "MEMBER").length,
+        },
+      ],
+    }),
+    [roleFilter, users],
+  );
+
+  const searchNode = React.useMemo(
+    () => (
+      <SettingsListFilterBar
+        search={search}
+        onSearch={setSearch}
+        placeholder="Buscar por nome, e-mail..."
+        ariaLabel="Buscar usuários"
+        groups={[roleFilterGroup]}
+        onClearAll={() => {
+          setSearch("");
+          setRoleFilter("all");
+        }}
+        popoverTitle="Filtros de equipe"
+      />
+    ),
+    [search, roleFilterGroup],
+  );
+
+  const actionsNode = React.useMemo(
+    () => (
+      <PageActionsMenu
+        items={[
+          {
+            icon: <IconPlus size={14} stroke={2.6} />,
+            label: "Novo usuário",
+            onClick: () => setInviteOpen(true),
+            primary: true,
+          },
+        ]}
+      />
+    ),
+    [],
+  );
+
+  React.useEffect(() => {
+    if (!headerSlots) return;
+    headerSlots.setCenter(searchNode);
+    headerSlots.setActions(actionsNode);
+    return () => {
+      headerSlots.setCenter(null);
+      headerSlots.setActions(null);
+    };
+  }, [headerSlots, searchNode, actionsNode]);
+
   return (
-    <SettingsV2Shell
-      back={SETTINGS_HUB_BACK}
-      title="Equipe"
-      description="Usuários, convites e permissões CRM"
-      center={
-        <PageSearchBar
-          variant="compact"
-          value={search}
-          onChange={setSearch}
-          placeholder="Buscar por nome, e-mail..."
-          aria-label="Buscar usuários"
-        />
-      }
-      actions={
-        <PagePrimaryButton type="button" onClick={() => setInviteOpen(true)}>
-          <IconPlus size={16} />
-          <span className="sm:hidden">Novo</span>
-          <span className="hidden sm:inline">Novo usuário</span>
-        </PagePrimaryButton>
-      }
-    >
+    <>
       {/* STATS — shrink-0: toolbar-hscroll/overflow em flex-col colapsava a altura
           (~só o topo dos ícones visível). Mobile: 3 mini-cards; desktop: StatCards. */}
       <div className="grid shrink-0 grid-cols-3 gap-2 sm:hidden">
@@ -528,51 +603,43 @@ export default function TeamV2ClientPage() {
         </p>
       ) : null}
 
-      {/* LIST — mesma estrutura glass-grid de /contacts */}
+      {/* LISTA — cards em grid responsivo (padrão canônico) */}
       {isLoading && users.length === 0 ? (
-        <GlassCard variant="panel" className="h-[400px] animate-pulse">{null}</GlassCard>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[132px] animate-pulse rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)]"
+            />
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <GlassCard variant="panel" className="px-6 py-12 text-center font-body text-[13px] text-[var(--text-muted)]">
-          {term
-            ? `Nenhum usuário encontrado para "${search.trim()}".`
+          {term || roleFilter !== "all"
+            ? "Nenhum usuário encontrado para os filtros atuais."
             : "Nenhum usuário cadastrado ainda."}
         </GlassCard>
       ) : (
-        <GlassCard variant="panel" className="min-w-0 shrink-0 overflow-x-hidden p-3 sm:p-4">
-          <p className="mb-2.5 px-1 font-body text-[12px] text-[var(--text-muted)]">
-            {filtered.length.toLocaleString("pt-BR")}{" "}
-            {filtered.length === 1 ? "usuário" : "usuários"}
-          </p>
-
-          <div className="mb-2.5 hidden sm:block">
-            <div className={listTableHeadRowClass("grid-cols-[42px_2.6fr_1.1fr_1.3fr]")}>
-              <span>
-                <CheckboxGlass
-                  checked={allChecked}
-                  indeterminate={!allChecked && someChecked}
-                  onChange={toggleAll}
-                  aria-label="Selecionar todos"
-                />
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="flex items-center justify-between gap-2 px-1">
+            <p className="font-body text-[12px] text-[var(--text-muted)]">
+              {filtered.length.toLocaleString("pt-BR")}{" "}
+              {filtered.length === 1 ? "usuário" : "usuários"}
+            </p>
+            <label className="flex cursor-pointer items-center gap-2">
+              <CheckboxGlass
+                checked={allChecked}
+                indeterminate={!allChecked && someChecked}
+                onChange={toggleAll}
+                aria-label="Selecionar todos"
+              />
+              <span className="font-body text-[12px] text-[var(--text-muted)]">
+                Selecionar todos
               </span>
-              <ListColumnLabel>Usuário</ListColumnLabel>
-              <ListColumnLabel>Função</ListColumnLabel>
-              <ListColumnLabel align="right">Ações</ListColumnLabel>
-            </div>
+            </label>
           </div>
 
-          <div className="mb-2 flex items-center gap-2 sm:hidden">
-            <CheckboxGlass
-              checked={allChecked}
-              indeterminate={!allChecked && someChecked}
-              onChange={toggleAll}
-              aria-label="Selecionar todos"
-            />
-            <span className="font-body text-[12px] text-[var(--text-muted)]">
-              Selecionar todos
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-2.5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {visibleUsers.map((u) => {
               const isSelected = selected.has(u.id);
               const fnRole = userFunctionRole(u, adminRole?.id);
@@ -589,15 +656,14 @@ export default function TeamV2ClientPage() {
                 <div
                   key={u.id}
                   className={cn(
-                    "flex flex-col gap-3 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)]",
-                    "sm:grid sm:grid-cols-[42px_2.6fr_1.1fr_1.3fr] sm:items-center sm:gap-3.5 sm:px-3.5 sm:py-3",
+                    "group relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-[var(--radius-lg)] border bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]",
                     isSelected
-                      ? "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
-                      : "border-[var(--glass-border-subtle)]",
+                      ? "border-[var(--brand-primary)]/40 shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
+                      : "border-[var(--glass-border)]",
                   )}
                 >
-                  <div className="flex items-start gap-3 sm:contents">
-                    <span>
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="shrink-0 pt-0.5">
                       <CheckboxGlass
                         checked={isSelected}
                         onChange={() => toggleOne(u.id)}
@@ -605,79 +671,87 @@ export default function TeamV2ClientPage() {
                       />
                     </span>
 
-                    <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
-                      <span
-                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
-                        style={{ background: avatarColor(u.id) }}
-                      >
-                        {initials(u.name)}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="break-words font-display text-[13px] font-bold text-[var(--text-primary)]">
-                            {u.name}
-                          </span>
-                          <span
-                            className={cn(
-                              "inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-display text-[10px] font-bold",
-                              roleBadgeClass(isAdminRole),
-                            )}
-                          >
-                            <IconShield size={11} className="opacity-85" />
-                            {fnLabel}
-                          </span>
-                        </div>
-                        <div className="mt-0.5 flex items-start gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
-                          <IconMail size={13} className="mt-0.5 flex-shrink-0" />
-                          <span className="break-all">{u.email}</span>
-                        </div>
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
+                      style={{ background: avatarColor(u.id) }}
+                    >
+                      {initials(u.name)}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+                          {u.name}
+                        </span>
+                        <span
+                          className={cn(
+                            "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-display text-[10px] font-bold",
+                            roleBadgeClass(isAdminRole),
+                          )}
+                        >
+                          <IconShield size={11} className="opacity-85" />
+                          {fnLabel}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
+                        <IconMail size={13} className="shrink-0" />
+                        <span className="truncate">{u.email}</span>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="min-w-0">
-                    <DropdownGlass
-                      options={rowOptions}
-                      value={fnRole && fnRole.id !== "__admin__" ? fnRole.id : undefined}
-                      placeholder="Definir função"
-                      onValueChange={(next) => {
-                        if (fnRole && next === fnRole.id) return;
-                        setPrimaryRole.mutate({ id: u.id, roleId: next });
-                      }}
-                      disabled={setPrimaryRole.isPending || !isAdmin}
-                      matchTriggerWidth={false}
-                      triggerClassName="h-9 w-full min-w-0 sm:w-auto sm:min-w-[160px]"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    {isAdmin ? (
-                      <>
-                        <TelephonyToggle userId={u.id} />
+                    {isAdmin && (
+                      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                         <button
                           type="button"
                           onClick={() => openPasswordDialog(u)}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-display text-[12px] font-bold text-[var(--brand-primary-dark,#3d52e8)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)]"
+                          aria-label={`Trocar senha de ${u.name}`}
+                          title="Trocar senha"
+                          className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary-dark,#3d52e8)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)]"
                         >
-                          <IconKey size={13} /> Senha
+                          <IconKey size={14} />
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(u)}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-danger,#e11d48)] px-3 py-2 font-display text-[12px] font-bold text-white transition-all hover:-translate-y-px"
+                          aria-label={`Excluir ${u.name}`}
+                          title="Excluir usuário"
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-danger,#e11d48)] text-white transition-all hover:-translate-y-px"
                         >
-                          <IconTrash size={13} /> Excluir
+                          <IconTrash size={14} />
                         </button>
-                      </>
-                    ) : (
-                      <span className="font-body text-[12px] text-[var(--text-muted)]">—</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 border-t border-[var(--glass-border-subtle)] pt-2.5">
+                    <div className="min-w-0 flex-1">
+                      <DropdownGlass
+                        options={rowOptions}
+                        value={fnRole && fnRole.id !== "__admin__" ? fnRole.id : undefined}
+                        placeholder="Definir função"
+                        onValueChange={(next) => {
+                          if (fnRole && next === fnRole.id) return;
+                          setPrimaryRole.mutate({ id: u.id, roleId: next });
+                        }}
+                        disabled={setPrimaryRole.isPending || !isAdmin}
+                        matchTriggerWidth={false}
+                        triggerClassName="h-9 w-full min-w-0"
+                      />
+                    </div>
+                    {isAdmin && (
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <span className="font-body text-[11px] font-semibold text-[var(--text-muted)]">
+                          Telefonia
+                        </span>
+                        <TelephonyToggle userId={u.id} />
+                      </div>
                     )}
                   </div>
                 </div>
               );
             })}
           </div>
-        </GlassCard>
+        </div>
       )}
 
       {isDesktop && filtered.length > 0 ? (
@@ -1021,7 +1095,7 @@ export default function TeamV2ClientPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </SettingsV2Shell>
+    </>
   );
 }
 

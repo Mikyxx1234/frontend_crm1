@@ -15,7 +15,6 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +25,8 @@ import {
 import { FormSheet } from "@/components/ui/form-sheet";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
+import { PageActionsMenu } from "@/components/crm/page-toolbar";
 
 import { ProductDialog } from "@/features/products-v2/product-dialog";
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
@@ -281,27 +282,46 @@ export function CatalogsManager() {
     );
   }, [catalogs, query]);
 
-  /* Injeta apenas a ação no PageHeader do SettingsV2Shell — compacta pra
-     não competir com o título no mobile. A busca fica no corpo da página
-     (ver abaixo), então o effect não depende de `query`. */
+  /* Busca canônica (slot center) + CTA no hamburger (slot actions) do
+     PageHeader do SettingsV2Shell. Sem grupos de filtro — só busca. */
+  const searchNode = React.useMemo(
+    () => (
+      <SettingsListFilterBar
+        search={query}
+        onSearch={setQuery}
+        placeholder="Buscar catálogo..."
+        ariaLabel="Buscar catálogo"
+        onClearAll={() => setQuery("")}
+      />
+    ),
+    [query],
+  );
+
+  const actionsNode = React.useMemo(
+    () => (
+      <PageActionsMenu
+        items={[
+          {
+            icon: <IconPlus size={16} />,
+            label: "Novo catálogo",
+            onClick: () => setWizardOpen(true),
+            primary: true,
+          },
+        ]}
+      />
+    ),
+    [],
+  );
+
   React.useEffect(() => {
     if (!slots) return;
-    slots.setActions(
-      <ButtonGlass
-        variant="primary"
-        size="sm"
-        onClick={() => setWizardOpen(true)}
-        className="shrink-0 gap-1.5 whitespace-nowrap"
-      >
-        <IconPlus size={16} />
-        <span className="sm:hidden">Novo</span>
-        <span className="hidden sm:inline">Novo catálogo</span>
-      </ButtonGlass>,
-    );
+    slots.setCenter(searchNode);
+    slots.setActions(actionsNode);
     return () => {
+      slots.setCenter(null);
       slots.setActions(null);
     };
-  }, [slots]);
+  }, [slots, searchNode, actionsNode]);
 
   return (
     <div className="flex min-w-0 w-full flex-col gap-3.5">
@@ -333,31 +353,15 @@ export function CatalogsManager() {
         />
       </div>
 
-      {/* BUSCA — no corpo (não no PageHeader) pra não disputar espaço com o
-          título/botão no mobile. Fallback com botão "Novo" quando não há
-          slots de header (ex.: rota standalone). */}
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        <label className="flex h-10 w-full min-w-0 items-center gap-2.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 text-[var(--text-muted)] transition-shadow focus-within:border-[var(--input-border-focus)] focus-within:shadow-[0_0_0_3px_var(--input-ring-focus)] sm:h-[42px] sm:max-w-[440px] sm:px-4">
-          <IconSearch size={16} className="shrink-0" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar catálogo..."
-            aria-label="Buscar catálogo"
-            className="min-w-0 flex-1 border-none bg-transparent text-[14px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
-          />
-        </label>
-        {!slots && (
-          <ButtonGlass
-            variant="primary"
-            onClick={() => setWizardOpen(true)}
-            className="w-full shrink-0 sm:w-auto"
-          >
-            <IconPlus size={16} /> Novo catálogo
-          </ButtonGlass>
-        )}
-      </div>
+      {/* Fallback quando não há slots de header (ex.: rota standalone):
+          renderiza a busca + CTA no corpo. Com slots, ambos vão para o
+          PageHeader (ver effect acima). */}
+      {!slots && (
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1 sm:max-w-[440px]">{searchNode}</div>
+          {actionsNode}
+        </div>
+      )}
 
       {/* PAINEL — lista de catálogos */}
       <section

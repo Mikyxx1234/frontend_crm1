@@ -4,7 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconAdjustmentsHorizontal as Sliders, IconCheck as Check, IconCircleCheck as CheckCircle2, IconChevronRight as ChevronRight, IconClock as Clock, IconDownload as Download, IconFileText as FileText, IconInfoCircle as Info, IconTemplate as LayoutTemplate, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconPlus as Plus, IconRotateClockwise as RotateCw, IconSearch as Search, IconTrash as Trash2, IconHierarchy as Workflow } from "@tabler/icons-react";
+import { IconCircleCheck as CheckCircle2, IconChevronRight as ChevronRight, IconClock as Clock, IconDownload as Download, IconFileText as FileText, IconInfoCircle as Info, IconTemplate as LayoutTemplate, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconPlus as Plus, IconSearch as Search, IconTrash as Trash2, IconHierarchy as Workflow } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
@@ -20,7 +20,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
-import { PageActionsMenu } from "@/components/crm/page-toolbar";
+import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-toolbar";
+import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import InternalTemplatesPage from "../templates";
 import WhatsAppTemplatesPage from "../whatsapp-templates";
 import {
@@ -29,8 +30,6 @@ import {
   HubStat,
   HubStatGrid,
   HubSubHeader,
-  HubTabBar,
-  type HubTabDef,
 } from "./hub-ui";
 
 type InternalRow = {
@@ -254,16 +253,27 @@ export default function MessageModelsHubPage() {
   const flowDraft = flows.filter((f) => f.status !== "PUBLISHED").length;
   const flowWithMeta = flows.filter((f) => f.metaFlowId?.trim()).length;
 
-  const tabDefs = React.useMemo<HubTabDef[]>(() => {
-    const defs: HubTabDef[] = [
-      { value: "overview", label: "Visão geral", count: totalCount || undefined },
+  const tabItems = React.useMemo(() => {
+    const withCount = (label: string, count?: number): React.ReactNode =>
+      typeof count === "number" ? (
+        <span className="inline-flex items-center gap-1.5">
+          {label}
+          <span className="min-w-[16px] rounded-full bg-[color-mix(in_srgb,var(--text-muted)_16%,transparent)] px-1 text-center text-[10px] font-bold leading-none">
+            {count}
+          </span>
+        </span>
+      ) : (
+        label
+      );
+    const items: { value: string; label: React.ReactNode }[] = [
+      { value: "overview", label: withCount("Visão geral", totalCount || undefined) },
     ];
-    if (canViewTemplates) defs.push({ value: "internal", label: "Internos", count: internalCount });
+    if (canViewTemplates) items.push({ value: "internal", label: withCount("Internos", internalCount) });
     if (canSubmitMeta) {
-      defs.push({ value: "whatsapp", label: "WhatsApp (Meta)", count: metaLoaded ? metaCount : undefined });
-      defs.push({ value: "flows", label: "Flows", count: flowCount });
+      items.push({ value: "whatsapp", label: withCount("WhatsApp (Meta)", metaLoaded ? metaCount : undefined) });
+      items.push({ value: "flows", label: withCount("Flows", flowCount) });
     }
-    return defs;
+    return items;
   }, [canViewTemplates, canSubmitMeta, totalCount, internalCount, metaLoaded, metaCount, flowCount]);
 
   const overviewRows = React.useMemo(() => {
@@ -350,13 +360,15 @@ export default function MessageModelsHubPage() {
 
   const tabBarNode = React.useMemo(
     () => (
-      <HubTabBar
-        tabs={tabDefs}
-        active={safeTab}
+      <PageSegmentedControl
+        size="compact"
+        aria-label="Abas de modelos de mensagem"
+        items={tabItems}
+        value={safeTab}
         onChange={(value) => setTab(value, { new: null, create: null })}
       />
     ),
-    [tabDefs, safeTab, setTab],
+    [tabItems, safeTab, setTab],
   );
 
   // Busca na posição padrão (centro do PageHeader) com filtros segmentados
@@ -364,44 +376,56 @@ export default function MessageModelsHubPage() {
   const searchNode = React.useMemo(() => {
     if (safeTab === "overview") {
       return (
-        <ModelsSearchFilterBar
+        <SettingsListFilterBar
           search={ovQuery}
           onSearch={setOvQuery}
           placeholder="Buscar por nome, conteúdo ou variável..."
-          title="Filtrar por canal"
-          options={[
-            { value: "all", label: "Todos os canais", count: totalCount },
-            { value: "interno", label: "Interno", count: internalCount, dot: "var(--text-muted)" },
-            { value: "waba", label: "WhatsApp", count: metaCount, dot: "var(--color-success)" },
-            { value: "flow", label: "Flow", count: flowCount, dot: "var(--color-info)" },
-          ]}
-          value={ovFilter}
-          onChange={(v) => setOvFilter(v as typeof ovFilter)}
+          popoverTitle="Filtrar por canal"
           onClearAll={() => {
             setOvQuery("");
             setOvFilter("all");
           }}
+          groups={[
+            {
+              key: "canal",
+              label: "Filtrar por canal",
+              value: ovFilter,
+              onChange: (v) => setOvFilter(v as typeof ovFilter),
+              options: [
+                { value: "all", label: "Todos os canais", count: totalCount },
+                { value: "interno", label: "Interno", count: internalCount },
+                { value: "waba", label: "WhatsApp", count: metaCount },
+                { value: "flow", label: "Flow", count: flowCount },
+              ],
+            },
+          ]}
         />
       );
     }
     if (safeTab === "flows" && canSubmitMeta) {
       return (
-        <ModelsSearchFilterBar
+        <SettingsListFilterBar
           search={flowQuery}
           onSearch={setFlowQuery}
           placeholder="Buscar flow por nome ou Meta flow id..."
-          title="Filtrar por estado"
-          options={[
-            { value: "all", label: "Todos", count: flowCount },
-            { value: "PUBLISHED", label: "Publicados", count: flowPublished },
-            { value: "DRAFT", label: "Rascunhos", count: flowDraft },
-          ]}
-          value={flowFilter}
-          onChange={(v) => setFlowFilter(v as typeof flowFilter)}
+          popoverTitle="Filtrar por estado"
           onClearAll={() => {
             setFlowQuery("");
             setFlowFilter("all");
           }}
+          groups={[
+            {
+              key: "estado",
+              label: "Filtrar por estado",
+              value: flowFilter,
+              onChange: (v) => setFlowFilter(v as typeof flowFilter),
+              options: [
+                { value: "all", label: "Todos", count: flowCount },
+                { value: "PUBLISHED", label: "Publicados", count: flowPublished },
+                { value: "DRAFT", label: "Rascunhos", count: flowDraft },
+              ],
+            },
+          ]}
         />
       );
     }
@@ -492,83 +516,86 @@ export default function MessageModelsHubPage() {
             <HubStat tone="warn" icon={<Clock className="size-5" />} value={metaPending} label="Aguardando revisão Meta" />
           </HubStatGrid>
 
-          <HubPanel>
-            {loadingInt || loadingMeta || loadingFlows ? (
-              <div className="space-y-2 p-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : overviewRows.length === 0 ? (
+          {loadingInt || loadingMeta || loadingFlows ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Skeleton className="h-[92px] w-full rounded-[var(--radius-lg)]" />
+              <Skeleton className="h-[92px] w-full rounded-[var(--radius-lg)]" />
+              <Skeleton className="h-[92px] w-full rounded-[var(--radius-lg)]" />
+            </div>
+          ) : overviewRows.length === 0 ? (
+            <HubPanel>
               <div className="flex flex-col items-center gap-2.5 px-5 py-14 text-center">
                 <Search className="size-9 text-[var(--glass-border)]" />
                 <p className="text-[13px] text-[var(--text-muted)]">Nenhum modelo encontrado.</p>
               </div>
-            ) : (
-              <div className="space-y-4 p-3 sm:p-4">
-                {OVERVIEW_GROUPS.map((g) => {
-                  const rows = overviewRows.filter((r) => r.type === g.type);
-                  if (!rows.length) return null;
-                  return (
-                    <div key={g.type} className="min-w-0">
-                      <div className="mb-2 flex items-center gap-2 px-1">
-                        <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-md)]", g.badge)}>
-                          {g.icon}
-                        </span>
-                        <span className="font-display text-[13px] font-bold text-[var(--text-secondary)]">
-                          {g.title}
-                        </span>
-                        <span className="rounded-full bg-[var(--glass-bg-strong)] px-1.5 text-[11px] font-bold text-[var(--text-secondary)]">
-                          {rows.length}
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {rows.map((r) => (
-                          <div
-                            key={r.key}
-                            className="group flex min-w-0 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] transition-all hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)] sm:px-4"
-                          >
-                            <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]", g.badge)}>
-                              {g.icon}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-[14px] font-bold text-[var(--text-primary)]">{r.name}</div>
-                              {r.preview ? (
-                                <div className="mt-0.5 truncate text-[12.5px] text-[var(--text-muted)]">{r.preview}</div>
-                              ) : null}
-                              {r.vars.length ? (
-                                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                                  {r.vars.map((v) => (
-                                    <span
-                                      key={v}
-                                      className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--text-secondary)]"
-                                    >
-                                      {v}
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : null}
-                            </div>
-                            <div className="hidden shrink-0 flex-col items-end gap-0.5 text-right sm:flex">
-                              <StatusPill kind={r.statusKind} label={r.statusLabel} />
-                              <span className="text-[11.5px] text-[var(--text-muted)]">{r.channel}</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={r.onOpen}
-                              className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
-                            >
-                              Abrir <ChevronRight className="size-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+            </HubPanel>
+          ) : (
+            <div className="space-y-4">
+              {OVERVIEW_GROUPS.map((g) => {
+                const rows = overviewRows.filter((r) => r.type === g.type);
+                if (!rows.length) return null;
+                return (
+                  <div key={g.type} className="min-w-0">
+                    <div className="mb-2.5 flex items-center gap-2 px-0.5">
+                      <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-md)]", g.badge)}>
+                        {g.icon}
+                      </span>
+                      <span className="font-display text-[13px] font-bold text-[var(--text-secondary)]">
+                        {g.title}
+                      </span>
+                      <span className="rounded-full bg-[var(--glass-bg-strong)] px-1.5 text-[11px] font-bold text-[var(--text-secondary)]">
+                        {rows.length}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </HubPanel>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {rows.map((r) => (
+                        <div
+                          key={r.key}
+                          role="button"
+                          tabIndex={0}
+                          onClick={r.onOpen}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              r.onOpen();
+                            }
+                          }}
+                          className="group relative flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]"
+                        >
+                          <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]", g.badge)}>
+                            {g.icon}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-[14px] font-bold text-[var(--text-primary)]">{r.name}</div>
+                            {r.preview ? (
+                              <div className="mt-0.5 truncate text-[12px] text-[var(--text-muted)]">{r.preview}</div>
+                            ) : null}
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <StatusPill kind={r.statusKind} label={r.statusLabel} />
+                              <span className="truncate text-[11px] text-[var(--text-muted)]">{r.channel}</span>
+                            </div>
+                            {r.vars.length ? (
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                {r.vars.map((v) => (
+                                  <span
+                                    key={v}
+                                    className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--text-secondary)]"
+                                  >
+                                    {v}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                          <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)] opacity-40 transition-all group-hover:translate-x-0.5 group-hover:text-[var(--brand-primary)] group-hover:opacity-100" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -615,94 +642,70 @@ export default function MessageModelsHubPage() {
             (ex.: estagiário) e configurar o mapeamento das respostas no lead.
           </HubCallout>
 
-          <HubPanel>
-            {loadingFlows ? (
-              <div className="space-y-2 p-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : flowRows.length === 0 ? (
+          {loadingFlows ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Skeleton className="h-[104px] w-full rounded-[var(--radius-lg)]" />
+              <Skeleton className="h-[104px] w-full rounded-[var(--radius-lg)]" />
+            </div>
+          ) : flowRows.length === 0 ? (
+            <HubPanel>
               <div className="flex flex-col items-center gap-2 px-5 py-14 text-center">
                 <Workflow className="size-9 text-[var(--glass-border)]" />
                 <h3 className="text-[15px] font-bold text-[var(--text-secondary)]">Nenhum flow encontrado</h3>
                 <p className="text-[13px] text-[var(--text-muted)]">Ajuste a busca ou importe um flow já publicado na Meta.</p>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[820px] border-collapse text-left">
-                  <thead>
-                    <tr className="[&>th]:px-4 [&>th]:py-3 [&>th]:text-[12px] [&>th]:font-semibold [&>th]:text-[var(--text-muted)] [&>th]:shadow-[0_1px_0_var(--glass-border-subtle)]">
-                      <th>Nome</th>
-                      <th className="w-[140px]">Estado</th>
-                      <th className="w-[200px]">Meta flow id</th>
-                      <th className="w-[180px]">Atualizado</th>
-                      <th className="w-[170px] text-right">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {flowRows.map((f) => (
-                      <tr
-                        key={f.id}
-                        className="border-b border-[var(--glass-border-subtle)] transition-colors last:border-0 hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]"
+            </HubPanel>
+          ) : (
+            <div className="space-y-2.5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {flowRows.map((f) => (
+                  <div
+                    key={f.id}
+                    className="group relative flex min-w-0 items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+                      <Workflow className="size-[18px]" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[14px] font-bold text-[var(--text-primary)]">{f.name}</div>
+                      <div className="mt-0.5 truncate text-[11.5px] text-[var(--text-muted)]">
+                        {f.metaFlowId ? `Meta flow id ${f.metaFlowId}` : "Criado no CRM"}
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <FlowStateBadge published={f.status === "PUBLISHED"} />
+                        <span className="text-[11px] text-[var(--text-muted)]">
+                          {new Date(f.updatedAt).toLocaleDateString("pt-BR")}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        aria-label="Excluir flow"
+                        onClick={() => deleteFlowMutation.mutate(f.id)}
+                        disabled={deleteFlowMutation.isPending}
+                        className="flex size-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger)]/40 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] disabled:opacity-50"
                       >
-                        <td className="px-4 py-3.5 align-middle">
-                          <div className="flex items-center gap-3">
-                            <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
-                              <Workflow className="size-[18px]" />
-                            </span>
-                            <div className="min-w-0">
-                              <div className="truncate font-bold text-[var(--text-primary)]">{f.name}</div>
-                              <div className="mt-0.5 text-[11.5px] text-[var(--text-muted)]">
-                                {f.metaFlowId ? "Importado da Meta" : "Criado no CRM"}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 align-middle">
-                          <FlowStateBadge published={f.status === "PUBLISHED"} />
-                        </td>
-                        <td className="px-4 py-3.5 align-middle">
-                          {f.metaFlowId ? (
-                            <span className="font-mono text-[12px] text-[var(--text-secondary)]">{f.metaFlowId}</span>
-                          ) : (
-                            <span className="text-[var(--text-muted)] opacity-60">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3.5 align-middle text-[12.5px] text-[var(--text-secondary)]">
-                          {new Date(f.updatedAt).toLocaleString("pt-BR")}
-                        </td>
-                        <td className="px-4 py-3.5 align-middle">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              aria-label="Excluir flow"
-                              onClick={() => deleteFlowMutation.mutate(f.id)}
-                              disabled={deleteFlowMutation.isPending}
-                              className="flex size-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger)]/40 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] disabled:opacity-50"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => router.push(`/settings/message-models/flows/${f.shortId ?? f.id}`)}
-                              className="rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-1.5 text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
-                            >
-                              Editar
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        <Trash2 className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/settings/message-models/flows/${f.shortId ?? f.id}`)}
+                        className="rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-1.5 text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
+                      >
+                        Editar
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[var(--glass-border-subtle)] px-[18px] py-3">
-              <span className="text-[12.5px] text-[var(--text-muted)]">
-                {flowRows.length} {flowRows.length === 1 ? "flow" : "flows"}
-              </span>
+              <div className="px-0.5">
+                <span className="text-[12.5px] text-[var(--text-muted)]">
+                  {flowRows.length} {flowRows.length === 1 ? "flow" : "flows"}
+                </span>
+              </div>
             </div>
-          </HubPanel>
+          )}
         </div>
       )}
 
@@ -884,142 +887,6 @@ function FlowStateBadge({ published }: { published: boolean }) {
       <span className={cn("size-1.5 rounded-full", published ? "bg-[var(--color-online)]" : "bg-[var(--text-muted)] opacity-60")} />
       {published ? "Publicado" : "Rascunho"}
     </span>
-  );
-}
-
-// ── Toolbar padrão (busca + popover de filtros segmentados) ────────────────
-
-type ModelsFilterOption = { value: string; label: string; count?: number; dot?: string };
-
-function ModelsCountBadge({ count }: { count: number }) {
-  if (count <= 0) return null;
-  return (
-    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[10px] font-bold leading-none text-white">
-      {count}
-    </span>
-  );
-}
-
-function ModelsSearchFilterBar({
-  search,
-  onSearch,
-  placeholder,
-  title,
-  options,
-  value,
-  onChange,
-  onClearAll,
-}: {
-  search: string;
-  onSearch: (v: string) => void;
-  placeholder: string;
-  title: string;
-  options: ModelsFilterOption[];
-  value: string;
-  onChange: (v: string) => void;
-  onClearAll: () => void;
-}) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [open, setOpen] = React.useState(false);
-  const activeCount = value !== "all" ? 1 : 0;
-
-  React.useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative w-full">
-      <Search
-        size={15}
-        className="absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]"
-      />
-      <input
-        type="search"
-        value={search}
-        onChange={(e) => onSearch(e.target.value)}
-        onFocus={() => setOpen(true)}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-11 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
-      />
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Filtros"
-        className={cn(
-          "absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors",
-          activeCount > 0 || open
-            ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-            : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
-        )}
-      >
-        <Sliders size={15} />
-      </button>
-
-      {open && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,380px)] flex-col overflow-visible rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
-          <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
-            <div className="flex items-center gap-2">
-              <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">{title}</span>
-              <ModelsCountBadge count={activeCount} />
-            </div>
-            <button
-              type="button"
-              onClick={onClearAll}
-              disabled={activeCount === 0 && !search}
-              className="flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)] disabled:opacity-40"
-            >
-              <RotateCw size={13} /> Limpar
-            </button>
-          </div>
-
-          <div className="max-h-[min(60vh,420px)] overflow-y-auto px-4 pb-4">
-            <div className="flex flex-wrap gap-1.5">
-              {options.map((opt) => {
-                const selected = value === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => onChange(opt.value)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
-                      selected
-                        ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
-                        : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
-                    )}
-                  >
-                    {selected ? (
-                      <Check size={12} stroke={2.4} />
-                    ) : opt.dot ? (
-                      <span className="size-2 rounded-full" style={{ background: opt.dot }} />
-                    ) : null}
-                    {opt.label}
-                    {typeof opt.count === "number" ? (
-                      <span
-                        className={cn(
-                          "min-w-[18px] rounded-full px-1.5 text-center text-[10px] font-bold",
-                          selected
-                            ? "bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]"
-                            : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-                        )}
-                      >
-                        {opt.count}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
 

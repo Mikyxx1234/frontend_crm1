@@ -24,10 +24,11 @@ import {
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { GlassCard } from "@/components/crm/glass-card";
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import {
-  PageSegmentedControl,
-  type PageSegmentItem,
-} from "@/components/crm/page-toolbar";
+  SettingsListFilterBar,
+  type SettingsFilterGroup,
+} from "@/components/crm/settings-filter-bar";
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -79,9 +80,11 @@ function TagsPage() {
   const queryClient = useQueryClient();
   const slots = useSettingsHeaderSlots();
   const [filter, setFilter] = React.useState<FilterTab>("todos");
+  const [search, setSearch] = React.useState("");
   const [newName, setNewName] = React.useState("");
   const [newColor, setNewColor] = React.useState(TAG_COLORS[0]);
   const [deleteTarget, setDeleteTarget] = React.useState<TagRow | null>(null);
+  const newNameRef = React.useRef<HTMLInputElement>(null);
 
   const { data: tags = [], isLoading } = useQuery({
     queryKey: ["tags-settings"],
@@ -161,70 +164,91 @@ function TagsPage() {
   const unusedCount = tags.filter((t) => t.dealCount === 0 && t.contactCount === 0).length;
 
   const filtered = React.useMemo(() => {
-    if (filter === "deals") return tags.filter((t) => t.dealCount > 0);
-    if (filter === "contatos") return tags.filter((t) => t.contactCount > 0);
-    if (filter === "sem-uso") return tags.filter((t) => t.dealCount === 0 && t.contactCount === 0);
-    return tags;
-  }, [tags, filter]);
+    let list = tags;
+    if (filter === "deals") list = list.filter((t) => t.dealCount > 0);
+    else if (filter === "contatos") list = list.filter((t) => t.contactCount > 0);
+    else if (filter === "sem-uso") list = list.filter((t) => t.dealCount === 0 && t.contactCount === 0);
+    const q = search.trim().toLowerCase();
+    if (q) list = list.filter((t) => t.name.toLowerCase().includes(q));
+    return list;
+  }, [tags, filter, search]);
 
-  const TABS: { id: FilterTab; label: string; count: number }[] = [
-    { id: "todos", label: "Todos", count: tags.length },
-    { id: "deals", label: "Deals", count: tags.filter((t) => t.dealCount > 0).length },
-    { id: "contatos", label: "Contatos", count: tags.filter((t) => t.contactCount > 0).length },
-    { id: "sem-uso", label: "Sem uso", count: unusedCount },
-  ];
+  const focusNewTag = React.useCallback(() => {
+    newNameRef.current?.focus();
+    newNameRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
 
-  const filterItems: readonly PageSegmentItem[] = TABS.map((tab) => ({
-    value: tab.id,
-    label: (
-      <span className="inline-flex items-center gap-1.5">
-        {tab.label}
-        <span
-          className={cn(
-            "min-w-[16px] rounded-full px-1 text-center text-[10px] font-bold",
-            filter === tab.id
-              ? "bg-[color-mix(in_srgb,var(--brand-primary)_16%,transparent)] text-[var(--brand-primary)]"
-              : tab.id === "sem-uso" && tab.count > 0
-                ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)]"
-                : "bg-[var(--glass-bg-strong)] text-[var(--text-secondary)]",
-          )}
-        >
-          {tab.count}
-        </span>
-      </span>
+  /* Busca (center) + filtro por uso em popover — padrão canônico. */
+  const filterGroups = React.useMemo<SettingsFilterGroup[]>(
+    () => [
+      {
+        key: "uso",
+        label: "Filtrar por uso",
+        value: filter,
+        onChange: (v) => setFilter(v as FilterTab),
+        options: [
+          { value: "todos", label: "Todos", count: tags.length },
+          { value: "deals", label: "Deals", count: tags.filter((t) => t.dealCount > 0).length },
+          { value: "contatos", label: "Contatos", count: tags.filter((t) => t.contactCount > 0).length },
+          { value: "sem-uso", label: "Sem uso", count: unusedCount },
+        ],
+      },
+    ],
+    [filter, tags, unusedCount],
+  );
+
+  const searchNode = React.useMemo(
+    () => (
+      <SettingsListFilterBar
+        search={search}
+        onSearch={setSearch}
+        placeholder="Buscar tag…"
+        ariaLabel="Buscar tags por nome"
+        icon={<IconTag size={15} />}
+        groups={filterGroups}
+        popoverTitle="Filtrar tags"
+        onClearAll={() => {
+          setSearch("");
+          setFilter("todos");
+        }}
+      />
     ),
-  }));
+    [search, filterGroups],
+  );
 
-  /* Injeta filtros (pills) + limpar-sem-uso no PageHeader — padrão /contacts. */
+  const actionsNode = React.useMemo(
+    () => (
+      <PageActionsMenu
+        aria-label="Ações de tags"
+        items={[
+          {
+            icon: <IconPlus size={16} />,
+            label: "Nova tag",
+            onClick: focusNewTag,
+            primary: true,
+          },
+          {
+            icon: <IconTrash size={16} />,
+            label: `Limpar sem uso${unusedCount > 0 ? ` (${unusedCount})` : ""}`,
+            onClick: () => bulkDeleteUnused.mutate(),
+            disabled: unusedCount === 0 || bulkDeleteUnused.isPending,
+            divider: true,
+          },
+        ]}
+      />
+    ),
+    [focusNewTag, unusedCount, bulkDeleteUnused],
+  );
+
   React.useEffect(() => {
     if (!slots) return;
-    slots.setActions(
-      <div className="flex items-center gap-2">
-        <PageSegmentedControl
-          items={filterItems}
-          value={filter}
-          onChange={(v) => setFilter(v as FilterTab)}
-          size="compact"
-          aria-label="Filtrar tags por uso"
-        />
-        {unusedCount > 0 && (
-          <TooltipGlass label={`Remover ${unusedCount} tag(s) sem nenhum uso`} side="bottom">
-            <ButtonGlass
-              variant="glass"
-              size="sm"
-              onClick={() => bulkDeleteUnused.mutate()}
-              disabled={bulkDeleteUnused.isPending}
-              className="!text-[var(--color-danger)]"
-            >
-              <IconTrash size={14} /> Limpar sem uso ({unusedCount})
-            </ButtonGlass>
-          </TooltipGlass>
-        )}
-      </div>,
-    );
-    return () => slots.setActions(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slots, filter, unusedCount, tags.length, bulkDeleteUnused.isPending]);
+    slots.setCenter(searchNode);
+    slots.setActions(actionsNode);
+    return () => {
+      slots.setCenter(null);
+      slots.setActions(null);
+    };
+  }, [slots, searchNode, actionsNode]);
 
   return (
     <GlassCard variant="panel" className="min-w-0 overflow-hidden">
@@ -255,6 +279,7 @@ function TagsPage() {
 
           {/* Name input */}
           <InputGlass
+            ref={newNameRef}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nome da tag…"

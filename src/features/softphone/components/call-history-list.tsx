@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/crm/empty-state";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
-import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
+import { listTableHeadRowClass } from "@/components/crm/sortable-header";
 import { listCalls } from "../api/extensions";
 import type { CallRecord, ListCallsFilters } from "../api/types";
 
@@ -69,6 +69,26 @@ function groupByDay(calls: CallRecord[]): [string, CallRecord[]][] {
       ([, a], [, b]) =>
         new Date(b[0].startedAt).getTime() - new Date(a[0].startedAt).getTime(),
     );
+}
+
+/** Rótulo de coluna no padrão do protótipo: uppercase, bold, letter-spaced. */
+function HeadLabel({
+  children,
+  align = "left",
+}: {
+  children: ReactNode;
+  align?: "left" | "right";
+}) {
+  return (
+    <span
+      className={cn(
+        "whitespace-nowrap font-display text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]",
+        align === "right" && "block text-right",
+      )}
+    >
+      {children}
+    </span>
+  );
 }
 
 function statusLabel(status: string): { label: string; color: string } {
@@ -157,14 +177,14 @@ export function CallHistoryList({
         <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
           <div className="min-w-[780px]">
             {/* Cabeçalho */}
-            <div className={listTableHeadRowClass(`${COLS} gap-3 px-3 py-2`)}>
-              <ListColumnLabel> </ListColumnLabel>
-              <ListColumnLabel>Contato / Telefone</ListColumnLabel>
-              <ListColumnLabel>Direção</ListColumnLabel>
-              <ListColumnLabel>Status</ListColumnLabel>
-              <ListColumnLabel>Duração</ListColumnLabel>
-              <ListColumnLabel>Data e hora</ListColumnLabel>
-              <ListColumnLabel align="right">Gravação</ListColumnLabel>
+            <div className={listTableHeadRowClass(`${COLS} gap-3 px-3 py-2.5`)}>
+              <HeadLabel> </HeadLabel>
+              <HeadLabel>Contato / Telefone</HeadLabel>
+              <HeadLabel>Direção</HeadLabel>
+              <HeadLabel>Status</HeadLabel>
+              <HeadLabel>Duração</HeadLabel>
+              <HeadLabel>Data e hora</HeadLabel>
+              <HeadLabel align="right">Gravação</HeadLabel>
             </div>
 
             {/* Linhas */}
@@ -172,12 +192,11 @@ export function CallHistoryList({
               {grouped
                 ? groupByDay(calls).map(([label, rows]) => (
                     <div key={label} className="flex flex-col">
-                      <div className="flex items-center gap-2.5 px-3 pb-1 pt-3 first:pt-1">
-                        <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                      <div className="flex items-center justify-between px-3 pb-1 pt-2.5 first:pt-1.5">
+                        <span className="shrink-0 font-display text-[10.5px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
                           {label}
                         </span>
-                        <span className="h-px flex-1 bg-[var(--glass-border-subtle)]" />
-                        <span className="shrink-0 font-display text-[11px] text-[var(--text-muted)]">
+                        <span className="shrink-0 font-display text-[10.5px] font-medium text-[var(--text-muted)]">
                           {rows.length} ligaç{rows.length !== 1 ? "ões" : "ão"}
                         </span>
                       </div>
@@ -255,51 +274,58 @@ function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
           )}
         </span>
 
-        {/* Contato / Telefone */}
+        {/* Contato / Telefone — nome semibold (display) + telefone em mono muted */}
         <div className="min-w-0 leading-tight">
-          {call.contact ? (
+          {call.contact?.name ? (
+            <>
+              <Link
+                href={`/contacts/${call.contact.id}`}
+                className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+              >
+                {call.contact.name}
+              </Link>
+              <div className="truncate font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
+                {call.phone}
+              </div>
+            </>
+          ) : call.contact ? (
             <Link
               href={`/contacts/${call.contact.id}`}
-              className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+              className="block truncate font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
             >
-              {call.contact.name ?? call.phone}
+              {call.phone}
             </Link>
           ) : (
-            <span className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+            <span className="block truncate font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)]">
               {call.phone}
             </span>
           )}
-          {call.contact?.phone && call.contact.phone !== call.phone && (
-            <div className="truncate font-display text-[11.5px] text-[var(--text-muted)]">
-              {call.phone}
-            </div>
-          )}
         </div>
 
-        {/* Direção */}
+        {/* Direção — pill: Recebida (brand) / Realizada (neutra) */}
         <span
           className={cn(
-            "inline-flex w-fit items-center rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
+            "inline-flex w-fit items-center rounded-full px-2.5 py-[3px] font-display text-[11px] font-bold",
             isInbound
-              ? "bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)] text-[var(--brand-primary)]"
-              : "bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)]",
+              ? "bg-[color-mix(in_srgb,var(--brand-primary)_15%,transparent)] text-[var(--brand-primary-dark)]"
+              : "bg-[color-mix(in_srgb,var(--text-muted)_12%,transparent)] text-[var(--text-secondary)]",
           )}
         >
           {isInbound ? "Recebida" : "Realizada"}
         </span>
 
         {/* Status */}
-        <span className={cn("inline-flex w-fit items-center rounded-full px-2 py-0.5 font-display text-[11px] font-semibold", sColor)}>
+        <span className={cn("inline-flex w-fit items-center rounded-full px-2.5 py-[3px] font-display text-[11px] font-bold", sColor)}>
           {sLabel}
         </span>
 
         {/* Duração */}
-        <span className="font-display text-[13px] tabular-nums text-[var(--text-muted)]">
+        <span className="font-mono text-[12.5px] tabular-nums text-[var(--text-secondary)]">
           {formatDuration(call.durationSeconds)}
         </span>
 
         {/* Data e hora */}
-        <span className="font-display text-[13px] tabular-nums text-[var(--text-secondary)]">
+        <span className="whitespace-nowrap font-mono text-[12px] tabular-nums text-[var(--text-muted)]">
           {formatDate(call.startedAt)}
         </span>
 

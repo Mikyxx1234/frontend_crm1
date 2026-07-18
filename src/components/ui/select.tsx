@@ -18,8 +18,8 @@ const SelectNative = React.forwardRef<HTMLSelectElement, SelectNativeProps>(
           ref={ref}
           disabled={disabled}
           className={cn(
-            // Padrão DS v2 (glass) — trava visual de todos os selects nativos.
-            "col-start-1 row-start-1 flex h-9 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-1 ps-3 pe-9 font-display text-[13px] font-medium text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none backdrop-blur-sm transition-colors hover:bg-[var(--glass-bg-strong)] disabled:cursor-not-allowed disabled:opacity-50",
+            // Padrão filtro/segmento — contorno leve + hover primary-soft.
+            "col-start-1 row-start-1 flex h-9 w-full appearance-none rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] py-1 ps-3 pe-9 font-display text-[12.5px] font-semibold text-[var(--text-primary)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50",
             "focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
             "aria-invalid:border-[var(--color-danger)] aria-invalid:ring-[var(--color-danger)]/20",
             className

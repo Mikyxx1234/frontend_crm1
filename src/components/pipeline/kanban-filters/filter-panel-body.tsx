@@ -19,7 +19,12 @@ import { IconDeviceFloppy as Save, IconSearch as Search, IconTrash as Trash2, Ic
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import {
+  DropdownGlass,
+  FILTER_FIELD_ITEM_CLASS,
+  FILTER_FIELD_MENU_CLASS,
+  FILTER_FIELD_TRIGGER_CLASS,
+} from "@/components/crm/dropdown-glass";
 import { SelectNative } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -240,7 +245,7 @@ function ValueRangeField({
         onChange={(e) =>
           onChange(e.target.value !== "" ? Number(e.target.value) : null, to ?? null)
         }
-        className="h-7 w-full rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]/20"
+        className="h-7 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-2 text-[11px] text-[var(--text-primary)] shadow-none outline-none transition-colors placeholder:text-[var(--text-muted)] hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/20"
       />
       <span className="shrink-0 text-[10px] text-[var(--text-muted)]">–</span>
       <input
@@ -250,7 +255,7 @@ function ValueRangeField({
         onChange={(e) =>
           onChange(from ?? null, e.target.value !== "" ? Number(e.target.value) : null)
         }
-        className="h-7 w-full rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]/20"
+        className="h-7 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-2 text-[11px] text-[var(--text-primary)] shadow-none outline-none transition-colors placeholder:text-[var(--text-muted)] hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/20"
       />
     </div>
   );
@@ -293,17 +298,16 @@ function StagesDropdown({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex h-7 w-full items-center justify-between rounded-md border px-2.5 text-[11px] transition-colors",
-          selected.length > 0
-            ? "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+          FILTER_FIELD_TRIGGER_CLASS,
+          "h-7 rounded-lg px-2.5 text-[11px]",
+          selected.length > 0 && "text-[var(--brand-primary)]",
         )}
       >
-        <span>{loading ? "Carregando..." : label}</span>
-        <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} />
+        <span className="min-w-0 flex-1 truncate text-left">{loading ? "Carregando..." : label}</span>
+        <ChevronDown className={cn("size-3 shrink-0 text-current opacity-60 transition-transform", open && "rotate-180")} />
       </button>
       {open && stages.length > 0 && (
-        <div className="absolute left-0 top-full z-10 mt-1 w-full overflow-hidden rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <div className={cn(FILTER_FIELD_MENU_CLASS, "absolute left-0 top-full z-10 mt-1 w-full")}>
           {stages.map((stage) => {
             const active = selected.includes(stage.id);
             return (
@@ -311,7 +315,7 @@ function StagesDropdown({
                 key={stage.id}
                 type="button"
                 onClick={() => onToggle(stage.id)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+                className={cn(FILTER_FIELD_ITEM_CLASS, "w-full text-[11px]")}
               >
                 <span
                   className="size-2 shrink-0 rounded-full"
@@ -354,7 +358,7 @@ function SourcesMultiPick({
           placeholder="Buscar origem..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-7 w-full rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-6 pr-2 text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none"
+          className="h-7 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] pl-6 pr-2 text-[11px] text-[var(--text-primary)] shadow-none outline-none transition-colors placeholder:text-[var(--text-muted)] hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]"
         />
       </div>
       <div className="max-h-28 space-y-0.5 overflow-y-auto">
@@ -365,7 +369,7 @@ function SourcesMultiPick({
             "flex w-full items-center gap-2 rounded px-2 py-1 text-[11px] transition-colors",
             withoutSource
               ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-              : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+              : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
           )}
         >
           {withoutSource && <Check className="size-3" />}
@@ -385,7 +389,7 @@ function SourcesMultiPick({
                 "flex w-full items-center gap-2 rounded px-2 py-1 text-[11px] transition-colors",
                 active
                   ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                  : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
               )}
             >
               <span className="flex-1 truncate text-left">{source}</span>
@@ -432,7 +436,7 @@ function UsersMultiPick({
           placeholder="Buscar usuário..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-7 w-full rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-6 pr-2 text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none"
+          className="h-7 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] pl-6 pr-2 text-[11px] text-[var(--text-primary)] shadow-none outline-none transition-colors placeholder:text-[var(--text-muted)] hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]"
         />
       </div>
       <div className="max-h-28 overflow-y-auto space-y-0.5">
@@ -443,7 +447,7 @@ function UsersMultiPick({
             "flex w-full items-center gap-2 rounded px-2 py-1 text-[11px] transition-colors",
             withoutOwner
               ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-              : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+              : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
           )}
         >
           {withoutOwner && <Check className="size-3" />}
@@ -463,7 +467,7 @@ function UsersMultiPick({
                 "flex w-full items-center gap-2 rounded px-2 py-1 text-[11px] transition-colors",
                 active
                   ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                  : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
               )}
             >
               <span

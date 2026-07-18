@@ -14,7 +14,6 @@ import {
   IconCircleCheck,
   IconEye,
   IconLayoutGrid,
-  IconMenu2,
   IconMessageReply,
   IconPlus,
   IconRotateClockwise,
@@ -26,7 +25,7 @@ import {
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 import { EmptyState } from "@/components/crm/empty-state";
-import { PagePrimaryButton, PageSegmentedControl } from "@/components/crm/page-toolbar";
+import { PageActionsMenu, PagePrimaryButton, PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { cn } from "@/lib/utils";
 
 import { useCampaigns } from "@/features/campaigns/hooks";
@@ -626,71 +625,22 @@ function CampaignsSearchFilterBar({
 
 function CampaignsActionsMenu() {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  const items: {
-    icon: React.ReactNode;
-    label: string;
-    onClick: () => void;
-    divider?: boolean;
-  }[] = [
-    {
-      icon: <IconPlus size={16} stroke={2.4} />,
-      label: "Nova campanha",
-      onClick: () => router.push("/campaigns/new"),
-    },
-    {
-      icon: <IconLayoutGrid size={16} />,
-      label: "Gerenciar segmentos",
-      onClick: () => router.push("/campaigns/segments"),
-      divider: true,
-    },
-  ];
-
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Ações"
-        aria-expanded={open}
-        className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
-          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
-        )}
-      >
-        <IconMenu2 size={18} stroke={2.2} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          {items.map((it) => (
-            <div key={it.label}>
-              {it.divider && <div className="my-1 h-px bg-[var(--glass-border)]" />}
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  it.onClick();
-                }}
-                className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-              >
-                <span className="text-[var(--text-muted)]">{it.icon}</span>
-                {it.label}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <PageActionsMenu
+      items={[
+        {
+          icon: <IconPlus size={14} stroke={2.6} />,
+          label: "Nova campanha",
+          onClick: () => router.push("/campaigns/new"),
+          primary: true,
+        },
+        {
+          icon: <IconLayoutGrid size={13} />,
+          label: "Gerenciar segmentos",
+          onClick: () => router.push("/campaigns/segments"),
+          divider: true,
+        },
+      ]}
+    />
   );
 }

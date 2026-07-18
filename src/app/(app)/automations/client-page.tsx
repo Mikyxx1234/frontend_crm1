@@ -12,7 +12,6 @@ import {
   IconCircleCheck,
   IconClock,
   IconLoader2,
-  IconMenu2,
   IconPlus,
   IconRobot,
   IconRotateClockwise,
@@ -24,7 +23,7 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2"
 import { RestrictedScreen } from "@/components/crm/restricted-screen"
 import { useRequireManager } from "@/hooks/use-user-role"
 import { PageHeader } from "@/components/crm/page-header"
-import { PageSegmentedControl } from "@/components/crm/page-toolbar"
+import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-toolbar"
 import { PageDemoBanner } from "@/components/crm/page-demo-banner"
 import { AutomationsGallery } from "@/components/crm/automations-gallery"
 import { EmptyState } from "@/components/crm/empty-state"
@@ -656,78 +655,27 @@ function AutomationsActionsMenu({
   onImport: () => void
   importing: boolean
 }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", onDown)
-    return () => document.removeEventListener("mousedown", onDown)
-  }, [open])
-
-  const items: {
-    icon: React.ReactNode
-    label: string
-    onClick: () => void
-    disabled?: boolean
-    divider?: boolean
-  }[] = [
-    {
-      icon: <IconPlus size={16} stroke={2.4} />,
-      label: "Nova automação",
-      onClick: onNew,
-    },
-    {
-      icon: importing ? (
-        <IconLoader2 size={16} className="animate-spin" />
-      ) : (
-        <IconUpload size={16} />
-      ),
-      label: importing ? "Importando…" : "Importar .json",
-      onClick: onImport,
-      disabled: importing,
-      divider: true,
-    },
-  ]
-
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Ações"
-        aria-expanded={open}
-        className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
-          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
-        )}
-      >
-        <IconMenu2 size={18} stroke={2.2} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          {items.map((it) => (
-            <div key={it.label}>
-              {it.divider && <div className="my-1 h-px bg-[var(--glass-border)]" />}
-              <button
-                type="button"
-                disabled={it.disabled}
-                onClick={() => {
-                  setOpen(false)
-                  it.onClick()
-                }}
-                className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)] disabled:opacity-40"
-              >
-                <span className="text-[var(--text-muted)]">{it.icon}</span>
-                {it.label}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <PageActionsMenu
+      items={[
+        {
+          icon: <IconPlus size={14} stroke={2.6} />,
+          label: "Nova automação",
+          onClick: onNew,
+          primary: true,
+        },
+        {
+          icon: importing ? (
+            <IconLoader2 size={13} className="animate-spin" />
+          ) : (
+            <IconUpload size={13} />
+          ),
+          label: importing ? "Importando…" : "Importar .json",
+          onClick: onImport,
+          disabled: importing,
+          divider: true,
+        },
+      ]}
+    />
   )
 }

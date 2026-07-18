@@ -6,6 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { IconCalendar as CalendarDays, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
+import { FILTER_FIELD_TRIGGER_CLASS } from "@/components/crm/dropdown-glass";
 
 type DatePickerProps = {
   value?: string | null;
@@ -68,36 +69,37 @@ export function DatePicker({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          "flex h-8 w-full items-center justify-between rounded-lg border border-border bg-[var(--color-bg-card)] px-2.5 text-left text-[13px] text-foreground transition",
-          "hover:border-[var(--glass-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-border)]",
+          FILTER_FIELD_TRIGGER_CLASS,
+          "justify-between text-left",
+          selectedDate && "text-[var(--text-primary)]",
           disabled && "cursor-not-allowed opacity-60",
           triggerClassName,
         )}
       >
-        <span className={cn("truncate", !selectedDate && "text-[var(--color-ink-muted)]")}>
+        <span className={cn("truncate", !selectedDate && "text-[var(--text-muted)]")}>
           {selectedDate ? format(selectedDate, "dd/MM/yyyy") : placeholder}
         </span>
-        <CalendarDays className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
+        <CalendarDays className="size-3.5 shrink-0 text-current opacity-60" />
       </button>
 
       {open ? (
-        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[280px] rounded-2xl border border-border bg-[var(--color-bg-card)] p-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
+        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[280px] rounded-xl border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg,var(--glass-bg-modal,#fff))] p-3 shadow-[0_8px_28px_rgba(15,23,42,0.13)]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => setVisibleMonth((current) => subMonths(current, 1))}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--glass-bg-base)] hover:text-foreground"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
               aria-label="Mês anterior"
             >
               <ChevronLeft className="size-4" />
             </button>
-            <div className="text-sm font-semibold text-[var(--text-primary)]">
+            <div className="font-display text-sm font-semibold capitalize text-[var(--text-primary)]">
               {format(visibleMonth, "MMMM yyyy", { locale: ptBR })}
             </div>
             <button
               type="button"
               onClick={() => setVisibleMonth((current) => addMonths(current, 1))}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--glass-bg-base)] hover:text-foreground"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
               aria-label="Próximo mês"
             >
               <ChevronRight className="size-4" />
@@ -126,8 +128,8 @@ export function DatePicker({
                   className={cn(
                     "flex h-8 items-center justify-center rounded-lg text-xs font-medium transition",
                     isSelected && "bg-[var(--brand-primary)] text-white shadow-sm",
-                    !isSelected && inMonth && "text-foreground hover:bg-[var(--glass-bg-overlay)]",
-                    !inMonth && "text-[var(--text-muted)] opacity-40 hover:bg-[var(--glass-bg-overlay)]",
+                    !isSelected && inMonth && "text-[var(--text-primary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
+                    !inMonth && "text-[var(--text-muted)] opacity-40 hover:bg-[var(--color-primary-soft)]",
                   )}
                 >
                   {format(day, "d")}

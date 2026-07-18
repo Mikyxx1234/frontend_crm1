@@ -26,7 +26,11 @@ import {
 } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
-import { PageSegmentedControl } from "@/components/crm/page-toolbar";
+import {
+  pageActionsMenuItemClass,
+  pageActionsMenuPanelClass,
+  PageSegmentedControl,
+} from "@/components/crm/page-toolbar";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
@@ -511,14 +515,15 @@ function ListActionsMenu({
     label: string;
     onClick: () => void;
     divider?: boolean;
+    primary?: boolean;
     permission?: "deal:import" | "deal:export";
   }[] = [
-    { icon: <IconPlus size={16} />, label: "Adicionar Negócio", onClick: onAdd },
-    { icon: <IconFileImport size={16} />, label: "Importar", onClick: onImport, permission: "deal:import" },
-    { icon: <IconDownload size={16} />, label: "Exportar", onClick: onExport, permission: "deal:export" },
-    { icon: <IconUsersGroup size={16} />, label: "Localizar Duplicados", onClick: onDupes },
+    { icon: <IconPlus size={14} stroke={2.6} />, label: "Adicionar negócio", onClick: onAdd, primary: true },
+    { icon: <IconFileImport size={13} />, label: "Importar", onClick: onImport, permission: "deal:import" },
+    { icon: <IconDownload size={13} />, label: "Exportar", onClick: onExport, permission: "deal:export" },
+    { icon: <IconUsersGroup size={13} />, label: "Localizar duplicados", onClick: onDupes },
     {
-      icon: <IconSettings size={16} />,
+      icon: <IconSettings size={13} />,
       label: "Configuração da lista",
       onClick: onColumns,
       divider: true,
@@ -542,7 +547,7 @@ function ListActionsMenu({
         </button>
       </TooltipGlass>
       {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[240px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <div className={cn(pageActionsMenuPanelClass, "w-[240px]")}>
           {items.map((it) => {
             const button = (
               <button
@@ -551,15 +556,17 @@ function ListActionsMenu({
                   setOpen(false);
                   it.onClick();
                 }}
-                className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+                className={pageActionsMenuItemClass({ primary: it.primary })}
               >
-                <span className="text-[var(--text-muted)]">{it.icon}</span>
+                <span className="shrink-0">{it.icon}</span>
                 {it.label}
               </button>
             );
             return (
               <div key={it.label}>
-                {it.divider && <div className="my-1 h-px bg-[var(--glass-border)]" />}
+                {it.divider && (
+                  <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
+                )}
                 {it.permission ? (
                   <RequirePermission permission={it.permission}>{button}</RequirePermission>
                 ) : (

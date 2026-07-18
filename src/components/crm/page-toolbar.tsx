@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { IconArrowLeft, IconSearch } from "@tabler/icons-react";
+import { IconArrowLeft, IconMenu2, IconSearch } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 
@@ -297,5 +297,128 @@ export function PagePrimaryButton({
     <button type={type} className={cls} {...props}>
       {children}
     </button>
+  );
+}
+
+// ── Menu hamburger (padrão Pipeline) ─────────────────────────────────────────
+//
+// Referência: PipelineKebabMenu
+//   • 1º CTA (primary): azul permanente + hover fundo brand/8
+//   • Demais itens: cinza → hover fundo primary-soft + texto/ícone azul
+//   • Ícones herdam a cor do botão (sem wrapper muted)
+
+export type PageActionsMenuItem = {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  /** Separador acima deste item. */
+  divider?: boolean;
+  /**
+   * CTA primário (azul permanente).
+   * - `true`: força azul
+   * - `false`: nunca azul (mesmo sendo o 1º)
+   * - omitido: o 1º item da lista vira CTA se ninguém marcar `true`
+   */
+  primary?: boolean;
+  /** Estado ativo (ex.: modo demo ligado). */
+  active?: boolean;
+};
+
+/** Classes do item de menu — use quando o menu for montado manualmente. */
+export function pageActionsMenuItemClass(opts?: {
+  primary?: boolean;
+  active?: boolean;
+}) {
+  if (opts?.primary) {
+    return "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/8 disabled:opacity-40";
+  }
+  if (opts?.active) {
+    return "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold bg-[var(--brand-primary)]/8 text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)] disabled:opacity-40";
+  }
+  return "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)] disabled:opacity-40";
+}
+
+export const pageActionsMenuPanelClass =
+  "absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] py-1.5 shadow-[0_8px_28px_rgba(15,23,42,0.13)] backdrop-blur-md";
+
+export const pageActionsMenuTriggerClass =
+  "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105";
+
+export function PageActionsMenu({
+  items,
+  "aria-label": ariaLabel = "Ações",
+  className,
+  menuClassName,
+}: {
+  items: PageActionsMenuItem[];
+  "aria-label"?: string;
+  className?: string;
+  menuClassName?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const hasForcedPrimary = items.some((it) => it.primary === true);
+
+  return (
+    <div ref={ref} className={cn("relative shrink-0", className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        className={cn(
+          pageActionsMenuTriggerClass,
+          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
+        )}
+      >
+        <IconMenu2 size={18} stroke={2.2} />
+      </button>
+      {open && (
+        <div className={cn(pageActionsMenuPanelClass, menuClassName)} role="menu">
+          {items.map((it, idx) => {
+            const isPrimary =
+              it.primary === true ||
+              (!hasForcedPrimary &&
+                it.primary !== false &&
+                idx === 0 &&
+                !it.active);
+            return (
+              <div key={it.label}>
+                {it.divider && (
+                  <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={it.disabled}
+                  onClick={() => {
+                    setOpen(false);
+                    it.onClick();
+                  }}
+                  className={pageActionsMenuItemClass({
+                    primary: isPrimary,
+                    active: it.active,
+                  })}
+                >
+                  <span className="shrink-0">{it.icon}</span>
+                  {it.label}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

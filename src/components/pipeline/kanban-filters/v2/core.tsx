@@ -30,7 +30,12 @@ import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
 
 import { cn } from "@/lib/utils";
 import { ds } from "@/lib/design-system";
-import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import {
+  DropdownGlass,
+  FILTER_FIELD_ITEM_CLASS,
+  FILTER_FIELD_MENU_CLASS,
+  FILTER_FIELD_TRIGGER_CLASS,
+} from "@/components/crm/dropdown-glass";
 import { useModalPortalContainer } from "@/components/ui/modal-portal-context";
 import { DatePicker } from "@/components/ui/date-picker";
 import { SelectNative } from "@/components/ui/select";
@@ -216,7 +221,7 @@ export function ChipToggle({
         "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors",
         active
           ? "border-transparent bg-primary text-white"
-          : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+          : "border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
       )}
     >
       {active && <Check className="size-3" />}
@@ -288,18 +293,14 @@ export function MultiSelectDropdown({
         <button
           type="button"
           className={cn(
-            "group inline-flex h-9 w-full items-center gap-2 rounded-lg px-3",
-            "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]",
-            "font-display text-[13px] font-semibold transition-colors",
-            selected.length ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]",
-            "hover:bg-[var(--glass-bg-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
-            "data-[state=open]:ring-2 data-[state=open]:ring-[var(--brand-primary)]/40",
+            FILTER_FIELD_TRIGGER_CLASS,
+            selected.length && "text-[var(--text-primary)]",
           )}
         >
           <span className="min-w-0 flex-1 truncate text-left">{summary}</span>
           <ChevronDown
             size={15}
-            className="shrink-0 text-[var(--text-muted)] transition-transform duration-200 group-data-[state=open]:rotate-180"
+            className="shrink-0 text-current opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180"
           />
         </button>
       </DropdownPrimitive.Trigger>
@@ -308,9 +309,8 @@ export function MultiSelectDropdown({
           align="start"
           sideOffset={6}
           className={cn(
-            "z-50 w-[var(--radix-dropdown-menu-trigger-width)] min-w-[220px] overflow-hidden rounded-[var(--radius-lg)] p-1.5",
-            "border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg,var(--glass-bg-modal,#fff))] shadow-[var(--glass-shadow)]",
-            "max-h-[min(320px,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto",
+            FILTER_FIELD_MENU_CLASS,
+            "w-[var(--radix-dropdown-menu-trigger-width)] min-w-[220px]",
             "animate-in fade-in-0 zoom-in-95",
           )}
           onCloseAutoFocus={(e) => e.preventDefault()}
@@ -324,7 +324,7 @@ export function MultiSelectDropdown({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={searchPlaceholder}
-                  className="h-8 w-full rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-8 pr-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-primary/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+                  className="h-8 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] pl-8 pr-2 text-[12px] text-[var(--text-primary)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
                   onKeyDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -347,10 +347,8 @@ export function MultiSelectDropdown({
                     onToggle(opt.value);
                   }}
                   className={cn(
-                    "flex cursor-pointer select-none items-center gap-2 rounded-[var(--radius-md)] px-2.5 py-2",
-                    "font-display text-[13px] font-semibold outline-none transition-colors",
-                    "text-[var(--text-secondary)] data-[highlighted]:bg-[var(--glass-bg-strong)] data-[highlighted]:text-[var(--text-primary)]",
-                    isOn && "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+                    FILTER_FIELD_ITEM_CLASS,
+                    isOn && "bg-[var(--color-primary-soft)] text-[var(--brand-primary)]",
                   )}
                 >
                   <span className="min-w-0 flex-1 truncate">{opt.label}</span>
@@ -392,7 +390,9 @@ export function TextField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={cn(
-          "h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20",
+          "h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] shadow-none outline-none transition-colors",
+          "hover:bg-[var(--color-primary-soft)] hover:border-[var(--input-border-focus)]",
+          "focus:border-[var(--brand-primary)]/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20",
           icon && "pl-8",
         )}
       />
@@ -416,7 +416,6 @@ function DateRangeField({ value, onChange }: { value?: DateRangeValue; onChange:
           if (key === "any") return onChange(undefined);
           onChange(dateRangeFromPreset(key) ?? undefined);
         }}
-        triggerClassName="h-9 w-full rounded-lg text-[13px]"
       />
       {preset === "custom" && (
         <div className="flex items-center gap-2">
@@ -424,14 +423,14 @@ function DateRangeField({ value, onChange }: { value?: DateRangeValue; onChange:
             type="date"
             value={value?.from ?? ""}
             onChange={(e) => onChange({ ...value, from: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+            className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-2 text-[13px] text-[var(--text-primary)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
           />
           <span className="shrink-0 text-[12px] text-ink-subtle">até</span>
           <input
             type="date"
             value={value?.to ?? ""}
             onChange={(e) => onChange({ ...value, to: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+            className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-2 text-[13px] text-[var(--text-primary)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
           />
         </div>
       )}
@@ -775,7 +774,7 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Mínimo"
           value={draft.valueFrom ?? ""}
           onChange={(e) => setDraftField("valueFrom", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+          className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
         />
         <span className="shrink-0 text-[12px] text-ink-subtle">–</span>
         <input
@@ -783,7 +782,7 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Máximo"
           value={draft.valueTo ?? ""}
           onChange={(e) => setDraftField("valueTo", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+          className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
         />
       </div>
     </FieldCard>
@@ -798,8 +797,11 @@ const CREATED_PRESETS: { key: DatePresetKey; label: string }[] = [
   { key: "this_month", label: "Este mês" },
 ];
 
-const DATE_TRIGGER_CLASS =
-  "h-9 rounded-full border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 shadow-none";
+const DATE_TRIGGER_CLASS = cn(
+  "h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 shadow-none",
+  "hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
+  "focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
+);
 
 function patchDateSide(
   current: DateRangeValue | undefined,
@@ -844,7 +846,7 @@ export function DatesPeriodSection({ draft, setDraftField }: SectionProps) {
                   "rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
                   on
                     ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.3)]"
-                    : "border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                    : "border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
                 )}
               >
                 {p.label}
@@ -966,9 +968,9 @@ function CustomFieldRow({
       ? (filter.value as DateRangeValue)
       : {};
 
-  const solidPanel = "bg-[var(--dropdown-solid-bg)]";
+  const solidPanel = "bg-[var(--dropdown-solid-bg,var(--glass-bg-modal,#fff))]";
   const inputCls =
-    "h-8 rounded-md border border-[var(--glass-border)] bg-white px-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20";
+    "h-8 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-2 text-[12px] text-[var(--text-primary)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20";
 
   return (
     <div className="space-y-1.5 rounded-lg border border-[var(--glass-border)] bg-white/70 px-2 py-2">
@@ -996,7 +998,7 @@ function CustomFieldRow({
           }))}
           value={currentOp}
           onValueChange={(v) => onChange({ ...filter, operator: v as CustomFieldOperator, value: undefined })}
-          triggerClassName="h-8 w-[120px] shrink-0 rounded-md text-[12px] px-2"
+          triggerClassName="h-8 w-[120px] shrink-0 text-[12px] px-2"
           className={solidPanel}
         />
         {opDef?.needsValue ? (
@@ -1035,7 +1037,7 @@ function CustomFieldRow({
                 value={typeof filter.value === "string" ? filter.value || undefined : undefined}
                 onValueChange={(v) => onChange({ ...filter, value: v })}
                 placeholder="— valor —"
-                triggerClassName="h-8 min-w-0 flex-1 basis-[140px] rounded-md text-[12px] px-2"
+                triggerClassName="h-8 min-w-0 flex-1 basis-[140px] text-[12px] px-2"
                 className={solidPanel}
               />
             )
@@ -1096,8 +1098,6 @@ function CustomFieldsSection({
             value={undefined}
             onValueChange={addFieldById}
             placeholder="+ Escolher campo…"
-            triggerClassName="h-9 w-full rounded-lg text-[12px] bg-white"
-            className="bg-[var(--dropdown-solid-bg)]"
           />
         ) : (
           <p className="text-[12px] text-[var(--text-muted)]">Todos os campos já foram adicionados.</p>
@@ -1183,7 +1183,6 @@ export function TagsSection({ draft, options, setDraftField }: SectionProps) {
             options={TAG_MODE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
             value={draft.tagMode ?? "any"}
             onValueChange={(v) => setDraftField("tagMode", v as TagMode)}
-            triggerClassName="h-9 w-full rounded-lg text-[12px]"
           />
         )}
         <MultiSelectDropdown
@@ -1272,7 +1271,7 @@ export function QuickFiltersList({
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors",
                 active
                   ? "border-transparent bg-[var(--brand-primary)] text-white shadow-sm"
-                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-ink-soft hover:text-foreground",
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-ink-soft hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
               )}
             >
               {qf.dot && <span className="size-2 rounded-full" style={{ background: qf.dot }} />}
@@ -1297,7 +1296,7 @@ export function QuickFiltersList({
               "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors",
               active
                 ? "bg-[var(--brand-primary)]/12 font-semibold text-[var(--brand-primary)] ring-1 ring-inset ring-[var(--brand-primary)]/25"
-                : "text-ink-soft hover:bg-muted hover:text-foreground",
+                : "text-ink-soft hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
             )}
           >
             {qf.dot && <span className="size-2 shrink-0 rounded-full" style={{ background: qf.dot }} />}
@@ -1321,7 +1320,7 @@ export function QuickFiltersList({
                   "group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors",
                   active
                     ? "bg-[var(--brand-primary)]/12 font-semibold text-[var(--brand-primary)] ring-1 ring-inset ring-[var(--brand-primary)]/25"
-                    : "text-ink-soft hover:bg-muted hover:text-foreground",
+                    : "text-ink-soft hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
                 )}
               >
                 <Bookmark className="size-3.5 shrink-0 text-primary/60" />

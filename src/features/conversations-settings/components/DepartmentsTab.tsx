@@ -34,7 +34,6 @@ import {
   IconInfoCircle,
   IconAdjustmentsHorizontal,
   IconRotateClockwise,
-  IconMenu2,
   IconUserCheck,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
@@ -43,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
+import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { FormSheet } from "@/components/ui/form-sheet";
 import {
@@ -1073,49 +1073,16 @@ function DepartmentsSearchFilterBar({
 // ─── Menu hamburger (CTAs da página) ────────────────────────────────────────────
 
 function DepartmentsActionsMenu({ onCreate }: { onCreate: () => void }) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
   return (
-    <div ref={ref} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Ações"
-        aria-expanded={open}
-        className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
-          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
-        )}
-      >
-        <IconMenu2 size={18} stroke={2.2} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onCreate();
-            }}
-            className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-          >
-            <span className="text-[var(--text-muted)]">
-              <IconPlus size={16} stroke={2.4} />
-            </span>
-            Criar departamento
-          </button>
-        </div>
-      )}
-    </div>
+    <PageActionsMenu
+      items={[
+        {
+          icon: <IconPlus size={14} stroke={2.6} />,
+          label: "Criar departamento",
+          onClick: onCreate,
+          primary: true,
+        },
+      ]}
+    />
   );
 }

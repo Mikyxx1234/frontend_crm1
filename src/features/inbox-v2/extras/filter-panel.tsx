@@ -429,7 +429,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                             "flex w-full items-center gap-3 rounded-[14px] border px-3.5 py-2.5 text-left font-display text-[13px] font-semibold transition-colors",
                             selected
                               ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--text-primary)]"
-                              : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                              : "border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
                           )}
                         >
                           <span
@@ -557,7 +557,6 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                             channel: d.channel === v ? undefined : v,
                           }))
                         }
-                        triggerClassName="h-9 w-full rounded-lg text-[13px]"
                       />
                     </FieldCard>
 
@@ -584,7 +583,6 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                                 : (v as "open" | "closed"),
                           }))
                         }
-                        triggerClassName="h-9 w-full rounded-lg text-[13px]"
                       />
                     </FieldCard>
                   </>
@@ -612,7 +610,6 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                             stageId: d.stageId === v ? undefined : v,
                           }))
                         }
-                        triggerClassName="h-9 w-full rounded-lg text-[13px]"
                       />
                       {stages.length === 0 && (
                         <p className="mt-1.5 text-[12px] text-[var(--text-muted)]">

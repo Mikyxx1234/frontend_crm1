@@ -10,7 +10,6 @@ import {
   IconCircleCheck,
   IconClockExclamation,
   IconLoader2,
-  IconMenu2,
   IconPencil,
   IconPlayerPlay,
   IconRefresh,
@@ -28,7 +27,7 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
-import { PageSegmentedControl } from "@/components/crm/page-toolbar";
+import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import { EmptyState } from "@/components/crm/empty-state";
 import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
@@ -978,90 +977,39 @@ function DistributionActionsMenu({
   hasFilters: boolean;
   onClearFilters: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  const items: {
-    icon: React.ReactNode;
-    label: string;
-    onClick: () => void;
-    disabled?: boolean;
-    divider?: boolean;
-  }[] = [
-    {
-      icon: testing ? (
-        <IconLoader2 size={16} className="animate-spin" />
-      ) : (
-        <IconPlayerPlay size={16} />
-      ),
-      label: testing ? "Testando…" : "Testar distribuição",
-      onClick: onTest,
-      disabled: testing,
-    },
-    {
-      icon: retrying ? (
-        <IconLoader2 size={16} className="animate-spin" />
-      ) : (
-        <IconRefresh size={16} />
-      ),
-      label: retrying ? "Reprocessando…" : "Reprocessar fila",
-      onClick: onRetry,
-      disabled: retrying || !canRetry,
-    },
-    {
-      icon: <IconX size={16} />,
-      label: "Limpar filtros",
-      onClick: onClearFilters,
-      disabled: !hasFilters,
-      divider: true,
-    },
-  ];
-
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Ações"
-        aria-expanded={open}
-        className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
-          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
-        )}
-      >
-        <IconMenu2 size={18} stroke={2.2} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          {items.map((it) => (
-            <div key={it.label}>
-              {it.divider && <div className="my-1 h-px bg-[var(--glass-border)]" />}
-              <button
-                type="button"
-                disabled={it.disabled}
-                onClick={() => {
-                  setOpen(false);
-                  it.onClick();
-                }}
-                className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)] disabled:opacity-40"
-              >
-                <span className="text-[var(--text-muted)]">{it.icon}</span>
-                {it.label}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <PageActionsMenu
+      items={[
+        {
+          icon: testing ? (
+            <IconLoader2 size={13} className="animate-spin" />
+          ) : (
+            <IconPlayerPlay size={13} />
+          ),
+          label: testing ? "Testando…" : "Testar distribuição",
+          onClick: onTest,
+          disabled: testing,
+          primary: true,
+        },
+        {
+          icon: retrying ? (
+            <IconLoader2 size={13} className="animate-spin" />
+          ) : (
+            <IconRefresh size={13} />
+          ),
+          label: retrying ? "Reprocessando…" : "Reprocessar fila",
+          onClick: onRetry,
+          disabled: retrying || !canRetry,
+        },
+        {
+          icon: <IconX size={13} />,
+          label: "Limpar filtros",
+          onClick: onClearFilters,
+          disabled: !hasFilters,
+          divider: true,
+        },
+      ]}
+    />
   );
 }
 

@@ -355,7 +355,7 @@ export function PipelineSearchFilterBar({
                         "flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold transition-colors",
                         active
                           ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                          : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                          : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
                       )}
                     >
                       <span>{opt.label}</span>

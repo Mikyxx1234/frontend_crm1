@@ -57,7 +57,7 @@ const PERIOD_PRESETS: { key: DatePresetKey; label: string }[] = [
 ];
 
 const DATE_TRIGGER_CLASS =
-  "h-9 rounded-full border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 shadow-none";
+  "h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 shadow-none hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]";
 
 function countActive(f: CallsFilterState): number {
   let n = 0;
@@ -267,7 +267,7 @@ export function CallsSearchFilterBar({
                         "flex w-full items-center gap-3 rounded-[14px] border px-3.5 py-2.5 text-left font-display text-[13px] font-semibold transition-colors",
                         selected
                           ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--text-primary)]"
-                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
                       )}
                     >
                       <span
@@ -314,7 +314,7 @@ export function CallsSearchFilterBar({
                         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
                         selected
                           ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
-                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
                       )}
                     >
                       {selected && <IconCheck size={12} stroke={2.4} />}
@@ -343,7 +343,7 @@ export function CallsSearchFilterBar({
                             "rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
                             on
                               ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.3)]"
-                              : "border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                              : "border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
                           )}
                         >
                           {p.label}

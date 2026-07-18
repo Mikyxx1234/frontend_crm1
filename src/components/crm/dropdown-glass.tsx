@@ -18,6 +18,48 @@ export interface DropdownOption {
   disabled?: boolean
 }
 
+/**
+ * Gatilho padrão de campos de filtro / segmento
+ * (referência: "+ Escolher campo…" em Personalizado do funil).
+ *
+ * Idle: fundo sólido + contorno leve · Hover/open: primary-soft + texto brand.
+ */
+export const FILTER_FIELD_TRIGGER_CLASS = cn(
+  "group inline-flex h-9 w-full items-center gap-2 rounded-lg px-3",
+  "border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] shadow-none",
+  "font-display text-[12.5px] font-semibold transition-colors",
+  "text-[var(--text-muted)]",
+  "hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
+  "data-[state=open]:bg-[var(--color-primary-soft)] data-[state=open]:text-[var(--brand-primary)] data-[state=open]:ring-2 data-[state=open]:ring-[var(--brand-primary)]/40",
+  "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
+)
+
+/** Input de texto/número/data nativo nos painéis de filtro. */
+export const FILTER_FIELD_INPUT_CLASS = cn(
+  "h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3",
+  "font-body text-[13px] text-[var(--text-primary)] shadow-none outline-none transition-colors",
+  "placeholder:text-[var(--text-muted)]",
+  "hover:bg-[var(--color-primary-soft)]",
+  "focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20",
+)
+
+/** Painel da lista do dropdown (filtros / segmentos). */
+export const FILTER_FIELD_MENU_CLASS = cn(
+  "z-50 overflow-hidden rounded-xl border border-[var(--glass-border)] p-1.5",
+  "bg-[var(--dropdown-solid-bg,var(--glass-bg-modal,#fff))] shadow-[0_8px_28px_rgba(15,23,42,0.13)]",
+  "max-h-[min(320px,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto",
+)
+
+/** Item da lista — hover azul como o hambúrguer da Pipeline. */
+export const FILTER_FIELD_ITEM_CLASS = cn(
+  "flex cursor-pointer select-none items-center gap-2.5 rounded-lg px-2.5 py-2",
+  "font-display text-[13px] font-semibold outline-none transition-colors",
+  "text-[var(--text-secondary)]",
+  "data-[highlighted]:bg-[var(--color-primary-soft)] data-[highlighted]:text-[var(--brand-primary)]",
+  "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
+)
+
 type Align = "start" | "center" | "end"
 type Side = "top" | "right" | "bottom" | "left"
 
@@ -90,21 +132,16 @@ export function DropdownGlass({
             type="button"
             suppressHydrationWarning
             className={cn(
-              "group inline-flex h-10 items-center gap-2 rounded-[var(--radius-md)] px-3.5",
-              "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-sm",
-              "shadow-[var(--glass-shadow-sm)] transition-colors",
-              "font-display text-[13px] font-semibold",
-              selected ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]",
-              "hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
-              "data-[state=open]:ring-2 data-[state=open]:ring-[var(--brand-primary)]/40 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
+              FILTER_FIELD_TRIGGER_CLASS,
+              selected && "text-[var(--text-primary)]",
               triggerClassName,
             )}
           >
             {selected?.icon && <span className="shrink-0">{selected.icon}</span>}
-            <span className="truncate">{selected?.label ?? placeholder}</span>
+            <span className="min-w-0 flex-1 truncate text-left">{selected?.label ?? placeholder}</span>
             <IconChevronDown
               size={15}
-              className="ml-auto shrink-0 text-[var(--text-muted)] transition-transform duration-200 group-data-[state=open]:rotate-180"
+              className="ml-auto shrink-0 text-current opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180"
             />
           </button>
         )}
@@ -116,10 +153,7 @@ export function DropdownGlass({
           side={side}
           sideOffset={sideOffset}
           className={cn(
-            "z-50 overflow-hidden rounded-[var(--radius-lg)] p-1.5",
-            "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-xl",
-            "shadow-[var(--glass-shadow)]",
-            "max-h-[min(320px,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto",
+            FILTER_FIELD_MENU_CLASS,
             matchTriggerWidth && "min-w-[var(--radix-dropdown-menu-trigger-width)]",
             "origin-(--radix-dropdown-menu-content-transform-origin)",
             "animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
@@ -128,7 +162,7 @@ export function DropdownGlass({
           )}
         >
           {menuLabel && (
-            <DropdownPrimitive.Label className="px-2.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <DropdownPrimitive.Label className="px-2.5 py-1.5 font-display text-[11px] font-bold text-[var(--text-muted)]">
               {menuLabel}
             </DropdownPrimitive.Label>
           )}
@@ -140,12 +174,8 @@ export function DropdownGlass({
                 disabled={option.disabled}
                 onSelect={() => onValueChange?.(option.value)}
                 className={cn(
-                  "flex cursor-pointer select-none items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 py-2",
-                  "font-display text-[13px] font-semibold outline-none transition-colors",
-                  "text-[var(--text-secondary)]",
-                  "data-[highlighted]:bg-[var(--glass-bg-strong)] data-[highlighted]:text-[var(--text-primary)]",
-                  "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
-                  isSelected && "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+                  FILTER_FIELD_ITEM_CLASS,
+                  isSelected && "bg-[var(--color-primary-soft)] text-[var(--brand-primary)]",
                   option.danger &&
                     "text-[var(--color-danger)] data-[highlighted]:bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] data-[highlighted]:text-[var(--color-danger)]",
                   itemClassName,

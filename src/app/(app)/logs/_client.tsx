@@ -1,18 +1,30 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2 as Loader2 } from "@tabler/icons-react";
 import {
   IconAdjustmentsHorizontal,
+  IconActivity,
+  IconBrandFacebook,
+  IconBrandInstagram,
+  IconBrandTelegram,
+  IconBrandWhatsapp,
+  IconBriefcase,
   IconBuildingCommunity,
   IconCalendarEvent,
   IconCheck,
+  IconChecklist,
   IconClipboardList,
   IconCopy,
+  IconExternalLink,
+  IconLink,
+  IconMail,
   IconMenu2,
+  IconMessageCircle,
   IconPhone,
   IconPhoneCall,
   IconPhoneCheck,
@@ -71,7 +83,7 @@ import { MOCK_FEED } from "@/features/activity-feed/mock-feed";
 import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 import { cn } from "@/lib/utils";
 
-const LOG_TABS = ["Feed", "Chamadas", "Estatísticas (30d)"] as const;
+const LOG_TABS = ["Eventos", "Chamadas", "Estatísticas (30d)"] as const;
 
 const ENTITY_OPTIONS = [
   { value: "ALL", label: "Todas as entidades" },
@@ -541,6 +553,8 @@ export default function LogsClientPage() {
 
         {isFeed ? (
           <>
+            <FeedMiniDash items={allItems} />
+
             {isDemo && (
               <PageDemoBanner>
                 Dados de exemplo — um evento de cada tipo para visualizar as
@@ -901,76 +915,18 @@ function EventCard({ event }: { event: FeedEvent }) {
         {detail || "—"}
       </span>
 
-      {/* Coluna: Entidade */}
+      {/* Coluna: Entidade — pill clicável (quando há link) + copy ID + copy link */}
       <div className="min-w-0">
-        {entityLabelText || event.entityType ? (
-          <div className="flex min-w-0 flex-col gap-0.5">
-            {/* Tipo (pill) + nome (truncável) na mesma linha */}
-            <span className="flex min-w-0 items-center gap-1.5">
-              {event.entityType && (
-                <span className="shrink-0 rounded px-1.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-[0.05em] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]">
-                  {ENTITY_LABEL[event.entityType] ?? event.entityType}
-                </span>
-              )}
-              {entityLabelText && (
-                <span className="min-w-0 truncate font-display text-[12.5px] text-[var(--text-secondary)]">
-                  {entityLabelText}
-                </span>
-              )}
-            </span>
-            {entityId && (
-              <button
-                type="button"
-                onClick={() => void copyId(entityId)}
-                title={`Copiar ID: ${entityId}`}
-                className="inline-flex w-fit items-center gap-1 rounded px-1 py-0.5 font-mono text-[10px] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]"
-              >
-                <span>{truncateId(entityId)}</span>
-                <IconCopy size={10} />
-              </button>
-            )}
-          </div>
-        ) : (
-          <span className="font-display text-[12.5px] text-[var(--text-muted)]">—</span>
-        )}
+        <EntityCell
+          entityType={event.entityType ?? null}
+          entityLabel={entityLabelText}
+          entityId={entityId}
+        />
       </div>
 
-      {/* Coluna: Origem */}
+      {/* Coluna: Origem — canal em pill com ícone dedicado (WhatsApp, IG, etc.) */}
       <div className="min-w-0">
-        {origin.pill ? (
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span
-                className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-display text-[10px] font-bold ${
-                  origin.pill === "client"
-                    ? "bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] text-[var(--color-info)]"
-                    : origin.pill === "agent"
-                    ? "bg-[color-mix(in_srgb,var(--color-success)_14%,transparent)] text-[var(--color-success)]"
-                    : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]"
-                }`}
-              >
-                {origin.pill === "client"
-                  ? "Cliente"
-                  : origin.pill === "agent"
-                  ? "Agente"
-                  : origin.primary ?? "Canal"}
-              </span>
-              {/* Para client/agent: mostrar o nome ao lado da pill */}
-              {origin.pill !== "channel" && origin.primary && (
-                <span className="min-w-0 truncate font-display text-[12.5px] text-[var(--text-secondary)]">
-                  {origin.primary}
-                </span>
-              )}
-            </span>
-            {origin.secondary && (
-              <span className="truncate font-display text-[11px] text-[var(--text-muted)]">
-                {origin.secondary}
-              </span>
-            )}
-          </div>
-        ) : (
-          <span className="font-display text-[12.5px] text-[var(--text-muted)]">—</span>
-        )}
+        <OriginCell origin={origin} />
       </div>
 
       {/* Coluna: Responsável */}
@@ -986,6 +942,358 @@ function EventCard({ event }: { event: FeedEvent }) {
       <div className="text-right">
         <EventDate iso={event.occurredAt} />
       </div>
+    </div>
+  );
+}
+
+// ── Célula de Entidade ──────────────────────────────────────────────────────
+// Padrão: pill do tipo + nome truncável. Quando há link canônico (DEAL,
+// CONTACT, CONVERSATION, MESSAGE) a pill vira Link e ganha um botão de
+// "copiar link" ao lado do "copiar ID".
+
+function entityHref(entityType: string | null, entityId: string): string | null {
+  if (!entityType || !entityId) return null;
+  switch (entityType) {
+    case "DEAL":
+      return `/deals/${entityId}`;
+    case "CONTACT":
+      return `/contacts/${entityId}`;
+    case "CONVERSATION":
+    case "MESSAGE":
+      return `/inbox?conversation=${entityId}`;
+    case "ACTIVITY":
+      return `/activities/${entityId}`;
+    default:
+      return null;
+  }
+}
+
+const ENTITY_PILL_STYLE: Record<
+  string,
+  { className: string; icon: React.ReactNode }
+> = {
+  DEAL: {
+    className:
+      "bg-[color-mix(in_srgb,var(--brand-primary)_14%,transparent)] text-[var(--brand-primary-dark)]",
+    icon: <IconBriefcase size={11} />,
+  },
+  CONTACT: {
+    className:
+      "bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] text-[var(--color-info)]",
+    icon: <IconUsers size={11} />,
+  },
+  CONVERSATION: {
+    className:
+      "bg-[color-mix(in_srgb,var(--color-success)_14%,transparent)] text-[var(--color-success)]",
+    icon: <IconMessageCircle size={11} />,
+  },
+  MESSAGE: {
+    className:
+      "bg-[color-mix(in_srgb,var(--color-success)_14%,transparent)] text-[var(--color-success)]",
+    icon: <IconMessageCircle size={11} />,
+  },
+  ACTIVITY: {
+    className:
+      "bg-[color-mix(in_srgb,var(--color-warning)_16%,transparent)] text-[var(--color-warning)]",
+    icon: <IconChecklist size={11} />,
+  },
+  NOTE: {
+    className: "bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+    icon: <IconClipboardList size={11} />,
+  },
+  TAG: {
+    className: "bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+    icon: null,
+  },
+};
+
+async function copyEntityLink(path: string) {
+  try {
+    const url = new URL(path, window.location.origin).toString();
+    await navigator.clipboard.writeText(url);
+    toast.success("Link copiado", { description: url });
+  } catch {
+    toast.error("Não foi possível copiar o link");
+  }
+}
+
+function EntityCell({
+  entityType,
+  entityLabel,
+  entityId,
+}: {
+  entityType: string | null;
+  entityLabel: string | null;
+  entityId: string | null;
+}) {
+  if (!entityType && !entityLabel) {
+    return (
+      <span className="font-display text-[12.5px] text-[var(--text-muted)]">
+        —
+      </span>
+    );
+  }
+
+  const style = (entityType && ENTITY_PILL_STYLE[entityType]) || {
+    className: "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+    icon: null as React.ReactNode,
+  };
+  const label = entityType ? ENTITY_LABEL[entityType] ?? entityType : null;
+  const href = entityType && entityId ? entityHref(entityType, entityId) : null;
+
+  const pill = (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-[0.04em] transition-transform",
+        style.className,
+        href && "hover:-translate-y-px hover:brightness-95",
+      )}
+    >
+      {style.icon}
+      {label}
+      {href && <IconExternalLink size={9} className="opacity-70" />}
+    </span>
+  );
+
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="flex min-w-0 items-center gap-1.5">
+        {href ? (
+          <Link
+            href={href}
+            title={`Abrir ${label?.toLowerCase()}`}
+            className="shrink-0"
+          >
+            {pill}
+          </Link>
+        ) : (
+          pill
+        )}
+        {entityLabel && (
+          <span className="min-w-0 truncate font-display text-[12.5px] text-[var(--text-secondary)]">
+            {entityLabel}
+          </span>
+        )}
+      </span>
+      {entityId && (
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={() => void copyId(entityId)}
+            title={`Copiar ID: ${entityId}`}
+            className="inline-flex w-fit items-center gap-1 rounded px-1 py-0.5 font-mono text-[10px] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]"
+          >
+            <span>{truncateId(entityId)}</span>
+            <IconCopy size={10} />
+          </button>
+          {href && (
+            <button
+              type="button"
+              onClick={() => void copyEntityLink(href)}
+              title="Copiar link"
+              className="inline-flex items-center rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+            >
+              <IconLink size={11} />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Célula de Origem ────────────────────────────────────────────────────────
+// Pill com ícone dedicado por canal (WhatsApp, IG, Facebook, etc). Para
+// mensagens (cliente/agente) mantém a pill neutra existente.
+
+const CHANNEL_STYLE: Record<
+  string,
+  { icon: React.ReactNode; className: string }
+> = {
+  whatsapp: {
+    icon: <IconBrandWhatsapp size={11} />,
+    className:
+      "bg-[color-mix(in_srgb,#25D366_16%,transparent)] text-[#128C4A]",
+  },
+  instagram: {
+    icon: <IconBrandInstagram size={11} />,
+    className:
+      "bg-[color-mix(in_srgb,#DD2A7B_14%,transparent)] text-[#C13584]",
+  },
+  facebook: {
+    icon: <IconBrandFacebook size={11} />,
+    className:
+      "bg-[color-mix(in_srgb,#1877F2_14%,transparent)] text-[#1877F2]",
+  },
+  telegram: {
+    icon: <IconBrandTelegram size={11} />,
+    className:
+      "bg-[color-mix(in_srgb,#0088CC_14%,transparent)] text-[#0088CC]",
+  },
+  email: {
+    icon: <IconMail size={11} />,
+    className:
+      "bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] text-[var(--color-info)]",
+  },
+  webhook: {
+    icon: <IconActivity size={11} />,
+    className: "bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+  },
+  api: {
+    icon: <IconActivity size={11} />,
+    className: "bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+  },
+  manual: {
+    icon: null,
+    className: "bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+  },
+  automation: {
+    icon: <IconActivity size={11} />,
+    className:
+      "bg-[color-mix(in_srgb,var(--color-warning)_16%,transparent)] text-[var(--color-warning)]",
+  },
+};
+
+function OriginCell({ origin }: { origin: OriginInfo }) {
+  if (!origin.pill) {
+    return (
+      <span className="font-display text-[12.5px] text-[var(--text-muted)]">
+        —
+      </span>
+    );
+  }
+
+  let pillNode: React.ReactNode = null;
+  if (origin.pill === "client") {
+    pillNode = (
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10px] font-bold bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] text-[var(--color-info)]">
+        Cliente
+      </span>
+    );
+  } else if (origin.pill === "agent") {
+    pillNode = (
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10px] font-bold bg-[color-mix(in_srgb,var(--color-success)_14%,transparent)] text-[var(--color-success)]">
+        Agente
+      </span>
+    );
+  } else {
+    const key = (origin.primary ?? "").toLowerCase();
+    const style = CHANNEL_STYLE[key] ?? {
+      icon: <IconActivity size={11} />,
+      className: "bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+    };
+    pillNode = (
+      <span
+        className={cn(
+          "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10px] font-bold",
+          style.className,
+        )}
+      >
+        {style.icon}
+        {origin.primary}
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="flex min-w-0 items-center gap-1.5">
+        {pillNode}
+        {origin.pill !== "channel" && origin.primary && (
+          <span className="min-w-0 truncate font-display text-[12.5px] text-[var(--text-secondary)]">
+            {origin.primary}
+          </span>
+        )}
+      </span>
+      {origin.secondary && (
+        <span className="truncate font-display text-[11px] text-[var(--text-muted)]">
+          {origin.secondary}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ── Mini-dash de Eventos ────────────────────────────────────────────────────
+// Mesmo padrão do mini-dash de Chamadas: 4 KPIs derivados do lote carregado.
+
+function FeedMiniDash({ items }: { items: FeedEvent[] }) {
+  const stats = React.useMemo(() => {
+    let messages = 0;
+    let conversations = 0;
+    let deals = 0;
+    for (const ev of items) {
+      const t = ev.entityType;
+      if (t === "MESSAGE") messages++;
+      else if (t === "CONVERSATION") conversations++;
+      else if (t === "DEAL") deals++;
+    }
+    return { total: items.length, messages, conversations, deals };
+  }, [items]);
+
+  const cards: {
+    key: string;
+    label: string;
+    value: number;
+    accent: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      key: "total",
+      label: "Total de eventos",
+      value: stats.total,
+      accent: "var(--brand-primary)",
+      icon: <IconActivity size={16} />,
+    },
+    {
+      key: "messages",
+      label: "Mensagens",
+      value: stats.messages,
+      accent: "var(--color-success)",
+      icon: <IconMessageCircle size={16} />,
+    },
+    {
+      key: "conversations",
+      label: "Conversas",
+      value: stats.conversations,
+      accent: "var(--color-info)",
+      icon: <IconUsers size={16} />,
+    },
+    {
+      key: "deals",
+      label: "Negócios",
+      value: stats.deals,
+      accent: "var(--brand-secondary, #a78bfa)",
+      icon: <IconBriefcase size={16} />,
+    },
+  ];
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {cards.map((c) => (
+        <div
+          key={c.key}
+          className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+        >
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            style={{
+              background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
+              color: c.accent,
+            }}
+          >
+            {c.icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-[11.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              {c.label}
+            </div>
+            <div className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
+              {c.value.toLocaleString("pt-BR")}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -1213,6 +1521,7 @@ function FeedSearchFilterBar({
         type="search"
         value={search}
         onChange={(e) => onSearch(e.target.value)}
+        onFocus={() => setOpen(true)}
         placeholder="Pesquisar e filtrar eventos..."
         aria-label="Buscar e filtrar eventos"
         className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-11 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"

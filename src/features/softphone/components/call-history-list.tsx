@@ -17,7 +17,7 @@ import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortabl
 import { listCalls } from "../api/extensions";
 import type { CallRecord, ListCallsFilters } from "../api/types";
 
-const COLS = "grid-cols-[36px_minmax(180px,2fr)_90px_100px_70px_minmax(130px,1.1fr)_80px]";
+const COLS = "grid-cols-[36px_minmax(180px,2fr)_90px_100px_70px_minmax(130px,1.1fr)_minmax(80px,190px)]";
 
 function formatDuration(sec: number | null) {
   if (!sec) return "—";
@@ -169,8 +169,7 @@ function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
   const { label: sLabel, color: sColor } = statusLabel(call.status);
 
   return (
-    <div className="flex flex-col border-b border-[var(--glass-border-subtle)] last:border-b-0">
-      <div className={`grid ${COLS} items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[var(--glass-bg-overlay)]`}>
+    <div className={`grid ${COLS} items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]`}>
         {/* Ícone de direção/status */}
         <span
           className={cn(
@@ -237,32 +236,131 @@ function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
           {formatDate(call.startedAt)}
         </span>
 
-        {/* Botão de gravação */}
-        <div className="flex justify-end">
+        {/* Gravação — botão play; quando ativo, vira um player COMPACTO
+            inline (barra menor ao lado do botão), sem expandir abaixo. */}
+        <div className="flex min-w-0 items-center justify-end">
           {call.recordUrl ? (
-            <button
-              type="button"
-              onClick={onPlay}
-              title={isPlaying ? "Pausar gravação" : "Ouvir gravação"}
-              className={cn(
-                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all",
-                isPlaying
-                  ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-                  : "bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_12px_rgba(91,111,245,0.35)]",
-              )}
-            >
-              {isPlaying ? <IconPlayerPauseFilled size={14} /> : <IconPlayerPlayFilled size={14} />}
-            </button>
+            isPlaying ? (
+              <CompactAudioPlayer src={call.recordUrl} onEnded={onPlay} />
+            ) : (
+              <button
+                type="button"
+                onClick={onPlay}
+                title="Ouvir gravação"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] text-[var(--brand-primary)] transition-all hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+              >
+                <IconPlayerPlayFilled size={14} />
+              </button>
+            )
           ) : (
             <span className="h-8 w-8" />
           )}
         </div>
-      </div>
+    </div>
+  );
+}
 
-      {/* Mini player inline — expande abaixo da linha quando ativo */}
-      {isPlaying && call.recordUrl && (
-        <AudioPlayer src={call.recordUrl} onEnded={onPlay} />
-      )}
+// ── Mini player COMPACTO inline ─────────────────────────────────────────────
+// Ocupa a própria célula de "Gravação" (não expande abaixo): botão play/pause
+// + barra fina de progresso + tempo, alinhados à direita.
+function CompactAudioPlayer({
+  src,
+  onEnded,
+}: {
+  src: string;
+  onEnded: () => void;
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [playing, setPlaying] = useState(true);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.play().catch(() => setPlaying(false));
+    return () => {
+      audio.pause();
+    };
+  }, [src]);
+
+  function handleTimeUpdate() {
+    const audio = audioRef.current;
+    if (!audio || !audio.duration) return;
+    setCurrentTime(audio.currentTime);
+    setProgress((audio.currentTime / audio.duration) * 100);
+  }
+
+  function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
+    const audio = audioRef.current;
+    if (!audio || !audio.duration) return;
+    audio.currentTime = (Number(e.target.value) / 100) * audio.duration;
+    setProgress(Number(e.target.value));
+  }
+
+  function togglePlay() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      audio.play();
+      setPlaying(true);
+    } else {
+      audio.pause();
+      setPlaying(false);
+    }
+  }
+
+  function fmtTime(s: number) {
+    if (!s || Number.isNaN(s)) return "0:00";
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${String(sec).padStart(2, "0")}`;
+  }
+
+  return (
+    <div className="flex min-w-0 items-center justify-end gap-2">
+      <audio
+        ref={audioRef}
+        src={src}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleTimeUpdate}
+        onEnded={onEnded}
+        preload="auto"
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={togglePlay}
+        title={playing ? "Pausar gravação" : "Retomar gravação"}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_2px_6px_rgba(91,111,245,0.3)] transition-transform hover:scale-105"
+      >
+        {playing ? (
+          <IconPlayerPauseFilled size={13} />
+        ) : (
+          <IconPlayerPlayFilled size={13} />
+        )}
+      </button>
+      <div className="relative min-w-0 flex-1">
+        <div className="h-1 overflow-hidden rounded-full bg-[var(--glass-border)]">
+          <div
+            className="h-full rounded-full bg-[var(--brand-primary)] transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={0.1}
+          value={progress}
+          onChange={handleSeek}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          aria-label="Posição da gravação"
+        />
+      </div>
+      <span className="w-8 shrink-0 text-right font-mono text-[10.5px] tabular-nums text-[var(--text-muted)]">
+        {fmtTime(currentTime)}
+      </span>
     </div>
   );
 }

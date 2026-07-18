@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { KpiCard } from "@/components/crm/kpi-card";
 import {
   Dialog,
   DialogContent,
@@ -27,8 +28,6 @@ import WhatsAppTemplatesPage from "../whatsapp-templates";
 import {
   HubCallout,
   HubPanel,
-  HubStat,
-  HubStatGrid,
   HubSubHeader,
 } from "./hub-ui";
 
@@ -509,12 +508,41 @@ export default function MessageModelsHubPage() {
 
       {safeTab === "overview" && (
         <div className="space-y-4">
-          <HubStatGrid>
-            <HubStat tone="brand" icon={<LayoutTemplate className="size-5" />} value={totalCount} label="Modelos no total" />
-            <HubStat tone="violet" icon={<FileText className="size-5" />} value={internalCount} label="Internos" />
-            <HubStat tone="success" icon={<CheckCircle2 className="size-5" />} value={metaApproved} label="WhatsApp aprovados" />
-            <HubStat tone="warn" icon={<Clock className="size-5" />} value={metaPending} label="Aguardando revisão Meta" />
-          </HubStatGrid>
+          <section
+            className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
+            aria-label="Indicadores de modelos de mensagem"
+          >
+            <KpiCard
+              label="Total modelos"
+              value={totalCount.toLocaleString("pt-BR")}
+              icon={<LayoutTemplate className="size-5" />}
+              tone="brand"
+            />
+            <KpiCard
+              label="Internos"
+              value={internalCount.toLocaleString("pt-BR")}
+              icon={<FileText className="size-5" />}
+              tone="violet"
+            />
+            <KpiCard
+              label="WhatsApp aprovados"
+              value={metaApproved.toLocaleString("pt-BR")}
+              icon={<CheckCircle2 className="size-5" />}
+              tone="success"
+            />
+            <KpiCard
+              label="Aguardando Meta"
+              value={metaPending.toLocaleString("pt-BR")}
+              icon={<Clock className="size-5" />}
+              tone="warning"
+            />
+            <KpiCard
+              label="Flows publicados"
+              value={flowPublished.toLocaleString("pt-BR")}
+              icon={<Workflow className="size-5" />}
+              tone="neutral"
+            />
+          </section>
 
           {loadingInt || loadingMeta || loadingFlows ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -628,12 +656,35 @@ export default function MessageModelsHubPage() {
             nos templates da Meta.
           </HubSubHeader>
 
-          <HubStatGrid>
-            <HubStat tone="brand" icon={<Workflow className="size-5" />} value={flowCount} label="Flows no total" />
-            <HubStat tone="success" icon={<CheckCircle2 className="size-5" />} value={flowPublished} label="Publicados" />
-            <HubStat tone="warn" icon={<FileText className="size-5" />} value={flowDraft} label="Rascunhos" />
-            <HubStat tone="violet" icon={<LayoutTemplate className="size-5" />} value={flowWithMeta} label="Com Meta flow id" />
-          </HubStatGrid>
+          <section
+            className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
+            aria-label="Indicadores de flows"
+          >
+            <KpiCard
+              label="Flows no total"
+              value={flowCount.toLocaleString("pt-BR")}
+              icon={<Workflow className="size-5" />}
+              tone="brand"
+            />
+            <KpiCard
+              label="Publicados"
+              value={flowPublished.toLocaleString("pt-BR")}
+              icon={<CheckCircle2 className="size-5" />}
+              tone="success"
+            />
+            <KpiCard
+              label="Rascunhos"
+              value={flowDraft.toLocaleString("pt-BR")}
+              icon={<FileText className="size-5" />}
+              tone="warning"
+            />
+            <KpiCard
+              label="Com Meta flow id"
+              value={flowWithMeta.toLocaleString("pt-BR")}
+              icon={<LayoutTemplate className="size-5" />}
+              tone="violet"
+            />
+          </section>
 
           <HubCallout tone="info" icon={<Info className="size-[18px]" />}>
             Flows criados só no <strong className="font-bold text-[var(--brand-primary-dark)]">Meta Business Manager</strong>{" "}

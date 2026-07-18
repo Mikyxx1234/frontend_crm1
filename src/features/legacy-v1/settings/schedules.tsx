@@ -1,21 +1,46 @@
 "use client";
 
-import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconCheck as Check, IconClock as Clock, IconLoader2 as Loader2, IconPencil as Pencil } from "@tabler/icons-react";
+import {
+  IconCheck as Check,
+  IconClock,
+  IconLayoutGrid,
+  IconLoader2 as Loader2,
+  IconPencil,
+  IconPhone,
+  IconUsers,
+  IconWifi,
+  IconWifiOff,
+  IconZzz,
+} from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
+import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import {
-  Dialog, DialogClose, DialogContent, DialogDescription,
-  DialogFooter, DialogHeader, DialogTitle,
+  ListColumnLabel,
+  SortableHeader,
+  listTableHeadRowClass,
+  type SortDir,
+} from "@/components/crm/sortable-header";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
-import { TooltipGlass } from "@/components/crm/tooltip-glass";
-import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
+import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 type AgentOnlineStatus = "ONLINE" | "OFFLINE" | "AWAY";
 
@@ -41,12 +66,23 @@ type AgentRow = {
   schedule: Schedule | null;
 };
 
-const STATUS_LABELS: Record<AgentOnlineStatus, string> = { ONLINE: "Online", OFFLINE: "Offline", AWAY: "Ausente" };
+type SortField = "name" | "email" | "status" | "schedule";
+type StatusFilter = AgentOnlineStatus | "WA" | "";
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const STATUS_LABELS: Record<AgentOnlineStatus, string> = {
+  ONLINE: "Online",
+  OFFLINE: "Offline",
+  AWAY: "Ausente",
+};
+
 const STATUS_COLORS: Record<AgentOnlineStatus, string> = {
   ONLINE: "bg-[var(--color-success-bg)] text-[color-mix(in_srgb,var(--color-success)_78%,black)]",
   OFFLINE: "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
   AWAY: "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
 };
+
 const STATUS_DOT: Record<AgentOnlineStatus, string> = {
   ONLINE: "bg-[var(--color-success)]",
   OFFLINE: "bg-[var(--text-muted)]",
@@ -72,11 +108,40 @@ const DEFAULT_SCHEDULE: Schedule = {
   weekdays: [1, 2, 3, 4, 5],
 };
 
+/** Mini-dash: segmentos de status clicáveis. */
+const STATUS_SEGMENTS: {
+  id: Exclude<StatusFilter, "">;
+  label: string;
+  tone: KpiTone;
+  icon: React.ReactNode;
+}[] = [
+  { id: "ONLINE",  label: "Online",      tone: "success", icon: <IconWifi    size={20} stroke={2.2} /> },
+  { id: "AWAY",    label: "Ausente",     tone: "warning", icon: <IconZzz     size={20} stroke={2.2} /> },
+  { id: "OFFLINE", label: "Offline",     tone: "neutral", icon: <IconWifiOff size={20} stroke={2.2} /> },
+  { id: "WA",      label: "WA voz ativo", tone: "violet", icon: <IconPhone   size={20} stroke={2.2} /> },
+];
+
+/** Grid: Nome | E-mail | Status | Expediente | Dias | Ações */
+const LIST_GRID = "minmax(0,1.6fr) minmax(0,1.4fr) 140px 150px 68px 52px";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 async function fetchAgents(): Promise<AgentRow[]> {
   const res = await fetch(apiUrl("/api/agents/status"));
   if (!res.ok) throw new Error("Erro ao carregar agentes");
   return res.json();
 }
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function SchedulesPage() {
   const qc = useQueryClient();
@@ -88,13 +153,13 @@ export default function SchedulesPage() {
 
   const slots = useSettingsHeaderSlots();
   const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("");
+  const [sortBy, setSortBy] = React.useState<SortField>("name");
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
   const [editAgent, setEditAgent] = React.useState<AgentRow | null>(null);
   const [editSchedule, setEditSchedule] = React.useState<Schedule>(DEFAULT_SCHEDULE);
 
-  const openEdit = (agent: AgentRow) => {
-    setEditAgent(agent);
-    setEditSchedule(agent.schedule ?? DEFAULT_SCHEDULE);
-  };
+  // ── Mutations ──────────────────────────────────────────────────────────────
 
   const statusMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: string; status: AgentOnlineStatus }) => {
@@ -104,6 +169,25 @@ export default function SchedulesPage() {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Erro ao alterar status");
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agents-schedules"] }),
+  });
+
+  const voiceMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      availableForVoiceCalls,
+    }: {
+      userId: string;
+      availableForVoiceCalls: boolean;
+    }) => {
+      const res = await fetch(apiUrl(`/api/agents/${userId}/status`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ availableForVoiceCalls }),
+      });
+      if (!res.ok) throw new Error("Erro ao atualizar ligações");
       return res.json();
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["agents-schedules"] }),
@@ -125,30 +209,19 @@ export default function SchedulesPage() {
     },
   });
 
-  const cycleStatus = (agent: AgentRow) => {
-    const current = agent.agentStatus?.status ?? "OFFLINE";
-    const next: AgentOnlineStatus = current === "ONLINE" ? "AWAY" : current === "AWAY" ? "OFFLINE" : "ONLINE";
-    statusMutation.mutate({ userId: agent.id, status: next });
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const openEdit = (agent: AgentRow) => {
+    setEditAgent(agent);
+    setEditSchedule(agent.schedule ?? DEFAULT_SCHEDULE);
   };
 
-  const voiceMutation = useMutation({
-    mutationFn: async ({
-      userId,
-      availableForVoiceCalls,
-    }: {
-      userId: string;
-      availableForVoiceCalls: boolean;
-    }) => {
-      const res = await fetch(apiUrl(`/api/agents/${userId}/status`), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ availableForVoiceCalls }),
-      });
-      if (!res.ok) throw new Error("Erro ao atualizar ligações");
-      return res.json();
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["agents-schedules"] }),
-  });
+  const cycleStatus = (agent: AgentRow) => {
+    const current = agent.agentStatus?.status ?? "OFFLINE";
+    const next: AgentOnlineStatus =
+      current === "ONLINE" ? "AWAY" : current === "AWAY" ? "OFFLINE" : "ONLINE";
+    statusMutation.mutate({ userId: agent.id, status: next });
+  };
 
   const toggleWeekday = (day: number) => {
     setEditSchedule((s) => ({
@@ -159,16 +232,75 @@ export default function SchedulesPage() {
     }));
   };
 
-  const filteredAgents = React.useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return agents;
-    return agents.filter(
-      (a) =>
-        a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q),
-    );
-  }, [agents, search]);
+  const toggleSort = React.useCallback((field: SortField) => {
+    setSortBy((prev) => {
+      if (prev === field) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+      setSortDir("asc");
+      return field;
+    });
+  }, []);
 
-  // Busca por nome do agente no centro do PageHeader (padrão canônico).
+  const dirFor = (f: SortField): SortDir => (sortBy === f ? sortDir : null);
+
+  // ── KPI counts ────────────────────────────────────────────────────────────
+
+  const kpiCounts = React.useMemo(() => ({
+    online:  agents.filter((a) => a.agentStatus?.status === "ONLINE").length,
+    away:    agents.filter((a) => a.agentStatus?.status === "AWAY").length,
+    offline: agents.filter((a) => !a.agentStatus || a.agentStatus.status === "OFFLINE").length,
+    wa:      agents.filter((a) => a.agentStatus?.availableForVoiceCalls === true).length,
+  }), [agents]);
+
+  // ── Filter + search + sort pipeline ──────────────────────────────────────
+
+  const sorted = React.useMemo(() => {
+    let arr = agents;
+
+    if (statusFilter === "ONLINE")
+      arr = arr.filter((a) => a.agentStatus?.status === "ONLINE");
+    else if (statusFilter === "AWAY")
+      arr = arr.filter((a) => a.agentStatus?.status === "AWAY");
+    else if (statusFilter === "OFFLINE")
+      arr = arr.filter((a) => !a.agentStatus || a.agentStatus.status === "OFFLINE");
+    else if (statusFilter === "WA")
+      arr = arr.filter((a) => a.agentStatus?.availableForVoiceCalls === true);
+
+    const q = search.trim().toLowerCase();
+    if (q)
+      arr = arr.filter(
+        (a) => a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q),
+      );
+
+    const result = [...arr];
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case "name":
+          cmp = a.name.localeCompare(b.name, "pt-BR");
+          break;
+        case "email":
+          cmp = a.email.localeCompare(b.email, "pt-BR");
+          break;
+        case "status": {
+          const sa = a.agentStatus?.status ?? "OFFLINE";
+          const sb = b.agentStatus?.status ?? "OFFLINE";
+          cmp = sa.localeCompare(sb);
+          break;
+        }
+        case "schedule":
+          cmp = (a.schedule?.startTime ?? "").localeCompare(b.schedule?.startTime ?? "");
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [agents, statusFilter, search, sortBy, sortDir]);
+
+  // ── Header slots ──────────────────────────────────────────────────────────
+
   const searchNode = React.useMemo(
     () => (
       <SettingsListFilterBar
@@ -188,141 +320,210 @@ export default function SchedulesPage() {
     return () => slots.setCenter(null);
   }, [slots, searchNode]);
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
-    <div className="min-w-0 w-full max-w-full space-y-3 sm:space-y-4 shrink-0">
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
       {isError && (
         <p className="rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 px-4 py-3 text-sm text-[var(--color-danger)]">
           Erro ao carregar agentes.
         </p>
       )}
 
+      {/* KPI mini-dash */}
+      <section
+        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
+        aria-label="Indicadores de agentes"
+      >
+        <KpiCard
+          label="Agentes"
+          value={agents.length.toLocaleString("pt-BR")}
+          icon={<IconUsers size={20} stroke={2.2} />}
+          tone="brand"
+          onClick={() => setStatusFilter("")}
+        />
+        {STATUS_SEGMENTS.map((seg) => {
+          const count =
+            seg.id === "ONLINE"  ? kpiCounts.online  :
+            seg.id === "AWAY"    ? kpiCounts.away    :
+            seg.id === "OFFLINE" ? kpiCounts.offline :
+                                   kpiCounts.wa;
+          return (
+            <KpiCard
+              key={seg.id}
+              label={seg.label}
+              value={count.toLocaleString("pt-BR")}
+              icon={seg.icon}
+              tone={seg.tone}
+              active={statusFilter === seg.id}
+              onClick={() =>
+                setStatusFilter((prev) => (prev === seg.id ? "" : seg.id))
+              }
+            />
+          );
+        })}
+      </section>
+
       {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-[var(--glass-bg-strong)]" />
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[64px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
+            />
           ))}
         </div>
       ) : agents.length === 0 ? (
-        <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16 text-center">
-          <Clock className="mx-auto mb-3 size-10 text-[var(--text-muted)] opacity-40" />
+        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16">
+          <IconClock size={40} className="text-[var(--text-muted)] opacity-40" />
           <p className="text-sm text-[var(--text-muted)]">Nenhum agente encontrado.</p>
         </div>
       ) : (
-        <div className="min-w-0 w-full max-w-full shrink-0 space-y-2">
-          <p className="px-1 font-body text-[12px] text-[var(--text-muted)]">
-            {filteredAgents.length} de {agents.length} agente
-            {agents.length !== 1 ? "s" : ""}
-          </p>
+        <div className="flex min-w-0 flex-col gap-2">
+          {/* Column header */}
+          <div
+            className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
+            style={{ gridTemplateColumns: LIST_GRID }}
+          >
+            <SortableHeader label="Nome"       sort={dirFor("name")}     onSort={() => toggleSort("name")}     />
+            <SortableHeader label="E-mail"     sort={dirFor("email")}    onSort={() => toggleSort("email")}    />
+            <SortableHeader label="Status"     sort={dirFor("status")}   onSort={() => toggleSort("status")}   />
+            <SortableHeader label="Expediente" sort={dirFor("schedule")} onSort={() => toggleSort("schedule")} />
+            <ListColumnLabel>Dias</ListColumnLabel>
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
+          </div>
 
-          {filteredAgents.length === 0 ? (
-            <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-12 text-center">
+          {sorted.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-12">
               <p className="font-body text-[13px] text-[var(--text-muted)]">
-                Nenhum agente encontrado para “{search}”.
+                Nenhum agente encontrado{search ? ` para "${search}"` : ""}.
               </p>
             </div>
           ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredAgents.map((agent) => {
+            sorted.map((agent) => {
               const status: AgentOnlineStatus = agent.agentStatus?.status ?? "OFFLINE";
               const voiceOn = agent.agentStatus?.availableForVoiceCalls ?? false;
               const sched = agent.schedule;
+
               return (
                 <div
                   key={agent.id}
-                  className="group relative flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]"
+                  style={{ gridTemplateColumns: LIST_GRID }}
+                  className="group grid items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]"
                 >
-                  <div className="flex items-start gap-3">
+                  {/* Nome + avatar */}
+                  <div className="flex min-w-0 items-center gap-2.5">
                     <div className="relative shrink-0">
-                      <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)] text-sm font-semibold text-white">
-                        {agent.name.charAt(0).toUpperCase()}
+                      <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)] font-display text-[12px] font-bold text-white">
+                        {getInitials(agent.name)}
                       </div>
-                      <span className={cn("absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-[var(--glass-bg-base)]", STATUS_DOT[status])} />
+                      <span
+                        className={cn(
+                          "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-[var(--glass-bg-base)]",
+                          STATUS_DOT[status],
+                        )}
+                      />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="break-words font-display text-[14px] font-semibold text-[var(--text-primary)]">{agent.name}</p>
-                      <p className="break-all font-body text-[12px] text-[var(--text-muted)]">{agent.email}</p>
+                    <div className="min-w-0 leading-tight">
+                      <p className="max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+                        {agent.name}
+                      </p>
+                      <p className="truncate font-body text-[12px] text-[var(--text-muted)]">
+                        {agent.role}
+                      </p>
                     </div>
-                    <TooltipGlass label="Editar horário" side="left">
-                      <ButtonGlass variant="icon" size="icon" onClick={() => openEdit(agent)} aria-label="Editar horário" className="shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100">
-                        <Pencil className="size-3.5" />
-                      </ButtonGlass>
-                    </TooltipGlass>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  {/* E-mail */}
+                  <span className="truncate font-body text-[13px] text-[var(--text-secondary)]">
+                    {agent.email}
+                  </span>
+
+                  {/* Status pill (click-to-cycle) + WA voice pill stacked */}
+                  <div className="flex flex-col items-start gap-1">
                     <button
                       type="button"
                       onClick={() => cycleStatus(agent)}
                       disabled={statusMutation.isPending}
-                      className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80", STATUS_COLORS[status])}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[11px] font-bold transition-opacity hover:opacity-80",
+                        STATUS_COLORS[status],
+                      )}
                     >
                       <span className={cn("size-1.5 rounded-full", STATUS_DOT[status])} />
                       {STATUS_LABELS[status]}
                     </button>
-                    <TooltipGlass label="Disponível para receber ligações WhatsApp (requer Online + horário)" side="top">
+                    <TooltipGlass
+                      label="Disponível para receber ligações WhatsApp (requer Online + horário)"
+                      side="top"
+                    >
                       <button
                         type="button"
                         onClick={() =>
-                          voiceMutation.mutate({ userId: agent.id, availableForVoiceCalls: !voiceOn })
+                          voiceMutation.mutate({
+                            userId: agent.id,
+                            availableForVoiceCalls: !voiceOn,
+                          })
                         }
                         disabled={voiceMutation.isPending}
                         className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80",
+                          "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display text-[10px] font-bold transition-opacity hover:opacity-80",
                           voiceOn
                             ? "bg-[var(--color-success-bg)] text-[color-mix(in_srgb,var(--color-success)_78%,black)]"
                             : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
                         )}
                         aria-label="Disponível para receber ligações WhatsApp"
                       >
-                        {voiceOn ? "WA: Ativo" : "WA: Inativo"}
+                        <IconPhone size={10} />
+                        WA {voiceOn ? "ativo" : "inativo"}
                       </button>
                     </TooltipGlass>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 font-body text-[12px] text-[var(--text-muted)]">
-                    <Clock className="size-3.5 shrink-0" />
-                    <span>
-                      Início{" "}
-                      <span className="tabular-nums font-semibold text-[var(--text-primary)]">{sched?.startTime ?? "08:00"}</span>
-                    </span>
-                    <span className="text-[var(--text-muted)]/50">·</span>
-                    <span>
-                      Almoço{" "}
-                      <span className="tabular-nums font-semibold text-[var(--text-primary)]">
-                        {sched ? `${sched.lunchStart} – ${sched.lunchEnd}` : "12:00 – 13:00"}
+                  {/* Expediente */}
+                  <div className="flex min-w-0 items-center gap-1.5 font-body text-[12px] text-[var(--text-secondary)]">
+                    <IconClock size={13} className="shrink-0 text-[var(--text-muted)]" />
+                    {sched ? (
+                      <span className="truncate tabular-nums">
+                        {sched.startTime} – {sched.endTime}
                       </span>
-                    </span>
-                    <span className="text-[var(--text-muted)]/50">·</span>
-                    <span>
-                      Fim{" "}
-                      <span className="tabular-nums font-semibold text-[var(--text-primary)]">{sched?.endTime ?? "18:00"}</span>
-                    </span>
+                    ) : (
+                      <span className="text-[var(--text-muted)]">—</span>
+                    )}
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5">
-                    {WEEKDAYS.map((wd) => {
-                      const active = sched ? sched.weekdays.includes(wd.value) : [1, 2, 3, 4, 5].includes(wd.value);
-                      return (
-                        <TooltipGlass key={wd.value} label={wd.label} side="top">
-                          <span className={cn(
-                            "inline-flex size-7 items-center justify-center rounded-[var(--radius-md)] text-[10px] font-bold",
-                            active
-                              ? "bg-[var(--brand-primary)] text-white"
-                              : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
-                          )}>{wd.short.charAt(0)}</span>
-                        </TooltipGlass>
-                      );
-                    })}
+                  {/* Dias (weekday count badge) */}
+                  <div>
+                    {sched && sched.weekdays.length > 0 ? (
+                      <span className="inline-flex items-center rounded-[var(--radius-sm)] bg-[var(--glass-bg-strong)] px-2 py-0.5 font-display text-[12px] font-semibold text-[var(--text-secondary)]">
+                        {sched.weekdays.length}d
+                      </span>
+                    ) : (
+                      <span className="font-body text-[12px] text-[var(--text-muted)]">—</span>
+                    )}
+                  </div>
+
+                  {/* Ações */}
+                  <div className="flex items-center justify-end">
+                    <TooltipGlass label="Editar horário" side="left">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(agent)}
+                        aria-label={`Editar horário de ${agent.name}`}
+                        className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
+                      >
+                        <IconPencil size={15} />
+                      </button>
+                    </TooltipGlass>
                   </div>
                 </div>
               );
-            })}
-          </div>
+            })
           )}
         </div>
       )}
 
-      {/* Edit schedule dialog */}
+      {/* Edit schedule dialog — preserved verbatim */}
       <Dialog open={!!editAgent} onOpenChange={(o) => { if (!o) setEditAgent(null); }}>
         <DialogContent size="md">
           <DialogClose />
@@ -331,34 +532,53 @@ export default function SchedulesPage() {
             <DialogDescription>Defina o expediente, almoço e dias de trabalho.</DialogDescription>
           </DialogHeader>
 
-          <form className="space-y-4" onSubmit={(e) => {
-            e.preventDefault();
-            if (editAgent) scheduleMutation.mutate({ userId: editAgent.id, schedule: editSchedule });
-          }}>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (editAgent) scheduleMutation.mutate({ userId: editAgent.id, schedule: editSchedule });
+            }}
+          >
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="min-w-0 w-full space-y-1.5">
                 <Label htmlFor="sch-start">Início expediente</Label>
-                <InputGlass id="sch-start" type="time" value={editSchedule.startTime}
+                <InputGlass
+                  id="sch-start"
+                  type="time"
+                  value={editSchedule.startTime}
                   onChange={(e) => setEditSchedule((s) => ({ ...s, startTime: e.target.value }))}
-                  className="w-full" />
+                  className="w-full"
+                />
               </div>
               <div className="min-w-0 w-full space-y-1.5">
                 <Label htmlFor="sch-end">Fim expediente</Label>
-                <InputGlass id="sch-end" type="time" value={editSchedule.endTime}
+                <InputGlass
+                  id="sch-end"
+                  type="time"
+                  value={editSchedule.endTime}
                   onChange={(e) => setEditSchedule((s) => ({ ...s, endTime: e.target.value }))}
-                  className="w-full" />
+                  className="w-full"
+                />
               </div>
               <div className="min-w-0 w-full space-y-1.5">
                 <Label htmlFor="sch-lunch-start">Início almoço</Label>
-                <InputGlass id="sch-lunch-start" type="time" value={editSchedule.lunchStart}
+                <InputGlass
+                  id="sch-lunch-start"
+                  type="time"
+                  value={editSchedule.lunchStart}
                   onChange={(e) => setEditSchedule((s) => ({ ...s, lunchStart: e.target.value }))}
-                  className="w-full" />
+                  className="w-full"
+                />
               </div>
               <div className="min-w-0 w-full space-y-1.5">
                 <Label htmlFor="sch-lunch-end">Fim almoço</Label>
-                <InputGlass id="sch-lunch-end" type="time" value={editSchedule.lunchEnd}
+                <InputGlass
+                  id="sch-lunch-end"
+                  type="time"
+                  value={editSchedule.lunchEnd}
                   onChange={(e) => setEditSchedule((s) => ({ ...s, lunchEnd: e.target.value }))}
-                  className="w-full" />
+                  className="w-full"
+                />
               </div>
             </div>
 
@@ -368,13 +588,17 @@ export default function SchedulesPage() {
                 {WEEKDAYS.map((wd) => {
                   const active = editSchedule.weekdays.includes(wd.value);
                   return (
-                    <button key={wd.value} type="button" onClick={() => toggleWeekday(wd.value)}
+                    <button
+                      key={wd.value}
+                      type="button"
+                      onClick={() => toggleWeekday(wd.value)}
                       className={cn(
                         "inline-flex items-center gap-1 rounded-[var(--radius-md)] px-3 py-2 text-xs font-semibold transition-colors",
                         active
                           ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                          : "border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] text-[var(--text-muted)] hover:border-[var(--brand-primary)] hover:text-[var(--text-primary)]"
-                      )}>
+                          : "border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] text-[var(--text-muted)] hover:border-[var(--brand-primary)] hover:text-[var(--text-primary)]",
+                      )}
+                    >
                       {active && <Check className="size-3" />}
                       {wd.short}
                     </button>
@@ -385,14 +609,27 @@ export default function SchedulesPage() {
 
             {scheduleMutation.isError && (
               <p className="text-sm text-destructive">
-                {scheduleMutation.error instanceof Error ? scheduleMutation.error.message : "Erro ao salvar."}
+                {scheduleMutation.error instanceof Error
+                  ? scheduleMutation.error.message
+                  : "Erro ao salvar."}
               </p>
             )}
 
             <DialogFooter className="gap-2">
-              <ButtonGlass type="button" variant="glass" onClick={() => setEditAgent(null)}>Cancelar</ButtonGlass>
-              <ButtonGlass type="submit" variant="primary" disabled={scheduleMutation.isPending} className="gap-2">
-                {scheduleMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+              <ButtonGlass type="button" variant="glass" onClick={() => setEditAgent(null)}>
+                Cancelar
+              </ButtonGlass>
+              <ButtonGlass
+                type="submit"
+                variant="primary"
+                disabled={scheduleMutation.isPending}
+                className="gap-2"
+              >
+                {scheduleMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Check className="size-4" />
+                )}
                 Salvar
               </ButtonGlass>
             </DialogFooter>

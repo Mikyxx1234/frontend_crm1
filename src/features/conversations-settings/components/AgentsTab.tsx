@@ -25,6 +25,7 @@ import {
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { KpiCard } from "@/components/crm/kpi-card";
 
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
@@ -990,6 +991,14 @@ export function AgentsTab() {
 
   const selectedAgent = agents.find((a) => a.id === selectedId) ?? null;
 
+  const kpis = React.useMemo(() => ({
+    total: agents.length,
+    online: agents.filter((a) => a.isOnline).length,
+    admins: agents.filter((a) => a.role === "ADMIN").length,
+    withPerms: agents.filter((a) => a.permissions != null).length,
+    noPerms: agents.filter((a) => a.permissions == null).length,
+  }), [agents]);
+
   if (isError) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] py-20 text-center">
@@ -1001,7 +1010,44 @@ export function AgentsTab() {
   }
 
   return (
-    <div className="grid min-w-0 w-full max-w-full grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
+      <section
+        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
+        aria-label="Indicadores de atendentes"
+      >
+        <KpiCard
+          label="Total atendentes"
+          value={kpis.total.toLocaleString("pt-BR")}
+          icon={<IconUsers size={20} stroke={2.2} />}
+          tone="brand"
+        />
+        <KpiCard
+          label="Online"
+          value={kpis.online.toLocaleString("pt-BR")}
+          icon={<IconCircleCheck size={20} stroke={2.2} />}
+          tone="success"
+        />
+        <KpiCard
+          label="Admins"
+          value={kpis.admins.toLocaleString("pt-BR")}
+          icon={<IconShieldCheck size={20} stroke={2.2} />}
+          tone="violet"
+        />
+        <KpiCard
+          label="Com permissões"
+          value={kpis.withPerms.toLocaleString("pt-BR")}
+          icon={<IconCheck size={20} stroke={2.2} />}
+          tone="warning"
+        />
+        <KpiCard
+          label="Sem permissões"
+          value={kpis.noPerms.toLocaleString("pt-BR")}
+          icon={<IconX size={20} stroke={2.2} />}
+          tone="neutral"
+        />
+      </section>
+
+      <div className="grid min-w-0 w-full max-w-full grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
       {/* ── Agent list sidebar ── */}
       <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
         {/* View toggle + search */}
@@ -1107,6 +1153,7 @@ export function AgentsTab() {
           <p className="font-body text-[12.5px] text-[var(--text-muted)]">Clique em um nome na lista para configurar as permissões.</p>
         </div>
       )}
+      </div>
     </div>
   );
 }

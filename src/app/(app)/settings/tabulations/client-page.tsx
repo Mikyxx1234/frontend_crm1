@@ -23,6 +23,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { GlassCard } from "@/components/crm/glass-card";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { KpiCard } from "@/components/crm/kpi-card";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
@@ -69,6 +70,24 @@ function countNodes(nodes: TabulationNode[]): number {
   let total = 0;
   for (const n of nodes) {
     total += 1 + countNodes(n.children);
+  }
+  return total;
+}
+
+function countActiveNodes(nodes: TabulationNode[]): number {
+  let total = 0;
+  for (const n of nodes) {
+    if (n.active) total += 1;
+    total += countActiveNodes(n.children);
+  }
+  return total;
+}
+
+function countLeafNodes(nodes: TabulationNode[]): number {
+  let total = 0;
+  for (const n of nodes) {
+    if (n.children.length === 0) total += 1;
+    else total += countLeafNodes(n.children);
   }
   return total;
 }
@@ -196,6 +215,8 @@ function TabulationsBody() {
   const requireOnClose = treeQuery.data?.requireTabulationOnClose ?? false;
   const tree = useMemo(() => treeQuery.data?.tree ?? [], [treeQuery.data?.tree]);
   const nodeCount = useMemo(() => countNodes(tree), [tree]);
+  const activeCount = useMemo(() => countActiveNodes(tree), [tree]);
+  const leafCount = useMemo(() => countLeafNodes(tree), [tree]);
 
   const toggleRequire = useMutation({
     mutationFn: async (next: boolean) => {
@@ -460,6 +481,45 @@ function TabulationsBody() {
             />
           </div>
         </GlassCard>
+      ) : null}
+
+      {/* ── KPI minidash de tabulações ────────────────────────────── */}
+      {effectiveDeptId ? (
+        <section
+          className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
+          aria-label="Indicadores de tabulações"
+        >
+          <KpiCard
+            label="Total níveis"
+            value={nodeCount.toLocaleString("pt-BR")}
+            icon={<IconListTree size={20} stroke={2.2} />}
+            tone="brand"
+          />
+          <KpiCard
+            label="Ativos"
+            value={activeCount.toLocaleString("pt-BR")}
+            icon={<IconCheck size={20} stroke={2.2} />}
+            tone="success"
+          />
+          <KpiCard
+            label="Inativos"
+            value={(nodeCount - activeCount).toLocaleString("pt-BR")}
+            icon={<IconX size={20} stroke={2.2} />}
+            tone="neutral"
+          />
+          <KpiCard
+            label="Níveis finais"
+            value={leafCount.toLocaleString("pt-BR")}
+            icon={<IconCircleDot size={20} stroke={2.2} />}
+            tone="violet"
+          />
+          <KpiCard
+            label="Exigência ativa"
+            value={requireOnClose ? "Sim" : "Não"}
+            icon={<IconSparkles size={20} stroke={2.2} />}
+            tone="warning"
+          />
+        </section>
       ) : null}
 
       {/* ── Árvore de tabulações ─────────────────────────────────── */}

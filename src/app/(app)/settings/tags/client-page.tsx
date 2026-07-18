@@ -2,36 +2,52 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { InputGlass } from "@/components/crm/input-glass";
-import { toast } from "sonner";
 import {
+  IconAlertTriangle,
   IconBriefcase,
-  IconCheck,
+  IconCircleOff,
+  IconLink,
   IconPencil,
   IconPlus,
   IconTag,
   IconTrash,
   IconUser,
-  IconX,
 } from "@tabler/icons-react";
-import { cn } from "@/lib/utils";
-import { apiUrl } from "@/lib/api";
-import {
-  SETTINGS_HUB_BACK,
-  SettingsV2Shell,
-  useSettingsHeaderSlots,
-} from "../_v2-shell";
-import { TooltipGlass } from "@/components/crm/tooltip-glass";
-import { GlassCard } from "@/components/crm/glass-card";
+import { toast } from "sonner";
+
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
+import { InputGlass } from "@/components/crm/input-glass";
+import { KpiCard } from "@/components/crm/kpi-card";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import {
   SettingsListFilterBar,
   type SettingsFilterGroup,
 } from "@/components/crm/settings-filter-bar";
+import {
+  ListColumnLabel,
+  SortableHeader,
+  listTableHeadRowClass,
+  type SortDir,
+} from "@/components/crm/sortable-header";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  SETTINGS_HUB_BACK,
+  SettingsV2Shell,
+  useSettingsHeaderSlots,
+} from "../_v2-shell";
+import { apiUrl } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────
-// Types
+// Types & constants
 // ─────────────────────────────────────────────────────────────────
 
 type TagRow = {
@@ -43,12 +59,17 @@ type TagRow = {
 };
 
 type FilterTab = "todos" | "deals" | "contatos" | "sem-uso";
+type KpiFilter = "" | "em-uso" | "sem-uso";
+type SortField = "name" | "deals" | "contatos" | "total";
 
 const TAG_COLORS = [
   "#2563eb", "#7c3aed", "#db2777", "#dc2626", "#ea580c",
   "#ca8a04", "#16a34a", "#0d9488", "#0891b2", "#4f46e5",
   "#6b7280", "#334155",
 ];
+
+/** Grid: [check] | Nome | Deals | Contatos | Uso total | Ações */
+const LIST_GRID = "32px minmax(0,1fr) 80px 90px 90px 84px";
 
 // ─────────────────────────────────────────────────────────────────
 // API helpers
@@ -60,8 +81,16 @@ async function fetchTags(): Promise<TagRow[]> {
   return res.json();
 }
 
+async function deleteTagRequest(id: string) {
+  const res = await fetch(apiUrl(`/api/tags/${id}`), { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { message?: string })?.message ?? "Erro ao excluir tag");
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
-// Main component
+// Shell wrapper
 // ─────────────────────────────────────────────────────────────────
 
 export default function TagsV2ClientPage() {
@@ -70,20 +99,32 @@ export default function TagsV2ClientPage() {
       back={SETTINGS_HUB_BACK}
       title="Tags"
       description="Etiquetas de classificação para contatos e negócios"
+      icon={<IconTag size={22} />}
     >
       <TagsPage />
     </SettingsV2Shell>
   );
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Main page
+// ─────────────────────────────────────────────────────────────────
+
 function TagsPage() {
   const queryClient = useQueryClient();
   const slots = useSettingsHeaderSlots();
+
+  const [kpiFilter, setKpiFilter] = React.useState<KpiFilter>("");
   const [filter, setFilter] = React.useState<FilterTab>("todos");
   const [search, setSearch] = React.useState("");
   const [newName, setNewName] = React.useState("");
   const [newColor, setNewColor] = React.useState(TAG_COLORS[0]);
-  const [deleteTarget, setDeleteTarget] = React.useState<TagRow | null>(null);
+  const [editingTag, setEditingTag] = React.useState<TagRow | null>(null);
+  const [deleting, setDeleting] = React.useState<TagRow | null>(null);
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [confirmBulk, setConfirmBulk] = React.useState(false);
+  const [sortBy, setSortBy] = React.useState<SortField>("name");
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
   const newNameRef = React.useRef<HTMLInputElement>(null);
 
   const { data: tags = [], isLoading } = useQuery({
@@ -123,24 +164,44 @@ function TagsPage() {
         throw new Error((err as { message?: string }).message ?? "Erro ao atualizar");
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tags-settings"] }),
+    onSuccess: () => {
+      setEditingTag(null);
+      queryClient.invalidateQueries({ queryKey: ["tags-settings"] });
+      toast.success("Tag atualizada");
+    },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(apiUrl(`/api/tags/${id}`), { method: "DELETE" });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error((err as { message?: string }).message ?? "Erro ao excluir");
-      }
-    },
+  const deleteMut = useMutation({
+    mutationFn: deleteTagRequest,
     onSuccess: () => {
-      setDeleteTarget(null);
       queryClient.invalidateQueries({ queryKey: ["tags-settings"] });
-      toast.success("Tag excluída");
+      toast.success("Tag excluída.");
+      setDeleting(null);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao excluir tag."),
+  });
+
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      let fail = 0;
+      for (const id of ids) {
+        try {
+          await deleteTagRequest(id);
+        } catch {
+          fail += 1;
+        }
+      }
+      return { ok: ids.length - fail, fail };
+    },
+    onSuccess: ({ ok, fail }) => {
+      queryClient.invalidateQueries({ queryKey: ["tags-settings"] });
+      setSelected(new Set());
+      setConfirmBulk(false);
+      if (fail === 0) toast.success(ok === 1 ? "Tag removida." : `${ok} tags removidas.`);
+      else if (ok === 0) toast.error("Não foi possível remover as tags selecionadas.");
+      else toast.error(`${ok} removida(s), ${fail} falharam.`);
+    },
   });
 
   const bulkDeleteUnused = useMutation({
@@ -162,23 +223,88 @@ function TagsPage() {
   });
 
   const unusedCount = tags.filter((t) => t.dealCount === 0 && t.contactCount === 0).length;
+  const inUseCount = tags.filter((t) => t.dealCount > 0 || t.contactCount > 0).length;
+  const totalDeals = React.useMemo(() => tags.reduce((s, t) => s + t.dealCount, 0), [tags]);
+  const totalContacts = React.useMemo(() => tags.reduce((s, t) => s + t.contactCount, 0), [tags]);
 
   const filtered = React.useMemo(() => {
     let list = tags;
+    if (kpiFilter === "em-uso") list = list.filter((t) => t.dealCount > 0 || t.contactCount > 0);
+    else if (kpiFilter === "sem-uso") list = list.filter((t) => t.dealCount === 0 && t.contactCount === 0);
     if (filter === "deals") list = list.filter((t) => t.dealCount > 0);
     else if (filter === "contatos") list = list.filter((t) => t.contactCount > 0);
     else if (filter === "sem-uso") list = list.filter((t) => t.dealCount === 0 && t.contactCount === 0);
     const q = search.trim().toLowerCase();
     if (q) list = list.filter((t) => t.name.toLowerCase().includes(q));
     return list;
-  }, [tags, filter, search]);
+  }, [tags, kpiFilter, filter, search]);
+
+  const sorted = React.useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case "name":
+          cmp = a.name.localeCompare(b.name, "pt-BR");
+          break;
+        case "deals":
+          cmp = a.dealCount - b.dealCount;
+          break;
+        case "contatos":
+          cmp = a.contactCount - b.contactCount;
+          break;
+        case "total":
+          cmp = (a.dealCount + a.contactCount) - (b.dealCount + b.contactCount);
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
+  React.useEffect(() => {
+    setSelected(new Set());
+  }, [search, kpiFilter, filter]);
+
+  const allChecked = sorted.length > 0 && sorted.every((t) => selected.has(t.id));
+  const someChecked = sorted.some((t) => selected.has(t.id));
+
+  const toggleAll = React.useCallback(() => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (sorted.every((t) => next.has(t.id))) sorted.forEach((t) => next.delete(t.id));
+      else sorted.forEach((t) => next.add(t.id));
+      return next;
+    });
+  }, [sorted]);
+
+  const toggleOne = React.useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSort = React.useCallback((field: SortField) => {
+    setSortBy((prev) => {
+      if (prev === field) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+      setSortDir(field === "name" ? "asc" : "desc");
+      return field;
+    });
+  }, []);
+
+  const dirFor = (f: SortField): SortDir => (sortBy === f ? sortDir : null);
 
   const focusNewTag = React.useCallback(() => {
     newNameRef.current?.focus();
     newNameRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
 
-  /* Busca (center) + filtro por uso em popover — padrão canônico. */
   const filterGroups = React.useMemo<SettingsFilterGroup[]>(
     () => [
       {
@@ -251,33 +377,95 @@ function TagsPage() {
   }, [slots, searchNode, actionsNode]);
 
   return (
-    <GlassCard variant="panel" className="min-w-0 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
+      {/* ── Mini-dash KPI ── */}
+      <section
+        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
+        aria-label="Indicadores de tags"
+      >
+        <KpiCard
+          label="Todas"
+          value={tags.length.toLocaleString("pt-BR")}
+          icon={<IconTag size={20} stroke={2.2} />}
+          tone="brand"
+          onClick={() => setKpiFilter("")}
+        />
+        <KpiCard
+          label="Em uso"
+          value={inUseCount.toLocaleString("pt-BR")}
+          icon={<IconLink size={20} stroke={2.2} />}
+          tone="success"
+          active={kpiFilter === "em-uso"}
+          onClick={() => setKpiFilter((prev) => (prev === "em-uso" ? "" : "em-uso"))}
+        />
+        <KpiCard
+          label="Sem uso"
+          value={unusedCount.toLocaleString("pt-BR")}
+          icon={<IconCircleOff size={20} stroke={2.2} />}
+          tone="warning"
+          active={kpiFilter === "sem-uso"}
+          onClick={() => setKpiFilter((prev) => (prev === "sem-uso" ? "" : "sem-uso"))}
+        />
+        <KpiCard
+          label="Vínculos deals"
+          value={totalDeals.toLocaleString("pt-BR")}
+          icon={<IconBriefcase size={20} stroke={2.2} />}
+          tone="violet"
+        />
+        <KpiCard
+          label="Vínculos contatos"
+          value={totalContacts.toLocaleString("pt-BR")}
+          icon={<IconUser size={20} stroke={2.2} />}
+          tone="neutral"
+        />
+      </section>
+
+      {/* ── Bulk selection bar ── */}
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 backdrop-blur-md">
+          <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+            {selected.size} selecionada{selected.size > 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Limpar
+            </ButtonGlass>
+            <ButtonGlass variant="danger" size="sm" type="button" onClick={() => setConfirmBulk(true)}>
+              <IconTrash size={14} /> Excluir
+            </ButtonGlass>
+          </div>
+        </div>
+      )}
+
       {/* ── Criar nova tag ── */}
-      <div className="border-b border-[var(--glass-border-subtle)] p-3 sm:p-4">
-        <p className="mb-3 font-display text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)]">
+        <p className="mb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
           Nova tag
         </p>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {/* Color picker */}
           <div className="flex flex-wrap items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1.5">
             {TAG_COLORS.map((c) => (
-              <TooltipGlass key={c} label={c} side="top">
-                <button
-                  type="button"
-                  onClick={() => setNewColor(c)}
-                  className={cn(
-                    "size-5 rounded-full transition-all",
-                    newColor === c
-                      ? "scale-110 ring-2 ring-offset-1 ring-[var(--glass-border)]"
-                      : "hover:scale-105",
-                  )}
-                  style={{ backgroundColor: c }}
-                />
-              </TooltipGlass>
+              <button
+                key={c}
+                type="button"
+                onClick={() => setNewColor(c)}
+                aria-label={c}
+                className={cn(
+                  "size-5 rounded-full transition-all",
+                  newColor === c
+                    ? "scale-110 ring-2 ring-offset-1 ring-[var(--glass-border)]"
+                    : "hover:scale-105",
+                )}
+                style={{ backgroundColor: c }}
+              />
             ))}
           </div>
-
-          {/* Name input */}
           <InputGlass
             ref={newNameRef}
             value={newName}
@@ -291,8 +479,6 @@ function TagsPage() {
               }
             }}
           />
-
-          {/* Preview */}
           {newName.trim() && (
             <span
               className="max-w-full shrink-0 truncate self-start rounded-full px-2.5 py-1 font-display text-[11px] font-semibold sm:self-auto"
@@ -305,7 +491,6 @@ function TagsPage() {
               {newName.trim()}
             </span>
           )}
-
           <ButtonGlass
             variant="primary"
             onClick={() =>
@@ -320,291 +505,331 @@ function TagsPage() {
         </div>
       </div>
 
-      {/* ── Grade de tags ── */}
-      <div>
-        {isLoading ? (
-          <div className="grid grid-cols-1 gap-2.5 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-[68px] animate-pulse rounded-[var(--radius-lg)] bg-[var(--glass-bg-strong)]"
+      {/* ── Lista ── */}
+      {isLoading ? (
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[64px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
+            />
+          ))}
+        </div>
+      ) : sorted.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16">
+          <IconTag size={40} className="text-[var(--text-muted)] opacity-40" />
+          <p className="text-sm text-[var(--text-muted)]">Nenhuma tag encontrada.</p>
+          {(kpiFilter || filter !== "todos") && (
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              onClick={() => {
+                setKpiFilter("");
+                setFilter("todos");
+              }}
+            >
+              Ver todas
+            </ButtonGlass>
+          )}
+        </div>
+      ) : (
+        <div className="flex min-w-0 flex-col gap-2">
+          {/* Cabeçalho de colunas */}
+          <div
+            className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
+            style={{ gridTemplateColumns: LIST_GRID }}
+          >
+            <span>
+              <CheckboxGlass
+                checked={allChecked}
+                indeterminate={!allChecked && someChecked}
+                onChange={toggleAll}
+                aria-label="Selecionar todas"
               />
-            ))}
+            </span>
+            <SortableHeader label="Nome" sort={dirFor("name")} onSort={() => toggleSort("name")} />
+            <SortableHeader label="Deals" sort={dirFor("deals")} onSort={() => toggleSort("deals")} />
+            <SortableHeader label="Contatos" sort={dirFor("contatos")} onSort={() => toggleSort("contatos")} />
+            <SortableHeader label="Uso total" sort={dirFor("total")} onSort={() => toggleSort("total")} />
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-12 text-center">
-            <IconTag size={32} className="text-[var(--text-muted)] opacity-40" />
-            <p className="font-display text-sm font-semibold text-[var(--text-muted)]">
-              {filter === "sem-uso" ? "Nenhuma tag sem uso" : "Nenhuma tag encontrada"}
-            </p>
-            {filter !== "todos" && (
-              <button
-                type="button"
-                onClick={() => setFilter("todos")}
-                className="font-display text-xs text-[var(--brand-primary)] hover:underline"
-              >
-                Ver todas
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-2.5 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-3">
-            {filtered.map((tag) => (
-              <TagRowItem
-                key={tag.id}
-                tag={tag}
-                onUpdate={(data) => updateMutation.mutate({ id: tag.id, ...data })}
-                onDelete={() => setDeleteTarget(tag)}
-                isPending={updateMutation.isPending}
-              />
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* ── Confirm delete ── */}
-      {deleteTarget && (
-        <DeleteConfirmDialog
-          tag={deleteTarget}
-          onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
-          onCancel={() => setDeleteTarget(null)}
-          isPending={deleteMutation.isPending}
+          {sorted.map((tag) => {
+            const isSelected = selected.has(tag.id);
+            const isUnused = tag.dealCount === 0 && tag.contactCount === 0;
+            return (
+              <div
+                key={tag.id}
+                style={{ gridTemplateColumns: LIST_GRID }}
+                className={cn(
+                  "group grid items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+                  isSelected
+                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] hover:border-[var(--input-border-focus)]",
+                )}
+              >
+                <span>
+                  <CheckboxGlass
+                    checked={isSelected}
+                    onChange={() => toggleOne(tag.id)}
+                    aria-label={`Selecionar ${tag.name}`}
+                  />
+                </span>
+
+                {/* Nome */}
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span
+                    className="size-4 shrink-0 rounded-full"
+                    style={{ backgroundColor: tag.color }}
+                    aria-hidden
+                  />
+                  <div className="min-w-0 leading-tight">
+                    <span className="block max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+                      {tag.name}
+                    </span>
+                    {isUnused && (
+                      <span className="inline-flex items-center rounded-full bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10px] font-semibold text-[var(--text-muted)]">
+                        Sem uso
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Deals */}
+                <span className="font-display text-[13px] text-[var(--text-secondary)]">
+                  {tag.dealCount.toLocaleString("pt-BR")}
+                </span>
+
+                {/* Contatos */}
+                <span className="font-display text-[13px] text-[var(--text-secondary)]">
+                  {tag.contactCount.toLocaleString("pt-BR")}
+                </span>
+
+                {/* Uso total */}
+                <span className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                  {(tag.dealCount + tag.contactCount).toLocaleString("pt-BR")}
+                </span>
+
+                {/* Ações */}
+                <div className="flex items-center justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTag(tag)}
+                    aria-label={`Editar ${tag.name}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
+                  >
+                    <IconPencil size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleting(tag)}
+                    aria-label={`Excluir ${tag.name}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] hover:text-[var(--color-danger)]"
+                  >
+                    <IconTrash size={15} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Edit dialog (rename + color) ── */}
+      {editingTag && (
+        <TagEditDialog
+          tag={editingTag}
+          isPending={updateMutation.isPending}
+          onSave={(data) => updateMutation.mutate({ id: editingTag.id, ...data })}
+          onClose={() => setEditingTag(null)}
         />
       )}
-    </GlassCard>
+
+      {/* ── Delete single ── */}
+      <Dialog open={deleting !== null} onOpenChange={(next) => !next && setDeleting(null)}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] text-[var(--color-danger)]">
+                <IconAlertTriangle size={18} />
+              </span>
+              <DialogTitle className="text-base">Excluir tag?</DialogTitle>
+            </div>
+            <DialogDescription className="text-[13px] leading-relaxed">
+              {deleting
+                ? `"${deleting.name}" será removida de ${deleting.dealCount} deal(s) e ${deleting.contactCount} contato(s). Esta ação não pode ser desfeita.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setDeleting(null)}
+              disabled={deleteMut.isPending}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Cancelar
+            </ButtonGlass>
+            <ButtonGlass
+              variant="danger"
+              size="sm"
+              type="button"
+              disabled={deleteMut.isPending}
+              onClick={() => deleting && deleteMut.mutate(deleting.id)}
+            >
+              <IconTrash size={14} /> {deleteMut.isPending ? "Excluindo..." : "Excluir"}
+            </ButtonGlass>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk delete ── */}
+      <Dialog open={confirmBulk} onOpenChange={(next) => !next && setConfirmBulk(false)}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] text-[var(--color-danger)]">
+                <IconAlertTriangle size={18} />
+              </span>
+              <DialogTitle className="text-base">
+                {`Excluir ${selected.size === 1 ? "tag" : `${selected.size} tags`}?`}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-[13px] leading-relaxed">
+              As tags selecionadas serão removidas de todos os deals e contatos vinculados.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setConfirmBulk(false)}
+              disabled={bulkDeleteMut.isPending}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Cancelar
+            </ButtonGlass>
+            <ButtonGlass
+              variant="danger"
+              size="sm"
+              type="button"
+              disabled={bulkDeleteMut.isPending}
+              onClick={() => bulkDeleteMut.mutate([...selected])}
+            >
+              <IconTrash size={14} /> {bulkDeleteMut.isPending ? "Excluindo..." : "Excluir"}
+            </ButtonGlass>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Tag Row
+// Tag Edit Dialog — rename + color picker
 // ─────────────────────────────────────────────────────────────────
 
-function TagRowItem({
+function TagEditDialog({
   tag,
-  onUpdate,
-  onDelete,
   isPending,
+  onSave,
+  onClose,
 }: {
   tag: TagRow;
-  onUpdate: (data: { name?: string; color?: string }) => void;
-  onDelete: () => void;
   isPending: boolean;
+  onSave: (data: { name?: string; color?: string }) => void;
+  onClose: () => void;
 }) {
-  const [editing, setEditing] = React.useState(false);
   const [name, setName] = React.useState(tag.name);
-  const [colorOpen, setColorOpen] = React.useState(false);
+  const [color, setColor] = React.useState(tag.color);
 
-  const save = () => {
-    if (name.trim() && name.trim() !== tag.name) {
-      onUpdate({ name: name.trim() });
+  const handleSave = () => {
+    const updates: { name?: string; color?: string } = {};
+    if (name.trim() && name.trim() !== tag.name) updates.name = name.trim();
+    if (color !== tag.color) updates.color = color;
+    if (Object.keys(updates).length > 0) {
+      onSave(updates);
+    } else {
+      onClose();
     }
-    setEditing(false);
   };
 
-  const isUnused = tag.dealCount === 0 && tag.contactCount === 0;
-
   return (
-    <div className="group relative flex min-w-0 flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3 pl-4 shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]">
-      {/* Trilha de cor à esquerda */}
-      <span
-        className="absolute inset-y-0 left-0 w-1.5 rounded-l-[var(--radius-lg)]"
-        style={{ backgroundColor: tag.color }}
-        aria-hidden
-      />
-
-      {/* Linha 1: cor + nome + ações */}
-      <div className="flex min-w-0 items-center gap-2">
-        {/* Color dot + picker */}
-        <div className="relative shrink-0">
-          <TooltipGlass label="Alterar cor" side="top">
-            <button
-              type="button"
-              onClick={() => setColorOpen((v) => !v)}
-              className="size-5 shrink-0 rounded-full transition-transform hover:scale-110"
-              style={{ backgroundColor: tag.color }}
-              aria-label="Alterar cor"
-            />
-          </TooltipGlass>
-          {colorOpen && (
-            <div className="absolute left-0 top-full z-30 mt-1 flex w-[132px] flex-wrap gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-2 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
-              {TAG_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => {
-                    onUpdate({ color: c });
-                    setColorOpen(false);
-                  }}
-                  className={cn(
-                    "size-5 rounded-full transition-all hover:scale-105",
-                    tag.color === c ? "ring-2 ring-offset-1 ring-[var(--glass-border)]" : "",
-                  )}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Name (editable) */}
-        {editing ? (
+    <Dialog open onOpenChange={(next) => !next && onClose()}>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <DialogTitle className="text-base">Editar tag</DialogTitle>
+          <DialogDescription className="text-[13px]">
+            Atualize o nome e/ou a cor da tag.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3 py-1">
           <InputGlass
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onBlur={save}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") save();
-              if (e.key === "Escape") { setName(tag.name); setEditing(false); }
-            }}
-            className="min-w-0 flex-1"
+            placeholder="Nome da tag…"
             autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSave();
+              if (e.key === "Escape") onClose();
+            }}
           />
-        ) : (
-          <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-[var(--text-primary)]">
-            {tag.name}
-          </span>
-        )}
-
-        {/* Actions */}
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-          {editing ? (
-            <button
-              type="button"
-              onClick={save}
-              className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
-            >
-              <IconCheck size={14} />
-            </button>
-          ) : (
-            <TooltipGlass label="Renomear" side="top">
+          <div className="flex flex-wrap items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2">
+            {TAG_COLORS.map((c) => (
               <button
+                key={c}
                 type="button"
-                onClick={() => { setName(tag.name); setEditing(true); }}
-                disabled={isPending}
-                className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-              >
-                <IconPencil size={13} />
-              </button>
-            </TooltipGlass>
-          )}
-          <TooltipGlass label="Excluir" side="top">
-            <button
-              type="button"
-              onClick={onDelete}
-              className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
-            >
-              <IconTrash size={13} />
-            </button>
-          </TooltipGlass>
-        </div>
-      </div>
-
-      {/* Linha 2: chip + contadores de uso */}
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <span
-          className="min-w-0 shrink truncate rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
-          style={{
-            background: `${tag.color}22`,
-            color: tag.color,
-            border: `1px solid ${tag.color}44`,
-          }}
-        >
-          {tag.name}
-        </span>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          {isUnused ? (
-            <span className="rounded-full border border-[var(--color-danger)]/20 bg-[var(--color-danger)]/8 px-2 py-0.5 font-display text-[10px] font-semibold text-[var(--color-danger)]">
-              Sem uso
-            </span>
-          ) : (
-            <>
-              {tag.dealCount > 0 && (
-                <TooltipGlass label={`${tag.dealCount} deal${tag.dealCount !== 1 ? "s" : ""}`} side="top">
-                  <span className="flex items-center gap-1 rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
-                    <IconBriefcase size={10} />
-                    {tag.dealCount}
-                  </span>
-                </TooltipGlass>
-              )}
-              {tag.contactCount > 0 && (
-                <TooltipGlass label={`${tag.contactCount} contato${tag.contactCount !== 1 ? "s" : ""}`} side="top">
-                  <span className="flex items-center gap-1 rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
-                    <IconUser size={10} />
-                    {tag.contactCount}
-                  </span>
-                </TooltipGlass>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Delete confirm dialog (DS v2 glass)
-// ─────────────────────────────────────────────────────────────────
-
-function DeleteConfirmDialog({
-  tag,
-  onConfirm,
-  onCancel,
-  isPending,
-}: {
-  tag: TagRow;
-  onConfirm: () => void;
-  onCancel: () => void;
-  isPending: boolean;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <GlassCard variant="panel" className="w-full max-w-sm p-5 sm:p-6">
-        <div className="mb-1 flex items-center gap-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-danger)]/12">
-            <IconTrash size={18} className="text-[var(--color-danger)]" />
+                onClick={() => setColor(c)}
+                aria-label={c}
+                className={cn(
+                  "size-6 rounded-full transition-all hover:scale-105",
+                  color === c ? "scale-110 ring-2 ring-offset-1 ring-[var(--glass-border)]" : "",
+                )}
+                style={{ backgroundColor: c }}
+              />
+            ))}
           </div>
-          <h3 className="font-display text-[16px] font-bold text-[var(--text-primary)]">
-            Excluir tag
-          </h3>
+          {name.trim() && (
+            <div className="flex items-center gap-2">
+              <span className="font-display text-[12px] text-[var(--text-muted)]">Prévia:</span>
+              <span
+                className="rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
+                style={{
+                  background: `${color}22`,
+                  color,
+                  border: `1px solid ${color}44`,
+                }}
+              >
+                {name.trim()}
+              </span>
+            </div>
+          )}
         </div>
-        <p className="mb-5 font-display text-sm text-[var(--text-muted)]">
-          A tag{" "}
-          <span
-            className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
-            style={{ background: `${tag.color}22`, color: tag.color, border: `1px solid ${tag.color}44` }}
-          >
-            {tag.name}
-          </span>{" "}
-          será removida de <strong>{tag.dealCount}</strong> deal(s) e{" "}
-          <strong>{tag.contactCount}</strong> contato(s). Esta ação não pode ser desfeita.
-        </p>
-        <div className="flex justify-end gap-2">
-          <button
+        <DialogFooter>
+          <ButtonGlass
+            variant="glass"
+            size="sm"
             type="button"
-            onClick={onCancel}
-            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-2 font-display text-sm font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+            onClick={onClose}
+            disabled={isPending}
+            className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
           >
             Cancelar
-          </button>
-          <button
+          </ButtonGlass>
+          <ButtonGlass
+            variant="primary"
+            size="sm"
             type="button"
-            onClick={onConfirm}
-            disabled={isPending}
-            className="rounded-[var(--radius-md)] bg-[var(--color-danger)] px-4 py-2 font-display text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            disabled={!name.trim() || isPending}
+            onClick={handleSave}
           >
-            Excluir
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="absolute right-4 top-4 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-        >
-          <IconX size={16} />
-        </button>
-      </GlassCard>
-    </div>
+            {isPending ? "Salvando..." : "Salvar"}
+          </ButtonGlass>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

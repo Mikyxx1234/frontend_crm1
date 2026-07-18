@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  IconAlertTriangle,
   IconBuilding,
   IconHeadset,
   IconPhone,
@@ -28,19 +30,35 @@ import {
   IconTrash,
   IconPencil,
   IconCheck,
-  IconAdjustmentsHorizontal,
-  IconRotateClockwise,
   IconUserCheck,
+  IconUserMinus,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
-import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
+import { KpiCard } from "@/components/crm/kpi-card";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
-import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
+import {
+  ListColumnLabel,
+  SortableHeader,
+  listTableHeadRowClass,
+  type SortDir,
+} from "@/components/crm/sortable-header";
+import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { FormSheet } from "@/components/ui/form-sheet";
+import { apiUrl } from "@/lib/api";
 import {
   useDepartments,
   useCreateDepartment,
@@ -54,9 +72,43 @@ import {
 } from "../hooks/use-department-members";
 import { useTeamUsers } from "@/features/pipeline-v2/hooks/use-deal-mutations";
 
+// ─── Types & helpers ──────────────────────────────────────────────────────────
+
+type SortField = "name" | "members" | "conversations" | "createdAt";
+type DeleteResult = { ok: true } | { ok: false; status: number; message: string };
+
+const LIST_GRID = "32px minmax(0,1fr) 100px 140px 120px 84px";
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+async function deleteDeptRaw(id: string): Promise<DeleteResult> {
+  const res = await fetch(apiUrl(`/api/settings/departments/${id}`), {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (res.ok) return { ok: true };
+  const data = await res.json().catch(() => ({}));
+  return {
+    ok: false,
+    status: res.status,
+    message: (data as { message?: string }).message ?? "Erro ao excluir departamento",
+  };
+}
+
 // ─── Icon registry ────────────────────────────────────────────────────────────
 
-type IconComponent = React.ComponentType<{ size?: number; strokeWidth?: number; className?: string; style?: React.CSSProperties }>;
+type IconComponent = React.ComponentType<{
+  size?: number;
+  strokeWidth?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}>;
 
 const ICON_REGISTRY: Record<string, IconComponent> = {
   IconBuilding, IconHeadset, IconPhone, IconBriefcase, IconCurrencyDollar,
@@ -97,9 +149,17 @@ const DEPT_COLORS = [
   "#6b7280", "#334155",
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function DeptIcon({ name, size = 16, color, className }: { name: string; size?: number; color?: string; className?: string }) {
+function DeptIcon({
+  name,
+  size = 16,
+  color,
+  className,
+}: {
+  name: string;
+  size?: number;
+  color?: string;
+  className?: string;
+}) {
   const Comp = ICON_REGISTRY[name] ?? IconBuilding;
   return <Comp size={size} strokeWidth={1.75} className={className} style={color ? { color } : undefined} />;
 }
@@ -108,10 +168,7 @@ function DeptIconBadge({ dept, size = 36 }: { dept: Department; size?: number })
   return (
     <div
       className="flex shrink-0 items-center justify-center rounded-[var(--radius-md)]"
-      style={{
-        width: size, height: size,
-        backgroundColor: dept.color + "18",
-      }}
+      style={{ width: size, height: size, backgroundColor: dept.color + "18" }}
     >
       <DeptIcon name={dept.icon ?? "IconBuilding"} size={size * 0.45} color={dept.color} />
     </div>
@@ -147,11 +204,19 @@ function CreateDepartmentModal({ open, onClose }: { open: boolean; onClose: () =
       description={name.trim() || undefined}
       footer={
         <>
-          <button type="button" onClick={() => { reset(); onClose(); }}
-            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
+          <button
+            type="button"
+            onClick={() => { reset(); onClose(); }}
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+          >
             Cancelar
           </button>
-          <ButtonGlass type="submit" form="new-dept-form" variant="primary" disabled={!name.trim() || createMutation.isPending}>
+          <ButtonGlass
+            type="submit"
+            form="new-dept-form"
+            variant="primary"
+            disabled={!name.trim() || createMutation.isPending}
+          >
             {createMutation.isPending ? "Criando…" : "Criar"}
           </ButtonGlass>
         </>
@@ -159,19 +224,41 @@ function CreateDepartmentModal({ open, onClose }: { open: boolean; onClose: () =
     >
       <form id="new-dept-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div>
-          <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Nome</label>
-          <InputGlass value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Suporte, Vendas, Financeiro…" autoFocus />
+          <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            Nome
+          </label>
+          <InputGlass
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex.: Suporte, Vendas, Financeiro…"
+            autoFocus
+          />
         </div>
 
         <div>
-          <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Ícone</label>
+          <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            Ícone
+          </label>
           <div className="grid grid-cols-11 gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2">
             {DEPT_ICONS.map(({ name: ic, label }) => (
-              <button key={ic} type="button" title={label} onClick={() => setIconName(ic)}
-                className={cn("flex h-8 w-full items-center justify-center rounded-[var(--radius-sm)] transition-all",
-                  iconName === ic ? "bg-[var(--brand-primary)]/12 ring-1 ring-[var(--brand-primary)]/40" : "hover:bg-[var(--glass-bg-strong)]")}>
-                <DeptIcon name={ic} size={17} color={iconName === ic ? color : undefined}
-                  className={iconName === ic ? undefined : "text-[var(--text-muted)]"} />
+              <button
+                key={ic}
+                type="button"
+                title={label}
+                onClick={() => setIconName(ic)}
+                className={cn(
+                  "flex h-8 w-full items-center justify-center rounded-[var(--radius-sm)] transition-all",
+                  iconName === ic
+                    ? "bg-[var(--brand-primary)]/12 ring-1 ring-[var(--brand-primary)]/40"
+                    : "hover:bg-[var(--glass-bg-strong)]",
+                )}
+              >
+                <DeptIcon
+                  name={ic}
+                  size={17}
+                  color={iconName === ic ? color : undefined}
+                  className={iconName === ic ? undefined : "text-[var(--text-muted)]"}
+                />
               </button>
             ))}
           </div>
@@ -181,13 +268,22 @@ function CreateDepartmentModal({ open, onClose }: { open: boolean; onClose: () =
         </div>
 
         <div>
-          <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Cor</label>
+          <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            Cor
+          </label>
           <div className="flex flex-wrap gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
             {DEPT_COLORS.map((c) => (
-              <button key={c} type="button" onClick={() => setColor(c)}
-                className={cn("relative size-6 rounded-full transition-all hover:scale-110", color === c && "scale-110 ring-2 ring-offset-2")}
+              <button
+                key={c}
+                type="button"
+                onClick={() => setColor(c)}
+                className={cn(
+                  "relative size-6 rounded-full transition-all hover:scale-110",
+                  color === c && "scale-110 ring-2 ring-offset-2",
+                )}
                 style={{ backgroundColor: c, ...(color === c ? { ringColor: c } : {}) }}
-                aria-label={c}>
+                aria-label={c}
+              >
                 {color === c && <IconCheck size={12} strokeWidth={3} className="absolute inset-0 m-auto text-white" />}
               </button>
             ))}
@@ -198,43 +294,7 @@ function CreateDepartmentModal({ open, onClose }: { open: boolean; onClose: () =
   );
 }
 
-// ─── Delete confirm modal ─────────────────────────────────────────────────────
-
-function DeleteConfirmModal({ dept, onConfirm, onCancel, isPending, errorMsg }: {
-  dept: Department | null; onConfirm: () => void; onCancel: () => void; isPending: boolean; errorMsg?: string;
-}) {
-  return (
-    <Dialog open={!!dept} onOpenChange={(v) => { if (!v) onCancel(); }}>
-      <DialogContent size="sm">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50">
-            <IconTrash size={18} className="text-red-500" />
-          </div>
-          <div className="flex-1 pt-0.5">
-            <h3 className="font-display text-[15px] font-bold text-[var(--text-primary)]">Excluir departamento</h3>
-            <p className="mt-1 font-body text-[13px] text-[var(--text-muted)]">
-              Tem certeza que deseja excluir <strong className="font-semibold text-[var(--text-primary)]">{dept?.name}</strong>? Esta ação não pode ser desfeita.
-            </p>
-          </div>
-        </div>
-        {errorMsg && <div className="rounded-[var(--radius-md)] border border-red-100 bg-red-50 px-3 py-2.5 font-body text-[12.5px] text-red-600">{errorMsg}</div>}
-        <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onCancel}
-            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
-            Cancelar
-          </button>
-          <button type="button" onClick={onConfirm} disabled={isPending}
-            className="rounded-[var(--radius-md)] bg-red-500 px-4 py-1.5 font-display text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
-            {isPending ? "Excluindo…" : "Excluir"}
-          </button>
-        </div>
-        <DialogClose />
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─── Edit modal ──────────────────────────────────────────────────────────────
+// ─── Edit modal ───────────────────────────────────────────────────────────────
 
 function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClose: () => void }) {
   const [name, setName] = React.useState(dept?.name ?? "");
@@ -249,20 +309,11 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   const [memberIds, setMemberIds] = React.useState<Set<string>>(new Set());
   const [memberSearch, setMemberSearch] = React.useState("");
 
-  // Sync fields when dept changes
   React.useEffect(() => {
     if (dept) { setName(dept.name); setIcon(dept.icon); setColor(dept.color); setMemberSearch(""); }
   }, [dept?.id]);
 
-  // Hidrata a seleção com os membros atuais quando carregam.
-  //
-  // IMPORTANTE: dependemos de uma CHAVE STRING estável (ids ordenados),
-  // não do array `currentMembers`. Como `useDepartmentMembers` retorna
-  // `data` = undefined enquanto a query está desabilitada (dept=null) ou
-  // carregando, o fallback `= []` cria uma NOVA referência a cada render.
-  // Depender do array faria o efeito rodar em todo render → setState →
-  // re-render → loop infinito (congela a tela toda). A chave string só
-  // muda quando o conjunto de membros realmente muda.
+  // Stable key prevents infinite re-render loop when currentMembers reference changes.
   const membersKey = currentMembers.map((m) => m.user.id).sort().join(",");
   React.useEffect(() => {
     setMemberIds(new Set(membersKey ? membersKey.split(",") : []));
@@ -314,8 +365,11 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
       description={dept?.name}
       footer={
         <>
-          <button type="button" onClick={onClose}
-            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+          >
             Cancelar
           </button>
           <ButtonGlass type="button" variant="primary" disabled={!name.trim() || saving} onClick={handleSave}>
@@ -324,207 +378,202 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
         </>
       }
     >
-      {/* Form */}
       <div className="flex flex-col gap-4">
-          {/* Nome */}
-          <div>
-            <label className="mb-1 block font-display text-[12px] font-semibold text-[var(--text-muted)]">Nome</label>
-            <InputGlass value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do departamento" />
-          </div>
+        <div>
+          <label className="mb-1 block font-display text-[12px] font-semibold text-[var(--text-muted)]">Nome</label>
+          <InputGlass value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do departamento" />
+        </div>
 
-          {/* Ícone */}
-          <div>
-            <label className="mb-2 block font-display text-[12px] font-semibold text-[var(--text-muted)]">Ícone</label>
-            <div className="grid grid-cols-6 gap-1.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2.5">
-              {DEPT_ICONS.map(({ name: n, label }) => (
-                <button key={n} type="button" title={label} onClick={() => setIcon(n)}
-                  className={cn(
-                    "flex flex-col items-center gap-1 rounded-[var(--radius-md)] px-1 py-2 transition-all",
-                    icon === n ? "bg-[var(--brand-primary)]/10 ring-1 ring-[var(--brand-primary)]" : "hover:bg-[var(--glass-bg-strong)]",
-                  )}>
-                  <DeptIcon name={n} size={16} color={icon === n ? color : "var(--text-muted)"} />
-                  <span className="text-center font-body text-[9px] leading-tight text-[var(--text-muted)]">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Cor */}
-          <div>
-            <label className="mb-2 block font-display text-[12px] font-semibold text-[var(--text-muted)]">Cor</label>
-            <div className="flex flex-wrap gap-2">
-              {DEPT_COLORS.map((c) => (
-                <button key={c} type="button" onClick={() => setColor(c)}
-                  className={cn(
-                    "h-7 w-7 rounded-full transition-transform hover:scale-110",
-                    color === c && "ring-2 ring-offset-1 ring-[var(--brand-primary)] scale-110",
-                  )}
-                  style={{ background: c }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Membros */}
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <label className="font-display text-[12px] font-semibold text-[var(--text-muted)]">Membros</label>
-              {memberIds.size > 0 && (
-                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 px-1.5 font-display text-[10px] font-bold text-[var(--brand-primary)]">
-                  {memberIds.size}
+        <div>
+          <label className="mb-2 block font-display text-[12px] font-semibold text-[var(--text-muted)]">Ícone</label>
+          <div className="grid grid-cols-6 gap-1.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2.5">
+            {DEPT_ICONS.map(({ name: n, label }) => (
+              <button
+                key={n}
+                type="button"
+                title={label}
+                onClick={() => setIcon(n)}
+                className={cn(
+                  "flex flex-col items-center gap-1 rounded-[var(--radius-md)] px-1 py-2 transition-all",
+                  icon === n
+                    ? "bg-[var(--brand-primary)]/10 ring-1 ring-[var(--brand-primary)]"
+                    : "hover:bg-[var(--glass-bg-strong)]",
+                )}
+              >
+                <DeptIcon name={n} size={16} color={icon === n ? color : "var(--text-muted)"} />
+                <span className="text-center font-body text-[9px] leading-tight text-[var(--text-muted)]">
+                  {label}
                 </span>
-              )}
-            </div>
-
-            <div className="mb-2">
-              <InputGlass
-                value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
-                placeholder="Buscar usuário por nome ou e-mail…"
-                withSearch
-              />
-            </div>
-
-            {orgUsers.length === 0 ? (
-              <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-4 text-center">
-                <IconUsers size={16} className="mx-auto mb-1 text-[var(--text-muted)] opacity-40" />
-                <p className="font-body text-[12px] text-[var(--text-muted)]">Nenhum usuário na organização.</p>
-              </div>
-            ) : (
-              <div className="max-h-[240px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]">
-                <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)]">
-                  {filteredUsers.map((u) => {
-                    const selected = memberIds.has(u.id);
-                    const roleLabel =
-                      u.role === "ADMIN" ? "Admin" : u.role === "MANAGER" ? "Gerente" : "Atendente";
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => toggleMember(u.id)}
-                        className={cn(
-                          "flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors",
-                          selected ? "bg-[var(--brand-primary)]/8" : "hover:bg-[var(--glass-bg-strong)]",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "flex size-5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border transition-colors",
-                            selected
-                              ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                              : "border-[var(--glass-border)] bg-white",
-                          )}
-                        >
-                          {selected && <IconCheck size={13} />}
-                        </span>
-                        {u.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={u.avatarUrl} alt={u.name} className="h-8 w-8 shrink-0 rounded-full object-cover" />
-                        ) : (
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 font-display text-[12px] font-bold text-[var(--brand-primary)]">
-                            {u.name.slice(0, 2).toUpperCase()}
-                          </span>
-                        )}
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">{u.name}</span>
-                          <span className="block truncate font-body text-[11px] text-[var(--text-muted)]">{u.email}</span>
-                        </span>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full px-2 py-0.5 font-display text-[10px] font-semibold",
-                            u.role === "ADMIN"
-                              ? "bg-violet-100 text-violet-700"
-                              : u.role === "MANAGER"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-slate-100 text-slate-600",
-                          )}
-                        >
-                          {roleLabel}
-                        </span>
-                      </button>
-                    );
-                  })}
-                  {filteredUsers.length === 0 && (
-                    <div className="px-3 py-4 text-center font-body text-[12px] text-[var(--text-muted)]">
-                      Nenhum usuário encontrado.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            <p className="mt-1.5 font-body text-[11px] text-[var(--text-muted)]">
-              O vínculo define a composição do time. Não altera o acesso à caixa de entrada (isso é
-              configurado em Permissões).
-            </p>
+              </button>
+            ))}
           </div>
         </div>
+
+        <div>
+          <label className="mb-2 block font-display text-[12px] font-semibold text-[var(--text-muted)]">Cor</label>
+          <div className="flex flex-wrap gap-2">
+            {DEPT_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setColor(c)}
+                className={cn(
+                  "h-7 w-7 rounded-full transition-transform hover:scale-110",
+                  color === c && "ring-2 ring-offset-1 ring-[var(--brand-primary)] scale-110",
+                )}
+                style={{ background: c }}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <label className="font-display text-[12px] font-semibold text-[var(--text-muted)]">Membros</label>
+            {memberIds.size > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 px-1.5 font-display text-[10px] font-bold text-[var(--brand-primary)]">
+                {memberIds.size}
+              </span>
+            )}
+          </div>
+
+          <div className="mb-2">
+            <InputGlass
+              value={memberSearch}
+              onChange={(e) => setMemberSearch(e.target.value)}
+              placeholder="Buscar usuário por nome ou e-mail…"
+              withSearch
+            />
+          </div>
+
+          {orgUsers.length === 0 ? (
+            <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-4 text-center">
+              <IconUsers size={16} className="mx-auto mb-1 text-[var(--text-muted)] opacity-40" />
+              <p className="font-body text-[12px] text-[var(--text-muted)]">Nenhum usuário na organização.</p>
+            </div>
+          ) : (
+            <div className="max-h-[240px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]">
+              <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)]">
+                {filteredUsers.map((u) => {
+                  const isSelected = memberIds.has(u.id);
+                  const roleLabel =
+                    u.role === "ADMIN" ? "Admin" : u.role === "MANAGER" ? "Gerente" : "Atendente";
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => toggleMember(u.id)}
+                      className={cn(
+                        "flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors",
+                        isSelected ? "bg-[var(--brand-primary)]/8" : "hover:bg-[var(--glass-bg-strong)]",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border transition-colors",
+                          isSelected
+                            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                            : "border-[var(--glass-border)] bg-white",
+                        )}
+                      >
+                        {isSelected && <IconCheck size={13} />}
+                      </span>
+                      {u.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u.avatarUrl} alt={u.name} className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                      ) : (
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 font-display text-[12px] font-bold text-[var(--brand-primary)]">
+                          {u.name.slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                          {u.name}
+                        </span>
+                        <span className="block truncate font-body text-[11px] text-[var(--text-muted)]">
+                          {u.email}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-0.5 font-display text-[10px] font-semibold",
+                          u.role === "ADMIN"
+                            ? "bg-violet-100 text-violet-700"
+                            : u.role === "MANAGER"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-slate-100 text-slate-600",
+                        )}
+                      >
+                        {roleLabel}
+                      </span>
+                    </button>
+                  );
+                })}
+                {filteredUsers.length === 0 && (
+                  <div className="px-3 py-4 text-center font-body text-[12px] text-[var(--text-muted)]">
+                    Nenhum usuário encontrado.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <p className="mt-1.5 font-body text-[11px] text-[var(--text-muted)]">
+            O vínculo define a composição do time. Não altera o acesso à caixa de entrada (isso é configurado em
+            Permissões).
+          </p>
+        </div>
+      </div>
     </FormSheet>
   );
 }
 
-// ─── Department card ─────────────────────────────────────────────────────────
-
-function DeptCard({
-  dept,
-  onEdit,
-  onDelete,
-}: {
-  dept: Department;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const members = dept._count?.members ?? 0;
-  const conversations = dept._count?.conversations ?? 0;
-
-  return (
-    <article
-      className="group relative flex min-w-0 items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]"
-    >
-      <DeptIconBadge dept={dept} size={40} />
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">{dept.name}</p>
-        <p className="mt-0.5 flex items-center gap-3 font-body text-[12px] text-[var(--text-muted)]">
-          <span>{members} {members === 1 ? "membro" : "membros"}</span>
-          <span className="text-[var(--glass-border)]">·</span>
-          <span>{conversations} conversa{conversations !== 1 ? "s" : ""}</span>
-        </p>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-        <button
-          type="button"
-          onClick={onEdit}
-          className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
-          aria-label={`Editar ${dept.name}`}
-        >
-          <IconPencil size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500"
-          aria-label={`Excluir ${dept.name}`}
-        >
-          <IconTrash size={14} />
-        </button>
-      </div>
-    </article>
-  );
-}
-
-// ─── Main component (master-detail) ─────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function DepartmentsTab() {
   const { data: departments = [], isLoading } = useDepartments();
-  const deleteMutation = useDeleteDepartment();
+  const deleteMut = useDeleteDepartment();
+  const queryClient = useQueryClient();
+  const headerSlots = useSettingsHeaderSlots();
 
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<"all" | "with" | "without">("all");
   const [showCreate, setShowCreate] = React.useState(false);
-  const [deleteTarget, setDeleteTarget] = React.useState<Department | null>(null);
-  const [deleteError, setDeleteError] = React.useState<string | undefined>();
+  const [deleting, setDeleting] = React.useState<Department | null>(null);
   const [editTarget, setEditTarget] = React.useState<Department | null>(null);
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [confirmBulk, setConfirmBulk] = React.useState(false);
+  const [sortBy, setSortBy] = React.useState<SortField>("name");
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
+
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const results = await Promise.all(ids.map(deleteDeptRaw));
+      const failures = results.filter((r): r is { ok: false; status: number; message: string } => !r.ok);
+      return {
+        ok: results.length - failures.length,
+        fail409: failures.filter((r) => r.status === 409).length,
+        failOther: failures.filter((r) => r.status !== 409).length,
+      };
+    },
+    onSuccess: ({ ok, fail409, failOther }) => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "departments"] });
+      setSelected(new Set());
+      setConfirmBulk(false);
+      const fail = fail409 + failOther;
+      if (fail === 0) {
+        toast.success(ok === 1 ? "Departamento removido." : `${ok} departamentos removidos.`);
+      } else if (ok === 0 && fail409 > 0) {
+        toast.error("Nenhum departamento excluído — todos têm conversas abertas.");
+      } else if (ok === 0) {
+        toast.error("Não foi possível remover os departamentos selecionados.");
+      } else {
+        const parts: string[] = [`${ok} removido${ok !== 1 ? "s" : ""}`];
+        if (fail409 > 0) parts.push(`${fail409} com conversas abertas`);
+        if (failOther > 0) parts.push(`${failOther} com falha`);
+        toast.error(parts.join(", ") + ".");
+      }
+    },
+  });
 
   const stats = React.useMemo(() => {
     let members = 0;
@@ -556,27 +605,107 @@ export function DepartmentsTab() {
     });
   }, [departments, search, filter]);
 
-  const headerSlots = useSettingsHeaderSlots();
+  const sorted = React.useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case "name":
+          cmp = a.name.localeCompare(b.name, "pt-BR");
+          break;
+        case "members":
+          cmp = (a._count?.members ?? 0) - (b._count?.members ?? 0);
+          break;
+        case "conversations":
+          cmp = (a._count?.conversations ?? 0) - (b._count?.conversations ?? 0);
+          break;
+        case "createdAt":
+          cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
+  React.useEffect(() => {
+    setSelected(new Set());
+  }, [search, filter]);
+
+  const allChecked = sorted.length > 0 && sorted.every((d) => selected.has(d.id));
+  const someChecked = sorted.some((d) => selected.has(d.id));
+
+  const toggleAll = React.useCallback(() => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (sorted.every((d) => next.has(d.id))) sorted.forEach((d) => next.delete(d.id));
+      else sorted.forEach((d) => next.add(d.id));
+      return next;
+    });
+  }, [sorted]);
+
+  const toggleOne = React.useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSort = React.useCallback((field: SortField) => {
+    setSortBy((prevField) => {
+      if (prevField === field) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prevField;
+      }
+      setSortDir(field === "name" ? "asc" : "desc");
+      return field;
+    });
+  }, []);
+
+  const dirFor = (f: SortField): SortDir => (sortBy === f ? sortDir : null);
 
   const searchNode = React.useMemo(
     () => (
-      <DepartmentsSearchFilterBar
+      <SettingsListFilterBar
         search={search}
         onSearch={setSearch}
-        filter={filter}
-        onFilterChange={setFilter}
-        counts={{ all: stats.total, with: stats.withMembers, without: stats.withoutMembers }}
-        onClearAll={() => {
-          setSearch("");
-          setFilter("all");
-        }}
+        placeholder="Buscar departamento…"
+        ariaLabel="Buscar departamentos"
+        groups={[
+          {
+            key: "membership",
+            label: "Membros",
+            options: [
+              { value: "all", label: "Todos", count: stats.total },
+              { value: "with", label: "Com membros", count: stats.withMembers },
+              { value: "without", label: "Sem membros", count: stats.withoutMembers },
+            ],
+            value: filter,
+            onChange: (v) => setFilter(v as "all" | "with" | "without"),
+          },
+        ]}
+        onClearAll={() => { setSearch(""); setFilter("all"); }}
+        popoverTitle="Filtrar por membros"
       />
     ),
     [search, filter, stats.total, stats.withMembers, stats.withoutMembers],
   );
 
   const actionsNode = React.useMemo(
-    () => <DepartmentsActionsMenu onCreate={() => setShowCreate(true)} />,
+    () => (
+      <PageActionsMenu
+        items={[
+          {
+            icon: <IconPlus size={14} stroke={2.6} />,
+            label: "Criar departamento",
+            onClick: () => setShowCreate(true),
+            primary: true,
+          },
+        ]}
+      />
+    ),
     [],
   );
 
@@ -590,318 +719,283 @@ export function DepartmentsTab() {
     };
   }, [headerSlots, searchNode, actionsNode]);
 
-  function confirmDelete() {
-    if (!deleteTarget) return;
-    deleteMutation.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        toast.success("Departamento excluído");
-        setDeleteTarget(null);
-        setDeleteError(undefined);
-      },
-      onError: (err: unknown) => setDeleteError((err as Error).message),
-    });
-  }
-
   return (
-    <div className="min-w-0 w-full max-w-full space-y-4">
-      <DepartmentsMiniDash stats={stats} />
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
+      {/* KPI mini-dash */}
+      <section
+        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
+        aria-label="Indicadores de departamentos"
+      >
+        <KpiCard
+          label="Departamentos"
+          value={stats.total.toLocaleString("pt-BR")}
+          icon={<IconBuilding size={20} stroke={2.2} />}
+          tone="brand"
+        />
+        <KpiCard
+          label="Membros vinculados"
+          value={stats.members.toLocaleString("pt-BR")}
+          icon={<IconUsers size={20} stroke={2.2} />}
+          tone="violet"
+        />
+        <KpiCard
+          label="Conversas abertas"
+          value={stats.conversations.toLocaleString("pt-BR")}
+          icon={<IconMessageCircle size={20} stroke={2.2} />}
+          tone="success"
+        />
+        <KpiCard
+          label="Com membros"
+          value={stats.withMembers.toLocaleString("pt-BR")}
+          icon={<IconUserCheck size={20} stroke={2.2} />}
+          tone="warning"
+          active={filter === "with"}
+          onClick={() => setFilter((prev) => (prev === "with" ? "all" : "with"))}
+        />
+        <KpiCard
+          label="Sem membros"
+          value={stats.withoutMembers.toLocaleString("pt-BR")}
+          icon={<IconUserMinus size={20} stroke={2.2} />}
+          tone="neutral"
+          active={filter === "without"}
+          onClick={() => setFilter((prev) => (prev === "without" ? "all" : "without"))}
+        />
+      </section>
 
-      {/* Cards grid */}
+      {/* Bulk-delete bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 backdrop-blur-md">
+          <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+            {selected.size} selecionado{selected.size > 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Limpar
+            </ButtonGlass>
+            <ButtonGlass variant="danger" size="sm" type="button" onClick={() => setConfirmBulk(true)}>
+              <IconTrash size={14} /> Excluir
+            </ButtonGlass>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
       {isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col gap-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-[72px] animate-pulse rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)]" />
+            <div
+              key={i}
+              className="h-[64px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
+            />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">
-            <IconBuilding size={24} className="text-[var(--text-muted)] opacity-50" />
-          </div>
-          <div>
-            <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
-              {search ? "Nenhum resultado" : "Nenhum departamento"}
-            </p>
-            <p className="mt-1 font-body text-[12.5px] text-[var(--text-muted)]">
-              {search ? "Tente outro termo." : "Crie o primeiro para começar."}
-            </p>
-          </div>
-          {!search && (
-            <ButtonGlass variant="primary" size="sm" onClick={() => setShowCreate(true)} className="mt-1 gap-1.5">
-              <IconPlus size={13} /> Criar departamento
+      ) : sorted.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16">
+          <IconBuilding size={40} className="text-[var(--text-muted)] opacity-40" />
+          <p className="text-sm text-[var(--text-muted)]">
+            {search || filter !== "all" ? "Nenhum resultado encontrado." : "Nenhum departamento cadastrado."}
+          </p>
+          {!search && filter === "all" && (
+            <ButtonGlass variant="glass" size="sm" onClick={() => setShowCreate(true)}>
+              <IconPlus size={14} /> Criar primeiro
             </ButtonGlass>
           )}
         </div>
       ) : (
-        <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((dept) => (
-              <DeptCard
-                key={dept.id}
-                dept={dept}
-                onEdit={() => setEditTarget(dept)}
-                onDelete={() => { setDeleteError(undefined); setDeleteTarget(dept); }}
-              />
-            ))}
-          </div>
-          <p className="px-1 font-body text-[12px] text-[var(--text-muted)]">
-            {filtered.length} departamento{filtered.length !== 1 ? "s" : ""}
-          </p>
-        </>
-      )}
-
-      {/* Modals */}
-      <CreateDepartmentModal open={showCreate} onClose={() => setShowCreate(false)} />
-      <DeleteConfirmModal
-        dept={deleteTarget}
-        onConfirm={confirmDelete}
-        onCancel={() => { setDeleteTarget(null); setDeleteError(undefined); }}
-        isPending={deleteMutation.isPending}
-        errorMsg={deleteError}
-      />
-      <EditDepartmentModal dept={editTarget} onClose={() => setEditTarget(null)} />
-    </div>
-  );
-}
-
-// ─── Mini-dash (KPIs globais) ──────────────────────────────────────────────────
-
-function DepartmentsMiniDash({
-  stats,
-  className,
-}: {
-  stats: { total: number; members: number; conversations: number; withMembers: number };
-  className?: string;
-}) {
-  const coverage = stats.total > 0 ? Math.round((stats.withMembers / stats.total) * 100) : 0;
-  const cards: {
-    key: string;
-    label: string;
-    value: string;
-    percent?: number;
-    accent: string;
-    icon: React.ReactNode;
-  }[] = [
-    {
-      key: "total",
-      label: "Departamentos",
-      value: stats.total.toLocaleString("pt-BR"),
-      accent: "var(--brand-primary)",
-      icon: <IconBuilding size={16} stroke={2.2} />,
-    },
-    {
-      key: "members",
-      label: "Membros vinculados",
-      value: stats.members.toLocaleString("pt-BR"),
-      accent: "var(--brand-secondary, #a78bfa)",
-      icon: <IconUsers size={16} />,
-    },
-    {
-      key: "conversations",
-      label: "Conversas",
-      value: stats.conversations.toLocaleString("pt-BR"),
-      accent: "var(--color-success)",
-      icon: <IconMessageCircle size={16} />,
-    },
-    {
-      key: "withMembers",
-      label: `Com membros · de ${stats.total}`,
-      value: stats.withMembers.toLocaleString("pt-BR"),
-      percent: coverage,
-      accent: "var(--text-muted)",
-      icon: <IconUserCheck size={16} />,
-    },
-  ];
-
-  return (
-    <section
-      className={cn("grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4", className)}
-      aria-label="Indicadores"
-    >
-      {cards.map((c) => (
-        <div
-          key={c.key}
-          className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-        >
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={{
-              background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
-              color: c.accent,
-            }}
+        <div className="flex min-w-0 flex-col gap-2">
+          <div
+            className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
+            style={{ gridTemplateColumns: LIST_GRID }}
           >
-            {c.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-display text-[11.5px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
-              {c.label}
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
-                {c.value}
-              </span>
-              {c.percent !== undefined && (
-                <span
-                  className="font-display text-[12px] font-bold tabular-nums"
-                  style={{ color: c.accent }}
-                >
-                  {c.percent}%
+            <span>
+              <CheckboxGlass
+                checked={allChecked}
+                indeterminate={!allChecked && someChecked}
+                onChange={toggleAll}
+                aria-label="Selecionar todos"
+              />
+            </span>
+            <SortableHeader label="Nome" sort={dirFor("name")} onSort={() => toggleSort("name")} />
+            <SortableHeader label="Membros" sort={dirFor("members")} onSort={() => toggleSort("members")} />
+            <SortableHeader
+              label="Conversas abertas"
+              sort={dirFor("conversations")}
+              onSort={() => toggleSort("conversations")}
+            />
+            <SortableHeader label="Criado em" sort={dirFor("createdAt")} onSort={() => toggleSort("createdAt")} />
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
+          </div>
+
+          {sorted.map((dept) => {
+            const isSelected = selected.has(dept.id);
+            const members = dept._count?.members ?? 0;
+            const conversations = dept._count?.conversations ?? 0;
+            return (
+              <div
+                key={dept.id}
+                style={{ gridTemplateColumns: LIST_GRID }}
+                className={cn(
+                  "group grid items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+                  isSelected
+                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] hover:border-[var(--input-border-focus)]",
+                )}
+              >
+                <span>
+                  <CheckboxGlass
+                    checked={isSelected}
+                    onChange={() => toggleOne(dept.id)}
+                    aria-label={`Selecionar ${dept.name}`}
+                  />
                 </span>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </section>
-  );
-}
 
-// ─── Busca + popover de filtros segmentados ─────────────────────────────────────
-
-function DeptCountBadge({ count }: { count: number }) {
-  if (count <= 0) return null;
-  return (
-    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[10px] font-bold leading-none text-white">
-      {count}
-    </span>
-  );
-}
-
-const DEPT_FILTERS: { value: "all" | "with" | "without"; label: string }[] = [
-  { value: "all", label: "Todos" },
-  { value: "with", label: "Com membros" },
-  { value: "without", label: "Sem membros" },
-];
-
-function DepartmentsSearchFilterBar({
-  search,
-  onSearch,
-  filter,
-  onFilterChange,
-  counts,
-  onClearAll,
-}: {
-  search: string;
-  onSearch: (v: string) => void;
-  filter: "all" | "with" | "without";
-  onFilterChange: (v: "all" | "with" | "without") => void;
-  counts: { all: number; with: number; without: number };
-  onClearAll: () => void;
-}) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [open, setOpen] = React.useState(false);
-  const activeCount = filter !== "all" ? 1 : 0;
-  const countFor = (v: "all" | "with" | "without") =>
-    v === "all" ? counts.all : v === "with" ? counts.with : counts.without;
-
-  React.useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative w-full">
-      <span className="pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]">
-        <IconBuilding size={15} />
-      </span>
-      <input
-        type="search"
-        value={search}
-        onChange={(e) => onSearch(e.target.value)}
-        onFocus={() => setOpen(true)}
-        placeholder="Buscar departamento…"
-        aria-label="Buscar e filtrar departamentos"
-        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-11 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
-      />
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Filtros"
-        className={cn(
-          "absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors",
-          activeCount > 0 || open
-            ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-            : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
-        )}
-      >
-        <IconAdjustmentsHorizontal size={15} />
-      </button>
-
-      {open && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,380px)] flex-col overflow-visible rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
-          <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
-            <div className="flex items-center gap-2">
-              <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">
-                Filtrar por membros
-              </span>
-              <DeptCountBadge count={activeCount} />
-            </div>
-            <button
-              type="button"
-              onClick={onClearAll}
-              disabled={activeCount === 0 && !search}
-              className="flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)] disabled:opacity-40"
-            >
-              <IconRotateClockwise size={13} /> Limpar
-            </button>
-          </div>
-
-          <div className="max-h-[min(60vh,420px)] overflow-y-auto px-4 pb-4">
-            <div className="flex flex-wrap gap-1.5">
-              {DEPT_FILTERS.map((opt) => {
-                const selected = filter === opt.value;
-                return (
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <DeptIconBadge dept={dept} size={36} />
                   <button
-                    key={opt.value}
                     type="button"
-                    onClick={() => onFilterChange(opt.value)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
-                      selected
-                        ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
-                        : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
-                    )}
+                    onClick={() => setEditTarget(dept)}
+                    className="block max-w-full truncate text-left font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
                   >
-                    {selected && <IconCheck size={12} stroke={2.4} />}
-                    {opt.label}
-                    <span
-                      className={cn(
-                        "min-w-[18px] rounded-full px-1.5 text-center text-[10px] font-bold",
-                        selected
-                          ? "bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]"
-                          : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-                      )}
-                    >
-                      {countFor(opt.value)}
-                    </span>
+                    {dept.name}
                   </button>
-                );
-              })}
-            </div>
-          </div>
+                </div>
+
+                <span className="truncate font-display text-[13px] text-[var(--text-secondary)]">
+                  {members.toLocaleString("pt-BR")}
+                </span>
+
+                <span className="truncate font-display text-[13px] text-[var(--text-secondary)]">
+                  {conversations.toLocaleString("pt-BR")}
+                </span>
+
+                <span className="truncate font-body text-[12px] text-[var(--text-muted)]">
+                  {formatDate(dept.createdAt)}
+                </span>
+
+                <div className="flex items-center justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditTarget(dept)}
+                    aria-label={`Editar ${dept.name}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
+                  >
+                    <IconPencil size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleting(dept)}
+                    aria-label={`Excluir ${dept.name}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] hover:text-[var(--color-danger)]"
+                  >
+                    <IconTrash size={15} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
+
+      <CreateDepartmentModal open={showCreate} onClose={() => setShowCreate(false)} />
+      <EditDepartmentModal dept={editTarget} onClose={() => setEditTarget(null)} />
+
+      {/* Single delete dialog */}
+      <Dialog open={deleting !== null} onOpenChange={(next) => !next && setDeleting(null)}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] text-[var(--color-danger)]">
+                <IconAlertTriangle size={18} />
+              </span>
+              <DialogTitle className="text-base">Excluir departamento?</DialogTitle>
+            </div>
+            <DialogDescription className="text-[13px] leading-relaxed">
+              {deleting
+                ? `"${deleting.name}" será removido permanentemente. Esta ação não pode ser desfeita.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setDeleting(null)}
+              disabled={deleteMut.isPending}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Cancelar
+            </ButtonGlass>
+            <ButtonGlass
+              variant="danger"
+              size="sm"
+              type="button"
+              disabled={deleteMut.isPending}
+              onClick={() => {
+                if (!deleting) return;
+                deleteMut.mutate(deleting.id, {
+                  onSuccess: () => {
+                    toast.success("Departamento excluído.");
+                    setDeleting(null);
+                  },
+                  onError: (err) => {
+                    toast.error(err instanceof Error ? err.message : "Erro ao excluir departamento.");
+                    setDeleting(null);
+                  },
+                });
+              }}
+            >
+              <IconTrash size={14} /> {deleteMut.isPending ? "Excluindo..." : "Excluir"}
+            </ButtonGlass>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk delete dialog */}
+      <Dialog open={confirmBulk} onOpenChange={(next) => !next && setConfirmBulk(false)}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] text-[var(--color-danger)]">
+                <IconAlertTriangle size={18} />
+              </span>
+              <DialogTitle className="text-base">
+                {`Excluir ${selected.size === 1 ? "departamento" : `${selected.size} departamentos`}?`}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-[13px] leading-relaxed">
+              Departamentos com conversas abertas não poderão ser excluídos e serão sinalizados no resultado.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setConfirmBulk(false)}
+              disabled={bulkDeleteMut.isPending}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Cancelar
+            </ButtonGlass>
+            <ButtonGlass
+              variant="danger"
+              size="sm"
+              type="button"
+              disabled={bulkDeleteMut.isPending}
+              onClick={() => bulkDeleteMut.mutate([...selected])}
+            >
+              <IconTrash size={14} /> {bulkDeleteMut.isPending ? "Excluindo..." : "Excluir"}
+            </ButtonGlass>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  );
-}
-
-// ─── Menu hamburger (CTAs da página) ────────────────────────────────────────────
-
-function DepartmentsActionsMenu({ onCreate }: { onCreate: () => void }) {
-  return (
-    <PageActionsMenu
-      items={[
-        {
-          icon: <IconPlus size={14} stroke={2.6} />,
-          label: "Criar departamento",
-          onClick: onCreate,
-          primary: true,
-        },
-      ]}
-    />
   );
 }

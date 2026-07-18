@@ -375,12 +375,13 @@ export interface MessageBubbleProps {
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as const
 
 /**
- * Paleta da bolha de AUTOMAÇÃO (referência V0): lavanda com acento
- * violeta. Hardcoded — em v2-dark os tokens de tema flipam para claro e
- * perdem o contraste contra o fundo claro fixo desta bolha.
+ * Paleta da bolha de AUTOMAÇÃO: cinza escuro com texto claro. Hardcoded —
+ * invariante ao data-chat-theme e ao modo dark/light, garantindo contraste
+ * do texto, dos badges e dos ticks (inclusive o azul de "lida") em qualquer
+ * tema. `ACCENT` (violeta) segue como cor do avatar do robô.
  */
-const AUTOMATION_BG = "#efedfd"
-const AUTOMATION_TEXT = "#1e1b39"
+const AUTOMATION_BG = "#374151"
+const AUTOMATION_TEXT = "#f3f4f6"
 const AUTOMATION_ACCENT = "#6c5ce7"
 
 /**
@@ -1215,6 +1216,7 @@ export function MessageBubble({
   const isBot = message.isBot ?? false
   const isNote = message.isNote === true
   const hasForm = !!(message.formFields && message.formFields.length > 0)
+  const hasButtons = !!(message.buttons && message.buttons.length > 0)
   const senderName = message.senderName
 
   // Menu WhatsApp-like só entra nas RECEBIDAS. Nas outgoing/notas/forms
@@ -1430,10 +1432,10 @@ export function MessageBubble({
             "relative min-w-0 rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
             isOutgoing
               ? isBot
-                // Bolha de AUTOMAÇÃO: lavanda com acento violeta (ref. V0).
+                // Bolha de AUTOMAÇÃO: cinza escuro com texto claro.
                 // Cores hardcoded (não usar --text-primary) porque em v2-dark
-                // o token flipa para cinza claro e some contra o bg claro.
-                ? "rounded-br border border-[rgba(108,92,231,0.22)] shadow-[0_2px_10px_rgba(108,92,231,0.14)]"
+                // o token flipa e some contra o fundo fixo desta bolha.
+                ? "rounded-br border border-white/10 shadow-[0_3px_12px_rgba(15,20,40,0.28)]"
                 : "rounded-br shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
               : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
@@ -1472,7 +1474,7 @@ export function MessageBubble({
             <div className="mb-1.5 flex items-center gap-1.5">
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest"
-                style={{ background: `${AUTOMATION_ACCENT}1f`, color: AUTOMATION_ACCENT }}
+                style={{ background: "rgba(199,210,254,0.18)", color: "#e0e7ff" }}
                 title={
                   message.isAutomationRun
                     ? "Automação disparada manualmente"
@@ -1526,7 +1528,7 @@ export function MessageBubble({
               snippet={message.replyTo.snippet}
               direction={message.replyTo.direction ?? "out"}
               senderName={message.replyTo.senderName ?? null}
-              onLightBg={!isOutgoing || isBot}
+              onLightBg={!isOutgoing}
             />
           )}
           {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
@@ -1534,12 +1536,19 @@ export function MessageBubble({
           {/* Botões de resposta rápida (interactive/template) — cards
               empilhados abaixo do corpo, estilo WhatsApp/V0. */}
           {message.buttons && message.buttons.length > 0 && (
-            <MessageButtons buttons={message.buttons} onLightBg={!isOutgoing || isBot} />
+            <MessageButtons buttons={message.buttons} onLightBg={!isOutgoing} />
           )}
+          {/* Horário + ticks. Sem botões, flutua no canto inferior direito
+              (padrão WhatsApp). COM botões, entra em fluxo abaixo deles,
+              alinhado à direita — senão o horário/ticks ficam cortados por
+              cima do último botão. */}
           <span
             className={cn(
-              "pointer-events-none absolute bottom-1.5 right-2.5 inline-flex select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
-              isOutgoing && isBot && "text-[var(--text-muted)]",
+              "pointer-events-none select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
+              hasButtons
+                ? "mt-1.5 flex w-full justify-end"
+                : "absolute bottom-1.5 right-2.5 inline-flex",
+              isOutgoing && isBot && "text-white/70",
               !isOutgoing && "text-[var(--text-muted)]",
             )}
             style={
@@ -1556,7 +1565,7 @@ export function MessageBubble({
               <StatusIndicator
                 status={message.status}
                 sendError={message.sendError}
-                onLightBg={isBot}
+                onLightBg={false}
               />
             )}
           </span>

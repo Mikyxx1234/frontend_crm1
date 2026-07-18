@@ -32,7 +32,7 @@ import { SwitchGlass } from "@/components/crm/switch-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
-import { PageActionsMenu } from "@/components/crm/page-toolbar";
+import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-toolbar";
 import {
   SettingsListFilterBar,
   type SettingsFilterGroup,
@@ -43,7 +43,7 @@ import {
   listTableHeadRowClass,
   type SortDir,
 } from "@/components/crm/sortable-header";
-import { TabsGlass } from "@/components/crm/tabs-glass";
+import { AvatarGlass } from "@/components/crm/avatar-glass";
 import { ExpedienteTab } from "@/features/legacy-v1/settings/schedules";
 import { cn } from "@/lib/utils";
 import {
@@ -87,26 +87,6 @@ const DEFAULT_INVITE_PERMISSIONS: CrmPermissionDraft = {
   runAutomations: true,
   assignOwner: true,
 };
-
-const AVATAR_COLORS = [
-  "var(--brand-primary)",
-  "var(--brand-secondary)",
-  "var(--color-success)",
-  "var(--brand-primary-light)",
-];
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase() || "?";
-}
-
-function avatarColor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
 
 /** Classes do badge de função (espelha o HTML de referência DS v2). */
 function roleBadgeClass(isAdminRole: boolean): string {
@@ -555,10 +535,15 @@ function TeamContent() {
   const actionsNode = React.useMemo(
     () => (
       <div className="flex items-center gap-2">
-        <TabsGlass
-          tabs={["Usuários", "Expediente"]}
-          activeTab={activeTab}
-          onChange={setActiveTab}
+        <PageSegmentedControl
+          size="compact"
+          aria-label="Abas da equipe"
+          items={[
+            { value: "usuarios", label: "Usuários" },
+            { value: "expediente", label: "Expediente" },
+          ]}
+          value={activeTab === 1 ? "expediente" : "usuarios"}
+          onChange={(v) => setActiveTab(v === "expediente" ? 1 : 0)}
         />
         <PageActionsMenu
           aria-label="Ações da equipe"
@@ -754,12 +739,7 @@ function TeamContent() {
 
                 {/* Usuário */}
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
-                    style={{ background: avatarColor(u.id) }}
-                  >
-                    {initials(u.name)}
-                  </span>
+                  <AvatarGlass size="sm" seed={u.id} name={u.name} />
                   <div className="min-w-0 leading-tight">
                     <span className="block max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
                       {u.name}

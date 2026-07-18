@@ -16,6 +16,7 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import { AvatarGlass } from "@/components/crm/avatar-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
@@ -133,15 +134,6 @@ async function fetchAgents(): Promise<AgentRow[]> {
   const res = await fetch(apiUrl("/api/agents/status"));
   if (!res.ok) throw new Error("Erro ao carregar agentes");
   return res.json();
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join("");
 }
 
 // ─── Sub-form reutilizável de horário (edição + template) ─────────────────────
@@ -530,17 +522,12 @@ export function ExpedienteTab({
                 >
                   {/* Nome + avatar */}
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="relative shrink-0">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)] font-display text-[12px] font-bold text-white">
-                        {getInitials(agent.name)}
-                      </div>
-                      <span
-                        className={cn(
-                          "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-[var(--glass-bg-base)]",
-                          STATUS_DOT[status],
-                        )}
-                      />
-                    </div>
+                    <AvatarGlass
+                      size="sm"
+                      seed={agent.id}
+                      name={agent.name}
+                      status={status === "ONLINE" ? "online" : "offline"}
+                    />
                     <div className="min-w-0 leading-tight">
                       <p className="max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
                         {agent.name}
@@ -736,11 +723,7 @@ export function ExpedienteTab({
                       onChange={() => toggleTemplateUser(a.id)}
                       aria-label={`Selecionar ${a.name}`}
                     />
-                    <span
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-primary)] font-display text-[10px] font-bold text-white"
-                    >
-                      {getInitials(a.name)}
-                    </span>
+                    <AvatarGlass size="sm" seed={a.id} name={a.name} />
                     <span className="min-w-0 leading-tight">
                       <span className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
                         {a.name}

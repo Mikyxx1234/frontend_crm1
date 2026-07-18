@@ -6,13 +6,16 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   IconAdjustmentsHorizontal,
+  IconAlertCircle,
   IconAlertTriangle,
   IconBrandWhatsapp,
   IconCheck,
   IconChevronRight,
   IconCircleCheck,
+  IconEye,
   IconLayoutGrid,
   IconMenu2,
+  IconMessageReply,
   IconPlus,
   IconRotateClockwise,
   IconSearch,
@@ -193,6 +196,17 @@ export default function CampaignsClientPage() {
   );
 }
 
+// Cor do dot de status — mapeada a partir do meta.tone (padrão Automações
+// usa dot simples). Também aplica pulse quando a campanha está enviando.
+const DOT_TONE: Record<string, string> = {
+  success: "bg-[var(--color-success)]",
+  brand: "bg-[var(--brand-primary)]",
+  info: "bg-[var(--color-info)]",
+  warning: "bg-[var(--color-warning)]",
+  danger: "bg-[var(--color-danger)]",
+  neutral: "bg-[var(--text-muted)] opacity-45",
+};
+
 function CampaignRow({ campaign }: { campaign: CampaignListItem }) {
   const meta = STATUS_META[campaign.status] ?? STATUS_META.DRAFT;
   const isSending = SENDING_STATUSES.includes(campaign.status);
@@ -219,51 +233,55 @@ function CampaignRow({ campaign }: { campaign: CampaignListItem }) {
   return (
     <Link
       href={`/campaigns/${campaign.id}`}
-      className="group flex min-w-0 cursor-pointer flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] transition-all hover:border-[var(--input-border-focus,rgba(91,111,245,0.50))] hover:shadow-[var(--glass-shadow)] sm:flex-row sm:items-center sm:gap-4 sm:px-4.5 sm:py-3.5 sm:hover:translate-x-0.5"
+      className="group flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus,rgba(91,111,245,0.50))] hover:shadow-[var(--glass-shadow)] sm:gap-4 sm:px-4"
     >
-      <div className="flex min-w-0 flex-1 items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-wa-bg,rgba(37,211,102,0.14))] text-[var(--color-wa-dark,#128c4b)] sm:h-11 sm:w-11">
-          <IconBrandWhatsapp size={22} />
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <p className="break-words font-display text-[14.5px] font-extrabold leading-snug text-[var(--text-primary)] sm:truncate sm:text-[15.5px]">
+      {/* Bloco esquerdo — dot + nome + subtítulo (padrão Automações). */}
+      <div className="min-w-0 flex-1 lg:min-w-[240px] lg:flex-none lg:shrink-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            aria-hidden
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full",
+              DOT_TONE[meta.tone] ?? DOT_TONE.neutral,
+              isSending && "animate-pulse",
+            )}
+          />
+          <h3 className="min-w-0 truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
             {campaign.name}
-          </p>
-          <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 font-body text-[12px] text-[var(--text-muted)]">
-            <span className="min-w-0 break-words sm:truncate">{listLabel}</span>
-            <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-[var(--text-muted)] opacity-60" />
-            <span className="min-w-0 break-words">{dateLabel}</span>
-          </p>
+          </h3>
         </div>
-
-        <IconChevronRight
-          size={18}
-          stroke={2.5}
-          className="mt-1 shrink-0 text-[var(--brand-primary)] sm:hidden"
-        />
+        <div className="mt-1 flex min-w-0 items-center gap-1.5 pl-4">
+          <IconBrandWhatsapp
+            size={13}
+            stroke={2.2}
+            className="shrink-0 text-[var(--color-wa-dark,#128c4b)]"
+          />
+          <span className="min-w-0 truncate font-body text-[12px] text-[var(--text-muted)] sm:text-[12.5px]">
+            {listLabel} · {dateLabel}
+          </span>
+        </div>
       </div>
 
-      <div className="flex min-w-0 flex-wrap items-center gap-2 sm:contents">
+      {/* Centro — pill de status compacta + progresso ou mensagem de espera. */}
+      <div className="hidden min-w-0 flex-1 items-center gap-3 lg:flex">
         <span
           className={cn(
-            "inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 font-display text-[11.5px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
+            "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 font-display text-[11px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
             TONE_CLASSES[meta.tone],
             isSending && "before:animate-pulse",
           )}
         >
           {meta.label}
         </span>
-
         {noMetrics ? (
-          <p className="min-w-0 flex-1 text-pretty break-words font-body text-[12px] italic leading-snug text-[var(--text-muted)] sm:text-[12.5px]">
+          <p className="min-w-0 flex-1 truncate font-body text-[12px] italic text-[var(--text-muted)]">
             {campaign.status === "SCHEDULED"
               ? "Aguardando disparo — métricas após o início do envio."
               : "Rascunho — configure e lance a campanha para ver métricas."}
           </p>
         ) : (
-          <div className="w-full min-w-0 sm:w-[180px] sm:shrink-0">
-            <div className="flex h-[7px] overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
+          <div className="min-w-0 flex-1">
+            <div className="flex h-[6px] overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
               <div
                 className="bg-[var(--color-success)] transition-all duration-500"
                 style={{ width: `${pctSent}%` }}
@@ -273,69 +291,97 @@ function CampaignRow({ campaign }: { campaign: CampaignListItem }) {
                 style={{ width: `${pctFailed}%` }}
               />
             </div>
-            <div className="mt-1.5 flex justify-between font-display text-[11px] font-bold">
+            <div className="mt-1 flex justify-between font-display text-[10.5px] font-bold">
               <span className="text-[var(--color-success-dark,var(--color-success-text))]">
                 {pctSent}% enviado
               </span>
               {pctFailed > 0 && (
-                <span className="text-[var(--color-danger)]">{pctFailed}% falha</span>
+                <span className="text-[var(--color-danger)]">
+                  {pctFailed}% falha
+                </span>
               )}
             </div>
           </div>
         )}
+      </div>
 
-        {!noMetrics && (
-          <div className="hidden shrink-0 gap-5.5 min-[1100px]:flex">
-            <Metric label="Total" value={total} tone="brand" />
-            <Metric label="Enviado" value={sent} tone="success" />
-            <Metric
-              label="Lido"
-              value={campaign.readCount}
-              tone={campaign.readCount > 0 ? "brand" : "muted"}
-            />
-            <Metric
-              label="Resp."
-              value={campaign.repliedCount ?? 0}
-              tone={(campaign.repliedCount ?? 0) > 0 ? "brand" : "muted"}
-            />
-            <Metric label="Falha" value={failed} tone="danger" />
-          </div>
-        )}
+      {/* Direita — métricas compactas no estilo Automações (icone/valor/label). */}
+      {!noMetrics && (
+        <div className="hidden shrink-0 items-center gap-6.5 min-[1100px]:flex">
+          <RowMetric
+            icon={<IconCircleCheck size={13} />}
+            value={total.toLocaleString("pt-BR")}
+            label="Total"
+          />
+          <RowMetric
+            icon={<IconSend size={13} />}
+            value={sent.toLocaleString("pt-BR")}
+            label="Enviado"
+          />
+          <RowMetric
+            icon={<IconEye size={13} />}
+            value={(campaign.readCount ?? 0).toLocaleString("pt-BR")}
+            label="Lido"
+          />
+          <RowMetric
+            icon={<IconMessageReply size={13} />}
+            value={(campaign.repliedCount ?? 0).toLocaleString("pt-BR")}
+            label="Resp."
+          />
+          <RowMetric
+            icon={<IconAlertCircle size={13} />}
+            value={failed.toLocaleString("pt-BR")}
+            label="Falha"
+          />
+        </div>
+      )}
+
+      {/* Fallback mobile — pill de status + chevron. */}
+      <div className="flex shrink-0 items-center gap-2 lg:hidden">
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-display text-[11px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
+            TONE_CLASSES[meta.tone],
+            isSending && "before:animate-pulse",
+          )}
+        >
+          {meta.label}
+        </span>
+        <IconChevronRight
+          size={16}
+          stroke={2.5}
+          className="text-[var(--brand-primary)]"
+        />
       </div>
 
       <IconChevronRight
-        size={18}
-        stroke={2.5}
-        className="hidden shrink-0 text-[var(--brand-primary)] transition-transform group-hover:translate-x-0.5 sm:block"
+        size={16}
+        stroke={2.2}
+        className="hidden shrink-0 text-[var(--text-muted)] transition-all group-hover:translate-x-0.5 group-hover:text-[var(--brand-primary)] lg:block"
       />
     </Link>
   );
 }
 
-const METRIC_TONES = {
-  brand: "text-[var(--brand-primary)]",
-  success: "text-[var(--color-success-dark,var(--color-success-text))]",
-  danger: "text-[var(--color-danger)]",
-  muted: "text-[var(--text-muted)]",
-} as const;
-
-function Metric({
-  label,
+// Métrica no formato Automações: ícone pequeno em cima, valor bold, label pequeno.
+function RowMetric({
+  icon,
   value,
-  tone,
+  label,
 }: {
+  icon: React.ReactNode;
+  value: string;
   label: string;
-  value: number;
-  tone: keyof typeof METRIC_TONES;
 }) {
   return (
-    <div className="min-w-[46px] text-center">
-      <p
-        className={`font-display text-[17px] font-extrabold leading-none tracking-tight ${METRIC_TONES[tone]}`}
-      >
-        {value.toLocaleString("pt-BR")}
+    <div className="min-w-[52px] text-center">
+      <div className="mb-0.5 flex items-center justify-center gap-1 text-[var(--text-muted)]">
+        {icon}
+      </div>
+      <p className="font-display text-[15px] font-extrabold leading-none text-[var(--text-primary)]">
+        {value}
       </p>
-      <p className="mt-1.5 font-body text-[10px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
+      <p className="mt-1 font-body text-[10px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
         {label}
       </p>
     </div>

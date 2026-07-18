@@ -13,13 +13,25 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/phone";
+import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { AVATAR_SIZE } from "@/lib/avatar";
 import { EmptyState } from "@/components/crm/empty-state";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
-import { listTableHeadRowClass } from "@/components/crm/sortable-header";
+import {
+  ListColumnLabel,
+  SortableHeader,
+  listTableHeadRowClass,
+  type SortDir,
+} from "@/components/crm/sortable-header";
 import { listCalls } from "../api/extensions";
-import type { CallRecord, ListCallsFilters } from "../api/types";
+import type {
+  CallRecord,
+  CallsSortField,
+  ListCallsFilters,
+} from "../api/types";
 
-const COLS = "grid-cols-[36px_minmax(180px,2fr)_90px_100px_70px_minmax(130px,1.1fr)_minmax(88px,240px)]";
+const COLS =
+  "grid-cols-[36px_minmax(220px,2fr)_100px_110px_80px_minmax(140px,1.1fr)_minmax(88px,240px)]";
 
 function formatDuration(sec: number | null) {
   if (!sec) return "—";
@@ -73,26 +85,6 @@ function groupByDay(calls: CallRecord[]): [string, CallRecord[]][] {
     );
 }
 
-/** Rótulo de coluna no padrão do protótipo: uppercase, bold, letter-spaced. */
-function HeadLabel({
-  children,
-  align = "left",
-}: {
-  children: ReactNode;
-  align?: "left" | "right";
-}) {
-  return (
-    <span
-      className={cn(
-        "whitespace-nowrap font-display text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]",
-        align === "right" && "block text-right",
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
 function statusLabel(status: string): { label: string; color: string } {
   switch (status) {
     case "COMPLETED":
@@ -116,7 +108,8 @@ interface CallHistoryListProps {
   onFiltersChange?: (f: ListCallsFilters) => void;
   contactId?: string;
   embedded?: boolean;
-  /** Agrupa as linhas por dia (Hoje / Ontem / dd/mm), como no log de chamadas real. */
+  /** Agrupa as linhas por dia (Hoje / Ontem / dd/mm), como no log de chamadas real.
+   *  Só é aplicado quando `filters.sortBy === "startedAt"` (default). */
   groupByDay?: boolean;
   /** Conteúdo renderizado dentro do card, acima da tabela (banner, toolbar de filtros…). */
   header?: ReactNode;
@@ -127,7 +120,7 @@ export function CallHistoryList({
   onFiltersChange,
   contactId,
   embedded,
-  groupByDay: grouped = false,
+  groupByDay: groupedRequested = false,
   header,
 }: CallHistoryListProps) {
   const filters = externalFilters ?? { page: 1, perPage: 25, contactId };
@@ -176,31 +169,76 @@ export function CallHistoryList({
   // individuais com gap. Em contexto embutido (inbox/pipeline) mantém tabela densa.
   const useCards = !embedded;
 
+  // Ordenação — resolvida a partir de `filters` (default startedAt/desc). Só
+  // agrupamos por dia quando a ordem é a padrão (startedAt/desc); em outras
+  // ordens a lista renderiza plana para respeitar a ordenação do usuário.
+  const currentSortBy: CallsSortField = filters.sortBy ?? "startedAt";
+  const currentSortDir = filters.sortDir ?? "desc";
+  const groupingActive =
+    groupedRequested && currentSortBy === "startedAt" && currentSortDir === "desc";
+
+  const sortFor = (field: CallsSortField): SortDir =>
+    currentSortBy === field ? currentSortDir : null;
+
+  const toggleSort = (field: CallsSortField) => {
+    if (!onFiltersChange) return;
+    let nextDir: CallsSortDir;
+    if (currentSortBy === field) {
+      nextDir = currentSortDir === "asc" ? "desc" : "asc";
+    } else {
+      // Data e Duração começam desc (mais recente/maior primeiro); demais asc.
+      nextDir = field === "startedAt" || field === "durationSeconds" ? "desc" : "asc";
+    }
+    onFiltersChange({ ...filters, sortBy: field, sortDir: nextDir, page: 1 });
+  };
+
+  const HeadRow = (
+    <>
+      <span />
+      <ListColumnLabel>Contato / Telefone</ListColumnLabel>
+      <SortableHeader
+        label="Direção"
+        sort={sortFor("direction")}
+        onSort={() => toggleSort("direction")}
+      />
+      <SortableHeader
+        label="Status"
+        sort={sortFor("status")}
+        onSort={() => toggleSort("status")}
+      />
+      <SortableHeader
+        label="Duração"
+        sort={sortFor("durationSeconds")}
+        onSort={() => toggleSort("durationSeconds")}
+      />
+      <SortableHeader
+        label="Data e hora"
+        sort={sortFor("startedAt")}
+        onSort={() => toggleSort("startedAt")}
+      />
+      <ListColumnLabel align="right">Gravação</ListColumnLabel>
+    </>
+  );
+
   return (
     <div className={cn("flex min-h-0 flex-col gap-3", !embedded && "flex-1")}>
       {header}
 
       {useCards ? (
         <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-          <div className="flex min-w-[780px] flex-col gap-2">
+          <div className="flex min-w-[820px] flex-col gap-2">
             <div className={listTableHeadRowClass(`${COLS} gap-3 border border-transparent px-4 py-2`)}>
-              <HeadLabel> </HeadLabel>
-              <HeadLabel>Contato / Telefone</HeadLabel>
-              <HeadLabel>Direção</HeadLabel>
-              <HeadLabel>Status</HeadLabel>
-              <HeadLabel>Duração</HeadLabel>
-              <HeadLabel>Data e hora</HeadLabel>
-              <HeadLabel align="right">Gravação</HeadLabel>
+              {HeadRow}
             </div>
 
-            {grouped
+            {groupingActive
               ? groupByDay(calls).map(([label, rows]) => (
                   <div key={label} className="flex flex-col gap-2">
                     <div className="flex items-center justify-between px-1 pt-1">
-                      <span className="shrink-0 font-display text-[10.5px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+                      <span className="shrink-0 font-display text-[11px] font-bold text-[var(--text-secondary)]">
                         {label}
                       </span>
-                      <span className="shrink-0 font-display text-[10.5px] font-medium text-[var(--text-muted)]">
+                      <span className="shrink-0 font-display text-[11px] font-medium text-[var(--text-muted)]">
                         {rows.length} ligaç{rows.length !== 1 ? "ões" : "ão"}
                       </span>
                     </div>
@@ -231,15 +269,9 @@ export function CallHistoryList({
       ) : (
         <div className="flex w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
           <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-            <div className="min-w-[780px]">
+            <div className="min-w-[820px]">
               <div className={listTableHeadRowClass(`${COLS} gap-3 px-3 py-2.5`)}>
-                <HeadLabel> </HeadLabel>
-                <HeadLabel>Contato / Telefone</HeadLabel>
-                <HeadLabel>Direção</HeadLabel>
-                <HeadLabel>Status</HeadLabel>
-                <HeadLabel>Duração</HeadLabel>
-                <HeadLabel>Data e hora</HeadLabel>
-                <HeadLabel align="right">Gravação</HeadLabel>
+                {HeadRow}
               </div>
               <div className="flex flex-col">
                 {calls.map((call) => (
@@ -317,43 +349,56 @@ function CallTableRow({ call, isPlaying, onPlay, variant = "dense" }: CallTableR
           )}
         </span>
 
-        {/* Contato / Telefone — protótipo: nome bold + telefone mono na
-            mesma linha ("Carla Mendes +55 (11) 98888-7777") */}
-        <div className="min-w-0 truncate leading-tight">
-          {call.contact?.name ? (
-            <>
+        {/* Contato / Telefone — avatar circular (padrão Contatos) + nome
+            bold + telefone mono na mesma linha. Sem nome, apenas o telefone
+            com um avatar neutro (?) para preservar alinhamento. */}
+        <div className="flex min-w-0 items-center gap-2.5">
+          <ChatAvatar
+            user={{
+              id: call.contact?.id ?? call.phone,
+              name: call.contact?.name ?? null,
+              imageUrl: null,
+            }}
+            channel={null}
+            hideCartoon
+            size={AVATAR_SIZE.sm}
+          />
+          <div className="min-w-0 truncate leading-tight">
+            {call.contact?.name ? (
+              <>
+                <Link
+                  href={`/contacts/${call.contact.id}`}
+                  className="font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                >
+                  {call.contact.name}
+                </Link>{" "}
+                <span className="font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
+                  {formatPhoneDisplay(call.phone)}
+                </span>
+              </>
+            ) : call.contact ? (
               <Link
                 href={`/contacts/${call.contact.id}`}
-                className="font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                className="font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
               >
-                {call.contact.name}
-              </Link>{" "}
-              <span className="font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
+                {formatPhoneDisplay(call.phone)}
+              </Link>
+            ) : (
+              <span className="font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)]">
                 {formatPhoneDisplay(call.phone)}
               </span>
-            </>
-          ) : call.contact ? (
-            <Link
-              href={`/contacts/${call.contact.id}`}
-              className="font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
-            >
-              {formatPhoneDisplay(call.phone)}
-            </Link>
-          ) : (
-            <span className="font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)]">
-              {formatPhoneDisplay(call.phone)}
-            </span>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Direção — protótipo: .dir-in (brand-soft/brand-dark) e
-            .dir-out (cinza neutro/ink-2) */}
+        {/* Direção — Recebida = brand-soft; Realizada = azul mais claro
+            (mesma família, cinza foi trocado por azul conforme padrão do DS). */}
         <span
           className={cn(
             "inline-flex w-fit items-center rounded-full px-2.5 py-[3px] font-display text-[11px] font-bold",
             isInbound
               ? "bg-[var(--color-primary-soft)] text-[var(--brand-primary-dark)]"
-              : "bg-[rgba(100,116,139,0.12)] text-[var(--text-secondary)]",
+              : "bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)] text-[var(--brand-primary)]",
           )}
         >
           {isInbound ? "Recebida" : "Realizada"}

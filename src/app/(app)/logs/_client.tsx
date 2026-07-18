@@ -231,7 +231,6 @@ export default function LogsClientPage() {
   // Aba Chamadas (histórico movido do ícone da nav rail para dentro de Logs).
   const callsWidget = useCallsWidget(sessionStatus === "authenticated");
   const queryClient = useQueryClient();
-  const callsAutoSyncedRef = React.useRef(false);
   const callsSyncMutation = useMutation({
     mutationFn: syncCalls,
     onSuccess: (res) => {
@@ -252,6 +251,12 @@ export default function LogsClientPage() {
   const [callsSearchDebounced, setCallsSearchDebounced] = React.useState<string>("");
   const [callsFilters, setCallsFilters] = React.useState<CallsFilterState>({});
   const [callsPage, setCallsPage] = React.useState<number>(1);
+  const [callsSortBy, setCallsSortBy] = React.useState<
+    ListCallsFilters["sortBy"]
+  >("startedAt");
+  const [callsSortDir, setCallsSortDir] = React.useState<
+    ListCallsFilters["sortDir"]
+  >("desc");
   React.useEffect(() => {
     const t = setTimeout(() => setCallsSearchDebounced(callsSearch.trim()), 300);
     return () => clearTimeout(t);
@@ -276,8 +281,16 @@ export default function LogsClientPage() {
       status: callsFilters.status,
       dateFrom: callsFilters.dateFrom,
       dateTo: callsFilters.dateTo,
+      sortBy: callsSortBy,
+      sortDir: callsSortDir,
     }),
-    [callsPage, callsSearchDebounced, callsFilters],
+    [
+      callsPage,
+      callsSearchDebounced,
+      callsFilters,
+      callsSortBy,
+      callsSortDir,
+    ],
   );
 
   // Total de chamadas para o contador da aba — mesma queryKey da lista, então
@@ -289,13 +302,7 @@ export default function LogsClientPage() {
   });
   const callsTotal = callsData?.total;
 
-  // Sync automático ao abrir a aba Chamadas (uma vez, quando o widget está ativo).
-  React.useEffect(() => {
-    if (isCalls && callsWidget.enabled === true && !callsAutoSyncedRef.current) {
-      callsAutoSyncedRef.current = true;
-      callsSyncMutation.mutate();
-    }
-  }, [isCalls, callsWidget.enabled, callsSyncMutation]);
+  // Sincronização é manual via menu de ações (não dispara toast ao abrir a aba).
 
   const [entity, setEntity] = React.useState<string>("ALL");
   const [actor, setActor] = React.useState<string>("ALL");
@@ -661,18 +668,11 @@ export default function LogsClientPage() {
               <CallHistoryList
                 groupByDay
                 filters={callsListFilters}
-                onFiltersChange={(f) => setCallsPage(f.page ?? 1)}
-                header={
-                  <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--brand-primary)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)] px-3.5 py-2.5 font-body text-[12.5px] text-[var(--brand-primary)]">
-                    <IconPhone size={16} className="shrink-0" />
-                    <span>
-                      <b className="font-display font-bold">Novo:</b> o
-                      histórico de chamadas saiu do ícone da barra lateral e
-                      agora vive aqui, como uma aba de Logs — mesmo padrão de
-                      Contatos e Empresas.
-                    </span>
-                  </div>
-                }
+                onFiltersChange={(f) => {
+                  if (f.page !== undefined) setCallsPage(f.page);
+                  if (f.sortBy !== undefined) setCallsSortBy(f.sortBy);
+                  if (f.sortDir !== undefined) setCallsSortDir(f.sortDir);
+                }}
               />
             </div>
           )

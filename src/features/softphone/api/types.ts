@@ -7,6 +7,13 @@ export type CallStatus =
   | "BUSY"
   | "FAILED";
 
+export type CallsSortField =
+  | "startedAt"
+  | "durationSeconds"
+  | "status"
+  | "direction";
+export type CallsSortDir = "asc" | "desc";
+
 export interface ListCallsFilters {
   extensionId?: string;
   direction?: CallDirection;
@@ -15,6 +22,8 @@ export interface ListCallsFilters {
   search?: string;
   dateFrom?: string; // YYYY-MM-DD
   dateTo?: string;   // YYYY-MM-DD
+  sortBy?: CallsSortField;
+  sortDir?: CallsSortDir;
   page?: number;
   perPage?: number;
 }

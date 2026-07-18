@@ -13,6 +13,8 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconArrowLeft,
   IconBriefcase,
+  IconChevronDown,
+  IconChevronUp,
   IconCircleX,
   IconDotsVertical,
   IconGripVertical,
@@ -358,6 +360,26 @@ export function DealDetailPanel({
 
   // Toggle foco ↔ compacto (compartilhado com contact-aside via localStorage).
   const [viewMode, setViewMode] = useAsideViewMode()
+
+  // Hero recolhido: esconde anel/barra/grid pra ampliar a área de campos.
+  const [heroCollapsed, setHeroCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false
+    try {
+      return window.localStorage.getItem("deal-aside-hero-collapsed") === "1"
+    } catch {
+      return false
+    }
+  })
+  const toggleHeroCollapsed = useCallback(() => {
+    setHeroCollapsed((v) => {
+      try {
+        window.localStorage.setItem("deal-aside-hero-collapsed", v ? "0" : "1")
+      } catch {
+        /* fail-silent */
+      }
+      return !v
+    })
+  }, [])
 
   // Detecção de viewport: < lg (1024px) ativa o layout mobile (painel único +
   // switcher Conversa | Detalhes). Desktop mantém o grid 2-colunas com resize.
@@ -747,6 +769,8 @@ export function DealDetailPanel({
                   </h2>
                 </div>
 
+                {!heroCollapsed && (
+                <>
                 {/* Linha base: anel de progresso (cor da etapa atual) + pipeline + responsável */}
                 <div className="relative mt-2.5 flex items-center gap-3">
                   <div
@@ -834,13 +858,30 @@ export function DealDetailPanel({
                       </TooltipGlass>
                     </>
                   )}
-                  <span className="self-start pt-0.5 text-slate-400">Tags</span>
-                  <span className="flex min-w-0 flex-wrap items-center justify-end gap-1 [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white">
+                  <span className="text-slate-400">Tags</span>
+                  <span className="flex min-w-0 flex-nowrap items-center justify-end gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:shrink [&_.tag-chip]:truncate">
                     {tagsSlot ?? (
                       <span className="text-xs text-white/60">Nenhuma tag</span>
                     )}
                   </span>
                 </div>
+                </>
+                )}
+
+                {/* Split: recolhe anel/barra/grid pra ampliar a área de campos. */}
+                <button
+                  type="button"
+                  onClick={toggleHeroCollapsed}
+                  aria-label={heroCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+                  aria-expanded={!heroCollapsed}
+                  className="absolute -bottom-3 left-1/2 z-10 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-[#2e3b6e] shadow-md transition-colors hover:bg-slate-100"
+                >
+                  {heroCollapsed ? (
+                    <IconChevronDown size={14} strokeWidth={2.5} />
+                  ) : (
+                    <IconChevronUp size={14} strokeWidth={2.5} />
+                  )}
+                </button>
               </header>
 
               {/* Motivo da perda — destaque vermelho quando deal está LOST. */}

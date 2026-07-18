@@ -1212,17 +1212,17 @@ export default function KanbanV2ClientPage({
             const visibleTags = allTags.slice(0, MAX_VISIBLE);
             const hiddenTags = allTags.slice(MAX_VISIBLE);
             return (
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
                 {visibleTags.map((t) => (
-                  // Mesmo padrão do card kanban: max-w + truncate + tooltip.
-                  // Sem isso, tags longas no header do deal detail estouravam
-                  // o slot e empurravam o resto do cabeçalho.
+                  // Linha única no grid do hero: chips truncam (max-w) e o
+                  // container não quebra — "+N" e "+" ficam sempre visíveis
+                  // na mesma linha.
                   <TooltipGlass key={t.id} label={t.name} side="top">
                     {/* Chip claro (color-mix com white) — mesmo padrão do
                         DealTagsTray do inbox, garante contraste legível sobre
                         o hero escuro (--nav-bg). */}
                     <span
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
+                      className="inline-block max-w-[7.5rem] min-w-0 truncate rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
                       style={{
                         background: `color-mix(in srgb, ${t.color ?? "#5b6ff5"} 18%, white)`,
                         color: `color-mix(in srgb, ${t.color ?? "#5b6ff5"} 75%, black)`,

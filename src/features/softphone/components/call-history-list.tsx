@@ -36,6 +36,33 @@ function formatDate(iso: string) {
   });
 }
 
+/** Rótulo do grupo por dia: Hoje / Ontem / dd/mm. */
+function dayLabel(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+  if (sameDay(d, today)) return "Hoje";
+  if (sameDay(d, yesterday)) return "Ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+/** Agrupa chamadas por dia preservando a ordem de chegada (mais recentes primeiro). */
+function groupByDay(calls: CallRecord[]): [string, CallRecord[]][] {
+  const map = new Map<string, CallRecord[]>();
+  for (const c of calls) {
+    const key = dayLabel(c.startedAt);
+    const arr = map.get(key);
+    if (arr) arr.push(c);
+    else map.set(key, [c]);
+  }
+  return Array.from(map.entries());
+}
+
 function statusLabel(status: string): { label: string; color: string } {
   switch (status) {
     case "COMPLETED":
@@ -59,6 +86,8 @@ interface CallHistoryListProps {
   onFiltersChange?: (f: ListCallsFilters) => void;
   contactId?: string;
   embedded?: boolean;
+  /** Agrupa as linhas por dia (Hoje / Ontem / dd/mm), como no log de chamadas real. */
+  groupByDay?: boolean;
 }
 
 export function CallHistoryList({
@@ -66,6 +95,7 @@ export function CallHistoryList({
   onFiltersChange,
   contactId,
   embedded,
+  groupByDay: grouped = false,
 }: CallHistoryListProps) {
   const filters = externalFilters ?? { page: 1, perPage: 25, contactId };
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -126,14 +156,38 @@ export function CallHistoryList({
 
             {/* Linhas */}
             <div className="flex flex-col">
-              {calls.map((call) => (
-                <CallTableRow
-                  key={call.id}
-                  call={call}
-                  isPlaying={playingId === call.id}
-                  onPlay={() => setPlayingId(playingId === call.id ? null : call.id)}
-                />
-              ))}
+              {grouped
+                ? groupByDay(calls).map(([label, rows]) => (
+                    <div key={label} className="flex flex-col">
+                      <div className="flex items-center gap-2.5 px-3 pb-1 pt-3 first:pt-1">
+                        <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                          {label}
+                        </span>
+                        <span className="h-px flex-1 bg-[var(--glass-border-subtle)]" />
+                        <span className="shrink-0 font-display text-[11px] text-[var(--text-muted)]">
+                          {rows.length} ligaç{rows.length !== 1 ? "ões" : "ão"}
+                        </span>
+                      </div>
+                      {rows.map((call) => (
+                        <CallTableRow
+                          key={call.id}
+                          call={call}
+                          isPlaying={playingId === call.id}
+                          onPlay={() =>
+                            setPlayingId(playingId === call.id ? null : call.id)
+                          }
+                        />
+                      ))}
+                    </div>
+                  ))
+                : calls.map((call) => (
+                    <CallTableRow
+                      key={call.id}
+                      call={call}
+                      isPlaying={playingId === call.id}
+                      onPlay={() => setPlayingId(playingId === call.id ? null : call.id)}
+                    />
+                  ))}
             </div>
           </div>
         </div>

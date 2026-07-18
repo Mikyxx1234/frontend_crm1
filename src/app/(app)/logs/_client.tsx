@@ -3,11 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2 as Loader2 } from "@tabler/icons-react";
 import {
   IconClipboardList,
   IconCopy,
   IconPhone,
+  IconRefresh,
+  IconSettings,
 } from "@tabler/icons-react";
 import { format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +23,7 @@ import {
   type CallsFilterState,
 } from "@/features/softphone/components/calls-search-filter-bar";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
+import { syncCalls } from "@/features/softphone/api/extensions";
 import type { ListCallsFilters } from "@/features/softphone/api/types";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
@@ -27,6 +31,8 @@ import { PageHeader } from "@/components/crm/page-header";
 import {
   PAGE_FILTER_DROPDOWN_CLASS,
   PageFilterBar,
+  PageGhostButton,
+  pageGhostButtonClass,
   PageSearchBar,
   PageSegmentedControl,
 } from "@/components/crm/page-toolbar";
@@ -223,6 +229,24 @@ export default function LogsClientPage() {
 
   // Aba Chamadas (histórico movido do ícone da nav rail para dentro de Logs).
   const callsWidget = useCallsWidget(sessionStatus === "authenticated");
+  const queryClient = useQueryClient();
+  const callsAutoSyncedRef = React.useRef(false);
+  const callsSyncMutation = useMutation({
+    mutationFn: syncCalls,
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["calls"] });
+      if (res?.reason === "no_api4com_token") return;
+      const total = (res?.created ?? 0) + (res?.updated ?? 0);
+      if (total > 0) {
+        toast.success(
+          `Chamadas sincronizadas (${res.created} nova(s), ${res.updated} atualizada(s)).`,
+        );
+      }
+    },
+    onError: () => {
+      toast.error("Não foi possível sincronizar as chamadas agora.");
+    },
+  });
   const [callsSearch, setCallsSearch] = React.useState<string>("");
   const [callsSearchDebounced, setCallsSearchDebounced] = React.useState<string>("");
   const [callsFilters, setCallsFilters] = React.useState<CallsFilterState>({});
@@ -254,6 +278,14 @@ export default function LogsClientPage() {
     }),
     [callsPage, callsSearchDebounced, callsFilters],
   );
+
+  // Sync automático ao abrir a aba Chamadas (uma vez, quando o widget está ativo).
+  React.useEffect(() => {
+    if (isCalls && callsWidget.enabled === true && !callsAutoSyncedRef.current) {
+      callsAutoSyncedRef.current = true;
+      callsSyncMutation.mutate();
+    }
+  }, [isCalls, callsWidget.enabled, callsSyncMutation]);
 
   const [entity, setEntity] = React.useState<string>("ALL");
   const [actor, setActor] = React.useState<string>("ALL");
@@ -599,15 +631,34 @@ export default function LogsClientPage() {
             <CallsNotEnabledState />
           ) : (
             <div className="flex min-h-0 flex-1 flex-col gap-3">
-              <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--brand-primary)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)] px-3.5 py-2.5 font-body text-[12.5px] text-[var(--brand-primary)]">
-                <IconPhone size={16} className="shrink-0" />
-                <span>
-                  <b className="font-display font-bold">Novo:</b> o histórico de
-                  chamadas saiu do ícone da barra lateral e agora vive aqui, como
-                  uma aba de Logs.
-                </span>
+              <div className="flex items-center justify-end gap-2">
+                <PageGhostButton
+                  onClick={() => callsSyncMutation.mutate()}
+                  disabled={callsSyncMutation.isPending}
+                  title="Sincronizar chamadas com a Api4com"
+                >
+                  <IconRefresh
+                    size={15}
+                    className={callsSyncMutation.isPending ? "animate-spin" : undefined}
+                  />
+                  <span className="hidden sm:inline">
+                    {callsSyncMutation.isPending ? "Sincronizando…" : "Sincronizar"}
+                  </span>
+                  <span className="sm:hidden">
+                    {callsSyncMutation.isPending ? "Sinc…" : "Sinc"}
+                  </span>
+                </PageGhostButton>
+                <Link
+                  href="/settings/softphone"
+                  className={pageGhostButtonClass()}
+                  title="Configurações do softphone"
+                >
+                  <IconSettings size={15} />
+                  <span className="hidden sm:inline">Configurações</span>
+                </Link>
               </div>
               <CallHistoryList
+                groupByDay
                 filters={callsListFilters}
                 onFiltersChange={(f) => setCallsPage(f.page ?? 1)}
               />

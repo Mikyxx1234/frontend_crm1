@@ -896,7 +896,7 @@ export function ContactAside({
                               )}
 
                               {/* Campos nativos */}
-                              <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                              <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
                                 <Row label="Nome" isFirst icon={<IconUser size={12} />} compact={viewMode === "compact"}>
                                   <InlineNativeEditor
                                     value={native("name", contact.name)}
@@ -979,7 +979,7 @@ export function ContactAside({
 
                               {/* Campos personalizados de contato */}
                               {resolvedContactPanelFields.length > 0 && (
-                                <div className="mt-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                                <div className="mt-3 rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
                                   {resolvedContactPanelFields.map((f, i) => {
                                     const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
                                     const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
@@ -1080,7 +1080,7 @@ export function ContactAside({
                                 Produtos
                               </SectionHeader>
                               {productsSectionOpen && (
-                                <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                                <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
                                   {/* `hideTitle` evita duplicar o rotulo "Produtos"
                                       — quem provee o cabecalho e o SectionHeader
                                       acima; DealProductsSection so renderiza os
@@ -1142,7 +1142,7 @@ export function ContactAside({
                                 {resolvedDealPanelFields.length > 0 && (
                                   viewMode === "compact" ? (
                                     /* ── Compact: flat rows ── */
-                                    <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                                    <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
                                       {resolvedDealPanelFields.map((f, idx) => {
                                         const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
                                         const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null

@@ -290,7 +290,7 @@ export function DealDetailsPanel({
                       </div>
                     </div>
                   )}
-                  <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                  <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
                     {group.fields.map((field, fi) => (
                       <FieldRow key={field.label} field={field} isFirst={fi === 0} />
                     ))}

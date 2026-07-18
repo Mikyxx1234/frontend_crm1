@@ -782,8 +782,9 @@ export function DealDetailPanel({
                   </div>
                 )}
 
-                {/* Grid 2 colunas de infos rápidas — Origem / Canal / Tags */}
-                <div className="relative mt-4 grid grid-cols-2 items-center gap-y-2 border-t border-white/10 pt-4 text-xs">
+                {/* Grid de infos rápidas — Origem / Canal / Tags. Coluna do
+                    rótulo em largura fixa para os valores alinharem à direita. */}
+                <div className="relative mt-4 grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-4 gap-y-2.5 border-t border-white/10 pt-4 text-xs">
                   <span className="text-slate-400">Origem</span>
                   <div className="min-w-0 text-right font-medium [&_input]:!bg-white [&_input]:!text-[var(--text-primary)] [&_input]:!rounded [&_input]:!px-1">
                     {deal.contactId ? (
@@ -821,8 +822,8 @@ export function DealDetailPanel({
                       </TooltipGlass>
                     </>
                   )}
-                  <span className="text-slate-400">Tags</span>
-                  <span className="flex flex-wrap items-center justify-end gap-1 [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white">
+                  <span className="self-start pt-0.5 text-slate-400">Tags</span>
+                  <span className="flex min-w-0 flex-wrap items-center justify-end gap-1 [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white">
                     {tagsSlot ?? (
                       <span className="text-xs text-white/60">Nenhuma tag</span>
                     )}
@@ -1794,7 +1795,7 @@ function FieldCard({
         )}
       </div>
       {/* Card branco (ref. Stitch) — rows/cards internos controlam o padding. */}
-      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-sm">
         {children}
       </div>
     </section>

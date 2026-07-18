@@ -244,11 +244,11 @@ export function CallHistoryTimeline({
             {groups.map(([label, rows]) => (
               <div key={label} className="mb-1">
                 <div className="mb-2.5 mt-4 flex items-center gap-2.5 first:mt-1">
-                  <h3 className="font-display text-[12px] font-bold uppercase tracking-[0.09em] text-[var(--text-secondary)]">
+                  <h3 className="font-display text-[13px] font-semibold text-[var(--text-muted)]">
                     {label}
                   </h3>
                   <span className="h-px flex-1 bg-[var(--glass-border-subtle)]" />
-                  <span className="font-body text-[11px] font-semibold text-[var(--text-muted)]">
+                  <span className="font-display text-[13px] text-[var(--text-muted)]">
                     {rows.length} ligaç{rows.length !== 1 ? "ões" : "ão"}
                   </span>
                 </div>
@@ -297,9 +297,9 @@ function TimelineRow({ call, isPlaying, onPlay }: TimelineRowProps) {
 
   return (
     <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:shadow-[var(--glass-shadow)]">
-      <div className="flex items-center gap-3 px-3.5 py-2.5 sm:gap-3.5 sm:px-4">
-        {/* Hora */}
-        <span className="w-11 shrink-0 text-center font-display text-[13px] font-semibold tabular-nums text-[var(--text-secondary)]">
+      <div className="flex items-center gap-3 px-3 py-2.5 sm:gap-3.5 sm:px-3.5">
+        {/* Hora — célula regular 13px (igual Telefone/datas em Contatos) */}
+        <span className="w-11 shrink-0 text-center font-display text-[13px] tabular-nums text-[var(--text-secondary)]">
           {timeLabel(call.startedAt)}
         </span>
 
@@ -323,7 +323,7 @@ function TimelineRow({ call, isPlaying, onPlay }: TimelineRowProps) {
           )}
         </span>
 
-        {/* Contato / Telefone — tipografia Contatos (14px bold + 12px muted) */}
+        {/* Identidade — nome 14px bold + subtítulo 12px muted (padrão Contatos) */}
         <div className="min-w-0 flex-1 leading-tight">
           {call.contact ? (
             <Link
@@ -338,41 +338,34 @@ function TimelineRow({ call, isPlaying, onPlay }: TimelineRowProps) {
             </span>
           )}
           {call.contact?.name && (
-            <p className="truncate font-body text-[12px] text-[var(--text-muted)]">
+            <div className="truncate font-body text-[12px] text-[var(--text-muted)]">
               {call.phone}
-            </p>
+            </div>
           )}
         </div>
 
-        {/* Direção — alinhada, com seta de entrada/saída */}
-        <span
-          className={cn(
-            "hidden w-[7.5rem] shrink-0 items-center justify-start gap-1.5 font-display text-[12px] font-semibold lg:inline-flex",
-            inbound
-              ? "text-[var(--brand-primary)]"
-              : "text-[var(--text-secondary)]",
-          )}
-        >
+        {/* Direção — 13px regular + seta (peso de célula Contatos) */}
+        <span className="hidden w-[7.5rem] shrink-0 items-center justify-start gap-1.5 font-display text-[13px] text-[var(--text-secondary)] lg:inline-flex">
           {inbound ? (
-            <IconArrowDownLeft size={14} stroke={2.2} className="shrink-0" />
+            <IconArrowDownLeft size={14} stroke={2} className="shrink-0 text-[var(--brand-primary)]" />
           ) : (
-            <IconArrowUpRight size={14} stroke={2.2} className="shrink-0" />
+            <IconArrowUpRight size={14} stroke={2} className="shrink-0" />
           )}
           {inbound ? "Recebida" : "Realizada"}
         </span>
 
-        {/* Status */}
+        {/* Status — 12px semibold (chips Contatos), não 11px bold */}
         <span
           className={cn(
-            "inline-flex w-[6.5rem] shrink-0 items-center justify-start gap-1.5 rounded-full px-2.5 py-1 font-display text-[11px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
+            "inline-flex w-[6.75rem] shrink-0 items-center justify-start gap-1.5 rounded-full px-2.5 py-1 font-display text-[12px] font-semibold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
             s.className,
           )}
         >
           {s.label}
         </span>
 
-        {/* Duração */}
-        <span className="hidden w-12 shrink-0 text-right font-display text-[13px] font-semibold tabular-nums text-[var(--text-secondary)] lg:block">
+        {/* Duração — 13px regular */}
+        <span className="hidden w-12 shrink-0 text-right font-display text-[13px] tabular-nums text-[var(--text-secondary)] lg:block">
           {formatDuration(call.durationSeconds)}
         </span>
 

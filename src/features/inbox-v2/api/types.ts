@@ -222,6 +222,13 @@ export interface InboxMessageDto {
    * real da automação em `senderName` sem quebrar a detecção do bot na UI.
    */
   authorType?: "human" | "bot" | "system";
+  /**
+   * Nome do agente que disparou a automação MANUALMENTE (gatilho `manual`).
+   * Presente nas mensagens `out` de bot enviadas por um disparo manual — o
+   * inbox exibe o selo "Manual" + o avatar do agente ao lado do robô (colab).
+   * NULL para envios automáticos/reativos.
+   */
+  triggeredByName?: string | null;
   /** Status bruto de envio (string livre do backend: sent/delivered/read/failed). */
   sendStatus?: string | null;
   /**

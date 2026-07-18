@@ -419,11 +419,22 @@ export function toMessageBubble(
     dto.sender?.kind === "BOT" ||
     (!isInbound && dto.senderName === "Automação");
 
-  // Confirmação de automação disparada manualmente pela conversa. Gravada
-  // pelo backend como `messageType: "automation_run"` (interna, isPrivate).
-  // Renderiza como cartão de automação (badge "Manual") com avatar do agente
-  // que acionou ao lado do robô — NÃO como nota.
-  const isAutomationRun = !isInbound && dto.messageType === "automation_run";
+  // Disparo manual de automação (colab): a mensagem REAL enviada pelos steps
+  // vem tagueada com `triggeredByName` (nome do agente que acionou). O inbox
+  // exibe o selo "Manual" + o avatar (iniciais) do agente ao lado do robô,
+  // reproduzindo a mensagem enviada. Mantém compat com o card legado
+  // `messageType: "automation_run"` (agente ficava em `senderName`).
+  const manualTriggerName =
+    !isInbound && typeof dto.triggeredByName === "string" && dto.triggeredByName.trim()
+      ? dto.triggeredByName.trim()
+      : null;
+  const legacyRunAgent =
+    !isInbound && dto.messageType === "automation_run" && dto.senderName
+      ? dto.senderName
+      : null;
+  const manualAutomationAgent = manualTriggerName ?? legacyRunAgent;
+  const isAutomationRun =
+    !!manualAutomationAgent || (!isInbound && dto.messageType === "automation_run");
 
   // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
   const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;
@@ -452,10 +463,10 @@ export function toMessageBubble(
     senderName: !isInbound && dto.senderName ? dto.senderName : undefined,
     isBot: isBot || isAutomationRun || undefined,
     isAutomationRun: isAutomationRun || undefined,
-    automationAgentName:
-      isAutomationRun && dto.senderName ? dto.senderName : undefined,
-    automationAgentInitials:
-      isAutomationRun && dto.senderName ? avatarInitials(dto.senderName) : undefined,
+    automationAgentName: manualAutomationAgent ?? undefined,
+    automationAgentInitials: manualAutomationAgent
+      ? avatarInitials(manualAutomationAgent)
+      : undefined,
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
     messageType: dto.messageType ?? undefined,

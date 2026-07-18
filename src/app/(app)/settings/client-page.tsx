@@ -7,6 +7,7 @@ import { IconAdjustments as Settings2, IconChevronRight as ChevronRight, IconChe
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
+import { PageSearchBar } from "@/components/crm/page-toolbar";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { useUserRole } from "@/hooks/use-user-role";
 import { cn } from "@/lib/utils";
@@ -32,10 +33,44 @@ export default function SettingsClientPageV2() {
     [role, isSuperAdmin, myPerms?.permissions],
   );
 
-  const settingsGroups = useMemo(
+  const allGroups = useMemo(
     () => filterSettingsNav(SETTINGS_NAV, viewer),
     [viewer],
   );
+
+  // Busca — filtra atalhos pessoais, grupos e itens por texto.
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const searching = q.length > 0;
+
+  const matches = (...parts: (string | undefined)[]) =>
+    parts.some((p) => p?.toLowerCase().includes(q));
+
+  const personalItems = useMemo(
+    () =>
+      searching
+        ? SETTINGS_PERSONAL.filter((i) => matches(i.label, i.description))
+        : SETTINGS_PERSONAL,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [searching, q],
+  );
+
+  const settingsGroups = useMemo(() => {
+    if (!searching) return allGroups;
+    return allGroups
+      .map((group) => {
+        // Se o nome do grupo casa, mantém todos os itens; senão filtra itens.
+        if (matches(group.label, group.description)) return group;
+        const items = group.items.filter((it) =>
+          matches(it.label, it.description, it.eyebrow),
+        );
+        return items.length ? { ...group, items } : null;
+      })
+      .filter((g): g is (typeof allGroups)[number] => g !== null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allGroups, searching, q]);
+
+  const hasResults = personalItems.length > 0 || settingsGroups.length > 0;
 
   // Estado de colapso por seção (apenas visual — não altera rotas/dados).
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -52,33 +87,46 @@ export default function SettingsClientPageV2() {
       <NavRailV2 />
 
       <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden sm:gap-3.5">
-        {/* Header fixo */}
+        {/* Header fixo + busca padrão */}
         <PageHeader
           title="Configurações"
           description="Organize canais, equipe, pipeline e integrações do seu workspace."
           icon={<Settings2 size={22} />}
+          center={
+            <PageSearchBar
+              variant="compact"
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar em configurações..."
+              aria-label="Buscar em configurações"
+            />
+          }
         />
 
         {/* Área scrollável */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pb-8 pr-1 sm:gap-6 sm:pr-2 [-webkit-overflow-scrolling:touch]">
 
           {/* Atalhos pessoais */}
-          <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
-            {SETTINGS_PERSONAL.map((item) => (
-              <PersonalShortcut key={item.id} item={item} pathname={pathname} />
-            ))}
-          </section>
+          {personalItems.length > 0 && (
+            <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+              {personalItems.map((item) => (
+                <PersonalShortcut key={item.id} item={item} pathname={pathname} />
+              ))}
+            </section>
+          )}
 
-          {/* Grupos de configuração */}
-          <div className="grid min-w-0 grid-cols-1 items-start gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {/* Grupos de configuração — layout masonry (colunas) para preencher
+              o espaço vertical e evitar buracos entre cards de alturas distintas. */}
+          <div className="min-w-0 gap-3 [column-fill:_balance] sm:gap-4 md:columns-2 xl:columns-3 [&>section]:mb-3 sm:[&>section]:mb-4">
             {settingsGroups.map((group) => {
               const GroupIcon = group.icon;
-              const isCollapsed = collapsed.has(group.id);
+              // Durante a busca, sempre expandido para revelar os resultados.
+              const isCollapsed = !searching && collapsed.has(group.id);
               return (
                 <section
                   key={group.id}
                   className={cn(
-                    "group/section min-w-0 overflow-hidden rounded-[var(--radius-xl)] border bg-[var(--glass-bg-base)] backdrop-blur-sm transition-[border-color,box-shadow] duration-200",
+                    "group/section inline-block w-full break-inside-avoid overflow-hidden rounded-[var(--radius-xl)] border bg-[var(--glass-bg-base)] backdrop-blur-sm transition-[border-color,box-shadow] duration-200",
                     isCollapsed
                       ? "border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]"
                       : "border-[rgba(91,111,245,0.30)] shadow-[var(--shadow-indigo-glow)]",
@@ -173,6 +221,17 @@ export default function SettingsClientPageV2() {
               );
             })}
           </div>
+
+          {searching && !hasResults && (
+            <div className="flex flex-col items-center justify-center gap-1 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] px-6 py-12 text-center">
+              <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                Nenhum resultado para “{search.trim()}”
+              </p>
+              <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+                Tente outro termo ou limpe a busca.
+              </p>
+            </div>
+          )}
         </div>
       </main>
     </div>

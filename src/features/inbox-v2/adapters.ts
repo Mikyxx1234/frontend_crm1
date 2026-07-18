@@ -419,6 +419,12 @@ export function toMessageBubble(
     dto.sender?.kind === "BOT" ||
     (!isInbound && dto.senderName === "Automação");
 
+  // Confirmação de automação disparada manualmente pela conversa. Gravada
+  // pelo backend como `messageType: "automation_run"` (interna, isPrivate).
+  // Renderiza como cartão de automação (badge "Manual") com avatar do agente
+  // que acionou ao lado do robô — NÃO como nota.
+  const isAutomationRun = !isInbound && dto.messageType === "automation_run";
+
   // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
   const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;
 
@@ -444,7 +450,12 @@ export function toMessageBubble(
     // Nome completo do remetente — exibido como tooltip no avatar e rótulo
     // abaixo da bolha outgoing para identificar agente ou automação.
     senderName: !isInbound && dto.senderName ? dto.senderName : undefined,
-    isBot: isBot || undefined,
+    isBot: isBot || isAutomationRun || undefined,
+    isAutomationRun: isAutomationRun || undefined,
+    automationAgentName:
+      isAutomationRun && dto.senderName ? dto.senderName : undefined,
+    automationAgentInitials:
+      isAutomationRun && dto.senderName ? avatarInitials(dto.senderName) : undefined,
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
     messageType: dto.messageType ?? undefined,
@@ -454,9 +465,10 @@ export function toMessageBubble(
     // MessageBubble (sem isso a nota era renderizada como balão de saída
     // azul, indistinguível de mensagem enviada ao cliente).
     isNote:
-      dto.isPrivate === true ||
-      dto.private === true ||
-      dto.messageType === "note" ||
+      (!isAutomationRun &&
+        (dto.isPrivate === true ||
+          dto.private === true ||
+          dto.messageType === "note")) ||
       undefined,
     mediaUrl: dto.mediaUrl ?? dto.media?.url ?? undefined,
     // Ticks de entrega (estilo WhatsApp) — apenas para mensagens out.

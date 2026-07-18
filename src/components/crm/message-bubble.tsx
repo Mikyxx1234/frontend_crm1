@@ -161,6 +161,16 @@ export interface Message {
   senderName?: string
   /** Mensagem enviada por bot/automação — exibe badge "AUTOMAÇÃO" */
   isBot?: boolean
+  /**
+   * Confirmação de automação disparada MANUALMENTE pela conversa. Renderiza
+   * o cartão de automação com badge "Manual" e o avatar (iniciais) do agente
+   * que acionou sobreposto ao robô — estilo colaboração.
+   */
+  isAutomationRun?: boolean
+  /** Nome do agente que disparou a automação manual (tooltip do avatar colab). */
+  automationAgentName?: string
+  /** Iniciais do agente que disparou — chip sobre o robô. */
+  automationAgentInitials?: string
   /** Campos parseados de resposta de formulário Meta Flow */
   formFields?: FormField[]
   /** Título do formulário (ex: "form_estag") */
@@ -1375,26 +1385,56 @@ export function MessageBubble({
       )}
     >
       <div className={cn("group flex items-end gap-2.5", isOutgoing && "flex-row-reverse")}>
-        {/* Avatar: robô para bot, iniciais para agente — com tooltip do nome */}
+        {/* Avatar: robô para bot, iniciais para agente — com tooltip do nome.
+            Automação manual (colab): robô + chip de iniciais do agente que
+            acionou, sobreposto no canto inferior direito. */}
         {isOutgoing && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
-                  !isBot && "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
-                )}
-                style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
-              >
-                {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
-              </div>
-            </TooltipTrigger>
-            {senderName && (
-              <TooltipContent side="left" className="font-medium text-[11px]">
-                {senderName}
-              </TooltipContent>
-            )}
-          </Tooltip>
+          message.isAutomationRun && message.automationAgentInitials ? (
+            <div className="relative flex shrink-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="flex h-7 w-7 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
+                    style={{ background: AUTOMATION_ACCENT }}
+                  >
+                    <IconRobot size={14} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="font-medium text-[11px]">
+                  Automação
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="absolute -bottom-1 -right-1 flex h-4 w-4 cursor-default items-center justify-center rounded-full border border-white bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[7px] font-bold text-white shadow-sm">
+                    {message.automationAgentInitials}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="font-medium text-[11px]">
+                  Disparada por {message.automationAgentName || "agente"}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn(
+                    "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
+                    !isBot && "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
+                  )}
+                  style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
+                >
+                  {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
+                </div>
+              </TooltipTrigger>
+              {senderName && (
+                <TooltipContent side="left" className="font-medium text-[11px]">
+                  {senderName}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          )
         )}
         <div
           className={cn(
@@ -1444,10 +1484,14 @@ export function MessageBubble({
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest"
                 style={{ background: `${AUTOMATION_ACCENT}1f`, color: AUTOMATION_ACCENT }}
-                title={senderName || "Automação"}
+                title={
+                  message.isAutomationRun
+                    ? "Automação disparada manualmente"
+                    : senderName || "Automação"
+                }
               >
                 <IconRobot size={10} />
-                {senderName || "Automação"}
+                {message.isAutomationRun ? "Manual" : senderName || "Automação"}
               </span>
             </div>
           )}

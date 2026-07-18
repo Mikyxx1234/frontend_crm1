@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2 as Loader2 } from "@tabler/icons-react";
 import {
   IconClipboardList,
   IconCopy,
+  IconMenu2,
   IconPhone,
   IconRefresh,
   IconSettings,
@@ -31,8 +32,6 @@ import { PageHeader } from "@/components/crm/page-header";
 import {
   PAGE_FILTER_DROPDOWN_CLASS,
   PageFilterBar,
-  PageGhostButton,
-  pageGhostButtonClass,
   PageSearchBar,
   PageSegmentedControl,
 } from "@/components/crm/page-toolbar";
@@ -60,6 +59,7 @@ import type { ActivityFeedFilters } from "@/features/activity-feed/api";
 import { useActivityStats } from "@/features/activity-feed/use-activity-stats";
 import { MOCK_FEED } from "@/features/activity-feed/mock-feed";
 import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
+import { cn } from "@/lib/utils";
 
 const LOG_TABS = ["Feed", "Chamadas", "Estatísticas (30d)"] as const;
 
@@ -223,6 +223,7 @@ function resolveOrigin(ev: FeedEvent): OriginInfo {
 export default function LogsClientPage() {
   const { ready, isManagerUp } = useRequireManager();
   const { status: sessionStatus } = useSession();
+  const router = useRouter();
   const [activeTab, setActiveTab] = React.useState(0);
   const isFeed = activeTab === 0;
   const isCalls = activeTab === 1;
@@ -478,6 +479,13 @@ export default function LogsClientPage() {
                 value={String(activeTab)}
                 onChange={(v) => setActiveTab(Number(v))}
               />
+              {isCalls && callsWidget.enabled === true && (
+                <CallsActionsMenu
+                  syncing={callsSyncMutation.isPending}
+                  onSync={() => callsSyncMutation.mutate()}
+                  onSettings={() => router.push("/settings/softphone")}
+                />
+              )}
             </div>
           }
         />
@@ -655,51 +663,14 @@ export default function LogsClientPage() {
                 filters={callsListFilters}
                 onFiltersChange={(f) => setCallsPage(f.page ?? 1)}
                 header={
-                  <div className="flex flex-col gap-2 px-2 pb-2.5 pt-2">
-                    {/* Banner informativo — histórico movido da nav rail p/ Logs */}
-                    <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--brand-primary)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)] px-3.5 py-2.5 font-body text-[12.5px] text-[var(--brand-primary)]">
-                      <IconPhone size={16} className="shrink-0" />
-                      <span>
-                        <b className="font-display font-bold">Novo:</b> o
-                        histórico de chamadas saiu do ícone da barra lateral e
-                        agora vive aqui, como uma aba de Logs — mesmo padrão de
-                        tabela densa.
-                      </span>
-                    </div>
-
-                    {/* Ações — filtros vivem no popover da busca do header */}
-                    <div className="flex flex-wrap items-center justify-end gap-2.5">
-                      <PageGhostButton
-                        onClick={() => callsSyncMutation.mutate()}
-                        disabled={callsSyncMutation.isPending}
-                        title="Sincronizar chamadas com a Api4com"
-                      >
-                        <IconRefresh
-                          size={15}
-                          className={
-                            callsSyncMutation.isPending
-                              ? "animate-spin"
-                              : undefined
-                          }
-                        />
-                        <span className="hidden sm:inline">
-                          {callsSyncMutation.isPending
-                            ? "Sincronizando…"
-                            : "Sincronizar"}
-                        </span>
-                        <span className="sm:hidden">
-                          {callsSyncMutation.isPending ? "Sinc…" : "Sinc"}
-                        </span>
-                      </PageGhostButton>
-                      <Link
-                        href="/settings/softphone"
-                        className={pageGhostButtonClass()}
-                        title="Configurações do softphone"
-                      >
-                        <IconSettings size={15} />
-                        <span className="hidden sm:inline">Configurações</span>
-                      </Link>
-                    </div>
+                  <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--brand-primary)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)] px-3.5 py-2.5 font-body text-[12.5px] text-[var(--brand-primary)]">
+                    <IconPhone size={16} className="shrink-0" />
+                    <span>
+                      <b className="font-display font-bold">Novo:</b> o
+                      histórico de chamadas saiu do ícone da barra lateral e
+                      agora vive aqui, como uma aba de Logs — mesmo padrão de
+                      Contatos e Empresas.
+                    </span>
                   </div>
                 }
               />
@@ -1040,6 +1011,91 @@ function StatBarPanel({
         )}
       </ul>
     </section>
+  );
+}
+
+/** Menu hamburger padrão Contatos/Empresas — Sincronizar + Configurações. */
+function CallsActionsMenu({
+  syncing,
+  onSync,
+  onSettings,
+}: {
+  syncing: boolean;
+  onSync: () => void;
+  onSettings: () => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const items: {
+    icon: React.ReactNode;
+    label: string;
+    onClick: () => void;
+    divider?: boolean;
+  }[] = [
+    {
+      icon: (
+        <IconRefresh
+          size={16}
+          className={syncing ? "animate-spin" : undefined}
+        />
+      ),
+      label: syncing ? "Sincronizando…" : "Sincronizar",
+      onClick: onSync,
+    },
+    {
+      icon: <IconSettings size={16} />,
+      label: "Configurações",
+      onClick: onSettings,
+      divider: true,
+    },
+  ];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Ações"
+        aria-expanded={open}
+        className={cn(
+          "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
+          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
+        )}
+      >
+        <IconMenu2 size={18} stroke={2.2} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          {items.map((it) => (
+            <div key={it.label}>
+              {it.divider && <div className="my-1 h-px bg-[var(--glass-border)]" />}
+              <button
+                type="button"
+                disabled={syncing && it.label.startsWith("Sincroniz")}
+                onClick={() => {
+                  setOpen(false);
+                  it.onClick();
+                }}
+                className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+              >
+                <span className="text-[var(--text-muted)]">{it.icon}</span>
+                {it.label}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

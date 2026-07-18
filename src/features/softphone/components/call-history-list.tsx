@@ -159,27 +159,31 @@ export function CallHistoryList({
 
   if (!calls.length) {
     return (
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <div className="flex flex-col gap-3">
         {header}
-        <EmptyState
-          icon={<IconPhone size={28} />}
-          title="Nenhuma chamada encontrada"
-          description="Sem chamadas para os filtros selecionados."
-        />
+        <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+          <EmptyState
+            icon={<IconPhone size={28} />}
+            title="Nenhuma chamada encontrada"
+            description="Sem chamadas para os filtros selecionados."
+          />
+        </div>
       </div>
     );
   }
 
+  // Layout em cards (padrão Contatos/Empresas): cabeçalho solto + linhas
+  // individuais com gap. Em contexto embutido (inbox/pipeline) mantém tabela densa.
+  const useCards = !embedded;
+
   return (
-    <div className={cn("flex min-h-0 flex-col gap-4", !embedded && "flex-1")}>
-      {/* Tabela */}
-      <div className="flex w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
-        {header}
-        {/* Scroll horizontal cobre header + rows em sincronia */}
+    <div className={cn("flex min-h-0 flex-col gap-3", !embedded && "flex-1")}>
+      {header}
+
+      {useCards ? (
         <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-          <div className="min-w-[780px]">
-            {/* Cabeçalho */}
-            <div className={listTableHeadRowClass(`${COLS} gap-3 px-3 py-2.5`)}>
+          <div className="flex min-w-[780px] flex-col gap-2">
+            <div className={listTableHeadRowClass(`${COLS} gap-3 border border-transparent px-4 py-2`)}>
               <HeadLabel> </HeadLabel>
               <HeadLabel>Contato / Telefone</HeadLabel>
               <HeadLabel>Direção</HeadLabel>
@@ -189,45 +193,70 @@ export function CallHistoryList({
               <HeadLabel align="right">Gravação</HeadLabel>
             </div>
 
-            {/* Linhas */}
-            <div className="flex flex-col">
-              {grouped
-                ? groupByDay(calls).map(([label, rows]) => (
-                    <div key={label} className="flex flex-col">
-                      <div className="flex items-center justify-between px-3 pb-1 pt-2.5 first:pt-1.5">
-                        <span className="shrink-0 font-display text-[10.5px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
-                          {label}
-                        </span>
-                        <span className="shrink-0 font-display text-[10.5px] font-medium text-[var(--text-muted)]">
-                          {rows.length} ligaç{rows.length !== 1 ? "ões" : "ão"}
-                        </span>
-                      </div>
-                      {rows.map((call) => (
-                        <CallTableRow
-                          key={call.id}
-                          call={call}
-                          isPlaying={playingId === call.id}
-                          onPlay={() =>
-                            setPlayingId(playingId === call.id ? null : call.id)
-                          }
-                        />
-                      ))}
+            {grouped
+              ? groupByDay(calls).map(([label, rows]) => (
+                  <div key={label} className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between px-1 pt-1">
+                      <span className="shrink-0 font-display text-[10.5px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+                        {label}
+                      </span>
+                      <span className="shrink-0 font-display text-[10.5px] font-medium text-[var(--text-muted)]">
+                        {rows.length} ligaç{rows.length !== 1 ? "ões" : "ão"}
+                      </span>
                     </div>
-                  ))
-                : calls.map((call) => (
-                    <CallTableRow
-                      key={call.id}
-                      call={call}
-                      isPlaying={playingId === call.id}
-                      onPlay={() => setPlayingId(playingId === call.id ? null : call.id)}
-                    />
-                  ))}
+                    {rows.map((call) => (
+                      <CallTableRow
+                        key={call.id}
+                        call={call}
+                        isPlaying={playingId === call.id}
+                        onPlay={() =>
+                          setPlayingId(playingId === call.id ? null : call.id)
+                        }
+                        variant="card"
+                      />
+                    ))}
+                  </div>
+                ))
+              : calls.map((call) => (
+                  <CallTableRow
+                    key={call.id}
+                    call={call}
+                    isPlaying={playingId === call.id}
+                    onPlay={() => setPlayingId(playingId === call.id ? null : call.id)}
+                    variant="card"
+                  />
+                ))}
+          </div>
+        </div>
+      ) : (
+        <div className="flex w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+            <div className="min-w-[780px]">
+              <div className={listTableHeadRowClass(`${COLS} gap-3 px-3 py-2.5`)}>
+                <HeadLabel> </HeadLabel>
+                <HeadLabel>Contato / Telefone</HeadLabel>
+                <HeadLabel>Direção</HeadLabel>
+                <HeadLabel>Status</HeadLabel>
+                <HeadLabel>Duração</HeadLabel>
+                <HeadLabel>Data e hora</HeadLabel>
+                <HeadLabel align="right">Gravação</HeadLabel>
+              </div>
+              <div className="flex flex-col">
+                {calls.map((call) => (
+                  <CallTableRow
+                    key={call.id}
+                    call={call}
+                    isPlaying={playingId === call.id}
+                    onPlay={() => setPlayingId(playingId === call.id ? null : call.id)}
+                    variant="dense"
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Paginação */}
       {!embedded && (
         <PaginationGlass
           label={`${total.toLocaleString("pt-BR")} chamada${total !== 1 ? "s" : ""} — página ${page} de ${lastPage}`}
@@ -249,15 +278,24 @@ interface CallTableRowProps {
   call: CallRecord;
   isPlaying: boolean;
   onPlay: () => void;
+  /** "card" = linhas separadas (padrão Contatos); "dense" = tabela embutida. */
+  variant?: "card" | "dense";
 }
 
-function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
+function CallTableRow({ call, isPlaying, onPlay, variant = "dense" }: CallTableRowProps) {
   const isMissed = call.status === "MISSED" || call.status === "FAILED";
   const isInbound = call.direction === "INBOUND";
   const { label: sLabel, color: sColor } = statusLabel(call.status);
 
   return (
-    <div className={`grid ${COLS} items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]`}>
+    <div
+      className={cn(
+        `grid ${COLS} items-center gap-3 transition-all`,
+        variant === "card"
+          ? "rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]"
+          : "border-b border-[var(--glass-border-subtle)] px-3 py-2.5 last:border-b-0 hover:bg-[var(--glass-bg-overlay)]",
+      )}
+    >
         {/* Ícone de direção/status — protótipo: ⤫ perdida/falhou (danger),
             ↙ recebida (success), ↗ realizada (brand) */}
         <span

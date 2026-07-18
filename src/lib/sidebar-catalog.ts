@@ -7,7 +7,6 @@ import {
   IconLayoutDashboard,
   IconMail,
   IconMessageCircle,
-  IconPhone,
   IconPlugConnected,
   IconRoute,
   IconSend,
@@ -175,15 +174,9 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     locked: false,
     requiredPermission: "nav:email",
   },
-  {
-    key: "calls",
-    title: "Chamadas",
-    href: "/widgets/calls",
-    icon: IconPhone,
-    description: "Histórico de chamadas recebidas e realizadas.",
-    locked: false,
-    requiredPermission: "nav:calls",
-  },
+  // "Chamadas" foi movido do ícone da nav rail para dentro de Logs
+  // (aba "Chamadas"). O histórico continua acessível via /widgets/calls,
+  // mas não é mais um item independente do trilho.
 ] as const;
 
 export const SIDEBAR_CATALOG_KEYS: ReadonlySet<string> = new Set(

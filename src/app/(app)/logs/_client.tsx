@@ -1,16 +1,25 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { IconLoader2 as Loader2 } from "@tabler/icons-react";
 import {
   IconClipboardList,
   IconCopy,
+  IconPhone,
 } from "@tabler/icons-react";
 import { format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { CallHistoryTimeline } from "@/features/softphone/components/call-history-timeline";
+import {
+  CallsSearchFilterBar,
+  type CallsFilterState,
+} from "@/features/softphone/components/calls-search-filter-bar";
+import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
@@ -45,7 +54,7 @@ import { useActivityStats } from "@/features/activity-feed/use-activity-stats";
 import { MOCK_FEED } from "@/features/activity-feed/mock-feed";
 import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
-const LOG_TABS = ["Feed", "Estatísticas (30d)"] as const;
+const LOG_TABS = ["Feed", "Chamadas", "Estatísticas (30d)"] as const;
 
 const ENTITY_OPTIONS = [
   { value: "ALL", label: "Todas as entidades" },
@@ -187,8 +196,20 @@ function resolveOrigin(ev: FeedEvent): OriginInfo {
 
 export default function LogsClientPage() {
   const { ready, isManagerUp } = useRequireManager();
+  const { status: sessionStatus } = useSession();
   const [activeTab, setActiveTab] = React.useState(0);
   const isFeed = activeTab === 0;
+  const isCalls = activeTab === 1;
+
+  // Aba Chamadas (histórico movido do ícone da nav rail para dentro de Logs).
+  const callsWidget = useCallsWidget(sessionStatus === "authenticated");
+  const [callsSearch, setCallsSearch] = React.useState<string>("");
+  const [callsSearchDebounced, setCallsSearchDebounced] = React.useState<string>("");
+  const [callsFilters, setCallsFilters] = React.useState<CallsFilterState>({});
+  React.useEffect(() => {
+    const t = setTimeout(() => setCallsSearchDebounced(callsSearch.trim()), 300);
+    return () => clearTimeout(t);
+  }, [callsSearch]);
 
   const [entity, setEntity] = React.useState<string>("ALL");
   const [actor, setActor] = React.useState<string>("ALL");
@@ -339,6 +360,15 @@ export default function LogsClientPage() {
                 placeholder="Buscar evento, lead, ator..."
                 aria-label="Buscar eventos"
               />
+            ) : isCalls ? (
+              <div className="flex w-full justify-start">
+                <CallsSearchFilterBar
+                  search={callsSearch}
+                  onSearch={setCallsSearch}
+                  filters={callsFilters}
+                  onFiltersChange={setCallsFilters}
+                />
+              </div>
             ) : undefined
           }
           actions={
@@ -511,6 +541,24 @@ export default function LogsClientPage() {
               />
             )}
           </>
+        ) : isCalls ? (
+          callsWidget.isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-16 animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md"
+                />
+              ))}
+            </div>
+          ) : callsWidget.enabled !== true ? (
+            <CallsNotEnabledState />
+          ) : (
+            <CallHistoryTimeline
+              search={callsSearchDebounced}
+              filters={callsFilters}
+            />
+          )
         ) : (
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto pr-1">
             {statsLoading || !stats ? (
@@ -579,6 +627,28 @@ export default function LogsClientPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function CallsNotEnabledState() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-12 text-center shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      <IconPhone size={36} className="text-[var(--text-muted)]" />
+      <p className="font-display text-[16px] font-bold text-[var(--text-primary)]">
+        Módulo de Telefonia não habilitado
+      </p>
+      <p className="max-w-md font-body text-[13px] text-[var(--text-muted)]">
+        O histórico de chamadas, o softphone integrado e o botão de ligar nos
+        cards fazem parte do widget de Telefonia. Ative-o na Central de Widgets
+        para liberar esta área.
+      </p>
+      <Link
+        href="/widgets"
+        className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white transition-all hover:-translate-y-px"
+      >
+        Ir para a Central de Widgets
+      </Link>
     </div>
   );
 }

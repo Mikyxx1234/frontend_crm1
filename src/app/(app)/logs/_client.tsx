@@ -14,12 +14,13 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
-import { CallHistoryTimeline } from "@/features/softphone/components/call-history-timeline";
+import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import {
   CallsSearchFilterBar,
   type CallsFilterState,
 } from "@/features/softphone/components/calls-search-filter-bar";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
+import type { ListCallsFilters } from "@/features/softphone/api/types";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
@@ -111,6 +112,25 @@ const ACTOR_BADGE: Record<
     className: "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
   },
 };
+
+// Ordem/cores dos KPIs por tipo de ator na aba Estatísticas (espelha ACTOR_BADGE).
+const STATS_ACTOR_ORDER: { key: string; label: string; color: string }[] = [
+  { key: "HUMAN", label: "Humanos", color: "var(--brand-primary)" },
+  { key: "AI", label: "Agentes IA", color: "var(--color-fuchsia)" },
+  { key: "AUTOMATION", label: "Automações", color: "var(--color-lavender)" },
+  { key: "INTEGRATION", label: "Integrações", color: "var(--color-sky)" },
+  { key: "SYSTEM", label: "Sistema", color: "var(--text-muted)" },
+];
+
+// Paleta cíclica das barras (Top tipos / Por entidade).
+const BAR_PALETTE = [
+  "var(--brand-primary)",
+  "var(--color-success)",
+  "var(--color-sky)",
+  "var(--color-lavender)",
+  "var(--color-fuchsia)",
+  "var(--color-danger)",
+];
 
 // 6 colunas: Evento | Detalhe | Entidade | Origem | Responsável | Data.
 // minmax garante largura mínima legível mesmo ao rolar lateralmente.
@@ -206,10 +226,34 @@ export default function LogsClientPage() {
   const [callsSearch, setCallsSearch] = React.useState<string>("");
   const [callsSearchDebounced, setCallsSearchDebounced] = React.useState<string>("");
   const [callsFilters, setCallsFilters] = React.useState<CallsFilterState>({});
+  const [callsPage, setCallsPage] = React.useState<number>(1);
   React.useEffect(() => {
     const t = setTimeout(() => setCallsSearchDebounced(callsSearch.trim()), 300);
     return () => clearTimeout(t);
   }, [callsSearch]);
+  // Reset da paginação quando busca/filtros mudam.
+  React.useEffect(() => {
+    setCallsPage(1);
+  }, [
+    callsSearchDebounced,
+    callsFilters.direction,
+    callsFilters.status,
+    callsFilters.dateFrom,
+    callsFilters.dateTo,
+  ]);
+
+  const callsListFilters = React.useMemo<ListCallsFilters>(
+    () => ({
+      page: callsPage,
+      perPage: 25,
+      search: callsSearchDebounced || undefined,
+      direction: callsFilters.direction,
+      status: callsFilters.status,
+      dateFrom: callsFilters.dateFrom,
+      dateTo: callsFilters.dateTo,
+    }),
+    [callsPage, callsSearchDebounced, callsFilters],
+  );
 
   const [entity, setEntity] = React.useState<string>("ALL");
   const [actor, setActor] = React.useState<string>("ALL");
@@ -554,10 +598,20 @@ export default function LogsClientPage() {
           ) : callsWidget.enabled !== true ? (
             <CallsNotEnabledState />
           ) : (
-            <CallHistoryTimeline
-              search={callsSearchDebounced}
-              filters={callsFilters}
-            />
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
+              <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--brand-primary)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)] px-3.5 py-2.5 font-body text-[12.5px] text-[var(--brand-primary)]">
+                <IconPhone size={16} className="shrink-0" />
+                <span>
+                  <b className="font-display font-bold">Novo:</b> o histórico de
+                  chamadas saiu do ícone da barra lateral e agora vive aqui, como
+                  uma aba de Logs.
+                </span>
+              </div>
+              <CallHistoryList
+                filters={callsListFilters}
+                onFiltersChange={(f) => setCallsPage(f.page ?? 1)}
+              />
+            </div>
           )
         ) : (
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto pr-1">
@@ -567,61 +621,45 @@ export default function LogsClientPage() {
                 Calculando estatísticas...
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  <StatCard label="Total de eventos" value={stats.totals.total} />
-                  {Object.entries(stats.totals.byActorType).map(([k, v]) => (
-                    <StatCard key={k} label={`Por ${k}`} value={v} />
+              <div className="space-y-4">
+                {/* KPIs por tipo de ator — Total destacado em brand */}
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+                  <ActorKpi total value={stats.totals.total} />
+                  {STATS_ACTOR_ORDER.map((a) => (
+                    <ActorKpi
+                      key={a.key}
+                      label={a.label}
+                      value={stats.totals.byActorType[a.key] ?? 0}
+                      color={a.color}
+                    />
                   ))}
                 </div>
 
-                <StatTable
-                  title="Top tipos de evento"
-                  rows={stats.totals.byType.map((r) => ({
-                    label: EVENT_CONFIG[r.type]?.label ?? r.type,
-                    value: r.count,
-                  }))}
-                />
+                {/* Top tipos de evento + Por entidade — barras proporcionais */}
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <StatBarPanel
+                    title="Top tipos de evento"
+                    caption="30 dias"
+                    rows={stats.totals.byType.map((r, i) => ({
+                      label: EVENT_CONFIG[r.type]?.label ?? r.type,
+                      value: r.count,
+                      color: BAR_PALETTE[i % BAR_PALETTE.length],
+                    }))}
+                  />
+                  <StatBarPanel
+                    title="Por entidade"
+                    caption="30 dias"
+                    rows={Object.entries(stats.totals.byEntityType).map(
+                      ([k, v], i) => ({
+                        label: ENTITY_LABEL[k] ?? k,
+                        value: v,
+                        color: BAR_PALETTE[i % BAR_PALETTE.length],
+                      }),
+                    )}
+                  />
+                </div>
 
-                <StatTable
-                  title="Por entidade"
-                  rows={Object.entries(stats.totals.byEntityType).map(
-                    ([k, v]) => ({ label: ENTITY_LABEL[k] ?? k, value: v }),
-                  )}
-                />
-
-                <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
-                  <h3 className="border-b border-[var(--glass-border-subtle)] px-4 py-3 font-display text-[13px] font-bold text-[var(--text-primary)]">
-                    Eventos por dia
-                  </h3>
-                  <ul>
-                    {stats.timeline.map((r) => {
-                      const max = Math.max(
-                        1,
-                        ...stats.timeline.map((x) => x.count),
-                      );
-                      return (
-                        <li
-                          key={r.day}
-                          className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-2 text-[13px] last:border-0"
-                        >
-                          <span className="w-24 font-mono text-[11px] text-[var(--text-muted)]">
-                            {r.day}
-                          </span>
-                          <div className="h-2 flex-1 rounded bg-[var(--glass-bg-overlay)]">
-                            <div
-                              className="h-2 rounded bg-[var(--brand-primary)]"
-                              style={{ width: `${(r.count / max) * 100}%` }}
-                            />
-                          </div>
-                          <span className="w-12 text-right font-display tabular-nums text-[var(--text-primary)]">
-                            {r.count}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
+                <EventsPerDay rows={stats.timeline} />
               </div>
             )}
           </div>
@@ -818,44 +856,139 @@ function dayLabel(iso: string): string {
   return format(d, "EEEE, dd 'de' MMMM", { locale: ptBR });
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function ActorKpi({
+  label,
+  value,
+  color,
+  total,
+}: {
+  label?: string;
+  value: number;
+  color?: string;
+  total?: boolean;
+}) {
+  if (total) {
+    return (
+      <div className="rounded-[var(--radius-xl)] border border-[var(--brand-primary)] bg-[var(--brand-primary)] p-4 text-white shadow-[0_6px_20px_rgba(91,111,245,0.35)]">
+        <p className="font-display text-[26px] font-bold leading-none tabular-nums">
+          {value.toLocaleString("pt-BR")}
+        </p>
+        <p className="mt-1.5 font-body text-[11.5px] text-white/85">
+          Total de eventos
+        </p>
+      </div>
+    );
+  }
   return (
-    <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
-      <p className="font-body text-[12px] text-[var(--text-muted)]">{label}</p>
-      <p className="mt-1 font-display text-[24px] font-bold tabular-nums text-[var(--text-primary)]">
-        {value}
+    <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 backdrop-blur-md shadow-[var(--glass-shadow-sm)]">
+      <p className="font-display text-[26px] font-bold leading-none tabular-nums text-[var(--text-primary)]">
+        {value.toLocaleString("pt-BR")}
+      </p>
+      <p className="mt-1.5 flex items-center gap-1.5 font-body text-[11.5px] text-[var(--text-muted)]">
+        <span
+          className="h-2 w-2 shrink-0 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+        {label}
       </p>
     </div>
   );
 }
 
-function StatTable({
+function StatBarPanel({
   title,
+  caption,
   rows,
 }: {
   title: string;
-  rows: { label: string; value: number }[];
+  caption?: string;
+  rows: { label: string; value: number; color: string }[];
 }) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
-      <h3 className="border-b border-[var(--glass-border-subtle)] px-4 py-3 font-display text-[13px] font-bold text-[var(--text-primary)]">
-        {title}
-      </h3>
-      <ul>
-        {rows.map((r) => (
-          <li
-            key={r.label}
-            className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-4 py-2 text-[13px] last:border-0"
-          >
-            <span className="font-body text-[var(--text-secondary)]">
-              {r.label}
-            </span>
-            <span className="font-display tabular-nums text-[var(--text-primary)]">
-              {r.value}
-            </span>
+      <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-4 py-3">
+        <h3 className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+          {title}
+        </h3>
+        {caption && (
+          <span className="font-body text-[11px] text-[var(--text-muted)]">
+            {caption}
+          </span>
+        )}
+      </div>
+      <ul className="px-4 py-2">
+        {rows.length === 0 ? (
+          <li className="py-3 text-center font-body text-[12px] text-[var(--text-muted)]">
+            Sem dados no período.
           </li>
-        ))}
+        ) : (
+          rows.map((r) => (
+            <li
+              key={r.label}
+              className="grid grid-cols-[minmax(110px,150px)_1fr_auto] items-center gap-3 py-1.5"
+            >
+              <span className="truncate font-body text-[12.5px] text-[var(--text-secondary)]">
+                {r.label}
+              </span>
+              <div className="h-2 rounded-full bg-[var(--glass-bg-overlay)]">
+                <div
+                  className="h-2 rounded-full"
+                  style={{
+                    width: `${(r.value / max) * 100}%`,
+                    backgroundColor: r.color,
+                  }}
+                />
+              </div>
+              <span className="w-12 text-right font-display text-[13px] font-bold tabular-nums text-[var(--text-primary)]">
+                {r.value.toLocaleString("pt-BR")}
+              </span>
+            </li>
+          ))
+        )}
       </ul>
+    </section>
+  );
+}
+
+function EventsPerDay({ rows }: { rows: { day: string; count: number }[] }) {
+  const max = Math.max(1, ...rows.map((r) => r.count));
+  return (
+    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-4 py-3">
+        <h3 className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+          Eventos por dia
+        </h3>
+        <span className="font-body text-[11px] text-[var(--text-muted)]">
+          {rows.length} dias
+        </span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="py-8 text-center font-body text-[12px] text-[var(--text-muted)]">
+          Sem eventos no período.
+        </p>
+      ) : (
+        <div className="flex h-[180px] items-end gap-1.5 px-4 pb-3 pt-5">
+          {rows.map((r) => (
+            <div
+              key={r.day}
+              className="flex h-full flex-1 flex-col items-center justify-end gap-1.5"
+              title={`${r.day}: ${r.count}`}
+            >
+              <span className="font-display text-[10px] font-bold tabular-nums text-[var(--text-secondary)]">
+                {r.count}
+              </span>
+              <div
+                className="w-full max-w-[26px] rounded-t-md bg-gradient-to-b from-[var(--brand-primary)] to-[color-mix(in_srgb,var(--brand-primary)_55%,#fff)]"
+                style={{ height: `${(r.count / max) * 100}%` }}
+              />
+              <span className="font-mono text-[9px] text-[var(--text-muted)]">
+                {r.day.length > 5 ? r.day.slice(5) : r.day}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

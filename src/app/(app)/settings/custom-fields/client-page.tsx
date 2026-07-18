@@ -1,26 +1,858 @@
 "use client";
 
-import { IconForms } from "@tabler/icons-react";
+import * as React from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  IconAlertCircle,
+  IconCalendar,
+  IconEye,
+  IconEyeOff,
+  IconForms,
+  IconGripVertical,
+  IconHash,
+  IconLayoutList,
+  IconLetterT,
+  IconLink,
+  IconList,
+  IconMail,
+  IconPencil,
+  IconPhone,
+  IconPlus,
+  IconToggleLeft,
+  IconTrash,
+} from "@tabler/icons-react";
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  type DropResult,
+} from "@hello-pangea/dnd";
 
-import OldCustomFieldsPage from "@/features/legacy-v1/settings/custom-fields";
-import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
+import { apiUrl } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { useConfirm } from "@/hooks/use-confirm";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { InputGlass } from "@/components/crm/input-glass";
+import { SwitchGlass } from "@/components/crm/switch-glass";
+import {
+  PagePrimaryButton,
+  PageSearchBar,
+  PageSegmentedControl,
+} from "@/components/crm/page-toolbar";
+import { listTableHeadRowClass } from "@/components/crm/sortable-header";
+import { FormSheet } from "@/components/ui/form-sheet";
 
-/**
- * Fase 1b (migração v1→v2): rota canônica `/settings/custom-fields` dentro do
- * shell v2. A reimplementação visual com drag-and-drop dedicado entra na
- * Fase 5/6; aqui mantemos a paridade funcional reusando o `client-page` v1
- * (que já suporta reordenação via @hello-pangea/dnd).
- */
+import {
+  SETTINGS_HUB_BACK,
+  SettingsV2Shell,
+  useSettingsHeaderSlots,
+} from "../_v2-shell";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type CustomFieldItem = {
+  id: string;
+  name: string;
+  label: string;
+  type: string;
+  options: string[];
+  required: boolean;
+  entity: string;
+  showInInboxLeadPanel?: boolean;
+  inboxLeadPanelOrder?: number | null;
+  showInDealPanel?: boolean;
+};
+
+type EntityTab = "deal" | "contact";
+
+const TYPES = [
+  { value: "TEXT", label: "Texto" },
+  { value: "NUMBER", label: "Número" },
+  { value: "DATE", label: "Data" },
+  { value: "SELECT", label: "Seleção" },
+  { value: "MULTI_SELECT", label: "Multi-seleção" },
+  { value: "BOOLEAN", label: "Sim/Não" },
+  { value: "URL", label: "URL" },
+  { value: "EMAIL", label: "E-mail" },
+  { value: "PHONE", label: "Telefone" },
+] as const;
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  TEXT: <IconLetterT size={13} strokeWidth={2.5} />,
+  NUMBER: <IconHash size={13} strokeWidth={2.5} />,
+  DATE: <IconCalendar size={13} strokeWidth={2.2} />,
+  SELECT: <IconList size={13} strokeWidth={2.2} />,
+  MULTI_SELECT: <IconList size={13} strokeWidth={2.2} />,
+  BOOLEAN: <IconToggleLeft size={13} strokeWidth={2.2} />,
+  URL: <IconLink size={13} strokeWidth={2.2} />,
+  EMAIL: <IconMail size={13} strokeWidth={2.2} />,
+  PHONE: <IconPhone size={13} strokeWidth={2.2} />,
+};
+
+// grid: handle | Campo (2fr) | Slug | Tipo | Inbox | Negócio | Ações
+const CF_COLS =
+  "grid-cols-[20px_minmax(180px,2fr)_minmax(120px,1fr)_minmax(90px,0.8fr)_80px_80px_64px]";
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+
+async function fetchFields(entity: string): Promise<CustomFieldItem[]> {
+  const res = await fetch(apiUrl(`/api/custom-fields?entity=${entity}`));
+  const data = res.ok ? await res.json() : [];
+  return Array.isArray(data) ? data : [];
+}
+async function createField(data: Record<string, unknown>) {
+  const res = await fetch(apiUrl("/api/custom-fields"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(
+      (body as { message?: string })?.message ?? "Erro ao criar campo",
+    );
+  }
+  return res.json();
+}
+async function updateField(id: string, data: Record<string, unknown>) {
+  const res = await fetch(apiUrl(`/api/custom-fields/${id}`), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Erro ao atualizar campo");
+  return res.json();
+}
+async function deleteField(id: string) {
+  const res = await fetch(apiUrl(`/api/custom-fields/${id}`), {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Erro ao excluir campo");
+}
+
+// ─── Shell ────────────────────────────────────────────────────────────────────
+
 export default function CustomFieldsV2ClientPage() {
   return (
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
       title="Campos personalizados"
-      description="Configure os campos exibidos nos registros. Arraste pelo indicador para definir a ordem de exibição no painel lateral da Inbox."
+      description="Configure os campos exibidos nos registros. Arraste pelo indicador para definir a ordem no painel lateral da Inbox."
       icon={<IconForms size={22} />}
     >
-      <OldCustomFieldsPage />
+      <CustomFieldsPage />
     </SettingsV2Shell>
   );
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+function CustomFieldsPage() {
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
+  const slots = useSettingsHeaderSlots();
+
+  const [activeEntity, setActiveEntity] = React.useState<EntityTab>("deal");
+  const [search, setSearch] = React.useState("");
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [editItem, setEditItem] = React.useState<CustomFieldItem | null>(null);
+
+  const queryKey = React.useMemo(
+    () => ["custom-fields", activeEntity] as const,
+    [activeEntity],
+  );
+
+  const { data: fields = [], isLoading } = useQuery({
+    queryKey,
+    queryFn: () => fetchFields(activeEntity),
+  });
+
+  const [localOrder, setLocalOrder] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    setLocalOrder(fields.map((f) => f.id));
+  }, [fields]);
+
+  const orderedFields = React.useMemo(() => {
+    const map = Object.fromEntries(fields.map((f) => [f.id, f]));
+    return localOrder.map((id) => map[id]).filter(Boolean);
+  }, [fields, localOrder]);
+
+  const filtered = React.useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return orderedFields;
+    return orderedFields.filter(
+      (f) =>
+        f.label.toLowerCase().includes(q) ||
+        f.name.toLowerCase().includes(q),
+    );
+  }, [orderedFields, search]);
+
+  const inboxCount = fields.filter((f) => f.showInInboxLeadPanel).length;
+  const dealCount = fields.filter((f) => f.showInDealPanel).length;
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteField,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: async ({
+      id,
+      inboxLeadPanelOrder,
+    }: {
+      id: string;
+      inboxLeadPanelOrder: number;
+    }) => updateField(id, { inboxLeadPanelOrder }),
+  });
+
+  function onDragEnd(result: DropResult) {
+    if (!result.destination) return;
+    const next = Array.from(localOrder);
+    const [moved] = next.splice(result.source.index, 1);
+    next.splice(result.destination.index, 0, moved);
+    setLocalOrder(next);
+    next.forEach((id, idx) =>
+      reorderMutation.mutate({ id, inboxLeadPanelOrder: idx }),
+    );
+  }
+
+  // Header slots — busca (center) + tabs + botão primário (actions).
+  React.useEffect(() => {
+    if (!slots) return;
+    slots.setCenter(
+      <PageSearchBar
+        variant="compact"
+        value={search}
+        onChange={setSearch}
+        placeholder="Buscar campo..."
+        aria-label="Buscar campo personalizado"
+      />,
+    );
+    return () => slots.setCenter(null);
+  }, [slots, search]);
+
+  React.useEffect(() => {
+    if (!slots) return;
+    slots.setActions(
+      <div className="flex items-center gap-2">
+        <PageSegmentedControl
+          items={[
+            { value: "deal", label: "Negócio" },
+            { value: "contact", label: "Contato" },
+          ]}
+          value={activeEntity}
+          onChange={(v) => {
+            setActiveEntity(v as EntityTab);
+            setSearch("");
+          }}
+          size="compact"
+          aria-label="Entidade dos campos"
+        />
+        <PagePrimaryButton
+          onClick={() => setCreateOpen(true)}
+          aria-label="Criar novo campo"
+        >
+          <IconPlus size={15} />
+          <span className="hidden sm:inline">Novo campo</span>
+        </PagePrimaryButton>
+      </div>,
+    );
+    return () => slots.setActions(null);
+  }, [slots, activeEntity]);
+
+  return (
+    <div className="flex min-w-0 flex-col gap-3">
+      {/* Resumo */}
+      {!isLoading && (
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="font-body text-[12.5px] text-[var(--text-muted)]">
+            {fields.length} campo{fields.length !== 1 ? "s" : ""}
+          </span>
+          {inboxCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 font-display text-[11px] font-semibold text-emerald-700">
+              <IconEye size={11} />
+              {inboxCount} no painel da Inbox
+            </span>
+          )}
+          {dealCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 font-display text-[11px] font-semibold text-violet-700">
+              <IconEye size={11} />
+              {dealCount} no painel do Negócio
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Lista */}
+      {isLoading ? (
+        <div className="flex flex-col gap-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="h-[60px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md"
+            />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-6 py-16 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">
+            <IconLayoutList
+              size={22}
+              className="text-[var(--text-muted)] opacity-50"
+            />
+          </div>
+          <div>
+            <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
+              {fields.length === 0
+                ? "Nenhum campo personalizado criado"
+                : "Nenhum campo encontrado"}
+            </p>
+            <p className="mt-1 font-body text-[12.5px] text-[var(--text-muted)]">
+              {fields.length === 0
+                ? "Crie campos para enriquecer seus registros."
+                : "Tente um termo diferente."}
+            </p>
+          </div>
+          {fields.length === 0 && (
+            <ButtonGlass
+              variant="primary"
+              size="sm"
+              onClick={() => setCreateOpen(true)}
+              className="mt-1 gap-1.5"
+            >
+              <IconPlus size={13} /> Criar campo
+            </ButtonGlass>
+          )}
+        </div>
+      ) : (
+        <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+          <div className="flex min-w-[780px] flex-col gap-2">
+            {/* Header de colunas — padrão Contatos */}
+            <div
+              className={listTableHeadRowClass(
+                cn(
+                  "grid gap-3 border border-transparent px-4 py-2",
+                  CF_COLS,
+                ),
+              )}
+            >
+              <span />
+              <span className="font-display text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]">
+                Campo
+              </span>
+              <span className="font-display text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]">
+                Slug
+              </span>
+              <span className="font-display text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]">
+                Tipo
+              </span>
+              <span className="font-display text-[11px] font-bold uppercase tracking-[0.05em] text-emerald-600">
+                Inbox
+              </span>
+              <span className="font-display text-[11px] font-bold uppercase tracking-[0.05em] text-violet-600">
+                Negócio
+              </span>
+              <span className="text-right font-display text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]">
+                Ações
+              </span>
+            </div>
+
+            {/* Linhas em cards com DnD */}
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="custom-fields-list">
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="flex flex-col gap-2"
+                  >
+                    {filtered.map((field, index) => (
+                      <Draggable
+                        key={field.id}
+                        draggableId={field.id}
+                        index={index}
+                      >
+                        {(drag, snapshot) => (
+                          <div
+                            ref={drag.innerRef}
+                            {...drag.draggableProps}
+                            className={cn(
+                              "group grid items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+                              CF_COLS,
+                              snapshot.isDragging &&
+                                "border-[var(--brand-primary)]/40 bg-[var(--color-primary-soft)] shadow-[var(--glass-shadow)]",
+                            )}
+                          >
+                            {/* Drag handle */}
+                            <div
+                              {...drag.dragHandleProps}
+                              className="cursor-grab text-[var(--text-muted)]/40 transition-colors hover:text-[var(--text-muted)] active:cursor-grabbing"
+                              title="Arrastar para reordenar"
+                            >
+                              <IconGripVertical size={14} />
+                            </div>
+
+                            {/* Campo */}
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
+                                {TYPE_ICONS[field.type] ?? (
+                                  <IconLetterT size={13} strokeWidth={2.5} />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
+                                    {field.label}
+                                  </span>
+                                  {field.required && (
+                                    <span className="shrink-0 rounded-[4px] bg-red-50 px-1.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-red-500">
+                                      Obrigatório
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Slug */}
+                            <span className="inline-block max-w-full truncate rounded-[4px] bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-mono text-[11.5px] text-[var(--text-muted)]">
+                              {field.name}
+                            </span>
+
+                            {/* Tipo */}
+                            <span className="truncate font-display text-[13px] text-[var(--text-secondary)]">
+                              {TYPES.find((t) => t.value === field.type)
+                                ?.label ?? field.type}
+                            </span>
+
+                            {/* Inbox */}
+                            <div>
+                              {(field.entity === "contact" ||
+                                field.entity === "deal") && (
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
+                                    field.showInInboxLeadPanel
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+                                  )}
+                                >
+                                  {field.showInInboxLeadPanel ? (
+                                    <IconEye size={11} />
+                                  ) : (
+                                    <IconEyeOff size={11} />
+                                  )}
+                                  {field.showInInboxLeadPanel ? "Sim" : "Não"}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Negócio */}
+                            <div>
+                              {field.entity === "deal" && (
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
+                                    field.showInDealPanel
+                                      ? "bg-violet-100 text-violet-700"
+                                      : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+                                  )}
+                                >
+                                  {field.showInDealPanel ? (
+                                    <IconEye size={11} />
+                                  ) : (
+                                    <IconEyeOff size={11} />
+                                  )}
+                                  {field.showInDealPanel ? "Sim" : "Não"}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Ações */}
+                            <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                              <button
+                                type="button"
+                                onClick={() => setEditItem(field)}
+                                className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+                                title="Editar"
+                              >
+                                <IconPencil size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const ok = await confirm({
+                                    title: "Excluir campo",
+                                    description: `Excluir o campo "${field.label}"? Todos os valores serão perdidos.`,
+                                    confirmLabel: "Excluir",
+                                    variant: "destructive",
+                                  });
+                                  if (ok) deleteMutation.mutate(field.id);
+                                }}
+                                className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500"
+                                title="Excluir"
+                              >
+                                <IconTrash size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          </div>
+        </div>
+      )}
+
+      {/* Modais */}
+      <FieldFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        mode="create"
+        defaultEntity={activeEntity}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey });
+          setCreateOpen(false);
+        }}
+      />
+      {editItem && (
+        <FieldFormDialog
+          open={!!editItem}
+          onOpenChange={(o) => {
+            if (!o) setEditItem(null);
+          }}
+          mode="edit"
+          initial={editItem}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey });
+            setEditItem(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Field form dialog ────────────────────────────────────────────────────────
+
+function FieldLabel({
+  children,
+  htmlFor,
+  hint,
+}: {
+  children: React.ReactNode;
+  htmlFor?: string;
+  hint?: string;
+}) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className="block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]"
+    >
+      {children}
+      {hint && (
+        <span className="ml-1 font-normal normal-case text-[var(--text-muted)]/70">
+          {hint}
+        </span>
+      )}
+    </label>
+  );
+}
+
+function FieldFormDialog({
+  open,
+  onOpenChange,
+  mode,
+  initial,
+  defaultEntity = "deal",
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  mode: "create" | "edit";
+  initial?: CustomFieldItem;
+  defaultEntity?: string;
+  onSaved: () => void;
+}) {
+  const [name, setName] = React.useState(initial?.name ?? "");
+  const [label, setLabel] = React.useState(initial?.label ?? "");
+  const [type, setType] = React.useState(initial?.type ?? "TEXT");
+  const [entity, setEntity] = React.useState(initial?.entity ?? defaultEntity);
+  const [required, setRequired] = React.useState(initial?.required ?? false);
+  const [optionsText, setOptionsText] = React.useState(
+    initial?.options.join("\n") ?? "",
+  );
+  const [showInInboxLeadPanel, setShowInInboxLeadPanel] = React.useState(
+    initial?.showInInboxLeadPanel ?? false,
+  );
+  const [showInDealPanel, setShowInDealPanel] = React.useState(
+    initial?.showInDealPanel ?? false,
+  );
+
+  React.useEffect(() => {
+    if (open && initial) {
+      setName(initial.name);
+      setLabel(initial.label);
+      setType(initial.type);
+      setEntity(initial.entity);
+      setRequired(initial.required);
+      setOptionsText(initial.options.join("\n"));
+      setShowInInboxLeadPanel(initial.showInInboxLeadPanel ?? false);
+      setShowInDealPanel(initial.showInDealPanel ?? false);
+    } else if (open && !initial) {
+      setName("");
+      setLabel("");
+      setType("TEXT");
+      setEntity(defaultEntity);
+      setRequired(false);
+      setOptionsText("");
+      setShowInInboxLeadPanel(false);
+      setShowInDealPanel(false);
+    }
+  }, [open, initial, defaultEntity]);
+
+  const supportsInboxPanel = entity === "contact" || entity === "deal";
+  React.useEffect(() => {
+    if (open && mode === "create" && !supportsInboxPanel) {
+      setShowInInboxLeadPanel(false);
+    }
+  }, [supportsInboxPanel, open, mode]);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const options = optionsText
+        .split("\n")
+        .map((o) => o.trim())
+        .filter(Boolean);
+      if (mode === "create") {
+        return createField({
+          name,
+          label,
+          type,
+          options,
+          required,
+          entity,
+          ...(supportsInboxPanel ? { showInInboxLeadPanel } : {}),
+          ...(entity === "deal" ? { showInDealPanel } : {}),
+        });
+      } else if (initial) {
+        const editSupports =
+          initial.entity === "contact" || initial.entity === "deal";
+        return updateField(initial.id, {
+          label,
+          type,
+          options,
+          required,
+          ...(editSupports ? { showInInboxLeadPanel } : {}),
+          ...(initial.entity === "deal" ? { showInDealPanel } : {}),
+        });
+      }
+    },
+    onSuccess: () => onSaved(),
+  });
+
+  const showOptions = type === "SELECT" || type === "MULTI_SELECT";
+  const entityOptions = [
+    { value: "contact", label: "Contato" },
+    { value: "deal", label: "Negócio" },
+    { value: "product", label: "Produto/Serviço" },
+  ];
+
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      busy={mutation.isPending}
+      icon={
+        <span className="text-[var(--brand-primary)]">
+          {TYPE_ICONS[type] ?? <IconLetterT size={16} strokeWidth={2.5} />}
+        </span>
+      }
+      title={mode === "create" ? "Novo campo" : "Editar campo"}
+      description={
+        mode === "create"
+          ? "Defina o nome, tipo e entidade."
+          : `Editando "${initial?.label}"`
+      }
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+          >
+            Cancelar
+          </button>
+          <ButtonGlass
+            type="submit"
+            form="field-form"
+            variant="primary"
+            disabled={mutation.isPending || !label.trim()}
+          >
+            {mutation.isPending
+              ? "Salvando…"
+              : mode === "create"
+                ? "Criar campo"
+                : "Salvar"}
+          </ButtonGlass>
+        </>
+      }
+    >
+      <form
+        id="field-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          mutation.mutate();
+        }}
+      >
+        <div className="flex flex-col gap-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>Entidade</FieldLabel>
+              <DropdownGlass
+                options={entityOptions}
+                value={entity}
+                onValueChange={(v) => setEntity(v)}
+                disabled={mode === "edit"}
+                triggerClassName="w-full"
+              />
+              {mode === "edit" && (
+                <p className="font-body text-[11px] text-[var(--text-muted)]">
+                  Não pode ser alterada
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>Tipo</FieldLabel>
+              <DropdownGlass
+                options={TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                value={type}
+                onValueChange={(v) => setType(v)}
+                triggerClassName="w-full"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel hint="— deixe vazio para gerar automaticamente">
+              Identificador (slug)
+            </FieldLabel>
+            <InputGlass
+              value={name}
+              onChange={(e) => {
+                const cleaned = e.target.value
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "")
+                  .replace(/[^a-z0-9]+/g, "_")
+                  .replace(/^_+|_+$/g, "")
+                  .replace(/_+/g, "_");
+                setName(cleaned);
+              }}
+              placeholder="ex: fonte_do_lead"
+              disabled={mode === "edit"}
+              className="font-mono"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>Nome (exibição)</FieldLabel>
+            <InputGlass
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="ex: Fonte do Lead"
+              autoFocus={mode === "create"}
+            />
+          </div>
+
+          {showOptions && (
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>Opções (uma por linha)</FieldLabel>
+              <textarea
+                value={optionsText}
+                onChange={(e) => setOptionsText(e.target.value)}
+                rows={4}
+                placeholder={"Opção 1\nOpção 2\nOpção 3"}
+                className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
+              />
+            </div>
+          )}
+
+          <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+            <div>
+              <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                Campo obrigatório
+              </p>
+              <p className="mt-0.5 font-body text-[11.5px] text-[var(--text-muted)]">
+                Impede salvar o registro sem preencher este campo.
+              </p>
+            </div>
+            <SwitchGlass
+              checked={required}
+              onChange={setRequired}
+              aria-label="Campo obrigatório"
+              size="sm"
+            />
+          </div>
+
+          {supportsInboxPanel && (
+            <div className="flex flex-col gap-2">
+              <p className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Visibilidade nos painéis
+              </p>
+              <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+                <div>
+                  <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                    Painel lateral — Inbox
+                  </p>
+                  <p className="mt-0.5 font-body text-[11.5px] leading-snug text-[var(--text-muted)]">
+                    Exibir no chat ao atender
+                  </p>
+                </div>
+                <SwitchGlass
+                  checked={showInInboxLeadPanel}
+                  onChange={setShowInInboxLeadPanel}
+                  aria-label="Exibir no painel Inbox"
+                  size="sm"
+                />
+              </div>
+              {entity === "deal" && (
+                <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+                  <div>
+                    <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                      Painel do Negócio
+                    </p>
+                    <p className="mt-0.5 font-body text-[11.5px] leading-snug text-[var(--text-muted)]">
+                      Exibir no deal detail
+                    </p>
+                  </div>
+                  <SwitchGlass
+                    checked={showInDealPanel}
+                    onChange={setShowInDealPanel}
+                    aria-label="Exibir no painel do Negócio"
+                    size="sm"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {mutation.isError && (
+            <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-red-100 bg-red-50 px-3 py-2.5">
+              <IconAlertCircle size={14} className="shrink-0 text-red-500" />
+              <p className="font-body text-[12.5px] text-red-600">
+                {mutation.error instanceof Error
+                  ? mutation.error.message
+                  : "Erro ao salvar"}
+              </p>
+            </div>
+          )}
+        </div>
+      </form>
+    </FormSheet>
+  );
+}

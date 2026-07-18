@@ -16,9 +16,16 @@ import {
 import { toast } from "sonner";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
+import {
+  ListColumnLabel,
+  SortableHeader,
+  listTableHeadRowClass,
+  type SortDir,
+} from "@/components/crm/sortable-header";
 import {
   Dialog,
   DialogContent,
@@ -66,8 +73,10 @@ const KIND_ICON: Record<ProductKind, React.ReactNode> = {
   JOB_OPENING: <IconBriefcase size={17} stroke={2.2} />,
 };
 
-/** Grid da linha: Produto | Preço | Tipo | Status | Ações. */
-const LIST_GRID = "minmax(0,1fr) 130px 120px 110px 84px";
+/** Grid da linha: [check] Produto | Preço | Tipo | Status | Ações. */
+const LIST_GRID = "32px minmax(0,1fr) 130px 120px 110px 84px";
+
+type SortField = "name" | "price" | "kind" | "status";
 
 async function fetchProducts(search: string): Promise<ProductRow[]> {
   const params = new URLSearchParams();
@@ -79,6 +88,14 @@ async function fetchProducts(search: string): Promise<ProductRow[]> {
   return data.products as ProductRow[];
 }
 
+async function deleteProductRequest(id: string) {
+  const res = await fetch(apiUrl(`/api/products/${id}`), { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { message?: string })?.message ?? "Erro ao excluir produto");
+  }
+}
+
 export function ProductsV2Page() {
   const slots = useSettingsHeaderSlots();
   const [search, setSearch] = React.useState("");
@@ -86,6 +103,10 @@ export function ProductsV2Page() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState<ProductRow | null>(null);
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [confirmBulk, setConfirmBulk] = React.useState(false);
+  const [sortBy, setSortBy] = React.useState<SortField>("name");
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
   const queryClient = useQueryClient();
 
   const { data: products = [], isLoading } = useQuery({
@@ -94,13 +115,7 @@ export function ProductsV2Page() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(apiUrl(`/api/products/${id}`), { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { message?: string })?.message ?? "Erro ao excluir produto");
-      }
-    },
+    mutationFn: deleteProductRequest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("Produto removido.");
@@ -109,9 +124,92 @@ export function ProductsV2Page() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao excluir produto."),
   });
 
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      let fail = 0;
+      for (const id of ids) {
+        try {
+          await deleteProductRequest(id);
+        } catch {
+          fail += 1;
+        }
+      }
+      return { ok: ids.length - fail, fail };
+    },
+    onSuccess: ({ ok, fail }) => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      setSelected(new Set());
+      setConfirmBulk(false);
+      if (fail === 0) toast.success(ok === 1 ? "Produto removido." : `${ok} produtos removidos.`);
+      else if (ok === 0) toast.error("Não foi possível remover os produtos selecionados.");
+      else toast.error(`${ok} removido(s), ${fail} falharam.`);
+    },
+  });
+
   const filtered = kindFilter
     ? products.filter((p) => p.kind === kindFilter)
     : products;
+
+  const sorted = React.useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case "name":
+          cmp = a.name.localeCompare(b.name, "pt-BR");
+          break;
+        case "price":
+          cmp = Number(a.price) - Number(b.price);
+          break;
+        case "kind":
+          cmp = KIND_LABEL[a.kind].localeCompare(KIND_LABEL[b.kind], "pt-BR");
+          break;
+        case "status":
+          cmp = Number(a.isActive) - Number(b.isActive);
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
+  React.useEffect(() => {
+    setSelected(new Set());
+  }, [search, kindFilter]);
+
+  const allChecked = sorted.length > 0 && sorted.every((p) => selected.has(p.id));
+  const someChecked = sorted.some((p) => selected.has(p.id));
+
+  const toggleAll = React.useCallback(() => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (sorted.every((p) => next.has(p.id))) sorted.forEach((p) => next.delete(p.id));
+      else sorted.forEach((p) => next.add(p.id));
+      return next;
+    });
+  }, [sorted]);
+
+  const toggleOne = React.useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSort = React.useCallback((field: SortField) => {
+    setSortBy((prevField) => {
+      if (prevField === field) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prevField;
+      }
+      setSortDir(field === "name" || field === "kind" ? "asc" : "desc");
+      return field;
+    });
+  }, []);
+
+  const dirFor = (f: SortField): SortDir => (sortBy === f ? sortDir : null);
 
   const openCreate = React.useCallback(() => {
     setEditingId(null);
@@ -198,6 +296,28 @@ export function ProductsV2Page() {
         ))}
       </section>
 
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 backdrop-blur-md">
+          <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+            {selected.size} selecionado{selected.size > 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Limpar
+            </ButtonGlass>
+            <ButtonGlass variant="danger" size="sm" type="button" onClick={() => setConfirmBulk(true)}>
+              <IconTrash size={14} /> Excluir
+            </ButtonGlass>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -207,7 +327,7 @@ export function ProductsV2Page() {
             />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : sorted.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16">
           <IconPackage size={40} className="text-[var(--text-muted)] opacity-40" />
           <p className="text-sm text-[var(--text-muted)]">Nenhum produto encontrado.</p>
@@ -219,25 +339,46 @@ export function ProductsV2Page() {
         <div className="flex min-w-0 flex-col gap-2">
           {/* Cabeçalho de colunas (padrão Empresas/Contatos). */}
           <div
-            className="grid gap-3 border border-transparent px-4 py-1 font-body text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]"
+            className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
             style={{ gridTemplateColumns: LIST_GRID }}
           >
-            <span>Produto</span>
-            <span>Preço</span>
-            <span>Tipo</span>
-            <span>Status</span>
-            <span className="text-right">Ações</span>
+            <span>
+              <CheckboxGlass
+                checked={allChecked}
+                indeterminate={!allChecked && someChecked}
+                onChange={toggleAll}
+                aria-label="Selecionar todos"
+              />
+            </span>
+            <SortableHeader label="Produto" sort={dirFor("name")} onSort={() => toggleSort("name")} />
+            <SortableHeader label="Preço" sort={dirFor("price")} onSort={() => toggleSort("price")} />
+            <SortableHeader label="Tipo" sort={dirFor("kind")} onSort={() => toggleSort("kind")} />
+            <SortableHeader label="Status" sort={dirFor("status")} onSort={() => toggleSort("status")} />
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
           </div>
 
-          {filtered.map((p) => (
+          {sorted.map((p) => {
+            const isSelected = selected.has(p.id);
+            return (
             <div
               key={p.id}
               style={{ gridTemplateColumns: LIST_GRID }}
               className={cn(
-                "group grid items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]",
+                "group grid items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+                isSelected
+                  ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] hover:border-[var(--input-border-focus)]",
                 !p.isActive && "opacity-60",
               )}
             >
+              <span>
+                <CheckboxGlass
+                  checked={isSelected}
+                  onChange={() => toggleOne(p.id)}
+                  aria-label={`Selecionar ${p.name}`}
+                />
+              </span>
+
               <div className="flex min-w-0 items-center gap-2.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]">
                   {KIND_ICON[p.kind]}
@@ -296,7 +437,8 @@ export function ProductsV2Page() {
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -341,6 +483,45 @@ export function ProductsV2Page() {
               onClick={() => deleting && deleteMut.mutate(deleting.id)}
             >
               <IconTrash size={14} /> {deleteMut.isPending ? "Excluindo..." : "Excluir"}
+            </ButtonGlass>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmBulk} onOpenChange={(next) => !next && setConfirmBulk(false)}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] text-[var(--color-danger)]">
+                <IconAlertTriangle size={18} />
+              </span>
+              <DialogTitle className="text-base">
+                {`Excluir ${selected.size === 1 ? "produto" : `${selected.size} produtos`}?`}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-[13px] leading-relaxed">
+              Os produtos selecionados serão desativados e deixarão de aparecer nas seleções.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setConfirmBulk(false)}
+              disabled={bulkDeleteMut.isPending}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Cancelar
+            </ButtonGlass>
+            <ButtonGlass
+              variant="danger"
+              size="sm"
+              type="button"
+              disabled={bulkDeleteMut.isPending}
+              onClick={() => bulkDeleteMut.mutate([...selected])}
+            >
+              <IconTrash size={14} /> {bulkDeleteMut.isPending ? "Excluindo..." : "Excluir"}
             </ButtonGlass>
           </DialogFooter>
         </DialogContent>

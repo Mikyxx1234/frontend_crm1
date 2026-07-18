@@ -794,11 +794,11 @@ export function DealDetailPanel({
                   </div>
                 )}
 
-                {/* Grid de infos rápidas — Origem / Canal / Tags. Coluna do
-                    rótulo em largura fixa para os valores alinharem à direita. */}
-                <div className="relative mt-2.5 grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 border-t border-white/10 pt-2.5 text-xs">
+                {/* Grid 2 colunas de infos rápidas — Origem / Canal / Tags
+                    (espelho exato do hero do contact-aside/Inbox). */}
+                <div className="relative mt-2.5 grid grid-cols-2 items-center gap-y-1.5 border-t border-white/10 pt-2.5 text-xs">
                   <span className="text-slate-400">Origem</span>
-                  <div className="min-w-0 text-right font-medium [&_input]:!bg-white [&_input]:!text-[var(--text-primary)] [&_input]:!rounded [&_input]:!px-1">
+                  <div className="flex min-w-0 justify-end text-right font-medium [&_input]:!bg-white [&_input]:!text-[var(--text-primary)] [&_input]:!rounded [&_input]:!px-1">
                     {deal.contactId ? (
                       <InlineNativeEditor
                         value={deal.contactSource ?? undefined}
@@ -1049,6 +1049,7 @@ export function DealDetailPanel({
                                       resolvedDealConfig) && (
                                     <FieldCard
                                       title="Informações do Negócio"
+                                      plain={viewMode !== "compact"}
                                       titleMeta={
                                         deal.number != null ? (
                                           <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
@@ -1105,34 +1106,8 @@ export function DealDetailPanel({
                                         </div>
                                       )}
                                       {viewMode === "compact" ? (
-                                        /* ── Compact: rows densas (paridade inbox) ── */
-                                        <div className="px-3.5 py-1">
-                                          {(customFieldsSlot ?? []).map((field, fieldIdx) => {
-                                            const currentValue = fieldValues[field.fieldId] ?? field.value
-                                            const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
-                                            const canEdit = !!field.entityType && !!field.entityId
-                                            return (
-                                              <div key={field.fieldId} className={cn("flex items-center justify-between gap-2 py-1.5 text-sm", fieldIdx > 0 && "border-t border-slate-50")}>
-                                                <span className="shrink-0 font-medium text-slate-500">{field.label}</span>
-                                                <div className="flex min-w-0 flex-1 justify-end">
-                                                  {dealCustomEditMode && canEdit ? (
-                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-sm font-semibold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
-                                                  ) : hl ? (
-                                                    <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
-                                                  ) : canEdit ? (
-                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-sm font-semibold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
-                                                  ) : (
-                                                    <span className="text-right font-display text-sm font-semibold text-[var(--text-primary)]">{currentValue || <span className="italic text-slate-400">—</span>}</span>
-                                                  )}
-                                                </div>
-                                              </div>
-                                            )
-                                          })}
-                                        </div>
-                                      ) : (
-                                        /* ── Focus (padrão): rows densas no padrão do inbox —
-                                            label à esquerda, valor/"+ Adicionar" à direita ── */
-                                        <div className="px-3.5 py-1">
+                                        /* ── Compact: flat rows (espelho exato do inbox) ── */
+                                        <div className="p-4 pt-2">
                                           {(customFieldsSlot ?? []).map((field, fieldIdx) => {
                                             const currentValue = fieldValues[field.fieldId] ?? field.value
                                             const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
@@ -1145,10 +1120,45 @@ export function DealDetailPanel({
                                                   fieldIdx > 0 && "border-t border-slate-50",
                                                 )}
                                               >
-                                                <span className="shrink-0 font-medium text-slate-500">
+                                                <span className="w-[38%] shrink-0 text-[12px] font-medium leading-tight text-slate-500">{field.label}</span>
+                                                <div className="min-w-0 flex-1">
+                                                  {dealCustomEditMode && canEdit ? (
+                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
+                                                  ) : hl ? (
+                                                    <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
+                                                  ) : canEdit ? (
+                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
+                                                  ) : (
+                                                    <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      ) : (
+                                        /* ── Focus (padrão): grid de cards slate-50
+                                            (espelho exato do inbox) ── */
+                                        <div className="grid grid-cols-2 gap-2">
+                                          {(customFieldsSlot ?? []).map((field) => {
+                                            const currentValue = fieldValues[field.fieldId] ?? field.value
+                                            const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
+                                            const canEdit = !!field.entityType && !!field.entityId
+                                            const isEmpty = !currentValue || currentValue === "—"
+                                            const isLong =
+                                              !isEmpty && ((currentValue ?? "").length > 18 || (currentValue ?? "").includes("@"))
+                                            return (
+                                              <div
+                                                key={field.fieldId}
+                                                className={cn(
+                                                  "flex flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
+                                                  isLong && "col-span-2",
+                                                )}
+                                              >
+                                                <span className="text-[11px] font-medium text-slate-500">
                                                   {field.label}
                                                 </span>
-                                                <div className="flex min-w-0 flex-1 justify-end">
+                                                <div className="min-w-0 w-full">
                                                   {dealCustomEditMode && canEdit ? (
                                                     <InlineFieldEditor
                                                       fieldId={field.fieldId}
@@ -1162,7 +1172,7 @@ export function DealDetailPanel({
                                                       onSaved={(v) =>
                                                         setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
                                                       }
-                                                      textClassName="font-display text-sm font-semibold text-[var(--text-primary)] text-right"
+                                                      textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
                                                       placeholder="+ Adicionar"
                                                     />
                                                   ) : hl ? (
@@ -1179,12 +1189,12 @@ export function DealDetailPanel({
                                                       onSaved={(v) =>
                                                         setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
                                                       }
-                                                      textClassName="font-display text-sm font-semibold text-[var(--text-primary)] text-right"
+                                                      textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
                                                       placeholder="+ Adicionar"
                                                     />
                                                   ) : (
-                                                    <span className="min-w-0 truncate text-right font-display text-sm font-semibold text-[var(--text-primary)]">
-                                                      {currentValue || <span className="text-slate-300">—</span>}
+                                                    <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                      {currentValue || "—"}
                                                     </span>
                                                   )}
                                                 </div>
@@ -1691,6 +1701,7 @@ function FieldCard({
   dragLabel,
   dragHandleProps,
   titleActions,
+  plain,
   children,
 }: {
   title?: string
@@ -1701,6 +1712,8 @@ function FieldCard({
   dragHandleProps?: React.HTMLAttributes<HTMLElement>
   /** Ações extras no cabeçalho (botões, ícones). */
   titleActions?: React.ReactNode
+  /** Sem o card branco ao redor (ex.: grid de pills do modo foco). */
+  plain?: boolean
   children: React.ReactNode
 }) {
   return (
@@ -1735,10 +1748,15 @@ function FieldCard({
           </div>
         )}
       </div>
-      {/* Card branco (ref. Stitch) — rows/cards internos controlam o padding. */}
-      <div className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-sm">
-        {children}
-      </div>
+      {/* Card branco (ref. Stitch) — rows/cards internos controlam o padding.
+          `plain` pula o card (grid de pills do modo foco, paridade inbox). */}
+      {plain ? (
+        children
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-sm">
+          {children}
+        </div>
+      )}
     </section>
   )
 }

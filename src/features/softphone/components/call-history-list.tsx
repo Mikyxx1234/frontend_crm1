@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   IconPhone,
@@ -96,6 +96,8 @@ interface CallHistoryListProps {
   embedded?: boolean;
   /** Agrupa as linhas por dia (Hoje / Ontem / dd/mm), como no log de chamadas real. */
   groupByDay?: boolean;
+  /** Conteúdo renderizado dentro do card, acima da tabela (banner, toolbar de filtros…). */
+  header?: ReactNode;
 }
 
 export function CallHistoryList({
@@ -104,6 +106,7 @@ export function CallHistoryList({
   contactId,
   embedded,
   groupByDay: grouped = false,
+  header,
 }: CallHistoryListProps) {
   const filters = externalFilters ?? { page: 1, perPage: 25, contactId };
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -134,7 +137,8 @@ export function CallHistoryList({
 
   if (!calls.length) {
     return (
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+        {header}
         <EmptyState
           icon={<IconPhone size={28} />}
           title="Nenhuma chamada encontrada"
@@ -148,6 +152,7 @@ export function CallHistoryList({
     <div className={cn("flex min-h-0 flex-col gap-4", !embedded && "flex-1")}>
       {/* Tabela */}
       <div className="flex w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+        {header}
         {/* Scroll horizontal cobre header + rows em sincronia */}
         <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
           <div className="min-w-[780px]">

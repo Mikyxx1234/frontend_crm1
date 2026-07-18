@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2 as Loader2 } from "@tabler/icons-react";
 import {
   IconClipboardList,
@@ -18,13 +18,14 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
-import {
-  CallsSearchFilterBar,
-  type CallsFilterState,
-} from "@/features/softphone/components/calls-search-filter-bar";
+import type { CallsFilterState } from "@/features/softphone/components/calls-search-filter-bar";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
-import { syncCalls } from "@/features/softphone/api/extensions";
-import type { ListCallsFilters } from "@/features/softphone/api/types";
+import { listCalls, syncCalls } from "@/features/softphone/api/extensions";
+import type {
+  CallDirection,
+  CallStatus,
+  ListCallsFilters,
+} from "@/features/softphone/api/types";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
@@ -62,6 +63,21 @@ import { MOCK_FEED } from "@/features/activity-feed/mock-feed";
 import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const LOG_TABS = ["Feed", "Chamadas", "Estatísticas (30d)"] as const;
+
+const CALL_DIRECTION_OPTIONS = [
+  { value: "", label: "Direção: todas" },
+  { value: "INBOUND", label: "Recebidas" },
+  { value: "OUTBOUND", label: "Realizadas" },
+];
+
+const CALL_STATUS_OPTIONS = [
+  { value: "", label: "Status: todos" },
+  { value: "ANSWERED", label: "Atendidas" },
+  { value: "COMPLETED", label: "Completadas" },
+  { value: "MISSED", label: "Perdidas" },
+  { value: "BUSY", label: "Ocupado" },
+  { value: "FAILED", label: "Falhou" },
+];
 
 const ENTITY_OPTIONS = [
   { value: "ALL", label: "Todas as entidades" },
@@ -279,6 +295,15 @@ export default function LogsClientPage() {
     [callsPage, callsSearchDebounced, callsFilters],
   );
 
+  // Total de chamadas para o contador da aba — mesma queryKey da lista, então
+  // o cache é compartilhado com o CallHistoryList (sem fetch duplicado).
+  const { data: callsData } = useQuery({
+    queryKey: ["calls", callsListFilters],
+    queryFn: () => listCalls(callsListFilters),
+    enabled: callsWidget.enabled === true,
+  });
+  const callsTotal = callsData?.total;
+
   // Sync automático ao abrir a aba Chamadas (uma vez, quando o widget está ativo).
   React.useEffect(() => {
     if (isCalls && callsWidget.enabled === true && !callsAutoSyncedRef.current) {
@@ -436,15 +461,6 @@ export default function LogsClientPage() {
                 placeholder="Buscar evento, lead, ator..."
                 aria-label="Buscar eventos"
               />
-            ) : isCalls ? (
-              <div className="flex w-full justify-start">
-                <CallsSearchFilterBar
-                  search={callsSearch}
-                  onSearch={setCallsSearch}
-                  filters={callsFilters}
-                  onFiltersChange={setCallsFilters}
-                />
-              </div>
             ) : undefined
           }
           actions={
@@ -454,7 +470,17 @@ export default function LogsClientPage() {
                 aria-label="Visão dos logs"
                 items={LOG_TABS.map((label, index) => ({
                   value: String(index),
-                  label,
+                  label:
+                    index === 1 && typeof callsTotal === "number" ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        {label}
+                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1.5 font-display text-[10px] font-bold leading-none text-white">
+                          {callsTotal.toLocaleString("pt-BR")}
+                        </span>
+                      </span>
+                    ) : (
+                      label
+                    ),
                 }))}
                 value={String(activeTab)}
                 onChange={(v) => setActiveTab(Number(v))}
@@ -631,36 +657,113 @@ export default function LogsClientPage() {
             <CallsNotEnabledState />
           ) : (
             <div className="flex min-h-0 flex-1 flex-col gap-3">
-              <div className="flex items-center justify-end gap-2">
-                <PageGhostButton
-                  onClick={() => callsSyncMutation.mutate()}
-                  disabled={callsSyncMutation.isPending}
-                  title="Sincronizar chamadas com a Api4com"
-                >
-                  <IconRefresh
-                    size={15}
-                    className={callsSyncMutation.isPending ? "animate-spin" : undefined}
-                  />
-                  <span className="hidden sm:inline">
-                    {callsSyncMutation.isPending ? "Sincronizando…" : "Sincronizar"}
-                  </span>
-                  <span className="sm:hidden">
-                    {callsSyncMutation.isPending ? "Sinc…" : "Sinc"}
-                  </span>
-                </PageGhostButton>
-                <Link
-                  href="/settings/softphone"
-                  className={pageGhostButtonClass()}
-                  title="Configurações do softphone"
-                >
-                  <IconSettings size={15} />
-                  <span className="hidden sm:inline">Configurações</span>
-                </Link>
-              </div>
               <CallHistoryList
                 groupByDay
                 filters={callsListFilters}
                 onFiltersChange={(f) => setCallsPage(f.page ?? 1)}
+                header={
+                  <div className="flex flex-col gap-2 px-2 pb-2.5 pt-2">
+                    {/* Banner informativo — histórico movido da nav rail p/ Logs */}
+                    <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--brand-primary)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)] px-3.5 py-2.5 font-body text-[12.5px] text-[var(--brand-primary)]">
+                      <IconPhone size={16} className="shrink-0" />
+                      <span>
+                        <b className="font-display font-bold">Novo:</b> o
+                        histórico de chamadas saiu do ícone da barra lateral e
+                        agora vive aqui, como uma aba de Logs — mesmo padrão de
+                        tabela densa.
+                      </span>
+                    </div>
+
+                    {/* Toolbar: busca + Direção/Status/Período + ações */}
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <PageSearchBar
+                        variant="compact"
+                        className="min-w-[220px] flex-1"
+                        value={callsSearch}
+                        onChange={setCallsSearch}
+                        placeholder="Buscar por contato ou telefone…"
+                        aria-label="Buscar chamadas"
+                      />
+                      <DropdownGlass
+                        options={CALL_DIRECTION_OPTIONS}
+                        value={callsFilters.direction ?? ""}
+                        onValueChange={(v) =>
+                          setCallsFilters((prev) => ({
+                            ...prev,
+                            direction: (v || undefined) as
+                              | CallDirection
+                              | undefined,
+                          }))
+                        }
+                        menuLabel="Direção"
+                        triggerClassName="min-w-[140px]"
+                      />
+                      <DropdownGlass
+                        options={CALL_STATUS_OPTIONS}
+                        value={callsFilters.status ?? ""}
+                        onValueChange={(v) =>
+                          setCallsFilters((prev) => ({
+                            ...prev,
+                            status: (v || undefined) as CallStatus | undefined,
+                          }))
+                        }
+                        menuLabel="Status"
+                        triggerClassName="min-w-[130px]"
+                      />
+                      <DateRangePicker
+                        value={{
+                          from: callsFilters.dateFrom
+                            ? new Date(`${callsFilters.dateFrom}T00:00:00`)
+                            : null,
+                          to: callsFilters.dateTo
+                            ? new Date(`${callsFilters.dateTo}T00:00:00`)
+                            : null,
+                        }}
+                        onChange={(r) =>
+                          setCallsFilters((prev) => ({
+                            ...prev,
+                            dateFrom: r.from
+                              ? format(r.from, "yyyy-MM-dd")
+                              : undefined,
+                            dateTo: r.to
+                              ? format(r.to, "yyyy-MM-dd")
+                              : undefined,
+                          }))
+                        }
+                      />
+                      <PageGhostButton
+                        onClick={() => callsSyncMutation.mutate()}
+                        disabled={callsSyncMutation.isPending}
+                        title="Sincronizar chamadas com a Api4com"
+                      >
+                        <IconRefresh
+                          size={15}
+                          className={
+                            callsSyncMutation.isPending
+                              ? "animate-spin"
+                              : undefined
+                          }
+                        />
+                        <span className="hidden sm:inline">
+                          {callsSyncMutation.isPending
+                            ? "Sincronizando…"
+                            : "Sincronizar"}
+                        </span>
+                        <span className="sm:hidden">
+                          {callsSyncMutation.isPending ? "Sinc…" : "Sinc"}
+                        </span>
+                      </PageGhostButton>
+                      <Link
+                        href="/settings/softphone"
+                        className={pageGhostButtonClass()}
+                        title="Configurações do softphone"
+                      >
+                        <IconSettings size={15} />
+                        <span className="hidden sm:inline">Configurações</span>
+                      </Link>
+                    </div>
+                  </div>
+                }
               />
             </div>
           )

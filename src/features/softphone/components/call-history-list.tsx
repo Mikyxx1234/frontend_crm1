@@ -17,7 +17,7 @@ import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortabl
 import { listCalls } from "../api/extensions";
 import type { CallRecord, ListCallsFilters } from "../api/types";
 
-const COLS = "grid-cols-[36px_minmax(180px,2fr)_90px_100px_70px_minmax(130px,1.1fr)_minmax(80px,190px)]";
+const COLS = "grid-cols-[36px_minmax(180px,2fr)_90px_100px_70px_minmax(130px,1.1fr)_minmax(88px,240px)]";
 
 function formatDuration(sec: number | null) {
   if (!sec) return "—";
@@ -241,7 +241,11 @@ function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
         <div className="flex min-w-0 items-center justify-end">
           {call.recordUrl ? (
             isPlaying ? (
-              <CompactAudioPlayer src={call.recordUrl} onEnded={onPlay} />
+              <CompactAudioPlayer
+                src={call.recordUrl}
+                fallbackDuration={call.durationSeconds}
+                onEnded={onPlay}
+              />
             ) : (
               <button
                 type="button"
@@ -262,17 +266,27 @@ function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
 
 // ── Mini player COMPACTO inline ─────────────────────────────────────────────
 // Ocupa a própria célula de "Gravação" (não expande abaixo): botão play/pause
-// + barra fina de progresso + tempo, alinhados à direita.
+// + barra arrastável (avançar/retroceder) + tempo atual / duração total.
+function fmtClock(s: number) {
+  if (!s || Number.isNaN(s) || !Number.isFinite(s)) return "0:00";
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2, "0")}`;
+}
+
 function CompactAudioPlayer({
   src,
+  fallbackDuration,
   onEnded,
 }: {
   src: string;
+  fallbackDuration?: number | null;
   onEnded: () => void;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(fallbackDuration ?? 0);
   const [playing, setPlaying] = useState(true);
 
   useEffect(() => {
@@ -286,16 +300,27 @@ function CompactAudioPlayer({
 
   function handleTimeUpdate() {
     const audio = audioRef.current;
-    if (!audio || !audio.duration) return;
+    if (!audio) return;
     setCurrentTime(audio.currentTime);
-    setProgress((audio.currentTime / audio.duration) * 100);
+    if (audio.duration && Number.isFinite(audio.duration)) {
+      setDuration(audio.duration);
+      setProgress((audio.currentTime / audio.duration) * 100);
+    }
+  }
+
+  function handleLoadedMetadata() {
+    const audio = audioRef.current;
+    if (audio?.duration && Number.isFinite(audio.duration)) {
+      setDuration(audio.duration);
+    }
   }
 
   function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
     const audio = audioRef.current;
-    if (!audio || !audio.duration) return;
+    if (!audio || !audio.duration || !Number.isFinite(audio.duration)) return;
     audio.currentTime = (Number(e.target.value) / 100) * audio.duration;
     setProgress(Number(e.target.value));
+    setCurrentTime(audio.currentTime);
   }
 
   function togglePlay() {
@@ -310,22 +335,15 @@ function CompactAudioPlayer({
     }
   }
 
-  function fmtTime(s: number) {
-    if (!s || Number.isNaN(s)) return "0:00";
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${String(sec).padStart(2, "0")}`;
-  }
-
   return (
-    <div className="flex min-w-0 items-center justify-end gap-2">
+    <div className="flex min-w-0 items-center justify-end gap-1.5">
       <audio
         ref={audioRef}
         src={src}
         onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
         onEnded={onEnded}
-        preload="auto"
+        preload="metadata"
         className="hidden"
       />
       <button
@@ -340,10 +358,13 @@ function CompactAudioPlayer({
           <IconPlayerPlayFilled size={13} />
         )}
       </button>
-      <div className="relative min-w-0 flex-1">
-        <div className="h-1 overflow-hidden rounded-full bg-[var(--glass-border)]">
+      <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-[var(--text-secondary)]">
+        {fmtClock(currentTime)}
+      </span>
+      <div className="group relative min-w-[36px] flex-1">
+        <div className="h-1.5 overflow-hidden rounded-full bg-[var(--glass-border)]">
           <div
-            className="h-full rounded-full bg-[var(--brand-primary)] transition-all"
+            className="h-full rounded-full bg-[var(--brand-primary)]"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -358,8 +379,8 @@ function CompactAudioPlayer({
           aria-label="Posição da gravação"
         />
       </div>
-      <span className="w-8 shrink-0 text-right font-mono text-[10.5px] tabular-nums text-[var(--text-muted)]">
-        {fmtTime(currentTime)}
+      <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-[var(--text-muted)]">
+        {fmtClock(duration)}
       </span>
     </div>
   );

@@ -9,7 +9,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { IconPhoneFilled } from "@tabler/icons-react";
+import { IconPhone } from "@tabler/icons-react";
 
 import { DockButton } from "@/components/crm/floating-dock";
 import { cn } from "@/lib/utils";
@@ -67,26 +67,62 @@ export function SoftphoneNavIcon({
   const isError = softphone.status === "error";
   const isConnecting =
     softphone.status === "connecting" || softphone.status === "disconnected";
-  const isConnected =
-    softphone.status === "registered" ||
-    softphone.status === "call_ringing" ||
+  const isOnCall =
     softphone.status === "call_active" ||
+    softphone.status === "call_ringing" ||
     softphone.status === "call_held";
+  const isConnected = softphone.status === "registered" || isOnCall;
 
   const title = isError
     ? `Softphone: erro — ${softphone.error ?? "falha"}`
     : isConnecting
       ? "Softphone: conectando…"
-      : `Softphone • Ramal ${ramal}`;
+      : isOnCall
+        ? `Softphone • Em chamada (Ramal ${ramal})`
+        : `Softphone • Ramal ${ramal}`;
 
-  // Verde = registrado/em chamada; cinza = offline/conectando; vermelho = erro.
-  const toneClass = isError
-    ? "text-[var(--color-danger)] hover:text-[var(--color-danger)]"
+  // Ícone permanece neutro (muted 60% → 100% no hover). O estado vive no
+  // dot de status ao lado — verde online (com pulso quando em chamada),
+  // cinza offline/conectando, vermelho em erro.
+  const iconToneClass =
+    "text-[var(--nav-text,var(--text-secondary))]/60 group-hover:text-[var(--nav-text,var(--text-primary))]";
+
+  const statusStyle = isError
+    ? {
+        background: "var(--color-danger)",
+        boxShadow: "0 0 8px rgba(239,68,68,0.55)",
+      }
     : isConnected
-      ? "text-[var(--color-success)] hover:text-[var(--color-success)]"
-      : "text-[var(--color-offline,#64748b)] hover:text-[var(--color-offline,#64748b)]";
+      ? {
+          background: "#22c55e",
+          boxShadow: "0 0 8px rgba(34,197,94,0.6)",
+        }
+      : {
+          background: "#64748b",
+          boxShadow: "none",
+        };
 
-  const icon = <IconPhoneFilled size={20} className={toneClass} />;
+  const statusDot = (
+    <span
+      aria-hidden
+      className={cn(
+        "pointer-events-none absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full border-2 border-[var(--nav-bg,var(--glass-bg-base))]",
+        isOnCall && "softphone-status-active",
+      )}
+      style={statusStyle}
+    />
+  );
+
+  const icon = (
+    <span className="relative inline-flex items-center justify-center">
+      <IconPhone
+        size={20}
+        strokeWidth={2}
+        className={cn("transition-colors", iconToneClass)}
+      />
+      {statusDot}
+    </span>
+  );
 
   // Rail colapsada: mesmo tile 44×44 dos demais ícones (cabe em 72px).
   if (!expanded) {
@@ -95,7 +131,7 @@ export function SoftphoneNavIcon({
         title={title}
         onClick={requestSoftphoneExpand}
         disablePop
-        className={cn(toneClass, className)}
+        className={cn("group", className)}
       >
         {icon}
       </DockButton>
@@ -109,8 +145,7 @@ export function SoftphoneNavIcon({
       aria-label={title}
       title={title}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center transition-colors",
-        toneClass,
+        "group relative inline-flex shrink-0 items-center justify-center rounded-xl p-1.5 transition-colors hover:bg-[var(--nav-hover,var(--glass-bg-overlay))]",
         className,
       )}
     >

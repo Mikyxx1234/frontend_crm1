@@ -33,6 +33,8 @@ import {
   IconCircleCheck,
   IconCircleDashed,
   IconAffiliate,
+  IconBrandWhatsapp,
+  IconMail,
   IconPackage,
   IconUser,
   IconStarFilled,
@@ -535,7 +537,7 @@ export function DealDetailPanel({
                 )}
               >
                 <div className="shrink-0 px-3 pt-2">
-                  <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] p-5 text-white shadow-lg">
+                  <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
                     <div className="relative flex items-center gap-1.5">
                       <button
                         type="button"
@@ -696,7 +698,7 @@ export function DealDetailPanel({
               {/* ── Hero header (ref. Stitch): card escuro #2e3b6e, edge-to-edge
                   no topo do container via margens negativas, cantos inferiores
                   grandes (rounded-b-3xl) e sombra. ── */}
-              <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] p-5 text-white shadow-lg">
+              <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
                 {/* Linha de controles: Voltar (esq) + spacer + etapa + kebab. */}
                 <div className="relative flex items-center gap-1.5">
                   <button
@@ -732,20 +734,29 @@ export function DealDetailPanel({
                   )}
                 </div>
 
-                {/* Linha topo: título + #num */}
-                <div className="relative mt-3 flex items-center gap-2">
-                  <h2 className="flex min-w-0 items-baseline gap-1.5 text-lg font-bold leading-snug text-white">
-                    <span className="min-w-0 truncate">{deal.name}</span>
-                    <span className="shrink-0 text-sm font-normal text-slate-400">
-                      #{deal.number ?? deal.id.slice(-6).toUpperCase()}
+                {/* Linha topo: título (até 2 linhas) + #num */}
+                <div className="relative mt-2 flex items-center gap-2">
+                  <h2 className="min-w-0 text-[15px] font-bold leading-snug text-white">
+                    <span className="line-clamp-2">
+                      {deal.name}
+                      <span className="ml-1.5 whitespace-nowrap text-[12px] font-normal text-slate-400">
+                        #{deal.number ?? deal.id.slice(-6).toUpperCase()}
+                      </span>
                     </span>
                   </h2>
                 </div>
 
-                {/* Linha base: anel de progresso + pipeline info + responsável */}
-                <div className="relative mt-4 flex items-center gap-4">
-                  <div className="relative flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-orange-500 bg-white/10">
-                    <span className="text-xs font-bold">
+                {/* Linha base: anel de progresso (cor da etapa atual) + pipeline + responsável */}
+                <div className="relative mt-2.5 flex items-center gap-3">
+                  <div
+                    className="relative flex size-10 shrink-0 items-center justify-center rounded-full border-2 bg-white/10"
+                    style={{
+                      borderColor:
+                        (currentSegIdx >= 0 ? sortedFunnel?.[currentSegIdx]?.color : null) ||
+                        "#f59e0b",
+                    }}
+                  >
+                    <span className="text-[11px] font-bold">
                       {funnelTotal > 0 ? `${funnelCurrent}/${funnelTotal}` : "—"}
                     </span>
                   </div>
@@ -764,16 +775,16 @@ export function DealDetailPanel({
                   )}
                 </div>
 
-                {/* Barra de etapas: 2px, ativo #f59e0b, inativo white/20 */}
+                {/* Barra de etapas: 2px, ativo na cor da etapa, inativo white/20 */}
                 {sortedFunnel && sortedFunnel.length > 0 && (
-                  <div className="relative mt-4 flex items-center gap-1">
+                  <div className="relative mt-2.5 flex items-center gap-1">
                     {sortedFunnel.map((seg, i) => (
                       <TooltipGlass key={seg.id} label={seg.name} side="top">
                         <span
                           className="h-[2px] flex-1 rounded-full transition-colors"
                           style={{
                             background: i <= currentSegIdx
-                              ? "#f59e0b"
+                              ? seg.color || "#f59e0b"
                               : "rgba(255,255,255,0.2)",
                           }}
                         />
@@ -784,7 +795,7 @@ export function DealDetailPanel({
 
                 {/* Grid de infos rápidas — Origem / Canal / Tags. Coluna do
                     rótulo em largura fixa para os valores alinharem à direita. */}
-                <div className="relative mt-4 grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-4 gap-y-2.5 border-t border-white/10 pt-4 text-xs">
+                <div className="relative mt-2.5 grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 border-t border-white/10 pt-2.5 text-xs">
                   <span className="text-slate-400">Origem</span>
                   <div className="min-w-0 text-right font-medium [&_input]:!bg-white [&_input]:!text-[var(--text-primary)] [&_input]:!rounded [&_input]:!px-1">
                     {deal.contactId ? (
@@ -1019,62 +1030,68 @@ export function DealDetailPanel({
                                           </div>
                                         </>
                                       ) : (
-                                        /* ── Focus: grid 2 colunas de cards ── */
-                                        <div className="grid grid-cols-2 gap-1.5 px-3.5 py-1.5">
+                                        /* ── Focus: rows densas no padrão do inbox — linha única,
+                                            ícone 12px + label à esquerda, valor à direita ── */
+                                        <div className="px-3.5 py-1">
                                           {/* Nome */}
-                                          <div className="col-span-2 flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
-                                            <span className="text-[10px] font-medium text-[var(--text-muted)]">Nome</span>
-                                            {deal.contactId ? (
-                                              <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="rounded bg-indigo-50 px-1.5 py-0.5 font-display text-[12.5px] font-bold text-indigo-600 break-all" />
-                                            ) : (
-                                              <span className="block min-w-0 w-fit truncate rounded bg-indigo-50 px-1.5 py-0.5 font-display text-[12.5px] font-bold text-indigo-600" title={deal.name}>{deal.name || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
-                                            )}
+                                          <div className="flex items-center justify-between gap-2 py-2 text-sm">
+                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconUser size={12} />Nome</span>
+                                            <div className="flex min-w-0 flex-1 justify-end">
+                                              {deal.contactId ? (
+                                                <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="rounded bg-indigo-50 px-1.5 py-0.5 font-display text-sm font-bold text-indigo-600 text-right" />
+                                              ) : (
+                                                <span className="min-w-0 truncate rounded bg-indigo-50 px-1.5 py-0.5 text-right font-display text-sm font-bold text-indigo-600" title={deal.name}>{deal.name || <span className="italic text-slate-400">+ Adicionar</span>}</span>
+                                              )}
+                                            </div>
                                           </div>
-                                          {/* Telefone — col-span-2 para não truncar
-                                              números formatados (+55 (11) 98888-0123)
-                                              na aside estreita; Email já faz o mesmo
-                                              quando length > 20. */}
-                                          <div className="col-span-2 flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
-                                            <span className="text-[10px] font-medium text-[var(--text-muted)]">Telefone</span>
-                                            {deal.contactId ? (
-                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
-                                            ) : onCreateContactForField ? (
-                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="deal" entityId={deal.id} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} customSave={(v) => onCreateContactForField("phone", v)} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
-                                            ) : (
-                                              <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="block min-w-0 truncate font-display text-[12.5px] font-bold text-[var(--brand-primary)]" title={deal.phone ? formatPhoneDisplay(deal.phone) : undefined}>{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
-                                            )}
+                                          {/* Telefone */}
+                                          <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-2 text-sm">
+                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconPhone size={12} />Telefone</span>
+                                            <div className="flex min-w-0 flex-1 justify-end">
+                                              {deal.contactId ? (
+                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-sm font-semibold text-indigo-600 text-right" />
+                                              ) : onCreateContactForField ? (
+                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="deal" entityId={deal.id} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} customSave={(v) => onCreateContactForField("phone", v)} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-sm font-semibold text-indigo-600 text-right" />
+                                              ) : (
+                                                <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="min-w-0 truncate text-right font-display text-sm font-semibold text-indigo-600" title={deal.phone ? formatPhoneDisplay(deal.phone) : undefined}>{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-slate-400">+ Adicionar</span>}</a>
+                                              )}
+                                            </div>
                                           </div>
                                           {/* Email */}
-                                          <div className={cn("flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2", (dealNative["email"] ?? deal.email ?? "").length > 20 ? "col-span-2" : "")}>
-                                            <span className="text-[10px] font-medium text-[var(--text-muted)]">Email</span>
-                                            {deal.contactId ? (
-                                              <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
-                                            ) : onCreateContactForField ? (
-                                              <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="deal" entityId={deal.id} fieldKey="email" inputType="email" placeholder="+ Adicionar" customSave={(v) => onCreateContactForField("email", v)} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
-                                            ) : (
-                                              <span className="block min-w-0 truncate font-display text-[12.5px] font-bold text-[var(--brand-primary)]" title={deal.email ?? undefined}>{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
-                                            )}
+                                          <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-2 text-sm">
+                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconMail size={12} />Email</span>
+                                            <div className="flex min-w-0 flex-1 justify-end">
+                                              {deal.contactId ? (
+                                                <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-sm font-semibold text-indigo-600 text-right" />
+                                              ) : onCreateContactForField ? (
+                                                <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="deal" entityId={deal.id} fieldKey="email" inputType="email" placeholder="+ Adicionar" customSave={(v) => onCreateContactForField("email", v)} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-sm font-semibold text-indigo-600 text-right" />
+                                              ) : (
+                                                <span className="min-w-0 truncate text-right font-display text-sm font-semibold text-indigo-600" title={deal.email ?? undefined}>{deal.email || <span className="italic text-slate-400">+ Adicionar</span>}</span>
+                                              )}
+                                            </div>
                                           </div>
                                           {/* @ WhatsApp — só leitura, vem do webhook Meta */}
                                           {deal.whatsappUsername && (
-                                            <div className="flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
-                                              <span className="text-[10px] font-medium text-[var(--text-muted)]">@ WhatsApp</span>
-                                              <span className="block min-w-0 truncate font-display text-[12.5px] font-bold text-[var(--text-primary)]" title={`@${deal.whatsappUsername.replace(/^@/, "")}`}>@{deal.whatsappUsername.replace(/^@/, "")}</span>
+                                            <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-2 text-sm">
+                                              <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconBrandWhatsapp size={12} />@ WhatsApp</span>
+                                              <span className="min-w-0 truncate text-right font-display text-sm font-semibold text-[var(--text-primary)]" title={`@${deal.whatsappUsername.replace(/^@/, "")}`}>@{deal.whatsappUsername.replace(/^@/, "")}</span>
                                             </div>
                                           )}
                                           {/* Canal */}
-                                          <div className="col-span-2 flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
-                                            <span className="text-[10px] font-medium text-[var(--text-muted)]">Canal</span>
-                                            {connection ? (
-                                              <TooltipGlass label={`Conversando por ${formatConnectionLabel(connection)}`} side="left">
-                                                <span className="inline-flex items-center gap-1 font-display text-[12.5px] font-bold text-[var(--text-primary)]">
-                                                  <IconAffiliate size={12} className="shrink-0 text-[var(--brand-primary)]" />
-                                                  <span className="min-w-0 truncate">{channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}</span>
-                                                </span>
-                                              </TooltipGlass>
-                                            ) : (
-                                              <span className="font-display text-[12.5px] italic text-[var(--text-muted)]">—</span>
-                                            )}
+                                          <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-2 text-sm">
+                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconAffiliate size={12} />Canal</span>
+                                            <div className="flex min-w-0 flex-1 justify-end">
+                                              {connection ? (
+                                                <TooltipGlass label={`Conversando por ${formatConnectionLabel(connection)}`} side="left">
+                                                  <span className="inline-flex min-w-0 items-center gap-1 font-display text-sm font-semibold text-[var(--text-primary)]">
+                                                    <IconAffiliate size={12} className="shrink-0 text-[var(--brand-primary)]" />
+                                                    <span className="min-w-0 truncate">{channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}</span>
+                                                  </span>
+                                                </TooltipGlass>
+                                              ) : (
+                                                <span className="font-display text-sm text-slate-300">—</span>
+                                              )}
+                                            </div>
                                           </div>
                                         </div>
                                       )}
@@ -1189,25 +1206,25 @@ export function DealDetailPanel({
                                           })}
                                         </div>
                                       ) : (
-                                        /* ── Focus (padrão): grid de cards ── */
-                                        <div className="grid grid-cols-2 gap-1.5 px-3.5 py-1.5">
-                                          {(customFieldsSlot ?? []).map((field) => {
+                                        /* ── Focus (padrão): rows densas no padrão do inbox —
+                                            label à esquerda, valor/"+ Adicionar" à direita ── */
+                                        <div className="px-3.5 py-1">
+                                          {(customFieldsSlot ?? []).map((field, fieldIdx) => {
                                             const currentValue = fieldValues[field.fieldId] ?? field.value
                                             const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
                                             const canEdit = !!field.entityType && !!field.entityId
-                                            const isLong = (currentValue ?? "").toString().length > 18 || (currentValue ?? "").toString().includes("@")
                                             return (
                                               <div
                                                 key={field.fieldId}
                                                 className={cn(
-                                                  "flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2",
-                                                  isLong && "col-span-2",
+                                                  "flex items-center justify-between gap-2 py-2 text-sm",
+                                                  fieldIdx > 0 && "border-t border-slate-50",
                                                 )}
                                               >
-                                                <span className="text-[10px] font-medium text-[var(--text-muted)]">
+                                                <span className="shrink-0 font-medium text-slate-500">
                                                   {field.label}
                                                 </span>
-                                                <div className="min-w-0 w-full">
+                                                <div className="flex min-w-0 flex-1 justify-end">
                                                   {dealCustomEditMode && canEdit ? (
                                                     <InlineFieldEditor
                                                       fieldId={field.fieldId}
@@ -1221,7 +1238,7 @@ export function DealDetailPanel({
                                                       onSaved={(v) =>
                                                         setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
                                                       }
-                                                      textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all"
+                                                      textClassName="font-display text-sm font-semibold text-[var(--text-primary)] text-right"
                                                       placeholder="+ Adicionar"
                                                     />
                                                   ) : hl ? (
@@ -1238,12 +1255,12 @@ export function DealDetailPanel({
                                                       onSaved={(v) =>
                                                         setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
                                                       }
-                                                      textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all"
+                                                      textClassName="font-display text-sm font-semibold text-[var(--text-primary)] text-right"
                                                       placeholder="+ Adicionar"
                                                     />
                                                   ) : (
-                                                    <span className="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all">
-                                                      {currentValue || <span className="italic text-[var(--text-muted)]">—</span>}
+                                                    <span className="min-w-0 truncate text-right font-display text-sm font-semibold text-[var(--text-primary)]">
+                                                      {currentValue || <span className="text-slate-300">—</span>}
                                                     </span>
                                                   )}
                                                 </div>

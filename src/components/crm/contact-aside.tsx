@@ -433,39 +433,51 @@ function DealInline({
   // Progresso do funil: usa currentSegIdx (0-based) + total de segmentos.
   const totalStages = sortedSegments?.length ?? 0
   const currentStage = currentSegIdx >= 0 ? currentSegIdx + 1 : 0
+  // Cor da etapa atual — usada no anel de progresso e no dot da pill
+  // (fallback laranja quando a etapa não tem cor cadastrada).
+  const currentStageColor =
+    (currentSegIdx >= 0 ? sortedSegments?.[currentSegIdx]?.color : null) || "#f59e0b"
 
   return (
     <div className="px-3 pt-2 pb-0">
       {/* ── Hero header (ref. Stitch): card escuro #2e3b6e, edge-to-edge no
           topo do container, cantos inferiores grandes (rounded-b-3xl). ── */}
-      <header className="relative isolate -mx-3 -mt-2 mb-3 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] p-5 text-white shadow-lg">
-        {/* Linha topo: título + #número | pill de etapa */}
-        <div className="relative mb-4 flex items-start justify-between gap-2">
-          <h1 className="flex min-w-0 items-baseline gap-1.5 text-lg font-bold leading-snug text-white">
-            <span className="min-w-0 truncate">{deal.title}</span>
-            {deal.number != null && (
-              <span className="shrink-0 text-sm font-normal text-slate-400">
-                #{deal.number}
-              </span>
-            )}
+      <header className="relative isolate -mx-3 -mt-2 mb-3 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+        {/* Linha topo: título (até 2 linhas, sem truncar o nome) + pill de etapa */}
+        <div className="relative mb-2.5 flex items-start justify-between gap-2">
+          <h1 className="min-w-0 text-[15px] font-bold leading-snug text-white">
+            <span className="line-clamp-2">
+              {deal.title}
+              {deal.number != null && (
+                <span className="ml-1.5 whitespace-nowrap text-[12px] font-normal text-slate-400">
+                  #{deal.number}
+                </span>
+              )}
+            </span>
           </h1>
 
           {deal.stageDropdownSlot ? (
-            <span className="relative z-30 flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white [&_button]:!text-white [&_button]:hover:!opacity-100">
+            <span className="relative z-30 flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs text-white [&_button]:!text-white [&_button]:hover:!opacity-100">
               {deal.stageDropdownSlot}
             </span>
           ) : (
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs">
-              <span className="h-2 w-2 rounded-full bg-orange-400" />
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs">
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: currentStageColor }}
+              />
               {stageLabel}
             </span>
           )}
         </div>
 
-        {/* Linha base: anel de progresso + pipeline info + responsável */}
-        <div className="relative mb-4 flex items-center gap-4">
-          <div className="relative flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-orange-500 bg-white/10">
-            <span className="text-xs font-bold">
+        {/* Linha base: anel de progresso (cor da etapa atual) + pipeline + responsável */}
+        <div className="relative mb-2.5 flex items-center gap-3">
+          <div
+            className="relative flex size-10 shrink-0 items-center justify-center rounded-full border-2 bg-white/10"
+            style={{ borderColor: currentStageColor }}
+          >
+            <span className="text-[11px] font-bold">
               {totalStages > 0 ? `${currentStage}/${totalStages}` : "—"}
             </span>
           </div>
@@ -482,15 +494,16 @@ function DealInline({
           )}
         </div>
 
-        {/* Barra de etapas segmentada — 2px, ativo #f59e0b, inativo white/20 */}
+        {/* Barra de etapas segmentada — 2px, ativo na cor da etapa, inativo white/20 */}
         {sortedSegments && sortedSegments.length > 0 && (
-          <div className="relative mb-4 flex items-center gap-1">
+          <div className="relative mb-2.5 flex items-center gap-1">
             {sortedSegments.map((seg, i) => (
               <TooltipGlass key={seg.id} label={seg.name} side="top">
                 <span
                   className="h-[2px] flex-1 rounded-full transition-colors"
                   style={{
-                    backgroundColor: i <= currentSegIdx ? "#f59e0b" : "rgba(255,255,255,0.2)",
+                    backgroundColor:
+                      i <= currentSegIdx ? seg.color || "#f59e0b" : "rgba(255,255,255,0.2)",
                   }}
                 />
               </TooltipGlass>
@@ -500,7 +513,7 @@ function DealInline({
 
         {/* Grid 2 colunas de infos rápidas — Origem / Canal / Tags */}
         {(deal.origin || contact.connection || deal.dealTagsNode !== undefined) && (
-          <div className="relative grid grid-cols-2 gap-y-2 border-t border-white/10 pt-4 text-xs">
+          <div className="relative grid grid-cols-2 items-center gap-y-1.5 border-t border-white/10 pt-2.5 text-xs">
             {deal.origin && (
               <>
                 <span className="text-slate-400">Origem</span>

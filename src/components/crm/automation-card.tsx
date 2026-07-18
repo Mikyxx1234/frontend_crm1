@@ -14,14 +14,6 @@ import { MiniFlow, type MiniFlowStep } from "./mini-flow"
 import { blockKeyForStepType } from "./flow-block-icon"
 import type { Automation } from "@/lib/automations-data"
 
-const accentBar: Record<Automation["accent"], string> = {
-  blue: "bg-[var(--brand-primary)]",
-  purple: "bg-[var(--brand-secondary)]",
-  mint: "bg-[var(--color-success)]",
-  coral: "bg-[var(--color-warn)]",
-  teal: "bg-[var(--color-danger)]",
-}
-
 interface AutomationCardProps {
   automation: Automation
   onToggle: (id: string) => void
@@ -47,7 +39,7 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
   return (
     <article
       className={cn(
-        "group relative flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] px-3.5 py-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)] sm:gap-4.5 sm:px-5.5 sm:py-4.5",
+        "group relative flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)] sm:gap-4 sm:px-4",
       )}
     >
       <Link
@@ -58,17 +50,9 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
         <span className="sr-only">Abrir editor</span>
       </Link>
 
-      <span
-        className={cn(
-          "absolute bottom-0 left-0 top-0 w-[5px] rounded-full",
-          accentBar[automation.accent],
-        )}
-        aria-hidden
-      />
-
       {/* Nome flexível: trunca no mobile para o switch não ser cortado.
           pointer-events-none deixa o clique atravessar até o <Link> de fundo. */}
-      <div className="pointer-events-none relative z-10 min-w-0 flex-1 pl-2 sm:pl-2.5 lg:min-w-[200px] lg:flex-none lg:shrink-0">
+      <div className="pointer-events-none relative z-10 min-w-0 flex-1 lg:min-w-[200px] lg:flex-none lg:shrink-0">
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
@@ -79,7 +63,7 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
             )}
             aria-hidden
           />
-          <h3 className="min-w-0 truncate font-display text-[14px] font-bold text-[var(--text-primary)] sm:text-[16px]">
+          <h3 className="min-w-0 truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
             {automation.name}
           </h3>
         </div>

@@ -385,15 +385,18 @@ const AUTOMATION_ACCENT = "#6c5ce7"
 
 /**
  * Botões de resposta rápida (interactive/template) — replicam o visual do
- * WhatsApp: botões full-width empilhados, texto centralizado, borda sutil.
- * Preview não-clicável no CRM (só reproduz o que foi enviado ao cliente).
+ * WhatsApp: cada opção é um card full-width com ícone de "responder" e o
+ * rótulo centralizado, empilhados abaixo do corpo e separados por uma
+ * divisória fina. Preview não-clicável no CRM (só reproduz o que o cliente
+ * vê no WhatsApp), mas com feedback de hover para parecer interativo.
  * `onLightBg` = bolha clara (automação): botão branco com acento violeta;
  * caso contrário (bolha azul do agente): translúcido sobre o fundo.
  */
 function MessageButtons({ buttons, onLightBg }: { buttons: string[]; onLightBg: boolean }) {
+  const accent = onLightBg ? AUTOMATION_ACCENT : "#ffffff"
   const dividerStyle = onLightBg
-    ? { background: `${AUTOMATION_ACCENT}1f` }
-    : { background: "rgba(255,255,255,0.18)" }
+    ? { background: `${AUTOMATION_ACCENT}24` }
+    : { background: "rgba(255,255,255,0.22)" }
   const btnStyle = onLightBg
     ? {
         borderColor: `${AUTOMATION_ACCENT}2e`,
@@ -401,22 +404,26 @@ function MessageButtons({ buttons, onLightBg }: { buttons: string[]; onLightBg: 
         color: AUTOMATION_ACCENT,
       }
     : {
-        borderColor: "rgba(255,255,255,0.28)",
-        background: "rgba(255,255,255,0.12)",
+        borderColor: "rgba(255,255,255,0.32)",
+        background: "rgba(255,255,255,0.14)",
         color: "#ffffff",
       }
   return (
-    <div className="mt-2 flex flex-col gap-1.5">
+    <div className="mt-2 -mx-1 flex flex-col gap-1">
       {/* Divisória fina separando o corpo da mensagem dos botões (ref. WhatsApp) */}
-      <span className="mb-0.5 h-px w-full" style={dividerStyle} />
+      <span className="mx-1 mb-1 h-px w-[calc(100%-0.5rem)]" style={dividerStyle} />
       {buttons.map((b, i) => (
         <span
           key={`${b}-${i}`}
-          className="flex w-full items-center justify-center rounded-lg border px-3 py-2 text-center font-display text-[13px] font-semibold leading-tight"
+          className={cn(
+            "flex w-full min-w-0 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-center font-display text-[13px] font-semibold leading-snug shadow-[0_1px_2px_rgba(15,20,40,0.06)] transition-colors",
+            onLightBg ? "hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,white)]" : "hover:bg-white/20",
+          )}
           style={btnStyle}
           title={b}
         >
-          <span className="truncate">{b}</span>
+          <IconArrowBackUp size={14} stroke={2.1} className="shrink-0" style={{ color: accent, opacity: 0.85 }} />
+          <span className="line-clamp-2 [overflow-wrap:anywhere]">{b}</span>
         </span>
       ))}
     </div>
@@ -1376,10 +1383,10 @@ export function MessageBubble({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className="flex h-7 w-7 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
+                    className="flex h-8 w-8 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
                     style={{ background: AUTOMATION_ACCENT }}
                   >
-                    <IconRobot size={14} />
+                    <IconRobot size={16} />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="font-medium text-[11px]">
@@ -1388,7 +1395,7 @@ export function MessageBubble({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="absolute -bottom-1 -right-1 flex h-4 w-4 cursor-default items-center justify-center rounded-full border border-white bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[7px] font-bold text-white shadow-sm">
+                  <span className="absolute -bottom-1 -right-1 flex h-[18px] min-w-[18px] cursor-default items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] px-0.5 font-display text-[9px] font-bold leading-none text-white shadow-[0_1px_3px_rgba(15,20,40,0.28)]">
                     {message.automationAgentInitials}
                   </span>
                 </TooltipTrigger>

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { PageSegmentedControl } from "@/components/crm/page-toolbar"
 import {
+  IconBriefcase,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
@@ -246,9 +247,10 @@ function SectionHeader({
         onClick={onToggle}
         disabled={!onToggle}
         className={cn(
-          // Tipografia padronizada — title case (sem caixa alta).
-          "flex items-center gap-1.5 rounded font-display text-[11px] font-semibold tracking-wide text-[var(--text-muted)]",
-          onToggle && "cursor-pointer hover:text-[var(--text-primary)]",
+          // Header padronizado (ref. protótipo): ícone + título bold escuro
+          // + #meta muted + chevron. Sem caixa alta, sem tracking largo.
+          "flex items-center gap-1.5 rounded font-display text-[12px] font-bold text-[var(--text-primary)]",
+          onToggle && "cursor-pointer hover:opacity-80",
         )}
       >
         {icon}
@@ -572,12 +574,12 @@ function DealInline({
 
       {fields.length > 0 && (
         <div className="mt-2 mb-2">
-          <div className="mb-1 flex items-center gap-1.5 font-display text-[11px] font-semibold tracking-wide text-[var(--text-muted)]">
-            <IconSparkles size={12} />
+          <div className="mb-1 flex items-center gap-1.5 font-display text-[12px] font-bold text-[var(--text-primary)]">
+            <IconBriefcase size={12} />
             <span className="flex items-baseline gap-1.5">
               Informações do Negócio
               {deal.number != null && (
-                <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">#{deal.number}</span>
+                <span className="font-mono text-[10px] font-normal text-[var(--text-muted)]">#{deal.number}</span>
               )}
             </span>
           </div>
@@ -1116,7 +1118,7 @@ export function ContactAside({
                               <div className="px-3 pb-3">
                                 <SectionHeader
                                   dragHandleProps={provided.dragHandleProps ?? undefined}
-                                  icon={<IconSparkles size={12} />}
+                                  icon={<IconBriefcase size={12} />}
                                   open={dealFieldsSectionOpen}
                                   onToggle={() => setDealFieldsSectionOpen((v) => !v)}
                                   meta={

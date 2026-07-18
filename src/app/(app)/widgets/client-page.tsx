@@ -2,7 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { IconLayoutGrid } from "@tabler/icons-react";
+import {
+  IconBuildingStore,
+  IconInfoCircle,
+  IconLayoutGrid,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
@@ -100,7 +104,7 @@ export default function WidgetsClientPage({
 
       <main className="flex min-w-0 flex-col gap-3 overflow-y-auto pr-1 sm:gap-4">
         <PageHeader
-          icon={<IconLayoutGrid size={22} />}
+          icon={<IconBuildingStore size={22} />}
           title="Widgets"
           center={
             <PageSearchBar
@@ -143,6 +147,18 @@ export default function WidgetsClientPage({
             onUninstall={handleUninstall}
           />
         )}
+
+        {/* Rodapé do marketplace (ref. mockup) */}
+        <footer className="mt-auto flex flex-col gap-3 border-t border-[var(--glass-border)] pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <span className="flex items-center gap-2 font-body text-[12px] text-[var(--text-muted)]">
+            <IconInfoCircle size={15} className="shrink-0" />
+            Precisa de um widget customizado? Entre em contato com o suporte.
+          </span>
+          <div className="flex items-center gap-5 font-display text-[12px] font-bold text-[#2563eb]">
+            <span className="cursor-pointer hover:underline">Documentação da API</span>
+            <span className="cursor-pointer hover:underline">Termos de Uso</span>
+          </div>
+        </footer>
       </main>
     </div>
   );
@@ -150,11 +166,11 @@ export default function WidgetsClientPage({
 
 function LoadingState() {
   return (
-    <div className="grid min-w-0 auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,360px),1fr))] sm:gap-4">
-      {Array.from({ length: 6 }).map((_, i) => (
+    <div className="grid min-w-0 auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="h-[320px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]"
+          className="h-[380px] animate-pulse rounded-lg border border-slate-200 bg-white"
         />
       ))}
     </div>

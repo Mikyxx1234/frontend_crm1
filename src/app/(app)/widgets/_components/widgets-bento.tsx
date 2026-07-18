@@ -13,8 +13,8 @@ interface WidgetsBentoProps {
 }
 
 /**
- * Grid responsivo dos widgets — DS v2:
- * 1 coluna no mobile; a partir de `sm`, auto-fill com min ~360px.
+ * Grid responsivo dos widgets — visual marketplace (ref. mockup):
+ * cards verticais/compridos, ~4 colunas em telas largas.
  */
 export function WidgetsBento({
   widgets,
@@ -24,7 +24,7 @@ export function WidgetsBento({
   onUninstall,
 }: WidgetsBentoProps) {
   return (
-    <div className="grid min-w-0 auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,360px),1fr))] sm:gap-4">
+    <div className="grid min-w-0 auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {widgets.map((widget) => (
         <WidgetCard
           key={widget.slug}

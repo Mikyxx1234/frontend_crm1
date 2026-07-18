@@ -26,6 +26,7 @@ import { cn, formatCurrency, tagPillStyle } from "@/lib/utils";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { useMoveMutation } from "@/components/sales-hub/deal-actions";
+import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
 import { SUBTLE_SPRING } from "@/lib/design-system";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
 import { AvatarGlass } from "@/components/crm/avatar-glass";
@@ -748,51 +749,21 @@ function StageInlinePicker({
                 {stages.length} etapas
               </span>
             </div>
-            <ul
-              role="listbox"
-              className="scrollbar-thin max-h-[280px] overflow-y-auto py-1"
-            >
-              {stages.map((stage) => {
-                const isCurrent = stage.id === deal.stageId;
-                return (
-                  <li key={stage.id}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={isCurrent}
-                      onClick={() => {
-                        if (!isCurrent) {
-                          moveMutation.mutate({
-                            dealId: deal.id,
-                            fromStageId: deal.stageId,
-                            toStageId: stage.id,
-                          });
-                        }
-                        setOpen(false);
-                      }}
-                      disabled={isCurrent}
-                      className={cn(
-                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-normal text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]",
-                        isCurrent &&
-                          "cursor-default bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
-                      )}
-                    >
-                      <span
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: stage.color ?? "var(--text-muted)" }}
-                      />
-                      <span className="truncate">{stage.name}</span>
-                      {isCurrent && (
-                        <Check
-                          className="ml-auto size-3.5 text-[var(--brand-primary)]"
-                          strokeWidth={2.5}
-                        />
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <MoveToStageMenu
+              stages={stages}
+              currentStageId={deal.stageId}
+              currentPipelineId={pipelineId}
+              isPending={moveMutation.isPending}
+              onSelect={(stageId, toPipelineId) => {
+                moveMutation.mutate({
+                  dealId: deal.id,
+                  fromStageId: deal.stageId,
+                  toStageId: stageId,
+                  toPipelineId,
+                });
+                setOpen(false);
+              }}
+            />
           </div>,
           document.body,
         )}

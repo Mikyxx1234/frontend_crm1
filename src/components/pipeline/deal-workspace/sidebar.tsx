@@ -11,6 +11,7 @@ import { useFieldLayout } from "@/hooks/use-field-layout";
 import { CustomFieldsSection } from "@/components/contacts/custom-fields-section";
 import { DealCustomFieldsSection } from "@/components/pipeline/deal-custom-fields-section";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
 import { SortableSidebar } from "@/components/ui/sortable-sidebar";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -78,7 +79,8 @@ type WorkspaceSidebarProps = {
   contact: ContactDetail;
   users: UserOption[];
   stageOptions: StageOption[];
-  onStageChange: (stageId: string) => void;
+  /** `toPipelineId` acompanha para caller decidir se precisa invalidar boards cross-pipeline. */
+  onStageChange: (stageId: string, toPipelineId?: string | null) => void;
   stagePending: boolean;
   onOwnerChange: (ownerId: string | null) => void;
   ownerPending: boolean;
@@ -100,7 +102,7 @@ export function WorkspaceCompactDealLeader({
 }: {
   deal: DealDetailData;
   stageOptions: StageOption[];
-  onStageChange: (stageId: string) => void;
+  onStageChange: (stageId: string, toPipelineId?: string | null) => void;
   stagePending: boolean;
 }) {
   const stageIdx = stageOptions.findIndex((s) => s.id === deal.stage.id);
@@ -122,6 +124,7 @@ export function WorkspaceCompactDealLeader({
           <StageDropdown
             stages={stageOptions}
             currentStageId={deal.stage.id}
+            currentPipelineId={deal.stage.pipeline?.id ?? null}
             onChange={onStageChange}
             isPending={stagePending}
             petroleumHeader
@@ -451,6 +454,7 @@ export function WorkspaceSidebar({
             <StageDropdown
               stages={stageOptions}
               currentStageId={deal.stage.id}
+              currentPipelineId={deal.stage.pipeline?.id ?? null}
               onChange={onStageChange}
               isPending={stagePending}
             />
@@ -765,6 +769,7 @@ function ContactRow({
 function StageDropdown({
   stages,
   currentStageId,
+  currentPipelineId,
   onChange,
   isPending,
   className,
@@ -775,7 +780,8 @@ function StageDropdown({
 }: {
   stages: StageOption[];
   currentStageId: string;
-  onChange: (stageId: string) => void;
+  currentPipelineId: string | null;
+  onChange: (stageId: string, toPipelineId?: string | null) => void;
   isPending: boolean;
   className?: string;
   /** Ex.: posição no pipeline; default `índice/total` quando omitido. */
@@ -904,41 +910,16 @@ function StageDropdown({
               {stages.length} etapas
             </span>
           </div>
-          <ul role="listbox" className="max-h-[320px] min-w-[220px] overflow-y-auto py-1">
-            {stages.map((stage) => {
-              const isActive = stage.id === currentStageId;
-              const color = stage.color ?? "#94a3b8";
-              return (
-                <li key={stage.id} className="min-w-0">
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={isActive}
-                    onClick={() => { onChange(stage.id); setOpen(false); }}
-                    disabled={isPending || isActive}
-                    className={cn(
-                      "flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-[13px] font-bold",
-                      "tracking-tight text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]",
-                      isActive && "cursor-default bg-primary-soft/60 text-primary-dark",
-                    )}
-                  >
-                    <span
-                      className="size-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: color }}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 flex-1 truncate">{stage.name}</span>
-                    {isActive ? (
-                      <Check
-                        className="size-3.5 shrink-0 text-primary"
-                        strokeWidth={2.5}
-                      />
-                    ) : null}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <MoveToStageMenu
+            stages={stages}
+            currentStageId={currentStageId}
+            currentPipelineId={currentPipelineId}
+            isPending={isPending}
+            onSelect={(stageId, toPipeId) => {
+              onChange(stageId, toPipeId);
+              setOpen(false);
+            }}
+          />
         </div>
       ) : null}
     </div>

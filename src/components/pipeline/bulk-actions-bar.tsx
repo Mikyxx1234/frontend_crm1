@@ -12,6 +12,7 @@ import {
 } from "@/components/pipeline/bulk-edit-fields-dialog";
 import { BulkOperationProgressDialog } from "@/components/pipeline/bulk-operation-progress-dialog";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
+import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -306,29 +307,31 @@ export function BulkActionsBar({
               <ChevronDown className="size-3" />
             </Button>
             {moveOpen && (
-              <div className="absolute bottom-full left-0 mb-2 min-w-[180px] rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-xl">
-                {stages.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
-                    onClick={() => {
-                      // Perdido: pede motivo só se tabulação estiver Ativa no funil.
-                      if (s.isLost && lossReasonsActive) {
-                        setPendingLostMoveStage(s);
-                      } else {
-                        mutation.mutate({ dealIds, action: "move_stage", stageId: s.id });
-                      }
-                      setMoveOpen(false);
-                    }}
-                  >
-                    <span
-                      className="size-2 rounded-full"
-                      style={{ backgroundColor: s.color ?? "var(--brand-primary)" }}
-                    />
-                    {s.name}
-                  </button>
-                ))}
+              <div className="absolute bottom-full left-0 mb-2 min-w-[220px] rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-xl">
+                <MoveToStageMenu
+                  stages={stages}
+                  currentStageId={null}
+                  currentPipelineId={pipelineId}
+                  isPending={mutation.isPending}
+                  onSelect={(stageId, toPipelineId) => {
+                    // Cross-pipeline bulk: quando o estágio destino é de
+                    // outro funil, a validação de lostReason acontece no
+                    // backend (lossReasonRequired do funil DESTINO).
+                    // Para o funil ATUAL usamos a meta já carregada e
+                    // abrimos o diálogo local pra manter UX consistente.
+                    const local = stages.find((x) => x.id === stageId);
+                    if (
+                      local?.isLost &&
+                      lossReasonsActive &&
+                      (!toPipelineId || toPipelineId === pipelineId)
+                    ) {
+                      setPendingLostMoveStage(local);
+                    } else {
+                      mutation.mutate({ dealIds, action: "move_stage", stageId });
+                    }
+                    setMoveOpen(false);
+                  }}
+                />
               </div>
             )}
           </div>

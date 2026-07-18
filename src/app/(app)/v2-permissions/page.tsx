@@ -6,20 +6,21 @@ export const metadata = {
 
 /**
  * Alias canônico v2 para a tela de permissões. A implementação real (papéis +
- * grupos + usuários, modelo Kommo com escopos NONE/SELF/TEAM/ALL, visibilidade
- * por etapa e permissões por campo) vive em `/settings/permissions` — manter
- * só um destino evita drift de UI e de RBAC.
+ * usuários, com visibilidade por etapa/funil e permissões por campo absorvidas
+ * no papel) vive em `/settings/permissions` — manter só um destino evita drift
+ * de UI e de RBAC.
  *
  * Mantém-se este path estável para deep-links externos ("v2") e para diferenciar
  * da rota legacy `/old/settings/permissions` (shadcn v1).
  */
-export default function V2PermissionsRedirectPage({
+export default async function V2PermissionsRedirectPage({
   searchParams,
 }: {
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const resolved = (await searchParams) ?? {};
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(searchParams ?? {})) {
+  for (const [key, value] of Object.entries(resolved)) {
     if (Array.isArray(value)) {
       for (const v of value) params.append(key, v);
     } else if (typeof value === "string") {

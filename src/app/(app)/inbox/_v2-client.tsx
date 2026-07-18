@@ -78,6 +78,7 @@ import {
   useDealDetail,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
+import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
 import { DealTagsPopover } from "@/features/pipeline-v2/extras/deal-tags-popover";
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
@@ -889,6 +890,7 @@ export default function InboxV2ClientPage({
             <InboxStageDropdown
               stages={boardStages}
               currentStageId={firstDealStageId}
+              currentPipelineId={firstDealPipelineId}
               isPending={isPending}
               onSelect={onSelectStage}
             />
@@ -1394,13 +1396,15 @@ function EmptyAside() {
 function InboxStageDropdown({
   stages,
   currentStageId,
+  currentPipelineId,
   isPending,
   onSelect,
 }: {
   stages: BoardStageDto[];
   currentStageId: string | null;
+  currentPipelineId: string | null;
   isPending: boolean;
-  onSelect: (stageId: string) => void;
+  onSelect: (stageId: string, toPipelineId?: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -1468,36 +1472,16 @@ function InboxStageDropdown({
             style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width }}
             className="z-(--z-popover) overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_12px_32px_rgba(15,20,40,0.18)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
           >
-            {[...stages]
-              .sort((a, b) => a.position - b.position)
-              .map((s) => {
-                const isActive = s.id === currentStageId;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => { onSelect(s.id); setOpen(false); }}
-                    className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left font-display text-[12px] font-semibold transition-colors",
-                      isActive
-                        ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                        : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
-                    )}
-                  >
-                    <span
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ background: s.color ?? "var(--brand-primary)" }}
-                    />
-                    <span className="whitespace-nowrap">{s.name}</span>
-                    {isActive && (
-                      <span className="ml-auto font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-                        Atual
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+            <MoveToStageMenu
+              stages={stages}
+              currentStageId={currentStageId}
+              currentPipelineId={currentPipelineId}
+              isPending={isPending}
+              onSelect={(stageId, toPipeId) => {
+                onSelect(stageId, toPipeId);
+                setOpen(false);
+              }}
+            />
           </div>,
           document.body,
         )

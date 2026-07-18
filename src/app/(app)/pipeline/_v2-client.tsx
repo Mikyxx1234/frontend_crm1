@@ -89,6 +89,7 @@ import {
   DealNotesTab,
   DealTimelineTab,
   InlineEditText,
+  MoveToStageMenu,
   PipelineSwitcher,
   StagePicker,
   TagsPopover,
@@ -369,8 +370,10 @@ export default function KanbanV2ClientPage({
   const requestMove = useCallback(
     (vars: MoveVars) => {
       const target = board.find((s) => s.id === vars.toStageId);
-      // Entrar no estágio Perdido (vindo de OUTRA etapa) pede motivo
-      // só quando a tabulação está Ativa neste funil.
+      // Cross-pipeline: quando o estágio destino não pertence ao board
+      // atual, não temos como saber isLost/lossReasonRequired sem uma
+      // requisição extra. Deixamos o backend validar (LOST_REASON_REQUIRED
+      // → toast de erro) e o operador tenta novamente pelo funil destino.
       if (
         target?.isLost &&
         vars.fromStageId !== vars.toStageId &&
@@ -1009,6 +1012,7 @@ export default function KanbanV2ClientPage({
                 <StageDropdown
                   stages={board}
                   currentStageId={activeDealStageId}
+                  currentPipelineId={pipelineId}
                   isPending={isPending}
                   onSelect={onSelectStage}
                 />
@@ -1357,13 +1361,15 @@ export default function KanbanV2ClientPage({
 function StageDropdown({
   stages,
   currentStageId,
+  currentPipelineId,
   isPending,
   onSelect,
 }: {
   stages: BoardStageDto[];
   currentStageId: string | null;
+  currentPipelineId: string | null;
   isPending: boolean;
-  onSelect: (stageId: string) => void;
+  onSelect: (stageId: string, toPipelineId?: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -1434,39 +1440,16 @@ function StageDropdown({
             style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width }}
             className="z-(--z-popover) overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
           >
-            {[...stages]
-              .sort((a, b) => a.position - b.position)
-              .map((s) => {
-                const isActive = s.id === currentStageId;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => {
-                      onSelect(s.id);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 px-3.5 py-2 text-left font-display text-[13px] font-semibold transition-colors",
-                      isActive
-                        ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                        : "text-[var(--text-primary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
-                    )}
-                  >
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: s.color ?? "var(--brand-primary)" }}
-                    />
-                    <span className="min-w-0 flex-1 whitespace-nowrap">{s.name}</span>
-                    {isActive && (
-                      <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-                        Atual
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+            <MoveToStageMenu
+              stages={stages}
+              currentStageId={currentStageId}
+              currentPipelineId={currentPipelineId}
+              isPending={isPending}
+              onSelect={(stageId, toPipeId) => {
+                onSelect(stageId, toPipeId);
+                setOpen(false);
+              }}
+            />
           </div>,
           document.body,
         )}
@@ -1507,7 +1490,12 @@ function CardMoveMenu({
   pipelineId: string | null;
   statusFilter: StatusFilter;
   stages: BoardStageDto[];
-  onRequestMove?: (vars: { dealId: string; fromStageId: string; toStageId: string }) => void;
+  onRequestMove?: (vars: {
+    dealId: string;
+    fromStageId: string;
+    toStageId: string;
+    toPipelineId?: string | null;
+  }) => void;
 }) {
   return (
     <StagePicker
@@ -1521,6 +1509,7 @@ function CardMoveMenu({
         <CardMoveDropdown
           stages={stages}
           currentStageId={currentStageId}
+          currentPipelineId={pipelineId}
           isPending={isPending}
           onSelect={onSelectStage}
         />
@@ -1532,13 +1521,15 @@ function CardMoveMenu({
 function CardMoveDropdown({
   stages,
   currentStageId,
+  currentPipelineId,
   isPending,
   onSelect,
 }: {
   stages: BoardStageDto[];
   currentStageId: string;
+  currentPipelineId: string | null;
   isPending: boolean;
-  onSelect: (stageId: string) => void;
+  onSelect: (stageId: string, toPipelineId?: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
@@ -1581,44 +1572,23 @@ function CardMoveDropdown({
             transform: "translate(-100%, -100%)",
             marginBottom: "6px",
           }}
-          className="max-h-[260px] min-w-[200px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)]"
+          className="max-h-[320px] min-w-[220px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)]"
         >
-          <div className="px-3 py-1.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-            Mover para
-          </div>
-          {[...stages]
-            .sort((a, b) => a.position - b.position)
-            .map((s) => {
-              const isActive = s.id === currentStageId;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={isPending || isActive}
-                  onClick={() => {
-                    onSelect(s.id);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left font-display text-[12px] font-semibold transition-colors",
-                    isActive
-                      ? "cursor-default bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                      : "text-[var(--text-primary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
-                  )}
-                >
-                  <span
-                    className="h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ background: s.color ?? "var(--brand-primary)" }}
-                  />
-                  <span className="min-w-0 flex-1 truncate">{s.name}</span>
-                  {isActive && (
-                    <span className="shrink-0 font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-                      Atual
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          <MoveToStageMenu
+            stages={stages}
+            currentStageId={currentStageId}
+            currentPipelineId={currentPipelineId}
+            isPending={isPending}
+            header={
+              <div className="px-3 py-1.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                Mover para
+              </div>
+            }
+            onSelect={(stageId, toPipeId) => {
+              onSelect(stageId, toPipeId);
+              setOpen(false);
+            }}
+          />
         </div>,
         document.body,
       )
@@ -1672,7 +1642,12 @@ function DroppableColumn({
   selectionMode: boolean;
   onToggleSelect: (id: string) => void;
   onToggleSelectAllInColumn: (ids: string[]) => void;
-  onRequestMove?: (vars: { dealId: string; fromStageId: string; toStageId: string }) => void;
+  onRequestMove?: (vars: {
+    dealId: string;
+    fromStageId: string;
+    toStageId: string;
+    toPipelineId?: string | null;
+  }) => void;
 }) {
   // Estado de seleção em massa restrito aos deals JÁ CARREGADOS desta
   // coluna. Replica o comportamento do kanban antigo.

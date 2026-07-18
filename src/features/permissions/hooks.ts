@@ -4,13 +4,20 @@ import { apiUrl } from "@/lib/api";
 
 import type {
   EffectivePermissions,
-  GroupDetail,
-  GroupSummary,
-  GroupWritePayload,
+  FieldGrantEntry,
   PermissionsCatalog,
   RoleSidebarItem,
   RoleSummary,
+  StageGrantEntry,
 } from "./types";
+
+/** Campos de grant compartilhados por create/update de Role. */
+type RoleGrantPayload = {
+  sharedInbox?: boolean;
+  mediaAccess?: boolean;
+  stageGrants?: StageGrantEntry[];
+  fieldGrants?: FieldGrantEntry[];
+};
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(apiUrl(path), options);
@@ -47,7 +54,7 @@ export function useCreateRole() {
       permissions: string[];
       inheritsFrom?: string | null;
       sidebarItems?: RoleSidebarItem[] | null;
-    }) =>
+    } & RoleGrantPayload) =>
       apiFetch<RoleSummary>("/api/roles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,7 +79,7 @@ export function useUpdateRole() {
       permissions?: string[];
       inheritsFrom?: string | null;
       sidebarItems?: RoleSidebarItem[] | null;
-    }) =>
+    } & RoleGrantPayload) =>
       apiFetch<RoleSummary>(`/api/roles/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -128,98 +135,6 @@ export function useRemoveRoleAssignment() {
     onSuccess: (_, { roleId, userId }) => {
       void qc.invalidateQueries({ queryKey: ["roles", roleId] });
       void qc.invalidateQueries({ queryKey: ["roles"] });
-      void qc.invalidateQueries({ queryKey: ["effective-permissions", userId] });
-      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
-    },
-  });
-}
-
-// ── Grupos ─────────────────────────────────────────────────────────────────
-
-export function useGroups() {
-  return useQuery<GroupSummary[]>({
-    queryKey: ["groups"],
-    queryFn: () => apiFetch("/api/groups"),
-  });
-}
-
-export function useGroup(id: string | null) {
-  return useQuery<GroupDetail>({
-    queryKey: ["groups", id],
-    queryFn: () => apiFetch(`/api/groups/${id}`),
-    enabled: !!id && id !== "new",
-  });
-}
-
-export function useCreateGroup() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: GroupWritePayload & { name: string }) =>
-      apiFetch<GroupDetail>("/api/groups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["groups"] });
-    },
-  });
-}
-
-export function useUpdateGroup() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, ...data }: GroupWritePayload & { id: string }) =>
-      apiFetch<GroupDetail>(`/api/groups/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }),
-    onSuccess: (_, { id }) => {
-      void qc.invalidateQueries({ queryKey: ["groups"] });
-      void qc.invalidateQueries({ queryKey: ["groups", id] });
-      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
-    },
-  });
-}
-
-export function useDeleteGroup() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiFetch<{ ok: boolean }>(`/api/groups/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["groups"] });
-    },
-  });
-}
-
-export function useAddGroupMember() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
-      apiFetch<GroupDetail>(`/api/groups/${groupId}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      }),
-    onSuccess: (_, { groupId, userId }) => {
-      void qc.invalidateQueries({ queryKey: ["groups", groupId] });
-      void qc.invalidateQueries({ queryKey: ["groups"] });
-      void qc.invalidateQueries({ queryKey: ["effective-permissions", userId] });
-      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
-    },
-  });
-}
-
-export function useRemoveGroupMember() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
-      apiFetch(`/api/groups/${groupId}/members/${userId}`, { method: "DELETE" }),
-    onSuccess: (_, { groupId, userId }) => {
-      void qc.invalidateQueries({ queryKey: ["groups", groupId] });
-      void qc.invalidateQueries({ queryKey: ["groups"] });
       void qc.invalidateQueries({ queryKey: ["effective-permissions", userId] });
       void qc.invalidateQueries({ queryKey: ["my-permissions"] });
     },
@@ -299,39 +214,6 @@ export type RoleScopeGrantsDto = {
   channelManageIds: string[] | null;
   channelDenyIds: string[] | null;
 };
-
-// ── Escopo de CANAL por Group (group-based scoping) ──────────────────────
-// Mesma semântica de roles: eixo aditivo (qualquer grant positivo libera).
-// Grupos são principal de 1ª classe no scope-grants desde 25/jun/26 (Bloco A).
-
-export type GroupScopeGrantsDto = RoleScopeGrantsDto;
-
-export function useGroupScopeGrants(groupId: string | null) {
-  return useQuery<GroupScopeGrantsDto>({
-    queryKey: ["group-scope-grants", groupId],
-    queryFn: () => apiFetch(`/api/groups/${groupId}/scope-grants`),
-    enabled: !!groupId && groupId !== "new",
-  });
-}
-
-export function useUpdateGroupScopeGrants(groupId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Partial<GroupScopeGrantsDto>) =>
-      apiFetch<GroupScopeGrantsDto & { ok: boolean }>(
-        `/api/groups/${groupId}/scope-grants`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        },
-      ),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["group-scope-grants", groupId] });
-      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
-    },
-  });
-}
 
 export function useRoleScopeGrants(roleId: string | null) {
   return useQuery<RoleScopeGrantsDto>({

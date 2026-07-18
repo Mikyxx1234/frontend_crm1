@@ -34,6 +34,12 @@ export interface MoveVars {
   toIndex?: number;
   /** Motivo da perda — obrigatório no fluxo de mover para o estágio Perdido. */
   lostReason?: string;
+  /**
+   * Funil de destino quando diferente do atual — usado para invalidar
+   * o cache do board do funil destino após a mutação e desabilitar o
+   * update otimista local (que assume board único).
+   */
+  toPipelineId?: string | null;
 }
 
 /**
@@ -48,19 +54,19 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
     mutationFn: (vars) => {
       // Backend exige `position` (inteiro >= 0). Quando o caller nao
       // sabe a posicao (ex.: StagePicker do detail panel), calculamos
-      // o "fim da coluna destino" a partir do cache atual.
+      // o "fim da coluna destino" a partir do cache atual. Para moves
+      // cross-pipeline, o board do funil destino pode nao estar
+      // carregado — usamos posicao 0 como fallback (backend clampa).
       let pos = vars.toIndex;
       if (pos == null) {
         const board = qc.getQueryData<BoardStageDto[]>(key);
         const target = board?.find((s) => s.id === vars.toStageId);
-        // Se a posicao for igual a `length`, o deal vai pro fim. Se a
-        // coluna destino contiver o proprio deal (drag dentro da
-        // mesma coluna), o length ja conta com ele — usa length-1.
-        const hasSelf = target?.deals.some((d) => d.id === vars.dealId);
-        pos = Math.max(
-          0,
-          (target?.deals.length ?? 0) - (hasSelf ? 1 : 0),
-        );
+        if (target) {
+          const hasSelf = target.deals.some((d) => d.id === vars.dealId);
+          pos = Math.max(0, target.deals.length - (hasSelf ? 1 : 0));
+        } else {
+          pos = 0;
+        }
       }
       return moveDeal(vars.dealId, {
         stageId: vars.toStageId,
@@ -75,6 +81,20 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
       const next = prev.map((s) => ({ ...s, deals: [...s.deals] }));
       const fromIdx = next.findIndex((s) => s.id === vars.fromStageId);
       const toIdx = next.findIndex((s) => s.id === vars.toStageId);
+      // Cross-pipeline: destino nao pertence ao board atual — apenas
+      // remove o card do estagio origem (evita ficar "flutuando" enquanto
+      // o servidor responde). O board de destino sera revalidado no
+      // onSettled abaixo.
+      if (fromIdx !== -1 && toIdx === -1) {
+        const dealIdx = next[fromIdx].deals.findIndex((d) => d.id === vars.dealId);
+        if (dealIdx !== -1) {
+          next[fromIdx].deals.splice(dealIdx, 1);
+          next[fromIdx].totalCount =
+            (next[fromIdx].totalCount ?? next[fromIdx].deals.length + 1) - 1;
+          qc.setQueryData(key, next);
+        }
+        return { prev };
+      }
       if (fromIdx === -1 || toIdx === -1) return { prev };
       const dealIdx = next[fromIdx].deals.findIndex((d) => d.id === vars.dealId);
       if (dealIdx === -1) return { prev };
@@ -90,20 +110,30 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
       if (ctx?.prev) qc.setQueryData(key, ctx.prev);
       toast.error(err.message || "Falha ao mover deal");
     },
-    onSuccess: (data, _vars) => {
+    onSuccess: (data, vars) => {
       // IB1: feedback visivel — antes a UI atualizava (ou nao) sem
       // qualquer toast e o operador nao tinha certeza de que tinha
       // funcionado. O backend POST /move retorna o deal direto
       // (NextResponse.json(deal)) — nao envelopado em { deal }. O
       // tipo do front diz `{ deal: BoardDealDto }`, mas na pratica
-      // o campo `stage.name` vem no nivel raiz. Aceitamos ambos
-      // pra robustez.
+      // o campo `stage.name` e `stage.pipeline` vem no nivel raiz.
       const root = data as
-        | { stage?: { name?: string }; deal?: { stage?: { name?: string } } }
+        | {
+            stage?: { name?: string; pipeline?: { id?: string; name?: string } | null };
+            deal?: { stage?: { name?: string; pipeline?: { id?: string; name?: string } | null } };
+          }
         | undefined;
-      const toName = root?.stage?.name ?? root?.deal?.stage?.name ?? null;
+      const toStage = root?.stage ?? root?.deal?.stage;
+      const toName = toStage?.name ?? null;
+      const toPipeName = toStage?.pipeline?.name ?? null;
+      const crossPipeline =
+        !!vars.toPipelineId && vars.toPipelineId !== pipelineId;
       toast.success(
-        toName ? `Fase atualizada para "${toName}"` : "Fase atualizada",
+        crossPipeline && toPipeName
+          ? `Movido para "${toPipeName} → ${toName ?? "fase"}"`
+          : toName
+            ? `Fase atualizada para "${toName}"`
+            : "Fase atualizada",
       );
     },
     onSettled: (_data, _err, vars) => {
@@ -115,9 +145,16 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
       qc.refetchQueries({ queryKey: key, type: "active" });
       qc.refetchQueries({ queryKey: ["contact-sidebar"], type: "active" });
       qc.refetchQueries({ queryKey: dealDetailKey(vars.dealId), type: "active" });
-      // Catch-all: qualquer outro consumidor de board (ex.: kanban em
-      // outro pipeline) so' marca como stale.
-      qc.invalidateQueries({ queryKey: ["pipeline-board"], type: "inactive" });
+      // Cross-pipeline: invalida TODOS os boards (o funil destino pode
+      // estar aberto em outra aba/tela) — refetch ativo garante que a
+      // UI do funil destino reflita o card recem-chegado.
+      if (vars.toPipelineId && vars.toPipelineId !== pipelineId) {
+        qc.refetchQueries({ queryKey: ["pipeline-board"], type: "active" });
+      } else {
+        // Catch-all: qualquer outro consumidor de board (ex.: kanban em
+        // outro pipeline) so' marca como stale.
+        qc.invalidateQueries({ queryKey: ["pipeline-board"], type: "inactive" });
+      }
     },
   });
 }

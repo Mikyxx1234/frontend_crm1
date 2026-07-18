@@ -8,16 +8,15 @@ import {
   IconSearch,
   IconShield,
   IconShieldCheck,
-  IconUsers,
 } from "@tabler/icons-react";
 
+import { AvatarGlass } from "@/components/crm/avatar-glass";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useUserRole } from "@/hooks/use-user-role";
-import { GroupPermissionsEditor } from "@/features/permissions/group-permissions-editor";
 import { RoleEditor } from "@/features/permissions/role-editor";
 import { UserPermissionsView } from "@/features/permissions/user-permissions-view";
-import { useGroups, useRoles } from "@/features/permissions/hooks";
-import type { GroupSummary, RoleSummary, RoleUser } from "@/features/permissions/types";
+import { useRoles } from "@/features/permissions/hooks";
+import type { RoleSummary, RoleUser } from "@/features/permissions/types";
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -27,15 +26,12 @@ import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 
 type Selection =
   | { kind: "role"; id: string | "new" }
-  | { kind: "group"; id: string | "new" }
   | { kind: "user"; id: string }
   | { kind: "none" };
 
 function readSelection(params: URLSearchParams): Selection {
   const role = params.get("role");
   if (role) return { kind: "role", id: role === "new" ? "new" : role };
-  const group = params.get("group");
-  if (group) return { kind: "group", id: group === "new" ? "new" : group };
   const user = params.get("user");
   if (user) return { kind: "user", id: user };
   return { kind: "none" };
@@ -72,7 +68,6 @@ export function PermissionsClientPage() {
     (next: Selection) => {
       const sp = new URLSearchParams();
       if (next.kind === "role") sp.set("role", next.id);
-      else if (next.kind === "group") sp.set("group", next.id);
       else if (next.kind === "user") sp.set("user", next.id);
       const qs = sp.toString();
       router.replace(qs ? `/settings/permissions?${qs}` : "/settings/permissions");
@@ -95,7 +90,7 @@ export function PermissionsClientPage() {
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
       title="Permissões"
-      description="Papéis, grupos e usuários"
+      description="Papéis e usuários"
       icon={<IconShieldCheck size={22} />}
     >
       {/* Mobile: coluna única, altura natural (page scroll) — lista antes,
@@ -115,11 +110,10 @@ export function PermissionsClientPage() {
 
 // ─── Sidebar (master) ───────────────────────────────────────────────────────
 
-type SidebarTab = "role" | "group" | "user";
+type SidebarTab = "role" | "user";
 
 const ADD_LABEL: Record<SidebarTab, string> = {
   role: "Papel",
-  group: "Grupo",
   user: "Pessoa",
 };
 
@@ -131,13 +125,10 @@ function Sidebar({
   onSelect: (s: Selection) => void;
 }) {
   const { data: roles = [], isLoading: rolesLoading } = useRoles();
-  const { data: groups = [], isLoading: groupsLoading } = useGroups();
   const { data: users = [], isLoading: usersLoading } = useUsers();
 
   const [tab, setTab] = useState<SidebarTab>(
-    selection.kind === "group" || selection.kind === "user"
-      ? selection.kind
-      : "role",
+    selection.kind === "user" ? selection.kind : "role",
   );
   const [search, setSearch] = useState("");
 
@@ -157,10 +148,6 @@ function Sidebar({
     () => (q ? roles.filter((r) => r.name.toLowerCase().includes(q)) : roles),
     [roles, q],
   );
-  const filteredGroups = useMemo(
-    () => (q ? groups.filter((g) => g.name.toLowerCase().includes(q)) : groups),
-    [groups, q],
-  );
   const filteredUsers = useMemo(
     () =>
       q
@@ -173,15 +160,13 @@ function Sidebar({
     [users, q],
   );
 
-  const canAdd = tab === "role" || tab === "group";
+  const canAdd = tab === "role";
   const handleAdd = () => {
     if (tab === "role") onSelect({ kind: "role", id: "new" });
-    else if (tab === "group") onSelect({ kind: "group", id: "new" });
   };
 
   const TABS: { id: SidebarTab; label: string; count: number }[] = [
     { id: "role", label: "Papéis", count: roles.length },
-    { id: "group", label: "Grupos", count: groups.length },
     { id: "user", label: "Pessoas", count: users.length },
   ];
 
@@ -269,22 +254,6 @@ function Sidebar({
             ))}
             {!rolesLoading && filteredRoles.length === 0 && (
               <EmptyRow label={q ? "Sem resultados" : "Nenhum papel"} />
-            )}
-          </>
-        )}
-
-        {tab === "group" && (
-          <>
-            {filteredGroups.map((g) => (
-              <GroupRow
-                key={g.id}
-                group={g}
-                active={selection.kind === "group" && selection.id === g.id}
-                onClick={() => onSelect({ kind: "group", id: g.id })}
-              />
-            ))}
-            {!groupsLoading && filteredGroups.length === 0 && (
-              <EmptyRow label={q ? "Sem resultados" : "Nenhum grupo"} />
             )}
           </>
         )}
@@ -396,31 +365,6 @@ function RoleRow({
   );
 }
 
-function GroupRow({
-  group,
-  active,
-  onClick,
-}: {
-  group: GroupSummary;
-  active: boolean;
-  onClick: () => void;
-}) {
-  const members = group._count?.members ?? 0;
-  return (
-    <RowShell
-      active={active}
-      onClick={onClick}
-      leading={
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-[color-mix(in_srgb,#0d9488_16%,transparent)] text-[#0d9488]">
-          <IconUsers size={16} />
-        </span>
-      }
-      title={group.name}
-      meta={`${members} ${members === 1 ? "membro" : "membros"}`}
-    />
-  );
-}
-
 function UserRow({
   user,
   active,
@@ -430,27 +374,11 @@ function UserRow({
   active: boolean;
   onClick: () => void;
 }) {
-  const initials =
-    user.name
-      ?.trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase() ?? "")
-      .join("") ?? "?";
   return (
     <RowShell
       active={active}
       onClick={onClick}
-      leading={
-        <span
-          className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-full font-display text-[10.5px] font-bold text-white",
-            active ? "bg-[var(--brand-primary)]" : "bg-[var(--text-muted)]",
-          )}
-        >
-          {initials}
-        </span>
-      }
+      leading={<AvatarGlass size="sm" name={user.name} imageUrl={user.avatarUrl} />}
       title={user.name}
       meta={user.email}
     />
@@ -483,18 +411,6 @@ function DetailPane({
           roleId={selection.id === "new" ? null : selection.id}
           onClose={onClear}
           onSaved={onClear}
-        />
-      </PaneShell>
-    );
-  }
-  if (selection.kind === "group") {
-    return (
-      <PaneShell>
-        <GroupPermissionsEditor
-          groupId={selection.id === "new" ? null : selection.id}
-          onClose={onClear}
-          onSaved={(id) => onSelect({ kind: "group", id })}
-          onDeleted={onClear}
         />
       </PaneShell>
     );
@@ -539,14 +455,7 @@ function UserDetailHeader({ userId }: { userId: string }) {
   if (!user) return null;
   return (
     <header className="mb-4 flex items-center gap-3 border-b border-[var(--glass-border-subtle)] pb-4">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] font-display text-[13px] font-bold text-white">
-        {user.name
-          ?.trim()
-          .split(/\s+/)
-          .slice(0, 2)
-          .map((w) => w[0]?.toUpperCase() ?? "")
-          .join("") ?? "?"}
-      </span>
+      <AvatarGlass size="md" name={user.name} imageUrl={user.avatarUrl} />
       <div className="min-w-0">
         <h2 className="truncate font-display text-[15px] font-bold text-[var(--text-primary)]">
           {user.name}
@@ -574,7 +483,7 @@ function DetailEmptyState({
           Selecione um item à esquerda
         </h2>
         <p className="font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">
-          Escolha um papel, grupo ou usuário para configurar.
+          Escolha um papel ou usuário para configurar.
           <br />
           Ou crie um novo agora:
         </p>
@@ -587,14 +496,6 @@ function DetailEmptyState({
         >
           <IconPlus size={13} />
           Novo papel
-        </button>
-        <button
-          type="button"
-          onClick={() => onSelect({ kind: "group", id: "new" })}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
-        >
-          <IconPlus size={13} />
-          Novo grupo
         </button>
       </div>
     </div>

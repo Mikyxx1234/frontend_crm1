@@ -8,6 +8,7 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd"
 import { cn } from "@/lib/utils"
+import { Row } from "@/components/crm/aside-row"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconArrowLeft,

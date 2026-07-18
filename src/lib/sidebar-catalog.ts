@@ -1,5 +1,4 @@
 import {
-  IconBolt,
   IconBuilding,
   IconChecklist,
   IconClipboardList,
@@ -8,8 +7,8 @@ import {
   IconMail,
   IconMessageCircle,
   IconPlugConnected,
+  IconRobot,
   IconRoute,
-  IconSend,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
@@ -121,20 +120,11 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "automations",
     title: "Automações",
     href: "/automations",
-    icon: IconBolt,
-    description: "Fluxos automáticos e gatilhos.",
+    icon: IconRobot,
+    description: "Fluxos automáticos e gatilhos (inclui campanhas).",
     locked: false,
     allowedRoles: ["ADMIN", "MANAGER"],
     requiredPermission: "nav:automations",
-  },
-  {
-    key: "campaigns",
-    title: "Campanhas",
-    href: "/campaigns",
-    icon: IconSend,
-    description: "Disparos em massa via WhatsApp com rastreamento.",
-    locked: false,
-    requiredPermission: "nav:campaigns",
   },
   {
     key: "distribution",

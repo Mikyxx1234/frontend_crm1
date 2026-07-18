@@ -24,7 +24,7 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import { EmptyState } from "@/components/crm/empty-state";
-import { PagePrimaryButton } from "@/components/crm/page-toolbar";
+import { PagePrimaryButton, PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { cn } from "@/lib/utils";
 
 import { useCampaigns } from "@/features/campaigns/hooks";
@@ -60,6 +60,7 @@ function fmtDateTimeBR(iso: string | null | undefined): string {
 const SENDING_STATUSES: CampaignStatus[] = ["SENDING", "PROCESSING"];
 
 export default function CampaignsClientPage() {
+  const router = useRouter();
   const { status: authStatus } = useSession();
   const isAuthenticated = authStatus === "authenticated";
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -127,7 +128,23 @@ export default function CampaignsClientPage() {
               onClearAll={clearFilters}
             />
           }
-          actions={<CampaignsActionsMenu />}
+          actions={
+            <div className="flex items-center gap-2">
+              <PageSegmentedControl
+                size="compact"
+                aria-label="Automações e campanhas"
+                items={[
+                  { value: "automations", label: "Automações" },
+                  { value: "campaigns", label: "Campanhas" },
+                ]}
+                value="campaigns"
+                onChange={(v) => {
+                  if (v === "automations") router.push("/automations");
+                }}
+              />
+              <CampaignsActionsMenu />
+            </div>
+          }
         />
 
         {isDemo && (

@@ -14,6 +14,7 @@ import {
   IconLoader2,
   IconMenu2,
   IconPlus,
+  IconRobot,
   IconRotateClockwise,
   IconSearch,
   IconUpload,
@@ -23,6 +24,7 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2"
 import { RestrictedScreen } from "@/components/crm/restricted-screen"
 import { useRequireManager } from "@/hooks/use-user-role"
 import { PageHeader } from "@/components/crm/page-header"
+import { PageSegmentedControl } from "@/components/crm/page-toolbar"
 import { PageDemoBanner } from "@/components/crm/page-demo-banner"
 import { AutomationsGallery } from "@/components/crm/automations-gallery"
 import { EmptyState } from "@/components/crm/empty-state"
@@ -306,7 +308,7 @@ export default function V2AutomationsClientPage() {
         />
 
         <PageHeader
-          icon={<IconBolt size={22} stroke={2.2} />}
+          icon={<IconRobot size={22} stroke={2.2} />}
           title="Automações"
           center={
             <AutomationsSearchFilterBar
@@ -322,11 +324,25 @@ export default function V2AutomationsClientPage() {
             />
           }
           actions={
-            <AutomationsActionsMenu
-              onNew={() => router.push("/automations/new")}
-              onImport={handleImportClick}
-              importing={isImporting}
-            />
+            <div className="flex items-center gap-2">
+              <PageSegmentedControl
+                size="compact"
+                aria-label="Automações e campanhas"
+                items={[
+                  { value: "automations", label: "Automações" },
+                  { value: "campaigns", label: "Campanhas" },
+                ]}
+                value="automations"
+                onChange={(v) => {
+                  if (v === "campaigns") router.push("/campaigns")
+                }}
+              />
+              <AutomationsActionsMenu
+                onNew={() => router.push("/automations/new")}
+                onImport={handleImportClick}
+                importing={isImporting}
+              />
+            </div>
           }
         />
 

@@ -10,6 +10,10 @@ import {
   IconCopy,
   IconMenu2,
   IconPhone,
+  IconPhoneCall,
+  IconPhoneCheck,
+  IconPhoneIncoming,
+  IconPhoneOutgoing,
   IconRefresh,
   IconSettings,
 } from "@tabler/icons-react";
@@ -24,7 +28,11 @@ import {
   type CallsFilterState,
 } from "@/features/softphone/components/calls-search-filter-bar";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
-import { listCalls, syncCalls } from "@/features/softphone/api/extensions";
+import {
+  getCallsStats,
+  listCalls,
+  syncCalls,
+} from "@/features/softphone/api/extensions";
 import type { ListCallsFilters } from "@/features/softphone/api/types";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
@@ -301,6 +309,22 @@ export default function LogsClientPage() {
     enabled: callsWidget.enabled === true,
   });
   const callsTotal = callsData?.total;
+
+  // Mini-dash da aba Chamadas — respeita busca/período (não filtra por direção
+  // ou status, pois é justamente o breakdown desses eixos).
+  const callsStatsFilters = React.useMemo(
+    () => ({
+      search: callsSearchDebounced || undefined,
+      dateFrom: callsFilters.dateFrom,
+      dateTo: callsFilters.dateTo,
+    }),
+    [callsSearchDebounced, callsFilters.dateFrom, callsFilters.dateTo],
+  );
+  const { data: callsStats } = useQuery({
+    queryKey: ["calls-stats", callsStatsFilters],
+    queryFn: () => getCallsStats(callsStatsFilters),
+    enabled: callsWidget.enabled === true && isCalls,
+  });
 
   // Sincronização é manual via menu de ações (não dispara toast ao abrir a aba).
 
@@ -665,6 +689,7 @@ export default function LogsClientPage() {
             <CallsNotEnabledState />
           ) : (
             <div className="flex min-h-0 flex-1 flex-col gap-3">
+              <CallsMiniDash stats={callsStats} />
               <CallHistoryList
                 groupByDay
                 filters={callsListFilters}
@@ -728,6 +753,100 @@ export default function LogsClientPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+// Mini-dash de chamadas — 4 KPIs (feitas, recebidas, atendidas %, completadas %)
+type CallsStatsSnapshot = {
+  total: number;
+  inbound: number;
+  outbound: number;
+  answered: number;
+  completed: number;
+};
+
+function CallsMiniDash({ stats }: { stats: CallsStatsSnapshot | undefined }) {
+  const s = stats ?? { total: 0, inbound: 0, outbound: 0, answered: 0, completed: 0 };
+  const pct = (n: number) =>
+    s.total > 0 ? Math.round((n / s.total) * 100) : 0;
+
+  const cards: {
+    key: string;
+    label: string;
+    value: number;
+    percent?: number;
+    accent: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      key: "outbound",
+      label: "Ligações feitas",
+      value: s.outbound,
+      accent: "var(--brand-primary)",
+      icon: <IconPhoneOutgoing size={16} />,
+    },
+    {
+      key: "inbound",
+      label: "Ligações recebidas",
+      value: s.inbound,
+      accent: "var(--color-success)",
+      icon: <IconPhoneIncoming size={16} />,
+    },
+    {
+      key: "answered",
+      label: "Atendidas",
+      value: s.answered,
+      percent: pct(s.answered),
+      accent: "var(--color-warning)",
+      icon: <IconPhoneCall size={16} />,
+    },
+    {
+      key: "completed",
+      label: "Completadas",
+      value: s.completed,
+      percent: pct(s.completed),
+      accent: "var(--brand-secondary, #a78bfa)",
+      icon: <IconPhoneCheck size={16} />,
+    },
+  ];
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {cards.map((c) => (
+        <div
+          key={c.key}
+          className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+        >
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            style={{
+              background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
+              color: c.accent,
+            }}
+          >
+            {c.icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-[11.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              {c.label}
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
+                {c.value.toLocaleString("pt-BR")}
+              </span>
+              {c.percent !== undefined && (
+                <span
+                  className="font-display text-[12px] font-bold tabular-nums"
+                  style={{ color: c.accent }}
+                >
+                  {c.percent}%
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

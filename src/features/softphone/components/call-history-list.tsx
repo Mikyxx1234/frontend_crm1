@@ -31,7 +31,7 @@ import type {
 } from "../api/types";
 
 const COLS =
-  "grid-cols-[36px_minmax(220px,2fr)_100px_110px_80px_minmax(140px,1.1fr)_minmax(88px,240px)]";
+  "grid-cols-[36px_minmax(220px,2fr)_100px_110px_80px_minmax(140px,1.1fr)_minmax(120px,280px)]";
 
 function formatDuration(sec: number | null) {
   if (!sec) return "—";
@@ -457,6 +457,9 @@ function fmtClock(s: number) {
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
+const PLAYBACK_RATES = [1, 1.5, 2] as const;
+type PlaybackRate = (typeof PLAYBACK_RATES)[number];
+
 function CompactAudioPlayer({
   src,
   fallbackDuration,
@@ -471,15 +474,26 @@ function CompactAudioPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(fallbackDuration ?? 0);
   const [playing, setPlaying] = useState(true);
+  const [rate, setRate] = useState<PlaybackRate>(1);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    audio.playbackRate = rate;
     audio.play().catch(() => setPlaying(false));
     return () => {
       audio.pause();
     };
-  }, [src]);
+  }, [src, rate]);
+
+  function cycleRate() {
+    setRate((prev) => {
+      const idx = PLAYBACK_RATES.indexOf(prev);
+      return PLAYBACK_RATES[(idx + 1) % PLAYBACK_RATES.length];
+    });
+  }
+
+  const rateLabel = rate === 1 ? "1x" : rate === 1.5 ? "1,5x" : "2x";
 
   function handleTimeUpdate() {
     const audio = audioRef.current;
@@ -519,7 +533,7 @@ function CompactAudioPlayer({
   }
 
   return (
-    <div className="flex min-w-0 items-center justify-end gap-1.5">
+    <div className="flex min-w-0 items-center justify-end gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-1 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
       <audio
         ref={audioRef}
         src={src}
@@ -533,12 +547,12 @@ function CompactAudioPlayer({
         type="button"
         onClick={togglePlay}
         title={playing ? "Pausar gravação" : "Retomar gravação"}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_2px_6px_rgba(91,111,245,0.3)] transition-transform hover:scale-105"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_2px_6px_rgba(91,111,245,0.3)] transition-transform hover:scale-105"
       >
         {playing ? (
-          <IconPlayerPauseFilled size={13} />
+          <IconPlayerPauseFilled size={12} />
         ) : (
-          <IconPlayerPlayFilled size={13} />
+          <IconPlayerPlayFilled size={12} />
         )}
       </button>
       <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-[var(--text-secondary)]">
@@ -565,6 +579,19 @@ function CompactAudioPlayer({
       <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-[var(--text-muted)]">
         {fmtClock(duration)}
       </span>
+      <button
+        type="button"
+        onClick={cycleRate}
+        title={`Velocidade: ${rateLabel} (clique para alternar)`}
+        className={cn(
+          "shrink-0 rounded-full border px-2 py-[2px] font-display text-[10.5px] font-bold tabular-nums transition-all",
+          rate === 1
+            ? "border-[var(--glass-border)] bg-transparent text-[var(--text-secondary)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+            : "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary-dark)]",
+        )}
+      >
+        {rateLabel}
+      </button>
     </div>
   );
 }

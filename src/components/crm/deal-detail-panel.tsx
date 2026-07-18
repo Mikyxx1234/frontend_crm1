@@ -820,9 +820,9 @@ export function DealDetailPanel({
 
                 {/* Grid 2 colunas de infos rápidas — Origem / Canal / Tags
                     (espelho exato do hero do contact-aside/Inbox). */}
-                <div className="relative mt-2.5 grid grid-cols-2 items-center gap-y-1.5 border-t border-white/10 pt-2.5 text-xs">
+                <div className="relative mt-2.5 grid grid-cols-[52px_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 border-t border-white/10 pt-2.5 text-xs">
                   <span className="text-slate-400">Origem</span>
-                  <div className="flex min-w-0 justify-end text-right font-medium [&_input]:!bg-white [&_input]:!text-[var(--text-primary)] [&_input]:!rounded [&_input]:!px-1">
+                  <div className="flex min-w-0 justify-start text-left font-medium [&_input]:!bg-white [&_input]:!text-[var(--text-primary)] [&_input]:!rounded [&_input]:!px-1">
                     {deal.contactId ? (
                       <InlineNativeEditor
                         value={deal.contactSource ?? undefined}
@@ -851,7 +851,7 @@ export function DealDetailPanel({
                         label={`Conversando por ${formatConnectionLabel(connection)}`}
                         side="left"
                       >
-                        <span className="ml-auto inline-flex min-w-0 items-center gap-1 truncate text-right font-medium text-white">
+                        <span className="inline-flex min-w-0 items-center gap-1 truncate font-medium text-white">
                           <IconAffiliate size={11} className="shrink-0" />
                           {formatConnectionShort(connection)}
                         </span>
@@ -859,7 +859,7 @@ export function DealDetailPanel({
                     </>
                   )}
                   <span className="text-slate-400">Tags</span>
-                  <span className="flex min-w-0 flex-nowrap items-center justify-end gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:shrink [&_.tag-chip]:truncate">
+                  <span className="flex min-w-0 flex-nowrap items-center justify-start gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:shrink [&_.tag-chip]:truncate">
                     {tagsSlot ?? (
                       <span className="text-xs text-white/60">Nenhuma tag</span>
                     )}

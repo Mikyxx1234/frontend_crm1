@@ -22,7 +22,6 @@ import {
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import { EmptyState } from "@/components/crm/empty-state";
 import { PagePrimaryButton, PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { cn } from "@/lib/utils";
@@ -100,7 +99,6 @@ export default function CampaignsClientPage() {
 
   const isLoading = allQuery.isLoading;
   const error = allQuery.error && !isDemoBase;
-  const isDemo = isDemoBase && !isLoading;
 
   const dashSource = isDemoBase ? MOCK_CAMPAIGNS_PAGE.items : realItems;
   const hasFilters = Boolean(statusFilter) || search.trim().length > 0;
@@ -146,14 +144,6 @@ export default function CampaignsClientPage() {
             </div>
           }
         />
-
-        {isDemo && (
-          <div className="shrink-0">
-            <PageDemoBanner>
-              Dados de exemplo — campanhas com métricas, barras de progresso e status variados.
-            </PageDemoBanner>
-          </div>
-        )}
 
         <CampaignsMiniDash items={dashSource} />
 

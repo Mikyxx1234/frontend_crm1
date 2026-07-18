@@ -27,9 +27,6 @@ import { ButtonGlass } from "@/components/crm/button-glass";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 
-/** Inputs "soft" do alvo: fundo cinza suave, sem borda, radius grande. */
-const SOFT_INPUT = "rounded-[var(--radius-lg)] border-transparent bg-[var(--glass-bg-subtle)]";
-
 /**
  * Bloco de feedback pós-conexão — extraído pra que o discriminated
  * union do `webhook.configured` seja estreitado corretamente DENTRO
@@ -109,15 +106,17 @@ function WebhookFallback({
         <code className="min-w-0 flex-1 truncate rounded border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-1 font-mono text-[11px] text-[var(--text-primary)]">
           {webhookUrl}
         </code>
-        <button
+        <ButtonGlass
           type="button"
+          variant="glass"
+          size="sm"
           onClick={() => onCopy(webhookUrl)}
-          className="inline-flex h-7 shrink-0 items-center gap-1 rounded border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+          className="shrink-0"
           title="Copiar URL"
         >
           {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
           {copied ? "Copiado" : "Copiar"}
-        </button>
+        </ButtonGlass>
       </div>
       <p className="text-pretty break-words text-[11px] text-[var(--text-muted)]">
         Sem isso, as chamadas funcionam mas não aparecem na lista
@@ -407,31 +406,29 @@ export function Api4ComConnectForm() {
         e.preventDefault();
         if (email && password) mutation.mutate();
       }}
-      className="flex min-w-0 w-full flex-col gap-4"
+      className="grid min-w-0 w-full gap-4"
     >
-      <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="grid min-w-0 gap-1.5">
         <Label>E-mail Api4Com</Label>
         <InputGlass
           type="email"
           placeholder="voce@empresa.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className={SOFT_INPUT}
         />
       </div>
 
-      <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="grid min-w-0 gap-1.5">
         <Label>Senha Api4Com</Label>
         <PasswordInput
           placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className={SOFT_INPUT}
         />
       </div>
 
       {mutation.isError && (
-        <p className="text-xs text-[var(--color-danger)]">
+        <p className="text-[11px] text-[var(--color-danger)]">
           {(mutation.error as Error)?.message ?? "Falha ao conectar"}
         </p>
       )}

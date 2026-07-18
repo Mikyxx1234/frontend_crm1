@@ -117,15 +117,13 @@ function TagsPage() {
   const [kpiFilter, setKpiFilter] = React.useState<KpiFilter>("");
   const [filter, setFilter] = React.useState<FilterTab>("todos");
   const [search, setSearch] = React.useState("");
-  const [newName, setNewName] = React.useState("");
-  const [newColor, setNewColor] = React.useState(TAG_COLORS[0]);
+  const [createOpen, setCreateOpen] = React.useState(false);
   const [editingTag, setEditingTag] = React.useState<TagRow | null>(null);
   const [deleting, setDeleting] = React.useState<TagRow | null>(null);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [confirmBulk, setConfirmBulk] = React.useState(false);
   const [sortBy, setSortBy] = React.useState<SortField>("name");
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
-  const newNameRef = React.useRef<HTMLInputElement>(null);
 
   const { data: tags = [], isLoading } = useQuery({
     queryKey: ["tags-settings"],
@@ -145,7 +143,7 @@ function TagsPage() {
       }
     },
     onSuccess: () => {
-      setNewName("");
+      setCreateOpen(false);
       queryClient.invalidateQueries({ queryKey: ["tags-settings"] });
       toast.success("Tag criada");
     },
@@ -300,11 +298,6 @@ function TagsPage() {
 
   const dirFor = (f: SortField): SortDir => (sortBy === f ? sortDir : null);
 
-  const focusNewTag = React.useCallback(() => {
-    newNameRef.current?.focus();
-    newNameRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
-
   const filterGroups = React.useMemo<SettingsFilterGroup[]>(
     () => [
       {
@@ -350,7 +343,7 @@ function TagsPage() {
           {
             icon: <IconPlus size={16} />,
             label: "Nova tag",
-            onClick: focusNewTag,
+            onClick: () => setCreateOpen(true),
             primary: true,
           },
           {
@@ -363,7 +356,7 @@ function TagsPage() {
         ]}
       />
     ),
-    [focusNewTag, unusedCount, bulkDeleteUnused],
+    [unusedCount, bulkDeleteUnused],
   );
 
   React.useEffect(() => {
@@ -442,68 +435,6 @@ function TagsPage() {
           </div>
         </div>
       )}
-
-      {/* ── Criar nova tag ── */}
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)]">
-        <p className="mb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-          Nova tag
-        </p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="flex flex-wrap items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1.5">
-            {TAG_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setNewColor(c)}
-                aria-label={c}
-                className={cn(
-                  "size-5 rounded-full transition-all",
-                  newColor === c
-                    ? "scale-110 ring-2 ring-offset-1 ring-[var(--glass-border)]"
-                    : "hover:scale-105",
-                )}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-          </div>
-          <InputGlass
-            ref={newNameRef}
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Nome da tag…"
-            className="min-w-0 w-full sm:flex-1"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newName.trim()) {
-                e.preventDefault();
-                createMutation.mutate({ name: newName.trim(), color: newColor });
-              }
-            }}
-          />
-          {newName.trim() && (
-            <span
-              className="max-w-full shrink-0 truncate self-start rounded-full px-2.5 py-1 font-display text-[11px] font-semibold sm:self-auto"
-              style={{
-                background: `${newColor}22`,
-                color: newColor,
-                border: `1px solid ${newColor}44`,
-              }}
-            >
-              {newName.trim()}
-            </span>
-          )}
-          <ButtonGlass
-            variant="primary"
-            onClick={() =>
-              newName.trim() && createMutation.mutate({ name: newName.trim(), color: newColor })
-            }
-            disabled={!newName.trim() || createMutation.isPending}
-            className="w-full shrink-0 sm:w-auto"
-          >
-            <IconPlus size={15} />
-            Criar
-          </ButtonGlass>
-        </div>
-      </div>
 
       {/* ── Lista ── */}
       {isLoading ? (
@@ -635,12 +566,22 @@ function TagsPage() {
         </div>
       )}
 
+      {/* ── Create dialog ── */}
+      {createOpen && (
+        <TagFormDialog
+          tag={null}
+          isPending={createMutation.isPending}
+          onSubmit={(data) => createMutation.mutate(data)}
+          onClose={() => setCreateOpen(false)}
+        />
+      )}
+
       {/* ── Edit dialog (rename + color) ── */}
       {editingTag && (
-        <TagEditDialog
+        <TagFormDialog
           tag={editingTag}
           isPending={updateMutation.isPending}
-          onSave={(data) => updateMutation.mutate({ id: editingTag.id, ...data })}
+          onSubmit={(data) => updateMutation.mutate({ id: editingTag.id, ...data })}
           onClose={() => setEditingTag(null)}
         />
       )}
@@ -729,41 +670,37 @@ function TagsPage() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Tag Edit Dialog — rename + color picker
+// Tag Form Dialog — criar/editar (nome + cor)
 // ─────────────────────────────────────────────────────────────────
 
-function TagEditDialog({
+function TagFormDialog({
   tag,
   isPending,
-  onSave,
+  onSubmit,
   onClose,
 }: {
-  tag: TagRow;
+  /** `null` = criação; caso contrário edição. */
+  tag: TagRow | null;
   isPending: boolean;
-  onSave: (data: { name?: string; color?: string }) => void;
+  onSubmit: (data: { name: string; color: string }) => void;
   onClose: () => void;
 }) {
-  const [name, setName] = React.useState(tag.name);
-  const [color, setColor] = React.useState(tag.color);
+  const isEdit = tag !== null;
+  const [name, setName] = React.useState(tag?.name ?? "");
+  const [color, setColor] = React.useState(tag?.color ?? TAG_COLORS[0]);
 
   const handleSave = () => {
-    const updates: { name?: string; color?: string } = {};
-    if (name.trim() && name.trim() !== tag.name) updates.name = name.trim();
-    if (color !== tag.color) updates.color = color;
-    if (Object.keys(updates).length > 0) {
-      onSave(updates);
-    } else {
-      onClose();
-    }
+    if (!name.trim()) return;
+    onSubmit({ name: name.trim(), color });
   };
 
   return (
     <Dialog open onOpenChange={(next) => !next && onClose()}>
       <DialogContent size="sm">
         <DialogHeader>
-          <DialogTitle className="text-base">Editar tag</DialogTitle>
+          <DialogTitle className="text-base">{isEdit ? "Editar tag" : "Nova tag"}</DialogTitle>
           <DialogDescription className="text-[13px]">
-            Atualize o nome e/ou a cor da tag.
+            {isEdit ? "Atualize o nome e/ou a cor da tag." : "Defina o nome e a cor da nova tag."}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-1">
@@ -826,7 +763,7 @@ function TagEditDialog({
             disabled={!name.trim() || isPending}
             onClick={handleSave}
           >
-            {isPending ? "Salvando..." : "Salvar"}
+            {isPending ? (isEdit ? "Salvando..." : "Criando...") : isEdit ? "Salvar" : "Criar"}
           </ButtonGlass>
         </DialogFooter>
       </DialogContent>

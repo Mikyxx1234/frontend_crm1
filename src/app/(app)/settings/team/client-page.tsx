@@ -37,6 +37,14 @@ import {
   SettingsListFilterBar,
   type SettingsFilterGroup,
 } from "@/components/crm/settings-filter-bar";
+import {
+  ListColumnLabel,
+  SortableHeader,
+  listTableHeadRowClass,
+  type SortDir,
+} from "@/components/crm/sortable-header";
+import { TabsGlass } from "@/components/crm/tabs-glass";
+import { ExpedienteTab } from "@/features/legacy-v1/settings/schedules";
 import { cn } from "@/lib/utils";
 import {
   CRM_ACTION_KEYS,
@@ -70,6 +78,9 @@ type UserRow = {
 type CrmPermissionDraft = Record<CrmActionKey, boolean>;
 
 const DEFAULT_PER_PAGE = 25;
+
+/** Grid da lista de usuários: [check] | Usuário | E-mail | Função | Telefonia | Ações */
+const USER_LIST_GRID = "32px minmax(0,1.5fr) minmax(0,1.3fr) 200px 104px 88px";
 
 const DEFAULT_INVITE_PERMISSIONS: CrmPermissionDraft = {
   editLeads: true,
@@ -140,7 +151,8 @@ export default function TeamV2ClientPage() {
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
       title="Equipe"
-      description="Usuários, convites e permissões CRM"
+      description="Usuários, funções, permissões e expediente"
+      icon={<IconUsers size={22} />}
     >
       <TeamContent />
     </SettingsV2Shell>
@@ -171,11 +183,18 @@ function TeamContent() {
     [adminRole, customRoles],
   );
 
+  const [activeTab, setActiveTab] = React.useState(0); // 0 = Usuários, 1 = Expediente
   const [search, setSearch] = React.useState("");
   const [roleFilter, setRoleFilter] = React.useState("all");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(DEFAULT_PER_PAGE);
+  const [sortBy, setSortBy] = React.useState<"name" | "email">("name");
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
+
+  // Expediente tab (busca própria + modal "Novo expediente")
+  const [expedienteSearch, setExpedienteSearch] = React.useState("");
+  const [expedienteNewOpen, setExpedienteNewOpen] = React.useState(false);
 
   const [inviteOpen, setInviteOpen] = React.useState(false);
   const [inviteName, setInviteName] = React.useState("");
@@ -231,15 +250,40 @@ function TeamContent() {
     setPage(1);
   }, [term, roleFilter, perPage]);
 
-  const total = filtered.length;
+  const sorted = React.useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const cmp =
+        sortBy === "email"
+          ? a.email.localeCompare(b.email, "pt-BR")
+          : a.name.localeCompare(b.name, "pt-BR");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
+  const toggleSort = React.useCallback((field: "name" | "email") => {
+    setSortBy((prev) => {
+      if (prev === field) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+      setSortDir("asc");
+      return field;
+    });
+  }, []);
+
+  const dirFor = (f: "name" | "email"): SortDir => (sortBy === f ? sortDir : null);
+
+  const total = sorted.length;
   const lastPage = Math.max(1, Math.ceil(total / perPage));
   const currentPage = Math.min(page, lastPage);
   const pageItems = React.useMemo(
-    () => filtered.slice((currentPage - 1) * perPage, currentPage * perPage),
-    [filtered, currentPage, perPage],
+    () => sorted.slice((currentPage - 1) * perPage, currentPage * perPage),
+    [sorted, currentPage, perPage],
   );
 
-  const visibleUsers = isDesktop ? pageItems : filtered;
+  const visibleUsers = isDesktop ? pageItems : sorted;
 
   React.useEffect(() => {
     if (isDesktop) setSelected(new Set());
@@ -482,37 +526,65 @@ function TeamContent() {
   );
 
   const searchNode = React.useMemo(
-    () => (
-      <SettingsListFilterBar
-        search={search}
-        onSearch={setSearch}
-        placeholder="Buscar por nome, e-mail..."
-        ariaLabel="Buscar usuários"
-        groups={[roleFilterGroup]}
-        onClearAll={() => {
-          setSearch("");
-          setRoleFilter("all");
-        }}
-        popoverTitle="Filtros de equipe"
-      />
-    ),
-    [search, roleFilterGroup],
+    () =>
+      activeTab === 0 ? (
+        <SettingsListFilterBar
+          search={search}
+          onSearch={setSearch}
+          placeholder="Buscar por nome, e-mail..."
+          ariaLabel="Buscar usuários"
+          groups={[roleFilterGroup]}
+          onClearAll={() => {
+            setSearch("");
+            setRoleFilter("all");
+          }}
+          popoverTitle="Filtros de equipe"
+        />
+      ) : (
+        <SettingsListFilterBar
+          search={expedienteSearch}
+          onSearch={setExpedienteSearch}
+          placeholder="Buscar agente…"
+          ariaLabel="Buscar agente por nome ou e-mail"
+          onClearAll={() => setExpedienteSearch("")}
+        />
+      ),
+    [activeTab, search, roleFilterGroup, expedienteSearch],
   );
 
   const actionsNode = React.useMemo(
     () => (
-      <PageActionsMenu
-        items={[
-          {
-            icon: <IconPlus size={14} stroke={2.6} />,
-            label: "Novo usuário",
-            onClick: () => setInviteOpen(true),
-            primary: true,
-          },
-        ]}
-      />
+      <div className="flex items-center gap-2">
+        <TabsGlass
+          tabs={["Usuários", "Expediente"]}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+        />
+        <PageActionsMenu
+          aria-label="Ações da equipe"
+          items={
+            activeTab === 0
+              ? [
+                  {
+                    icon: <IconPlus size={14} stroke={2.6} />,
+                    label: "Novo usuário",
+                    onClick: () => setInviteOpen(true),
+                    primary: true,
+                  },
+                ]
+              : [
+                  {
+                    icon: <IconPlus size={14} stroke={2.6} />,
+                    label: "Novo expediente",
+                    onClick: () => setExpedienteNewOpen(true),
+                    primary: true,
+                  },
+                ]
+          }
+        />
+      </div>
     ),
-    [],
+    [activeTab],
   );
 
   React.useEffect(() => {
@@ -527,6 +599,14 @@ function TeamContent() {
 
   return (
     <>
+      {activeTab === 1 ? (
+        <ExpedienteTab
+          search={expedienteSearch}
+          newExpedienteOpen={expedienteNewOpen}
+          onNewExpedienteOpenChange={setExpedienteNewOpen}
+        />
+      ) : (
+      <>
       {/* STATS — shrink-0: toolbar-hscroll/overflow em flex-col colapsava a altura
           (~só o topo dos ícones visível). Mobile: 3 mini-cards; desktop: StatCards. */}
       <div className="grid shrink-0 grid-cols-3 gap-2 sm:hidden">
@@ -603,13 +683,13 @@ function TeamContent() {
         </p>
       ) : null}
 
-      {/* LISTA — cards em grid responsivo (padrão canônico) */}
+      {/* LISTA — linha a linha (padrão canônico) */}
       {isLoading && users.length === 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col gap-2">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="h-[132px] animate-pulse rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)]"
+              className="h-[64px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
             />
           ))}
         </div>
@@ -620,137 +700,143 @@ function TeamContent() {
             : "Nenhum usuário cadastrado ainda."}
         </GlassCard>
       ) : (
-        <div className="flex min-w-0 flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 px-1">
-            <p className="font-body text-[12px] text-[var(--text-muted)]">
-              {filtered.length.toLocaleString("pt-BR")}{" "}
-              {filtered.length === 1 ? "usuário" : "usuários"}
-            </p>
-            <label className="flex cursor-pointer items-center gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
+          {/* Cabeçalho de colunas */}
+          <div
+            className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
+            style={{ gridTemplateColumns: USER_LIST_GRID }}
+          >
+            <span>
               <CheckboxGlass
                 checked={allChecked}
                 indeterminate={!allChecked && someChecked}
                 onChange={toggleAll}
                 aria-label="Selecionar todos"
               />
-              <span className="font-body text-[12px] text-[var(--text-muted)]">
-                Selecionar todos
-              </span>
-            </label>
+            </span>
+            <SortableHeader label="Nome" sort={dirFor("name")} onSort={() => toggleSort("name")} />
+            <SortableHeader label="E-mail" sort={dirFor("email")} onSort={() => toggleSort("email")} />
+            <ListColumnLabel>Função</ListColumnLabel>
+            <ListColumnLabel>Telefonia</ListColumnLabel>
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleUsers.map((u) => {
-              const isSelected = selected.has(u.id);
-              const fnRole = userFunctionRole(u, adminRole?.id);
-              const isAdminRole = fnRole?.systemPreset === "ADMIN";
-              const fnLabel = fnRole?.name ?? "Sem função";
-              // Garante que o valor atual apareça no dropdown mesmo se for um
-              // preset legado (MANAGER/MEMBER) fora das opções base.
-              const rowOptions =
-                fnRole && fnRole.id !== "__admin__" &&
-                !baseRoleOptions.some((o) => o.value === fnRole.id)
-                  ? [{ value: fnRole.id, label: fnLabel }, ...baseRoleOptions]
-                  : baseRoleOptions;
-              return (
-                <div
-                  key={u.id}
-                  className={cn(
-                    "group relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-[var(--radius-lg)] border bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]",
-                    isSelected
-                      ? "border-[var(--brand-primary)]/40 shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
-                      : "border-[var(--glass-border)]",
-                  )}
-                >
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span className="shrink-0 pt-0.5">
-                      <CheckboxGlass
-                        checked={isSelected}
-                        onChange={() => toggleOne(u.id)}
-                        aria-label={`Selecionar ${u.name}`}
-                      />
-                    </span>
+          {visibleUsers.map((u) => {
+            const isSelected = selected.has(u.id);
+            const fnRole = userFunctionRole(u, adminRole?.id);
+            const isAdminRole = fnRole?.systemPreset === "ADMIN";
+            const fnLabel = fnRole?.name ?? "Sem função";
+            // Garante que o valor atual apareça no dropdown mesmo se for um
+            // preset legado (MANAGER/MEMBER) fora das opções base.
+            const rowOptions =
+              fnRole && fnRole.id !== "__admin__" &&
+              !baseRoleOptions.some((o) => o.value === fnRole.id)
+                ? [{ value: fnRole.id, label: fnLabel }, ...baseRoleOptions]
+                : baseRoleOptions;
+            return (
+              <div
+                key={u.id}
+                style={{ gridTemplateColumns: USER_LIST_GRID }}
+                className={cn(
+                  "group grid items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+                  isSelected
+                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] hover:border-[var(--input-border-focus)]",
+                )}
+              >
+                <span>
+                  <CheckboxGlass
+                    checked={isSelected}
+                    onChange={() => toggleOne(u.id)}
+                    aria-label={`Selecionar ${u.name}`}
+                  />
+                </span>
 
+                {/* Usuário */}
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
+                    style={{ background: avatarColor(u.id) }}
+                  >
+                    {initials(u.name)}
+                  </span>
+                  <div className="min-w-0 leading-tight">
+                    <span className="block max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+                      {u.name}
+                    </span>
                     <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
-                      style={{ background: avatarColor(u.id) }}
+                      className={cn(
+                        "mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-px font-display text-[10px] font-bold",
+                        roleBadgeClass(isAdminRole),
+                      )}
                     >
-                      {initials(u.name)}
+                      <IconShield size={10} className="opacity-85" />
+                      {fnLabel}
                     </span>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
-                          {u.name}
-                        </span>
-                        <span
-                          className={cn(
-                            "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-display text-[10px] font-bold",
-                            roleBadgeClass(isAdminRole),
-                          )}
-                        >
-                          <IconShield size={11} className="opacity-85" />
-                          {fnLabel}
-                        </span>
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
-                        <IconMail size={13} className="shrink-0" />
-                        <span className="truncate">{u.email}</span>
-                      </div>
-                    </div>
-
-                    {isAdmin && (
-                      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                        <button
-                          type="button"
-                          onClick={() => openPasswordDialog(u)}
-                          aria-label={`Trocar senha de ${u.name}`}
-                          title="Trocar senha"
-                          className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary-dark,#3d52e8)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)]"
-                        >
-                          <IconKey size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(u)}
-                          aria-label={`Excluir ${u.name}`}
-                          title="Excluir usuário"
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-danger,#e11d48)] text-white transition-all hover:-translate-y-px"
-                        >
-                          <IconTrash size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 border-t border-[var(--glass-border-subtle)] pt-2.5">
-                    <div className="min-w-0 flex-1">
-                      <DropdownGlass
-                        options={rowOptions}
-                        value={fnRole && fnRole.id !== "__admin__" ? fnRole.id : undefined}
-                        placeholder="Definir função"
-                        onValueChange={(next) => {
-                          if (fnRole && next === fnRole.id) return;
-                          setPrimaryRole.mutate({ id: u.id, roleId: next });
-                        }}
-                        disabled={setPrimaryRole.isPending || !isAdmin}
-                        matchTriggerWidth={false}
-                        triggerClassName="h-9 w-full min-w-0"
-                      />
-                    </div>
-                    {isAdmin && (
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        <span className="font-body text-[11px] font-semibold text-[var(--text-muted)]">
-                          Telefonia
-                        </span>
-                        <TelephonyToggle userId={u.id} />
-                      </div>
-                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+
+                {/* E-mail */}
+                <div className="flex min-w-0 items-center gap-1.5 font-body text-[13px] text-[var(--text-secondary)]">
+                  <IconMail size={13} className="shrink-0 text-[var(--text-muted)]" />
+                  <span className="truncate">{u.email}</span>
+                </div>
+
+                {/* Função */}
+                <div className="min-w-0">
+                  <DropdownGlass
+                    options={rowOptions}
+                    value={fnRole && fnRole.id !== "__admin__" ? fnRole.id : undefined}
+                    placeholder="Definir função"
+                    onValueChange={(next) => {
+                      if (fnRole && next === fnRole.id) return;
+                      setPrimaryRole.mutate({ id: u.id, roleId: next });
+                    }}
+                    disabled={setPrimaryRole.isPending || !isAdmin}
+                    matchTriggerWidth={false}
+                    triggerClassName="h-9 w-full min-w-0"
+                  />
+                </div>
+
+                {/* Telefonia */}
+                <div className="flex items-center">
+                  {isAdmin ? (
+                    <TelephonyToggle userId={u.id} />
+                  ) : (
+                    <span className="font-body text-[12px] text-[var(--text-muted)]">—</span>
+                  )}
+                </div>
+
+                {/* Ações */}
+                <div className="flex items-center justify-end gap-1">
+                  {isAdmin ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openPasswordDialog(u)}
+                        aria-label={`Trocar senha de ${u.name}`}
+                        title="Trocar senha"
+                        className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
+                      >
+                        <IconKey size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(u)}
+                        aria-label={`Excluir ${u.name}`}
+                        title="Excluir usuário"
+                        className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] hover:text-[var(--color-danger)]"
+                      >
+                        <IconTrash size={14} />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="font-body text-[12px] text-[var(--text-muted)]">—</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -768,6 +854,8 @@ function TeamContent() {
           }}
         />
       ) : null}
+      </>
+      )}
 
       {/* ─── Drawer: criar usuário ─── */}
       <FormSheet

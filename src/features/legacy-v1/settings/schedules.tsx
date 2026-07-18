@@ -5,18 +5,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconCheck as Check,
   IconClock,
-  IconLayoutGrid,
   IconLoader2 as Loader2,
   IconPencil,
   IconPhone,
+  IconPlus,
   IconUsers,
   IconWifi,
   IconWifiOff,
   IconZzz,
 } from "@tabler/icons-react";
+import { toast } from "sonner";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
+import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import {
   ListColumnLabel,
@@ -141,9 +144,109 @@ function getInitials(name: string) {
     .join("");
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Sub-form reutilizável de horário (edição + template) ─────────────────────
 
-export default function SchedulesPage() {
+function ScheduleFields({
+  schedule,
+  onChange,
+}: {
+  schedule: Schedule;
+  onChange: (next: Schedule) => void;
+}) {
+  const toggleWeekday = (day: number) => {
+    onChange({
+      ...schedule,
+      weekdays: schedule.weekdays.includes(day)
+        ? schedule.weekdays.filter((d) => d !== day)
+        : [...schedule.weekdays, day].sort(),
+    });
+  };
+
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="min-w-0 w-full space-y-1.5">
+          <Label>Início expediente</Label>
+          <InputGlass
+            type="time"
+            value={schedule.startTime}
+            onChange={(e) => onChange({ ...schedule, startTime: e.target.value })}
+            className="w-full"
+          />
+        </div>
+        <div className="min-w-0 w-full space-y-1.5">
+          <Label>Fim expediente</Label>
+          <InputGlass
+            type="time"
+            value={schedule.endTime}
+            onChange={(e) => onChange({ ...schedule, endTime: e.target.value })}
+            className="w-full"
+          />
+        </div>
+        <div className="min-w-0 w-full space-y-1.5">
+          <Label>Início almoço</Label>
+          <InputGlass
+            type="time"
+            value={schedule.lunchStart}
+            onChange={(e) => onChange({ ...schedule, lunchStart: e.target.value })}
+            className="w-full"
+          />
+        </div>
+        <div className="min-w-0 w-full space-y-1.5">
+          <Label>Fim almoço</Label>
+          <InputGlass
+            type="time"
+            value={schedule.lunchEnd}
+            onChange={(e) => onChange({ ...schedule, lunchEnd: e.target.value })}
+            className="w-full"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Dias de trabalho</Label>
+        <div className="flex flex-wrap gap-2">
+          {WEEKDAYS.map((wd) => {
+            const active = schedule.weekdays.includes(wd.value);
+            return (
+              <button
+                key={wd.value}
+                type="button"
+                onClick={() => toggleWeekday(wd.value)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-[var(--radius-md)] px-3 py-2 text-xs font-semibold transition-colors",
+                  active
+                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                    : "border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] text-[var(--text-muted)] hover:border-[var(--brand-primary)] hover:text-[var(--text-primary)]",
+                )}
+              >
+                {active && <Check className="size-3" />}
+                {wd.short}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Tab de Expediente (sem header slots próprios) ────────────────────────────
+
+/**
+ * Lista de expediente/disponibilidade dos agentes. A busca vem por prop (o
+ * header é controlado pela página/aba pai). O modal "Novo expediente"
+ * (template aplicável a vários usuários) é controlado via props.
+ */
+export function ExpedienteTab({
+  search,
+  newExpedienteOpen,
+  onNewExpedienteOpenChange,
+}: {
+  search: string;
+  newExpedienteOpen: boolean;
+  onNewExpedienteOpenChange: (open: boolean) => void;
+}) {
   const qc = useQueryClient();
   const { data: agents = [], isLoading, isError } = useQuery({
     queryKey: ["agents-schedules"],
@@ -151,13 +254,22 @@ export default function SchedulesPage() {
     refetchInterval: 30_000,
   });
 
-  const slots = useSettingsHeaderSlots();
-  const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("");
   const [sortBy, setSortBy] = React.useState<SortField>("name");
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
   const [editAgent, setEditAgent] = React.useState<AgentRow | null>(null);
   const [editSchedule, setEditSchedule] = React.useState<Schedule>(DEFAULT_SCHEDULE);
+
+  // Template ("Novo expediente")
+  const [templateSchedule, setTemplateSchedule] = React.useState<Schedule>(DEFAULT_SCHEDULE);
+  const [templateUsers, setTemplateUsers] = React.useState<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    if (newExpedienteOpen) {
+      setTemplateSchedule(DEFAULT_SCHEDULE);
+      setTemplateUsers(new Set());
+    }
+  }, [newExpedienteOpen]);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
@@ -209,6 +321,32 @@ export default function SchedulesPage() {
     },
   });
 
+  const applyTemplate = useMutation({
+    mutationFn: async ({ userIds, schedule }: { userIds: string[]; schedule: Schedule }) => {
+      const results = await Promise.allSettled(
+        userIds.map((id) =>
+          fetch(apiUrl(`/api/agents/${id}/schedule`), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(schedule),
+          }).then((r) => {
+            if (!r.ok) throw new Error();
+          }),
+        ),
+      );
+      const fail = results.filter((r) => r.status === "rejected").length;
+      return { ok: userIds.length - fail, fail };
+    },
+    onSuccess: ({ ok, fail }) => {
+      qc.invalidateQueries({ queryKey: ["agents-schedules"] });
+      onNewExpedienteOpenChange(false);
+      if (fail === 0) toast.success(`Expediente aplicado a ${ok} usuário(s).`);
+      else if (ok === 0) toast.error("Não foi possível aplicar o expediente.");
+      else toast.error(`${ok} aplicado(s), ${fail} falharam.`);
+    },
+    onError: () => toast.error("Erro ao aplicar expediente."),
+  });
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const openEdit = (agent: AgentRow) => {
@@ -223,15 +361,6 @@ export default function SchedulesPage() {
     statusMutation.mutate({ userId: agent.id, status: next });
   };
 
-  const toggleWeekday = (day: number) => {
-    setEditSchedule((s) => ({
-      ...s,
-      weekdays: s.weekdays.includes(day)
-        ? s.weekdays.filter((d) => d !== day)
-        : [...s.weekdays, day].sort(),
-    }));
-  };
-
   const toggleSort = React.useCallback((field: SortField) => {
     setSortBy((prev) => {
       if (prev === field) {
@@ -244,6 +373,15 @@ export default function SchedulesPage() {
   }, []);
 
   const dirFor = (f: SortField): SortDir => (sortBy === f ? sortDir : null);
+
+  const toggleTemplateUser = (id: string) => {
+    setTemplateUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // ── KPI counts ────────────────────────────────────────────────────────────
 
@@ -298,27 +436,6 @@ export default function SchedulesPage() {
     });
     return result;
   }, [agents, statusFilter, search, sortBy, sortDir]);
-
-  // ── Header slots ──────────────────────────────────────────────────────────
-
-  const searchNode = React.useMemo(
-    () => (
-      <SettingsListFilterBar
-        search={search}
-        onSearch={setSearch}
-        placeholder="Buscar agente…"
-        ariaLabel="Buscar agente por nome ou e-mail"
-        onClearAll={() => setSearch("")}
-      />
-    ),
-    [search],
-  );
-
-  React.useEffect(() => {
-    if (!slots) return;
-    slots.setCenter(searchNode);
-    return () => slots.setCenter(null);
-  }, [slots, searchNode]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -523,12 +640,12 @@ export default function SchedulesPage() {
         </div>
       )}
 
-      {/* Edit schedule dialog — preserved verbatim */}
+      {/* Edit schedule dialog */}
       <Dialog open={!!editAgent} onOpenChange={(o) => { if (!o) setEditAgent(null); }}>
         <DialogContent size="md">
           <DialogClose />
           <DialogHeader>
-            <DialogTitle>Horário de {editAgent?.name}</DialogTitle>
+            <DialogTitle>Expediente de {editAgent?.name}</DialogTitle>
             <DialogDescription>Defina o expediente, almoço e dias de trabalho.</DialogDescription>
           </DialogHeader>
 
@@ -539,73 +656,7 @@ export default function SchedulesPage() {
               if (editAgent) scheduleMutation.mutate({ userId: editAgent.id, schedule: editSchedule });
             }}
           >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="min-w-0 w-full space-y-1.5">
-                <Label htmlFor="sch-start">Início expediente</Label>
-                <InputGlass
-                  id="sch-start"
-                  type="time"
-                  value={editSchedule.startTime}
-                  onChange={(e) => setEditSchedule((s) => ({ ...s, startTime: e.target.value }))}
-                  className="w-full"
-                />
-              </div>
-              <div className="min-w-0 w-full space-y-1.5">
-                <Label htmlFor="sch-end">Fim expediente</Label>
-                <InputGlass
-                  id="sch-end"
-                  type="time"
-                  value={editSchedule.endTime}
-                  onChange={(e) => setEditSchedule((s) => ({ ...s, endTime: e.target.value }))}
-                  className="w-full"
-                />
-              </div>
-              <div className="min-w-0 w-full space-y-1.5">
-                <Label htmlFor="sch-lunch-start">Início almoço</Label>
-                <InputGlass
-                  id="sch-lunch-start"
-                  type="time"
-                  value={editSchedule.lunchStart}
-                  onChange={(e) => setEditSchedule((s) => ({ ...s, lunchStart: e.target.value }))}
-                  className="w-full"
-                />
-              </div>
-              <div className="min-w-0 w-full space-y-1.5">
-                <Label htmlFor="sch-lunch-end">Fim almoço</Label>
-                <InputGlass
-                  id="sch-lunch-end"
-                  type="time"
-                  value={editSchedule.lunchEnd}
-                  onChange={(e) => setEditSchedule((s) => ({ ...s, lunchEnd: e.target.value }))}
-                  className="w-full"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Dias de trabalho</Label>
-              <div className="flex flex-wrap gap-2">
-                {WEEKDAYS.map((wd) => {
-                  const active = editSchedule.weekdays.includes(wd.value);
-                  return (
-                    <button
-                      key={wd.value}
-                      type="button"
-                      onClick={() => toggleWeekday(wd.value)}
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-[var(--radius-md)] px-3 py-2 text-xs font-semibold transition-colors",
-                        active
-                          ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                          : "border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] text-[var(--text-muted)] hover:border-[var(--brand-primary)] hover:text-[var(--text-primary)]",
-                      )}
-                    >
-                      {active && <Check className="size-3" />}
-                      {wd.short}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <ScheduleFields schedule={editSchedule} onChange={setEditSchedule} />
 
             {scheduleMutation.isError && (
               <p className="text-sm text-destructive">
@@ -636,6 +687,157 @@ export default function SchedulesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Novo expediente (template aplicável a vários usuários) */}
+      <Dialog open={newExpedienteOpen} onOpenChange={onNewExpedienteOpenChange}>
+        <DialogContent size="md">
+          <DialogClose />
+          <DialogHeader>
+            <DialogTitle>Novo expediente</DialogTitle>
+            <DialogDescription>
+              Defina um expediente e aplique-o aos usuários selecionados.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const ids = [...templateUsers];
+              if (ids.length === 0) return;
+              applyTemplate.mutate({ userIds: ids, schedule: templateSchedule });
+            }}
+          >
+            <ScheduleFields schedule={templateSchedule} onChange={setTemplateSchedule} />
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Aplicar a</Label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTemplateUsers((prev) =>
+                      prev.size === agents.length ? new Set() : new Set(agents.map((a) => a.id)),
+                    )
+                  }
+                  className="font-display text-[11px] font-semibold text-[var(--brand-primary)] hover:underline"
+                >
+                  {templateUsers.size === agents.length ? "Limpar" : "Selecionar todos"}
+                </button>
+              </div>
+              <div className="max-h-[220px] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1.5">
+                {agents.map((a) => (
+                  <label
+                    key={a.id}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors hover:bg-[var(--glass-bg-strong)]"
+                  >
+                    <CheckboxGlass
+                      checked={templateUsers.has(a.id)}
+                      onChange={() => toggleTemplateUser(a.id)}
+                      aria-label={`Selecionar ${a.name}`}
+                    />
+                    <span
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-primary)] font-display text-[10px] font-bold text-white"
+                    >
+                      {getInitials(a.name)}
+                    </span>
+                    <span className="min-w-0 leading-tight">
+                      <span className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                        {a.name}
+                      </span>
+                      <span className="block truncate font-body text-[11px] text-[var(--text-muted)]">
+                        {a.email}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="font-body text-[11px] text-[var(--text-muted)]">
+                {templateUsers.size} usuário(s) selecionado(s).
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <ButtonGlass
+                type="button"
+                variant="glass"
+                onClick={() => onNewExpedienteOpenChange(false)}
+              >
+                Cancelar
+              </ButtonGlass>
+              <ButtonGlass
+                type="submit"
+                variant="primary"
+                disabled={applyTemplate.isPending || templateUsers.size === 0}
+                className="gap-2"
+              >
+                {applyTemplate.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Check className="size-4" />
+                )}
+                Aplicar expediente
+              </ButtonGlass>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+// ─── Página standalone (rota /settings/schedules) ─────────────────────────────
+
+export default function SchedulesPage() {
+  const slots = useSettingsHeaderSlots();
+  const [search, setSearch] = React.useState("");
+  const [newOpen, setNewOpen] = React.useState(false);
+
+  const searchNode = React.useMemo(
+    () => (
+      <SettingsListFilterBar
+        search={search}
+        onSearch={setSearch}
+        placeholder="Buscar agente…"
+        ariaLabel="Buscar agente por nome ou e-mail"
+        onClearAll={() => setSearch("")}
+      />
+    ),
+    [search],
+  );
+
+  const actionsNode = React.useMemo(
+    () => (
+      <PageActionsMenu
+        aria-label="Ações de expediente"
+        items={[
+          {
+            icon: <IconPlus size={16} />,
+            label: "Novo expediente",
+            onClick: () => setNewOpen(true),
+            primary: true,
+          },
+        ]}
+      />
+    ),
+    [],
+  );
+
+  React.useEffect(() => {
+    if (!slots) return;
+    slots.setCenter(searchNode);
+    slots.setActions(actionsNode);
+    return () => {
+      slots.setCenter(null);
+      slots.setActions(null);
+    };
+  }, [slots, searchNode, actionsNode]);
+
+  return (
+    <ExpedienteTab
+      search={search}
+      newExpedienteOpen={newOpen}
+      onNewExpedienteOpenChange={setNewOpen}
+    />
   );
 }

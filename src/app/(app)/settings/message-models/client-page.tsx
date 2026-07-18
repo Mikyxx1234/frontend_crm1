@@ -14,7 +14,7 @@ export default function MessageModelsV2ClientPage() {
   return (
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
-      title="Modelos de mensagem"
+      title="Modelos"
       description="Internos, WhatsApp WABA e Flows (Kommo)"
       icon={<IconTemplate size={22} />}
     >

@@ -19,6 +19,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { GlassCard } from "@/components/crm/glass-card";
 import { InputGlass } from "@/components/crm/input-glass";
@@ -28,6 +29,18 @@ import { SwitchGlass } from "@/components/crm/switch-glass";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
+import {
+  SettingsListFilterBar,
+  type SettingsFilterGroup,
+} from "@/components/crm/settings-filter-bar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useDepartments, type Department } from "@/features/conversations-settings/hooks/use-departments";
 import { DeptGlyph } from "@/features/conversations-settings/department-icons";
 
@@ -90,6 +103,65 @@ function countLeafNodes(nodes: TabulationNode[]): number {
     else total += countLeafNodes(n.children);
   }
   return total;
+}
+
+/** Filtra a árvore por nome (case-insensitive), preservando ancestrais.
+ * Um nó é mantido se casa OU se tem descendentes que casam. Quando o
+ * próprio nó casa, sua subárvore completa é preservada. */
+function filterTree(nodes: TabulationNode[], query: string): TabulationNode[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return nodes;
+  const out: TabulationNode[] = [];
+  for (const n of nodes) {
+    const selfMatch = n.name.toLowerCase().includes(q);
+    const filteredChildren = filterTree(n.children, q);
+    if (selfMatch || filteredChildren.length > 0) {
+      out.push({ ...n, children: selfMatch ? n.children : filteredChildren });
+    }
+  }
+  return out;
+}
+
+/* ─── Nova tabulação (árvore em rascunho, criada ao confirmar) ─────── */
+
+type DraftNode = { id: string; name: string; children: DraftNode[] };
+
+function makeDraftNode(): DraftNode {
+  return {
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `draft-${Math.random().toString(36).slice(2)}`,
+    name: "",
+    children: [],
+  };
+}
+
+/** Cria a árvore de rascunho de forma sequencial: cada filho só é criado
+ * após o pai retornar seu `id`. Reutiliza o POST existente de tabulações. */
+async function createTabulationTree(
+  departmentId: string,
+  parentId: string | null,
+  nodes: DraftNode[],
+): Promise<void> {
+  for (const node of nodes) {
+    const name = node.name.trim();
+    if (!name) continue;
+    const res = await fetch(apiUrl("/api/settings/tabulations"), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ departmentId, parentId, name }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { message?: string }).message ?? "Erro ao criar tabulação");
+    }
+    const created = (await res.json()) as { id: string };
+    if (node.children.length > 0) {
+      await createTabulationTree(departmentId, created.id, node.children);
+    }
+  }
 }
 
 /* ─── CSV helpers (round-trip por id) ─────────────────────────────── */
@@ -203,6 +275,8 @@ function TabulationsBody() {
   const departments = departmentsQuery.data ?? [];
 
   const [departmentId, setDepartmentId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [newOpen, setNewOpen] = useState(false);
   const effectiveDeptId = departmentId ?? departments[0]?.id ?? null;
 
   const treeQuery = useQuery({
@@ -217,6 +291,9 @@ function TabulationsBody() {
   const nodeCount = useMemo(() => countNodes(tree), [tree]);
   const activeCount = useMemo(() => countActiveNodes(tree), [tree]);
   const leafCount = useMemo(() => countLeafNodes(tree), [tree]);
+
+  const filteredTree = useMemo(() => filterTree(tree, search), [tree, search]);
+  const filteredCount = useMemo(() => countNodes(filteredTree), [filteredTree]);
 
   const toggleRequire = useMutation({
     mutationFn: async (next: boolean) => {
@@ -365,17 +442,27 @@ function TabulationsBody() {
     importCsv.mutate(rows);
   };
 
-  // Seletor de departamento no centro do PageHeader (troca preservada).
-  const centerNode = useMemo(
-    () => (
-      <DeptSelect
-        departments={departments}
-        selected={selectedDept}
-        onSelect={(id) => setDepartmentId(id)}
+  // Busca + filtro de departamento no centro do PageHeader.
+  const centerNode = useMemo(() => {
+    const deptGroup: SettingsFilterGroup = {
+      key: "departamento",
+      label: "Departamento",
+      value: effectiveDeptId ?? "",
+      onChange: (id) => setDepartmentId(id),
+      options: departments.map((d) => ({ value: d.id, label: d.name })),
+    };
+    return (
+      <SettingsListFilterBar
+        search={search}
+        onSearch={setSearch}
+        placeholder="Buscar tabulação…"
+        ariaLabel="Buscar tabulação"
+        groups={[deptGroup]}
+        popoverTitle="Filtrar tabulações"
+        onClearAll={() => setSearch("")}
       />
-    ),
-    [departments, selectedDept],
-  );
+    );
+  }, [departments, effectiveDeptId, search]);
 
   // CTAs de CSV no hambúrguer à direita do PageHeader.
   const actionsNode = useMemo(
@@ -384,17 +471,23 @@ function TabulationsBody() {
         aria-label="Ações de tabulações"
         items={[
           {
+            icon: <IconPlus size={16} />,
+            label: "Nova tabulação",
+            onClick: () => setNewOpen(true),
+            primary: true,
+          },
+          {
             icon: <IconUpload size={16} />,
             label: importCsv.isPending ? "Importando…" : "Importar CSV",
             onClick: () => fileRef.current?.click(),
             disabled: importCsv.isPending,
+            divider: true,
           },
           {
             icon: <IconDownload size={16} />,
             label: "Exportar CSV",
             onClick: handleExport,
             disabled: tree.length === 0,
-            divider: true,
           },
         ]}
       />
@@ -525,15 +618,220 @@ function TabulationsBody() {
       {/* ── Árvore de tabulações ─────────────────────────────────── */}
       {effectiveDeptId ? (
         <TreeEditor
-          tree={tree}
+          tree={filteredTree}
           loading={treeQuery.isLoading}
-          nodeCount={nodeCount}
+          nodeCount={filteredCount}
           onCreate={(parentId, name) => createNode.mutate({ parentId, name })}
           onRename={(id, name) => updateNode.mutate({ id, name })}
           onToggleActive={(id, active) => updateNode.mutate({ id, active })}
           onDelete={(id) => deleteNode.mutate(id)}
         />
       ) : null}
+
+      <NewTabulationModal
+        open={newOpen}
+        onOpenChange={setNewOpen}
+        departmentId={effectiveDeptId}
+        departmentName={selectedDept?.name ?? null}
+        onCreated={() =>
+          qc.invalidateQueries({ queryKey: tabulationsQueryKey(effectiveDeptId) })
+        }
+      />
+    </div>
+  );
+}
+
+/* ─── Modal "Nova tabulação" (monta árvore antes de salvar) ────────── */
+
+function NewTabulationModal({
+  open,
+  onOpenChange,
+  departmentId,
+  departmentName,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  departmentId: string | null;
+  departmentName: string | null;
+  onCreated: () => void;
+}) {
+  const [rootName, setRootName] = useState("");
+  const [children, setChildren] = useState<DraftNode[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setRootName("");
+      setChildren([]);
+      setSaving(false);
+    }
+  }, [open]);
+
+  const canSave = !!departmentId && rootName.trim().length > 0 && !saving;
+
+  const handleSave = async () => {
+    if (!departmentId || !rootName.trim()) return;
+    setSaving(true);
+    try {
+      await createTabulationTree(departmentId, null, [
+        { id: "root", name: rootName.trim(), children },
+      ]);
+      toast.success("Tabulação criada com sucesso.");
+      onCreated();
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar tabulação.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>Nova tabulação</DialogTitle>
+          <DialogDescription>
+            {departmentId
+              ? `Monte a estrutura de níveis e subníveis${departmentName ? ` para ${departmentName}` : ""} antes de salvar.`
+              : "Selecione um departamento para criar uma tabulação."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+              Nível raiz
+            </label>
+            <InputGlass
+              autoFocus
+              value={rootName}
+              placeholder="Nome do nível raiz…"
+              onChange={(e) => setRootName(e.target.value)}
+              disabled={!departmentId}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <p className="font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                Subníveis
+              </p>
+              <ButtonGlass
+                type="button"
+                variant="glass"
+                onClick={() => setChildren((c) => [...c, makeDraftNode()])}
+                disabled={!departmentId}
+                className="shrink-0"
+              >
+                <IconPlus size={16} /> Adicionar subnível
+              </ButtonGlass>
+            </div>
+
+            {children.length === 0 ? (
+              <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] py-6 text-center font-body text-[12.5px] text-[var(--text-muted)]">
+                Nenhum subnível. A tabulação será criada apenas com o nível raiz.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {children.map((child, idx) => (
+                  <DraftNodeEditor
+                    key={child.id}
+                    node={child}
+                    depth={1}
+                    onChange={(next) =>
+                      setChildren((cs) => cs.map((c, i) => (i === idx ? next : c)))
+                    }
+                    onRemove={() =>
+                      setChildren((cs) => cs.filter((_, i) => i !== idx))
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <ButtonGlass type="button" variant="glass" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </ButtonGlass>
+          <ButtonGlass type="button" variant="primary" onClick={handleSave} disabled={!canSave}>
+            {saving ? "Criando…" : "Criar tabulação"}
+          </ButtonGlass>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Editor recursivo de um nó de rascunho: nome + adicionar/remover subníveis. */
+function DraftNodeEditor({
+  node,
+  depth,
+  onChange,
+  onRemove,
+}: {
+  node: DraftNode;
+  depth: number;
+  onChange: (next: DraftNode) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-2.5">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 rounded-full bg-[var(--brand-primary)]/10 px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+          Nível {depth + 1}
+        </span>
+        <InputGlass
+          value={node.name}
+          placeholder="Nome do subnível…"
+          onChange={(e) => onChange({ ...node, name: e.target.value })}
+        />
+        <button
+          type="button"
+          onClick={() =>
+            onChange({ ...node, children: [...node.children, makeDraftNode()] })
+          }
+          aria-label="Adicionar subnível"
+          className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+        >
+          <IconPlus size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remover nível"
+          className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
+        >
+          <IconTrash size={16} />
+        </button>
+      </div>
+
+      {node.children.length > 0 && (
+        <div className="ml-3 mt-2.5 flex flex-col gap-2.5 border-l border-[var(--glass-border)] pl-3">
+          {node.children.map((child, idx) => (
+            <DraftNodeEditor
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              onChange={(next) =>
+                onChange({
+                  ...node,
+                  children: node.children.map((c, i) => (i === idx ? next : c)),
+                })
+              }
+              onRemove={() =>
+                onChange({
+                  ...node,
+                  children: node.children.filter((_, i) => i !== idx),
+                })
+              }
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

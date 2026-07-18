@@ -9,9 +9,6 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { ButtonGlass } from "@/components/crm/button-glass";
 
-/** Inputs "soft" do alvo: fundo cinza suave, sem borda, radius grande. */
-const SOFT_INPUT = "rounded-[var(--radius-lg)] border-transparent bg-[var(--glass-bg-subtle)]";
-
 export function ExtensionSettingsForm() {
   const [label, setLabel] = useState("");
   const [sipUri, setSipUri] = useState("");
@@ -30,67 +27,62 @@ export function ExtensionSettingsForm() {
         e.preventDefault();
         mutation.mutate();
       }}
-      className="flex min-w-0 w-full flex-col gap-4"
+      className="grid min-w-0 w-full gap-4"
     >
-      <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="grid min-w-0 gap-1.5">
         <Label>Label (nome do ramal)</Label>
         <InputGlass
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Meu Ramal"
-          className={SOFT_INPUT}
         />
       </div>
 
-      <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="grid min-w-0 gap-1.5">
         <Label>SIP URI</Label>
         <InputGlass
           value={sipUri}
           onChange={(e) => setSipUri(e.target.value)}
           placeholder="sip:1001@pbx.empresa.com"
-          className={SOFT_INPUT}
         />
       </div>
 
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="grid min-w-0 gap-1.5">
           <Label>Auth User (ramal)</Label>
           <InputGlass
             value={authUser}
             onChange={(e) => setAuthUser(e.target.value)}
             placeholder="1001"
-            className={SOFT_INPUT}
           />
         </div>
-        <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="grid min-w-0 gap-1.5">
           <Label>Senha SIP</Label>
           <PasswordInput
             value={authPassword}
             onChange={(e) => setAuthPassword(e.target.value)}
             placeholder="••••••"
-            className={SOFT_INPUT}
           />
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="grid min-w-0 gap-1.5">
         <Label>WebSocket Server</Label>
         <InputGlass
           value={wsServer}
           onChange={(e) => setWsServer(e.target.value)}
           placeholder="wss://pbx.empresa.com:6443"
-          className={SOFT_INPUT}
         />
       </div>
 
       {mutation.isError && (
-        <p className="text-xs text-[var(--color-danger)]">
+        <p className="text-[11px] text-[var(--color-danger)]">
           {(mutation.error as Error)?.message ?? "Erro ao salvar"}
         </p>
       )}
 
       {mutation.isSuccess && (
-        <p className="text-xs text-[var(--color-success)]/80">Ramal salvo com sucesso!</p>
+        <p className="text-[11px] text-[var(--color-success)]">Ramal salvo com sucesso!</p>
       )}
 
       <div className="flex justify-end">

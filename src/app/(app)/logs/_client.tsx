@@ -9,6 +9,7 @@ import { IconLoader2 as Loader2 } from "@tabler/icons-react";
 import {
   IconAdjustmentsHorizontal,
   IconActivity,
+  IconArrowsExchange,
   IconBrandFacebook,
   IconBrandInstagram,
   IconBrandTelegram,
@@ -349,6 +350,9 @@ export default function LogsClientPage() {
   const [demo, setDemo] = React.useState<boolean>(false);
   const [limit, setLimit] = React.useState<number>(50);
   const [range, setRange] = React.useState<DateRange>({ from: null, to: null });
+  const [stagePipelineId, setStagePipelineId] = React.useState<string | null>(null);
+  const [stageFrom, setStageFrom] = React.useState<string[]>([]);
+  const [stageTo, setStageTo] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     const t = setTimeout(() => setQDebounced(q), 350);
@@ -362,9 +366,12 @@ export default function LogsClientPage() {
       q: qDebounced || undefined,
       dateFrom: range.from ? format(range.from, "yyyy-MM-dd") : undefined,
       dateTo: range.to ? format(range.to, "yyyy-MM-dd") : undefined,
+      stagePipelineId: stagePipelineId || undefined,
+      stageFrom: stageFrom.length ? stageFrom : undefined,
+      stageTo: stageTo.length ? stageTo : undefined,
       limit,
     }),
-    [entity, actor, qDebounced, range, limit],
+    [entity, actor, qDebounced, range, stagePipelineId, stageFrom, stageTo, limit],
   );
 
   const {
@@ -382,7 +389,13 @@ export default function LogsClientPage() {
   );
 
   const hasFilters =
-    entity !== "ALL" || actor !== "ALL" || Boolean(q) || Boolean(range.from);
+    entity !== "ALL" ||
+    actor !== "ALL" ||
+    Boolean(q) ||
+    Boolean(range.from) ||
+    Boolean(stagePipelineId) ||
+    stageFrom.length > 0 ||
+    stageTo.length > 0;
 
   // Modo demonstração: ativo manualmente OU automaticamente quando não há
   // eventos reais e nenhum filtro aplicado (para visualizar todos os tipos).
@@ -493,6 +506,12 @@ export default function LogsClientPage() {
                 onActorChange={setActor}
                 range={range}
                 onRangeChange={setRange}
+                stagePipelineId={stagePipelineId}
+                onStagePipelineChange={setStagePipelineId}
+                stageFrom={stageFrom}
+                onStageFromChange={setStageFrom}
+                stageTo={stageTo}
+                onStageToChange={setStageTo}
               />
             ) : isCalls && callsWidget.enabled === true ? (
               <div className="flex w-full justify-start">
@@ -537,6 +556,9 @@ export default function LogsClientPage() {
                     setActor("ALL");
                     setQ("");
                     setRange({ from: null, to: null });
+                    setStagePipelineId(null);
+                    setStageFrom([]);
+                    setStageTo([]);
                   }}
                 />
               )}
@@ -1431,7 +1453,7 @@ function StatBarPanel({
 
 // ── Feed: busca + popover de filtros (padrão Contatos/Empresas) ─────────────
 
-type FeedFilterTab = "entidade" | "ator" | "periodo";
+type FeedFilterTab = "entidade" | "ator" | "periodo" | "transicao";
 
 const FEED_FILTER_TABS: {
   id: FeedFilterTab;
@@ -1449,7 +1471,31 @@ const FEED_FILTER_TABS: {
     label: "Período",
     icon: <IconCalendarEvent size={14} stroke={2.2} />,
   },
+  {
+    id: "transicao",
+    label: "Fase",
+    icon: <IconArrowsExchange size={14} stroke={2.2} />,
+  },
 ];
+
+type PipelineWithStagesLite = {
+  id: string;
+  name: string;
+  stages: { id: string; name: string }[];
+};
+
+function usePipelinesLite(enabled: boolean) {
+  return useQuery<PipelineWithStagesLite[]>({
+    queryKey: ["logs-pipelines-lite"],
+    queryFn: async () => {
+      const res = await fetch("/api/pipelines");
+      if (!res.ok) throw new Error("Falha ao carregar pipelines");
+      return res.json();
+    },
+    enabled,
+    staleTime: 60_000,
+  });
+}
 
 function CountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -1469,6 +1515,12 @@ function FeedSearchFilterBar({
   onActorChange,
   range,
   onRangeChange,
+  stagePipelineId,
+  onStagePipelineChange,
+  stageFrom,
+  onStageFromChange,
+  stageTo,
+  onStageToChange,
 }: {
   search: string;
   onSearch: (v: string) => void;
@@ -1478,15 +1530,40 @@ function FeedSearchFilterBar({
   onActorChange: (v: string) => void;
   range: DateRange;
   onRangeChange: (r: DateRange) => void;
+  stagePipelineId: string | null;
+  onStagePipelineChange: (v: string | null) => void;
+  stageFrom: string[];
+  onStageFromChange: (v: string[]) => void;
+  stageTo: string[];
+  onStageToChange: (v: string[]) => void;
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [open, setOpen] = React.useState(false);
   const [tab, setTab] = React.useState<FeedFilterTab>("entidade");
 
+  const stageTransitionActive =
+    Boolean(stagePipelineId) || stageFrom.length > 0 || stageTo.length > 0;
+
   const activeCount =
     (entity !== "ALL" ? 1 : 0) +
     (actor !== "ALL" ? 1 : 0) +
-    (range.from || range.to ? 1 : 0);
+    (range.from || range.to ? 1 : 0) +
+    (stageTransitionActive ? 1 : 0);
+
+  const { data: pipelines = [] } = usePipelinesLite(open && tab === "transicao");
+  const currentPipeline = React.useMemo(
+    () => pipelines.find((p) => p.id === stagePipelineId) ?? null,
+    [pipelines, stagePipelineId],
+  );
+
+  const toggleStageId = (
+    current: string[],
+    id: string,
+    setter: (v: string[]) => void,
+  ) => {
+    if (current.includes(id)) setter(current.filter((x) => x !== id));
+    else setter([...current, id]);
+  };
 
   React.useEffect(() => {
     if (!open) return;
@@ -1502,6 +1579,12 @@ function FeedSearchFilterBar({
     if (id === "entidade") return entity !== "ALL" ? 1 : 0;
     if (id === "ator") return actor !== "ALL" ? 1 : 0;
     if (id === "periodo") return range.from || range.to ? 1 : 0;
+    if (id === "transicao")
+      return (
+        (stagePipelineId ? 1 : 0) +
+        (stageFrom.length > 0 ? 1 : 0) +
+        (stageTo.length > 0 ? 1 : 0)
+      );
     return 0;
   };
 
@@ -1509,6 +1592,9 @@ function FeedSearchFilterBar({
     onEntityChange("ALL");
     onActorChange("ALL");
     onRangeChange({ from: null, to: null });
+    onStagePipelineChange(null);
+    onStageFromChange([]);
+    onStageToChange([]);
   }
 
   return (
@@ -1653,9 +1739,158 @@ function FeedSearchFilterBar({
                 <DateRangePicker value={range} onChange={onRangeChange} />
               </div>
             )}
+
+            {tab === "transicao" && (
+              <div className="flex flex-col gap-3">
+                <div className="rounded-[12px] border border-[var(--brand-primary)]/25 bg-[var(--color-primary-soft)] px-3 py-2 font-body text-[11.5px] leading-snug text-[var(--brand-primary-dark)]">
+                  Filtra apenas eventos de <b>mudança de fase</b>. Combina com
+                  período e ator selecionados. Escolha o funil e, opcionalmente,
+                  as fases de <b>origem</b> e <b>destino</b>.
+                </div>
+
+                <div>
+                  <p className="mb-1.5 font-display text-[11px] font-semibold text-[var(--text-muted)]">
+                    Funil
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onStagePipelineChange(null);
+                        onStageFromChange([]);
+                        onStageToChange([]);
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                        !stagePipelineId
+                          ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                      )}
+                    >
+                      {!stagePipelineId && <IconCheck size={12} stroke={2.4} />}
+                      Todos
+                    </button>
+                    {pipelines.map((p) => {
+                      const selected = stagePipelineId === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            onStagePipelineChange(p.id);
+                            onStageFromChange([]);
+                            onStageToChange([]);
+                          }}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                            selected
+                              ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                              : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                          )}
+                        >
+                          {selected && <IconCheck size={12} stroke={2.4} />}
+                          {p.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {currentPipeline && (
+                  <>
+                    <StagePicker
+                      label="De (fase de origem)"
+                      hint="Vazio = qualquer fase de origem"
+                      stages={currentPipeline.stages}
+                      selected={stageFrom}
+                      onToggle={(id) =>
+                        toggleStageId(stageFrom, id, onStageFromChange)
+                      }
+                      onClear={() => onStageFromChange([])}
+                    />
+                    <StagePicker
+                      label="Para (fase de destino)"
+                      hint="Vazio = qualquer fase de destino"
+                      stages={currentPipeline.stages}
+                      selected={stageTo}
+                      onToggle={(id) =>
+                        toggleStageId(stageTo, id, onStageToChange)
+                      }
+                      onClear={() => onStageToChange([])}
+                    />
+                  </>
+                )}
+
+                {!currentPipeline && pipelines.length > 0 && (
+                  <p className="rounded-[10px] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-3 text-center font-body text-[11.5px] text-[var(--text-muted)]">
+                    Selecione um funil acima para escolher as fases de origem
+                    e destino.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function StagePicker({
+  label,
+  hint,
+  stages,
+  selected,
+  onToggle,
+  onClear,
+}: {
+  label: string;
+  hint: string;
+  stages: { id: string; name: string }[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center justify-between">
+        <p className="font-display text-[11px] font-semibold text-[var(--text-muted)]">
+          {label}
+        </p>
+        {selected.length > 0 && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="font-display text-[10.5px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+          >
+            limpar ({selected.length})
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {stages.map((s) => {
+          const on = selected.includes(s.id);
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onToggle(s.id)}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-display text-[11.5px] font-bold transition-colors",
+                on
+                  ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+              )}
+            >
+              {on && <IconCheck size={11} stroke={2.4} />}
+              {s.name}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1 font-body text-[10.5px] italic text-[var(--text-muted)]">
+        {hint}
+      </p>
     </div>
   );
 }

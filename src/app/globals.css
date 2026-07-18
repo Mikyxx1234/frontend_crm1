@@ -575,6 +575,15 @@
   .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(100, 130, 180, 0.30); border-radius: 99px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 
+  /* Scrollbar fina do redesign dos asides (ref. Stitch): 4px, thumb slate-300. */
+  .aside-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .aside-scrollbar::-webkit-scrollbar { width: 4px; }
+  .aside-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .aside-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
   /* Chat no workspace do negócio (Kanban): barra vertical mais legível que `scrollbar-thin`. */
   .scrollbar-workspace {
     scrollbar-width: auto;

@@ -9,16 +9,21 @@ import {
 } from "@hello-pangea/dnd"
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
-import { PageSegmentedControl } from "@/components/crm/page-toolbar"
 import {
   IconBriefcase,
+  IconBrandWhatsapp,
+  IconCalendarEvent,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconGripVertical,
+  IconId,
   IconLayoutList,
+  IconMail,
+  IconMapPin,
   IconPackage,
   IconPencil,
+  IconPhone,
   IconSparkles,
   IconTag,
   IconSettings,
@@ -247,13 +252,13 @@ function SectionHeader({
         onClick={onToggle}
         disabled={!onToggle}
         className={cn(
-          // Header padronizado (ref. protótipo): ícone + título bold escuro
-          // + #meta muted + chevron. Sem caixa alta, sem tracking largo.
-          "flex items-center gap-1.5 rounded font-display text-[12px] font-bold text-[var(--text-primary)]",
+          // Header padronizado (ref. Stitch): ícone 16px + título bold 14px
+          // + #meta opacity-60 + chevron. Sem caixa alta, sem tracking largo.
+          "flex items-center gap-2 rounded font-display text-sm font-bold text-[var(--text-primary)]",
           onToggle && "cursor-pointer hover:opacity-80",
         )}
       >
-        {icon}
+        {icon && <span className="flex shrink-0 items-center text-slate-600">{icon}</span>}
         <span className="flex min-w-0 items-baseline gap-1.5">
           {children}
           {meta}
@@ -292,7 +297,7 @@ function HeaderBtn({
           "flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
           active
             ? "bg-[var(--brand-primary)] text-white"
-            : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+            : "text-slate-400 hover:text-blue-500",
         )}
       >
         {children}
@@ -310,7 +315,8 @@ function Row({
   value,
   valueStyle,
   children,
-  isLast,
+  icon,
+  isFirst,
   compact,
   className,
 }: {
@@ -318,32 +324,30 @@ function Row({
   value?: string
   valueStyle?: React.CSSProperties
   children?: React.ReactNode
-  isLast?: boolean
+  /** Ícone 12px à esquerda do label (ref. Stitch). */
+  icon?: React.ReactNode
+  /** Primeira linha do card não recebe borda superior. */
+  isFirst?: boolean
   compact?: boolean
   className?: string
 }) {
   return (
     <div
       className={cn(
-        "flex items-baseline gap-2 px-3",
-        compact ? "py-1" : "py-1.5",
-        !isLast && "border-b border-[var(--glass-border-subtle)]",
+        "flex items-center justify-between gap-2 text-sm",
+        compact ? "py-1.5" : "py-2",
+        !isFirst && "border-t border-slate-50",
         className,
       )}
     >
-      <span className={cn(
-        "shrink-0 font-medium text-[var(--text-muted)]",
-        compact ? "w-[32%] text-[11px] leading-tight" : "w-[30%] text-[12px]",
-      )}>
+      <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500">
+        {icon}
         {label}
       </span>
       <div className="flex min-w-0 flex-1 justify-end">
         {children ?? (
           <span
-            className={cn(
-              "min-w-0 truncate text-right font-display font-semibold text-[var(--text-primary)]",
-              compact ? "text-[12px]" : "text-[13px]",
-            )}
+            className="min-w-0 truncate text-right font-display font-semibold text-[var(--text-primary)]"
             style={valueStyle}
             title={value}
           >
@@ -429,96 +433,64 @@ function DealInline({
   // Progresso do funil: usa currentSegIdx (0-based) + total de segmentos.
   const totalStages = sortedSegments?.length ?? 0
   const currentStage = currentSegIdx >= 0 ? currentSegIdx + 1 : 0
-  const progress = totalStages > 0 ? Math.round((currentStage / totalStages) * 100) : 0
 
   return (
     <div className="px-3 pt-2 pb-0">
-      {/* ── Hero header: cor sólida da NavRail (--nav-bg), ocupando toda a
-          cabeça do container (edge-to-edge via margens negativas + cantos
-          superiores acompanhando o raio do container). ── */}
-      <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] bg-[var(--nav-bg)] px-3.5 pb-2.5 pt-3.5 text-white">
-        {/* Bolhas decorativas */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-t-[var(--radius-xl)]">
-          <div className="absolute -right-8 -top-10 size-28 rounded-full bg-white/10" />
-          <div className="absolute -bottom-10 -left-6 size-24 rounded-full bg-white/10" />
-        </div>
-
-        {/* Linha topo: título + stage dropdown numa única linha */}
-        <div className="relative flex items-center justify-between gap-2">
-          <h2 className="flex min-w-0 items-baseline gap-1.5 font-display text-[14px] font-bold leading-snug text-white">
+      {/* ── Hero header (ref. Stitch): card escuro #2e3b6e, edge-to-edge no
+          topo do container, cantos inferiores grandes (rounded-b-3xl). ── */}
+      <header className="relative isolate -mx-3 -mt-2 mb-3 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] p-5 text-white shadow-lg">
+        {/* Linha topo: título + #número | pill de etapa */}
+        <div className="relative mb-4 flex items-start justify-between gap-2">
+          <h1 className="flex min-w-0 items-baseline gap-1.5 text-lg font-bold leading-snug text-white">
             <span className="min-w-0 truncate">{deal.title}</span>
             {deal.number != null && (
-              <span className="shrink-0 font-mono text-[10px] font-semibold text-white/65">
+              <span className="shrink-0 text-sm font-normal text-slate-400">
                 #{deal.number}
               </span>
             )}
-          </h2>
+          </h1>
 
           {deal.stageDropdownSlot ? (
-            <div className="relative z-30 shrink-0 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
+            <span className="relative z-30 flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white [&_button]:!text-white [&_button]:hover:!opacity-100">
               {deal.stageDropdownSlot}
-            </div>
+            </span>
           ) : (
-            <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium backdrop-blur-sm">
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs">
+              <span className="h-2 w-2 rounded-full bg-orange-400" />
               {stageLabel}
             </span>
           )}
         </div>
 
         {/* Linha base: anel de progresso + pipeline info + responsável */}
-        <div className="relative mt-2 flex items-center gap-2.5">
-          <div
-            className="grid size-9 shrink-0 place-items-center rounded-full"
-            style={{
-              background:
-                sortedSegments && sortedSegments.length > 0
-                  ? (() => {
-                      const step = 100 / sortedSegments.length
-                      const stops = sortedSegments
-                        .map((seg, i) => {
-                          const color = seg.color || "var(--brand-primary)"
-                          const active = i <= currentSegIdx
-                          const c = active
-                            ? color
-                            : `color-mix(in srgb, ${color} 22%, rgba(255,255,255,0.35))`
-                          return `${c} ${i * step}% ${(i + 1) * step}%`
-                        })
-                        .join(", ")
-                      return `conic-gradient(${stops})`
-                    })()
-                  : `conic-gradient(var(--brand-primary) ${progress}%, rgba(255,255,255,0.25) 0)`,
-            }}
-          >
-            <div className="grid size-[26px] place-items-center rounded-full bg-[var(--brand-primary)]">
-              <span className="font-display text-[9px] font-bold text-white">
-                {totalStages > 0 ? `${currentStage}/${totalStages}` : "—"}
-              </span>
-            </div>
+        <div className="relative mb-4 flex items-center gap-4">
+          <div className="relative flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-orange-500 bg-white/10">
+            <span className="text-xs font-bold">
+              {totalStages > 0 ? `${currentStage}/${totalStages}` : "—"}
+            </span>
           </div>
-          <div className="min-w-0 flex-1 text-[10.5px] text-white/80">
-            <p className="truncate font-semibold text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
-            <p className="truncate">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
+            <p className="truncate text-xs text-slate-300">
               {totalStages > 0 ? `Etapa ${currentStage} de ${totalStages}` : stageLabel}
             </p>
           </div>
           {deal.assigneeSlot && (
-            <div className="shrink-0 [&_span]:!border-transparent [&_span]:!bg-white [&_span]:!text-[var(--brand-primary)] [&_span]:shadow-sm">
+            <div className="shrink-0 [&_span]:!border-transparent [&_span]:!bg-white [&_span]:!text-[#2e3b6e] [&_span]:shadow-sm">
               {deal.assigneeSlot}
             </div>
           )}
         </div>
 
-        {/* Barra de funil segmentada — dentro do card */}
+        {/* Barra de etapas segmentada — 2px, ativo #f59e0b, inativo white/20 */}
         {sortedSegments && sortedSegments.length > 0 && (
-          <div className="relative mt-2 flex gap-1 px-0.5">
+          <div className="relative mb-4 flex items-center gap-1">
             {sortedSegments.map((seg, i) => (
               <TooltipGlass key={seg.id} label={seg.name} side="top">
                 <span
-                  className="h-[3px] flex-1 rounded-full transition-colors"
+                  className="h-[2px] flex-1 rounded-full transition-colors"
                   style={{
-                    background: i <= currentSegIdx
-                      ? (seg.color || "var(--brand-primary)")
-                      : "rgba(255,255,255,0.28)",
+                    backgroundColor: i <= currentSegIdx ? "#f59e0b" : "rgba(255,255,255,0.2)",
                   }}
                 />
               </TooltipGlass>
@@ -526,28 +498,30 @@ function DealInline({
           </div>
         )}
 
-        {/* Origem + Canal + Tags — seção inferior do card */}
+        {/* Grid 2 colunas de infos rápidas — Origem / Canal / Tags */}
         {(deal.origin || contact.connection || deal.dealTagsNode !== undefined) && (
-          <div className="relative mt-2 flex flex-col gap-0 divide-y divide-white/15 rounded-[var(--radius-md)] bg-white/10 px-2.5 py-1">
+          <div className="relative grid grid-cols-2 gap-y-2 border-t border-white/10 pt-4 text-xs">
             {deal.origin && (
-              <div className="flex items-center justify-between gap-2 py-1">
-                <span className="shrink-0 text-[11px] text-white/60">Origem</span>
-                <span className="truncate text-right text-[11.5px] font-semibold text-white">{deal.origin}</span>
-              </div>
+              <>
+                <span className="text-slate-400">Origem</span>
+                <span className="truncate text-right font-medium">{deal.origin}</span>
+              </>
             )}
             {contact.connection && (
-              <div className="flex items-center justify-between gap-2 py-1">
-                <span className="shrink-0 text-[11px] text-white/60">Canal</span>
-                <span className="truncate text-right text-[11.5px] font-semibold text-white">
+              <>
+                <span className="text-slate-400">Canal</span>
+                <span className="truncate text-right font-medium">
                   {formatConnectionShort(contact.connection)}
                 </span>
-              </div>
+              </>
             )}
             {deal.dealTagsNode !== undefined && (
-              <div className="flex flex-wrap items-center gap-1.5 py-1.5 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:!border-white/20">
-                <span className="shrink-0 text-[11px] text-white/60">Tags</span>
-                {deal.dealTagsNode}
-              </div>
+              <>
+                <span className="text-slate-400">Tags</span>
+                <span className="flex flex-wrap items-center justify-end gap-1 [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white">
+                  {deal.dealTagsNode}
+                </span>
+              </>
             )}
           </div>
         )}
@@ -594,15 +568,15 @@ function DealInline({
                 <div
                   key={f.fieldId}
                   className={cn(
-                    "flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2",
+                    "flex flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2",
                     isLong && "col-span-2",
                   )}
                 >
-                  <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                  <span className="text-[11px] font-medium text-slate-500">
                     {f.label}
                   </span>
                   {isEmpty ? (
-                    <span className="italic text-[12px] text-[var(--text-muted)]/70">
+                    <span className="italic text-[12px] text-slate-400">
                       + Adicionar
                     </span>
                   ) : (
@@ -804,7 +778,7 @@ export function ContactAside({
           </button>
         </TooltipGlass>
       )}
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <div className="aside-scrollbar relative flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
 
         {/* Header de acoes do contato (IB4 do questionario):
             DealCallButton entra aqui via `headerActionsNode`. Antes ficava
@@ -827,18 +801,31 @@ export function ContactAside({
           </div>
         )}
 
-        {/* ── Pills: Perfil / Produto + toggle de visão ── */}
-        <div className="flex items-center gap-2 px-3 pt-2">
-          <PageSegmentedControl
-            items={ASIDE_TAB_ITEMS}
-            value={activeTab}
-            onChange={(v) => setActiveTab(v as AsideTab)}
-            aria-label="Alternar entre Perfil e Produto"
-            size="compact"
-            className="flex-1 [&>button]:flex [&>button]:flex-1 [&>button]:items-center [&>button]:justify-center"
-          />
-          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
-        </div>
+        {/* ── Abas: Perfil / Produto + toggle de visão (ref. Stitch) ── */}
+        <nav className="flex items-center gap-2 p-4" aria-label="Alternar entre Perfil e Produto">
+          {ASIDE_TAB_ITEMS.map((item) => {
+            const active = activeTab === item.value
+            return (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setActiveTab(item.value as AsideTab)}
+                aria-pressed={active}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-[13px] font-semibold transition-colors",
+                  active
+                    ? "border border-slate-200 bg-white text-indigo-600 shadow-sm"
+                    : "bg-slate-200/50 text-slate-600 hover:bg-slate-200",
+                )}
+              >
+                {item.label}
+              </button>
+            )
+          })}
+          <div className="flex items-center gap-1">
+            <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+          </div>
+        </nav>
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="aside-sections">
@@ -866,7 +853,7 @@ export function ContactAside({
                             <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-2">
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
-                                icon={<IconUser size={12} />}
+                                icon={<IconUser size={16} />}
                                 open={contactSectionOpen}
                                 onToggle={() => setContactSectionOpen((v) => !v)}
                                 meta={
@@ -909,13 +896,8 @@ export function ContactAside({
                               )}
 
                               {/* Campos nativos */}
-                              <div className={cn(
-                                "rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] overflow-hidden",
-                                viewMode === "compact"
-                                  ? "bg-[var(--glass-bg-overlay)]"
-                                  : "bg-[var(--glass-bg-overlay)] px-3.5 py-1"
-                              )}>
-                                <Row label="Nome" compact={viewMode === "compact"}>
+                              <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                                <Row label="Nome" isFirst icon={<IconUser size={12} />} compact={viewMode === "compact"}>
                                   <InlineNativeEditor
                                     value={native("name", contact.name)}
                                     entityType="contact"
@@ -924,14 +906,14 @@ export function ContactAside({
                                     editMode={contactEditMode}
                                     invalidateKeys={contactInvalidateKeys}
                                     onSaved={(v) => setNativeValues((p) => ({ ...p, name: v }))}
-                                    textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                    textClassName="rounded bg-indigo-50 px-2 py-0.5 font-display text-[13px] font-bold text-indigo-600"
                                   />
                                 </Row>
                                 {/* Telefone (formatado). Campos basicos
                                     garantidos no aside: Nome, Telefone, Email
                                     e @ do WhatsApp. Edicao inline salva o valor
                                     cru; exibicao usa mascara BR. */}
-                                <Row label="Telefone" compact={viewMode === "compact"}>
+                                <Row label="Telefone" icon={<IconPhone size={12} />} compact={viewMode === "compact"}>
                                   <InlineNativeEditor
                                     value={native("phone", contact.phone)}
                                     entityType="contact"
@@ -943,10 +925,10 @@ export function ContactAside({
                                     editMode={contactEditMode}
                                     invalidateKeys={contactInvalidateKeys}
                                     onSaved={(v) => setNativeValues((p) => ({ ...p, phone: v }))}
-                                    textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right"
+                                    textClassName="text-right font-display text-[13px] font-semibold text-indigo-600"
                                   />
                                 </Row>
-                                <Row label="Email" compact={viewMode === "compact"}>
+                                <Row label="Email" icon={<IconMail size={12} />} compact={viewMode === "compact"}>
                                   <InlineNativeEditor
                                     value={native("email", contact.email)}
                                     entityType="contact"
@@ -957,7 +939,7 @@ export function ContactAside({
                                     editMode={contactEditMode}
                                     invalidateKeys={contactInvalidateKeys}
                                     onSaved={(v) => setNativeValues((p) => ({ ...p, email: v }))}
-                                    textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right"
+                                    textClassName="text-right font-display text-[13px] font-semibold text-[var(--text-primary)]"
                                   />
                                 </Row>
                                 {/* @ do WhatsApp — somente leitura (vem do
@@ -967,39 +949,37 @@ export function ContactAside({
                                   <Row
                                     label="@ WhatsApp"
                                     value={`@${contact.whatsappUsername!.replace(/^@/, "")}`}
+                                    icon={<IconBrandWhatsapp size={12} />}
                                     compact={viewMode === "compact"}
                                   />
                                 )}
                                 {contact.connection && (
-                                  <Row label="Canal" compact={viewMode === "compact"}>
+                                  <Row label="Canal" icon={<IconAffiliate size={12} />} compact={viewMode === "compact"}>
                                     <TooltipGlass
                                       label={`Conversando por ${formatConnectionLabel(contact.connection)}`}
                                       side="left"
                                     >
-                                      <span className="inline-flex items-center gap-1.5 font-display text-[12px] font-bold text-[var(--text-primary)]">
-                                        <IconAffiliate size={13} className="text-[var(--brand-primary)]" />
+                                      <span className="inline-flex items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                        <IconBrandWhatsapp size={14} className="text-[#25d366]" />
                                         {channelTypeLabel(contact.connection.type)} · {formatConnectionShort(contact.connection)}
                                       </span>
                                     </TooltipGlass>
                                   </Row>
                                 )}
-                                {isFilled(contact.cpf) && <Row label="CPF" value={contact.cpf} compact={viewMode === "compact"} />}
-                                {isFilled(contact.rg) && <Row label="RG" value={contact.rg} compact={viewMode === "compact"} />}
-                                {isFilled(contact.cep) && <Row label="CEP" value={contact.cep} compact={viewMode === "compact"} />}
+                                {isFilled(contact.cpf) && <Row label="CPF" value={contact.cpf} icon={<IconId size={12} />} compact={viewMode === "compact"} />}
+                                {isFilled(contact.rg) && <Row label="RG" value={contact.rg} icon={<IconId size={12} />} compact={viewMode === "compact"} />}
+                                {isFilled(contact.cep) && <Row label="CEP" value={contact.cep} icon={<IconMapPin size={12} />} compact={viewMode === "compact"} />}
                                 {isFilled(contact.addressNumber) && (
-                                  <Row label="N Residencia" value={contact.addressNumber} compact={viewMode === "compact"} />
+                                  <Row label="N Residencia" value={contact.addressNumber} icon={<IconMapPin size={12} />} compact={viewMode === "compact"} />
                                 )}
                                 {isFilled(contact.birthDate) && (
-                                  <Row label="Data de Nascimento" value={contact.birthDate} isLast compact={viewMode === "compact"} />
+                                  <Row label="Data de Nascimento" value={contact.birthDate} icon={<IconCalendarEvent size={12} />} compact={viewMode === "compact"} />
                                 )}
                               </div>
 
                               {/* Campos personalizados de contato */}
                               {resolvedContactPanelFields.length > 0 && (
-                                <div className={cn(
-                                  "mt-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] overflow-hidden",
-                                  "bg-[var(--glass-bg-overlay)]"
-                                )}>
+                                <div className="mt-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                                   {resolvedContactPanelFields.map((f, i) => {
                                     const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
                                     const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
@@ -1009,14 +989,13 @@ export function ContactAside({
                                       <div
                                         key={f.fieldId}
                                         className={cn(
-                                          "flex items-baseline gap-2 px-3",
-                                          isCompact ? "py-1" : "py-1.5",
-                                          i < resolvedContactPanelFields.length - 1 &&
-                                            "border-b border-[var(--glass-border-subtle)]",
+                                          "flex items-center justify-between gap-2 text-sm",
+                                          isCompact ? "py-1.5" : "py-2",
+                                          i > 0 && "border-t border-slate-50",
                                         )}
                                       >
                                         <span className={cn(
-                                          "shrink-0 font-medium text-[var(--text-muted)]",
+                                          "shrink-0 font-medium text-slate-500",
                                           isCompact ? "w-[40%] text-[11px] leading-tight" : "w-[38%] text-[12px]"
                                         )}>
                                           {f.label}
@@ -1094,14 +1073,14 @@ export function ContactAside({
                             <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-2">
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
-                                icon={<IconPackage size={12} />}
+                                icon={<IconPackage size={16} />}
                                 open={productsSectionOpen}
                                 onToggle={() => setProductsSectionOpen((v) => !v)}
                               >
                                 Produtos
                               </SectionHeader>
                               {productsSectionOpen && (
-                                <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+                                <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                                   {/* `hideTitle` evita duplicar o rotulo "Produtos"
                                       — quem provee o cabecalho e o SectionHeader
                                       acima; DealProductsSection so renderiza os
@@ -1118,7 +1097,7 @@ export function ContactAside({
                               <div className="px-3 pb-3">
                                 <SectionHeader
                                   dragHandleProps={provided.dragHandleProps ?? undefined}
-                                  icon={<IconBriefcase size={12} />}
+                                  icon={<IconBriefcase size={16} />}
                                   open={dealFieldsSectionOpen}
                                   onToggle={() => setDealFieldsSectionOpen((v) => !v)}
                                   meta={
@@ -1163,7 +1142,7 @@ export function ContactAside({
                                 {resolvedDealPanelFields.length > 0 && (
                                   viewMode === "compact" ? (
                                     /* ── Compact: flat rows ── */
-                                    <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] overflow-hidden">
+                                    <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                                       {resolvedDealPanelFields.map((f, idx) => {
                                         const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
                                         const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
@@ -1172,11 +1151,11 @@ export function ContactAside({
                                           <div
                                             key={f.fieldId}
                                             className={cn(
-                                              "flex items-baseline gap-2 px-3 py-1",
-                                              idx < resolvedDealPanelFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
+                                              "flex items-center justify-between gap-2 py-2 text-sm",
+                                              idx > 0 && "border-t border-slate-50",
                                             )}
                                           >
-                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">{f.label}</span>
+                                            <span className="w-[38%] shrink-0 text-[12px] font-medium leading-tight text-slate-500">{f.label}</span>
                                             <div className="min-w-0 flex-1">
                                               {dealFieldsEditMode && canEdit ? (
                                                 <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
@@ -1206,11 +1185,11 @@ export function ContactAside({
                                         <div
                                           key={f.fieldId}
                                           className={cn(
-                                            "flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2.5",
+                                            "flex flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
                                             isLongDeal && "col-span-2",
                                           )}
                                         >
-                                          <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                                          <span className="text-[11px] font-medium text-slate-500">
                                             {f.label}
                                           </span>
                                           <div className="min-w-0 w-full">

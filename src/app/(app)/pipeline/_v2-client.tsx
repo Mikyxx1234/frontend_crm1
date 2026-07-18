@@ -34,7 +34,7 @@ import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
 import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
-import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar";
+import { DealProductsSection, DealQuotasSection } from "@/components/pipeline/deal-detail/sidebar";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
@@ -1202,7 +1202,12 @@ export default function KanbanV2ClientPage({
             : undefined
         }
         productsSlot={
-          activeDealId ? <DealProductsSection dealId={activeDealId} compact /> : null
+          activeDealId ? (
+            <div className="flex flex-col gap-3">
+              <DealProductsSection dealId={activeDealId} compact />
+              <DealQuotasSection dealId={activeDealId} />
+            </div>
+          ) : null
         }
         onCreateContactForField={handleCreateContactForField}
         tagsSlot={

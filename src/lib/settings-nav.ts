@@ -181,6 +181,16 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         requiredPermission: "catalog:view",
         eyebrow: "Novo",
       },
+      {
+        id: "cotas",
+        label: "Cotas de desconto",
+        description: "Cupons com estoque, vigência e cumulatividade",
+        icon: Tag,
+        href: "/settings/cotas",
+        allowedRoles: GESTAO,
+        requiredPermission: "quota:view",
+        eyebrow: "Novo",
+      },
     ],
   },
 

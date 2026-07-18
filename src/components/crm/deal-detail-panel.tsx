@@ -969,131 +969,55 @@ export function DealDetailPanel({
                                             {resolvedContactConfig}
                                           </div>
                                         )}
-                                        {viewMode === "compact" ? (
-                                        /* ── Compact: mesmo padrão do inbox (ícone + label / valor
-                                            à direita), apenas mais denso (py-1.5). ── */
+                                        {/* ── Rows compartilhadas (aside-row) — espelho exato do
+                                            aside do inbox: mesmo Row, mesmas classes de valor;
+                                            foco × compacto = prop `compact` (py-2 vs py-1.5). ── */}
                                         <div className="px-3.5 py-1">
-                                          {/* Nome */}
-                                          <div className="flex items-center justify-between gap-2 py-1.5 text-sm">
-                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconUser size={12} />Nome</span>
-                                            <div className="flex min-w-0 flex-1 justify-end">
-                                              {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="rounded bg-indigo-50 px-1.5 py-0.5 font-display text-sm font-bold text-indigo-600 text-right" />
-                                              ) : (
-                                                <span className="min-w-0 truncate rounded bg-indigo-50 px-1.5 py-0.5 text-right font-display text-sm font-bold text-indigo-600" title={deal.name}>{deal.name || <span className="italic text-slate-400">+ Adicionar</span>}</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                          {/* Telefone */}
-                                          <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-1.5 text-sm">
-                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconPhone size={12} />Telefone</span>
-                                            <div className="flex min-w-0 flex-1 justify-end">
-                                              {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-sm font-semibold text-indigo-600 text-right" />
-                                              ) : (
-                                                <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-sm font-semibold text-indigo-600 text-right">{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-slate-400">+ Adicionar</span>}</a>
-                                              )}
-                                            </div>
-                                          </div>
-                                          {/* Email */}
-                                          <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-1.5 text-sm">
-                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconMail size={12} />Email</span>
-                                            <div className="flex min-w-0 flex-1 justify-end">
-                                              {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-sm font-semibold text-indigo-600 text-right" />
-                                              ) : (
-                                                <span className="min-w-0 truncate text-right font-display text-sm font-semibold text-indigo-600" title={deal.email ?? undefined}>{deal.email || <span className="italic text-slate-400">+ Adicionar</span>}</span>
-                                              )}
-                                            </div>
-                                          </div>
+                                          <Row label="Nome" isFirst icon={<IconUser size={12} />} compact={viewMode === "compact"}>
+                                            {deal.contactId ? (
+                                              <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="rounded bg-indigo-50 px-2 py-0.5 font-display text-[13px] font-bold text-indigo-600" />
+                                            ) : (
+                                              <span className="min-w-0 truncate rounded bg-indigo-50 px-2 py-0.5 text-right font-display text-[13px] font-bold text-indigo-600" title={deal.name}>{deal.name || <span className="italic text-slate-400">+ Adicionar</span>}</span>
+                                            )}
+                                          </Row>
+                                          <Row label="Telefone" icon={<IconPhone size={12} />} compact={viewMode === "compact"}>
+                                            {deal.contactId ? (
+                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="text-right font-display text-[13px] font-semibold text-indigo-600" />
+                                            ) : onCreateContactForField ? (
+                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="deal" entityId={deal.id} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} customSave={(v) => onCreateContactForField("phone", v)} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="text-right font-display text-[13px] font-semibold text-indigo-600" />
+                                            ) : (
+                                              <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="min-w-0 truncate text-right font-display text-[13px] font-semibold text-indigo-600" title={deal.phone ? formatPhoneDisplay(deal.phone) : undefined}>{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-slate-400">+ Adicionar</span>}</a>
+                                            )}
+                                          </Row>
+                                          <Row label="Email" icon={<IconMail size={12} />} compact={viewMode === "compact"}>
+                                            {deal.contactId ? (
+                                              <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="text-right font-display text-[13px] font-semibold text-[var(--text-primary)]" />
+                                            ) : onCreateContactForField ? (
+                                              <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="deal" entityId={deal.id} fieldKey="email" inputType="email" placeholder="+ Adicionar" customSave={(v) => onCreateContactForField("email", v)} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="text-right font-display text-[13px] font-semibold text-[var(--text-primary)]" />
+                                            ) : (
+                                              <span className="min-w-0 truncate text-right font-display text-[13px] font-semibold text-[var(--text-primary)]" title={deal.email ?? undefined}>{deal.email || <span className="italic text-slate-400">+ Adicionar</span>}</span>
+                                            )}
+                                          </Row>
                                           {/* @ WhatsApp — só leitura, vem do webhook Meta */}
                                           {deal.whatsappUsername && (
-                                            <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-1.5 text-sm">
-                                              <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconBrandWhatsapp size={12} />@ WhatsApp</span>
-                                              <span className="min-w-0 truncate text-right font-display text-sm font-semibold text-[var(--text-primary)]" title={`@${deal.whatsappUsername.replace(/^@/, "")}`}>@{deal.whatsappUsername.replace(/^@/, "")}</span>
-                                            </div>
+                                            <Row
+                                              label="@ WhatsApp"
+                                              value={`@${deal.whatsappUsername.replace(/^@/, "")}`}
+                                              icon={<IconBrandWhatsapp size={12} />}
+                                              compact={viewMode === "compact"}
+                                            />
                                           )}
-                                          {/* Canal */}
-                                          <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-1.5 text-sm">
-                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconAffiliate size={12} />Canal</span>
-                                            <div className="flex min-w-0 flex-1 justify-end">
-                                              {connection ? (
-                                                <span className="inline-flex items-center gap-1 font-display text-sm font-semibold text-[var(--text-primary)]">
-                                                  <IconAffiliate size={12} className="shrink-0 text-[var(--brand-primary)]" />
-                                                  {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
+                                          {connection && (
+                                            <Row label="Canal" icon={<IconAffiliate size={12} />} compact={viewMode === "compact"}>
+                                              <TooltipGlass label={`Conversando por ${formatConnectionLabel(connection)}`} side="left">
+                                                <span className="inline-flex min-w-0 items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                  <IconBrandWhatsapp size={14} className="shrink-0 text-[#25d366]" />
+                                                  <span className="min-w-0 truncate">{channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}</span>
                                                 </span>
-                                              ) : (
-                                                <span className="font-display text-sm text-slate-300">—</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        /* ── Focus: rows densas no padrão do inbox — linha única,
-                                            ícone 12px + label à esquerda, valor à direita ── */
-                                        <div className="px-3.5 py-1">
-                                          {/* Nome */}
-                                          <div className="flex items-center justify-between gap-2 py-2 text-sm">
-                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconUser size={12} />Nome</span>
-                                            <div className="flex min-w-0 flex-1 justify-end">
-                                              {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="rounded bg-indigo-50 px-1.5 py-0.5 font-display text-sm font-bold text-indigo-600 text-right" />
-                                              ) : (
-                                                <span className="min-w-0 truncate rounded bg-indigo-50 px-1.5 py-0.5 text-right font-display text-sm font-bold text-indigo-600" title={deal.name}>{deal.name || <span className="italic text-slate-400">+ Adicionar</span>}</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                          {/* Telefone */}
-                                          <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-2 text-sm">
-                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconPhone size={12} />Telefone</span>
-                                            <div className="flex min-w-0 flex-1 justify-end">
-                                              {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-sm font-semibold text-indigo-600 text-right" />
-                                              ) : onCreateContactForField ? (
-                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="deal" entityId={deal.id} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} customSave={(v) => onCreateContactForField("phone", v)} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-sm font-semibold text-indigo-600 text-right" />
-                                              ) : (
-                                                <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="min-w-0 truncate text-right font-display text-sm font-semibold text-indigo-600" title={deal.phone ? formatPhoneDisplay(deal.phone) : undefined}>{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-slate-400">+ Adicionar</span>}</a>
-                                              )}
-                                            </div>
-                                          </div>
-                                          {/* Email */}
-                                          <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-2 text-sm">
-                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconMail size={12} />Email</span>
-                                            <div className="flex min-w-0 flex-1 justify-end">
-                                              {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-sm font-semibold text-indigo-600 text-right" />
-                                              ) : onCreateContactForField ? (
-                                                <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="deal" entityId={deal.id} fieldKey="email" inputType="email" placeholder="+ Adicionar" customSave={(v) => onCreateContactForField("email", v)} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-sm font-semibold text-indigo-600 text-right" />
-                                              ) : (
-                                                <span className="min-w-0 truncate text-right font-display text-sm font-semibold text-indigo-600" title={deal.email ?? undefined}>{deal.email || <span className="italic text-slate-400">+ Adicionar</span>}</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                          {/* @ WhatsApp — só leitura, vem do webhook Meta */}
-                                          {deal.whatsappUsername && (
-                                            <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-2 text-sm">
-                                              <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconBrandWhatsapp size={12} />@ WhatsApp</span>
-                                              <span className="min-w-0 truncate text-right font-display text-sm font-semibold text-[var(--text-primary)]" title={`@${deal.whatsappUsername.replace(/^@/, "")}`}>@{deal.whatsappUsername.replace(/^@/, "")}</span>
-                                            </div>
+                                              </TooltipGlass>
+                                            </Row>
                                           )}
-                                          {/* Canal */}
-                                          <div className="flex items-center justify-between gap-2 border-t border-slate-50 py-2 text-sm">
-                                            <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><IconAffiliate size={12} />Canal</span>
-                                            <div className="flex min-w-0 flex-1 justify-end">
-                                              {connection ? (
-                                                <TooltipGlass label={`Conversando por ${formatConnectionLabel(connection)}`} side="left">
-                                                  <span className="inline-flex min-w-0 items-center gap-1 font-display text-sm font-semibold text-[var(--text-primary)]">
-                                                    <IconAffiliate size={12} className="shrink-0 text-[var(--brand-primary)]" />
-                                                    <span className="min-w-0 truncate">{channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}</span>
-                                                  </span>
-                                                </TooltipGlass>
-                                              ) : (
-                                                <span className="font-display text-sm text-slate-300">—</span>
-                                              )}
-                                            </div>
-                                          </div>
                                         </div>
-                                      )}
                                     </FieldCard>
                                   )}
 

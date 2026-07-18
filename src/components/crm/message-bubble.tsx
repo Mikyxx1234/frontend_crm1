@@ -384,59 +384,41 @@ const AUTOMATION_TEXT = "#1e1b39"
 const AUTOMATION_ACCENT = "#6c5ce7"
 
 /**
- * Botões de resposta rápida (interactive/template) — preview compacto no
- * CRM: sub-card com label "Opções enviadas" + pills inline (flex wrap).
- * Sinaliza claramente que é uma prévia (nao-clicavel no CRM), evitando
- * confusao com botao real.
- * `onLightBg` = bolha clara (automação): card branco com acento violeta.
+ * Botões de resposta rápida (interactive/template) — replicam o visual do
+ * WhatsApp: botões full-width empilhados, texto centralizado, borda sutil.
+ * Preview não-clicável no CRM (só reproduz o que foi enviado ao cliente).
+ * `onLightBg` = bolha clara (automação): botão branco com acento violeta;
+ * caso contrário (bolha azul do agente): translúcido sobre o fundo.
  */
 function MessageButtons({ buttons, onLightBg }: { buttons: string[]; onLightBg: boolean }) {
-  const cardStyle = onLightBg
+  const dividerStyle = onLightBg
+    ? { background: `${AUTOMATION_ACCENT}1f` }
+    : { background: "rgba(255,255,255,0.18)" }
+  const btnStyle = onLightBg
     ? {
-        borderColor: `${AUTOMATION_ACCENT}33`,
-        background: `${AUTOMATION_ACCENT}0d`,
-      }
-    : {
-        borderColor: "rgba(255,255,255,0.22)",
-        background: "rgba(255,255,255,0.08)",
-      }
-  const labelStyle = onLightBg
-    ? { color: `${AUTOMATION_ACCENT}` }
-    : { color: "rgba(255,255,255,0.75)" }
-  const pillStyle = onLightBg
-    ? {
-        borderColor: `${AUTOMATION_ACCENT}66`,
+        borderColor: `${AUTOMATION_ACCENT}2e`,
         background: "#ffffff",
         color: AUTOMATION_ACCENT,
       }
     : {
-        borderColor: "rgba(255,255,255,0.35)",
-        background: "rgba(255,255,255,0.16)",
+        borderColor: "rgba(255,255,255,0.28)",
+        background: "rgba(255,255,255,0.12)",
         color: "#ffffff",
       }
   return (
-    <div
-      className="mt-2.5 rounded-lg border px-2.5 py-2"
-      style={cardStyle}
-    >
-      <div
-        className="mb-1.5 font-display text-[9.5px] font-bold uppercase tracking-[0.08em] opacity-80"
-        style={labelStyle}
-      >
-        Opções enviadas
-      </div>
-      <div className="flex flex-wrap gap-1">
-        {buttons.map((b, i) => (
-          <span
-            key={`${b}-${i}`}
-            className="inline-flex max-w-full items-center rounded-md border px-2 py-0.5 font-display text-[11.5px] font-semibold leading-tight"
-            style={pillStyle}
-            title={b}
-          >
-            <span className="truncate">{b}</span>
-          </span>
-        ))}
-      </div>
+    <div className="mt-2 flex flex-col gap-1.5">
+      {/* Divisória fina separando o corpo da mensagem dos botões (ref. WhatsApp) */}
+      <span className="mb-0.5 h-px w-full" style={dividerStyle} />
+      {buttons.map((b, i) => (
+        <span
+          key={`${b}-${i}`}
+          className="flex w-full items-center justify-center rounded-lg border px-3 py-2 text-center font-display text-[13px] font-semibold leading-tight"
+          style={btnStyle}
+          title={b}
+        >
+          <span className="truncate">{b}</span>
+        </span>
+      ))}
     </div>
   )
 }

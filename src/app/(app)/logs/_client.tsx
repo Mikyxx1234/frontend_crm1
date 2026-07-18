@@ -6,6 +6,10 @@ import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2 as Loader2 } from "@tabler/icons-react";
 import {
+  IconAdjustmentsHorizontal,
+  IconBuildingCommunity,
+  IconCalendarEvent,
+  IconCheck,
   IconClipboardList,
   IconCopy,
   IconMenu2,
@@ -15,7 +19,12 @@ import {
   IconPhoneIncoming,
   IconPhoneOutgoing,
   IconRefresh,
+  IconRotateClockwise,
+  IconSearch,
   IconSettings,
+  IconTestPipe,
+  IconUsers,
+  IconX,
 } from "@tabler/icons-react";
 import { format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -37,20 +46,13 @@ import type { ListCallsFilters } from "@/features/softphone/api/types";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
-import {
-  PAGE_FILTER_DROPDOWN_CLASS,
-  PageFilterBar,
-  PageSearchBar,
-  PageSegmentedControl,
-} from "@/components/crm/page-toolbar";
+import { PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import {
   listTableHeadRowClass,
   SortableHeader,
   type SortDir,
 } from "@/components/crm/sortable-header";
-import { Button } from "@/components/ui/button";
-import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { DateRangePicker, type DateRange } from "@/components/crm/date-range-picker";
 import { EmptyState } from "@/components/crm/empty-state";
 import { PageDemoBanner } from "@/components/crm/page-demo-banner";
@@ -470,12 +472,15 @@ export default function LogsClientPage() {
           title="Logs"
           center={
             isFeed ? (
-              <PageSearchBar
-                variant="compact"
-                value={q}
-                onChange={setQ}
-                placeholder="Buscar evento, lead, ator..."
-                aria-label="Buscar eventos"
+              <FeedSearchFilterBar
+                search={q}
+                onSearch={setQ}
+                entity={entity}
+                onEntityChange={setEntity}
+                actor={actor}
+                onActorChange={setActor}
+                range={range}
+                onRangeChange={setRange}
               />
             ) : isCalls && callsWidget.enabled === true ? (
               <div className="flex w-full justify-start">
@@ -510,6 +515,19 @@ export default function LogsClientPage() {
                 value={String(activeTab)}
                 onChange={(v) => setActiveTab(Number(v))}
               />
+              {isFeed && (
+                <FeedActionsMenu
+                  demo={demo}
+                  onToggleDemo={() => setDemo((d) => !d)}
+                  hasFilters={hasFilters}
+                  onClearFilters={() => {
+                    setEntity("ALL");
+                    setActor("ALL");
+                    setQ("");
+                    setRange({ from: null, to: null });
+                  }}
+                />
+              )}
               {isCalls && callsWidget.enabled === true && (
                 <CallsActionsMenu
                   syncing={callsSyncMutation.isPending}
@@ -523,38 +541,6 @@ export default function LogsClientPage() {
 
         {isFeed ? (
           <>
-            <PageFilterBar className="toolbar-hscroll max-w-full flex-nowrap overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
-              <DropdownGlass
-                options={ENTITY_OPTIONS}
-                value={entity}
-                onValueChange={(v) => setEntity(v)}
-                menuLabel="Entidade"
-                triggerClassName={PAGE_FILTER_DROPDOWN_CLASS}
-              />
-              <DropdownGlass
-                options={ACTOR_OPTIONS}
-                value={actor}
-                onValueChange={(v) => setActor(v)}
-                menuLabel="Responsável"
-                triggerClassName={PAGE_FILTER_DROPDOWN_CLASS}
-              />
-              <DateRangePicker value={range} onChange={setRange} />
-              {hasFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setEntity("ALL");
-                    setActor("ALL");
-                    setQ("");
-                    setRange({ from: null, to: null });
-                  }}
-                >
-                  Limpar
-                </Button>
-              )}
-            </PageFilterBar>
-
             {isDemo && (
               <PageDemoBanner>
                 Dados de exemplo — um evento de cada tipo para visualizar as
@@ -582,85 +568,87 @@ export default function LogsClientPage() {
                 />
               </div>
             ) : (
-              /* Outer card: ocupa largura disponível sem vazar da viewport */
-              <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
-                {/* Scroll horizontal: ativa quando viewport < 960px */}
-                <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-                  {/* Conteúdo interno com largura mínima — header + linhas rolam juntos */}
-                  <div className="flex min-h-0 min-w-[960px] flex-1 flex-col">
-                    <div className={listTableHeadRowClass(FEED_GRID)}>
-                      <SortableHeader
-                        label="Evento"
-                        sort={sort.column === "evento" ? sort.dir : null}
-                        onSort={() => toggleSort("evento")}
-                      />
-                      <SortableHeader
-                        label="Detalhe"
-                        sort={sort.column === "detalhe" ? sort.dir : null}
-                        onSort={() => toggleSort("detalhe")}
-                      />
-                      <SortableHeader
-                        label="Entidade"
-                        sort={sort.column === "entidade" ? sort.dir : null}
-                        onSort={() => toggleSort("entidade")}
-                      />
-                      <SortableHeader
-                        label="Origem"
-                        sort={sort.column === "origem" ? sort.dir : null}
-                        onSort={() => toggleSort("origem")}
-                      />
-                      <SortableHeader
-                        label="Responsável"
-                        sort={sort.column === "ator" ? sort.dir : null}
-                        onSort={() => toggleSort("ator")}
-                      />
-                      <SortableHeader
-                        label="Data"
-                        sort={sort.column === "data" ? sort.dir : null}
-                        onSort={() => toggleSort("data")}
-                        align="right"
-                      />
-                    </div>
-
-                    {!isDefaultSort && hasNextPage && (
-                      <div className="mb-2 px-1 font-body text-[11px] italic text-[var(--text-muted)]">
-                        Ordenando eventos carregados — role para carregar mais.
-                      </div>
+              /* Layout em cards (padrão Chamadas): cabeçalho solto + linhas
+                 individuais com gap. Scroll horizontal se viewport < 960px. */
+              <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+                <div className="flex min-w-[960px] flex-col gap-2">
+                  <div
+                    className={listTableHeadRowClass(
+                      `${FEED_GRID} gap-3.5 border border-transparent px-4 py-2`,
                     )}
+                  >
+                    <SortableHeader
+                      label="Evento"
+                      sort={sort.column === "evento" ? sort.dir : null}
+                      onSort={() => toggleSort("evento")}
+                    />
+                    <SortableHeader
+                      label="Detalhe"
+                      sort={sort.column === "detalhe" ? sort.dir : null}
+                      onSort={() => toggleSort("detalhe")}
+                    />
+                    <SortableHeader
+                      label="Entidade"
+                      sort={sort.column === "entidade" ? sort.dir : null}
+                      onSort={() => toggleSort("entidade")}
+                    />
+                    <SortableHeader
+                      label="Origem"
+                      sort={sort.column === "origem" ? sort.dir : null}
+                      onSort={() => toggleSort("origem")}
+                    />
+                    <SortableHeader
+                      label="Responsável"
+                      sort={sort.column === "ator" ? sort.dir : null}
+                      onSort={() => toggleSort("ator")}
+                    />
+                    <SortableHeader
+                      label="Data"
+                      sort={sort.column === "data" ? sort.dir : null}
+                      onSort={() => toggleSort("data")}
+                      align="right"
+                    />
+                  </div>
 
-                    <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
-                      {isDefaultSort
-                        ? groups.map(([dayKey, dayItems]) => (
-                            <React.Fragment key={dayKey}>
-                              <div className="flex items-center gap-2.5 px-1 pb-1 pt-3 first:pt-1">
-                                <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                                  {dayLabel(dayItems[0].occurredAt)}
-                                </span>
-                                <span className="h-px flex-1 bg-[var(--glass-border-subtle)]" />
-                              </div>
-                              {dayItems.map((ev) => (
-                                <EventCard key={ev.id} event={ev} />
-                              ))}
-                            </React.Fragment>
-                          ))
-                        : sortedFlat.map((ev) => (
+                  {!isDefaultSort && hasNextPage && (
+                    <div className="px-1 font-body text-[11px] italic text-[var(--text-muted)]">
+                      Ordenando eventos carregados — role para carregar mais.
+                    </div>
+                  )}
+
+                  {isDefaultSort
+                    ? groups.map(([dayKey, dayItems]) => (
+                        <div key={dayKey} className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between px-1 pt-1">
+                            <span className="shrink-0 font-display text-[11px] font-bold text-[var(--text-secondary)]">
+                              {dayLabel(dayItems[0].occurredAt)}
+                            </span>
+                            <span className="shrink-0 font-display text-[11px] font-medium text-[var(--text-muted)]">
+                              {dayItems.length} evento
+                              {dayItems.length !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          {dayItems.map((ev) => (
                             <EventCard key={ev.id} event={ev} />
                           ))}
-
-                      <div ref={sentinelRef} className="h-1" />
-                      {isFetchingNextPage && (
-                        <div className="flex items-center justify-center py-4 text-[13px] text-[var(--text-muted)]">
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Carregando mais...
                         </div>
-                      )}
-                      {!hasNextPage && allItems.length > 0 && (
-                        <p className="pb-2 pt-2 text-center text-[11px] text-[var(--text-muted)]/70">
-                          Fim do histórico.
-                        </p>
-                      )}
+                      ))
+                    : sortedFlat.map((ev) => (
+                        <EventCard key={ev.id} event={ev} />
+                      ))}
+
+                  <div ref={sentinelRef} className="h-1" />
+                  {isFetchingNextPage && (
+                    <div className="flex items-center justify-center py-4 text-[13px] text-[var(--text-muted)]">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Carregando mais...
                     </div>
-                  </div>
+                  )}
+                  {!hasNextPage && allItems.length > 0 && (
+                    <p className="pb-2 pt-2 text-center text-[11px] text-[var(--text-muted)]/70">
+                      Fim do histórico.
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -894,7 +882,7 @@ function EventCard({ event }: { event: FeedEvent }) {
 
   return (
     <div
-      className={`grid ${FEED_GRID} items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]`}
+      className={`grid ${FEED_GRID} items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]`}
     >
       {/* Coluna: Evento */}
       <div className="flex min-w-0 items-center gap-2">
@@ -1130,6 +1118,338 @@ function StatBarPanel({
         )}
       </ul>
     </section>
+  );
+}
+
+// ── Feed: busca + popover de filtros (padrão Contatos/Empresas) ─────────────
+
+type FeedFilterTab = "entidade" | "ator" | "periodo";
+
+const FEED_FILTER_TABS: {
+  id: FeedFilterTab;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    id: "entidade",
+    label: "Entidade",
+    icon: <IconBuildingCommunity size={14} stroke={2.2} />,
+  },
+  { id: "ator", label: "Ator", icon: <IconUsers size={14} stroke={2.2} /> },
+  {
+    id: "periodo",
+    label: "Período",
+    icon: <IconCalendarEvent size={14} stroke={2.2} />,
+  },
+];
+
+function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[10px] font-bold leading-none text-white">
+      {count}
+    </span>
+  );
+}
+
+function FeedSearchFilterBar({
+  search,
+  onSearch,
+  entity,
+  onEntityChange,
+  actor,
+  onActorChange,
+  range,
+  onRangeChange,
+}: {
+  search: string;
+  onSearch: (v: string) => void;
+  entity: string;
+  onEntityChange: (v: string) => void;
+  actor: string;
+  onActorChange: (v: string) => void;
+  range: DateRange;
+  onRangeChange: (r: DateRange) => void;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [open, setOpen] = React.useState(false);
+  const [tab, setTab] = React.useState<FeedFilterTab>("entidade");
+
+  const activeCount =
+    (entity !== "ALL" ? 1 : 0) +
+    (actor !== "ALL" ? 1 : 0) +
+    (range.from || range.to ? 1 : 0);
+
+  React.useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const tabBadge = (id: FeedFilterTab) => {
+    if (id === "entidade") return entity !== "ALL" ? 1 : 0;
+    if (id === "ator") return actor !== "ALL" ? 1 : 0;
+    if (id === "periodo") return range.from || range.to ? 1 : 0;
+    return 0;
+  };
+
+  function clearAll() {
+    onEntityChange("ALL");
+    onActorChange("ALL");
+    onRangeChange({ from: null, to: null });
+  }
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <IconSearch
+        size={15}
+        className="absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]"
+      />
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => onSearch(e.target.value)}
+        placeholder="Pesquisar e filtrar eventos..."
+        aria-label="Buscar e filtrar eventos"
+        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-11 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+      />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Filtros"
+        className={cn(
+          "absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors",
+          activeCount > 0 || open
+            ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+            : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
+        )}
+      >
+        <IconAdjustmentsHorizontal size={15} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,380px)] flex-col overflow-visible rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
+          <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
+            <div className="flex items-center gap-2">
+              <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">
+                Filtros
+              </span>
+              <CountBadge count={activeCount} />
+            </div>
+            <button
+              type="button"
+              onClick={clearAll}
+              disabled={activeCount === 0}
+              className="flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)] disabled:opacity-40"
+            >
+              <IconRotateClockwise size={13} /> Limpar
+            </button>
+          </div>
+
+          <div className="px-4 pb-3">
+            <div
+              role="tablist"
+              aria-label="Seções do filtro"
+              className="flex items-center gap-0.5 rounded-full bg-[var(--glass-bg-strong)] p-1"
+            >
+              {FEED_FILTER_TABS.map((t) => {
+                const active = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(t.id)}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1.5 font-display text-[12px] font-bold transition-all",
+                      active
+                        ? "bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
+                  >
+                    <span
+                      className={
+                        active ? "text-[var(--brand-primary)]" : undefined
+                      }
+                    >
+                      {t.icon}
+                    </span>
+                    {t.label}
+                    <CountBadge count={tabBadge(t.id)} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="max-h-[min(60vh,420px)] overflow-y-auto px-4 pb-3">
+            {tab === "entidade" && (
+              <div className="flex flex-wrap gap-1.5">
+                {ENTITY_OPTIONS.map((opt) => {
+                  const selected = entity === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => onEntityChange(opt.value)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                        selected
+                          ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                      )}
+                    >
+                      {selected && <IconCheck size={12} stroke={2.4} />}
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {tab === "ator" && (
+              <div className="flex flex-wrap gap-1.5">
+                {ACTOR_OPTIONS.map((opt) => {
+                  const selected = actor === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => onActorChange(opt.value)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                        selected
+                          ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                      )}
+                    >
+                      {selected && <IconCheck size={12} stroke={2.4} />}
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {tab === "periodo" && (
+              <div className="flex flex-col gap-2">
+                <p className="font-display text-[11px] font-semibold text-[var(--text-muted)]">
+                  Intervalo de datas
+                </p>
+                <DateRangePicker value={range} onChange={onRangeChange} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Menu hamburger do Feed — Limpar filtros + Modo demonstração. */
+function FeedActionsMenu({
+  demo,
+  onToggleDemo,
+  hasFilters,
+  onClearFilters,
+}: {
+  demo: boolean;
+  onToggleDemo: () => void;
+  hasFilters: boolean;
+  onClearFilters: () => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const items: {
+    icon: React.ReactNode;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    active?: boolean;
+    divider?: boolean;
+  }[] = [
+    {
+      icon: <IconX size={16} />,
+      label: "Limpar filtros",
+      onClick: onClearFilters,
+      disabled: !hasFilters,
+    },
+    {
+      icon: <IconTestPipe size={16} />,
+      label: demo ? "Desativar modo demo" : "Ativar modo demo",
+      onClick: onToggleDemo,
+      active: demo,
+      divider: true,
+    },
+  ];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Ações"
+        aria-expanded={open}
+        className={cn(
+          "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
+          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
+        )}
+      >
+        <IconMenu2 size={18} stroke={2.2} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          {items.map((it) => (
+            <div key={it.label}>
+              {it.divider && (
+                <div className="my-1 h-px bg-[var(--glass-border)]" />
+              )}
+              <button
+                type="button"
+                disabled={it.disabled}
+                onClick={() => {
+                  setOpen(false);
+                  it.onClick();
+                }}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold transition-colors disabled:opacity-40",
+                  it.active
+                    ? "bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]",
+                )}
+              >
+                <span
+                  className={
+                    it.active
+                      ? "text-[var(--brand-primary)]"
+                      : "text-[var(--text-muted)]"
+                  }
+                >
+                  {it.icon}
+                </span>
+                {it.label}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

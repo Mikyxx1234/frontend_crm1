@@ -28,10 +28,6 @@ import {
   IconTrash,
   IconPencil,
   IconCheck,
-  IconChevronRight,
-  IconArrowLeft,
-  IconShieldLock,
-  IconInfoCircle,
   IconAdjustmentsHorizontal,
   IconRotateClockwise,
   IconUserCheck,
@@ -120,12 +116,6 @@ function DeptIconBadge({ dept, size = 36 }: { dept: Department; size?: number })
       <DeptIcon name={dept.icon ?? "IconBuilding"} size={size * 0.45} color={dept.color} />
     </div>
   );
-}
-
-function formatDate(iso: string) {
-  try {
-    return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(iso));
-  } catch { return iso; }
 }
 
 // ─── Create modal ─────────────────────────────────────────────────────────────
@@ -472,188 +462,54 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   );
 }
 
-// ─── List row (master) ─────────────────────────────────────────────────────────
+// ─── Department card ─────────────────────────────────────────────────────────
 
-function DeptListRow({ dept, active, onSelect }: { dept: Department; active: boolean; onSelect: () => void }) {
-  const members = dept._count?.members;
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "group flex w-full items-center gap-3 rounded-[var(--radius-lg)] border px-3 py-2.5 text-left transition-all",
-        active
-          ? "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/8 shadow-[0_2px_8px_rgba(100,130,180,0.12)]"
-          : "border-transparent hover:bg-white/60",
-      )}
-    >
-      <DeptIconBadge dept={dept} size={38} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">{dept.name}</p>
-        <p className="truncate font-body text-[12px] text-[var(--text-muted)]">
-          {typeof members === "number" ? `${members} ${members === 1 ? "membro" : "membros"}` : "Sem membros"}
-        </p>
-      </div>
-      <IconChevronRight
-        size={15}
-        className={cn(
-          "shrink-0 text-[var(--brand-primary)] transition-opacity",
-          active ? "opacity-80" : "opacity-0 group-hover:opacity-50",
-        )}
-      />
-    </button>
-  );
-}
-
-// ─── Detail (master-detail right pane) ─────────────────────────────────────────
-
-function StatBox({ value, label }: { value: React.ReactNode; label: string }) {
-  return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
-      <p className="font-display text-[22px] font-extrabold leading-none text-[var(--text-primary)]">{value}</p>
-      <p className="mt-1 font-body text-[11.5px] text-[var(--text-muted)]">{label}</p>
-    </div>
-  );
-}
-
-function DepartmentDetail({
+function DeptCard({
   dept,
   onEdit,
   onDelete,
-  onBack,
 }: {
-  dept: Department | null;
+  dept: Department;
   onEdit: () => void;
   onDelete: () => void;
-  onBack: () => void;
 }) {
-  const { data: members = [], isLoading } = useDepartmentMembers(dept?.id ?? null);
-
-  if (!dept) {
-    return (
-      <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">
-          <IconBuilding size={24} className="text-[var(--text-muted)] opacity-50" />
-        </div>
-        <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">Selecione um departamento</p>
-        <p className="max-w-[38ch] font-body text-[12.5px] text-[var(--text-muted)]">
-          Escolha um departamento na lista para ver membros, isolamento de dados e ações.
-        </p>
-      </div>
-    );
-  }
-
-  const memberCount = members.length || dept._count?.members || 0;
+  const members = dept._count?.members ?? 0;
   const conversations = dept._count?.conversations ?? 0;
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow,0_8px_32px_rgba(100,130,180,0.18))]">
-      {/* Header */}
-      <div className="flex items-start gap-4 border-b border-[var(--glass-border-subtle)] p-5">
+    <article
+      className="group relative flex min-w-0 items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]"
+    >
+      <DeptIconBadge dept={dept} size={40} />
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">{dept.name}</p>
+        <p className="mt-0.5 flex items-center gap-3 font-body text-[12px] text-[var(--text-muted)]">
+          <span>{members} {members === 1 ? "membro" : "membros"}</span>
+          <span className="text-[var(--glass-border)]">·</span>
+          <span>{conversations} conversa{conversations !== 1 ? "s" : ""}</span>
+        </p>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
         <button
           type="button"
-          onClick={onBack}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] lg:hidden"
-          aria-label="Voltar"
+          onClick={onEdit}
+          className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
+          aria-label={`Editar ${dept.name}`}
         >
-          <IconArrowLeft size={18} />
+          <IconPencil size={14} />
         </button>
-        <DeptIconBadge dept={dept} size={52} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-[19px] font-extrabold tracking-[-0.02em] text-[var(--text-primary)]">{dept.name}</h2>
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success)]/12 px-2.5 py-0.5 font-display text-[11px] font-bold text-[var(--color-success)]">
-              <IconShieldLock size={12} /> Isolado
-            </span>
-          </div>
-          <p className="mt-1 font-body text-[12.5px] text-[var(--text-muted)]">Criado em {formatDate(dept.createdAt)}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <ButtonGlass variant="glass" size="sm" onClick={onEdit} className="gap-1.5">
-            <IconPencil size={13} /> Editar
-          </ButtonGlass>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] text-[var(--text-muted)] transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500"
-            aria-label="Excluir"
-          >
-            <IconTrash size={14} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+          aria-label={`Excluir ${dept.name}`}
+        >
+          <IconTrash size={14} />
+        </button>
       </div>
-
-      <div className="flex flex-col gap-6 p-5">
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <StatBox value={memberCount} label="Membros" />
-          <StatBox value={conversations} label="Conversas" />
-          <StatBox value={dept.requireTabulationOnClose ? "Sim" : "Não"} label="Tabular ao fechar" />
-        </div>
-
-        {/* Isolation note */}
-        <div className="flex items-start gap-2.5 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/6 px-4 py-3">
-          <IconInfoCircle size={16} className="mt-0.5 shrink-0 text-[var(--brand-primary)]" />
-          <p className="font-body text-[12.5px] leading-relaxed text-[var(--text-secondary,var(--text-muted))]">
-            <strong className="font-semibold text-[var(--text-primary)]">Isolamento de dados:</strong> atendentes escopados a este
-            departamento só veem as conversas dele. O escopo de caixa de entrada é definido em{" "}
-            <strong className="font-semibold text-[var(--text-primary)]">Conversas → Atendentes</strong> (departamentos permitidos).
-            O vínculo de membros abaixo define a composição do time.
-          </p>
-        </div>
-
-        {/* Members */}
-        <div>
-          <div className="mb-2.5 flex items-center gap-2">
-            <span className="font-display text-[13px] font-bold text-[var(--text-secondary)]">Membros</span>
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] px-1.5 font-display text-[10.5px] font-bold text-[var(--text-muted)]">
-              {memberCount}
-            </span>
-          </div>
-
-          {isLoading ? (
-            <div className="flex flex-col gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-[52px] animate-pulse rounded-[var(--radius-lg)] bg-[var(--glass-bg-strong)]" />
-              ))}
-            </div>
-          ) : members.length === 0 ? (
-            <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-6 text-center">
-              <IconUsers size={18} className="mx-auto mb-1.5 text-[var(--text-muted)] opacity-40" />
-              <p className="font-body text-[12.5px] text-[var(--text-muted)]">Nenhum membro vinculado ainda.</p>
-              <button
-                type="button"
-                onClick={onEdit}
-                className="mt-2 font-display text-[12.5px] font-semibold text-[var(--brand-primary)] hover:underline"
-              >
-                Adicionar membros →
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)]">
-              <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)]">
-                {members.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3 bg-[var(--glass-bg-overlay)] px-4 py-2.5">
-                    {m.user.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={m.user.avatarUrl} alt={m.user.name} className="h-8 w-8 shrink-0 rounded-full object-cover" />
-                    ) : (
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 font-display text-[12px] font-bold text-[var(--brand-primary)]">
-                        {m.user.name.slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">{m.user.name}</p>
-                      <p className="truncate font-body text-[11.5px] text-[var(--text-muted)]">{m.user.email}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    </article>
   );
 }
 
@@ -665,8 +521,6 @@ export function DepartmentsTab() {
 
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<"all" | "with" | "without">("all");
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const [mobileDetail, setMobileDetail] = React.useState(false);
   const [showCreate, setShowCreate] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<Department | null>(null);
   const [deleteError, setDeleteError] = React.useState<string | undefined>();
@@ -702,19 +556,6 @@ export function DepartmentsTab() {
     });
   }, [departments, search, filter]);
 
-  // Auto-seleciona o primeiro no desktop; mantém seleção válida após filtro/exclusão.
-  React.useEffect(() => {
-    if (filtered.length === 0) {
-      if (selectedId !== null) setSelectedId(null);
-      return;
-    }
-    if (!selectedId || !filtered.some((d) => d.id === selectedId)) {
-      setSelectedId(filtered[0].id);
-    }
-  }, [filtered, selectedId]);
-
-  const selected = filtered.find((d) => d.id === selectedId) ?? null;
-
   const headerSlots = useSettingsHeaderSlots();
 
   const searchNode = React.useMemo(
@@ -749,11 +590,6 @@ export function DepartmentsTab() {
     };
   }, [headerSlots, searchNode, actionsNode]);
 
-  function selectDept(id: string) {
-    setSelectedId(id);
-    setMobileDetail(true);
-  }
-
   function confirmDelete() {
     if (!deleteTarget) return;
     deleteMutation.mutate(deleteTarget.id, {
@@ -761,7 +597,6 @@ export function DepartmentsTab() {
         toast.success("Departamento excluído");
         setDeleteTarget(null);
         setDeleteError(undefined);
-        setMobileDetail(false);
       },
       onError: (err: unknown) => setDeleteError((err as Error).message),
     });
@@ -769,69 +604,53 @@ export function DepartmentsTab() {
 
   return (
     <div className="min-w-0 w-full max-w-full space-y-4">
-      <DepartmentsMiniDash stats={stats} className={cn(mobileDetail && "hidden lg:grid")} />
+      <DepartmentsMiniDash stats={stats} />
 
-      <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-        {/* ── Master: lista ── */}
-        <div className={cn("min-w-0 flex-col gap-3", mobileDetail ? "hidden lg:flex" : "flex")}>
-          {isLoading ? (
-            <div className="flex flex-col gap-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-[58px] animate-pulse rounded-[var(--radius-lg)] bg-[var(--glass-bg-strong)]" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">
-                <IconBuilding size={24} className="text-[var(--text-muted)] opacity-50" />
-              </div>
-              <div>
-                <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
-                  {search ? "Nenhum resultado" : "Nenhum departamento"}
-                </p>
-                <p className="mt-1 font-body text-[12.5px] text-[var(--text-muted)]">
-                  {search ? "Tente outro termo." : "Crie o primeiro para começar."}
-                </p>
-              </div>
-              {!search && (
-                <ButtonGlass variant="primary" size="sm" onClick={() => setShowCreate(true)} className="mt-1 gap-1.5">
-                  <IconPlus size={13} /> Criar departamento
-                </ButtonGlass>
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              {filtered.map((dept) => (
-                <DeptListRow
-                  key={dept.id}
-                  dept={dept}
-                  active={dept.id === selectedId}
-                  onSelect={() => selectDept(dept.id)}
-                />
-              ))}
-              <p className="mt-1 px-1 font-body text-[12px] text-[var(--text-muted)]">
-                {filtered.length} departamento{filtered.length !== 1 ? "s" : ""}
-              </p>
-            </div>
+      {/* Cards grid */}
+      {isLoading ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-[72px] animate-pulse rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)]" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">
+            <IconBuilding size={24} className="text-[var(--text-muted)] opacity-50" />
+          </div>
+          <div>
+            <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
+              {search ? "Nenhum resultado" : "Nenhum departamento"}
+            </p>
+            <p className="mt-1 font-body text-[12.5px] text-[var(--text-muted)]">
+              {search ? "Tente outro termo." : "Crie o primeiro para começar."}
+            </p>
+          </div>
+          {!search && (
+            <ButtonGlass variant="primary" size="sm" onClick={() => setShowCreate(true)} className="mt-1 gap-1.5">
+              <IconPlus size={13} /> Criar departamento
+            </ButtonGlass>
           )}
         </div>
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((dept) => (
+              <DeptCard
+                key={dept.id}
+                dept={dept}
+                onEdit={() => setEditTarget(dept)}
+                onDelete={() => { setDeleteError(undefined); setDeleteTarget(dept); }}
+              />
+            ))}
+          </div>
+          <p className="px-1 font-body text-[12px] text-[var(--text-muted)]">
+            {filtered.length} departamento{filtered.length !== 1 ? "s" : ""}
+          </p>
+        </>
+      )}
 
-        {/* ── Detail ── */}
-        <div className={cn("min-w-0", mobileDetail ? "block" : "hidden lg:block")}>
-          <DepartmentDetail
-            dept={selected}
-            onBack={() => setMobileDetail(false)}
-            onEdit={() => selected && setEditTarget(selected)}
-            onDelete={() => {
-              if (!selected) return;
-              setDeleteError(undefined);
-              setDeleteTarget(selected);
-            }}
-          />
-        </div>
-      </div>
-
-      {/* ── Modals ── */}
+      {/* Modals */}
       <CreateDepartmentModal open={showCreate} onClose={() => setShowCreate(false)} />
       <DeleteConfirmModal
         dept={deleteTarget}

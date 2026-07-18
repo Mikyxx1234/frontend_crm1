@@ -81,45 +81,27 @@ export function SoftphoneNavIcon({
         ? `Softphone • Em chamada (Ramal ${ramal})`
         : `Softphone • Ramal ${ramal}`;
 
-  // Ícone permanece neutro (muted 60% → 100% no hover). O estado vive no
-  // dot de status ao lado — verde online (com pulso quando em chamada),
-  // cinza offline/conectando, vermelho em erro.
-  const iconToneClass =
-    "text-[var(--nav-text,var(--text-secondary))]/60 group-hover:text-[var(--nav-text,var(--text-primary))]";
+  // Telefone simples em verde. O estado vive no dot: verde esmaecendo (pulse
+  // suave de opacidade) quando online, vermelho estático quando offline/erro.
+  const iconColorClass = "text-[#22c55e]";
 
-  const statusStyle = isError
-    ? {
-        background: "var(--color-danger)",
-        boxShadow: "0 0 8px rgba(239,68,68,0.55)",
-      }
-    : isConnected
-      ? {
-          background: "#22c55e",
-          boxShadow: "0 0 8px rgba(34,197,94,0.6)",
-        }
-      : {
-          background: "#64748b",
-          boxShadow: "none",
-        };
+  const dotBg = isConnected ? "#22c55e" : "#ef4444";
+  const dotAnimateClass = isConnected ? "softphone-dot-fade" : "";
 
   const statusDot = (
     <span
       aria-hidden
       className={cn(
-        "pointer-events-none absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full border-2 border-[var(--nav-bg,var(--glass-bg-base))]",
-        isOnCall && "softphone-status-active",
+        "pointer-events-none absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full",
+        dotAnimateClass,
       )}
-      style={statusStyle}
+      style={{ background: dotBg }}
     />
   );
 
   const icon = (
     <span className="relative inline-flex items-center justify-center">
-      <IconPhone
-        size={20}
-        strokeWidth={2}
-        className={cn("transition-colors", iconToneClass)}
-      />
+      <IconPhone size={20} strokeWidth={2.2} className={iconColorClass} />
       {statusDot}
     </span>
   );

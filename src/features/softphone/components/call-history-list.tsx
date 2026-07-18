@@ -51,7 +51,8 @@ function dayLabel(iso: string) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
-/** Agrupa chamadas por dia preservando a ordem de chegada (mais recentes primeiro). */
+/** Agrupa chamadas por dia, do dia mais recente ao mais antigo (e chamadas
+ * mais recentes primeiro dentro de cada dia). */
 function groupByDay(calls: CallRecord[]): [string, CallRecord[]][] {
   const map = new Map<string, CallRecord[]>();
   for (const c of calls) {
@@ -60,7 +61,14 @@ function groupByDay(calls: CallRecord[]): [string, CallRecord[]][] {
     if (arr) arr.push(c);
     else map.set(key, [c]);
   }
-  return Array.from(map.entries());
+  const byRecent = (a: CallRecord, b: CallRecord) =>
+    new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
+  return Array.from(map.entries())
+    .map(([key, arr]) => [key, [...arr].sort(byRecent)] as [string, CallRecord[]])
+    .sort(
+      ([, a], [, b]) =>
+        new Date(b[0].startedAt).getTime() - new Date(a[0].startedAt).getTime(),
+    );
 }
 
 function statusLabel(status: string): { label: string; color: string } {

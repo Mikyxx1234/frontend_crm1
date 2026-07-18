@@ -18,14 +18,13 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
-import type { CallsFilterState } from "@/features/softphone/components/calls-search-filter-bar";
+import {
+  CallsSearchFilterBar,
+  type CallsFilterState,
+} from "@/features/softphone/components/calls-search-filter-bar";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
 import { listCalls, syncCalls } from "@/features/softphone/api/extensions";
-import type {
-  CallDirection,
-  CallStatus,
-  ListCallsFilters,
-} from "@/features/softphone/api/types";
+import type { ListCallsFilters } from "@/features/softphone/api/types";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
@@ -63,21 +62,6 @@ import { MOCK_FEED } from "@/features/activity-feed/mock-feed";
 import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const LOG_TABS = ["Feed", "Chamadas", "Estatísticas (30d)"] as const;
-
-const CALL_DIRECTION_OPTIONS = [
-  { value: "", label: "Direção: todas" },
-  { value: "INBOUND", label: "Recebidas" },
-  { value: "OUTBOUND", label: "Realizadas" },
-];
-
-const CALL_STATUS_OPTIONS = [
-  { value: "", label: "Status: todos" },
-  { value: "ANSWERED", label: "Atendidas" },
-  { value: "COMPLETED", label: "Completadas" },
-  { value: "MISSED", label: "Perdidas" },
-  { value: "BUSY", label: "Ocupado" },
-  { value: "FAILED", label: "Falhou" },
-];
 
 const ENTITY_OPTIONS = [
   { value: "ALL", label: "Todas as entidades" },
@@ -461,6 +445,15 @@ export default function LogsClientPage() {
                 placeholder="Buscar evento, lead, ator..."
                 aria-label="Buscar eventos"
               />
+            ) : isCalls && callsWidget.enabled === true ? (
+              <div className="flex w-full justify-start">
+                <CallsSearchFilterBar
+                  search={callsSearch}
+                  onSearch={setCallsSearch}
+                  filters={callsFilters}
+                  onFiltersChange={setCallsFilters}
+                />
+              </div>
             ) : undefined
           }
           actions={
@@ -674,63 +667,8 @@ export default function LogsClientPage() {
                       </span>
                     </div>
 
-                    {/* Toolbar: busca + Direção/Status/Período + ações */}
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <PageSearchBar
-                        variant="compact"
-                        className="min-w-[220px] flex-1"
-                        value={callsSearch}
-                        onChange={setCallsSearch}
-                        placeholder="Buscar por contato ou telefone…"
-                        aria-label="Buscar chamadas"
-                      />
-                      <DropdownGlass
-                        options={CALL_DIRECTION_OPTIONS}
-                        value={callsFilters.direction ?? ""}
-                        onValueChange={(v) =>
-                          setCallsFilters((prev) => ({
-                            ...prev,
-                            direction: (v || undefined) as
-                              | CallDirection
-                              | undefined,
-                          }))
-                        }
-                        menuLabel="Direção"
-                        triggerClassName="min-w-[140px]"
-                      />
-                      <DropdownGlass
-                        options={CALL_STATUS_OPTIONS}
-                        value={callsFilters.status ?? ""}
-                        onValueChange={(v) =>
-                          setCallsFilters((prev) => ({
-                            ...prev,
-                            status: (v || undefined) as CallStatus | undefined,
-                          }))
-                        }
-                        menuLabel="Status"
-                        triggerClassName="min-w-[130px]"
-                      />
-                      <DateRangePicker
-                        value={{
-                          from: callsFilters.dateFrom
-                            ? new Date(`${callsFilters.dateFrom}T00:00:00`)
-                            : null,
-                          to: callsFilters.dateTo
-                            ? new Date(`${callsFilters.dateTo}T00:00:00`)
-                            : null,
-                        }}
-                        onChange={(r) =>
-                          setCallsFilters((prev) => ({
-                            ...prev,
-                            dateFrom: r.from
-                              ? format(r.from, "yyyy-MM-dd")
-                              : undefined,
-                            dateTo: r.to
-                              ? format(r.to, "yyyy-MM-dd")
-                              : undefined,
-                          }))
-                        }
-                      />
+                    {/* Ações — filtros vivem no popover da busca do header */}
+                    <div className="flex flex-wrap items-center justify-end gap-2.5">
                       <PageGhostButton
                         onClick={() => callsSyncMutation.mutate()}
                         disabled={callsSyncMutation.isPending}

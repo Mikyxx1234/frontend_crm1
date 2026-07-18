@@ -6,11 +6,13 @@ import { useQuery } from "@tanstack/react-query";
 import {
   IconPhone,
   IconPhoneIncoming,
+  IconPhoneOutgoing,
   IconPhoneX,
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { EmptyState } from "@/components/crm/empty-state";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { listTableHeadRowClass } from "@/components/crm/sortable-header";
@@ -97,11 +99,11 @@ function statusLabel(status: string): { label: string; color: string } {
     case "ANSWERED":
       return { label: status === "COMPLETED" ? "Completada" : "Atendida", color: "text-[var(--color-success-text)] bg-[var(--color-success-bg)]" };
     case "MISSED":
-      return { label: "Perdida", color: "text-[var(--color-danger-text)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]" };
+      return { label: "Perdida", color: "text-[var(--color-danger-text)] bg-[var(--color-danger-bg)]" };
     case "BUSY":
       return { label: "Ocupado", color: "text-[var(--color-warning-text)] bg-[var(--color-warn-bg)]" };
     case "FAILED":
-      return { label: "Falhou", color: "text-[var(--color-danger-text)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]" };
+      return { label: "Falhou", color: "text-[var(--color-danger-text)] bg-[var(--color-danger-bg)]" };
     case "RINGING":
       return { label: "Chamando", color: "text-[var(--text-muted)] bg-[var(--glass-bg-subtle)]" };
     default:
@@ -256,13 +258,16 @@ function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
 
   return (
     <div className={`grid ${COLS} items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]`}>
-        {/* Ícone de direção/status */}
+        {/* Ícone de direção/status — protótipo: ⤫ perdida/falhou (danger),
+            ↙ recebida (success), ↗ realizada (brand) */}
         <span
           className={cn(
             "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
             isMissed
-              ? "bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] text-[var(--color-danger)]"
-              : "bg-[color-mix(in_srgb,var(--color-success)_10%,transparent)] text-[var(--color-success)]",
+              ? "bg-[var(--color-danger-bg)] text-[var(--color-danger)]"
+              : isInbound
+                ? "bg-[var(--color-success-bg)] text-[var(--color-success)]"
+                : "bg-[var(--color-primary-soft)] text-[var(--brand-primary-dark)]",
           )}
         >
           {isMissed ? (
@@ -270,45 +275,47 @@ function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
           ) : isInbound ? (
             <IconPhoneIncoming size={13} />
           ) : (
-            <IconPhone size={13} />
+            <IconPhoneOutgoing size={13} />
           )}
         </span>
 
-        {/* Contato / Telefone — nome semibold (display) + telefone em mono muted */}
-        <div className="min-w-0 leading-tight">
+        {/* Contato / Telefone — protótipo: nome bold + telefone mono na
+            mesma linha ("Carla Mendes +55 (11) 98888-7777") */}
+        <div className="min-w-0 truncate leading-tight">
           {call.contact?.name ? (
             <>
               <Link
                 href={`/contacts/${call.contact.id}`}
-                className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                className="font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
               >
                 {call.contact.name}
-              </Link>
-              <div className="truncate font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
-                {call.phone}
-              </div>
+              </Link>{" "}
+              <span className="font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
+                {formatPhoneDisplay(call.phone)}
+              </span>
             </>
           ) : call.contact ? (
             <Link
               href={`/contacts/${call.contact.id}`}
-              className="block truncate font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+              className="font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
             >
-              {call.phone}
+              {formatPhoneDisplay(call.phone)}
             </Link>
           ) : (
-            <span className="block truncate font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)]">
-              {call.phone}
+            <span className="font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)]">
+              {formatPhoneDisplay(call.phone)}
             </span>
           )}
         </div>
 
-        {/* Direção — pill: Recebida (brand) / Realizada (neutra) */}
+        {/* Direção — protótipo: .dir-in (brand-soft/brand-dark) e
+            .dir-out (cinza neutro/ink-2) */}
         <span
           className={cn(
             "inline-flex w-fit items-center rounded-full px-2.5 py-[3px] font-display text-[11px] font-bold",
             isInbound
-              ? "bg-[color-mix(in_srgb,var(--brand-primary)_15%,transparent)] text-[var(--brand-primary-dark)]"
-              : "bg-[color-mix(in_srgb,var(--text-muted)_12%,transparent)] text-[var(--text-secondary)]",
+              ? "bg-[var(--color-primary-soft)] text-[var(--brand-primary-dark)]"
+              : "bg-[rgba(100,116,139,0.12)] text-[var(--text-secondary)]",
           )}
         >
           {isInbound ? "Recebida" : "Realizada"}

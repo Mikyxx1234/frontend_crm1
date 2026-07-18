@@ -12,7 +12,7 @@
  */
 
 import { createPortal } from "react-dom";
-import { IconRobot, IconPlayerStopFilled, IconHistory } from "@tabler/icons-react";
+import { IconRobot, IconPlayerStopFilled, IconHistory, IconClock } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
@@ -46,6 +46,23 @@ function formatWhen(iso: string): string {
   const hh = String(d.getHours()).padStart(2, "0");
   const mi = String(d.getMinutes()).padStart(2, "0");
   return `${dd}/${mm} ${hh}:${mi}`;
+}
+
+/** Duração da execução (finishedAt − startedAt) em formato compacto. */
+function formatDuration(startIso: string, endIso: string): string {
+  const start = new Date(startIso).getTime();
+  const end = new Date(endIso).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return "";
+  const totalSec = Math.round((end - start) / 1000);
+  if (totalSec < 60) return `${totalSec}s`;
+  const totalMin = Math.floor(totalSec / 60);
+  if (totalMin < 60) {
+    const sec = totalSec % 60;
+    return sec ? `${totalMin}min ${sec}s` : `${totalMin}min`;
+  }
+  const hours = Math.floor(totalMin / 60);
+  const min = totalMin % 60;
+  return min ? `${hours}h ${min}min` : `${hours}h`;
 }
 
 export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsButtonProps) {
@@ -242,31 +259,46 @@ export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsBut
 
               {!loadingHistory && history.length > 0 && (
                 <ul className="flex max-h-44 flex-col gap-1 overflow-y-auto">
-                  {history.map((h) => (
-                    <li
-                      key={h.contextId}
-                      className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <span className="block truncate text-[12px] font-medium text-(--text-secondary)">
-                          {h.name}
-                        </span>
-                        <span className="text-[10.5px] text-(--text-muted)">
-                          {formatWhen(h.finishedAt)}
-                        </span>
-                      </div>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
-                          h.status === "TIMED_OUT"
-                            ? "bg-amber-500/12 text-amber-600 v2-dark:text-amber-400"
-                            : "bg-slate-500/12 text-slate-500 v2-dark:text-slate-300",
-                        )}
+                  {history.map((h) => {
+                    const failed = h.status === "TIMED_OUT";
+                    const duration = formatDuration(h.startedAt, h.finishedAt);
+                    return (
+                      <li
+                        key={h.contextId}
+                        className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5"
                       >
-                        {h.status === "TIMED_OUT" ? "Expirada" : "Concluída"}
-                      </span>
-                    </li>
-                  ))}
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate text-[12px] font-medium text-(--text-secondary)">
+                            {h.name}
+                          </span>
+                          <span className="flex items-center gap-1.5 text-[10.5px] text-(--text-muted)">
+                            <span>{formatWhen(h.finishedAt)}</span>
+                            {duration && (
+                              <>
+                                <span aria-hidden className="opacity-50">
+                                  ·
+                                </span>
+                                <span className="inline-flex items-center gap-0.5">
+                                  <IconClock size={10} stroke={1.75} />
+                                  {duration}
+                                </span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
+                            failed
+                              ? "bg-rose-500/12 text-rose-600 v2-dark:text-rose-400"
+                              : "bg-emerald-500/12 text-emerald-600 v2-dark:text-emerald-400",
+                          )}
+                        >
+                          {failed ? "Expirada" : "Concluída"}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
 

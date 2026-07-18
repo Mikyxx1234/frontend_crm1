@@ -4,7 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconCircleCheck as CheckCircle2, IconChevronRight as ChevronRight, IconClock as Clock, IconDownload as Download, IconFileText as FileText, IconInfoCircle as Info, IconTemplate as LayoutTemplate, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconPlus as Plus, IconSearch as Search, IconTrash as Trash2, IconHierarchy as Workflow } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal as Sliders, IconCheck as Check, IconCircleCheck as CheckCircle2, IconChevronRight as ChevronRight, IconClock as Clock, IconDownload as Download, IconFileText as FileText, IconInfoCircle as Info, IconMenu2 as Menu, IconTemplate as LayoutTemplate, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconPlus as Plus, IconRotateClockwise as RotateCw, IconSearch as Search, IconTrash as Trash2, IconHierarchy as Workflow } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
@@ -24,13 +24,11 @@ import InternalTemplatesPage from "../templates";
 import WhatsAppTemplatesPage from "../whatsapp-templates";
 import {
   HubCallout,
-  HubChip,
   HubPanel,
   HubStat,
   HubStatGrid,
   HubSubHeader,
   HubTabBar,
-  HubToolbar,
   type HubTabDef,
 } from "./hub-ui";
 
@@ -360,36 +358,127 @@ export default function MessageModelsHubPage() {
     [tabDefs, safeTab, setTab],
   );
 
-  const actionNode = React.useMemo(
-    () =>
-      safeTab === "overview" ? (
-        <ButtonGlass type="button" variant="primary" size="sm" onClick={() => setNewOpen(true)}>
-          <Plus className="size-4" />
-          <span className="ml-2">Novo modelo</span>
-        </ButtonGlass>
-      ) : null,
-    [safeTab],
-  );
+  // Busca na posição padrão (centro do PageHeader) com filtros segmentados
+  // no popover — contextual por aba (visão geral: canais; flows: estado).
+  const searchNode = React.useMemo(() => {
+    if (safeTab === "overview") {
+      return (
+        <ModelsSearchFilterBar
+          search={ovQuery}
+          onSearch={setOvQuery}
+          placeholder="Buscar por nome, conteúdo ou variável..."
+          title="Filtrar por canal"
+          options={[
+            { value: "all", label: "Todos os canais", count: totalCount },
+            { value: "interno", label: "Interno", count: internalCount, dot: "var(--text-muted)" },
+            { value: "waba", label: "WhatsApp", count: metaCount, dot: "var(--color-success)" },
+            { value: "flow", label: "Flow", count: flowCount, dot: "var(--color-info)" },
+          ]}
+          value={ovFilter}
+          onChange={(v) => setOvFilter(v as typeof ovFilter)}
+          onClearAll={() => {
+            setOvQuery("");
+            setOvFilter("all");
+          }}
+        />
+      );
+    }
+    if (safeTab === "flows" && canSubmitMeta) {
+      return (
+        <ModelsSearchFilterBar
+          search={flowQuery}
+          onSearch={setFlowQuery}
+          placeholder="Buscar flow por nome ou Meta flow id..."
+          title="Filtrar por estado"
+          options={[
+            { value: "all", label: "Todos", count: flowCount },
+            { value: "PUBLISHED", label: "Publicados", count: flowPublished },
+            { value: "DRAFT", label: "Rascunhos", count: flowDraft },
+          ]}
+          value={flowFilter}
+          onChange={(v) => setFlowFilter(v as typeof flowFilter)}
+          onClearAll={() => {
+            setFlowQuery("");
+            setFlowFilter("all");
+          }}
+        />
+      );
+    }
+    return null;
+  }, [
+    safeTab,
+    ovQuery,
+    ovFilter,
+    flowQuery,
+    flowFilter,
+    canSubmitMeta,
+    totalCount,
+    internalCount,
+    metaCount,
+    flowCount,
+    flowPublished,
+    flowDraft,
+  ]);
 
-  // Injeta abas + ação na linha do PageHeader (padrão Pipeline) quando
+  // Pills (abas) + hambúrguer com os CTAs da página, à direita do PageHeader.
+  const actionsNode = React.useMemo(() => {
+    const menuItems: ModelsMenuItem[] =
+      safeTab === "flows" && canSubmitMeta
+        ? [
+            {
+              icon: createFlowMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Workflow className="size-4" />
+              ),
+              label: "Novo flow",
+              onClick: () => createFlowMutation.mutate(),
+              disabled: createFlowMutation.isPending,
+            },
+            {
+              icon: <Download className="size-4" />,
+              label: "Importar da Meta",
+              onClick: () => {
+                setImportOpen(true);
+                void refetchMetaFlows();
+              },
+              divider: true,
+            },
+          ]
+        : [
+            {
+              icon: <Plus className="size-4" />,
+              label: "Novo modelo",
+              onClick: () => setNewOpen(true),
+            },
+          ];
+    return (
+      <div className="flex items-center gap-2">
+        {tabBarNode}
+        <ModelsActionsMenu items={menuItems} />
+      </div>
+    );
+  }, [safeTab, canSubmitMeta, tabBarNode, createFlowMutation, refetchMetaFlows]);
+
+  // Injeta busca (centro) + abas/ação (direita) na linha do PageHeader quando
   // rodando dentro do SettingsV2Shell. Sem o shell (rota /old) cai no
   // render inline abaixo.
   React.useEffect(() => {
     if (!headerSlots) return;
-    headerSlots.setCenter(tabBarNode);
-    headerSlots.setActions(actionNode);
+    headerSlots.setCenter(searchNode);
+    headerSlots.setActions(actionsNode);
     return () => {
       headerSlots.setCenter(null);
       headerSlots.setActions(null);
     };
-  }, [headerSlots, tabBarNode, actionNode]);
+  }, [headerSlots, searchNode, actionsNode]);
 
   return (
     <div className="min-w-0 w-full max-w-full space-y-3 sm:space-y-4">
       {!headerSlots ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {tabBarNode}
-          {actionNode}
+          {searchNode ? <div className="min-w-0 flex-1">{searchNode}</div> : <div />}
+          {actionsNode}
         </div>
       ) : null}
 
@@ -403,40 +492,6 @@ export default function MessageModelsHubPage() {
           </HubStatGrid>
 
           <HubPanel>
-            <HubToolbar
-              searchValue={ovQuery}
-              onSearchChange={setOvQuery}
-              placeholder="Buscar por nome, conteúdo ou variável..."
-            >
-              <HubChip active={ovFilter === "all"} onClick={() => setOvFilter("all")} tone="brand">
-                Todos os canais
-              </HubChip>
-              <HubChip
-                active={ovFilter === "interno"}
-                onClick={() => setOvFilter("interno")}
-                dot="var(--text-muted)"
-                tone="neutral"
-              >
-                Interno
-              </HubChip>
-              <HubChip
-                active={ovFilter === "waba"}
-                onClick={() => setOvFilter("waba")}
-                dot="var(--color-success)"
-                tone="success"
-              >
-                WhatsApp
-              </HubChip>
-              <HubChip
-                active={ovFilter === "flow"}
-                onClick={() => setOvFilter("flow")}
-                dot="var(--color-info)"
-                tone="info"
-              >
-                Flow
-              </HubChip>
-            </HubToolbar>
-
             {loadingInt || loadingMeta || loadingFlows ? (
               <div className="space-y-2 p-4">
                 <Skeleton className="h-12 w-full" />
@@ -459,7 +514,7 @@ export default function MessageModelsHubPage() {
                         <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-md)]", g.badge)}>
                           {g.icon}
                         </span>
-                        <span className="font-display text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                        <span className="font-display text-[13px] font-bold text-[var(--text-secondary)]">
                           {g.title}
                         </span>
                         <span className="rounded-full bg-[var(--glass-bg-strong)] px-1.5 text-[11px] font-bold text-[var(--text-secondary)]">
@@ -535,36 +590,6 @@ export default function MessageModelsHubPage() {
           <HubSubHeader
             icon={<Workflow className="size-5" />}
             title="Flows interativos"
-            actions={
-              <>
-                <ButtonGlass
-                  type="button"
-                  size="sm"
-                  variant="glass"
-                  onClick={() => {
-                    setImportOpen(true);
-                    void refetchMetaFlows();
-                  }}
-                >
-                  <Download className="size-4" />
-                  <span className="ml-2">Importar da Meta</span>
-                </ButtonGlass>
-                <ButtonGlass
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={createFlowMutation.isPending}
-                  onClick={() => createFlowMutation.mutate()}
-                >
-                  {createFlowMutation.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Workflow className="size-4" />
-                  )}
-                  <span className="ml-2">Novo flow</span>
-                </ButtonGlass>
-              </>
-            }
           >
             Desenhe um flow direto no CRM ou importe um já publicado na WABA; depois{" "}
             <strong className="font-bold text-[var(--text-secondary)]">mapeie cada resposta para o campo do lead</strong>.
@@ -590,22 +615,6 @@ export default function MessageModelsHubPage() {
           </HubCallout>
 
           <HubPanel>
-            <HubToolbar
-              searchValue={flowQuery}
-              onSearchChange={setFlowQuery}
-              placeholder="Buscar flow por nome ou Meta flow id..."
-            >
-              <HubChip active={flowFilter === "all"} onClick={() => setFlowFilter("all")} count={flowCount}>
-                Todos
-              </HubChip>
-              <HubChip active={flowFilter === "PUBLISHED"} onClick={() => setFlowFilter("PUBLISHED")} count={flowPublished}>
-                Publicados
-              </HubChip>
-              <HubChip active={flowFilter === "DRAFT"} onClick={() => setFlowFilter("DRAFT")} count={flowDraft}>
-                Rascunhos
-              </HubChip>
-            </HubToolbar>
-
             {loadingFlows ? (
               <div className="space-y-2 p-4">
                 <Skeleton className="h-12 w-full" />
@@ -621,7 +630,7 @@ export default function MessageModelsHubPage() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[820px] border-collapse text-left">
                   <thead>
-                    <tr className="[&>th]:px-4 [&>th]:py-3 [&>th]:text-[11px] [&>th]:font-bold [&>th]:uppercase [&>th]:tracking-[0.06em] [&>th]:text-[var(--text-muted)] [&>th]:shadow-[0_1px_0_var(--glass-border-subtle)]">
+                    <tr className="[&>th]:px-4 [&>th]:py-3 [&>th]:text-[12px] [&>th]:font-semibold [&>th]:text-[var(--text-muted)] [&>th]:shadow-[0_1px_0_var(--glass-border-subtle)]">
                       <th>Nome</th>
                       <th className="w-[140px]">Estado</th>
                       <th className="w-[200px]">Meta flow id</th>
@@ -865,15 +874,213 @@ function FlowStateBadge({ published }: { published: boolean }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
+        "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] px-2.5 py-1 text-[11.5px] font-bold",
         published
           ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
           : "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
       )}
     >
       <span className={cn("size-1.5 rounded-full", published ? "bg-[var(--color-online)]" : "bg-[var(--text-muted)] opacity-60")} />
-      {published ? "Published" : "Draft"}
+      {published ? "Publicado" : "Rascunho"}
     </span>
+  );
+}
+
+// ── Toolbar padrão (busca + popover de filtros segmentados) ────────────────
+
+type ModelsFilterOption = { value: string; label: string; count?: number; dot?: string };
+
+function ModelsCountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[10px] font-bold leading-none text-white">
+      {count}
+    </span>
+  );
+}
+
+function ModelsSearchFilterBar({
+  search,
+  onSearch,
+  placeholder,
+  title,
+  options,
+  value,
+  onChange,
+  onClearAll,
+}: {
+  search: string;
+  onSearch: (v: string) => void;
+  placeholder: string;
+  title: string;
+  options: ModelsFilterOption[];
+  value: string;
+  onChange: (v: string) => void;
+  onClearAll: () => void;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [open, setOpen] = React.useState(false);
+  const activeCount = value !== "all" ? 1 : 0;
+
+  React.useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <Search
+        size={15}
+        className="absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]"
+      />
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => onSearch(e.target.value)}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-11 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+      />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Filtros"
+        className={cn(
+          "absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors",
+          activeCount > 0 || open
+            ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+            : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
+        )}
+      >
+        <Sliders size={15} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,380px)] flex-col overflow-visible rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
+          <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
+            <div className="flex items-center gap-2">
+              <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">{title}</span>
+              <ModelsCountBadge count={activeCount} />
+            </div>
+            <button
+              type="button"
+              onClick={onClearAll}
+              disabled={activeCount === 0 && !search}
+              className="flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)] disabled:opacity-40"
+            >
+              <RotateCw size={13} /> Limpar
+            </button>
+          </div>
+
+          <div className="max-h-[min(60vh,420px)] overflow-y-auto px-4 pb-4">
+            <div className="flex flex-wrap gap-1.5">
+              {options.map((opt) => {
+                const selected = value === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => onChange(opt.value)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                      selected
+                        ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                        : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                    )}
+                  >
+                    {selected ? (
+                      <Check size={12} stroke={2.4} />
+                    ) : opt.dot ? (
+                      <span className="size-2 rounded-full" style={{ background: opt.dot }} />
+                    ) : null}
+                    {opt.label}
+                    {typeof opt.count === "number" ? (
+                      <span
+                        className={cn(
+                          "min-w-[18px] rounded-full px-1.5 text-center text-[10px] font-bold",
+                          selected
+                            ? "bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]"
+                            : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                        )}
+                      >
+                        {opt.count}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Menu hamburger (CTAs da página) ────────────────────────────────────────
+
+type ModelsMenuItem = {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  divider?: boolean;
+};
+
+function ModelsActionsMenu({ items }: { items: ModelsMenuItem[] }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Ações"
+        aria-expanded={open}
+        className={cn(
+          "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
+          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
+        )}
+      >
+        <Menu size={18} stroke={2.2} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          {items.map((it) => (
+            <div key={it.label}>
+              {it.divider && <div className="my-1 h-px bg-[var(--glass-border)]" />}
+              <button
+                type="button"
+                disabled={it.disabled}
+                onClick={() => {
+                  setOpen(false);
+                  it.onClick();
+                }}
+                className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)] disabled:opacity-40"
+              >
+                <span className="text-[var(--text-muted)]">{it.icon}</span>
+                {it.label}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

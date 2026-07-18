@@ -1,17 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import {
+  IconAdjustmentsHorizontal,
   IconAlertTriangle,
+  IconCheck,
   IconCircleCheck,
   IconClockExclamation,
   IconLoader2,
+  IconMenu2,
   IconPencil,
   IconPlayerPlay,
   IconRefresh,
+  IconRotateClockwise,
   IconRoute,
+  IconSearch,
+  IconTag,
+  IconUserCheck,
+  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
@@ -20,8 +28,9 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
-import { PagePrimaryButton } from "@/components/crm/page-toolbar";
+import { PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { PageDemoBanner } from "@/components/crm/page-demo-banner";
+import { EmptyState } from "@/components/crm/empty-state";
 import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
 import { cn } from "@/lib/utils";
 import { useWidgets } from "@/features/widgets/hooks";
@@ -46,6 +55,16 @@ import {
 import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const SMART_DISTRIBUTION_SLUG = "smart_distribution";
+
+type DistributionView = "team" | "queue";
+
+/** Presença efetiva de um responsável (para badge + filtro). */
+type PresenceKey = "ONLINE" | "AWAY" | "OFFLINE" | "INACTIVE";
+function classifyPresence(r: DistributionResponsibleDto): PresenceKey {
+  if (!r.participates) return "INACTIVE";
+  if (r.paused) return "AWAY";
+  return (r.status ?? "OFFLINE") === "ONLINE" ? "ONLINE" : r.status === "AWAY" ? "AWAY" : "OFFLINE";
+}
 
 interface DistributionClientPageProps {
   navRail?: React.ReactNode;
@@ -79,6 +98,13 @@ export default function DistributionClientPage({
   const [editing, setEditing] = useState<DistributionResponsibleDto | null>(null);
   const [simResult, setSimResult] = useState<DistributionResult | null>(null);
 
+  // ── Estado de UI: aba, busca, filtros ──
+  const [view, setView] = useState<DistributionView>("team");
+  const [search, setSearch] = useState("");
+  const [presence, setPresence] = useState<PresenceKey[]>([]);
+  const [eligibility, setEligibility] = useState<("eligible" | "blocked")[]>([]);
+  const [types, setTypes] = useState<string[]>([]);
+
   const realResponsibles = respQuery.data?.responsibles ?? [];
   const realPending = pendingQuery.data?.pending ?? [];
   const useDemo =
@@ -99,6 +125,44 @@ export default function DistributionClientPage({
     ? MOCK_DISTRIBUTION_RESPONSIBLES.responsibles
     : realResponsibles;
   const pending = useDemo ? MOCK_DISTRIBUTION_PENDING.pending : realPending;
+
+  const typeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(responsibles.map((r) => r.type).filter((t): t is string => !!t)),
+      ).sort(),
+    [responsibles],
+  );
+
+  const hasFilters =
+    search.trim().length > 0 ||
+    presence.length > 0 ||
+    eligibility.length > 0 ||
+    types.length > 0;
+
+  const filteredResponsibles = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return responsibles.filter((r) => {
+      if (q) {
+        const hay = `${r.name ?? ""} ${r.email ?? ""} ${r.type ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (presence.length > 0 && !presence.includes(classifyPresence(r))) return false;
+      if (eligibility.length === 1) {
+        if (eligibility[0] === "eligible" && !r.eligible) return false;
+        if (eligibility[0] === "blocked" && r.eligible) return false;
+      }
+      if (types.length > 0 && (!r.type || !types.includes(r.type))) return false;
+      return true;
+    });
+  }, [responsibles, search, presence, eligibility, types]);
+
+  const clearFilters = () => {
+    setSearch("");
+    setPresence([]);
+    setEligibility([]);
+    setTypes([]);
+  };
 
   const handleRetry = () => {
     retryMut.mutate(undefined, {
@@ -135,6 +199,12 @@ export default function DistributionClientPage({
 
   if (roleReady && !isManagerUp) return <RestrictedScreen />;
 
+  const showContent =
+    !widgetsQuery.isLoading &&
+    smartInstalled &&
+    !(!useDemo && respQuery.isLoading) &&
+    !(!useDemo && respQuery.error);
+
   return (
     <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
       {navRail ?? <NavRailV2 />}
@@ -143,19 +213,59 @@ export default function DistributionClientPage({
         <PageHeader
           icon={<IconRoute size={22} />}
           title="Distribuição"
+          center={
+            smartInstalled ? (
+              <DistributionSearchFilterBar
+                search={search}
+                onSearch={setSearch}
+                presence={presence}
+                onPresenceChange={setPresence}
+                eligibility={eligibility}
+                onEligibilityChange={setEligibility}
+                types={types}
+                onTypesChange={setTypes}
+                typeOptions={typeOptions}
+                onClearAll={clearFilters}
+              />
+            ) : undefined
+          }
           actions={
             smartInstalled ? (
-              <PagePrimaryButton
-                onClick={handleTest}
-                disabled={simulateMut.isPending}
-              >
-                {simulateMut.isPending ? (
-                  <IconLoader2 size={16} className="animate-spin" />
-                ) : (
-                  <IconPlayerPlay size={16} />
-                )}
-                Testar distribuição
-              </PagePrimaryButton>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <PageSegmentedControl
+                  size="compact"
+                  aria-label="Visão da distribuição"
+                  items={[
+                    {
+                      value: "team",
+                      label: (
+                        <SegLabel label="Equipe" count={responsibles.length} />
+                      ),
+                    },
+                    {
+                      value: "queue",
+                      label: (
+                        <SegLabel
+                          label="Fila de espera"
+                          count={pending.length}
+                          tone={pending.length > 0 ? "warn" : "muted"}
+                        />
+                      ),
+                    },
+                  ]}
+                  value={view}
+                  onChange={(v) => setView(v as DistributionView)}
+                />
+                <DistributionActionsMenu
+                  onTest={handleTest}
+                  testing={simulateMut.isPending}
+                  onRetry={handleRetry}
+                  retrying={retryMut.isPending}
+                  canRetry={pending.length > 0}
+                  hasFilters={hasFilters}
+                  onClearFilters={clearFilters}
+                />
+              </div>
             ) : undefined
           }
         />
@@ -169,35 +279,40 @@ export default function DistributionClientPage({
         ) : !useDemo && respQuery.error ? (
           <ErrorState message={respQuery.error.message} />
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden sm:gap-4">
-            {useDemo && (
-              <div className="shrink-0">
+          showContent && (
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden sm:gap-4">
+              {useDemo && (
                 <PageDemoBanner>
                   Dados de exemplo — equipe, fila e elegibilidade ilustrativas para o módulo de distribuição.
                 </PageDemoBanner>
-              </div>
-            )}
-            {simResult && (
-              <div className="shrink-0">
-                <SimulationPanel
-                  result={simResult}
-                  onClose={() => setSimResult(null)}
+              )}
+
+              <DistributionMiniDash responsibles={responsibles} pending={pending} />
+
+              {simResult && (
+                <SimulationPanel result={simResult} onClose={() => setSimResult(null)} />
+              )}
+
+              {view === "team" ? (
+                <ResponsiblesCardList
+                  responsibles={filteredResponsibles}
+                  total={responsibles.length}
+                  hasFilters={hasFilters}
+                  onClearFilters={clearFilters}
+                  currentUserId={currentUserId}
+                  canManage={canManage}
+                  onEdit={(r) => setEditing(r)}
                 />
-              </div>
-            )}
-            <PendingQueueBlock
-              pending={pending}
-              onRetry={handleRetry}
-              retrying={retryMut.isPending}
-              loading={pendingQuery.isLoading}
-            />
-            <ResponsiblesTable
-              responsibles={responsibles}
-              currentUserId={currentUserId}
-              canManage={canManage}
-              onEdit={(r) => setEditing(r)}
-            />
-          </div>
+              ) : (
+                <PendingQueueCards
+                  pending={pending}
+                  onRetry={handleRetry}
+                  retrying={retryMut.isPending}
+                  loading={pendingQuery.isLoading}
+                />
+              )}
+            </div>
+          )
         )}
       </main>
 
@@ -211,9 +326,146 @@ export default function DistributionClientPage({
   );
 }
 
-// ── Tabela de responsáveis ──────────────────────────────────────────────
+// ── Label das pills (com contador) ──────────────────────────────────────
+function SegLabel({
+  label,
+  count,
+  tone = "brand",
+}: {
+  label: string;
+  count: number;
+  tone?: "brand" | "warn" | "muted";
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {label}
+      <span
+        className={cn(
+          "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 font-display text-[10px] font-bold leading-none",
+          tone === "warn"
+            ? "bg-[var(--color-warn,#d97706)] text-white"
+            : tone === "muted"
+              ? "bg-[var(--glass-border-subtle)] text-[var(--text-muted)]"
+              : "bg-[var(--brand-primary)] text-white",
+        )}
+      >
+        {count}
+      </span>
+    </span>
+  );
+}
 
-// 6 colunas com mínimos legíveis — H-scroll no card quando viewport < ~960px.
+// ── Mini-dash ────────────────────────────────────────────────────────────
+
+function DistributionMiniDash({
+  responsibles,
+  pending,
+}: {
+  responsibles: DistributionResponsibleDto[];
+  pending: PendingDistributionDto[];
+}) {
+  const stats = useMemo(() => {
+    const participating = responsibles.filter((r) => r.participates);
+    const eligible = responsibles.filter((r) => r.eligible).length;
+    const blocked = participating.length - eligible;
+    const inService = responsibles.reduce((acc, r) => acc + (r.queueCount ?? 0), 0);
+    const waiting = pending.length;
+    // Taxa de cobertura: elegíveis / participantes (capacidade de receber agora).
+    const coverage =
+      participating.length > 0
+        ? Math.round((eligible / participating.length) * 100)
+        : 0;
+    // Taxa de sucesso da distribuição: distribuídos / (distribuídos + aguardando).
+    const successRate =
+      inService + waiting > 0
+        ? Math.round((inService / (inService + waiting)) * 100)
+        : 100;
+    return { eligible, blocked, inService, waiting, coverage, successRate };
+  }, [responsibles, pending]);
+
+  const cards: {
+    key: string;
+    label: string;
+    value: number;
+    percent?: number;
+    accent: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      key: "eligible",
+      label: "Elegíveis agora",
+      value: stats.eligible,
+      percent: stats.coverage,
+      accent: "var(--color-success)",
+      icon: <IconUserCheck size={16} />,
+    },
+    {
+      key: "blocked",
+      label: "Indisponíveis",
+      value: stats.blocked,
+      accent: "var(--color-danger, #dc2626)",
+      icon: <IconAlertTriangle size={16} />,
+    },
+    {
+      key: "inService",
+      label: "Em atendimento",
+      value: stats.inService,
+      accent: "var(--brand-primary)",
+      icon: <IconUsers size={16} />,
+    },
+    {
+      key: "waiting",
+      label: "Aguardando · taxa de sucesso",
+      value: stats.waiting,
+      percent: stats.successRate,
+      accent: "var(--color-warn, #d97706)",
+      icon: <IconClockExclamation size={16} />,
+    },
+  ];
+
+  return (
+    <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {cards.map((c) => (
+        <div
+          key={c.key}
+          className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+        >
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            style={{
+              background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
+              color: c.accent,
+            }}
+          >
+            {c.icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-display text-[11.5px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
+              {c.label}
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
+                {c.value.toLocaleString("pt-BR")}
+              </span>
+              {c.percent !== undefined && (
+                <span
+                  className="font-display text-[12px] font-bold tabular-nums"
+                  style={{ color: c.accent }}
+                >
+                  {c.percent}%
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Lista de responsáveis em cards ───────────────────────────────────────
+
+// 6 colunas com mínimos legíveis — H-scroll no container quando < ~960px.
 const RESP_GRID =
   "grid-cols-[minmax(200px,2.4fr)_minmax(160px,1.4fr)_minmax(64px,0.7fr)_minmax(72px,0.8fr)_minmax(150px,1.2fr)_minmax(100px,0.9fr)]";
 
@@ -225,196 +477,85 @@ const AVATAR_PALETTES = [
   "bg-[color-mix(in_srgb,var(--brand-secondary)_16%,transparent)] text-[var(--brand-secondary)]",
 ] as const;
 
-function ResponsiblesTable({
+function ResponsiblesCardList({
   responsibles,
+  total,
+  hasFilters,
+  onClearFilters,
   currentUserId,
   canManage,
   onEdit,
 }: {
   responsibles: DistributionResponsibleDto[];
+  total: number;
+  hasFilters: boolean;
+  onClearFilters: () => void;
   currentUserId: string | null;
   canManage: boolean;
   onEdit: (r: DistributionResponsibleDto) => void;
 }) {
+  if (total === 0) {
+    return (
+      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <EmptyState
+          icon={<IconRoute size={28} />}
+          title="Nenhum responsável disponível"
+          description="Adicione consultores à organização para distribuir leads."
+        />
+      </div>
+    );
+  }
+
   if (responsibles.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-12 text-center shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-        <IconRoute size={32} className="text-[var(--text-muted)]" />
-        <p className="font-display text-[15px] font-semibold text-[var(--text-primary)]">
-          Nenhum responsável disponível
-        </p>
-        <p className="font-body text-[13px] text-[var(--text-muted)]">
-          Adicione consultores à organização para distribuir leads.
-        </p>
+      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <EmptyState
+          icon={<IconSearch size={28} />}
+          title="Nenhum responsável encontrado"
+          description="Sem resultados para a busca e filtros atuais."
+          action={
+            hasFilters ? (
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-[13px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+              >
+                <IconRotateClockwise size={14} /> Limpar filtros
+              </button>
+            ) : undefined
+          }
+        />
       </div>
     );
   }
 
   return (
-    <>
-      {/* Mobile: painel glass até o rodapé + cards com scroll interno */}
-      <section
-        aria-label="Responsáveis"
-        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3 shadow-[var(--glass-shadow)] backdrop-blur-md md:hidden"
-      >
-        <p className="mb-2.5 shrink-0 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-          Responsáveis ({responsibles.length})
-        </p>
-        <div className="scrollbar-thin min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
-          {responsibles.map((r, idx) => (
-            <ResponsibleMobileCard
-              key={r.userId}
-              r={r}
-              idx={idx}
-              isCurrentUser={r.userId === currentUserId}
-              canManage={canManage}
-              onEdit={onEdit}
-            />
-          ))}
+    <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+      <div className="flex min-w-[960px] flex-col gap-2">
+        <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-3.5 border border-transparent px-4 py-2"))}>
+          <ListColumnLabel>Responsável</ListColumnLabel>
+          <ListColumnLabel>Presença</ListColumnLabel>
+          <ListColumnLabel className="text-center">Fila</ListColumnLabel>
+          <ListColumnLabel className="text-center">Volume</ListColumnLabel>
+          <ListColumnLabel>Elegibilidade</ListColumnLabel>
+          <ListColumnLabel align="right">Ações</ListColumnLabel>
         </div>
-      </section>
-
-      {/* Desktop/tablet: tabela com H-scroll sincronizado + scroll vertical */}
-      <div className="hidden min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md md:flex">
-        <div className="scrollbar-thin min-h-0 flex-1 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-          <div className="min-w-[960px]">
-            <div className={listTableHeadRowClass(cn(RESP_GRID, "sticky top-0 z-[1] gap-3 px-3 py-2"))}>
-              <ListColumnLabel>Responsável</ListColumnLabel>
-              <ListColumnLabel>Presença</ListColumnLabel>
-              <ListColumnLabel className="text-center">Fila</ListColumnLabel>
-              <ListColumnLabel className="text-center">Volume</ListColumnLabel>
-              <ListColumnLabel>Elegibilidade</ListColumnLabel>
-              <ListColumnLabel align="right">Ações</ListColumnLabel>
-            </div>
-            {responsibles.map((r, idx) => (
-              <ResponsibleRow
-                key={r.userId}
-                r={r}
-                idx={idx}
-                isCurrentUser={r.userId === currentUserId}
-                canManage={canManage}
-                onEdit={onEdit}
-              />
-            ))}
-          </div>
-        </div>
+        {responsibles.map((r, idx) => (
+          <ResponsibleCard
+            key={r.userId}
+            r={r}
+            idx={idx}
+            isCurrentUser={r.userId === currentUserId}
+            canManage={canManage}
+            onEdit={onEdit}
+          />
+        ))}
       </div>
-    </>
+    </div>
   );
 }
 
-function ResponsibleMobileCard({
-  r,
-  idx,
-  isCurrentUser,
-  canManage,
-  onEdit,
-}: {
-  r: DistributionResponsibleDto;
-  idx: number;
-  isCurrentUser: boolean;
-  canManage: boolean;
-  onEdit: (r: DistributionResponsibleDto) => void;
-}) {
-  const statusMut = useSetAgentStatus();
-  const initials = (r.name ?? r.email ?? "?")
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-  const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
-  const avatarClass = AVATAR_PALETTES[idx % AVATAR_PALETTES.length];
-
-  return (
-    <article className="min-w-0 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <div className="flex min-w-0 items-start gap-3">
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-extrabold ${avatarClass}`}
-        >
-          {initials}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
-            {r.name ?? "Sem nome"}
-          </p>
-          <p className="truncate font-body text-[11.5px] text-[var(--text-muted)]">
-            {r.email ?? "—"}{" "}
-            <span className="font-mono text-[10px] text-[var(--text-secondary)]">· {r.role}</span>
-          </p>
-        </div>
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => onEdit(r)}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 font-display text-[11.5px] font-bold text-[var(--text-secondary)]"
-          >
-            <IconPencil size={13} /> Editar
-          </button>
-        )}
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
-        {isCurrentUser && (
-          <button
-            type="button"
-            onClick={() =>
-              statusMut.mutate(
-                { userId: r.userId, status: isOnline ? "OFFLINE" : "ONLINE" },
-                { onError: (e) => toast.error(e.message || "Erro ao alterar status.") },
-              )
-            }
-            disabled={statusMut.isPending}
-            className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--text-muted)] disabled:opacity-50"
-          >
-            {statusMut.isPending ? "…" : isOnline ? "Ficar offline" : "Ficar online"}
-          </button>
-        )}
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2.5 py-2">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-            Fila
-          </p>
-          <p className="mt-0.5 font-display text-[15px] font-extrabold text-[var(--text-primary)]">
-            {r.queueCount}
-          </p>
-        </div>
-        <div className="rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2.5 py-2">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-            Volume
-          </p>
-          <p className="mt-0.5 font-display text-[15px] font-extrabold text-[var(--text-primary)]">
-            {r.queueLimit > 0 ? r.queueLimit : "∞"}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-2.5 flex min-w-0 flex-col gap-1">
-        {r.eligible ? (
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-success-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-success-dark,#0f7a5a)]">
-            <IconCircleCheck size={13} /> Elegível
-          </span>
-        ) : (
-          <>
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-danger-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-danger-text)]">
-              <IconAlertTriangle size={13} /> Indisponível
-            </span>
-            {r.blockedReasons.length > 0 && (
-              <span className="min-w-0 text-pretty break-words font-body text-[11px] text-[var(--text-muted)]">
-                {r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
-              </span>
-            )}
-          </>
-        )}
-      </div>
-    </article>
-  );
-}
-
-function ResponsibleRow({
+function ResponsibleCard({
   r,
   idx,
   isCurrentUser,
@@ -441,14 +582,17 @@ function ResponsibleRow({
   const toggleOwnStatus = () => {
     statusMut.mutate(
       { userId: r.userId, status: isOnline ? "OFFLINE" : "ONLINE" },
-      {
-        onError: (e) => toast.error(e.message || "Erro ao alterar status."),
-      },
+      { onError: (e) => toast.error(e.message || "Erro ao alterar status.") },
     );
   };
 
   return (
-    <div className={cn("grid min-w-0 items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]", RESP_GRID)}>
+    <div
+      className={cn(
+        "grid items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+        RESP_GRID,
+      )}
+    >
       {/* Responsável */}
       <div className="flex min-w-0 items-center gap-3">
         <div
@@ -477,11 +621,7 @@ function ResponsibleRow({
             disabled={statusMut.isPending}
             className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
           >
-            {statusMut.isPending
-              ? "…"
-              : isOnline
-                ? "Ficar offline"
-                : "Ficar online"}
+            {statusMut.isPending ? "…" : isOnline ? "Ficar offline" : "Ficar online"}
           </button>
         )}
       </div>
@@ -572,6 +712,359 @@ function PresenceBadge({
   );
 }
 
+// ── Busca + popover de filtros (padrão Logs/Contatos) ────────────────────
+
+type DistFilterTab = "presenca" | "elegibilidade" | "tipo";
+
+const PRESENCE_OPTIONS: { value: PresenceKey; label: string }[] = [
+  { value: "ONLINE", label: "Online" },
+  { value: "AWAY", label: "Em pausa / ausente" },
+  { value: "OFFLINE", label: "Offline" },
+  { value: "INACTIVE", label: "Inativo" },
+];
+
+const ELIGIBILITY_OPTIONS: { value: "eligible" | "blocked"; label: string }[] = [
+  { value: "eligible", label: "Elegível" },
+  { value: "blocked", label: "Indisponível" },
+];
+
+function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[10px] font-bold leading-none text-white">
+      {count}
+    </span>
+  );
+}
+
+function FilterChip({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+        selected
+          ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+      )}
+    >
+      {selected && <IconCheck size={12} stroke={2.4} />}
+      {children}
+    </button>
+  );
+}
+
+function DistributionSearchFilterBar({
+  search,
+  onSearch,
+  presence,
+  onPresenceChange,
+  eligibility,
+  onEligibilityChange,
+  types,
+  onTypesChange,
+  typeOptions,
+  onClearAll,
+}: {
+  search: string;
+  onSearch: (v: string) => void;
+  presence: PresenceKey[];
+  onPresenceChange: (v: PresenceKey[]) => void;
+  eligibility: ("eligible" | "blocked")[];
+  onEligibilityChange: (v: ("eligible" | "blocked")[]) => void;
+  types: string[];
+  onTypesChange: (v: string[]) => void;
+  typeOptions: string[];
+  onClearAll: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<DistFilterTab>("presenca");
+
+  const activeCount =
+    presence.length + (eligibility.length === 1 ? 1 : 0) + types.length;
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const toggle = <T,>(current: T[], val: T, setter: (v: T[]) => void) => {
+    setter(current.includes(val) ? current.filter((x) => x !== val) : [...current, val]);
+  };
+
+  const tabBadge = (id: DistFilterTab) => {
+    if (id === "presenca") return presence.length;
+    if (id === "elegibilidade") return eligibility.length === 1 ? 1 : 0;
+    return types.length;
+  };
+
+  const TABS: { id: DistFilterTab; label: string; icon: React.ReactNode }[] = [
+    { id: "presenca", label: "Presença", icon: <IconUsers size={14} stroke={2.2} /> },
+    { id: "elegibilidade", label: "Elegibilidade", icon: <IconUserCheck size={14} stroke={2.2} /> },
+    { id: "tipo", label: "Tipo", icon: <IconTag size={14} stroke={2.2} /> },
+  ];
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <IconSearch
+        size={15}
+        className="absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]"
+      />
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => onSearch(e.target.value)}
+        onFocus={() => setOpen(true)}
+        placeholder="Pesquisar e filtrar responsáveis..."
+        aria-label="Buscar e filtrar responsáveis"
+        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-11 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+      />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Filtros"
+        className={cn(
+          "absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors",
+          activeCount > 0 || open
+            ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+            : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
+        )}
+      >
+        <IconAdjustmentsHorizontal size={15} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,380px)] flex-col overflow-visible rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
+          <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
+            <div className="flex items-center gap-2">
+              <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">
+                Filtros
+              </span>
+              <CountBadge count={activeCount} />
+            </div>
+            <button
+              type="button"
+              onClick={onClearAll}
+              disabled={activeCount === 0 && !search}
+              className="flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)] disabled:opacity-40"
+            >
+              <IconRotateClockwise size={13} /> Limpar
+            </button>
+          </div>
+
+          <div className="px-4 pb-3">
+            <div
+              role="tablist"
+              aria-label="Seções do filtro"
+              className="flex items-center gap-0.5 rounded-full bg-[var(--glass-bg-strong)] p-1"
+            >
+              {TABS.map((t) => {
+                const active = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(t.id)}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1.5 font-display text-[12px] font-bold transition-all",
+                      active
+                        ? "bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
+                  >
+                    <span className={active ? "text-[var(--brand-primary)]" : undefined}>
+                      {t.icon}
+                    </span>
+                    {t.label}
+                    <CountBadge count={tabBadge(t.id)} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="max-h-[min(60vh,420px)] overflow-y-auto px-4 pb-4">
+            {tab === "presenca" && (
+              <div className="flex flex-wrap gap-1.5">
+                {PRESENCE_OPTIONS.map((opt) => (
+                  <FilterChip
+                    key={opt.value}
+                    selected={presence.includes(opt.value)}
+                    onClick={() => toggle(presence, opt.value, onPresenceChange)}
+                  >
+                    {opt.label}
+                  </FilterChip>
+                ))}
+              </div>
+            )}
+
+            {tab === "elegibilidade" && (
+              <div className="flex flex-wrap gap-1.5">
+                {ELIGIBILITY_OPTIONS.map((opt) => (
+                  <FilterChip
+                    key={opt.value}
+                    selected={eligibility.includes(opt.value)}
+                    onClick={() => {
+                      // Exclusivo: selecionar um limpa o outro.
+                      onEligibilityChange(
+                        eligibility.includes(opt.value) ? [] : [opt.value],
+                      );
+                    }}
+                  >
+                    {opt.label}
+                  </FilterChip>
+                ))}
+              </div>
+            )}
+
+            {tab === "tipo" && (
+              <div className="flex flex-wrap gap-1.5">
+                {typeOptions.length === 0 ? (
+                  <p className="rounded-[10px] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-3 text-center font-body text-[11.5px] text-[var(--text-muted)]">
+                    Nenhum tipo/segmento cadastrado nos responsáveis.
+                  </p>
+                ) : (
+                  typeOptions.map((t) => (
+                    <FilterChip
+                      key={t}
+                      selected={types.includes(t)}
+                      onClick={() => toggle(types, t, onTypesChange)}
+                    >
+                      {t}
+                    </FilterChip>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Menu hamburger (CTAs da página) ──────────────────────────────────────
+
+function DistributionActionsMenu({
+  onTest,
+  testing,
+  onRetry,
+  retrying,
+  canRetry,
+  hasFilters,
+  onClearFilters,
+}: {
+  onTest: () => void;
+  testing: boolean;
+  onRetry: () => void;
+  retrying: boolean;
+  canRetry: boolean;
+  hasFilters: boolean;
+  onClearFilters: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const items: {
+    icon: React.ReactNode;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    divider?: boolean;
+  }[] = [
+    {
+      icon: testing ? (
+        <IconLoader2 size={16} className="animate-spin" />
+      ) : (
+        <IconPlayerPlay size={16} />
+      ),
+      label: testing ? "Testando…" : "Testar distribuição",
+      onClick: onTest,
+      disabled: testing,
+    },
+    {
+      icon: retrying ? (
+        <IconLoader2 size={16} className="animate-spin" />
+      ) : (
+        <IconRefresh size={16} />
+      ),
+      label: retrying ? "Reprocessando…" : "Reprocessar fila",
+      onClick: onRetry,
+      disabled: retrying || !canRetry,
+    },
+    {
+      icon: <IconX size={16} />,
+      label: "Limpar filtros",
+      onClick: onClearFilters,
+      disabled: !hasFilters,
+      divider: true,
+    },
+  ];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Ações"
+        aria-expanded={open}
+        className={cn(
+          "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
+          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
+        )}
+      >
+        <IconMenu2 size={18} stroke={2.2} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          {items.map((it) => (
+            <div key={it.label}>
+              {it.divider && <div className="my-1 h-px bg-[var(--glass-border)]" />}
+              <button
+                type="button"
+                disabled={it.disabled}
+                onClick={() => {
+                  setOpen(false);
+                  it.onClick();
+                }}
+                className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)] disabled:opacity-40"
+              >
+                <span className="text-[var(--text-muted)]">{it.icon}</span>
+                {it.label}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Painel de simulação ─────────────────────────────────────────────────
 
 function SimulationPanel({
@@ -582,7 +1075,7 @@ function SimulationPanel({
   onClose: () => void;
 }) {
   return (
-    <div className="rounded-[var(--radius-xl)] border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.06] p-4">
+    <div className="shrink-0 rounded-[var(--radius-xl)] border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.06] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <IconPlayerPlay size={18} className="text-[var(--brand-primary)]" />
@@ -619,7 +1112,7 @@ function SimulationPanel({
   );
 }
 
-// ── Fila de espera (leads sem responsável elegível) ─────────────────────
+// ── Fila de espera (aba complementar) ────────────────────────────────────
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -632,7 +1125,7 @@ function relativeTime(iso: string): string {
   return `há ${d} d`;
 }
 
-function PendingQueueBlock({
+function PendingQueueCards({
   pending,
   onRetry,
   retrying,
@@ -643,36 +1136,30 @@ function PendingQueueBlock({
   retrying: boolean;
   loading?: boolean;
 }) {
-  const isEmpty = pending.length === 0;
+  if (pending.length === 0) {
+    return (
+      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <EmptyState
+          icon={<IconCircleCheck size={28} />}
+          title="Nenhum lead aguardando"
+          description={
+            loading
+              ? "Carregando fila…"
+              : "Todos os leads recebidos foram distribuídos."
+          }
+        />
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={cn(
-        "min-w-0 shrink-0 rounded-[var(--radius-xl)] border backdrop-blur-md",
-        isEmpty
-          ? "border-[var(--glass-border)] bg-[var(--glass-bg-base,rgba(255,255,255,0.82))] shadow-[var(--glass-shadow)]"
-          : "border-[var(--color-warn)]/40 bg-[var(--color-warn-bg)]/80 shadow-[var(--glass-shadow)]",
-      )}
-    >
-      <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-start sm:gap-3 sm:p-4">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          {/* Ícone */}
-          <div
-            className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
-              isEmpty
-                ? "bg-[var(--color-success-bg)] text-[var(--color-success)]"
-                : "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
-            )}
-          >
-            {isEmpty ? (
-              <IconCircleCheck size={18} />
-            ) : (
-              <IconClockExclamation size={18} />
-            )}
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <div className="flex shrink-0 flex-col gap-2 rounded-[var(--radius-xl)] border border-[var(--color-warn)]/40 bg-[var(--color-warn-bg)]/80 p-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-warn-bg)] text-[var(--color-warn)]">
+            <IconClockExclamation size={18} />
           </div>
-
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0">
             <p className="font-display text-[14.5px] font-extrabold text-[var(--text-primary)]">
               Aguardando distribuição ({pending.length})
             </p>
@@ -681,56 +1168,48 @@ function PendingQueueBlock({
             </p>
           </div>
         </div>
-
-        {!isEmpty && (
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={retrying}
-            className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--color-warn)]/50 bg-[var(--color-warn-bg)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--color-warn)] transition-colors hover:bg-[var(--color-warn-bg)] disabled:opacity-50 sm:w-auto"
-          >
-            {retrying ? (
-              <IconLoader2 size={14} className="animate-spin" />
-            ) : (
-              <IconRefresh size={14} />
-            )}
-            Reprocessar agora
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onRetry}
+          disabled={retrying}
+          className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--color-warn)]/50 bg-[var(--color-warn-bg)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--color-warn)] transition-colors hover:brightness-95 disabled:opacity-50 sm:w-auto"
+        >
+          {retrying ? (
+            <IconLoader2 size={14} className="animate-spin" />
+          ) : (
+            <IconRefresh size={14} />
+          )}
+          Reprocessar agora
+        </button>
       </div>
 
-      {isEmpty ? (
-        <div className="mx-3 mb-3 flex items-start gap-2.5 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 font-body text-[13px] leading-snug text-[var(--text-muted)] sm:mx-4 sm:mb-4 sm:px-4">
-          <IconCircleCheck size={15} className="mt-0.5 shrink-0 text-[var(--color-success)]" />
-          <span className="min-w-0 flex-1 text-pretty break-words">
-            {loading
-              ? "Carregando fila…"
-              : "Nenhum lead aguardando. Todos os leads recebidos foram distribuídos."}
-          </span>
-        </div>
-      ) : (
-        <ul className="mx-3 mb-3 flex flex-col gap-1.5 sm:mx-4 sm:mb-4">
-          {pending.map((p) => (
-            <li
-              key={p.id}
-              className="flex min-w-0 flex-col gap-1 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-            >
-              <span className="min-w-0 break-words font-semibold text-[var(--text-primary)]">
+      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
+        {pending.map((p) => (
+          <div
+            key={p.id}
+            className="flex min-w-0 items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-warn-bg,rgba(217,119,6,0.10))] text-[var(--color-warn,#d97706)]">
+              <IconClockExclamation size={16} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">
                 {p.label}
-                {p.distributionType && (
-                  <span className="ml-2 font-normal text-[var(--text-muted)]">
-                    · {p.distributionType}
+              </p>
+              <p className="truncate font-body text-[11.5px] text-[var(--text-muted)]">
+                {p.distributionType ? (
+                  <span className="font-semibold text-[var(--text-secondary)]">
+                    {p.distributionType}
                   </span>
-                )}
-              </span>
-              <span className="shrink-0 text-[12px] text-[var(--text-muted)]">
+                ) : null}
+                {p.distributionType ? " · " : ""}
                 {p.attempts > 1 ? `${p.attempts} tentativas · ` : ""}
                 {relativeTime(p.createdAt)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -762,8 +1241,6 @@ function EditResponsibleDialog({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    // "Volume" = limite de leads (0 = sem limite). Persistido em queueLimit,
-    // que é o campo que o motor usa para bloquear (QUEUE_LIMIT_REACHED).
     const limit = Math.max(0, Math.floor(Number(volume) || 0));
     updateMut.mutate(
       {
@@ -908,8 +1385,6 @@ function ToggleField({
           checked ? "bg-[var(--brand-primary)]" : "bg-[var(--glass-border)]",
         )}
       >
-        {/* Thumb ancorado às bordas (left/right) em vez de translate-x fixo —
-            assim a bolinha nunca vaza pra fora da trilha. */}
         <span
           className={cn(
             "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-sm transition-all",

@@ -165,7 +165,7 @@ function RowMetric({
       <p className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
         {value}
       </p>
-      <p className="font-body text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+      <p className="font-body text-[10px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
         {label}
       </p>
     </div>

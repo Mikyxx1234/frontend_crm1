@@ -45,6 +45,8 @@ import {
 } from "@/components/crm/sortable-header";
 import { UserAvatar } from "@/components/crm/user-avatar";
 import { ExpedienteTab } from "@/features/legacy-v1/settings/schedules";
+import { DepartmentsTab } from "@/features/conversations-settings/components/DepartmentsTab";
+import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   CRM_ACTION_KEYS,
@@ -132,7 +134,7 @@ export default function TeamV2ClientPage() {
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
       title="Equipe"
-      description="Usuários, funções, permissões e expediente"
+      description="Usuários, funções, permissões, expediente e departamentos"
       icon={<IconUsers size={22} />}
     >
       <TeamContent />
@@ -140,11 +142,39 @@ export default function TeamV2ClientPage() {
   );
 }
 
+/**
+ * Injeta busca (center) + ações (actions) no header do SettingsV2Shell.
+ * Montado apenas nas abas Usuários/Expediente — desmonta na aba
+ * Departamentos, cedendo os slots ao DepartmentsTab sem conflito.
+ */
+function TeamHeaderSlots({
+  center,
+  actions,
+}: {
+  center: React.ReactNode;
+  actions: React.ReactNode;
+}) {
+  const headerSlots = useSettingsHeaderSlots();
+  React.useEffect(() => {
+    if (!headerSlots) return;
+    headerSlots.setCenter(center);
+    headerSlots.setActions(actions);
+    return () => {
+      headerSlots.setCenter(null);
+      headerSlots.setActions(null);
+    };
+  }, [headerSlots, center, actions]);
+  return null;
+}
+
 function TeamContent() {
   const qc = useQueryClient();
   const { data: session, status } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
+  const canManageDepartments =
+    session?.user?.role === "ADMIN" || session?.user?.role === "MANAGER";
   const isDesktop = useIsDesktop();
+  const searchParams = useSearchParams();
 
   // Funções disponíveis (modelo híbrido): ADMIN preset + roles customizadas.
   const { data: roles = [] } = useRoles();
@@ -164,7 +194,14 @@ function TeamContent() {
     [adminRole, customRoles],
   );
 
-  const [activeTab, setActiveTab] = React.useState(0); // 0 = Usuários, 1 = Expediente
+  // 0 = Usuários, 1 = Expediente, 2 = Departamentos. Suporta deep-link
+  // via ?tab= (usado pelo redirect da rota antiga /settings/departments).
+  const [activeTab, setActiveTab] = React.useState(() => {
+    const t = searchParams?.get("tab");
+    if (t === "departamentos") return 2;
+    if (t === "expediente") return 1;
+    return 0;
+  });
   const [search, setSearch] = React.useState("");
   const [roleFilter, setRoleFilter] = React.useState("all");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
@@ -476,7 +513,11 @@ function TeamContent() {
     }
   }
 
-  const headerSlots = useSettingsHeaderSlots();
+  // Membro sem gestão não acessa Departamentos — se cair na aba via
+  // deep-link, volta para Usuários assim que a sessão resolve.
+  React.useEffect(() => {
+    if (activeTab === 2 && session && !canManageDepartments) setActiveTab(0);
+  }, [activeTab, session, canManageDepartments]);
 
   const roleFilterGroup = React.useMemo<SettingsFilterGroup>(
     () => ({
@@ -533,19 +574,36 @@ function TeamContent() {
     [activeTab, search, roleFilterGroup, expedienteSearch],
   );
 
+  // Segmented control compartilhado pelas 3 abas. É reusado tanto no
+  // header próprio de Usuários/Expediente quanto injetado no header do
+  // DepartmentsTab (via tabsSlot) — garante que as abas fiquem sempre
+  // visíveis, inclusive na aba Departamentos.
+  const segmentedControl = React.useMemo(() => {
+    const tabValue =
+      activeTab === 2 ? "departamentos" : activeTab === 1 ? "expediente" : "usuarios";
+    return (
+      <PageSegmentedControl
+        size="compact"
+        aria-label="Abas da equipe"
+        items={[
+          { value: "usuarios", label: "Usuários" },
+          { value: "expediente", label: "Expediente" },
+          ...(canManageDepartments
+            ? [{ value: "departamentos", label: "Departamentos" }]
+            : []),
+        ]}
+        value={tabValue}
+        onChange={(v) =>
+          setActiveTab(v === "departamentos" ? 2 : v === "expediente" ? 1 : 0)
+        }
+      />
+    );
+  }, [activeTab, canManageDepartments]);
+
   const actionsNode = React.useMemo(
     () => (
       <div className="flex items-center gap-2">
-        <PageSegmentedControl
-          size="compact"
-          aria-label="Abas da equipe"
-          items={[
-            { value: "usuarios", label: "Usuários" },
-            { value: "expediente", label: "Expediente" },
-          ]}
-          value={activeTab === 1 ? "expediente" : "usuarios"}
-          onChange={(v) => setActiveTab(v === "expediente" ? 1 : 0)}
-        />
+        {segmentedControl}
         <PageActionsMenu
           aria-label="Ações da equipe"
           items={
@@ -570,22 +628,21 @@ function TeamContent() {
         />
       </div>
     ),
-    [activeTab],
+    [activeTab, segmentedControl],
   );
-
-  React.useEffect(() => {
-    if (!headerSlots) return;
-    headerSlots.setCenter(searchNode);
-    headerSlots.setActions(actionsNode);
-    return () => {
-      headerSlots.setCenter(null);
-      headerSlots.setActions(null);
-    };
-  }, [headerSlots, searchNode, actionsNode]);
 
   return (
     <>
-      {activeTab === 1 ? (
+      {/* Header (busca + ações) das abas Usuários/Expediente. Na aba
+          Departamentos quem gerencia o header é o próprio DepartmentsTab
+          (com o segmented control injetado via tabsSlot) — nunca os dois
+          ao mesmo tempo, evitando disputa pelos slots do shell. */}
+      {activeTab !== 2 && (
+        <TeamHeaderSlots center={searchNode} actions={actionsNode} />
+      )}
+      {activeTab === 2 ? (
+        <DepartmentsTab tabsSlot={segmentedControl} />
+      ) : activeTab === 1 ? (
         <ExpedienteTab
           search={expedienteSearch}
           newExpedienteOpen={expedienteNewOpen}

@@ -1,13 +1,8 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import DepartmentsClientPage from "./client-page";
-
-export const dynamic = "force-dynamic";
-
+// Departamentos migrou para uma aba dentro de Equipe (/settings/team).
+// Mantemos a rota para não quebrar links existentes (ex.: Tabulações),
+// redirecionando para a aba correspondente.
 export default function DepartmentsPage() {
-  return (
-    <Suspense fallback={null}>
-      <DepartmentsClientPage />
-    </Suspense>
-  );
+  redirect("/settings/team?tab=departamentos");
 }

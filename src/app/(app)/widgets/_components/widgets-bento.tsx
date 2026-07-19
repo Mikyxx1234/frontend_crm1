@@ -10,6 +10,10 @@ interface WidgetsBentoProps {
   pendingSlug: string | null;
   onInstall: (slug: string) => void;
   onUninstall: (slug: string) => void;
+  /** Slugs para os quais o botão "Configurar" deve aparecer (usuário tem
+   *  permissão E há entrada no registry). */
+  configurableSlugs?: ReadonlySet<string>;
+  onConfigure?: (slug: string) => void;
 }
 
 /**
@@ -22,6 +26,8 @@ export function WidgetsBento({
   pendingSlug,
   onInstall,
   onUninstall,
+  configurableSlugs,
+  onConfigure,
 }: WidgetsBentoProps) {
   return (
     <div className="grid min-w-0 auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -31,8 +37,10 @@ export function WidgetsBento({
           widget={widget}
           canManage={canManage}
           pending={pendingSlug === widget.slug}
+          canConfigure={configurableSlugs?.has(widget.slug) ?? false}
           onInstall={onInstall}
           onUninstall={onUninstall}
+          onConfigure={onConfigure}
         />
       ))}
     </div>

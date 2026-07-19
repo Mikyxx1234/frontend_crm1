@@ -1,4 +1,4 @@
-import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPhone as Phone, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconArrowsShuffle as Shuffle, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconUsers as Users } from "@tabler/icons-react";
+import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconUsers as Users } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { UserRole } from "@/lib/prisma-enum-types";
 
@@ -115,16 +115,6 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         requiredPermission: "settings:webhooks",
       },
       {
-        id: "softphone",
-        label: "Telefonia IP",
-        description: "Ramal SIP e provedor de chamadas",
-        icon: Phone,
-        href: "/settings/softphone",
-        allowedRoles: GESTAO,
-        requiredPermission: "sip_extension:manage",
-        eyebrow: "Novo",
-      },
-      {
         id: "email-accounts",
         label: "Contas de e-mail",
         description: "IMAP/SMTP, pastas e regras",
@@ -208,20 +198,6 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         href: "/settings/team",
         allowedRoles: GESTAO,
         requiredPermission: "settings:team",
-      },
-      {
-        id: "distribution",
-        label: "Distribuição",
-        description: "Round-robin, priorização e regras",
-        icon: Shuffle,
-        href: "/settings/distribution",
-        allowedRoles: GESTAO,
-        // distribution:manage e key DEDICADA do modulo (so ADMIN/MANAGER tem
-        // por default). Antes usavamos conversation:reassign_others, mas
-        // operadores senior tambem ganham essa permissao (pra puxar leads
-        // pra si na inbox) — usar essa key vazava o item de Distribuicao
-        // pra qualquer atendente, contrariando "Distribuicao = gestao".
-        requiredPermission: "distribution:manage",
       },
     ],
   },

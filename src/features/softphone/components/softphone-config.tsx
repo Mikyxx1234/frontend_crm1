@@ -1,33 +1,38 @@
 "use client";
 
+/**
+ * Painel de configuração de Telefonia IP — reutilizado tanto pelo drawer
+ * de configuração do widget na Central (`/widgets`) quanto por qualquer
+ * outra superfície que precise expor as mesmas configs.
+ *
+ * O corpo é o mesmo antes usado em `/settings/softphone`. Quando renderizado
+ * fora do `SettingsV2Shell` (drawer, modal), `useSettingsHeaderSlots()`
+ * retorna null e o componente cai no fallback inline com as pills
+ * Api4Com/PBX no topo, mantendo a UX equivalente.
+ */
+
 import { useEffect, useMemo, useState } from "react";
 import {
-  IconPhone as Phone,
-  IconPhoneCheck,
-  IconKey,
-  IconWebhook,
   IconCloud,
+  IconKey,
+  IconPhoneCheck,
   IconServer,
+  IconWebhook,
 } from "@tabler/icons-react";
 
 import { GlassCard } from "@/components/crm/glass-card";
 import { PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { Separator } from "@/components/ui/separator";
 import {
-  SETTINGS_HUB_BACK,
-  SettingsV2Shell,
-  useSettingsHeaderSlots,
-} from "../_v2-shell";
-import {
   Api4ComConnectForm,
   Api4ComStatusCard,
 } from "@/features/softphone/components/api4com-connect-form";
 import { ExtensionSettingsForm } from "@/features/softphone/components/extension-settings-form";
 import { ProviderConfigForm } from "@/features/softphone/components/provider-config-form";
+import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
 
 type RamalType = "api4com" | "pbx";
 
-/** Card de seção: badge de ícone + título + descrição, hairline, conteúdo. */
 function SectionCard({
   icon,
   title,
@@ -60,25 +65,10 @@ function SectionCard({
   );
 }
 
-export default function SoftphoneSettingsClientPage() {
-  return (
-    <SettingsV2Shell
-      back={SETTINGS_HUB_BACK}
-      title="Telefonia IP"
-      description="Chamadas no navegador — tudo dentro do CRM"
-      icon={<Phone size={22} />}
-    >
-      <SoftphoneBody />
-    </SettingsV2Shell>
-  );
-}
-
-function SoftphoneBody() {
+export function SoftphoneConfig() {
   const slots = useSettingsHeaderSlots();
   const [ramalType, setRamalType] = useState<RamalType>("api4com");
 
-  // Pills de página (Api4Com / PBX) no slot de ações do PageHeader —
-  // controlam qual formulário de configuração é exibido.
   const actionsNode = useMemo(
     () => (
       <PageSegmentedControl
@@ -131,7 +121,6 @@ function SoftphoneBody() {
         description="Escolha o tipo de conexão (nas pills do topo) e informe as credenciais do seu ramal."
       >
         <div className="flex min-w-0 flex-col gap-4">
-          {/* Fallback do seletor quando fora do shell (sem slots de header). */}
           {!slots ? (
             <PageSegmentedControl
               items={[
@@ -180,3 +169,5 @@ function SoftphoneBody() {
     </div>
   );
 }
+
+export default SoftphoneConfig;

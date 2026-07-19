@@ -565,7 +565,7 @@ export default function LogsClientPage() {
                 <CallsActionsMenu
                   syncing={callsSyncMutation.isPending}
                   onSync={() => callsSyncMutation.mutate()}
-                  onSettings={() => router.push("/settings/softphone")}
+                  onSettings={() => router.push("/widgets?configure=calls_history")}
                 />
               )}
             </div>

@@ -119,7 +119,7 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
                 </span>
               </PageGhostButton>
               <Link
-                href="/settings/softphone"
+                href="/widgets?configure=calls_history"
                 className={pageGhostButtonClass()}
                 title="Configurações do softphone"
               >

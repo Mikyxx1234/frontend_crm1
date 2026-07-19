@@ -14,6 +14,7 @@ import {
   IconRobot as Bot,
   IconRoute as Route,
   IconCalendar as Calendar,
+  IconSettings as SettingsIcon,
   IconTrash as Trash2,
   IconWebhook as Webhook,
 } from "@tabler/icons-react";
@@ -72,8 +73,15 @@ interface WidgetCardProps {
   widget: WidgetDto;
   canManage: boolean;
   pending: boolean;
+  /** True quando existe painel de config para o slug no registry E o
+   *  usuário tem a permissão necessária. Controla a exibição do botão
+   *  "Configurar" no rodapé do card. */
+  canConfigure?: boolean;
   onInstall: (slug: string) => void;
   onUninstall: (slug: string) => void;
+  /** Handler acionado pelo botão "Configurar". Recebe o slug e é
+   *  responsável por abrir o drawer de config na Central. */
+  onConfigure?: (slug: string) => void;
 }
 
 /**
@@ -89,8 +97,10 @@ export function WidgetCard({
   widget,
   canManage,
   pending,
+  canConfigure = false,
   onInstall,
   onUninstall,
+  onConfigure,
 }: WidgetCardProps) {
   const installed = widget.installed;
   const comingSoon = widget.availability === "coming_soon";
@@ -114,6 +124,9 @@ export function WidgetCard({
 
   const trashBtn =
     "flex size-[42px] shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition-colors hover:border-[var(--color-danger-text)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)] disabled:cursor-not-allowed disabled:opacity-50";
+
+  const configBtn =
+    "flex size-[42px] shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition-colors hover:border-[#2563eb] hover:bg-blue-50 hover:text-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <article className="relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-[box-shadow,border-color] duration-150 hover:border-slate-300 hover:shadow-md">
@@ -212,6 +225,17 @@ export function WidgetCard({
                   <IconExternalLink className="size-4" strokeWidth={2.2} />
                   Abrir
                 </Link>
+              )}
+              {!disabled && canConfigure && onConfigure && (
+                <button
+                  type="button"
+                  onClick={() => onConfigure(widget.slug)}
+                  aria-label={`Configurar ${widget.name}`}
+                  title="Configurar"
+                  className={configBtn}
+                >
+                  <SettingsIcon className="size-4" strokeWidth={2.2} />
+                </button>
               )}
               <button
                 type="button"

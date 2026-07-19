@@ -263,6 +263,9 @@ export function useDealChatBinding(params: {
   // Âncora ao fim da lista — rola até a última mensagem quando a conversa
   // muda (instantâneo) ou quando chegam/enviamos mensagens (suave). Sem isto
   // a tela ficava congelada após enviar, ao invés de descer até a mensagem.
+  // scrollIntoView numa âncora de altura zero era pouco confiável (o chat
+  // fica num drawer), então localizamos o container rolável real e ajustamos
+  // o scrollTop diretamente.
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastConvRef = useRef<string | null>(null);
   useEffect(() => {
@@ -270,10 +273,31 @@ export function useDealChatBinding(params: {
     const changed = lastConvRef.current !== effectiveConversationId;
     lastConvRef.current = effectiveConversationId;
     const behavior: ScrollBehavior = changed ? "auto" : "smooth";
-    const raf = requestAnimationFrame(() => {
-      bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+
+    const scrollToEnd = () => {
+      const anchor = bottomRef.current;
+      if (!anchor) return;
+      let el: HTMLElement | null = anchor.parentElement;
+      while (el) {
+        const oy = getComputedStyle(el).overflowY;
+        if ((oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight) {
+          el.scrollTo({ top: el.scrollHeight, behavior });
+          return;
+        }
+        el = el.parentElement;
+      }
+      anchor.scrollIntoView({ behavior, block: "end" });
+    };
+
+    // Dois rAFs: garante que o layout já refletiu as novas bolhas antes de rolar.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(scrollToEnd);
     });
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
   }, [bubbles, effectiveConversationId]);
 
   const scrollToMessage = useCallback((messageId: string) => {

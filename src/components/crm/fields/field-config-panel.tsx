@@ -653,7 +653,7 @@ function EntityFieldsSection({
  * tabelas novas. Cada mutação altera `localSections`; a persistência é
  * feita pelo botão "Salvar layout" existente logo abaixo.
  */
-function EntityGroupsSection({
+export function EntityGroupsSection({
   entity,
   sections,
   onSectionsChange,

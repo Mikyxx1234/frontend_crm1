@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   IconAlertCircle,
   IconCalendar,
+  IconCheck,
   IconEye,
   IconEyeOff,
   IconForms,
@@ -14,6 +16,7 @@ import {
   IconLetterT,
   IconLink,
   IconList,
+  IconLoader2,
   IconMail,
   IconPencil,
   IconPhone,
@@ -31,10 +34,16 @@ import {
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useFieldLayout } from "@/hooks/use-field-layout";
+import { type SectionConfig } from "@/lib/field-layout";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import { SwitchGlass } from "@/components/crm/switch-glass";
+import {
+  EntityGroupsSection,
+  type FieldConfigEntity,
+} from "@/components/crm/fields/field-config-panel";
 import {
   PagePrimaryButton,
   PageSearchBar,
@@ -65,6 +74,7 @@ type CustomFieldItem = {
 };
 
 type EntityTab = "deal" | "contact";
+type PageMode = "fields" | "groups";
 
 const TYPES = [
   { value: "TEXT", label: "Texto" },
@@ -154,6 +164,7 @@ function CustomFieldsPage() {
   const slots = useSettingsHeaderSlots();
 
   const [activeEntity, setActiveEntity] = React.useState<EntityTab>("deal");
+  const [mode, setMode] = React.useState<PageMode>("fields");
   const [search, setSearch] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<CustomFieldItem | null>(null);
@@ -220,6 +231,10 @@ function CustomFieldsPage() {
   // Header slots — busca (center) + tabs + botão primário (actions).
   React.useEffect(() => {
     if (!slots) return;
+    if (mode !== "fields") {
+      slots.setCenter(null);
+      return () => slots.setCenter(null);
+    }
     slots.setCenter(
       <PageSearchBar
         variant="compact"
@@ -230,12 +245,22 @@ function CustomFieldsPage() {
       />,
     );
     return () => slots.setCenter(null);
-  }, [slots, search]);
+  }, [slots, search, mode]);
 
   React.useEffect(() => {
     if (!slots) return;
     slots.setActions(
       <div className="flex items-center gap-2">
+        <PageSegmentedControl
+          items={[
+            { value: "fields", label: "Campos" },
+            { value: "groups", label: "Grupos" },
+          ]}
+          value={mode}
+          onChange={(v) => setMode(v as PageMode)}
+          size="compact"
+          aria-label="Modo de exibição"
+        />
         <PageSegmentedControl
           items={[
             { value: "deal", label: "Negócio" },
@@ -249,17 +274,23 @@ function CustomFieldsPage() {
           size="compact"
           aria-label="Entidade dos campos"
         />
-        <PagePrimaryButton
-          onClick={() => setCreateOpen(true)}
-          aria-label="Criar novo campo"
-        >
-          <IconPlus size={15} />
-          <span className="hidden sm:inline">Novo campo</span>
-        </PagePrimaryButton>
+        {mode === "fields" && (
+          <PagePrimaryButton
+            onClick={() => setCreateOpen(true)}
+            aria-label="Criar novo campo"
+          >
+            <IconPlus size={15} />
+            <span className="hidden sm:inline">Novo campo</span>
+          </PagePrimaryButton>
+        )}
       </div>,
     );
     return () => slots.setActions(null);
-  }, [slots, activeEntity]);
+  }, [slots, activeEntity, mode]);
+
+  if (mode === "groups") {
+    return <CustomFieldGroupsManager entity={activeEntity} />;
+  }
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
@@ -532,6 +563,113 @@ function CustomFieldsPage() {
             setEditItem(null);
           }}
         />
+      )}
+    </div>
+  );
+}
+
+// ─── Grupos de campos (organização para o agente) ──────────────────────────────
+
+/** Extrai os grupos (custom_fields_group) de uma entidade a partir de um layout. */
+function pickGroups(sections: SectionConfig[], entity: FieldConfigEntity) {
+  return sections.filter(
+    (s) => s.kind === "custom_fields_group" && s.entity === entity,
+  );
+}
+
+/**
+ * Editor unificado de grupos: o gestor organiza os campos personalizados em
+ * grupos e o resultado vale para os dois painéis laterais (Inbox e Negócio).
+ * Persiste no escopo "admin" (padrão para os agentes) em ambos os contextos.
+ */
+function CustomFieldGroupsManager({ entity }: { entity: FieldConfigEntity }) {
+  const deal = useFieldLayout("deal_panel_v2");
+  const inbox = useFieldLayout("inbox_lead_v2");
+
+  // Base canônica: prioriza o que já existe no painel do Negócio; se vazio,
+  // usa o da Inbox. A partir do primeiro salvamento os dois ficam idênticos.
+  const initialGroups = React.useMemo(() => {
+    const fromDeal = pickGroups(deal.adminSections, entity);
+    return fromDeal.length > 0 ? fromDeal : pickGroups(inbox.adminSections, entity);
+  }, [deal.adminSections, inbox.adminSections, entity]);
+
+  const [draft, setDraft] = React.useState<SectionConfig[] | null>(null);
+  const working = draft ?? initialGroups;
+  const dirty = draft !== null;
+
+  // Ao trocar de entidade, descarta rascunho não salvo.
+  React.useEffect(() => {
+    setDraft(null);
+  }, [entity]);
+
+  const save = () => {
+    const groups = working;
+    for (const ctx of [deal, inbox] as const) {
+      const merged = [
+        ...ctx.adminSections.filter(
+          (s) => !(s.kind === "custom_fields_group" && s.entity === entity),
+        ),
+        ...groups,
+      ];
+      ctx.saveAdmin(merged);
+    }
+    setDraft(null);
+    toast.success("Grupos salvos");
+  };
+
+  const saving = deal.saveAdminPending || inbox.saveAdminPending;
+  const entityLabel = entity === "deal" ? "Negócio" : "Contato";
+
+  return (
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="max-w-2xl">
+        <p className="font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">
+          Organize os campos de{" "}
+          <span className="font-semibold text-[var(--text-secondary)]">
+            {entityLabel}
+          </span>{" "}
+          em grupos. Os grupos aparecem nos painéis laterais da Inbox e do Negócio
+          para todos os agentes. Cada campo pode estar em apenas um grupo; os
+          campos sem grupo continuam listados normalmente.
+        </p>
+      </div>
+
+      <div className="max-w-2xl rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+        <EntityGroupsSection
+          entity={entity}
+          sections={working}
+          onSectionsChange={setDraft}
+        />
+      </div>
+
+      {dirty && (
+        <div className="sticky bottom-3 flex max-w-2xl items-center justify-end gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <span className="mr-auto font-body text-[11.5px] text-[var(--text-muted)]">
+            Alterações não salvas
+          </span>
+          <button
+            type="button"
+            onClick={() => setDraft(null)}
+            disabled={saving}
+            className="rounded-full px-3 py-1.5 font-display text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <ButtonGlass
+            variant="primary"
+            size="sm"
+            onClick={save}
+            disabled={saving}
+            className="gap-1.5"
+          >
+            {saving ? (
+              <IconLoader2 size={13} className="animate-spin" />
+            ) : (
+              <IconCheck size={13} />
+            )}
+            Salvar grupos
+          </ButtonGlass>
+        </div>
       )}
     </div>
   );

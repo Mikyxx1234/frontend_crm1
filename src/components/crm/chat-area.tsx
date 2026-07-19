@@ -28,6 +28,7 @@ import {
   IconPinFilled,
   IconX,
   IconLock,
+  IconChevronDown,
 } from "@tabler/icons-react"
 
 export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
@@ -208,6 +209,11 @@ export function ChatArea({
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
+  // Botão flutuante "descer" (estilo WhatsApp): aparece quando chega mensagem
+  // do cliente enquanto o operador está lendo histórico mais acima. O badge
+  // conta as novas mensagens não vistas; clicar rola suave até o fim.
+  const [showScrollDown, setShowScrollDown] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   // Índice da fixada exibida no banner e id destacado após o scroll.
   const [activePinIndex, setActivePinIndex] = useState(0)
   const [highlightId, setHighlightId] = useState<string | null>(null)
@@ -261,12 +267,40 @@ export function ChatArea({
       sessionName || (isPreviewMode() ? PREVIEW_USER.name : "Agente")
     setAgentInitials(getInitials(name) || "?")
   }, [session])
+  // Rola suave (ou instantâneo) até a última mensagem e zera o estado do
+  // botão "descer".
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const container = messagesRef.current
+    if (!container) return
+    requestAnimationFrame(() => {
+      container.scrollTo({ top: container.scrollHeight, behavior })
+    })
+    setShowScrollDown(false)
+    setUnreadCount(0)
+  }, [])
+
+  // Esconde o botão assim que o operador chega perto do fim manualmente.
+  useEffect(() => {
+    const container = messagesRef.current
+    if (!container) return
+    const onScroll = () => {
+      const nearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight < 200
+      if (nearBottom) {
+        setShowScrollDown(false)
+        setUnreadCount(0)
+      }
+    }
+    container.addEventListener("scroll", onScroll, { passive: true })
+    return () => container.removeEventListener("scroll", onScroll)
+  }, [])
+
   // Rola a lista até o fim quando: (1) a conversa muda / carrega (instantâneo),
   // ou (2) chega/enviamos uma nova mensagem no fim. Ao enviar (mensagem própria)
   // ou quando o operador já está perto do fim, rola suave; se ele estiver lendo
-  // histórico mais acima, não puxamos a tela. Detecta troca de conversa vs.
-  // append comparando o 1º/último id (evita depender de `conversationNumber`,
-  // que pode vir nulo). Sem isto a tela ficava congelada após enviar.
+  // histórico mais acima e o cliente enviar, NÃO puxamos a tela — mostramos o
+  // botão "descer" com o contador. Detecta troca de conversa vs. append
+  // comparando o 1º/último id (evita depender de `conversationNumber`, nulável).
   const prevFirstIdRef = useRef<string | null>(null)
   const prevLastIdRef = useRef<string | null>(null)
   useEffect(() => {
@@ -288,6 +322,8 @@ export function ChatArea({
       requestAnimationFrame(() => {
         container.scrollTop = container.scrollHeight
       })
+      setShowScrollDown(false)
+      setUnreadCount(0)
       return
     }
 
@@ -298,6 +334,12 @@ export function ChatArea({
       requestAnimationFrame(() => {
         container.scrollTo({ top: container.scrollHeight, behavior: "smooth" })
       })
+      setShowScrollDown(false)
+      setUnreadCount(0)
+    } else {
+      // Mensagem do cliente chegou enquanto o operador lê histórico acima.
+      setShowScrollDown(true)
+      setUnreadCount((n) => n + 1)
     }
   }, [messages])
 
@@ -537,6 +579,29 @@ export function ChatArea({
           <ConversationClosedMarker closedAt={conversationClosedAt ?? null} />
         )}
       </div>
+
+      {/* Botão flutuante "descer" (estilo WhatsApp) — só aparece quando o
+          operador está lendo histórico e chega mensagem nova. Segue os tokens
+          de vidro da página; badge reusa o estilo de não-lidas da lista. */}
+      {showScrollDown && (
+        <button
+          type="button"
+          onClick={() => scrollToBottom("smooth")}
+          aria-label={
+            unreadCount > 0
+              ? `${unreadCount} mensagens não lidas — ir para o fim`
+              : "Ir para a última mensagem"
+          }
+          className="absolute bottom-24 right-6 z-20 flex size-10 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-px hover:text-[var(--brand-primary)] active:scale-95"
+        >
+          <IconChevronDown size={20} />
+          {unreadCount > 0 && (
+            <span className="absolute -right-1 -top-1.5 inline-flex min-w-[18px] items-center justify-center rounded-full bg-primary px-1 py-0.5 text-[10px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* SESSION ALERT */}
       {showSessionAlert && <SessionAlert onUseTemplate={onUseTemplate} />}

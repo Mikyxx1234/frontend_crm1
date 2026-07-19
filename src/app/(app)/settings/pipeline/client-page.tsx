@@ -23,7 +23,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { ScrollMap } from "@/components/crm/scroll-map";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
@@ -2007,14 +2006,10 @@ export default function PipelineSettingsClientPage() {
 
   return (
     <>
-      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] grid-rows-1 gap-4 p-4">
-        <NavRailV2 />
-
-        <div
-          ref={boardWrapperRef}
-          className="flex min-w-0 flex-col gap-3"
-          style={{ height: "calc(100dvh / var(--v2-scale, 1) - 2rem)", overflow: "clip" }}
-        >
+      <div
+        ref={boardWrapperRef}
+        className="flex min-w-0 flex-1 flex-col gap-3 overflow-hidden"
+      >
           <PipelineHeader
             hideActions
             back={SETTINGS_HUB_BACK}
@@ -2093,7 +2088,6 @@ export default function PipelineSettingsClientPage() {
           <ScrollMap boardRef={boardRef} columnCount={stages.length + 1} />
           </div>{/* fim relative wrapper */}
         </div>
-      </div>
 
       <NewPipelineModal
         open={newPipelineOpen}

@@ -148,8 +148,8 @@ export function DealSidebar({
       />
 
       <DealProductsSection dealId={deal.id} compact />
-      <DealCustomFieldsSection dealId={deal.id} />
-      <CustomFieldsSection contactId={contact.id} />
+      <DealCustomFieldsSection dealId={deal.id} layoutContext="deal_panel_v2" />
+      <CustomFieldsSection contactId={contact.id} layoutContext="inbox_lead_v2" />
 
       <SidebarSection
         title="Contato"

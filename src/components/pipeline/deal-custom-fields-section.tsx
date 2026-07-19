@@ -12,6 +12,9 @@ import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
 import { SidebarSection } from "@/components/pipeline/deal-detail/shared";
 import { cn } from "@/lib/utils";
+import { CustomFieldsGroupedView } from "@/components/crm/fields/custom-fields-grouped-view";
+import { useFieldLayout, type FieldLayoutContext } from "@/hooks/use-field-layout";
+import { resolveCustomFieldGroups } from "@/lib/field-layout";
 
 type FieldWithValue = {
   fieldId: string;
@@ -45,11 +48,19 @@ const compactDlToolbarBtn =
 export function DealCustomFieldsSection({
   dealId,
   variant = "default",
+  layoutContext,
 }: {
   dealId: string;
   /** Linha de grupo `<dl>` com ações à direita (workspace sidebar compacto). */
   /** `kompact` — linhas flat estilo Kommo (sidebar workspace). */
   variant?: "default" | "compactDl" | "compactCards" | "kompact";
+  /**
+   * Contexto de layout usado para resolver grupos de campos personalizados
+   * na aside (PRD Agrupamento de Campos). Só afeta o variant `default`;
+   * quando não informado (ou sem grupos configurados), renderiza flat
+   * como antes.
+   */
+  layoutContext?: FieldLayoutContext;
 }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = React.useState(false);
@@ -59,6 +70,30 @@ export function DealCustomFieldsSection({
     queryKey: ["deal-custom-fields", dealId],
     queryFn: () => fetchFieldValues(dealId),
   });
+
+  // Layout de grupos (PRD Agrupamento de Campos na Aside). Só afeta o
+  // variant `default`; para os variants compactos permanecemos flat.
+  // Hooks precisam ficar no topo, então lemos aqui — passamos um
+  // contexto "fallback" quando prop não foi informada; nesse caso os
+  // resultados são ignorados pelo branching abaixo.
+  const effectiveLayoutContext: FieldLayoutContext = layoutContext ?? "deal_panel_v2";
+  const { sections: layoutSections } = useFieldLayout(effectiveLayoutContext);
+  const hasRealGroups = React.useMemo(() => {
+    if (!layoutContext) return false;
+    const groups = resolveCustomFieldGroups(
+      layoutSections,
+      fields.map((f) => ({
+        id: f.fieldId,
+        name: f.name,
+        label: f.label,
+        type: f.type,
+        options: f.options,
+        required: f.required,
+      })),
+      "deal",
+    );
+    return groups.some((g) => g.group !== null);
+  }, [layoutContext, layoutSections, fields]);
 
   const saveMutation = useMutation({
     mutationFn: (values: { fieldId: string; value: string }[]) =>
@@ -303,6 +338,25 @@ export function DealCustomFieldsSection({
 
   if (isLoading) return <div className="py-3 text-xs text-muted-foreground">Carregando campos…</div>;
   if (fields.length === 0) return null;
+
+  if (layoutContext && hasRealGroups) {
+    return (
+      <CustomFieldsGroupedView
+        fields={fields}
+        entity="deal"
+        layoutContext={layoutContext}
+        editing={editing}
+        draft={draft}
+        onDraftChange={(fieldId, value) =>
+          setDraft((p) => ({ ...p, [fieldId]: value }))
+        }
+        onStartEdit={startEdit}
+        onCancelEdit={() => setEditing(false)}
+        onSave={onSave}
+        savePending={saveMutation.isPending}
+      />
+    );
+  }
 
   return (
     <SidebarSection

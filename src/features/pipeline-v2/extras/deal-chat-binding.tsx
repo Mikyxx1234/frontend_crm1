@@ -260,6 +260,22 @@ export function useDealChatBinding(params: {
     }
   }, [pinnedMessagesPreview.length, activePinIndex]);
 
+  // Âncora ao fim da lista — rola até a última mensagem quando a conversa
+  // muda (instantâneo) ou quando chegam/enviamos mensagens (suave). Sem isto
+  // a tela ficava congelada após enviar, ao invés de descer até a mensagem.
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const lastConvRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!effectiveConversationId) return;
+    const changed = lastConvRef.current !== effectiveConversationId;
+    lastConvRef.current = effectiveConversationId;
+    const behavior: ScrollBehavior = changed ? "auto" : "smooth";
+    const raf = requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [bubbles, effectiveConversationId]);
+
   const scrollToMessage = useCallback((messageId: string) => {
     // O chat do deal fica num drawer; pode haver a mesma âncora montada no
     // inbox por baixo. Pega a ÚLTIMA ocorrência no DOM (o drawer é renderizado
@@ -422,6 +438,7 @@ export function useDealChatBinding(params: {
           Nenhuma mensagem ainda.
         </div>
         {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
+        <div ref={bottomRef} />
       </>
     );
   } else {
@@ -487,6 +504,7 @@ export function useDealChatBinding(params: {
       <>
         {bubbleNodes}
         {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
+        <div ref={bottomRef} />
       </>
     );
   }

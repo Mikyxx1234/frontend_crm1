@@ -39,6 +39,8 @@ export type DealDetailData = {
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
   stage: { id: string; name: string; color?: string | null; pipeline: { id: string; name: string } };
   owner: DealDetailUser | null;
+  /** Unidade organizacional (filial) do negócio. Base p/ ofertas por unidade + cotas. */
+  orgUnitId?: string | null;
   tags?: { tag: { id: string; name: string; color: string } }[];
   activities: DealDetailActivity[];
   notes: DealDetailNote[];

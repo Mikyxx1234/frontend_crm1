@@ -147,7 +147,9 @@ export function DealSidebar({
         removeTagPending={removeTagMutation.isPending}
       />
 
+      <DealOrgUnitSection dealId={deal.id} currentUnitId={deal.orgUnitId ?? null} />
       <DealProductsSection dealId={deal.id} compact />
+      <DealQuotasSection dealId={deal.id} />
       <DealCustomFieldsSection dealId={deal.id} layoutContext="deal_panel_v2" />
       <CustomFieldsSection contactId={contact.id} layoutContext="inbox_lead_v2" />
 
@@ -1192,6 +1194,8 @@ type AvailableQuota = {
   exclusionGroup: string | null;
   maxStacks: number;
   calcMode: "CASCADE" | "SUM_SIMPLE";
+  categoryId: string | null;
+  categoryName: string | null;
   linked: boolean;
 };
 
@@ -1374,7 +1378,16 @@ export function DealQuotasSection({ dealId }: { dealId: string }) {
                   )}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-semibold text-foreground">{q.name}</div>
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="truncate font-semibold text-foreground">
+                        {q.categoryName ?? q.name}
+                      </span>
+                      {q.balance !== null && q.balance <= 3 && q.balance > 0 && (
+                        <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                          {q.balance} restante{q.balance === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[11px] text-muted-foreground">
                       {q.balance === null ? "Ilimitada" : `Saldo ${q.balance}`}
                       {" • "}
@@ -1464,6 +1477,90 @@ export function DealQuotasSection({ dealId }: { dealId: string }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Seletor da Unidade (filial) do negócio. Alterar a unidade dispara:
+ *   - relist de cotas disponíveis (`cotas-disponiveis`)
+ *   - relist de produtos do deal (o preço aplicado ao ADICIONAR produtos
+ *     passa a considerar a ProductOffer da nova unidade — itens já
+ *     adicionados mantêm o preço original)
+ *
+ * Compacto: 1 linha, exibe unidade atual + dropdown. Sem unidade, o
+ * matching de cotas cai em "somente cotas globais" (categoria sem unidade).
+ */
+function DealOrgUnitSection({
+  dealId,
+  currentUnitId,
+}: {
+  dealId: string;
+  currentUnitId: string | null;
+}) {
+  const queryClient = useQueryClient();
+  type UnitOption = { id: string; name: string };
+
+  const { data: units = [] } = useQuery({
+    queryKey: ["quotas-org-units"],
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/org-units`));
+      if (!res.ok) return [] as UnitOption[];
+      const data = (await res.json()) as {
+        items?: UnitOption[];
+        orgUnits?: UnitOption[];
+      };
+      return data.items ?? data.orgUnits ?? [];
+    },
+  });
+
+  const updateMut = useMutation({
+    mutationFn: async (orgUnitId: string | null) => {
+      const res = await fetch(apiUrl(`/api/deals/${dealId}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgUnitId }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(data.message || "Falha ao atualizar unidade.");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["deal-quotas-available", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["deal-quotas", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["deal-products", dealId] });
+      toast.success("Unidade atualizada.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <span className="text-sm font-bold text-foreground">Unidade</span>
+        <div className="flex-1" />
+        <select
+          value={currentUnitId ?? ""}
+          disabled={updateMut.isPending}
+          onChange={(e) => updateMut.mutate(e.target.value || null)}
+          className="h-8 max-w-[220px] rounded-lg border border-border bg-[var(--color-bg-subtle)] px-2 text-[13px] font-medium text-foreground"
+        >
+          <option value="">— Sem unidade —</option>
+          {units.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      {!currentUnitId && (
+        <div className="border-t border-border px-4 py-2 text-[11px] text-muted-foreground">
+          Defina a unidade para aplicar o preço da oferta e ver as cotas
+          alocadas para essa filial.
         </div>
       )}
     </div>

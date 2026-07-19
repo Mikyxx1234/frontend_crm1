@@ -17,6 +17,8 @@ import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
 import { apiUrl } from "@/lib/api";
 import { cn, formatCurrency } from "@/lib/utils";
 
+import { CategoriesPage } from "./categories-page";
+import { CategoryDialog } from "./category-dialog";
 import { QuotaDialog } from "./quota-dialog";
 
 type QuotaRow = {
@@ -68,11 +70,15 @@ function fmtValidity(from: string, to: string | null): string {
 
 const LIST_GRID = "minmax(0,1fr) 110px 120px 130px 90px 90px";
 
+type Tab = "categories" | "quotas";
+
 export function QuotasPage() {
   const slots = useSettingsHeaderSlots();
   const [search, setSearch] = React.useState("");
+  const [tab, setTab] = React.useState<Tab>("categories");
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [catDialogOpen, setCatDialogOpen] = React.useState(false);
   const queryClient = useQueryClient();
 
   const { data: quotas = [], isLoading } = useQuery({
@@ -115,12 +121,28 @@ export function QuotasPage() {
   const actionsNode = React.useMemo(
     () => (
       <PageActionsMenu
-        items={[
-          { icon: <IconPlus size={16} />, label: "Nova cota", onClick: openCreate, primary: true },
-        ]}
+        items={
+          tab === "categories"
+            ? [
+                {
+                  icon: <IconPlus size={16} />,
+                  label: "Nova categoria",
+                  onClick: () => setCatDialogOpen(true),
+                  primary: true,
+                },
+              ]
+            : [
+                {
+                  icon: <IconPlus size={16} />,
+                  label: "Nova cota avulsa",
+                  onClick: openCreate,
+                  primary: true,
+                },
+              ]
+        }
       />
     ),
-    [openCreate],
+    [openCreate, tab],
   );
 
   React.useEffect(() => {
@@ -135,7 +157,32 @@ export function QuotasPage() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3.5">
-      {isLoading ? (
+      <div className="flex items-center gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1 text-[13px]">
+        {(
+          [
+            { key: "categories", label: "Categorias" },
+            { key: "quotas", label: "Cotas avulsas (legado)" },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={cn(
+              "flex-1 rounded-[var(--radius-md)] px-3 py-1.5 font-medium transition-colors",
+              tab === t.key
+                ? "bg-[var(--glass-bg-strong)] text-[var(--text-primary)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "categories" ? (
+        <CategoriesPage search={search} />
+      ) : isLoading ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
@@ -244,6 +291,12 @@ export function QuotasPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         quotaId={editingId}
+      />
+
+      <CategoryDialog
+        open={catDialogOpen}
+        onOpenChange={setCatDialogOpen}
+        categoryId={null}
       />
     </div>
   );

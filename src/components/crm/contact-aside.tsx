@@ -46,6 +46,8 @@ import { formatPhoneDisplay } from "@/lib/phone"
 import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
+import { resolveCustomFieldGroups, type CustomFieldDef } from "@/lib/field-layout"
+import { CustomFieldGroupBlock } from "@/components/crm/fields/custom-field-group-block"
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -645,6 +647,52 @@ export function ContactAside({
   // "olho" no painel de config nao tinha efeito porque ContactAside
   // ignorava o layout. Mapeamento sectionId interno -> id taxonomia.
   const { sections: fieldLayoutSections } = useFieldLayout("inbox_lead_v2")
+
+  // Agrupamento visual dos campos personalizados (PRD Agrupamento de
+  // Campos na Aside). Um memo por entidade — os dois grids (Contato /
+  // Negócio) são independentes. Sem grupos configurados → 1 bucket flat
+  // (fallback RN-05).
+  type ResolvedContactField = typeof resolvedContactPanelFields[number]
+  type ResolvedDealField = typeof resolvedDealPanelFields[number]
+  const buildGroups = <T extends { fieldId: string; label: string; type: string }>(
+    fields: T[],
+    entity: "contact" | "deal",
+  ): Array<{ id: string; title: string | null; collapsedDefault: boolean; fields: T[] }> => {
+    if (fields.length === 0) return []
+    const defs: CustomFieldDef[] = fields.map((f) => ({
+      id: f.fieldId,
+      name: f.fieldId,
+      label: f.label,
+      type: f.type,
+    }))
+    const groups = resolveCustomFieldGroups(fieldLayoutSections ?? [], defs, entity)
+    const hasReal = groups.some((g) => g.group !== null)
+    if (!hasReal) return [{ id: "__all__", title: null, collapsedDefault: false, fields }]
+    const byId = new Map(fields.map((f) => [f.fieldId, f] as const))
+    const out: Array<{ id: string; title: string | null; collapsedDefault: boolean; fields: T[] }> = []
+    const orphans: T[] = []
+    for (const g of groups) {
+      const mapped = g.fields.map((d) => byId.get(d.id)).filter(Boolean) as T[]
+      if (mapped.length === 0) continue
+      if (g.group === null) orphans.push(...mapped)
+      else out.push({ id: g.group.id, title: g.group.label, collapsedDefault: g.group.collapsedDefault, fields: mapped })
+    }
+    if (orphans.length > 0) {
+      out.push({ id: "__orphans__", title: "Outros campos", collapsedDefault: false, fields: orphans })
+    }
+    return out
+  }
+  const contactFieldGroups = useMemo(
+    () => buildGroups<ResolvedContactField>(resolvedContactPanelFields, "contact"),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [resolvedContactPanelFields, fieldLayoutSections],
+  )
+  const dealFieldGroups = useMemo(
+    () => buildGroups<ResolvedDealField>(resolvedDealPanelFields, "deal"),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [resolvedDealPanelFields, fieldLayoutSections],
+  )
+
   const sectionHiddenMap = useMemo(() => {
     const FIELD_LAYOUT_TO_INTERNAL: Record<string, AsideSection> = {
       negocios: "negocios",
@@ -943,84 +991,61 @@ export function ContactAside({
                                 )}
                               </div>
 
-                              {/* Campos personalizados de contato */}
-                              {resolvedContactPanelFields.length > 0 && (
-                                <div className="mt-3 rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
-                                  {resolvedContactPanelFields.map((f, i) => {
-                                    const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
-                                    const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
-                                    const canEdit = !!f.entityType && !!f.entityId
-                                    const isCompact = viewMode === "compact"
-                                    return (
-                                      <div
-                                        key={f.fieldId}
-                                        className={cn(
-                                          "flex items-center justify-between gap-2 text-sm",
-                                          isCompact ? "py-1.5" : "py-2",
-                                          i > 0 && "border-t border-slate-50",
+                              {/* Campos personalizados de contato — com agrupamento visual (PRD) */}
+                              {resolvedContactPanelFields.length > 0 && (() => {
+                                const isCompact = viewMode === "compact"
+                                const renderRow = (f: ResolvedContactField, i: number) => {
+                                  const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
+                                  const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
+                                  const canEdit = !!f.entityType && !!f.entityId
+                                  return (
+                                    <div
+                                      key={f.fieldId}
+                                      className={cn(
+                                        "flex items-center justify-between gap-2 text-sm",
+                                        isCompact ? "py-1.5" : "py-2",
+                                        i > 0 && "border-t border-slate-50",
+                                      )}
+                                    >
+                                      <span className={cn(
+                                        "shrink-0 font-medium text-slate-500",
+                                        isCompact ? "w-[40%] text-[11px] leading-tight" : "w-[38%] text-[12px]"
+                                      )}>
+                                        {f.label}
+                                      </span>
+                                      <div className="min-w-0 flex-1">
+                                        {contactEditMode && canEdit ? (
+                                          <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={contactEditMode} invalidateKeys={contactInvalidateKeys} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")} placeholder="+ Adicionar" />
+                                        ) : hl && colors ? (
+                                          <span style={{ backgroundColor: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }} className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold">{hl.label}</span>
+                                        ) : canEdit ? (
+                                          <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={contactEditMode} invalidateKeys={contactInvalidateKeys} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")} placeholder="+ Adicionar" />
+                                        ) : (
+                                          <span className={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")}>{f.value || PLACEHOLDER}</span>
                                         )}
-                                      >
-                                        <span className={cn(
-                                          "shrink-0 font-medium text-slate-500",
-                                          isCompact ? "w-[40%] text-[11px] leading-tight" : "w-[38%] text-[12px]"
-                                        )}>
-                                          {f.label}
-                                        </span>
-                                        <div className="min-w-0 flex-1">
-                                          {contactEditMode && canEdit ? (
-                                            <InlineFieldEditor
-                                              fieldId={f.fieldId}
-                                              fieldType={f.type}
-                                              fieldOptions={f.options ?? []}
-                                              value={f.value || null}
-                                              entityType={f.entityType!}
-                                              entityId={f.entityId!}
-                                              editMode={contactEditMode}
-                                              invalidateKeys={contactInvalidateKeys}
-                                              onSaved={(v) =>
-                                                setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))
-                                              }
-                                              textClassName={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")}
-                                              placeholder="+ Adicionar"
-                                            />
-                                          ) : hl && colors ? (
-                                            <span
-                                              style={{
-                                                backgroundColor: colors.bg,
-                                                color: colors.text,
-                                                border: `1px solid ${colors.border}`,
-                                              }}
-                                              className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
-                                            >
-                                              {hl.label}
-                                            </span>
-                                          ) : canEdit ? (
-                                            <InlineFieldEditor
-                                              fieldId={f.fieldId}
-                                              fieldType={f.type}
-                                              fieldOptions={f.options ?? []}
-                                              value={f.value || null}
-                                              entityType={f.entityType!}
-                                              entityId={f.entityId!}
-                                              editMode={contactEditMode}
-                                              invalidateKeys={contactInvalidateKeys}
-                                              onSaved={(v) =>
-                                                setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))
-                                              }
-                                              textClassName={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")}
-                                              placeholder="+ Adicionar"
-                                            />
-                                          ) : (
-                                            <span className={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")}>
-                                              {f.value || PLACEHOLDER}
-                                            </span>
-                                          )}
-                                        </div>
                                       </div>
-                                    )
-                                  })}
-                                </div>
-                              )}
+                                    </div>
+                                  )
+                                }
+                                return (
+                                  <div className="mt-3 rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+                                    {contactFieldGroups.map((g) => {
+                                      const rows = g.fields.map((f, i) => renderRow(f, i))
+                                      if (!g.title) return <div key={g.id}>{rows}</div>
+                                      return (
+                                        <CustomFieldGroupBlock
+                                          key={g.id}
+                                          storageKey={`aside_grupos:inbox_lead_v2:${g.id}`}
+                                          title={g.title}
+                                          collapsedInitial={g.collapsedDefault}
+                                        >
+                                          {rows}
+                                        </CustomFieldGroupBlock>
+                                      )
+                                    })}
+                                  </div>
+                                )
+                              })()}
 
                               {/* Tags do CONTATO removidas das asides por decisão de design */}
                               </>
@@ -1105,42 +1130,55 @@ export function ContactAside({
                                   </div>
                                 )}
 
-                                {resolvedDealPanelFields.length > 0 && (
-                                  viewMode === "compact" ? (
-                                    /* ── Compact: flat rows ── */
+                                {resolvedDealPanelFields.length > 0 && (() => {
+                                  const renderCompactRow = (f: ResolvedDealField, idx: number) => {
+                                    const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
+                                    const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
+                                    const canEdit = !!f.entityType && !!f.entityId
+                                    return (
+                                      <div
+                                        key={f.fieldId}
+                                        className={cn(
+                                          "flex items-center justify-between gap-2 py-2 text-sm",
+                                          idx > 0 && "border-t border-slate-50",
+                                        )}
+                                      >
+                                        <span className="w-[38%] shrink-0 text-[12px] font-medium leading-tight text-slate-500">{f.label}</span>
+                                        <div className="min-w-0 flex-1">
+                                          {dealFieldsEditMode && canEdit ? (
+                                            <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
+                                          ) : hl && colors ? (
+                                            <span style={{ backgroundColor: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }} className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold">{hl.label}</span>
+                                          ) : canEdit ? (
+                                            <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
+                                          ) : (
+                                            <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{f.value || PLACEHOLDER}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )
+                                  }
+                                  return viewMode === "compact" ? (
                                     <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
-                                      {resolvedDealPanelFields.map((f, idx) => {
-                                        const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
-                                        const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
-                                        const canEdit = !!f.entityType && !!f.entityId
+                                      {dealFieldGroups.map((g) => {
+                                        const rows = g.fields.map((f, i) => renderCompactRow(f, i))
+                                        if (!g.title) return <div key={g.id}>{rows}</div>
                                         return (
-                                          <div
-                                            key={f.fieldId}
-                                            className={cn(
-                                              "flex items-center justify-between gap-2 py-2 text-sm",
-                                              idx > 0 && "border-t border-slate-50",
-                                            )}
+                                          <CustomFieldGroupBlock
+                                            key={g.id}
+                                            storageKey={`aside_grupos:inbox_lead_v2:${g.id}`}
+                                            title={g.title}
+                                            collapsedInitial={g.collapsedDefault}
                                           >
-                                            <span className="w-[38%] shrink-0 text-[12px] font-medium leading-tight text-slate-500">{f.label}</span>
-                                            <div className="min-w-0 flex-1">
-                                              {dealFieldsEditMode && canEdit ? (
-                                                <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
-                                              ) : hl && colors ? (
-                                                <span style={{ backgroundColor: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }} className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold">{hl.label}</span>
-                                              ) : canEdit ? (
-                                                <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
-                                              ) : (
-                                                <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{f.value || PLACEHOLDER}</span>
-                                              )}
-                                            </div>
-                                          </div>
+                                            {rows}
+                                          </CustomFieldGroupBlock>
                                         )
                                       })}
                                     </div>
                                   ) : (
-                                  /* ── Focus (padrão): grid de cards ── */
-                                  <div className="grid grid-cols-2 gap-2">
-                                    {resolvedDealPanelFields.map((f) => {
+                                  /* ── Focus (padrão): grid de cards agrupados ── */
+                                  <div className="flex flex-col gap-3">
+                                    {(() => { const _renderCard = (f: ResolvedDealField) => {
                                       const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
                                       const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
                                       const canEdit = !!f.entityType && !!f.entityId
@@ -1210,10 +1248,29 @@ export function ContactAside({
                                           </div>
                                         </div>
                                       )
-                                    })}
+                                    }
+                                    return dealFieldGroups.map((g) => {
+                                      const grid = (
+                                        <div className="grid grid-cols-2 gap-2">
+                                          {g.fields.map(_renderCard)}
+                                        </div>
+                                      )
+                                      if (!g.title) return <div key={g.id}>{grid}</div>
+                                      return (
+                                        <CustomFieldGroupBlock
+                                          key={g.id}
+                                          storageKey={`aside_grupos:inbox_lead_v2:${g.id}`}
+                                          title={g.title}
+                                          collapsedInitial={g.collapsedDefault}
+                                        >
+                                          {grid}
+                                        </CustomFieldGroupBlock>
+                                      )
+                                    })
+                                    })()}
                                   </div>
                                   )
-                                )}
+                                })()}
                                 </>
                                 )}
                               </div>

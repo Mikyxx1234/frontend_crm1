@@ -50,7 +50,61 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
   const qc = useQueryClient();
   const key = boardKey(pipelineId, status);
 
-  return useMutation<{ deal: BoardDealDto }, Error, MoveVars, { prev?: BoardStageDto[] }>({
+  // Bug 18/jul/26 — a aside do deal (Pipeline + Inbox) mostrava o toast
+  // "Fase atualizada" mas continuava exibindo a fase antiga ate F5. Causa:
+  // o `_v2-client` do pipeline monta o board com 3 query keys distintas
+  // (`pipeline-board`, `pipeline-board-filtered`, `pipeline-board-search`)
+  // dependendo de sort/filtro/busca ativos, e o `onMutate`/`onSettled` so'
+  // enxergava a variante `pipeline-board`. Otimista era descartado e o
+  // refetch ignorava as outras variantes. Solucao: aplicar o otimista em
+  // TODAS as caches do tipo `BoardStageDto[]` que contenham o deal e
+  // refetch por predicate cobrindo todas as variantes.
+  const BOARD_KEY_PREFIXES = [
+    "pipeline-board",
+    "pipeline-board-filtered",
+    "pipeline-board-search",
+  ] as const;
+
+  function isBoardCacheKey(k: readonly unknown[]): boolean {
+    return typeof k[0] === "string" && (BOARD_KEY_PREFIXES as readonly string[]).includes(k[0] as string);
+  }
+
+  function applyOptimisticMove(
+    stages: BoardStageDto[],
+    vars: MoveVars,
+  ): { next: BoardStageDto[]; matched: boolean } {
+    const dealIsHere = stages.some((s) => s.deals.some((d) => d.id === vars.dealId));
+    if (!dealIsHere) return { next: stages, matched: false };
+    const next = stages.map((s) => ({ ...s, deals: [...s.deals] }));
+    const fromIdx = next.findIndex((s) => s.id === vars.fromStageId);
+    const toIdx = next.findIndex((s) => s.id === vars.toStageId);
+    // Cross-pipeline (destino fora do board): so' remove do estagio origem.
+    if (fromIdx !== -1 && toIdx === -1) {
+      const dealIdx = next[fromIdx].deals.findIndex((d) => d.id === vars.dealId);
+      if (dealIdx !== -1) {
+        next[fromIdx].deals.splice(dealIdx, 1);
+        next[fromIdx].totalCount =
+          (next[fromIdx].totalCount ?? next[fromIdx].deals.length + 1) - 1;
+      }
+      return { next, matched: true };
+    }
+    if (fromIdx === -1 || toIdx === -1) return { next: stages, matched: false };
+    const dealIdx = next[fromIdx].deals.findIndex((d) => d.id === vars.dealId);
+    if (dealIdx === -1) return { next: stages, matched: false };
+    const [moved] = next[fromIdx].deals.splice(dealIdx, 1);
+    const insertAt = vars.toIndex ?? next[toIdx].deals.length;
+    next[toIdx].deals.splice(Math.min(insertAt, next[toIdx].deals.length), 0, moved);
+    next[fromIdx].totalCount = (next[fromIdx].totalCount ?? next[fromIdx].deals.length + 1) - 1;
+    next[toIdx].totalCount = (next[toIdx].totalCount ?? next[toIdx].deals.length - 1) + 1;
+    return { next, matched: true };
+  }
+
+  return useMutation<
+    { deal: BoardDealDto },
+    Error,
+    MoveVars,
+    { snapshots: Array<{ queryKey: readonly unknown[]; data: BoardStageDto[] }> }
+  >({
     mutationFn: (vars) => {
       // Backend exige `position` (inteiro >= 0). Quando o caller nao
       // sabe a posicao (ex.: StagePicker do detail panel), calculamos
@@ -75,39 +129,31 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
       });
     },
     onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: key });
-      const prev = qc.getQueryData<BoardStageDto[]>(key);
-      if (!prev) return { prev };
-      const next = prev.map((s) => ({ ...s, deals: [...s.deals] }));
-      const fromIdx = next.findIndex((s) => s.id === vars.fromStageId);
-      const toIdx = next.findIndex((s) => s.id === vars.toStageId);
-      // Cross-pipeline: destino nao pertence ao board atual — apenas
-      // remove o card do estagio origem (evita ficar "flutuando" enquanto
-      // o servidor responde). O board de destino sera revalidado no
-      // onSettled abaixo.
-      if (fromIdx !== -1 && toIdx === -1) {
-        const dealIdx = next[fromIdx].deals.findIndex((d) => d.id === vars.dealId);
-        if (dealIdx !== -1) {
-          next[fromIdx].deals.splice(dealIdx, 1);
-          next[fromIdx].totalCount =
-            (next[fromIdx].totalCount ?? next[fromIdx].deals.length + 1) - 1;
-          qc.setQueryData(key, next);
-        }
-        return { prev };
+      // Cancela refetches em voo de qualquer variante do board pra evitar
+      // que uma resposta stale sobrescreva o otimista logo apos aplicado.
+      await qc.cancelQueries({
+        predicate: (q) => isBoardCacheKey(q.queryKey),
+      });
+      const snapshots: Array<{ queryKey: readonly unknown[]; data: BoardStageDto[] }> = [];
+      const boards = qc.getQueriesData<BoardStageDto[]>({
+        predicate: (q) => isBoardCacheKey(q.queryKey),
+      });
+      for (const [queryKey, data] of boards) {
+        if (!data) continue;
+        const { next, matched } = applyOptimisticMove(data, vars);
+        if (!matched) continue;
+        snapshots.push({ queryKey, data });
+        qc.setQueryData(queryKey, next);
       }
-      if (fromIdx === -1 || toIdx === -1) return { prev };
-      const dealIdx = next[fromIdx].deals.findIndex((d) => d.id === vars.dealId);
-      if (dealIdx === -1) return { prev };
-      const [moved] = next[fromIdx].deals.splice(dealIdx, 1);
-      const insertAt = vars.toIndex ?? next[toIdx].deals.length;
-      next[toIdx].deals.splice(Math.min(insertAt, next[toIdx].deals.length), 0, moved);
-      next[fromIdx].totalCount = (next[fromIdx].totalCount ?? next[fromIdx].deals.length + 1) - 1;
-      next[toIdx].totalCount = (next[toIdx].totalCount ?? next[toIdx].deals.length - 1) + 1;
-      qc.setQueryData(key, next);
-      return { prev };
+      return { snapshots };
     },
     onError: (err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(key, ctx.prev);
+      // Rollback: restaura TODAS as caches que foram tocadas no otimista.
+      if (ctx?.snapshots) {
+        for (const snap of ctx.snapshots) {
+          qc.setQueryData(snap.queryKey, snap.data);
+        }
+      }
       toast.error(err.message || "Falha ao mover deal");
     },
     onSuccess: (data, vars) => {
@@ -137,24 +183,20 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
       );
     },
     onSettled: (_data, _err, vars) => {
-      // IB1: usar refetchQueries (em vez de invalidate) garante que as
-      // queries ativas no inbox sejam re-buscadas imediatamente — o
-      // invalidate marca como stale mas pode deixar a UI com o valor
-      // antigo ate o proximo trigger. `type: "active"` evita refetch
-      // de queries de outras orgs / paineis nao montados.
-      qc.refetchQueries({ queryKey: key, type: "active" });
+      // Refetch de TODAS as variantes do board (normal + filtered + search),
+      // ativas — o `_v2-client` alterna entre elas conforme sort/filtros/busca
+      // e o refetch por prefixo unico deixava a UI com dado stale ate F5.
+      qc.refetchQueries({
+        type: "active",
+        predicate: (q) => isBoardCacheKey(q.queryKey),
+      });
       qc.refetchQueries({ queryKey: ["contact-sidebar"], type: "active" });
       qc.refetchQueries({ queryKey: dealDetailKey(vars.dealId), type: "active" });
-      // Cross-pipeline: invalida TODOS os boards (o funil destino pode
-      // estar aberto em outra aba/tela) — refetch ativo garante que a
-      // UI do funil destino reflita o card recem-chegado.
-      if (vars.toPipelineId && vars.toPipelineId !== pipelineId) {
-        qc.refetchQueries({ queryKey: ["pipeline-board"], type: "active" });
-      } else {
-        // Catch-all: qualquer outro consumidor de board (ex.: kanban em
-        // outro pipeline) so' marca como stale.
-        qc.invalidateQueries({ queryKey: ["pipeline-board"], type: "inactive" });
-      }
+      // Boards inativos (aberto em outra aba/tela) so' marcam stale.
+      qc.invalidateQueries({
+        type: "inactive",
+        predicate: (q) => isBoardCacheKey(q.queryKey),
+      });
     },
   });
 }

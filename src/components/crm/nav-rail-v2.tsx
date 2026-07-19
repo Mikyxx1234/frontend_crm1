@@ -301,6 +301,11 @@ export function NavRailV2({ className }: { className?: string }) {
 
   const isProfileActive = pathname.startsWith("/settings/profile");
 
+  // Foto do perfil (User.avatarUrl espelhado em session.user.image). Quando
+  // presente, sobrepõe as iniciais — "quem manda é o perfil".
+  const userImage =
+    (session?.user as { image?: string | null } | undefined)?.image ?? null;
+
   // Classes reutilizadas: item da lista quando expandido — icone + label lado a lado.
   const expandedItemBase =
     "group flex h-11 w-full shrink-0 items-center gap-3 rounded-[var(--radius-md)] px-3 text-[13px] font-medium transition-colors";
@@ -545,14 +550,19 @@ export function NavRailV2({ className }: { className?: string }) {
         >
           <div
             className={cn(
-              "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
+              "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
               !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
             )}
           >
-            {initials}
+            {userImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={userImage} alt={displayName} className="size-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              initials
+            )}
             <span
               className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-[var(--glass-bg-strong)]"
               style={{ backgroundColor: statusMeta.color }}
@@ -576,14 +586,19 @@ export function NavRailV2({ className }: { className?: string }) {
         >
           <div
             className={cn(
-              "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
+              "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
               !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
             )}
           >
-            {initials}
+            {userImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={userImage} alt={displayName} className="size-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              initials
+            )}
             <span
               className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-[var(--glass-bg-strong)]"
               style={{ backgroundColor: statusMeta.color }}
@@ -601,8 +616,13 @@ export function NavRailV2({ className }: { className?: string }) {
 
         <DropdownMenuContent align="start" className={ACCOUNT_MENU_CONTENT}>
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[11px] font-bold text-white">
-              {initials}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[11px] font-bold text-white">
+              {userImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={userImage} alt={displayName} className="size-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                initials
+              )}
             </div>
             <div className="min-w-0">
               <p className="truncate font-display text-[13px] font-bold text-[var(--color-popover-foreground)]">

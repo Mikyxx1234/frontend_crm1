@@ -16,7 +16,7 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { AvatarGlass } from "@/components/crm/avatar-glass";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
@@ -62,6 +62,7 @@ type AgentRow = {
   name: string;
   email: string;
   role: string;
+  avatarUrl?: string | null;
   agentStatus: {
     status: AgentOnlineStatus;
     availableForVoiceCalls?: boolean;
@@ -522,11 +523,17 @@ export function ExpedienteTab({
                 >
                   {/* Nome + avatar */}
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <AvatarGlass
-                      size="sm"
-                      seed={agent.id}
+                    <UserAvatar
+                      size={32}
                       name={agent.name}
-                      status={status === "ONLINE" ? "online" : "offline"}
+                      imageUrl={agent.avatarUrl}
+                      status={
+                        status === "ONLINE"
+                          ? "online"
+                          : status === "AWAY"
+                            ? "away"
+                            : "offline"
+                      }
                     />
                     <div className="min-w-0 leading-tight">
                       <p className="max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
@@ -723,7 +730,7 @@ export function ExpedienteTab({
                       onChange={() => toggleTemplateUser(a.id)}
                       aria-label={`Selecionar ${a.name}`}
                     />
-                    <AvatarGlass size="sm" seed={a.id} name={a.name} />
+                    <UserAvatar size={32} name={a.name} imageUrl={a.avatarUrl} />
                     <span className="min-w-0 leading-tight">
                       <span className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
                         {a.name}

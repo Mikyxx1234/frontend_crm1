@@ -43,7 +43,7 @@ import {
   listTableHeadRowClass,
   type SortDir,
 } from "@/components/crm/sortable-header";
-import { AvatarGlass } from "@/components/crm/avatar-glass";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import { ExpedienteTab } from "@/features/legacy-v1/settings/schedules";
 import { cn } from "@/lib/utils";
 import {
@@ -72,6 +72,7 @@ type UserRow = {
   name: string;
   email: string;
   role: UserRole;
+  avatarUrl?: string | null;
   assignedRoles?: AssignedRole[];
 };
 
@@ -739,7 +740,7 @@ function TeamContent() {
 
                 {/* Usuário */}
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <AvatarGlass size="sm" seed={u.id} name={u.name} />
+                  <UserAvatar size={32} name={u.name} imageUrl={u.avatarUrl} />
                   <div className="min-w-0 leading-tight">
                     <span className="block max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
                       {u.name}

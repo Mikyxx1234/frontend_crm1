@@ -559,6 +559,7 @@ export function ChatArea({
                   <MessageBubble
                     message={message}
                     agentInitials={agentInitials}
+                    agentImageUrl={session?.user?.image ?? null}
                     onReplyMessage={onReplyMessage}
                     onForwardMessage={onForwardMessage}
                     onReactMessage={onReactMessage}

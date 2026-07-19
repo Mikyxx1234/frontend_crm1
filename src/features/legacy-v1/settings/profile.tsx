@@ -53,6 +53,7 @@ import {
 } from "@/lib/chat-theme";
 import { cn } from "@/lib/utils";
 import { AvatarCropDialog } from "@/components/profile/avatar-crop-dialog";
+import { UserAvatar } from "@/components/crm/user-avatar";
 
 type Profile = {
   id: string;
@@ -204,14 +205,6 @@ function ChatThemeField({
       </div>
     </div>
   );
-}
-
-function getInitials(name: string | null | undefined): string {
-  if (!name?.trim()) return "?";
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
 export default function ProfilePage() {
@@ -407,20 +400,12 @@ function ProfileCard({
           real só ao clicar em "Salvar" abaixo (evita registro inconsistente).
         */}
         <div className="relative shrink-0">
-          <div className="flex size-[96px] items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-pink-200 to-pink-300 ring-4 ring-[var(--glass-bg-modal)] shadow-[var(--shadow-sm)]">
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt={name}
-                className="size-full object-cover"
-              />
-            ) : (
-              <span className="font-display text-2xl font-bold text-white drop-shadow">
-                {getInitials(name)}
-              </span>
-            )}
-          </div>
+          <UserAvatar
+            size={96}
+            name={name}
+            imageUrl={avatarUrl}
+            className="ring-4 ring-[var(--glass-bg-modal)] shadow-[var(--shadow-sm)]"
+          />
           <TooltipHost
             label="Alterar foto"
             side="right"

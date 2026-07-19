@@ -347,6 +347,9 @@ export interface MessageBubbleProps {
   message: Message
   /** Iniciais do agente logado — exibidas no avatar das mensagens outgoing. */
   agentInitials?: string
+  /** Foto do agente logado (User.avatarUrl). Sobrepõe as iniciais no token
+   *  outgoing quando a bolha representa o próprio agente. */
+  agentImageUrl?: string | null
   className?: string
   /** Esta nota está fixada na conversa? Exibe indicador âmbar. */
   isPinned?: boolean
@@ -1202,6 +1205,7 @@ function MenuItem({
 export function MessageBubble({
   message,
   agentInitials,
+  agentImageUrl,
   className,
   isPinned,
   onPinNote,
@@ -1411,12 +1415,24 @@ export function MessageBubble({
               <TooltipTrigger asChild>
                 <div
                   className={cn(
-                    "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
+                    "flex h-7 w-7 shrink-0 cursor-default items-center justify-center overflow-hidden rounded-full font-display text-[10px] font-bold text-white",
                     !isBot && "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
                   )}
                   style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
                 >
-                  {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
+                  {isBot ? (
+                    <IconRobot size={14} />
+                  ) : !message.senderInitials && agentImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={agentImageUrl}
+                      alt={agentInitials ?? "Você"}
+                      className="size-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    message.senderInitials || agentInitials || "?"
+                  )}
                 </div>
               </TooltipTrigger>
               {senderName && (

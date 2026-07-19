@@ -69,7 +69,7 @@
      bolhas out em tema claro/gradiente, dando a impressão de que a
      entrega nunca era marcada como lida mesmo quando a Meta entregava
      o evento read via webhook. */
-  --wa-tick-read:    #53bdeb;   /* ticks azuis = lido */
+  --wa-tick-read:    #38bdf8;   /* ticks azuis = lido (ciano vivo p/ contrastar na bolha indigo) */
   --wa-tick-fail:    #fca5a5;   /* ícone de falha = rosa */
 
   /* Toggle unchecked */

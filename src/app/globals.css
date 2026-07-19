@@ -301,7 +301,7 @@
   --chat-bubble-sent-bg: linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%);
   --chat-bubble-sent-text: #ffffff;
   --chat-bubble-sent-time: rgba(255, 255, 255, 0.7);
-  --chat-bubble-sent-check-read: #c7d2fe;
+  --chat-bubble-sent-check-read: #38bdf8;
   --chat-bg: transparent;
   --chat-bubble-received-text: #1e2a3b;
   --chat-bubble-received-time: #4b5563;
@@ -343,7 +343,7 @@
   --chat-bubble-sent-bg: linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%);
   --chat-bubble-sent-text: #ffffff;
   --chat-bubble-sent-time: rgba(255, 255, 255, 0.7);
-  --chat-bubble-sent-check-read: #c7d2fe;
+  --chat-bubble-sent-check-read: #38bdf8;
   --chat-bg: transparent;
 }
 

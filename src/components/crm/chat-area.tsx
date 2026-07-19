@@ -261,6 +261,46 @@ export function ChatArea({
       sessionName || (isPreviewMode() ? PREVIEW_USER.name : "Agente")
     setAgentInitials(getInitials(name) || "?")
   }, [session])
+  // Rola a lista até o fim quando: (1) a conversa muda / carrega (instantâneo),
+  // ou (2) chega/enviamos uma nova mensagem no fim. Ao enviar (mensagem própria)
+  // ou quando o operador já está perto do fim, rola suave; se ele estiver lendo
+  // histórico mais acima, não puxamos a tela. Detecta troca de conversa vs.
+  // append comparando o 1º/último id (evita depender de `conversationNumber`,
+  // que pode vir nulo). Sem isto a tela ficava congelada após enviar.
+  const prevFirstIdRef = useRef<string | null>(null)
+  const prevLastIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    const container = messagesRef.current
+    if (!container) return
+    const firstId = messages[0]?.id ?? null
+    const last = messages[messages.length - 1]
+    const lastId = last?.id ?? null
+    const prevFirst = prevFirstIdRef.current
+    const prevLast = prevLastIdRef.current
+    prevFirstIdRef.current = firstId
+    prevLastIdRef.current = lastId
+
+    // Nada novo no fim (ex.: prepend de histórico mais antigo) → não mexe.
+    if (lastId === prevLast) return
+
+    const isSwitchOrInitial = prevLast === null || firstId !== prevFirst
+    if (isSwitchOrInitial) {
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight
+      })
+      return
+    }
+
+    const nearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 200
+    const ownMessage = last?.type === "outgoing"
+    if (ownMessage || nearBottom) {
+      requestAnimationFrame(() => {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" })
+      })
+    }
+  }, [messages])
+
   const effectiveDisabled = inputDisabled ?? showSessionAlert
   const value = inputValue ?? ""
 

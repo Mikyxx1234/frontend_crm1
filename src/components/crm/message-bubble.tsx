@@ -275,7 +275,7 @@ function StatusTicks({
   return (
     <IconChecks
       size={15}
-      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read)]" : solid)}
+      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read,#38bdf8)]" : solid)}
       aria-label={status === "read" ? "Lida" : "Entregue"}
     />
   )

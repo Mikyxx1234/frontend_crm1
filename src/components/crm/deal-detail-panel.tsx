@@ -56,6 +56,7 @@ import { FavoritesPanel } from "@/components/crm/favorites-panel"
 import { TabulationDialog } from "@/features/inbox-v2/extras/tabulation-dialog"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
+import { resolveCustomFieldGroups, type CustomFieldDef } from "@/lib/field-layout"
 import { useContactSources } from "@/hooks/use-contact-sources"
 import { formatPhoneDisplay } from "@/lib/phone"
 import { useIsDesktop } from "@/hooks/use-media-query"
@@ -81,6 +82,61 @@ const SIDEBAR_STORAGE_KEY = "crm:deal-detail:sidebar-order:v4"
 // duas abas: "Perfil" (contato + campos de negócio) e "Produto"
 // (produtos). `principal` não pertence a nenhuma aba (render null).
 type SidebarTab = "perfil" | "produto"
+// Bloco colapsável para grupos de campos personalizados (PRD
+// Agrupamento de Campos na Aside). Estado persistido por
+// contexto/grupo em localStorage.
+function CustomFieldGroupBlock({
+  storageKey,
+  title,
+  collapsedInitial,
+  children,
+}: {
+  storageKey: string
+  title: string
+  collapsedInitial: boolean
+  children: React.ReactNode
+}) {
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return collapsedInitial
+    const raw = window.localStorage.getItem(storageKey)
+    if (raw === "1") return true
+    if (raw === "0") return false
+    return collapsedInitial
+  })
+  const toggle = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(storageKey, next ? "1" : "0")
+      }
+      return next
+    })
+  }
+  return (
+    <div className="mt-1 first:mt-0">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={!collapsed}
+        className="mb-1.5 flex w-full items-center gap-1.5 text-left"
+      >
+        <IconChevronDown
+          size={12}
+          strokeWidth={2.4}
+          className={cn(
+            "shrink-0 text-slate-500 transition-transform",
+            collapsed && "-rotate-90",
+          )}
+        />
+        <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
+          {title}
+        </span>
+      </button>
+      {!collapsed && <div>{children}</div>}
+    </div>
+  )
+}
+
 const SIDEBAR_SECTION_TAB: Partial<Record<SidebarSection, SidebarTab>> = {
   contato: "perfil",
   campos: "perfil",
@@ -405,6 +461,54 @@ export function DealDetailPanel({
     }
     return hidden
   }, [fieldLayoutSections])
+
+  // ── Agrupamento visual dos campos personalizados (PRD Agrupamento de
+  //    Campos na Aside). Resolve os grupos configurados em
+  //    field_layout_configs (context=deal_panel_v2) considerando as duas
+  //    entidades (deal/contact) presentes no customFieldsSlot. Sem
+  //    grupos → devolve um único bucket com todos os campos (fallback
+  //    flat = RN-05/CA-01), preservando o layout atual em grade.
+  type SlotItem = NonNullable<typeof customFieldsSlot>[number]
+  const customFieldGroups = useMemo<
+    Array<{ id: string; title: string | null; collapsedDefault: boolean; fields: SlotItem[] }>
+  >(() => {
+    const slot = customFieldsSlot ?? []
+    if (slot.length === 0) return []
+    const dealDefs: CustomFieldDef[] = []
+    const contactDefs: CustomFieldDef[] = []
+    const bySlotId = new Map<string, SlotItem>()
+    for (const f of slot) {
+      bySlotId.set(f.fieldId, f)
+      const def: CustomFieldDef = { id: f.fieldId, name: f.fieldId, label: f.label, type: f.type ?? "TEXT" }
+      if (f.entityType === "deal") dealDefs.push(def)
+      else contactDefs.push(def)
+    }
+    const dealGroups = resolveCustomFieldGroups(fieldLayoutSections ?? [], dealDefs, "deal")
+    const contactGroups = resolveCustomFieldGroups(fieldLayoutSections ?? [], contactDefs, "contact")
+    const hasRealDeal = dealGroups.some((g) => g.group !== null)
+    const hasRealContact = contactGroups.some((g) => g.group !== null)
+    if (!hasRealDeal && !hasRealContact) {
+      // Fallback flat: 1 bucket com todos os campos, sem header (mantém
+      // o card único "Informações do Negócio" como estava).
+      return [{ id: "__all__", title: null, collapsedDefault: false, fields: slot }]
+    }
+    const out: Array<{ id: string; title: string | null; collapsedDefault: boolean; fields: SlotItem[] }> = []
+    const orphans: SlotItem[] = []
+    const emit = (groups: typeof dealGroups) => {
+      for (const g of groups) {
+        const fields = g.fields.map((d) => bySlotId.get(d.id)).filter(Boolean) as SlotItem[]
+        if (fields.length === 0) continue
+        if (g.group === null) orphans.push(...fields)
+        else out.push({ id: g.group.id, title: g.group.label, collapsedDefault: g.group.collapsedDefault, fields })
+      }
+    }
+    emit(dealGroups)
+    emit(contactGroups)
+    if (orphans.length > 0) {
+      out.push({ id: "__orphans__", title: "Outros campos", collapsedDefault: false, fields: orphans })
+    }
+    return out
+  }, [customFieldsSlot, fieldLayoutSections])
 
   // ── Resize da sidebar do detalhe (drag horizontal) ───────────────
   // Largura persistida em localStorage por operador. Min 280 evita
@@ -1146,104 +1250,137 @@ export function DealDetailPanel({
                                           {resolvedDealConfig}
                                         </div>
                                       )}
-                                      {viewMode === "compact" ? (
-                                        /* ── Compact: flat rows (espelho exato do inbox) ── */
-                                        <div className="p-4 pt-2">
-                                          {(customFieldsSlot ?? []).map((field, fieldIdx) => {
-                                            const currentValue = fieldValues[field.fieldId] ?? field.value
-                                            const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
-                                            const canEdit = !!field.entityType && !!field.entityId
-                                            return (
-                                              <div
-                                                key={field.fieldId}
-                                                className={cn(
-                                                  "flex items-center justify-between gap-2 py-2 text-sm",
-                                                  fieldIdx > 0 && "border-t border-slate-50",
+                                      {(() => {
+                                        // Renderer de UMA linha compacta (label à esquerda + valor/editor).
+                                        const renderCompactRow = (field: SlotItem, fieldIdx: number) => {
+                                          const currentValue = fieldValues[field.fieldId] ?? field.value
+                                          const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
+                                          const canEdit = !!field.entityType && !!field.entityId
+                                          return (
+                                            <div
+                                              key={field.fieldId}
+                                              className={cn(
+                                                "flex items-center justify-between gap-2 py-2 text-sm",
+                                                fieldIdx > 0 && "border-t border-slate-50",
+                                              )}
+                                            >
+                                              <span className="w-[38%] shrink-0 text-[12px] font-medium leading-tight text-slate-500">{field.label}</span>
+                                              <div className="min-w-0 flex-1">
+                                                {dealCustomEditMode && canEdit ? (
+                                                  <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
+                                                ) : hl ? (
+                                                  <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
+                                                ) : canEdit ? (
+                                                  <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
+                                                ) : (
+                                                  <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
                                                 )}
-                                              >
-                                                <span className="w-[38%] shrink-0 text-[12px] font-medium leading-tight text-slate-500">{field.label}</span>
-                                                <div className="min-w-0 flex-1">
-                                                  {dealCustomEditMode && canEdit ? (
-                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
-                                                  ) : hl ? (
-                                                    <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
-                                                  ) : canEdit ? (
-                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
-                                                  ) : (
-                                                    <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
-                                                  )}
-                                                </div>
                                               </div>
-                                            )
-                                          })}
-                                        </div>
-                                      ) : (
-                                        /* ── Focus (padrão): grid de cards slate-50
-                                            (espelho exato do inbox) ── */
-                                        <div className="grid grid-cols-2 gap-2">
-                                          {(customFieldsSlot ?? []).map((field) => {
-                                            const currentValue = fieldValues[field.fieldId] ?? field.value
-                                            const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
-                                            const canEdit = !!field.entityType && !!field.entityId
-                                            const isEmpty = !currentValue || currentValue === "—"
-                                            const isLong =
-                                              !isEmpty && ((currentValue ?? "").length > 18 || (currentValue ?? "").includes("@"))
-                                            return (
-                                              <div
-                                                key={field.fieldId}
-                                                className={cn(
-                                                  "flex flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
-                                                  isLong && "col-span-2",
+                                            </div>
+                                          )
+                                        }
+                                        // Renderer de UM card no grid (focus mode).
+                                        const renderGridCard = (field: SlotItem) => {
+                                          const currentValue = fieldValues[field.fieldId] ?? field.value
+                                          const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
+                                          const canEdit = !!field.entityType && !!field.entityId
+                                          const isEmpty = !currentValue || currentValue === "—"
+                                          const isLong =
+                                            !isEmpty && ((currentValue ?? "").length > 18 || (currentValue ?? "").includes("@"))
+                                          return (
+                                            <div
+                                              key={field.fieldId}
+                                              className={cn(
+                                                "flex flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
+                                                isLong && "col-span-2",
+                                              )}
+                                            >
+                                              <span className="text-[11px] font-medium text-slate-500">
+                                                {field.label}
+                                              </span>
+                                              <div className="min-w-0 w-full">
+                                                {dealCustomEditMode && canEdit ? (
+                                                  <InlineFieldEditor
+                                                    fieldId={field.fieldId}
+                                                    fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                    fieldOptions={field.options ?? []}
+                                                    value={currentValue ?? null}
+                                                    entityType={field.entityType!}
+                                                    entityId={field.entityId!}
+                                                    editMode={dealCustomEditMode}
+                                                    invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                    onSaved={(v) =>
+                                                      setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                    }
+                                                    textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                                    placeholder="+ Adicionar"
+                                                  />
+                                                ) : hl ? (
+                                                  <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
+                                                ) : canEdit ? (
+                                                  <InlineFieldEditor
+                                                    fieldId={field.fieldId}
+                                                    fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                    fieldOptions={field.options ?? []}
+                                                    value={currentValue ?? null}
+                                                    entityType={field.entityType!}
+                                                    entityId={field.entityId!}
+                                                    invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                    onSaved={(v) =>
+                                                      setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                    }
+                                                    textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                                    placeholder="+ Adicionar"
+                                                  />
+                                                ) : (
+                                                  <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                    {currentValue || "—"}
+                                                  </span>
                                                 )}
-                                              >
-                                                <span className="text-[11px] font-medium text-slate-500">
-                                                  {field.label}
-                                                </span>
-                                                <div className="min-w-0 w-full">
-                                                  {dealCustomEditMode && canEdit ? (
-                                                    <InlineFieldEditor
-                                                      fieldId={field.fieldId}
-                                                      fieldType={(field as { type?: string }).type ?? "TEXT"}
-                                                      fieldOptions={field.options ?? []}
-                                                      value={currentValue ?? null}
-                                                      entityType={field.entityType!}
-                                                      entityId={field.entityId!}
-                                                      editMode={dealCustomEditMode}
-                                                      invalidateKeys={[["deal-detail-v2", deal.id]]}
-                                                      onSaved={(v) =>
-                                                        setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
-                                                      }
-                                                      textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
-                                                      placeholder="+ Adicionar"
-                                                    />
-                                                  ) : hl ? (
-                                                    <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
-                                                  ) : canEdit ? (
-                                                    <InlineFieldEditor
-                                                      fieldId={field.fieldId}
-                                                      fieldType={(field as { type?: string }).type ?? "TEXT"}
-                                                      fieldOptions={field.options ?? []}
-                                                      value={currentValue ?? null}
-                                                      entityType={field.entityType!}
-                                                      entityId={field.entityId!}
-                                                      invalidateKeys={[["deal-detail-v2", deal.id]]}
-                                                      onSaved={(v) =>
-                                                        setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
-                                                      }
-                                                      textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
-                                                      placeholder="+ Adicionar"
-                                                    />
-                                                  ) : (
-                                                    <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-                                                      {currentValue || "—"}
-                                                    </span>
-                                                  )}
-                                                </div>
                                               </div>
-                                            )
-                                          })}
-                                        </div>
-                                      )}
+                                            </div>
+                                          )
+                                        }
+                                        return viewMode === "compact" ? (
+                                          <div className="p-4 pt-2">
+                                            {customFieldGroups.map((g) => {
+                                              const body = g.fields.map((f, i) => renderCompactRow(f, i))
+                                              if (!g.title) return <div key={g.id}>{body}</div>
+                                              return (
+                                                <CustomFieldGroupBlock
+                                                  key={g.id}
+                                                  storageKey={`aside_grupos:deal_panel_v2:${g.id}`}
+                                                  title={g.title}
+                                                  collapsedInitial={g.collapsedDefault}
+                                                >
+                                                  {body}
+                                                </CustomFieldGroupBlock>
+                                              )
+                                            })}
+                                          </div>
+                                        ) : (
+                                          <div className="flex flex-col gap-3">
+                                            {customFieldGroups.map((g) => {
+                                              const grid = (
+                                                <div className="grid grid-cols-2 gap-2">
+                                                  {g.fields.map(renderGridCard)}
+                                                </div>
+                                              )
+                                              if (!g.title) return <div key={g.id}>{grid}</div>
+                                              return (
+                                                <CustomFieldGroupBlock
+                                                  key={g.id}
+                                                  storageKey={`aside_grupos:deal_panel_v2:${g.id}`}
+                                                  title={g.title}
+                                                  collapsedInitial={g.collapsedDefault}
+                                                >
+                                                  {grid}
+                                                </CustomFieldGroupBlock>
+                                              )
+                                            })}
+                                          </div>
+                                        )
+                                      })()}
                                     </FieldCard>
                                   )}
                                 </div>

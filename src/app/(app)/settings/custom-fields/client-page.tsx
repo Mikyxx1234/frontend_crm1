@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   IconAlertCircle,
+  IconAsterisk,
   IconCalendar,
   IconCheck,
   IconEye,
@@ -21,6 +22,7 @@ import {
   IconPencil,
   IconPhone,
   IconPlus,
+  IconStack2,
   IconToggleLeft,
   IconTrash,
 } from "@tabler/icons-react";
@@ -39,16 +41,20 @@ import { type SectionConfig } from "@/lib/field-layout";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { InputGlass } from "@/components/crm/input-glass";
+import { KpiCard } from "@/components/crm/kpi-card";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import {
   EntityGroupsSection,
   type FieldConfigEntity,
 } from "@/components/crm/fields/field-config-panel";
 import {
-  PagePrimaryButton,
-  PageSearchBar,
+  PageActionsMenu,
   PageSegmentedControl,
 } from "@/components/crm/page-toolbar";
+import {
+  SettingsListFilterBar,
+  type SettingsFilterGroup,
+} from "@/components/crm/settings-filter-bar";
 import { listTableHeadRowClass } from "@/components/crm/sortable-header";
 import { FormSheet } from "@/components/ui/form-sheet";
 
@@ -147,7 +153,7 @@ export default function CustomFieldsV2ClientPage() {
   return (
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
-      title="Campos personalizados"
+      title="Campos"
       description="Configure os campos exibidos nos registros. Arraste pelo indicador para definir a ordem no painel lateral da Inbox."
       icon={<IconForms size={22} />}
     >
@@ -166,8 +172,20 @@ function CustomFieldsPage() {
   const [activeEntity, setActiveEntity] = React.useState<EntityTab>("deal");
   const [mode, setMode] = React.useState<PageMode>("fields");
   const [search, setSearch] = React.useState("");
+  const [visFilter, setVisFilter] = React.useState<"todos" | "inbox" | "deal">(
+    "todos",
+  );
+  const [reqFilter, setReqFilter] = React.useState<"todos" | "sim">("todos");
+  const [typeFilter, setTypeFilter] = React.useState<string>("todos");
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<CustomFieldItem | null>(null);
+
+  const resetFilters = React.useCallback(() => {
+    setSearch("");
+    setVisFilter("todos");
+    setReqFilter("todos");
+    setTypeFilter("todos");
+  }, []);
 
   const queryKey = React.useMemo(
     () => ["custom-fields", activeEntity] as const,
@@ -191,16 +209,76 @@ function CustomFieldsPage() {
 
   const filtered = React.useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return orderedFields;
-    return orderedFields.filter(
-      (f) =>
-        f.label.toLowerCase().includes(q) ||
-        f.name.toLowerCase().includes(q),
-    );
-  }, [orderedFields, search]);
+    return orderedFields.filter((f) => {
+      if (
+        q &&
+        !f.label.toLowerCase().includes(q) &&
+        !f.name.toLowerCase().includes(q)
+      )
+        return false;
+      if (visFilter === "inbox" && !f.showInInboxLeadPanel) return false;
+      if (visFilter === "deal" && !f.showInDealPanel) return false;
+      if (reqFilter === "sim" && !f.required) return false;
+      if (typeFilter !== "todos" && f.type !== typeFilter) return false;
+      return true;
+    });
+  }, [orderedFields, search, visFilter, reqFilter, typeFilter]);
 
   const inboxCount = fields.filter((f) => f.showInInboxLeadPanel).length;
   const dealCount = fields.filter((f) => f.showInDealPanel).length;
+  const requiredCount = fields.filter((f) => f.required).length;
+
+  const filterGroups = React.useMemo<SettingsFilterGroup[]>(
+    () => [
+      {
+        key: "vis",
+        label: "Exibição no painel",
+        value: visFilter,
+        onChange: (v) => setVisFilter(v as "todos" | "inbox" | "deal"),
+        options: [
+          { value: "todos", label: "Todos" },
+          { value: "inbox", label: "Inbox", count: inboxCount },
+          ...(activeEntity === "deal"
+            ? [{ value: "deal", label: "Negócio", count: dealCount }]
+            : []),
+        ],
+      },
+      {
+        key: "req",
+        label: "Obrigatoriedade",
+        value: reqFilter,
+        onChange: (v) => setReqFilter(v as "todos" | "sim"),
+        options: [
+          { value: "todos", label: "Todos" },
+          { value: "sim", label: "Só obrigatórios", count: requiredCount },
+        ],
+      },
+      {
+        key: "type",
+        label: "Tipo de campo",
+        value: typeFilter,
+        onChange: setTypeFilter,
+        options: [
+          { value: "todos", label: "Todos" },
+          ...TYPES.map((t) => ({
+            value: t.value,
+            label: t.label,
+            count: fields.filter((f) => f.type === t.value).length,
+          })),
+        ],
+      },
+    ],
+    [
+      visFilter,
+      reqFilter,
+      typeFilter,
+      activeEntity,
+      inboxCount,
+      dealCount,
+      requiredCount,
+      fields,
+    ],
+  );
 
   const deleteMutation = useMutation({
     mutationFn: deleteField,
@@ -228,7 +306,7 @@ function CustomFieldsPage() {
     );
   }
 
-  // Header slots — busca (center) + tabs + botão primário (actions).
+  // Header slots — busca com filtros (center) + pills + hamburger (actions).
   React.useEffect(() => {
     if (!slots) return;
     if (mode !== "fields") {
@@ -236,16 +314,19 @@ function CustomFieldsPage() {
       return () => slots.setCenter(null);
     }
     slots.setCenter(
-      <PageSearchBar
-        variant="compact"
-        value={search}
-        onChange={setSearch}
-        placeholder="Buscar campo..."
-        aria-label="Buscar campo personalizado"
+      <SettingsListFilterBar
+        search={search}
+        onSearch={setSearch}
+        placeholder="Buscar campo…"
+        ariaLabel="Buscar campo personalizado"
+        icon={<IconForms size={15} />}
+        groups={filterGroups}
+        popoverTitle="Filtrar campos"
+        onClearAll={resetFilters}
       />,
     );
     return () => slots.setCenter(null);
-  }, [slots, search, mode]);
+  }, [slots, search, mode, filterGroups, resetFilters]);
 
   React.useEffect(() => {
     if (!slots) return;
@@ -269,51 +350,88 @@ function CustomFieldsPage() {
           value={activeEntity}
           onChange={(v) => {
             setActiveEntity(v as EntityTab);
-            setSearch("");
+            resetFilters();
           }}
           size="compact"
           aria-label="Entidade dos campos"
         />
-        {mode === "fields" && (
-          <PagePrimaryButton
-            onClick={() => setCreateOpen(true)}
-            aria-label="Criar novo campo"
-          >
-            <IconPlus size={15} />
-            <span className="hidden sm:inline">Novo campo</span>
-          </PagePrimaryButton>
-        )}
+        <PageActionsMenu
+          aria-label="Ações de campos personalizados"
+          items={[
+            {
+              icon: <IconPlus size={16} />,
+              label: "Novo campo",
+              onClick: () => setCreateOpen(true),
+              primary: true,
+            },
+            {
+              icon: <IconStack2 size={16} />,
+              label: mode === "groups" ? "Ver campos" : "Organizar grupos",
+              onClick: () => setMode(mode === "groups" ? "fields" : "groups"),
+              divider: true,
+            },
+          ]}
+        />
       </div>,
     );
     return () => slots.setActions(null);
-  }, [slots, activeEntity, mode]);
+  }, [slots, activeEntity, mode, resetFilters]);
 
   if (mode === "groups") {
     return <CustomFieldGroupsManager entity={activeEntity} />;
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
-      {/* Resumo */}
-      {!isLoading && (
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="font-body text-[12.5px] text-[var(--text-muted)]">
-            {fields.length} campo{fields.length !== 1 ? "s" : ""}
-          </span>
-          {inboxCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 font-display text-[11px] font-semibold text-emerald-700">
-              <IconEye size={11} />
-              {inboxCount} no painel da Inbox
-            </span>
-          )}
-          {dealCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 font-display text-[11px] font-semibold text-violet-700">
-              <IconEye size={11} />
-              {dealCount} no painel do Negócio
-            </span>
-          )}
-        </div>
-      )}
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
+      {/* Mini-dash KPI */}
+      <section
+        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
+        aria-label="Indicadores de campos"
+      >
+        <KpiCard
+          label="Total"
+          value={fields.length.toLocaleString("pt-BR")}
+          icon={<IconForms size={20} stroke={2.2} />}
+          tone="brand"
+          active={visFilter === "todos" && reqFilter === "todos"}
+          onClick={() => {
+            setVisFilter("todos");
+            setReqFilter("todos");
+          }}
+        />
+        <KpiCard
+          label="No painel Inbox"
+          value={inboxCount.toLocaleString("pt-BR")}
+          icon={<IconEye size={20} stroke={2.2} />}
+          tone="success"
+          active={visFilter === "inbox"}
+          onClick={() =>
+            setVisFilter((v) => (v === "inbox" ? "todos" : "inbox"))
+          }
+        />
+        {activeEntity === "deal" && (
+          <KpiCard
+            label="No painel Negócio"
+            value={dealCount.toLocaleString("pt-BR")}
+            icon={<IconEye size={20} stroke={2.2} />}
+            tone="violet"
+            active={visFilter === "deal"}
+            onClick={() =>
+              setVisFilter((v) => (v === "deal" ? "todos" : "deal"))
+            }
+          />
+        )}
+        <KpiCard
+          label="Obrigatórios"
+          value={requiredCount.toLocaleString("pt-BR")}
+          icon={<IconAsterisk size={20} stroke={2.2} />}
+          tone="warning"
+          active={reqFilter === "sim"}
+          onClick={() =>
+            setReqFilter((v) => (v === "sim" ? "todos" : "sim"))
+          }
+        />
+      </section>
 
       {/* Lista */}
       {isLoading ? (

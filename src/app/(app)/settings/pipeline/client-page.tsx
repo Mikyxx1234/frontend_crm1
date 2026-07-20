@@ -28,9 +28,12 @@ import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { PasswordInput } from "@/components/ui/password-input";
 import { usePipelines, useBoard } from "@/features/pipeline-v2/hooks";
 import { boardKey } from "@/features/pipeline-v2/hooks/use-board";
+import { archivePipeline } from "@/features/pipeline-v2/api";
 import { useAutomations } from "@/features/automations-v2/hooks";
+import { useUserRole } from "@/hooks/use-user-role";
 import { apiUrl } from "@/lib/api";
 import { SETTINGS_HUB_BACK } from "../_v2-shell";
 import { AddAutomationDrawer } from "./add-automation-drawer";
@@ -1101,6 +1104,94 @@ function NewPipelineModal({
   );
 }
 
+// ─── Modal "Apagar pipeline" ──────────────────────────────────────
+
+function ArchivePipelineModal({
+  open,
+  pipelineName,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  pipelineName: string;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (password: string) => void;
+}) {
+  const [password, setPassword] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setPassword("");
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+      onClick={busy ? undefined : onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-6 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[color-mix(in_srgb,var(--color-danger)_25%,transparent)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]">
+            <IconTrash size={18} />
+          </span>
+          <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+            Apagar pipeline
+          </h2>
+        </div>
+        <p className="font-body text-[13px] leading-relaxed text-[var(--text-secondary)]">
+          O pipeline{" "}
+          <strong className="font-semibold text-[var(--text-primary)]">{pipelineName}</strong>,
+          suas etapas e negócios deixarão de aparecer no CRM. Os dados não são apagados
+          definitivamente — ficam arquivados no banco. Confirme com sua senha de login para
+          continuar.
+        </p>
+        <PasswordInput
+          ref={inputRef}
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && password && !busy) onConfirm(password);
+            if (e.key === "Escape" && !busy) onClose();
+          }}
+          placeholder="Sua senha de login..."
+          disabled={busy}
+          className="mt-4"
+        />
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            disabled={busy || !password}
+            onClick={() => onConfirm(password)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-danger)] px-4 py-2 font-display text-[12px] font-bold text-white shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-px hover:brightness-95 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <IconTrash size={13} />
+            {busy ? "Apagando..." : "Apagar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── TabsOverride ─────────────────────────────────────────────────
 
 interface TabsOverrideProps {
@@ -1109,6 +1200,9 @@ interface TabsOverrideProps {
   onSave: () => void;
   hasChanges: boolean;
   saving: boolean;
+  onDeletePipeline?: () => void;
+  canDelete?: boolean;
+  deleteDisabled?: boolean;
 }
 
 function PipelineSettingsTabs({
@@ -1117,6 +1211,9 @@ function PipelineSettingsTabs({
   onSave,
   hasChanges,
   saving,
+  onDeletePipeline,
+  canDelete,
+  deleteDisabled,
 }: TabsOverrideProps) {
   return (
     <div className="flex w-full items-center gap-2">
@@ -1138,6 +1235,23 @@ function PipelineSettingsTabs({
           <IconStar size={15} />
         </button>
       </TooltipGlass>
+
+      {canDelete && (
+        <TooltipGlass
+          label={deleteDisabled ? "Não é possível apagar o único pipeline" : "Apagar este pipeline"}
+          side="bottom"
+        >
+          <button
+            type="button"
+            onClick={onDeletePipeline}
+            disabled={deleteDisabled}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-danger)_35%,transparent)] bg-[var(--color-danger-bg)] px-4 py-1.5 font-display text-[12px] font-bold text-[var(--color-danger-text)] transition-all hover:-translate-y-px hover:brightness-95 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-40"
+          >
+            <IconTrash size={14} />
+            Apagar pipeline
+          </button>
+        </TooltipGlass>
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         <button
@@ -1164,10 +1278,16 @@ function PipelineSettingsTabs({
 export default function PipelineSettingsClientPage() {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
+  const { role, isSuperAdmin } = useUserRole();
+  const canDeletePipeline = role === "ADMIN" || isSuperAdmin;
 
   const { data: pipelines } = usePipelines(isAuthenticated);
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [newPipelineOpen, setNewPipelineOpen] = useState(false);
+
+  // Modal "Apagar pipeline"
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [archiveBusy, setArchiveBusy] = useState(false);
 
   // Automações por estágio (estado local)
   const [stageAutomationsMap, setStageAutomationsMap] = useState<Record<string, Automation[]>>({});
@@ -2004,6 +2124,41 @@ export default function PipelineSettingsClientPage() {
     }
   }, [pipelineId, queryClient]);
 
+  // Apagar pipeline (soft-archive) — ADMIN only. Guarda client-side de
+  // "último pipeline" espelha a validação 409 do backend, evitando um round
+  // trip óbvio; o backend segue sendo a fonte da verdade (defesa em
+  // profundidade caso a lista local esteja desatualizada).
+  const canArchiveCurrentPipeline = (pipelines?.length ?? 0) > 1;
+
+  const handleArchivePipeline = useCallback(
+    async (password: string) => {
+      if (!pipelineId) return;
+      setArchiveBusy(true);
+      try {
+        await archivePipeline(pipelineId, password);
+        const remaining = (pipelines ?? []).filter((p) => p.id !== pipelineId);
+        setArchiveModalOpen(false);
+        setPipelineId(remaining[0]?.id ?? null);
+        setStageOrder([]);
+        setStageNameOverrides({});
+        setStageColorOverrides({});
+        setStageAutomationsMap({});
+        await queryClient.invalidateQueries({ queryKey: ["pipelines-v2"] });
+        toast.success("Pipeline apagado.");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Erro ao apagar pipeline.");
+      } finally {
+        setArchiveBusy(false);
+      }
+    },
+    [pipelineId, pipelines, queryClient],
+  );
+
+  const currentPipelineName = useMemo(
+    () => pipelines?.find((p) => p.id === pipelineId)?.name ?? "",
+    [pipelines, pipelineId],
+  );
+
   return (
     <>
       <div
@@ -2032,6 +2187,9 @@ export default function PipelineSettingsClientPage() {
                 onSave={handleSaveAll}
                 hasChanges={hasChanges}
                 saving={saving}
+                onDeletePipeline={() => setArchiveModalOpen(true)}
+                canDelete={canDeletePipeline}
+                deleteDisabled={!pipelineId || !canArchiveCurrentPipeline}
               />
             }
           />
@@ -2093,6 +2251,14 @@ export default function PipelineSettingsClientPage() {
         open={newPipelineOpen}
         onClose={() => setNewPipelineOpen(false)}
         onConfirm={handleNewPipeline}
+      />
+
+      <ArchivePipelineModal
+        open={archiveModalOpen}
+        pipelineName={currentPipelineName}
+        busy={archiveBusy}
+        onClose={() => setArchiveModalOpen(false)}
+        onConfirm={handleArchivePipeline}
       />
 
       <RenameStageModal

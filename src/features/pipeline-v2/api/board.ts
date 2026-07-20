@@ -25,6 +25,33 @@ export async function listPipelines(): Promise<PipelineListItemDto[]> {
 }
 
 /**
+ * POST /api/pipelines/:id/archive — soft-archive do pipeline (ADMIN only).
+ *
+ * Exige senha de login no corpo (reautenticação); backend responde 403 se a
+ * senha estiver errada e 409 se for o último pipeline restante. O pipeline
+ * some das listagens (`listPipelines`/board) após sucesso, mas os dados
+ * (stages/deals) permanecem no banco — não é um DELETE definitivo.
+ */
+export async function archivePipeline(pipelineId: string, password: string): Promise<void> {
+  const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/archive`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const fallback =
+      res.status === 403
+        ? "Senha incorreta."
+        : res.status === 409
+          ? "Não é possível apagar o único pipeline restante."
+          : "Erro ao apagar pipeline.";
+    throw new Error(typeof data?.message === "string" ? data.message : fallback);
+  }
+}
+
+/**
  * Ordenação opcional dos cards dentro de cada coluna. Quando omitida,
  * o backend cai no default histórico (`position asc` = ordem manual
  * de drag-and-drop). Espelha os params aceitos pelo route handler em

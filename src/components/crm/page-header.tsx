@@ -124,9 +124,9 @@ export function PageHeader({
       <div className="flex flex-col gap-2 lg:hidden">
         <Identity icon={icon} title={title} back={back} titleAccessory={titleAccessory} />
         {hasControls ? (
-          <div className="toolbar-hscroll flex max-w-full flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-0 max-w-full items-center gap-2">
             {center ? (
-              <div className="shrink-0 [&_.relative]:!w-[min(280px,75vw)] [&_.relative]:!max-w-none">
+              <div className="min-w-0 flex-1 [&_.relative]:!w-full [&_.relative]:!max-w-none">
                 {center}
               </div>
             ) : null}

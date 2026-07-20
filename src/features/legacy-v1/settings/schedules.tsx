@@ -20,6 +20,8 @@ import { UserAvatar } from "@/components/crm/user-avatar";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
+import { KpiStrip } from "@/components/crm/kpi-strip";
+import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import {
@@ -441,10 +443,7 @@ export function ExpedienteTab({
       )}
 
       {/* KPI mini-dash */}
-      <section
-        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
-        aria-label="Indicadores de agentes"
-      >
+      <KpiStrip aria-label="Indicadores de agentes">
         <KpiCard
           label="Agentes"
           value={agents.length.toLocaleString("pt-BR")}
@@ -472,7 +471,7 @@ export function ExpedienteTab({
             />
           );
         })}
-      </section>
+      </KpiStrip>
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
@@ -489,7 +488,7 @@ export function ExpedienteTab({
           <p className="text-sm text-[var(--text-muted)]">Nenhum agente encontrado.</p>
         </div>
       ) : (
-        <div className="flex min-w-0 flex-col gap-2">
+        <MobileTableScroll minWidth={720}>
           {/* Column header */}
           <div
             className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
@@ -631,7 +630,7 @@ export function ExpedienteTab({
               );
             })
           )}
-        </div>
+        </MobileTableScroll>
       )}
 
       {/* Edit schedule dialog */}

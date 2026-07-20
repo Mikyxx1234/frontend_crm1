@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   IconAdjustmentsHorizontal,
   IconCheck,
@@ -67,7 +68,11 @@ export function SettingsListFilterBar({
   popoverTitle?: string;
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
+  const popoverRef = React.useRef<HTMLDivElement>(null);
   const [open, setOpen] = React.useState(false);
+  const [coords, setCoords] = React.useState<{ top: number; left: number; width: number } | null>(
+    null,
+  );
 
   const activeCount = groups.reduce(
     (acc, g) => acc + (g.value !== (g.options[0]?.value ?? "") ? 1 : 0),
@@ -75,14 +80,44 @@ export function SettingsListFilterBar({
   );
   const hasFilters = groups.length > 0;
 
+  const updateCoords = React.useCallback(() => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const width = Math.min(380, window.innerWidth - 16);
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+    const top = Math.min(rect.bottom + 8, window.innerHeight - 8);
+    setCoords({ top, left, width });
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    updateCoords();
+  }, [open, updateCoords]);
+
   React.useEffect(() => {
     if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    function onDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (
+        (!ref.current || !ref.current.contains(target)) &&
+        (!popoverRef.current || !popoverRef.current.contains(target))
+      ) {
+        setOpen(false);
+      }
     }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", updateCoords, { passive: true, capture: true });
+    window.addEventListener("resize", updateCoords, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", updateCoords, true);
+      window.removeEventListener("resize", updateCoords);
+    };
+  }, [open, updateCoords]);
 
   return (
     <div ref={ref} className="relative w-full">
@@ -117,8 +152,11 @@ export function SettingsListFilterBar({
         </button>
       )}
 
-      {open && hasFilters && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,380px)] flex-col overflow-visible rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
+      {open && hasFilters && coords && typeof document !== "undefined" && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ top: coords.top, left: coords.left, width: coords.width }}
+          className="fixed z-(--z-popover) flex flex-col overflow-visible rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
           <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
             <div className="flex items-center gap-2">
               <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">
@@ -178,7 +216,8 @@ export function SettingsListFilterBar({
               </div>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

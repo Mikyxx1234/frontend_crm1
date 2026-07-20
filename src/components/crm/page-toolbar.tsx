@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { IconArrowLeft, IconMenu2, IconSearch } from "@tabler/icons-react";
 
@@ -340,7 +341,9 @@ export function pageActionsMenuItemClass(opts?: {
 }
 
 export const pageActionsMenuPanelClass =
-  "absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] py-1.5 shadow-[0_8px_28px_rgba(15,23,42,0.13)] backdrop-blur-md";
+  "fixed z-(--z-popover) w-[220px] overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] py-1.5 shadow-[0_8px_28px_rgba(15,23,42,0.13)] backdrop-blur-md";
+
+const PAGE_ACTIONS_MENU_WIDTH = 220;
 
 export const pageActionsMenuTriggerClass =
   "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105";
@@ -357,22 +360,57 @@ export function PageActionsMenu({
   menuClassName?: string;
 }) {
   const [open, setOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = React.useState<{ top: number; right: number } | null>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+
+  const updateCoords = React.useCallback(() => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const right = Math.min(
+      Math.max(8, window.innerWidth - rect.right),
+      Math.max(8, window.innerWidth - PAGE_ACTIONS_MENU_WIDTH - 8),
+    );
+    const top = Math.min(rect.bottom + 6, window.innerHeight - 8);
+    setCoords({ top, right });
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    updateCoords();
+  }, [open, updateCoords]);
 
   React.useEffect(() => {
     if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    function onDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (
+        (!triggerRef.current || !triggerRef.current.contains(target)) &&
+        (!panelRef.current || !panelRef.current.contains(target))
+      ) {
+        setOpen(false);
+      }
     }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", updateCoords, { passive: true, capture: true });
+    window.addEventListener("resize", updateCoords, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", updateCoords, true);
+      window.removeEventListener("resize", updateCoords);
+    };
+  }, [open, updateCoords]);
 
   const hasForcedPrimary = items.some((it) => it.primary === true);
 
   return (
-    <div ref={ref} className={cn("relative shrink-0", className)}>
+    <div className={cn("relative shrink-0", className)}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={ariaLabel}
@@ -384,41 +422,49 @@ export function PageActionsMenu({
       >
         <IconMenu2 size={18} stroke={2.2} />
       </button>
-      {open && (
-        <div className={cn(pageActionsMenuPanelClass, menuClassName)} role="menu">
-          {items.map((it, idx) => {
-            const isPrimary =
-              it.primary === true ||
-              (!hasForcedPrimary &&
-                it.primary !== false &&
-                idx === 0 &&
-                !it.active);
-            return (
-              <div key={it.label}>
-                {it.divider && (
-                  <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
-                )}
-                <button
-                  type="button"
-                  role="menuitem"
-                  disabled={it.disabled}
-                  onClick={() => {
-                    setOpen(false);
-                    it.onClick();
-                  }}
-                  className={pageActionsMenuItemClass({
-                    primary: isPrimary,
-                    active: it.active,
-                  })}
-                >
-                  <span className="shrink-0">{it.icon}</span>
-                  {it.label}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {open && coords && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={panelRef}
+              className={cn(pageActionsMenuPanelClass, menuClassName)}
+              style={{ top: coords.top, right: coords.right }}
+              role="menu"
+            >
+              {items.map((it, idx) => {
+                const isPrimary =
+                  it.primary === true ||
+                  (!hasForcedPrimary &&
+                    it.primary !== false &&
+                    idx === 0 &&
+                    !it.active);
+                return (
+                  <div key={it.label}>
+                    {it.divider && (
+                      <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
+                    )}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={it.disabled}
+                      onClick={() => {
+                        setOpen(false);
+                        it.onClick();
+                      }}
+                      className={pageActionsMenuItemClass({
+                        primary: isPrimary,
+                        active: it.active,
+                      })}
+                    >
+                      <span className="shrink-0">{it.icon}</span>
+                      {it.label}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

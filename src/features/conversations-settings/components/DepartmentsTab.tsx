@@ -40,6 +40,8 @@ import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { KpiCard } from "@/components/crm/kpi-card";
+import { KpiStrip } from "@/components/crm/kpi-strip";
+import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import {
@@ -725,10 +727,7 @@ export function DepartmentsTab({ tabsSlot }: { tabsSlot?: React.ReactNode } = {}
   return (
     <div className="flex w-full min-w-0 flex-col gap-3.5">
       {/* KPI mini-dash */}
-      <section
-        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
-        aria-label="Indicadores de departamentos"
-      >
+      <KpiStrip aria-label="Indicadores de departamentos">
         <KpiCard
           label="Departamentos"
           value={stats.total.toLocaleString("pt-BR")}
@@ -763,7 +762,7 @@ export function DepartmentsTab({ tabsSlot }: { tabsSlot?: React.ReactNode } = {}
           active={filter === "without"}
           onClick={() => setFilter((prev) => (prev === "without" ? "all" : "without"))}
         />
-      </section>
+      </KpiStrip>
 
       {/* Bulk-delete bar */}
       {selected.size > 0 && (
@@ -811,7 +810,7 @@ export function DepartmentsTab({ tabsSlot }: { tabsSlot?: React.ReactNode } = {}
           )}
         </div>
       ) : (
-        <div className="flex min-w-0 flex-col gap-2">
+        <MobileTableScroll minWidth={780}>
           <div
             className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
             style={{ gridTemplateColumns: LIST_GRID }}
@@ -902,7 +901,7 @@ export function DepartmentsTab({ tabsSlot }: { tabsSlot?: React.ReactNode } = {}
               </div>
             );
           })}
-        </div>
+        </MobileTableScroll>
       )}
 
       <CreateDepartmentModal open={showCreate} onClose={() => setShowCreate(false)} />

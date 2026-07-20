@@ -104,6 +104,11 @@ export function MobileBottomNav() {
   const { data: prefs } = useSidebarPreferences();
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(true);
+  const [chatOpen, setChatOpen] = useState(
+    () =>
+      typeof document !== "undefined" &&
+      document.documentElement.dataset.mobileChatOpen === "1",
+  );
   const [initials, setInitials] = useState("··");
   const [displayName, setDisplayName] = useState("Usuário");
   const [email, setEmail] = useState<string | null>(null);
@@ -133,6 +138,18 @@ export function MobileBottomNav() {
   useEffect(() => {
     setVisible(true);
   }, [pathname]);
+
+  // Observa `html[data-mobile-chat-open]` (setado por useMobileChatChrome)
+  // para desmontar a nav enquanto o chat estiver aberto no mobile — evita
+  // que ela cubra o composer, sem depender só do CSS.
+  useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => setChatOpen(root.dataset.mobileChatOpen === "1");
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(root, { attributes: true, attributeFilter: ["data-mobile-chat-open"] });
+    return () => observer.disconnect();
+  }, []);
 
   // Hide on scroll down / show on scroll up — capture porque o scroll
   // acontece em containers internos (overflow-y-auto), nao no window.
@@ -202,6 +219,10 @@ export function MobileBottomNav() {
         ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
         : "text-[var(--nav-text-muted)] hover:bg-[var(--nav-text-hover-bg)] hover:text-[var(--nav-text-hover)]",
     );
+
+  // Chat aberto no mobile: a nav não deve existir no DOM, para não sobrar
+  // nenhuma chance de cobrir o composer (CSS já esconde, isto é reforço).
+  if (chatOpen) return null;
 
   return (
     <>

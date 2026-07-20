@@ -3,6 +3,7 @@
 import { Fragment, useRef, useState, useEffect, useCallback, type FormEvent } from "react"
 import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
+import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
@@ -354,6 +355,9 @@ export function ChatArea({
     onSendMessage(trimmed)
   }
 
+  // Mobile: esconde bottom nav global; composer fica fixo na base do chat.
+  useMobileChatChrome(true)
+
   return (
     <main
       aria-label={`Conversa com ${contact.name}`}
@@ -604,15 +608,19 @@ export function ChatArea({
         </button>
       )}
 
-      {/* SESSION ALERT */}
+      {/* Footer fixo: alerta + composer (Mensagem/Nota + input). No mobile a
+          bottom nav some via useMobileChatChrome — bloco fica na base. */}
+      <div
+        data-chat-composer-footer
+        className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1.5 backdrop-blur-md"
+      >
       {showSessionAlert && <SessionAlert onUseTemplate={onUseTemplate} />}
 
-      {/* INPUT BAR */}
       {composerSlot ?? (
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="mx-6 mb-6 flex h-11 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-3 pr-1.5 shadow-[var(--glass-shadow-sm)]"
+          className="mx-6 mb-2 flex h-11 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-3 pr-1.5 shadow-[var(--glass-shadow-sm)] max-md:mx-3"
         >
           <TooltipGlass label="Anexar" side="top">
             <button
@@ -662,6 +670,7 @@ export function ChatArea({
           </TooltipGlass>
         </form>
       )}
+      </div>
         </>
       )}
     </main>

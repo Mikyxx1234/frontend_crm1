@@ -387,6 +387,17 @@ html[data-nav-expanded="true"] {
   .v2-screen {
     grid-template-columns: minmax(0, 1fr) !important;
   }
+
+  /* Chat aberto: esconde a bottom nav global e zera a altura reservada
+     para o composer/barra Mensagem|Nota ficar fixo na base da conversa. */
+  html[data-mobile-chat-open="1"] {
+    --mobile-bottom-nav-h: 0px;
+  }
+  html[data-mobile-chat-open="1"] [data-mobile-bottom-nav] {
+    transform: translateY(100%) !important;
+    pointer-events: none !important;
+    visibility: hidden;
+  }
 }
 
 .v2-root {

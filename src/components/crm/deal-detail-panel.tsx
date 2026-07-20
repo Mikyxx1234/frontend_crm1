@@ -61,6 +61,7 @@ import { CustomFieldGroupBlock } from "@/components/crm/fields/custom-field-grou
 import { useContactSources } from "@/hooks/use-contact-sources"
 import { formatPhoneDisplay } from "@/lib/phone"
 import { useIsDesktop } from "@/hooks/use-media-query"
+import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
 // Mudancas (DD4 + DD5 do questionario):
@@ -386,6 +387,8 @@ export function DealDetailPanel({
   // Detecção de viewport: < lg (1024px) ativa o layout mobile (painel único +
   // switcher Conversa | Detalhes). Desktop mantém o grid 2-colunas com resize.
   const isDesktop = useIsDesktop()
+  // Mobile: esconde bottom nav global enquanto o chat do deal estiver aberto.
+  useMobileChatChrome(Boolean(isOpen && (messagesSlot || composerSlot || sessionAlertSlot)))
   const [mobilePane, setMobilePane] = useState<"conversa" | "detalhes">("conversa")
 
   // DD8 do questionario: respeitar visibilidade de blocos configurada via
@@ -1475,13 +1478,17 @@ export function DealDetailPanel({
 
               {pinnedMessageSlot}
 
-              <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
+              <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
                 {messagesSlot}
               </div>
 
-              {sessionAlertSlot}
-
-              {composerSlot ? composerSlot : <FallbackComposer />}
+              <div
+                data-chat-composer-footer
+                className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1.5 backdrop-blur-md"
+              >
+                {sessionAlertSlot}
+                {composerSlot ? composerSlot : <FallbackComposer />}
+              </div>
             </main>
           ) : (
             // Default: container com header de tabs + ChatArea mock.

@@ -21,16 +21,17 @@ export type PageHeaderBack = {
  *
  * Mobile (< lg): título numa linha; busca + ações numa faixa
  * `toolbar-hscroll` (mesmo padrão do Pipeline / kanban).
- * Desktop (lg+): identidade com largura fixa → busca com largura fixa →
- * spacer → ações. Assim a barra começa sempre na mesma coluna, independente
- * do tamanho do título.
+ * Desktop (lg+): identidade com largura fixa → busca flexível (encolhe até
+ * caber, até um máximo) → spacer → ações. Assim a barra começa sempre na
+ * mesma coluna, independente do tamanho do título, e as ações nunca são
+ * recortadas.
  * Descrições de página foram removidas do padrão NavRail.
  */
 
 /** Largura da coluna de identidade (ícone + título) — alinha a busca entre páginas. */
 const IDENTITY_COL = "w-[18rem]"
-/** Largura da barra de busca no header. */
-const SEARCH_COL = "w-[32rem]"
+/** Largura máxima da barra de busca no header — encolhe antes de recortar as ações. */
+const SEARCH_COL = "min-w-0 flex-1 max-w-[32rem]"
 
 interface PageHeaderProps {
   icon: React.ReactNode
@@ -104,13 +105,13 @@ export function PageHeader({
 
   return (
     <div className={cn("flex flex-col gap-2 px-1", className)}>
-      {/* Desktop: identidade (largura fixa) → busca (largura fixa) → spacer → ações */}
+      {/* Desktop: identidade (largura fixa) → busca (flexível, até max-w) → spacer → ações */}
       <div className="hidden items-center gap-4 lg:flex">
         <div className={cn(IDENTITY_COL, "shrink-0")}>
           <Identity icon={icon} title={title} back={back} titleAccessory={titleAccessory} />
         </div>
         {center ? (
-          <div className={cn(SEARCH_COL, "min-w-0 shrink-0 [&_.relative]:!w-full [&_.relative]:!max-w-none")}>
+          <div className={cn(SEARCH_COL, "[&_.relative]:!w-full [&_.relative]:!max-w-none")}>
             {center}
           </div>
         ) : null}

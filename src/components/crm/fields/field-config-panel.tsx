@@ -41,7 +41,6 @@ import { cn } from "@/lib/utils";
 import { useFieldLayout, type FieldLayoutContext } from "@/hooks/use-field-layout";
 import { type SectionConfig } from "@/lib/field-layout";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
-import { Textarea } from "@/components/ui/textarea";
 import {
   type HighlightRule,
   type HighlightOp,
@@ -76,10 +75,10 @@ const ENTITY_LABEL: Record<FieldConfigEntity, string> = {
 
 const TYPES = [
   { value: "TEXT", label: "Texto" },
-  { value: "NUMBER", label: "Número" },
-  { value: "DATE", label: "Data" },
   { value: "SELECT", label: "Seleção" },
   { value: "MULTI_SELECT", label: "Multi-seleção" },
+  { value: "NUMBER", label: "Número" },
+  { value: "DATE", label: "Data" },
   { value: "BOOLEAN", label: "Sim/Não" },
   { value: "URL", label: "URL" },
   { value: "EMAIL", label: "E-mail" },
@@ -963,21 +962,34 @@ function FieldForm({
   const [label, setLabel] = React.useState(initial?.label ?? "");
   const [type, setType] = React.useState(initial?.type ?? "TEXT");
   const [required, setRequired] = React.useState(initial?.required ?? false);
-  const [optionsText, setOptionsText] = React.useState(
-    initial?.options.join("\n") ?? "",
+  const [options, setOptions] = React.useState<string[]>(
+    initial?.options ?? [],
   );
+  const [optionsError, setOptionsError] = React.useState<string | null>(null);
+  const [optionDraft, setOptionDraft] = React.useState("");
   const [highlightRules, setHighlightRules] = React.useState<HighlightRule[]>(
     () => parseHighlightRules(initial?.highlightRules ?? []),
   );
 
   const showOptions = type === "SELECT" || type === "MULTI_SELECT";
 
+  function addOption() {
+    const value = optionDraft.trim();
+    if (!value || options.includes(value)) {
+      setOptionDraft("");
+      return;
+    }
+    setOptions((prev) => [...prev, value]);
+    setOptionDraft("");
+    setOptionsError(null);
+  }
+
+  function removeOption(index: number) {
+    setOptions((prev) => prev.filter((_, i) => i !== index));
+  }
+
   const mutation = useMutation({
     mutationFn: async () => {
-      const options = optionsText
-        .split("\n")
-        .map((o) => o.trim())
-        .filter(Boolean);
       if (isEdit && initial) {
         return updateField(initial.id, { label, type, options, required, highlightRules });
       }
@@ -986,6 +998,15 @@ function FieldForm({
     onSuccess: onSaved,
     onError: (e: Error) => toast.error(e.message),
   });
+
+  function handleSubmit() {
+    if (showOptions && options.length === 0) {
+      setOptionsError("Adicione pelo menos uma alternativa");
+      return;
+    }
+    setOptionsError(null);
+    mutation.mutate();
+  }
 
   return (
     <div className="mt-2 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/30 bg-[color-mix(in_srgb,var(--brand-primary)_5%,transparent)] p-3">
@@ -1056,20 +1077,70 @@ function FieldForm({
             </div>
           )}
 
-          {/* Opções */}
+          {/* Alternativas */}
           {showOptions && (
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="font-display text-[10.5px] font-semibold text-[var(--text-muted)]">
-                Opções (uma por linha)
+                Alternativas
               </span>
-              <Textarea
-                value={optionsText}
-                onChange={(e) => setOptionsText(e.target.value)}
-                rows={3}
-                placeholder={"Opção 1\nOpção 2"}
-                className="resize-none text-[12px]"
-              />
-            </label>
+              <span className="-mt-0.5 font-body text-[10.5px] text-[var(--text-muted)]">
+                Opções exibidas na lista de seleção
+              </span>
+
+              {options.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {options.map((opt, i) => (
+                    <span
+                      key={`${opt}-${i}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pl-2 pr-1 py-0.5 font-body text-[11.5px] text-[var(--text-primary)]"
+                    >
+                      {opt}
+                      <button
+                        type="button"
+                        onClick={() => removeOption(i)}
+                        className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500"
+                        title={`Remover "${opt}"`}
+                      >
+                        <IconX size={9} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="font-body text-[11px] text-[var(--text-muted)]/80">
+                  Adicione pelo menos uma alternativa
+                </span>
+              )}
+
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={optionDraft}
+                  onChange={(e) => setOptionDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addOption();
+                    }
+                  }}
+                  placeholder="Nova alternativa"
+                  className="h-7 flex-1 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 font-display text-[11.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
+                />
+                <button
+                  type="button"
+                  onClick={addOption}
+                  className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 font-display text-[11px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                >
+                  Adicionar
+                </button>
+              </div>
+
+              {optionsError && (
+                <span className="font-body text-[10.5px] text-red-500">
+                  {optionsError}
+                </span>
+              )}
+            </div>
           )}
 
           {/* Obrigatório */}
@@ -1105,7 +1176,7 @@ function FieldForm({
         </button>
         <button
           type="button"
-          onClick={() => mutation.mutate()}
+          onClick={handleSubmit}
           disabled={mutation.isPending || !label.trim()}
           className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1.5 font-display text-[11px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >

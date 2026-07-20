@@ -6,6 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { IconX as X } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
+import { ModalPortalContext } from "@/components/ui/modal-portal-context";
 
 type SheetContextValue = {
   open: boolean;
@@ -117,10 +118,17 @@ const SheetContent = React.forwardRef<HTMLDialogElement, SheetContentProps>(
   ({ className, children, side = "right", ...props }, ref) => {
     const { open, onOpenChange } = useSheetContext("SheetContent");
     const internalRef = React.useRef<HTMLDialogElement | null>(null);
+    // Nó publicado no contexto de portal: popovers/menus (DropdownGlass) portam
+    // pra dentro do `<dialog>` (top-layer) em vez do body, senão ficam atrás do
+    // backdrop e os cliques são interceptados pelo modal.
+    const [portalNode, setPortalNode] = React.useState<HTMLDialogElement | null>(
+      null
+    );
 
     const setRefs = React.useCallback(
       (node: HTMLDialogElement | null) => {
         internalRef.current = node;
+        setPortalNode(node);
         if (typeof ref === "function") ref(node);
         else if (ref != null)
           (ref as React.MutableRefObject<HTMLDialogElement | null>).current =
@@ -184,7 +192,9 @@ const SheetContent = React.forwardRef<HTMLDialogElement, SheetContentProps>(
             className={cn(sheetPanelVariants({ side }), "overflow-hidden p-6", className)}
             onClick={(e) => e.stopPropagation()}
           >
-            {children}
+            <ModalPortalContext.Provider value={portalNode}>
+              {children}
+            </ModalPortalContext.Provider>
           </div>
         </div>
       </dialog>,

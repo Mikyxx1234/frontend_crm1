@@ -1951,3 +1951,10 @@ aplicada com SQL aditivo idempotente em
 `Message.channelId` é nullable → mensagens históricas ficam sem rótulo.
 
 ---
+
+## Decisões técnicas
+
+### 2026-07-20 — Biometria no APK (escopo A)
+- Modelo: Opus (Cursor Grok 4.5 / orquestração)
+- Decisão: cadeado local com `@capgo/capacitor-native-biometric`; só com sessão logada; flag `crm_biometric_lock_enabled` em localStorage; toggle no Perfil; sem Firebase/push neste escopo.
+- Alternativas descartadas: login biométrico substituindo senha; WebAuthn-only no browser; SecureStorage de senha.

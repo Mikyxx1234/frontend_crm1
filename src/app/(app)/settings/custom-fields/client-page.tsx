@@ -25,6 +25,7 @@ import {
   IconStack2,
   IconToggleLeft,
   IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 import {
   DragDropContext,
@@ -86,10 +87,10 @@ type PageMode = "fields" | "groups";
 
 const TYPES = [
   { value: "TEXT", label: "Texto" },
-  { value: "NUMBER", label: "Número" },
-  { value: "DATE", label: "Data" },
   { value: "SELECT", label: "Seleção" },
   { value: "MULTI_SELECT", label: "Multi-seleção" },
+  { value: "NUMBER", label: "Número" },
+  { value: "DATE", label: "Data" },
   { value: "BOOLEAN", label: "Sim/Não" },
   { value: "URL", label: "URL" },
   { value: "EMAIL", label: "E-mail" },
@@ -819,6 +820,86 @@ function FieldLabel({
   );
 }
 
+function AlternativesEditor({
+  options,
+  onChange,
+  error,
+}: {
+  options: string[];
+  onChange: (next: string[]) => void;
+  error?: string | null;
+}) {
+  const [draft, setDraft] = React.useState("");
+
+  function addOption() {
+    const value = draft.trim();
+    if (!value || options.includes(value)) {
+      setDraft("");
+      return;
+    }
+    onChange([...options, value]);
+    setDraft("");
+  }
+
+  function removeOption(index: number) {
+    onChange(options.filter((_, i) => i !== index));
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <FieldLabel>Alternativas</FieldLabel>
+      <p className="-mt-1 font-body text-[11.5px] text-[var(--text-muted)]">
+        Opções exibidas na lista de seleção
+      </p>
+
+      {options.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {options.map((opt, i) => (
+            <span
+              key={`${opt}-${i}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-3 pr-1.5 py-1 font-body text-[12.5px] text-[var(--text-primary)]"
+            >
+              {opt}
+              <button
+                type="button"
+                onClick={() => removeOption(i)}
+                className="flex h-4.5 w-4.5 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500"
+                title={`Remover "${opt}"`}
+              >
+                <IconX size={11} />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="font-body text-[12px] text-[var(--text-muted)]/80">
+          Adicione pelo menos uma alternativa
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <InputGlass
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addOption();
+            }
+          }}
+          placeholder="Nova alternativa"
+          className="flex-1"
+        />
+        <ButtonGlass type="button" variant="glass" size="sm" onClick={addOption}>
+          Adicionar
+        </ButtonGlass>
+      </div>
+
+      {error && <p className="font-body text-[11.5px] text-red-500">{error}</p>}
+    </div>
+  );
+}
+
 function FieldFormDialog({
   open,
   onOpenChange,
@@ -839,9 +920,10 @@ function FieldFormDialog({
   const [type, setType] = React.useState(initial?.type ?? "TEXT");
   const [entity, setEntity] = React.useState(initial?.entity ?? defaultEntity);
   const [required, setRequired] = React.useState(initial?.required ?? false);
-  const [optionsText, setOptionsText] = React.useState(
-    initial?.options.join("\n") ?? "",
+  const [options, setOptions] = React.useState<string[]>(
+    initial?.options ?? [],
   );
+  const [optionsError, setOptionsError] = React.useState<string | null>(null);
   const [showInInboxLeadPanel, setShowInInboxLeadPanel] = React.useState(
     initial?.showInInboxLeadPanel ?? false,
   );
@@ -856,7 +938,8 @@ function FieldFormDialog({
       setType(initial.type);
       setEntity(initial.entity);
       setRequired(initial.required);
-      setOptionsText(initial.options.join("\n"));
+      setOptions(initial.options ?? []);
+      setOptionsError(null);
       setShowInInboxLeadPanel(initial.showInInboxLeadPanel ?? false);
       setShowInDealPanel(initial.showInDealPanel ?? false);
     } else if (open && !initial) {
@@ -865,7 +948,8 @@ function FieldFormDialog({
       setType("TEXT");
       setEntity(defaultEntity);
       setRequired(false);
-      setOptionsText("");
+      setOptions([]);
+      setOptionsError(null);
       setShowInInboxLeadPanel(false);
       setShowInDealPanel(false);
     }
@@ -880,10 +964,6 @@ function FieldFormDialog({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const options = optionsText
-        .split("\n")
-        .map((o) => o.trim())
-        .filter(Boolean);
       if (mode === "create") {
         return createField({
           name,
@@ -962,6 +1042,11 @@ function FieldFormDialog({
         id="field-form"
         onSubmit={(e) => {
           e.preventDefault();
+          if (showOptions && options.length === 0) {
+            setOptionsError("Adicione pelo menos uma alternativa");
+            return;
+          }
+          setOptionsError(null);
           mutation.mutate();
         }}
       >
@@ -1026,16 +1111,14 @@ function FieldFormDialog({
           </div>
 
           {showOptions && (
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel>Opções (uma por linha)</FieldLabel>
-              <textarea
-                value={optionsText}
-                onChange={(e) => setOptionsText(e.target.value)}
-                rows={4}
-                placeholder={"Opção 1\nOpção 2\nOpção 3"}
-                className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
-              />
-            </div>
+            <AlternativesEditor
+              options={options}
+              onChange={(next) => {
+                setOptions(next);
+                if (next.length > 0) setOptionsError(null);
+              }}
+              error={optionsError}
+            />
           )}
 
           <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">

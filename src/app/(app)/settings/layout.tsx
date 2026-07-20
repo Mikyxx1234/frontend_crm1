@@ -1,4 +1,11 @@
+"use client";
+
+import { useState } from "react";
+import { IconLayoutSidebarLeftExpand } from "@tabler/icons-react";
+
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { cn } from "@/lib/utils";
 
 import { SettingsSidebar } from "./_components/settings-sidebar";
 import { SettingsSlide } from "./_components/settings-slide";
@@ -10,19 +17,56 @@ import { SettingsSlide } from "./_components/settings-slide";
  * O painel direito envolve `{children}` num wrapper com `key={pathname}` para
  * animar a entrada do conteúdo da direita a cada troca de sub-rota.
  *
- * Sub-páginas continuam usando o `SettingsV2Shell` (agora sem NavRailV2),
- * então recebem o PageHeader/slots dentro deste painel — sem duplicação.
+ * A sidebar é retrátil: clicando no botão do próprio header, o grid transita
+ * a largura da coluna do meio para 0 (retrai para a esquerda) e um botão
+ * flutuante aparece à beira do painel direito para expandi-la de volta.
  */
 export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(true);
+
   return (
-    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(240px,300px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
+    <div
+      className={cn(
+        "v2-screen grid min-w-0 grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4",
+        // Transição do grid: a coluna do meio anima entre 0 e 288px.
+        "transition-[grid-template-columns] duration-300 ease-out",
+        open
+          ? "grid-cols-[var(--nav-rail-w,72px)_minmax(240px,288px)_minmax(0,1fr)]"
+          : "grid-cols-[var(--nav-rail-w,72px)_0px_minmax(0,1fr)]",
+      )}
+    >
       <NavRailV2 />
-      <SettingsSidebar />
-      <SettingsSlide>{children}</SettingsSlide>
+
+      {/* Coluna da sidebar — sempre montada; o overflow-hidden clipa quando a
+          coluna colapsa a 0. Dentro, a própria sidebar aplica translate-x e
+          fade pra transição parecer com o grid. */}
+      <div className="relative min-w-0 overflow-hidden">
+        <SettingsSidebar open={open} onClose={() => setOpen(false)} />
+      </div>
+
+      <div className="relative flex min-w-0 flex-col overflow-hidden">
+        {/* Botão flutuante para reabrir a sidebar */}
+        {!open && (
+          <div className="pointer-events-none absolute left-0 top-1/2 z-10 -translate-y-1/2 pl-1">
+            <TooltipGlass label="Mostrar menu" side="right">
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                aria-label="Expandir menu de configurações"
+                className="pointer-events-auto flex h-9 w-6 items-center justify-center rounded-r-[var(--radius-md)] border border-l-0 border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-colors hover:text-[var(--brand-primary)]"
+              >
+                <IconLayoutSidebarLeftExpand size={16} />
+              </button>
+            </TooltipGlass>
+          </div>
+        )}
+
+        <SettingsSlide>{children}</SettingsSlide>
+      </div>
     </div>
   );
 }

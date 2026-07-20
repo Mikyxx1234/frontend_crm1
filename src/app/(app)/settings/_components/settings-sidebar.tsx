@@ -4,12 +4,12 @@
  * Sidebar mestre da tela de Configurações (layout master-detail).
  *
  * Fonte de dados: `SETTINGS_NAV` + `SETTINGS_PERSONAL` filtrados por
- * permissão via `filterSettingsNav`. Preserva a mesma UX de busca e
- * colapso do hub antigo (`settings/client-page.tsx`), com layout vertical
- * e denso para caber na coluna esquerda do layout.
+ * permissão via `filterSettingsNav`. Itens são achatados numa única lista
+ * ordenada alfabeticamente — sem cabeçalhos de grupo, mais limpo.
  *
- * Fica dentro de um card glass — mesmos tokens (`--glass-*`, `--brand-primary`)
- * usados no hub anterior; nenhum estilo novo/inventado.
+ * A sidebar é retrátil: o botão do header dispara `onClose`, e o layout
+ * cuida da animação de largura via grid-template-columns. Este componente
+ * também aplica translate/opacity próprios para casar com o movimento.
  */
 
 import Link from "next/link";
@@ -17,10 +17,11 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
   IconAdjustments as Settings2,
-  IconChevronDown as ChevronDown,
+  IconLayoutSidebarLeftCollapse,
 } from "@tabler/icons-react";
 
 import { PageSearchBar } from "@/components/crm/page-toolbar";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { useUserRole } from "@/hooks/use-user-role";
 import { cn } from "@/lib/utils";
@@ -32,7 +33,12 @@ import {
   type SettingsNavItem,
 } from "@/lib/settings-nav";
 
-export function SettingsSidebar() {
+interface SettingsSidebarProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function SettingsSidebar({ open, onClose }: SettingsSidebarProps) {
   const pathname = usePathname();
   const { role, isSuperAdmin } = useUserRole();
   const { data: myPerms } = useMyPermissions();
@@ -46,55 +52,41 @@ export function SettingsSidebar() {
     [role, isSuperAdmin, myPerms?.permissions],
   );
 
-  const allGroups = useMemo(
-    () => filterSettingsNav(SETTINGS_NAV, viewer),
-    [viewer],
-  );
+  // Achata todos os itens (pessoais + grupos, filtrados por permissão) numa
+  // única lista alfabética. Sem cabeçalhos de grupo — layout mais limpo.
+  const flatItems = useMemo(() => {
+    const fromGroups = filterSettingsNav(SETTINGS_NAV, viewer).flatMap(
+      (g) => g.items,
+    );
+    const all = [...SETTINGS_PERSONAL, ...fromGroups];
+    // Ordena por label em pt-BR (ignora acentos/caixa).
+    return all.sort((a, b) =>
+      a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" }),
+    );
+  }, [viewer]);
 
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
   const searching = q.length > 0;
 
-  const matches = (...parts: (string | undefined)[]) =>
-    parts.some((p) => p?.toLowerCase().includes(q));
-
-  const personalItems = useMemo(
-    () =>
-      searching
-        ? SETTINGS_PERSONAL.filter((i) => matches(i.label, i.description))
-        : SETTINGS_PERSONAL,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [searching, q],
-  );
-
-  const settingsGroups = useMemo(() => {
-    if (!searching) return allGroups;
-    return allGroups
-      .map((group) => {
-        if (matches(group.label, group.description)) return group;
-        const items = group.items.filter((it) =>
-          matches(it.label, it.description, it.eyebrow),
-        );
-        return items.length ? { ...group, items } : null;
-      })
-      .filter((g): g is (typeof allGroups)[number] => g !== null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allGroups, searching, q]);
-
-  const hasResults = personalItems.length > 0 || settingsGroups.length > 0;
-
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const toggleGroup = (id: string) =>
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const items = useMemo(() => {
+    if (!searching) return flatItems;
+    return flatItems.filter((it) =>
+      [it.label, it.description, it.eyebrow].some((p) =>
+        p?.toLowerCase().includes(q),
+      ),
+    );
+  }, [flatItems, searching, q]);
 
   return (
     <aside
       aria-label="Menu de configurações"
-      className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm"
+      aria-hidden={!open}
+      className={cn(
+        "flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm",
+        "transition-[transform,opacity] duration-300 ease-out",
+        open ? "translate-x-0 opacity-100" : "-translate-x-3 opacity-0",
+      )}
     >
       {/* Header do card */}
       <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-3 sm:px-4">
@@ -113,6 +105,16 @@ export function SettingsSidebar() {
         >
           Configurações
         </h2>
+        <TooltipGlass label="Recolher menu" side="bottom">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Recolher menu de configurações"
+            className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+          >
+            <IconLayoutSidebarLeftCollapse size={16} />
+          </button>
+        </TooltipGlass>
       </div>
 
       {/* Busca */}
@@ -126,82 +128,17 @@ export function SettingsSidebar() {
         />
       </div>
 
-      {/* Lista rolável */}
+      {/* Lista rolável — flat + alfabética */}
       <div className="flex-1 overflow-y-auto overscroll-contain px-2 py-2 [-webkit-overflow-scrolling:touch] sm:px-2.5">
-        {/* Atalhos pessoais */}
-        {personalItems.length > 0 && (
+        {items.length > 0 ? (
           <ul className="flex flex-col gap-0.5">
-            {personalItems.map((item) => (
+            {items.map((item) => (
               <li key={item.id}>
                 <SidebarItem item={item} pathname={pathname} />
               </li>
             ))}
           </ul>
-        )}
-
-        {/* Divisor sutil entre atalhos e grupos */}
-        {personalItems.length > 0 && settingsGroups.length > 0 && (
-          <div className="my-2 h-px bg-[var(--glass-border-subtle)]" />
-        )}
-
-        {/* Grupos */}
-        <div className="flex flex-col gap-1">
-          {settingsGroups.map((group) => {
-            const GroupIcon = group.icon;
-            const isCollapsed = !searching && collapsed.has(group.id);
-            return (
-              <section key={group.id} aria-labelledby={`side-group-${group.id}`}>
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.id)}
-                  aria-expanded={!isCollapsed}
-                  aria-controls={`side-group-body-${group.id}`}
-                  className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
-                >
-                  <GroupIcon
-                    className="size-3.5 shrink-0"
-                    // Ícone do grupo em tom muted (a coluna já é estreita).
-                    style={{ color: "var(--text-muted)" }}
-                  />
-                  <span
-                    id={`side-group-${group.id}`}
-                    className="flex-1 truncate font-display text-[11px] font-bold uppercase tracking-wider"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {group.label}
-                  </span>
-                  <ChevronDown
-                    className="size-3.5 shrink-0 transition-transform duration-200"
-                    style={{
-                      color: "var(--text-muted)",
-                      transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-                    }}
-                  />
-                </button>
-
-                <div
-                  id={`side-group-body-${group.id}`}
-                  className={cn(
-                    "grid transition-[grid-template-rows] duration-300 ease-out",
-                    isCollapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
-                  )}
-                >
-                  <div className="overflow-hidden">
-                    <ul className="flex flex-col gap-0.5 pt-0.5">
-                      {group.items.map((item) => (
-                        <li key={item.id}>
-                          <SidebarItem item={item} pathname={pathname} />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </section>
-            );
-          })}
-        </div>
-
-        {searching && !hasResults && (
+        ) : (
           <div className="mt-4 rounded-[var(--radius-md)] border border-dashed border-[var(--glass-border)] px-3 py-4 text-center">
             <p
               className="text-[12px] font-medium"
@@ -308,6 +245,5 @@ function SidebarItem({
 
 function isRouteActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
-  // Match sub-routes: /settings/channels/xyz também ativa "Canais".
   return pathname.startsWith(`${href}/`);
 }

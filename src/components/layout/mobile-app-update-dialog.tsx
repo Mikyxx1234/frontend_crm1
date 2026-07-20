@@ -5,14 +5,22 @@
  *
  * Diferente do `UpdateAvailableBanner` (desktop, baseado em semver de
  * `NEXT_PUBLIC_APP_VERSION` + localStorage, focado em mostrar "novidades"),
- * este popup só existe em viewport mobile e é focado em pedir reload — o
- * WebView do APK não recebe o novo bundle sozinho como uma aba de navegador
- * normal faria em alguns casos, então avisamos o usuário a fechar/reabrir
- * (ou recarregar) quando detectamos um deploy novo.
+ * este popup só existe em viewport mobile/Capacitor e é focado em pedir
+ * reload — o WebView do APK não recebe o novo bundle sozinho como uma aba
+ * de navegador normal faria em alguns casos, então avisamos o usuário a
+ * fechar/reabrir (ou recarregar) quando detectamos um deploy novo.
  *
- * Detecção: `generatedAt` de `/changelog.json` (gerado a cada build por
- * `scripts/generate-changelog.mjs`) muda em todo deploy, independente de
- * versão semver — serve como fingerprint barato do build atual.
+ * Detecção: `NEXT_PUBLIC_BUILD_ID` é embutido no JS do cliente em build
+ * time (via `next.config.ts`, lendo `public/app-revision.json` gerado por
+ * `scripts/generate-app-revision.mjs`). Comparamos esse valor fixo do
+ * cliente contra `GET /api/app-revision` — rota dinâmica (`no-store`,
+ * excluída do precache do Serwist) que sempre reflete o build rodando no
+ * servidor. Se divergirem, o deploy mudou e o cliente está desatualizado.
+ *
+ * Isso evita dois problemas do fingerprint anterior (`changelog.json`):
+ *   1. Era comparado só dentro da mesma sessão (primeira leitura virava
+ *      baseline) — nunca detectava updates ocorridos antes do open.
+ *   2. Era um arquivo estático `/changelog.json`, sujeito a cache do SW.
  */
 
 import * as React from "react";
@@ -29,15 +37,28 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useIsMobile } from "@/hooks/use-media-query";
 
-const POLL_INTERVAL_MS = 60_000;
+const POLL_INTERVAL_MS = 30_000;
 const DISMISSED_REVISION_KEY = "crm_mobile_update_dismissed_revision";
 
-async function fetchChangelogGeneratedAt(): Promise<string | null> {
+/** Fingerprint do build atual, embutido em build time. Vazio em builds sem CI/local sem prebuild. */
+const CLIENT_REVISION = (process.env.NEXT_PUBLIC_BUILD_ID ?? "").trim();
+
+function isNativePlatform(): boolean {
+  if (typeof window === "undefined") return false;
+  const capacitor = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
   try {
-    const res = await fetch("/changelog.json", { cache: "no-store" });
+    return capacitor?.isNativePlatform?.() ?? false;
+  } catch {
+    return false;
+  }
+}
+
+async function fetchRemoteRevision(): Promise<string | null> {
+  try {
+    const res = await fetch(`/api/app-revision?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) return null;
-    const data = (await res.json()) as { generatedAt?: string };
-    return data.generatedAt?.trim() || null;
+    const data = (await res.json()) as { revision?: string };
+    return data.revision?.trim() || null;
   } catch {
     return null;
   }
@@ -45,28 +66,25 @@ async function fetchChangelogGeneratedAt(): Promise<string | null> {
 
 export function MobileAppUpdateDialog() {
   const isMobile = useIsMobile();
-
-  /** Revisão vista no mount desta sessão — referência de comparação. */
-  const sessionRevision = React.useRef<string | null>(null);
+  const [isNative, setIsNative] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [pendingRevision, setPendingRevision] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    setIsNative(isNativePlatform());
+  }, []);
+
+  const active = isMobile || isNative;
+
   const checkForUpdate = React.useCallback(async () => {
-    const remote = await fetchChangelogGeneratedAt();
+    if (!CLIENT_REVISION || CLIENT_REVISION === "dev") return;
+
+    const remote = await fetchRemoteRevision();
     if (!remote) return;
-
-    // Primeira leitura da sessão: apenas fixa a referência.
-    if (!sessionRevision.current) {
-      sessionRevision.current = remote;
-      return;
-    }
-
-    if (remote === sessionRevision.current) return;
+    if (remote === CLIENT_REVISION) return;
 
     const dismissed =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem(DISMISSED_REVISION_KEY)
-        : null;
+      typeof window !== "undefined" ? window.localStorage.getItem(DISMISSED_REVISION_KEY) : null;
     if (dismissed === remote) return;
 
     setPendingRevision(remote);
@@ -74,7 +92,7 @@ export function MobileAppUpdateDialog() {
   }, []);
 
   React.useEffect(() => {
-    if (!isMobile) return;
+    if (!active) return;
 
     void checkForUpdate();
     const interval = window.setInterval(() => void checkForUpdate(), POLL_INTERVAL_MS);
@@ -92,9 +110,9 @@ export function MobileAppUpdateDialog() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", onFocus);
     };
-  }, [isMobile, checkForUpdate]);
+  }, [active, checkForUpdate]);
 
-  if (!isMobile) return null;
+  if (!active) return null;
 
   function handleDismiss() {
     if (pendingRevision && typeof window !== "undefined") {

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -5,6 +6,25 @@ import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Lê `public/app-revision.json` (gerado por `scripts/generate-app-revision.mjs`
+ * em predev/prebuild) e embute o fingerprint do build em `NEXT_PUBLIC_BUILD_ID`.
+ * Usado pelo `MobileAppUpdateDialog` para detectar deploys novos comparando
+ * contra `/api/app-revision` — ver esse componente para detalhes.
+ */
+function readAppRevision(): { revision: string; builtAt: string | null } {
+  try {
+    const raw = readFileSync(path.join(__dirname, "public", "app-revision.json"), "utf8");
+    const parsed = JSON.parse(raw) as { revision?: string; builtAt?: string };
+    return {
+      revision: parsed.revision?.trim() || process.env.BUILD_ID || "dev",
+      builtAt: parsed.builtAt ?? null,
+    };
+  } catch {
+    return { revision: process.env.BUILD_ID || "dev", builtAt: null };
+  }
+}
 
 const withSerwist = withSerwistInit({
   swSrc: "src/app/sw.ts",
@@ -39,6 +59,8 @@ function backendBase(): string {
   return (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").trim().replace(/\/$/, "");
 }
 
+const appRevision = readAppRevision();
+
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: __dirname,
@@ -46,6 +68,11 @@ const nextConfig: NextConfig = {
     // Versão exibida pelo banner "Novidades em vX.Y.Z". Setar APP_VERSION
     // no ambiente de build (Easypanel) para alinhar com o CHANGELOG.md.
     NEXT_PUBLIC_APP_VERSION: process.env.APP_VERSION ?? "1.4.0",
+    // Fingerprint único do build (sha/timestamp), usado pelo
+    // MobileAppUpdateDialog para detectar deploys — NÃO confundir com
+    // NEXT_PUBLIC_APP_VERSION (semver, usado pelo banner desktop).
+    NEXT_PUBLIC_BUILD_ID: appRevision.revision,
+    NEXT_PUBLIC_BUILD_TIME: appRevision.builtAt ?? "",
   },
   typescript: {
     ignoreBuildErrors: true,

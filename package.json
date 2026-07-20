@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/generate-changelog.mjs",
+    "predev": "node scripts/generate-app-revision.mjs && node scripts/generate-changelog.mjs",
     "dev": "next dev --turbopack -p 3000",
     "dev:https": "next dev --turbopack -p 3000 --experimental-https",
     "dev:webpack": "next dev -p 3000",
-    "prebuild": "node scripts/generate-changelog.mjs",
+    "prebuild": "node scripts/generate-app-revision.mjs && node scripts/generate-changelog.mjs",
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint && node scripts/ds-scan.mjs",

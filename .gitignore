@@ -20,6 +20,9 @@
 /.next/
 /out/
 
+# fingerprint de build (gerado em predev/prebuild — não versionar)
+/public/app-revision.json
+
 # production
 /build
 

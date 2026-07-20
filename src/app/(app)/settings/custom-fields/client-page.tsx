@@ -43,6 +43,7 @@ import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import { KpiCard } from "@/components/crm/kpi-card";
 import { KpiStrip } from "@/components/crm/kpi-strip";
+import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import {
   EntityGroupsSection,
@@ -476,8 +477,7 @@ function CustomFieldsPage() {
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-          <div className="flex min-w-[780px] flex-col gap-2">
+        <MobileTableScroll minWidth={780}>
             {/* Header de colunas — padrão Contatos */}
             <div
               className={listTableHeadRowClass(
@@ -654,8 +654,7 @@ function CustomFieldsPage() {
                 )}
               </Droppable>
             </DragDropContext>
-          </div>
-        </div>
+        </MobileTableScroll>
       )}
 
       {/* Modais */}

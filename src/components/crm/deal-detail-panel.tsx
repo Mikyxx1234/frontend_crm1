@@ -1586,37 +1586,39 @@ function TabsBar({
       <header className="flex items-center gap-2 px-4 py-3">
         {/* Tabs pill group — oculta enquanto busca está aberta */}
         {!(searchOpen && activeTab === "conversa") && (
-          <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
-            {TABS.map((tab) => {
-              const Icon = tab.icon
-              const isActive = activeTab === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => onChange(tab.id)}
-                  className={cn(
-                    "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
-                    isActive
-                      ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
-                      : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                  )}
-                >
-                  <Icon size={14} />
-                  {tab.label}
-                  {tab.count !== undefined && (
-                    <span
-                      className={cn(
-                        "rounded-full px-1.5 font-display text-[10px] font-bold",
-                        isActive ? "bg-[var(--glass-bg)] text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-                      )}
-                    >
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
+          <div className="toolbar-hscroll min-w-0 max-w-full flex-1">
+            <div className="inline-flex w-max flex-nowrap items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+              {TABS.map((tab) => {
+                const Icon = tab.icon
+                const isActive = activeTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => onChange(tab.id)}
+                    className={cn(
+                      "inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
+                      isActive
+                        ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
+                  >
+                    <Icon size={14} />
+                    {tab.label}
+                    {tab.count !== undefined && (
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 font-display text-[10px] font-bold",
+                          isActive ? "bg-[var(--glass-bg)] text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                        )}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
 

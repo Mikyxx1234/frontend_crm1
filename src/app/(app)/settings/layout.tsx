@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { IconLayoutSidebarLeftExpand } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { useIsMobile } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { SettingsSidebar } from "./_components/settings-sidebar";
@@ -27,6 +29,27 @@ export default function SettingsLayout({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(true);
+  const isMobile = useIsMobile();
+  const pathname = usePathname();
+  const isHub = pathname === "/settings" || pathname === "/settings/";
+
+  // Mobile: lista→detalhe. No hub mostra só o menu (sem NavRail, sem
+  // painel direito); numa sub-rota mostra só a página, full-width.
+  if (isMobile && isHub) {
+    return (
+      <div className="v2-screen flex min-w-0 flex-col overflow-hidden p-3 sm:p-4">
+        <SettingsSidebar open onClose={() => {}} hideCollapse />
+      </div>
+    );
+  }
+
+  if (isMobile && !isHub) {
+    return (
+      <div className="v2-screen flex min-w-0 flex-col overflow-hidden p-3 sm:p-4">
+        <SettingsSlide>{children}</SettingsSlide>
+      </div>
+    );
+  }
 
   return (
     <div

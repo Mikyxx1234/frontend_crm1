@@ -36,9 +36,15 @@ import {
 interface SettingsSidebarProps {
   open: boolean;
   onClose: () => void;
+  /** Oculta o botão de recolher (ex.: no hub mobile, onde não há o que recolher). */
+  hideCollapse?: boolean;
 }
 
-export function SettingsSidebar({ open, onClose }: SettingsSidebarProps) {
+export function SettingsSidebar({
+  open,
+  onClose,
+  hideCollapse,
+}: SettingsSidebarProps) {
   const pathname = usePathname();
   const { role, isSuperAdmin } = useUserRole();
   const { data: myPerms } = useMyPermissions();
@@ -105,16 +111,18 @@ export function SettingsSidebar({ open, onClose }: SettingsSidebarProps) {
         >
           Configurações
         </h2>
-        <TooltipGlass label="Recolher menu" side="bottom">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Recolher menu de configurações"
-            className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-          >
-            <IconLayoutSidebarLeftCollapse size={16} />
-          </button>
-        </TooltipGlass>
+        {!hideCollapse && (
+          <TooltipGlass label="Recolher menu" side="bottom">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Recolher menu de configurações"
+              className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+            >
+              <IconLayoutSidebarLeftCollapse size={16} />
+            </button>
+          </TooltipGlass>
+        )}
       </div>
 
       {/* Busca */}

@@ -386,19 +386,21 @@ export function ChatArea({
               #N continua acessivel no separador de ticket da timeline. */}
 
           {tabsEnabled && (
-            <ChatTabsBar
-              activeTab={activeTab}
-              onChange={setActiveTab}
-              hiddenTabs={{
-                notas: !notesSlot,
-                atividades: !activitiesSlot,
-                timeline: !timelineSlot,
-                chamadas: !callsSlot,
-              }}
-            />
+            <div className="min-w-0 flex-1">
+              <ChatTabsBar
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                hiddenTabs={{
+                  notas: !notesSlot,
+                  atividades: !activitiesSlot,
+                  timeline: !timelineSlot,
+                  chamadas: !callsSlot,
+                }}
+              />
+            </div>
           )}
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             {headerActionsSlot ?? (
               <>
                 {contact.phone && (
@@ -690,27 +692,29 @@ function ChatTabsBar({
   hiddenTabs?: Partial<Record<ChatTabId, boolean>>
 }) {
   return (
-    <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
-      {CHAT_TABS.filter((t) => t.id === "conversa" || !hiddenTabs?.[t.id]).map((tab) => {
-        const Icon = tab.icon
-        const isActive = activeTab === tab.id
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onChange(tab.id)}
-            className={cn(
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all",
-              isActive
-                ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-            )}
-          >
-            <Icon size={13} stroke={isActive ? 2.4 : 2} />
-            {tab.label}
-          </button>
-        )
-      })}
+    <div className="toolbar-hscroll min-w-0 max-w-full">
+      <div className="inline-flex w-max flex-nowrap items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+        {CHAT_TABS.filter((t) => t.id === "conversa" || !hiddenTabs?.[t.id]).map((tab) => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              className={cn(
+                "inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all",
+                isActive
+                  ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+              )}
+            >
+              <Icon size={13} stroke={isActive ? 2.4 : 2} />
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

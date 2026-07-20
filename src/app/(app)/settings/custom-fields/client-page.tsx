@@ -42,6 +42,7 @@ import { ButtonGlass } from "@/components/crm/button-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import { KpiCard } from "@/components/crm/kpi-card";
+import { KpiStrip } from "@/components/crm/kpi-strip";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import {
   EntityGroupsSection,
@@ -384,9 +385,9 @@ function CustomFieldsPage() {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3.5">
       {/* Mini-dash KPI */}
-      <section
-        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
+      <KpiStrip
         aria-label="Indicadores de campos"
+        gridClassName="grid grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
       >
         <KpiCard
           label="Total"
@@ -431,7 +432,7 @@ function CustomFieldsPage() {
             setReqFilter((v) => (v === "sim" ? "todos" : "sim"))
           }
         />
-      </section>
+      </KpiStrip>
 
       {/* Lista */}
       {isLoading ? (

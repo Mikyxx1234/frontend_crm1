@@ -24,6 +24,8 @@ type KpiCardProps = {
   /** Se passado, o card vira botão acionável. */
   onClick?: () => void;
   className?: string;
+  /** Força o layout compacto (padding/ícone/valor menores) em qualquer breakpoint. */
+  compact?: boolean;
 };
 
 /**
@@ -39,9 +41,12 @@ export function KpiCard({
   active = false,
   onClick,
   className,
+  compact = false,
 }: KpiCardProps) {
   const classNames = cn(
     "flex items-center gap-3.5 rounded-[var(--radius-xl)] border px-4.5 py-4 text-left shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all",
+    "max-sm:gap-2.5 max-sm:px-3 max-sm:py-3",
+    compact && "gap-2.5 px-3 py-3",
     active
       ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] shadow-[0_8px_24px_rgba(91,111,245,0.12)]"
       : "border-[var(--glass-border)] bg-[var(--glass-bg-base)]",
@@ -56,6 +61,8 @@ export function KpiCard({
       <span
         className={cn(
           "flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
+          "max-sm:h-9 max-sm:w-9",
+          compact && "h-9 w-9",
           KPI_TONES[tone],
         )}
       >
@@ -65,7 +72,13 @@ export function KpiCard({
         <p className="font-body text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]">
           {label}
         </p>
-        <p className="font-display text-[24px] font-extrabold leading-tight tracking-tight text-[var(--text-primary)]">
+        <p
+          className={cn(
+            "font-display text-[24px] font-extrabold leading-tight tracking-tight text-[var(--text-primary)]",
+            "max-sm:text-[20px]",
+            compact && "text-[20px]",
+          )}
+        >
           {value}
           {hint && (
             <small className="ml-1.5 text-[13px] font-semibold text-[var(--text-muted)]">

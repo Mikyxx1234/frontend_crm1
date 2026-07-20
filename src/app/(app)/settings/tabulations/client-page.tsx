@@ -25,6 +25,7 @@ import { GlassCard } from "@/components/crm/glass-card";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { KpiCard } from "@/components/crm/kpi-card";
+import { KpiStrip } from "@/components/crm/kpi-strip";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
@@ -578,10 +579,7 @@ function TabulationsBody() {
 
       {/* ── KPI minidash de tabulações ────────────────────────────── */}
       {effectiveDeptId ? (
-        <section
-          className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
-          aria-label="Indicadores de tabulações"
-        >
+        <KpiStrip aria-label="Indicadores de tabulações">
           <KpiCard
             label="Total níveis"
             value={nodeCount.toLocaleString("pt-BR")}
@@ -612,7 +610,7 @@ function TabulationsBody() {
             icon={<IconSparkles size={20} stroke={2.2} />}
             tone="warning"
           />
-        </section>
+        </KpiStrip>
       ) : null}
 
       {/* ── Árvore de tabulações ─────────────────────────────────── */}
@@ -1069,7 +1067,7 @@ function TreeCard(props: {
           : "border-dashed border-[var(--glass-border)] opacity-75",
       )}
     >
-      <div className="group flex items-center gap-3 p-2.5">
+      <div className="group flex items-center gap-3 p-2.5 max-sm:gap-2 max-sm:p-2">
         {/* Ícone tile */}
         <button
           type="button"
@@ -1147,7 +1145,7 @@ function TreeCard(props: {
               >
                 {node.name}
               </span>
-              <span className="font-body text-[11px] text-[var(--text-muted)]">
+              <span className="truncate font-body text-[11px] text-[var(--text-muted)]">
                 {isLeaf
                   ? "Nível final — selecionável pelo agente"
                   : `${node.children.length} ${node.children.length === 1 ? "subnível" : "subníveis"}`}
@@ -1155,7 +1153,7 @@ function TreeCard(props: {
             </span>
             <span
               className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-wider",
+                "shrink-0 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-wider max-sm:hidden",
                 isLeaf
                   ? "bg-[var(--glass-bg-base)] text-[var(--text-secondary)]"
                   : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
@@ -1260,7 +1258,7 @@ function TreeCard(props: {
 
       {/* Filhos */}
       {hasChildren && open && (
-        <div className="ml-5 space-y-2.5 border-l border-[var(--glass-border)] py-1 pb-2.5 pl-4 pr-2.5">
+        <div className="ml-5 space-y-2.5 border-l border-[var(--glass-border)] py-1 pb-2.5 pl-4 pr-2.5 max-sm:ml-2 max-sm:pl-2">
           {node.children.map((child) => (
             <TreeCard
               key={child.id}

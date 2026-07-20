@@ -28,6 +28,7 @@ import { FormSheet } from "@/components/ui/form-sheet";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
+import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
@@ -582,21 +583,23 @@ function TeamContent() {
     const tabValue =
       activeTab === 2 ? "departamentos" : activeTab === 1 ? "expediente" : "usuarios";
     return (
-      <PageSegmentedControl
-        size="compact"
-        aria-label="Abas da equipe"
-        items={[
-          { value: "usuarios", label: "Usuários" },
-          { value: "expediente", label: "Expediente" },
-          ...(canManageDepartments
-            ? [{ value: "departamentos", label: "Departamentos" }]
-            : []),
-        ]}
-        value={tabValue}
-        onChange={(v) =>
-          setActiveTab(v === "departamentos" ? 2 : v === "expediente" ? 1 : 0)
-        }
-      />
+      <div className="toolbar-hscroll min-w-0 max-w-full">
+        <PageSegmentedControl
+          size="compact"
+          aria-label="Abas da equipe"
+          items={[
+            { value: "usuarios", label: "Usuários" },
+            { value: "expediente", label: "Expediente" },
+            ...(canManageDepartments
+              ? [{ value: "departamentos", label: "Departamentos" }]
+              : []),
+          ]}
+          value={tabValue}
+          onChange={(v) =>
+            setActiveTab(v === "departamentos" ? 2 : v === "expediente" ? 1 : 0)
+          }
+        />
+      </div>
     );
   }, [activeTab, canManageDepartments]);
 
@@ -743,7 +746,7 @@ function TeamContent() {
             : "Nenhum usuário cadastrado ainda."}
         </GlassCard>
       ) : (
-        <div className="flex min-w-0 flex-col gap-2">
+        <MobileTableScroll minWidth={780}>
           {/* Cabeçalho de colunas */}
           <div
             className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
@@ -875,7 +878,7 @@ function TeamContent() {
               </div>
             );
           })}
-        </div>
+        </MobileTableScroll>
       )}
 
       {isDesktop && filtered.length > 0 ? (

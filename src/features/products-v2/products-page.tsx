@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
+import { KpiStrip } from "@/components/crm/kpi-strip";
+import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import {
@@ -270,10 +272,7 @@ export function ProductsV2Page() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3.5">
-      <section
-        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
-        aria-label="Indicadores de produtos"
-      >
+      <KpiStrip aria-label="Indicadores de produtos">
         <KpiCard
           label="Todos"
           value={products.length.toLocaleString("pt-BR")}
@@ -294,7 +293,7 @@ export function ProductsV2Page() {
             }
           />
         ))}
-      </section>
+      </KpiStrip>
 
       {selected.size > 0 && (
         <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 backdrop-blur-md">
@@ -336,7 +335,7 @@ export function ProductsV2Page() {
           </ButtonGlass>
         </div>
       ) : (
-        <div className="flex min-w-0 flex-col gap-2">
+        <MobileTableScroll minWidth={720}>
           {/* Cabeçalho de colunas (padrão Empresas/Contatos). */}
           <div
             className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
@@ -439,7 +438,7 @@ export function ProductsV2Page() {
             </div>
             );
           })}
-        </div>
+        </MobileTableScroll>
       )}
 
       <ProductDialog

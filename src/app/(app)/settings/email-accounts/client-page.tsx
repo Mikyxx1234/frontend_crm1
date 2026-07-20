@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import { KpiCard } from "@/components/crm/kpi-card";
+import { KpiStrip } from "@/components/crm/kpi-strip";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import {
@@ -286,9 +287,9 @@ function AccountsList({
   return (
     <div className="flex w-full min-w-0 flex-col gap-3.5">
       {/* KPI minidash */}
-      <section
-        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
+      <KpiStrip
         aria-label="Indicadores de contas"
+        gridClassName="grid grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
       >
         <KpiCard
           label="Total contas"
@@ -314,7 +315,7 @@ function AccountsList({
           icon={<IconBell size={20} stroke={2.2} />}
           tone="warning"
         />
-      </section>
+      </KpiStrip>
 
       {loading ? (
         <div className="flex flex-col gap-2">
@@ -564,10 +565,7 @@ function AccountRules({
   return (
     <div className="flex w-full min-w-0 flex-col gap-3.5">
       {/* KPI minidash */}
-      <section
-        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
-        aria-label="Indicadores de regras"
-      >
+      <KpiStrip aria-label="Indicadores de regras">
         <KpiCard
           label="Total regras"
           value={rules.length.toLocaleString("pt-BR")}
@@ -598,7 +596,7 @@ function AccountRules({
           icon={<IconTrash size={20} stroke={2.2} />}
           tone="warning"
         />
-      </section>
+      </KpiStrip>
 
       {/* Create bar */}
       <div className="flex items-center justify-between gap-3">

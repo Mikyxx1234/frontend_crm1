@@ -31,6 +31,8 @@ import { WhatsappQrModal } from "@/components/channels/whatsapp-qr-modal";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
 import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
+import { KpiStrip } from "@/components/crm/kpi-strip";
+import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import {
   SettingsListFilterBar,
@@ -518,10 +520,7 @@ export default function SettingsChannelsPage({
       ) : null}
 
       {/* ── KPI mini-dash ── */}
-      <section
-        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
-        aria-label="Indicadores de canais"
-      >
+      <KpiStrip aria-label="Indicadores de canais">
         <KpiCard
           label="Todos"
           value={channels.length.toLocaleString("pt-BR")}
@@ -540,7 +539,7 @@ export default function SettingsChannelsPage({
             onClick={() => setKpiFilter((prev) => (prev === seg.id ? "" : seg.id))}
           />
         ))}
-      </section>
+      </KpiStrip>
 
       {/* ── Error ── */}
       {isError ? (
@@ -581,7 +580,7 @@ export default function SettingsChannelsPage({
         </GlassCard>
       ) : (
         /* ── Row list ── */
-        <div className="flex min-w-0 flex-col gap-2">
+        <MobileTableScroll minWidth={900}>
           {/* Column header */}
           <div
             className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
@@ -781,7 +780,7 @@ export default function SettingsChannelsPage({
               );
             })
           )}
-        </div>
+        </MobileTableScroll>
       )}
 
       {/* ── Modals (all preserved exactly) ── */}

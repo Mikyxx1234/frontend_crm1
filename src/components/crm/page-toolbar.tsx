@@ -188,7 +188,7 @@ export function PageSegmentedControl({
             aria-selected={active}
             onClick={() => onChange(item.value)}
             className={cn(
-              "cursor-pointer rounded-full font-display font-bold transition-colors",
+              "shrink-0 cursor-pointer whitespace-nowrap rounded-full font-display font-bold transition-colors",
               compact
                 ? "px-3 py-1 text-xs"
                 : "px-4 py-2 text-[13px]",

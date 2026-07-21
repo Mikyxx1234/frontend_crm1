@@ -168,11 +168,12 @@ export function mockCompaniesPage(params: {
   search?: string;
   page?: number;
   perPage?: number;
+  segment?: "todos" | "com-contatos" | "sem-email" | "sem-telefone";
 }): CompanyListPage {
   const page = params.page ?? 1;
   const perPage = params.perPage ?? 30;
   const q = (params.search ?? "").trim().toLowerCase();
-  const filtered = q
+  let filtered = q
     ? MOCK_COMPANIES.filter(
         (c) =>
           c.name.toLowerCase().includes(q) ||
@@ -180,6 +181,13 @@ export function mockCompaniesPage(params: {
           (c.industry ?? "").toLowerCase().includes(q),
       )
     : MOCK_COMPANIES;
+  if (params.segment === "com-contatos") {
+    filtered = filtered.filter((c) => c._count.contacts > 0);
+  } else if (params.segment === "sem-email") {
+    filtered = filtered.filter((c) => !c.domain);
+  } else if (params.segment === "sem-telefone") {
+    filtered = filtered.filter((c) => !c.phone);
+  }
   const { items, total } = paginate(filtered, page, perPage);
   return { items, total, page, perPage };
 }

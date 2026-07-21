@@ -1,0 +1,93 @@
+/**
+ * Acesso ao runtime nativo do Capacitor (APK) sem depender de nenhum
+ * pacote `@capacitor/*` no bundle do Next.js.
+ *
+ * Decisão (ver AGENT.md § Biometria no APK): a casca Capacitor vive só em
+ * `mobile/` (repo separado por branch `CRM_MOBILE`). O frontend acessa o
+ * bridge via `window.Capacitor`, que só existe dentro do WebView do APK —
+ * em browser/desktop este objeto é `undefined` e todo o código aqui faz
+ * no-op.
+ */
+
+export type NativeBiometryType =
+  | "none"
+  | "touchId"
+  | "faceId"
+  | "fingerprint"
+  | "faceAuthentication"
+  | "irisAuthentication"
+  | "multiple"
+  | "deviceCredential";
+
+export interface NativeBiometricAvailableResult {
+  isAvailable: boolean;
+  biometryType?: NativeBiometryType | number;
+  errorCode?: number;
+}
+
+export interface NativeBiometricVerifyOptions {
+  reason?: string;
+  title?: string;
+  subtitle?: string;
+  description?: string;
+  negativeButtonText?: string;
+  maxAttempts?: number;
+}
+
+export interface NativeBiometricPlugin {
+  isAvailable(options?: { useFallback?: boolean }): Promise<NativeBiometricAvailableResult>;
+  verifyIdentity(options?: NativeBiometricVerifyOptions): Promise<void>;
+}
+
+export type AppStateChangeListener = (state: { isActive: boolean }) => void;
+
+export interface AppPluginListenerHandle {
+  remove(): void | Promise<void>;
+}
+
+export interface NativeAppPlugin {
+  addListener(
+    eventName: "appStateChange",
+    listener: AppStateChangeListener,
+  ): Promise<AppPluginListenerHandle> | AppPluginListenerHandle;
+}
+
+export interface CapacitorPluginsMap {
+  NativeBiometric?: NativeBiometricPlugin;
+  App?: NativeAppPlugin;
+  [pluginName: string]: unknown;
+}
+
+interface CapacitorGlobal {
+  isNativePlatform?: () => boolean;
+  getPlatform?: () => string;
+  Plugins?: CapacitorPluginsMap;
+}
+
+function getCapacitorGlobal(): CapacitorGlobal | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (window as unknown as { Capacitor?: CapacitorGlobal }).Capacitor;
+}
+
+/** `true` apenas dentro do WebView do APK (Android/iOS via Capacitor). */
+export function isNativePlatform(): boolean {
+  const capacitor = getCapacitorGlobal();
+  try {
+    return capacitor?.isNativePlatform?.() ?? false;
+  } catch {
+    return false;
+  }
+}
+
+/** Acesso tipado aos plugins nativos registrados no bridge do Capacitor. */
+export function getCapacitorPlugins(): CapacitorPluginsMap | undefined {
+  return getCapacitorGlobal()?.Plugins;
+}
+
+export function getNativeBiometricPlugin(): NativeBiometricPlugin | undefined {
+  return getCapacitorPlugins()?.NativeBiometric;
+}
+
+export function getNativeAppPlugin(): NativeAppPlugin | undefined {
+  return getCapacitorPlugins()?.App;
+}

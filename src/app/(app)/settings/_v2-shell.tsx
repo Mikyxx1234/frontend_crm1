@@ -3,7 +3,6 @@
 import * as React from "react";
 import { IconSettings } from "@tabler/icons-react";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader, type PageHeaderBack } from "@/components/crm/page-header";
 
 /** Atalho voltar ao hub de configurações — use em sub-páginas de `/settings/*`. */
@@ -34,15 +33,15 @@ export function useSettingsHeaderSlots(): SettingsHeaderSlotSetters | null {
 }
 
 /**
- * Shell glass que envolve sub-páginas de settings portadas da v1.
+ * Shell glass que envolve sub-páginas de settings.
  *
- * O conteúdo (children) ainda é o `client-page.tsx` da v1 (shadcn),
- * mas servido sem o DashboardShell antigo — apenas dentro do
- * NavRailV2 + PageHeader v2. O v0 pode reimplementar visualmente
- * cada sub-página depois.
+ * A partir do layout master-detail (`settings/layout.tsx`), o NavRailV2 e
+ * a sidebar são providos pelo próprio layout — este shell fica com o
+ * PageHeader + a área rolável do painel direito. Preserva o Provider dos
+ * slots de header para as sub-páginas continuarem injetando controles.
  *
  * Sub-páginas de `/settings/*` podem passar `back={SETTINGS_HUB_BACK}` para
- * atalho ao hub. Listas top-level continuam usando só a NavRail.
+ * atalho ao hub.
  */
 export function SettingsV2Shell({
   title,
@@ -75,24 +74,20 @@ export function SettingsV2Shell({
 
   return (
     <SettingsHeaderSlotsContext.Provider value={slotSetters}>
-      <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
-        <NavRailV2 />
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden sm:gap-3.5">
+        <PageHeader
+          back={back}
+          icon={icon}
+          title={title}
+          description={description ?? "Configurações"}
+          center={center ?? slotCenter}
+          actions={actions ?? slotActions}
+        />
 
-        <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden sm:gap-3.5">
-          <PageHeader
-            back={back}
-            icon={icon}
-            title={title}
-            description={description ?? "Configurações"}
-            center={center ?? slotCenter}
-            actions={actions ?? slotActions}
-          />
-
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pr-1 sm:gap-3.5 [-webkit-overflow-scrolling:touch]">
-            {children}
-          </div>
-        </main>
-      </div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pr-1 sm:gap-3.5 [-webkit-overflow-scrolling:touch]">
+          {children}
+        </div>
+      </main>
     </SettingsHeaderSlotsContext.Provider>
   );
 }

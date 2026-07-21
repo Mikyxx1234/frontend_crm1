@@ -26,7 +26,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { IconAlertTriangle as AlertTriangle, IconCamera as Camera, IconCheck as Check, IconCopy as Copy, IconInfoCircle as Info, IconKey as Key, IconLoader2 as Loader2, IconPlus as Plus, IconRefresh as RefreshCw, IconSparkles as Sparkles, IconTrash as Trash2 } from "@tabler/icons-react";
+import { IconAlertTriangle as AlertTriangle, IconCamera as Camera, IconCheck as Check, IconCopy as Copy, IconFingerprint as Fingerprint, IconInfoCircle as Info, IconKey as Key, IconLoader2 as Loader2, IconPlus as Plus, IconRefresh as RefreshCw, IconSparkles as Sparkles, IconTrash as Trash2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
@@ -53,6 +53,14 @@ import {
 } from "@/lib/chat-theme";
 import { cn } from "@/lib/utils";
 import { AvatarCropDialog } from "@/components/profile/avatar-crop-dialog";
+import { UserAvatar } from "@/components/crm/user-avatar";
+import { isNativePlatform } from "@/lib/native/capacitor";
+import {
+  isBiometricAvailable,
+  isBiometricLockEnabled,
+  setBiometricLockEnabled,
+  verifyBiometric,
+} from "@/lib/native/biometric";
 
 type Profile = {
   id: string;
@@ -75,6 +83,86 @@ type ApiToken = {
   expiresAt: string | null;
   createdAt: string;
 };
+
+/**
+ * Toggle "Desbloquear com biometria" — só renderiza dentro do APK
+ * (`isNativePlatform()`); em web/desktop este bloco nem monta.
+ *
+ * Ligar exige uma verificação biométrica bem-sucedida antes de gravar a
+ * flag (evita ligar o cadeado sem confirmar que a biometria funciona no
+ * aparelho). Desligar não exige nada (ver AGENT.md § Biometria no APK).
+ */
+function BiometricLockField() {
+  const [native, setNative] = React.useState(false);
+  const [enabled, setEnabled] = React.useState(false);
+  const [available, setAvailable] = React.useState(true);
+  const [checking, setChecking] = React.useState(true);
+  const [busy, setBusy] = React.useState(false);
+
+  React.useEffect(() => {
+    const isNative = isNativePlatform();
+    setNative(isNative);
+    if (!isNative) {
+      setChecking(false);
+      return;
+    }
+    setEnabled(isBiometricLockEnabled());
+    void isBiometricAvailable().then((res) => {
+      setAvailable(res.isAvailable);
+      setChecking(false);
+    });
+  }, []);
+
+  if (!native) return null;
+
+  async function handleToggle(next: boolean) {
+    if (!next) {
+      setBiometricLockEnabled(false);
+      setEnabled(false);
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const ok = await verifyBiometric("Confirme sua identidade para ativar o bloqueio");
+      if (ok) {
+        setBiometricLockEnabled(true);
+        setEnabled(true);
+        toast.success("Bloqueio por biometria ativado");
+      } else {
+        toast.error("Não foi possível confirmar sua identidade. Tente novamente.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-2xl">
+      <label className="flex cursor-pointer items-center gap-3">
+        <SwitchGlass
+          checked={enabled}
+          onChange={(next) => void handleToggle(next)}
+          disabled={checking || busy || !available}
+          aria-label="Desbloquear com biometria"
+        />
+        <span className="flex items-center gap-1.5 text-sm font-medium text-[var(--text-primary)]">
+          <Fingerprint className="size-4 text-[var(--text-muted)]" aria-hidden />
+          Desbloquear com biometria
+        </span>
+      </label>
+      <p className="pl-[52px] text-[11px] leading-snug text-[var(--color-ink-muted)]">
+        Use a digital ou o Face Unlock do aparelho para abrir o app.
+      </p>
+      {!checking && !available ? (
+        <div className="flex items-start gap-2 rounded-xl bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3 py-2 text-[12px] leading-snug text-[var(--color-warning)]">
+          <Info className="mt-0.5 size-3.5 shrink-0" />
+          <span>Cadastre digital ou reconhecimento facial no aparelho para usar este recurso.</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function ChatThemeField({
   profile,
@@ -204,14 +292,6 @@ function ChatThemeField({
       </div>
     </div>
   );
-}
-
-function getInitials(name: string | null | undefined): string {
-  if (!name?.trim()) return "?";
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
 export default function ProfilePage() {
@@ -407,20 +487,12 @@ function ProfileCard({
           real só ao clicar em "Salvar" abaixo (evita registro inconsistente).
         */}
         <div className="relative shrink-0">
-          <div className="flex size-[96px] items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-pink-200 to-pink-300 ring-4 ring-[var(--glass-bg-modal)] shadow-[var(--shadow-sm)]">
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt={name}
-                className="size-full object-cover"
-              />
-            ) : (
-              <span className="font-display text-2xl font-bold text-white drop-shadow">
-                {getInitials(name)}
-              </span>
-            )}
-          </div>
+          <UserAvatar
+            size={96}
+            name={name}
+            imageUrl={avatarUrl}
+            className="ring-4 ring-[var(--glass-bg-modal)] shadow-[var(--shadow-sm)]"
+          />
           <TooltipHost
             label="Alterar foto"
             side="right"
@@ -562,6 +634,8 @@ function ProfileCard({
             </>
           )}
         </div>
+
+        <BiometricLockField />
 
         <ButtonGlass
           type="submit"

@@ -40,6 +40,22 @@ export interface RoleSidebarItem {
   order: number;
 }
 
+/** Grant de etapa do funil concedido a um papel. */
+export interface StageGrantEntry {
+  stageId: string;
+  canView: boolean;
+  canEdit: boolean;
+}
+
+/** Grant por campo (mascaramento) concedido a um papel. */
+export interface FieldGrantEntry {
+  /** "deal" | "contact" | "company" | "product" */
+  entity: string;
+  fieldKey: string;
+  canView: boolean;
+  canEdit: boolean;
+}
+
 export interface RoleSummary {
   id: string;
   name: string;
@@ -47,6 +63,14 @@ export interface RoleSummary {
   isSystem: boolean;
   description: string | null;
   permissions: string[];
+  /** Extra: ler/responder conversas não atribuídas (default true). */
+  sharedInbox?: boolean;
+  /** Extra: baixar/visualizar mídias anexadas (default true). */
+  mediaAccess?: boolean;
+  /** Visibilidade por etapa do funil (vazio = todas). */
+  stageGrants?: StageGrantEntry[];
+  /** Restrições por campo (vazio = todos liberados). */
+  fieldGrants?: FieldGrantEntry[];
   /**
    * Ponteiro de origem (modelo de herança pragmático): id do role base do
    * qual este grupo personalizado herda. Null/undefined em presets e grupos
@@ -60,68 +84,8 @@ export interface RoleSummary {
    * a ele — resolvida no backend em `getSidebarPreferences`.
    */
   sidebarItems?: RoleSidebarItem[] | null;
-  _count?: { assignments: number; groups: number; groupMembers: number };
+  _count?: { assignments: number };
   assignments?: { id: string; user: RoleUser }[];
-}
-
-// ── Grupos de acesso (modelo Kommo — permissões scoped por grupo) ───────────
-
-export type GroupScopeLevel = "NONE" | "SELF" | "TEAM" | "ALL";
-
-export interface GroupPermissionEntry {
-  resource: string;
-  action: string;
-  level: GroupScopeLevel;
-}
-
-export interface GroupStageGrantEntry {
-  stageId: string;
-  canView: boolean;
-  canEdit: boolean;
-}
-
-export interface GroupFieldGrantEntry {
-  /** "deal" | "contact" | "company" | "product" */
-  entity: string;
-  fieldKey: string;
-  canView: boolean;
-  canEdit: boolean;
-}
-
-export interface GroupMemberEntry {
-  id: string;
-  user: RoleUser;
-}
-
-export interface GroupSummary {
-  id: string;
-  name: string;
-  description: string | null;
-  sharedInbox: boolean;
-  mediaAccess: boolean;
-  sidebarRoutes: string[];
-  _count?: { members: number; permissions: number };
-}
-
-export interface GroupDetail extends GroupSummary {
-  members: GroupMemberEntry[];
-  permissions: GroupPermissionEntry[];
-  stageGrants: GroupStageGrantEntry[];
-  fieldGrants: GroupFieldGrantEntry[];
-}
-
-/** Payload de escrita (POST/PUT) do grupo. */
-export interface GroupWritePayload {
-  name?: string;
-  description?: string | null;
-  sharedInbox?: boolean;
-  mediaAccess?: boolean;
-  sidebarRoutes?: string[];
-  permissions?: GroupPermissionEntry[];
-  stageGrants?: GroupStageGrantEntry[];
-  fieldGrants?: GroupFieldGrantEntry[];
-  /** IDs de usuários a vincular como membros já na criação do grupo. */
-  memberIds?: string[];
 }
 
 export interface EffectivePermissions {
@@ -129,10 +93,4 @@ export interface EffectivePermissions {
   channelGrants: string[];
   stageGrants: string[];
   roles: { id: string; name: string; systemPreset: string | null }[];
-  groups: {
-    id: string;
-    name: string;
-    channelGrants: string[];
-    stageGrants: string[];
-  }[];
 }

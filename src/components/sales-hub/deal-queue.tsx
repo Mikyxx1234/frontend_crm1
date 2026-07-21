@@ -26,8 +26,10 @@ import { cn, formatCurrency, tagPillStyle } from "@/lib/utils";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { useMoveMutation } from "@/components/sales-hub/deal-actions";
+import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
 import { SUBTLE_SPRING } from "@/lib/design-system";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
+import { AvatarGlass } from "@/components/crm/avatar-glass";
 import { SidebarField } from "@/components/ui/sidebar-field";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { dt } from "@/lib/design-tokens";
@@ -747,51 +749,21 @@ function StageInlinePicker({
                 {stages.length} etapas
               </span>
             </div>
-            <ul
-              role="listbox"
-              className="scrollbar-thin max-h-[280px] overflow-y-auto py-1"
-            >
-              {stages.map((stage) => {
-                const isCurrent = stage.id === deal.stageId;
-                return (
-                  <li key={stage.id}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={isCurrent}
-                      onClick={() => {
-                        if (!isCurrent) {
-                          moveMutation.mutate({
-                            dealId: deal.id,
-                            fromStageId: deal.stageId,
-                            toStageId: stage.id,
-                          });
-                        }
-                        setOpen(false);
-                      }}
-                      disabled={isCurrent}
-                      className={cn(
-                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-normal text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]",
-                        isCurrent &&
-                          "cursor-default bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
-                      )}
-                    >
-                      <span
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: stage.color ?? "var(--text-muted)" }}
-                      />
-                      <span className="truncate">{stage.name}</span>
-                      {isCurrent && (
-                        <Check
-                          className="ml-auto size-3.5 text-[var(--brand-primary)]"
-                          strokeWidth={2.5}
-                        />
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <MoveToStageMenu
+              stages={stages}
+              currentStageId={deal.stageId}
+              currentPipelineId={pipelineId}
+              isPending={moveMutation.isPending}
+              onSelect={(stageId, toPipelineId) => {
+                moveMutation.mutate({
+                  dealId: deal.id,
+                  fromStageId: deal.stageId,
+                  toStageId: stageId,
+                  toPipelineId,
+                });
+                setOpen(false);
+              }}
+            />
           </div>,
           document.body,
         )}
@@ -1026,15 +998,12 @@ function DealCard({
 
         {deal.owner ? (
           <div className="mt-0.5 shrink-0 self-start">
-            <ChatAvatar
-              user={{
-                id: deal.owner.id,
-                name: deal.owner.name,
-                imageUrl: deal.owner.avatarUrl ?? null,
-              }}
-              size={20}
-              channel={null}
-              hideCartoon
+            <AvatarGlass
+              name={deal.owner.name}
+              seed={deal.owner.id}
+              imageUrl={deal.owner.avatarUrl ?? null}
+              size="sm"
+              className="!h-5 !w-5 !text-[9px]"
             />
           </div>
         ) : null}
@@ -1219,15 +1188,12 @@ function DealCard({
                       <Loader2 className="size-3.5 shrink-0 animate-spin text-[var(--text-muted)]" />
                     ) : deal.owner ? (
                       <>
-                        <ChatAvatar
-                          user={{
-                            id: deal.owner.id,
-                            name: deal.owner.name,
-                            imageUrl: deal.owner.avatarUrl ?? null,
-                          }}
-                          size={20}
-                          channel={null}
-                          hideCartoon
+                        <AvatarGlass
+                          name={deal.owner.name}
+                          seed={deal.owner.id}
+                          imageUrl={deal.owner.avatarUrl ?? null}
+                          size="sm"
+                          className="!h-5 !w-5 !text-[9px]"
                         />
                         <span className="text-[11px] font-medium text-[var(--text-secondary)]">{deal.owner.name}</span>
                       </>
@@ -1361,14 +1327,15 @@ function DealCard({
                       )}
                     >
                       <div className="relative">
-                        <ChatAvatar
-                          user={{ id: u.id, name: u.name, imageUrl: u.avatarUrl ?? null }}
-                          size={24}
-                          channel={null}
-                          hideCartoon
+                        <AvatarGlass
+                          name={u.name}
+                          seed={u.id}
+                          imageUrl={u.avatarUrl ?? null}
+                          size="sm"
+                          className="!h-6 !w-6 !text-[10px]"
                         />
                         <span
-                          className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-white"
+                          className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-[var(--avatar-ring)]"
                           style={{ backgroundColor: dotBg }}
                         />
                       </div>

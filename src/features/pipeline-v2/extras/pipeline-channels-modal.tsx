@@ -26,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Switch } from "@/components/ui/switch";
 import type { ApiChannel } from "@/components/channels/types";
 import type { ChannelType } from "@/lib/prisma-enum-types";
@@ -149,34 +150,27 @@ export function PipelineChannelsModal({
   const showList = !isLoading && !isError && channels.length > 0;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent size="md" bodyClassName="gap-0 p-0">
-        <DialogHeader className="flex-row items-start gap-3 px-5 pb-4 pt-5 border-b border-[var(--glass-border-subtle)]">
-          <div
-            aria-hidden
-            className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-          >
-            <IconFilter size={20} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <DialogTitle>
-              Canais do funil
-              {pipelineName ? (
-                <>
-                  {" · "}
-                  <span className="text-[var(--brand-primary-dark)]">{pipelineName}</span>
-                </>
-              ) : null}
-            </DialogTitle>
-            <DialogDescription className="mt-1.5 max-w-[42ch] text-[12.5px] leading-relaxed">
-              Selecione os canais cujos novos leads devem entrar neste funil.
-              Conversas que já existem no CRM não são movidas.
-            </DialogDescription>
-          </div>
-          <DialogClose className="static ml-auto flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] opacity-100 transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]" />
-        </DialogHeader>
-
-        <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
+    <FormSheet
+      open={open}
+      onOpenChange={(o) => { if (!o) onClose(); }}
+      busy={mutation.isPending}
+      icon={<IconFilter size={20} className="text-[var(--brand-primary)]" />}
+      title={<>Canais do funil{pipelineName ? <> · <span className="text-[var(--brand-primary-dark)]">{pipelineName}</span></> : null}</>}
+      description="Selecione os canais cujos novos leads devem entrar neste funil. Conversas que já existem no CRM não são movidas."
+      footer={
+        <div className="flex w-full items-center gap-2">
+          <span className="mr-auto text-[11.5px] text-[var(--text-muted)]">
+            {showEmpty
+              ? "Nenhum canal configurado"
+              : linkedHereCount === 0
+                ? "Nenhum canal selecionado"
+                : `${linkedHereCount} ${linkedHereCount === 1 ? "canal selecionado" : "canais selecionados"}`}
+          </span>
+          <Button variant="ghost" onClick={onClose}>Fechar</Button>
+        </div>
+      }
+    >
+      <div>
           {isError ? (
             <p className="rounded-[var(--radius-md)] border border-[var(--color-danger)]/30 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] px-3 py-2 text-sm text-[var(--color-danger)]">
               {error instanceof Error ? error.message : "Erro ao carregar canais."}
@@ -277,21 +271,7 @@ export function PipelineChannelsModal({
               })}
             </ul>
           ) : null}
-        </div>
-
-        <DialogFooter className="flex-row items-center gap-2.5 border-t border-[var(--glass-border-subtle)] px-5 py-3.5 sm:justify-end">
-          <span className="mr-auto text-[11.5px] text-[var(--text-muted)]">
-            {showEmpty
-              ? "Nenhum canal configurado"
-              : linkedHereCount === 0
-                ? "Nenhum canal selecionado"
-                : `${linkedHereCount} ${linkedHereCount === 1 ? "canal selecionado" : "canais selecionados"}`}
-          </span>
-          <Button variant="ghost" onClick={onClose}>
-            Fechar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormSheet>
   );
 }

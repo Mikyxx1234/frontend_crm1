@@ -1,13 +1,9 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import DistributionV2ClientPage from "./client-page";
-
-export const dynamic = "force-dynamic";
-
-export default function DistributionPage() {
-  return (
-    <Suspense fallback={null}>
-      <DistributionV2ClientPage />
-    </Suspense>
-  );
+/**
+ * Rota legada — a config de Distribuição foi movida para o card do widget
+ * na Central (`/widgets`). Deep link abre direto o drawer de config.
+ */
+export default function DistributionSettingsRedirect() {
+  redirect("/widgets?configure=smart_distribution");
 }

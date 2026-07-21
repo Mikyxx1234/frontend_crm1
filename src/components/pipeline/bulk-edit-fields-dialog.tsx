@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
@@ -251,15 +252,23 @@ export function BulkEditFieldsDialog({ open, onOpenChange, dealIds, onEnqueued, 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" onClick={(e) => e.stopPropagation()}>
-        <DialogHeader>
-          <DialogTitle>Editar campos em massa</DialogTitle>
-          <DialogDescription>
-            Aplicando a <strong>{effectiveCount}</strong> negócio(s). Só os campos
-            preenchidos serão alterados — o restante permanece como está.
-          </DialogDescription>
-        </DialogHeader>
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      busy={submitting}
+      size="lg"
+      title="Editar campos em massa"
+      description={<>Aplicando a <strong>{effectiveCount}</strong> negócio(s). Só os campos preenchidos serão alterados — o restante permanece como está.</>}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button type="button" onClick={submit} disabled={submitting}>
+            {submitting ? "Enfileirando…" : "Aplicar alterações"}
+          </Button>
+        </>
+      }
+    >
+      <div onClick={(e) => e.stopPropagation()}>
 
         {scopeContext && (
           <div className="space-y-1.5 rounded-xl border border-border bg-muted/40 p-3">
@@ -435,16 +444,8 @@ export function BulkEditFieldsDialog({ open, onOpenChange, dealIds, onEnqueued, 
           </Section>
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button type="button" onClick={submit} disabled={submitting}>
-            {submitting ? "Enfileirando…" : "Aplicar alterações"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormSheet>
   );
 }
 

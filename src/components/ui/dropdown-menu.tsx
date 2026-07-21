@@ -271,9 +271,11 @@ const DropdownMenuItem = React.forwardRef<
       type="button"
       role="menuitem"
       className={cn(
-        "relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground",
+        // Hover azul (primary-soft) — padrão Funil; evita hover branco invisível em menus claros.
+        "relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-[var(--color-primary-soft)] focus:text-[var(--brand-primary)]",
         inset && "ps-8",
-        !disabled && "hover:bg-accent hover:text-accent-foreground",
+        !disabled &&
+          "hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
         disabled && "pointer-events-none opacity-50",
         className
       )}

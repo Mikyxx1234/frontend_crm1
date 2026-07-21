@@ -3,12 +3,13 @@
 import { Fragment, useRef, useState, useEffect, useCallback, type FormEvent } from "react"
 import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
+import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
-import { BadgeGlass } from "./badge-glass"
-import { avatarGradients, channelBadge } from "./conversation-card"
-import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, type Message } from "./message-bubble"
+import { ChatAvatar } from "@/components/inbox/chat-avatar"
+import { AVATAR_SIZE } from "@/lib/avatar"
+import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
 import {
   formatConnectionLabel,
@@ -28,6 +29,7 @@ import {
   IconPinFilled,
   IconX,
   IconLock,
+  IconChevronDown,
 } from "@tabler/icons-react"
 
 export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
@@ -54,18 +56,12 @@ interface ChatContact {
   badge?: "enterprise" | "lead" | "success"
   badgeLabel?: string
   initials?: string
-  /** Chave do gradiente (sunset/forest/ocean/dusk/blue/teal/orange/purple/pink/coral)
-      OU string CSS raw (compat com chamadores legados). Quando bater
-      com uma chave do `avatarGradients`, renderiza o mesmo gradiente
-      da conversation-card — mantendo identidade visual entre a lista
-      de conversas e o header do chat. */
+  /** @deprecated — ChatAvatar usa sólido determinístico; mantido por compat. */
   avatarColor?: string
   status?: string
   phone?: string
   contactId?: string
-  /** Canal (whatsapp/instagram/facebook/email/…) — quando presente,
-      renderiza o badge do canal no canto inferior direito do avatar,
-      idêntico ao card da lista de conversas. */
+  /** Canal — badge no canto inferior direito (padrão Inbox / ChatAvatar). */
   channel?: string | null
 }
 
@@ -164,6 +160,13 @@ interface ChatAreaProps {
    */
   conversationResolved?: boolean
   conversationClosedAt?: string | null
+
+  /**
+   * Slot flutuante (canto inferior direito, ao lado da composer) — usado
+   * para o botão "Robôs ativos". Renderizado como overlay absoluto dentro
+   * do `<main>` (que agora é `relative`); o próprio slot cuida da posição.
+   */
+  activeBotsSlot?: React.ReactNode
 }
 
 export function ChatArea({
@@ -201,12 +204,17 @@ export function ChatArea({
   onFavoriteMessage,
   pinnedMessages,
   onUnpinMessage,
-  conversationNumber,
   conversationResolved,
   conversationClosedAt,
+  activeBotsSlot,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
+  // Botão flutuante "descer" (estilo WhatsApp): aparece quando chega mensagem
+  // do cliente enquanto o operador está lendo histórico mais acima. O badge
+  // conta as novas mensagens não vistas; clicar rola suave até o fim.
+  const [showScrollDown, setShowScrollDown] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   // Índice da fixada exibida no banner e id destacado após o scroll.
   const [activePinIndex, setActivePinIndex] = useState(0)
   const [highlightId, setHighlightId] = useState<string | null>(null)
@@ -260,6 +268,82 @@ export function ChatArea({
       sessionName || (isPreviewMode() ? PREVIEW_USER.name : "Agente")
     setAgentInitials(getInitials(name) || "?")
   }, [session])
+  // Rola suave (ou instantâneo) até a última mensagem e zera o estado do
+  // botão "descer".
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const container = messagesRef.current
+    if (!container) return
+    requestAnimationFrame(() => {
+      container.scrollTo({ top: container.scrollHeight, behavior })
+    })
+    setShowScrollDown(false)
+    setUnreadCount(0)
+  }, [])
+
+  // Esconde o botão assim que o operador chega perto do fim manualmente.
+  useEffect(() => {
+    const container = messagesRef.current
+    if (!container) return
+    const onScroll = () => {
+      const nearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight < 200
+      if (nearBottom) {
+        setShowScrollDown(false)
+        setUnreadCount(0)
+      }
+    }
+    container.addEventListener("scroll", onScroll, { passive: true })
+    return () => container.removeEventListener("scroll", onScroll)
+  }, [])
+
+  // Rola a lista até o fim quando: (1) a conversa muda / carrega (instantâneo),
+  // ou (2) chega/enviamos uma nova mensagem no fim. Ao enviar (mensagem própria)
+  // ou quando o operador já está perto do fim, rola suave; se ele estiver lendo
+  // histórico mais acima e o cliente enviar, NÃO puxamos a tela — mostramos o
+  // botão "descer" com o contador. Detecta troca de conversa vs. append
+  // comparando o 1º/último id (evita depender de `conversationNumber`, nulável).
+  const prevFirstIdRef = useRef<string | null>(null)
+  const prevLastIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    const container = messagesRef.current
+    if (!container) return
+    const firstId = messages[0]?.id ?? null
+    const last = messages[messages.length - 1]
+    const lastId = last?.id ?? null
+    const prevFirst = prevFirstIdRef.current
+    const prevLast = prevLastIdRef.current
+    prevFirstIdRef.current = firstId
+    prevLastIdRef.current = lastId
+
+    // Nada novo no fim (ex.: prepend de histórico mais antigo) → não mexe.
+    if (lastId === prevLast) return
+
+    const isSwitchOrInitial = prevLast === null || firstId !== prevFirst
+    if (isSwitchOrInitial) {
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight
+      })
+      setShowScrollDown(false)
+      setUnreadCount(0)
+      return
+    }
+
+    const nearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 200
+    const ownMessage = last?.type === "outgoing"
+    if (ownMessage || nearBottom) {
+      requestAnimationFrame(() => {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" })
+      })
+      setShowScrollDown(false)
+      setUnreadCount(0)
+    } else {
+      // Mensagem do cliente chegou enquanto o operador lê histórico acima.
+      setShowScrollDown(true)
+      setUnreadCount((n) => n + 1)
+    }
+  }, [messages])
+
   const effectiveDisabled = inputDisabled ?? showSessionAlert
   const value = inputValue ?? ""
 
@@ -271,105 +355,52 @@ export function ChatArea({
     onSendMessage(trimmed)
   }
 
+  // Mobile: esconde bottom nav global; composer fica fixo na base do chat.
+  useMobileChatChrome(true)
+
   return (
     <main
       aria-label={`Conversa com ${contact.name}`}
       className={cn(
-        "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
       <header className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]">
         <div className="flex items-center gap-3 px-4 py-2">
           <TooltipGlass label={contact.name} side="bottom">
-            {(() => {
-              const bg =
-                (contact.avatarColor && avatarGradients[contact.avatarColor]) ||
-                contact.avatarColor ||
-                "var(--brand-primary)"
-              const ch =
-                (contact.channel ?? connection?.type ?? null) as string | null
-              const badge = channelBadge(ch)
-              return (
-                <span
-                  className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white shadow-[0_2px_8px_rgba(15,20,40,0.18)]"
-                  style={{ background: bg }}
-                  aria-label={contact.name}
-                >
-                  {contact.initials || contact.name.slice(0, 2).toUpperCase()}
-                  {badge && (
-                    <span
-                      title={badge.title}
-                      aria-label={badge.title}
-                      className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full ring-2 ring-[var(--glass-bg-overlay)]"
-                      style={{ background: badge.bg, color: badge.fg }}
-                    >
-                      <badge.Icon size={9} stroke={2.5} />
-                    </span>
-                  )}
-                </span>
-              )
-            })()}
+            <ChatAvatar
+              user={{
+                id: contact.contactId ?? contact.name,
+                name: contact.name,
+              }}
+              phone={contact.phone}
+              channel={contact.channel ?? connection?.type ?? null}
+              size={AVATAR_SIZE.md}
+            />
           </TooltipGlass>
 
-          {contact.badge && (
-            <BadgeGlass variant={contact.badge}>
-              {contact.badgeLabel ??
-                (contact.badge === "enterprise"
-                  ? "ENTERPRISE"
-                  : contact.badge === "lead"
-                    ? "LEAD"
-                    : "CLIENTE")}
-            </BadgeGlass>
-          )}
-
-          {/* Chip minimalista com o "ticket number" da conversa. Fica em
-              linha com o avatar e o BadgeGlass, sem card lateral: assim o
-              operador enxerga o #N dentro do proprio chat, referenciavel
-              em logs/handoff. Padrao Contact.number / Deal.number (#N por
-              organizacao). Ver AGENT.md "ID de conversa + logs + gatilho". */}
-          {typeof conversationNumber === "number" && (
-            <span
-              title={`Conversa #${conversationNumber}`}
-              aria-label={`Conversa numero ${conversationNumber}`}
-              className="font-mono text-[11px] font-medium tabular-nums text-[var(--text-muted)] select-all"
-            >
-              #{conversationNumber}
-            </span>
-          )}
-
-          {/* Chip "Encerrada" no header — indica status resolvido de
-              relance, sem depender do usuario abrir o kebab. Mesmo padrao
-              tipografico do #N (mono/muted) pra nao competir com o nome
-              do contato. Renderiza mesmo quando #N ausente (backend legado). */}
-          {conversationResolved && (
-            <span
-              title={
-                conversationClosedAt
-                  ? `Encerrada em ${new Date(conversationClosedAt).toLocaleString("pt-BR")}`
-                  : "Conversa encerrada"
-              }
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
-            >
-              <IconLock size={10} />
-              Encerrada
-            </span>
-          )}
+          {/* Header enxuto (pedido 16/jul/26): sem badge de tipo (CLIENTE/
+              LEAD), sem #N e sem chip "Encerrada". O status resolvido passou
+              a ser sinalizado pela faixa verde sutil abaixo do header — o
+              #N continua acessivel no separador de ticket da timeline. */}
 
           {tabsEnabled && (
-            <ChatTabsBar
-              activeTab={activeTab}
-              onChange={setActiveTab}
-              hiddenTabs={{
-                notas: !notesSlot,
-                atividades: !activitiesSlot,
-                timeline: !timelineSlot,
-                chamadas: !callsSlot,
-              }}
-            />
+            <div className="min-w-0 flex-1">
+              <ChatTabsBar
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                hiddenTabs={{
+                  notas: !notesSlot,
+                  atividades: !activitiesSlot,
+                  timeline: !timelineSlot,
+                  chamadas: !callsSlot,
+                }}
+              />
+            </div>
           )}
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             {headerActionsSlot ?? (
               <>
                 {contact.phone && (
@@ -388,6 +419,31 @@ export function ChatArea({
           </div>
         </div>
       </header>
+
+      {/* Botão flutuante "Robôs ativos" — overlay no canto inf. direito,
+          ao lado da composer. O slot cuida do próprio posicionamento. */}
+      {activeBotsSlot}
+
+      {/* Faixa sutil de conversa resolvida — substitui o chip "ENCERRADA"
+          do header. Verde suave, discreta, colada abaixo do header. */}
+      {conversationResolved && (
+        <div
+          role="status"
+          className="flex shrink-0 items-center justify-center gap-1.5 border-b border-emerald-500/15 bg-emerald-500/10 px-4 py-1 text-[11px] font-medium text-emerald-700 v2-dark:text-emerald-400"
+        >
+          <IconLock size={11} className="shrink-0" />
+          Conversa resolvida
+          {conversationClosedAt && (() => {
+            const d = new Date(conversationClosedAt)
+            if (Number.isNaN(d.getTime())) return null
+            const dd = String(d.getDate()).padStart(2, "0")
+            const mm = String(d.getMonth() + 1).padStart(2, "0")
+            const hh = String(d.getHours()).padStart(2, "0")
+            const mi = String(d.getMinutes()).padStart(2, "0")
+            return <span className="text-emerald-700/70 v2-dark:text-emerald-400/70">· {dd}/{mm} às {hh}:{mi}</span>
+          })()}
+        </div>
+      )}
 
       {tabsEnabled && activeTab !== "conversa" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -458,6 +514,18 @@ export function ChatArea({
           const showConnSwitches = distinctChannels.size >= 2
           let lastChannelId: string | null = null
           return messages.map((message, index) => {
+            // Separador de ticket — item sintético injetado pelo backend
+            // quando `?history=1`. Não é uma bolha; renderiza diretamente.
+            if (message.messageType === "ticket-separator" && message.ticketInfo) {
+              return (
+                <TicketDivider
+                  key={message.id || `sep-${index}`}
+                  number={message.ticketInfo.number}
+                  closedAt={message.ticketInfo.closedAt}
+                  isCurrent={message.ticketInfo.isCurrent}
+                />
+              )
+            }
             if (message.type !== "incoming" && message.type !== "outgoing") {
               return null
             }
@@ -497,6 +565,7 @@ export function ChatArea({
                   <MessageBubble
                     message={message}
                     agentInitials={agentInitials}
+                    agentImageUrl={session?.user?.image ?? null}
                     onReplyMessage={onReplyMessage}
                     onForwardMessage={onForwardMessage}
                     onReactMessage={onReactMessage}
@@ -518,15 +587,42 @@ export function ChatArea({
         )}
       </div>
 
-      {/* SESSION ALERT */}
+      {/* Botão flutuante "descer" (estilo WhatsApp) — só aparece quando o
+          operador está lendo histórico e chega mensagem nova. Segue os tokens
+          de vidro da página; badge reusa o estilo de não-lidas da lista. */}
+      {showScrollDown && (
+        <button
+          type="button"
+          onClick={() => scrollToBottom("smooth")}
+          aria-label={
+            unreadCount > 0
+              ? `${unreadCount} mensagens não lidas — ir para o fim`
+              : "Ir para a última mensagem"
+          }
+          className="absolute bottom-24 right-6 z-20 flex size-10 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-px hover:text-[var(--brand-primary)] active:scale-95"
+        >
+          <IconChevronDown size={20} />
+          {unreadCount > 0 && (
+            <span className="absolute -right-1 -top-1.5 inline-flex min-w-[18px] items-center justify-center rounded-full bg-primary px-1 py-0.5 text-[10px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
+      )}
+
+      {/* Footer fixo: alerta + composer (Mensagem/Nota + input). No mobile a
+          bottom nav some via useMobileChatChrome — bloco fica na base. */}
+      <div
+        data-chat-composer-footer
+        className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1.5 backdrop-blur-md"
+      >
       {showSessionAlert && <SessionAlert onUseTemplate={onUseTemplate} />}
 
-      {/* INPUT BAR */}
       {composerSlot ?? (
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="mx-6 mb-6 flex h-11 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-3 pr-1.5 shadow-[var(--glass-shadow-sm)]"
+          className="mx-6 mb-2 flex h-11 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-3 pr-1.5 shadow-[var(--glass-shadow-sm)] max-md:mx-3"
         >
           <TooltipGlass label="Anexar" side="top">
             <button
@@ -576,6 +672,7 @@ export function ChatArea({
           </TooltipGlass>
         </form>
       )}
+      </div>
         </>
       )}
     </main>
@@ -595,27 +692,29 @@ function ChatTabsBar({
   hiddenTabs?: Partial<Record<ChatTabId, boolean>>
 }) {
   return (
-    <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
-      {CHAT_TABS.filter((t) => t.id === "conversa" || !hiddenTabs?.[t.id]).map((tab) => {
-        const Icon = tab.icon
-        const isActive = activeTab === tab.id
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onChange(tab.id)}
-            className={cn(
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all",
-              isActive
-                ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-            )}
-          >
-            <Icon size={13} stroke={isActive ? 2.4 : 2} />
-            {tab.label}
-          </button>
-        )
-      })}
+    <div className="toolbar-hscroll min-w-0 max-w-full">
+      <div className="inline-flex w-max flex-nowrap items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+        {CHAT_TABS.filter((t) => t.id === "conversa" || !hiddenTabs?.[t.id]).map((tab) => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              className={cn(
+                "inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all",
+                isActive
+                  ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+              )}
+            >
+              <Icon size={13} stroke={isActive ? 2.4 : 2} />
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

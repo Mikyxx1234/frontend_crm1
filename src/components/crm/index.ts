@@ -1,5 +1,6 @@
 // Design System Components
 export { AvatarGlass } from './avatar-glass'
+export { UserAvatar } from './user-avatar'
 export { BadgeGlass } from './badge-glass'
 export { ButtonGlass } from './button-glass'
 export { Chip } from './chip'

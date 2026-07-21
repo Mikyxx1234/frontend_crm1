@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { KpiCard } from "@/components/crm/kpi-card";
 import {
   Dialog,
   DialogContent,
@@ -20,18 +21,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
+import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-toolbar";
+import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import InternalTemplatesPage from "../templates";
 import WhatsAppTemplatesPage from "../whatsapp-templates";
 import {
   HubCallout,
-  HubChip,
   HubPanel,
-  HubStat,
-  HubStatGrid,
   HubSubHeader,
-  HubTabBar,
-  HubToolbar,
-  type HubTabDef,
 } from "./hub-ui";
 
 type InternalRow = {
@@ -255,16 +252,27 @@ export default function MessageModelsHubPage() {
   const flowDraft = flows.filter((f) => f.status !== "PUBLISHED").length;
   const flowWithMeta = flows.filter((f) => f.metaFlowId?.trim()).length;
 
-  const tabDefs = React.useMemo<HubTabDef[]>(() => {
-    const defs: HubTabDef[] = [
-      { value: "overview", label: "Visão geral", count: totalCount || undefined },
+  const tabItems = React.useMemo(() => {
+    const withCount = (label: string, count?: number): React.ReactNode =>
+      typeof count === "number" ? (
+        <span className="inline-flex items-center gap-1.5">
+          {label}
+          <span className="min-w-[16px] rounded-full bg-[color-mix(in_srgb,var(--text-muted)_16%,transparent)] px-1 text-center text-[10px] font-bold leading-none">
+            {count}
+          </span>
+        </span>
+      ) : (
+        label
+      );
+    const items: { value: string; label: React.ReactNode }[] = [
+      { value: "overview", label: withCount("Visão geral", totalCount || undefined) },
     ];
-    if (canViewTemplates) defs.push({ value: "internal", label: "Internos", count: internalCount });
+    if (canViewTemplates) items.push({ value: "internal", label: withCount("Internos", internalCount) });
     if (canSubmitMeta) {
-      defs.push({ value: "whatsapp", label: "WhatsApp (Meta)", count: metaLoaded ? metaCount : undefined });
-      defs.push({ value: "flows", label: "Flows", count: flowCount });
+      items.push({ value: "whatsapp", label: withCount("WhatsApp (Meta)", metaLoaded ? metaCount : undefined) });
+      items.push({ value: "flows", label: withCount("Flows", flowCount) });
     }
-    return defs;
+    return items;
   }, [canViewTemplates, canSubmitMeta, totalCount, internalCount, metaLoaded, metaCount, flowCount]);
 
   const overviewRows = React.useMemo(() => {
@@ -351,133 +359,251 @@ export default function MessageModelsHubPage() {
 
   const tabBarNode = React.useMemo(
     () => (
-      <HubTabBar
-        tabs={tabDefs}
-        active={safeTab}
+      <PageSegmentedControl
+        size="compact"
+        aria-label="Abas de modelos de mensagem"
+        items={tabItems}
+        value={safeTab}
         onChange={(value) => setTab(value, { new: null, create: null })}
       />
     ),
-    [tabDefs, safeTab, setTab],
+    [tabItems, safeTab, setTab],
   );
 
-  const actionNode = React.useMemo(
-    () =>
-      safeTab === "overview" ? (
-        <ButtonGlass type="button" variant="primary" size="sm" onClick={() => setNewOpen(true)}>
-          <Plus className="size-4" />
-          <span className="ml-2">Novo modelo</span>
-        </ButtonGlass>
-      ) : null,
-    [safeTab],
-  );
+  // Busca na posição padrão (centro do PageHeader) com filtros segmentados
+  // no popover — contextual por aba (visão geral: canais; flows: estado).
+  const searchNode = React.useMemo(() => {
+    if (safeTab === "overview") {
+      return (
+        <SettingsListFilterBar
+          search={ovQuery}
+          onSearch={setOvQuery}
+          placeholder="Buscar por nome, conteúdo ou variável..."
+          popoverTitle="Filtrar por canal"
+          onClearAll={() => {
+            setOvQuery("");
+            setOvFilter("all");
+          }}
+          groups={[
+            {
+              key: "canal",
+              label: "Filtrar por canal",
+              value: ovFilter,
+              onChange: (v) => setOvFilter(v as typeof ovFilter),
+              options: [
+                { value: "all", label: "Todos os canais", count: totalCount },
+                { value: "interno", label: "Interno", count: internalCount },
+                { value: "waba", label: "WhatsApp", count: metaCount },
+                { value: "flow", label: "Flow", count: flowCount },
+              ],
+            },
+          ]}
+        />
+      );
+    }
+    if (safeTab === "flows" && canSubmitMeta) {
+      return (
+        <SettingsListFilterBar
+          search={flowQuery}
+          onSearch={setFlowQuery}
+          placeholder="Buscar flow por nome ou Meta flow id..."
+          popoverTitle="Filtrar por estado"
+          onClearAll={() => {
+            setFlowQuery("");
+            setFlowFilter("all");
+          }}
+          groups={[
+            {
+              key: "estado",
+              label: "Filtrar por estado",
+              value: flowFilter,
+              onChange: (v) => setFlowFilter(v as typeof flowFilter),
+              options: [
+                { value: "all", label: "Todos", count: flowCount },
+                { value: "PUBLISHED", label: "Publicados", count: flowPublished },
+                { value: "DRAFT", label: "Rascunhos", count: flowDraft },
+              ],
+            },
+          ]}
+        />
+      );
+    }
+    return null;
+  }, [
+    safeTab,
+    ovQuery,
+    ovFilter,
+    flowQuery,
+    flowFilter,
+    canSubmitMeta,
+    totalCount,
+    internalCount,
+    metaCount,
+    flowCount,
+    flowPublished,
+    flowDraft,
+  ]);
 
-  // Injeta abas + ação na linha do PageHeader (padrão Pipeline) quando
+  // Pills (abas) + hambúrguer com os CTAs da página, à direita do PageHeader.
+  const actionsNode = React.useMemo(() => {
+    const menuItems: ModelsMenuItem[] =
+      safeTab === "flows" && canSubmitMeta
+        ? [
+            {
+              icon: createFlowMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Workflow className="size-4" />
+              ),
+              label: "Novo flow",
+              onClick: () => createFlowMutation.mutate(),
+              disabled: createFlowMutation.isPending,
+            },
+            {
+              icon: <Download className="size-4" />,
+              label: "Importar da Meta",
+              onClick: () => {
+                setImportOpen(true);
+                void refetchMetaFlows();
+              },
+              divider: true,
+            },
+          ]
+        : [
+            {
+              icon: <Plus className="size-4" />,
+              label: "Novo modelo",
+              onClick: () => setNewOpen(true),
+            },
+          ];
+    return (
+      <div className="flex items-center gap-2">
+        {tabBarNode}
+        <ModelsActionsMenu items={menuItems} />
+      </div>
+    );
+  }, [safeTab, canSubmitMeta, tabBarNode, createFlowMutation, refetchMetaFlows]);
+
+  // Injeta busca (centro) + abas/ação (direita) na linha do PageHeader quando
   // rodando dentro do SettingsV2Shell. Sem o shell (rota /old) cai no
   // render inline abaixo.
   React.useEffect(() => {
     if (!headerSlots) return;
-    headerSlots.setCenter(tabBarNode);
-    headerSlots.setActions(actionNode);
+    headerSlots.setCenter(searchNode);
+    headerSlots.setActions(actionsNode);
     return () => {
       headerSlots.setCenter(null);
       headerSlots.setActions(null);
     };
-  }, [headerSlots, tabBarNode, actionNode]);
+  }, [headerSlots, searchNode, actionsNode]);
 
   return (
     <div className="min-w-0 w-full max-w-full space-y-3 sm:space-y-4">
       {!headerSlots ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {tabBarNode}
-          {actionNode}
+          {searchNode ? <div className="min-w-0 flex-1">{searchNode}</div> : <div />}
+          {actionsNode}
         </div>
       ) : null}
 
       {safeTab === "overview" && (
         <div className="space-y-4">
-          <HubStatGrid>
-            <HubStat tone="brand" icon={<LayoutTemplate className="size-5" />} value={totalCount} label="Modelos no total" />
-            <HubStat tone="violet" icon={<FileText className="size-5" />} value={internalCount} label="Internos" />
-            <HubStat tone="success" icon={<CheckCircle2 className="size-5" />} value={metaApproved} label="WhatsApp aprovados" />
-            <HubStat tone="warn" icon={<Clock className="size-5" />} value={metaPending} label="Aguardando revisão Meta" />
-          </HubStatGrid>
+          <section
+            className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
+            aria-label="Indicadores de modelos de mensagem"
+          >
+            <KpiCard
+              label="Total modelos"
+              value={totalCount.toLocaleString("pt-BR")}
+              icon={<LayoutTemplate className="size-5" />}
+              tone="brand"
+            />
+            <KpiCard
+              label="Internos"
+              value={internalCount.toLocaleString("pt-BR")}
+              icon={<FileText className="size-5" />}
+              tone="violet"
+            />
+            <KpiCard
+              label="WhatsApp aprovados"
+              value={metaApproved.toLocaleString("pt-BR")}
+              icon={<CheckCircle2 className="size-5" />}
+              tone="success"
+            />
+            <KpiCard
+              label="Aguardando Meta"
+              value={metaPending.toLocaleString("pt-BR")}
+              icon={<Clock className="size-5" />}
+              tone="warning"
+            />
+            <KpiCard
+              label="Flows publicados"
+              value={flowPublished.toLocaleString("pt-BR")}
+              icon={<Workflow className="size-5" />}
+              tone="neutral"
+            />
+          </section>
 
-          <HubPanel>
-            <HubToolbar
-              searchValue={ovQuery}
-              onSearchChange={setOvQuery}
-              placeholder="Buscar por nome, conteúdo ou variável..."
-            >
-              <HubChip active={ovFilter === "all"} onClick={() => setOvFilter("all")} tone="brand">
-                Todos os canais
-              </HubChip>
-              <HubChip
-                active={ovFilter === "interno"}
-                onClick={() => setOvFilter("interno")}
-                dot="var(--text-muted)"
-                tone="neutral"
-              >
-                Interno
-              </HubChip>
-              <HubChip
-                active={ovFilter === "waba"}
-                onClick={() => setOvFilter("waba")}
-                dot="var(--color-success)"
-                tone="success"
-              >
-                WhatsApp
-              </HubChip>
-              <HubChip
-                active={ovFilter === "flow"}
-                onClick={() => setOvFilter("flow")}
-                dot="var(--color-info)"
-                tone="info"
-              >
-                Flow
-              </HubChip>
-            </HubToolbar>
-
-            {loadingInt || loadingMeta || loadingFlows ? (
-              <div className="space-y-2 p-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : overviewRows.length === 0 ? (
+          {loadingInt || loadingMeta || loadingFlows ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Skeleton className="h-[92px] w-full rounded-[var(--radius-lg)]" />
+              <Skeleton className="h-[92px] w-full rounded-[var(--radius-lg)]" />
+              <Skeleton className="h-[92px] w-full rounded-[var(--radius-lg)]" />
+            </div>
+          ) : overviewRows.length === 0 ? (
+            <HubPanel>
               <div className="flex flex-col items-center gap-2.5 px-5 py-14 text-center">
                 <Search className="size-9 text-[var(--glass-border)]" />
                 <p className="text-[13px] text-[var(--text-muted)]">Nenhum modelo encontrado.</p>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[680px] border-collapse text-left">
-                  <thead>
-                    <tr className="[&>th]:px-[18px] [&>th]:py-3.5 [&>th]:text-[11px] [&>th]:font-bold [&>th]:uppercase [&>th]:tracking-[0.06em] [&>th]:text-[var(--text-muted)] [&>th]:shadow-[0_1px_0_var(--glass-border-subtle)]">
-                      <th className="w-[140px]">Tipo</th>
-                      <th>Nome / conteúdo</th>
-                      <th className="w-[260px]">Status / canal</th>
-                      <th className="w-[120px] text-right">Ação</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {overviewRows.map((r) => (
-                      <tr
-                        key={r.key}
-                        className="border-b border-[var(--glass-border-subtle)] transition-colors last:border-0 hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]"
-                      >
-                        <td className="px-[18px] py-3.5 align-middle">
-                          <OverviewTypeBadge type={r.type} />
-                        </td>
-                        <td className="px-[18px] py-3.5 align-middle">
-                          <div className="min-w-0">
-                            <div className="font-bold text-[var(--text-primary)]">{r.name}</div>
+            </HubPanel>
+          ) : (
+            <div className="space-y-4">
+              {OVERVIEW_GROUPS.map((g) => {
+                const rows = overviewRows.filter((r) => r.type === g.type);
+                if (!rows.length) return null;
+                return (
+                  <div key={g.type} className="min-w-0">
+                    <div className="mb-2.5 flex items-center gap-2 px-0.5">
+                      <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-md)]", g.badge)}>
+                        {g.icon}
+                      </span>
+                      <span className="font-display text-[13px] font-bold text-[var(--text-secondary)]">
+                        {g.title}
+                      </span>
+                      <span className="rounded-full bg-[var(--glass-bg-strong)] px-1.5 text-[11px] font-bold text-[var(--text-secondary)]">
+                        {rows.length}
+                      </span>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {rows.map((r) => (
+                        <div
+                          key={r.key}
+                          role="button"
+                          tabIndex={0}
+                          onClick={r.onOpen}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              r.onOpen();
+                            }
+                          }}
+                          className="group relative flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]"
+                        >
+                          <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]", g.badge)}>
+                            {g.icon}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-[14px] font-bold text-[var(--text-primary)]">{r.name}</div>
                             {r.preview ? (
-                              <div className="mt-0.5 max-w-[520px] truncate text-[12.5px] text-[var(--text-muted)]">
-                                {r.preview}
-                              </div>
+                              <div className="mt-0.5 truncate text-[12px] text-[var(--text-muted)]">{r.preview}</div>
                             ) : null}
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <StatusPill kind={r.statusKind} label={r.statusLabel} />
+                              <span className="truncate text-[11px] text-[var(--text-muted)]">{r.channel}</span>
+                            </div>
                             {r.vars.length ? (
-                              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                                 {r.vars.map((v) => (
                                   <span
                                     key={v}
@@ -489,29 +615,15 @@ export default function MessageModelsHubPage() {
                               </div>
                             ) : null}
                           </div>
-                        </td>
-                        <td className="px-[18px] py-3.5 align-middle">
-                          <div className="flex flex-col gap-1.5">
-                            <StatusPill kind={r.statusKind} label={r.statusLabel} />
-                            <span className="text-[12px] text-[var(--text-secondary)]">{r.channel}</span>
-                          </div>
-                        </td>
-                        <td className="px-[18px] py-3.5 text-right align-middle">
-                          <button
-                            type="button"
-                            onClick={r.onOpen}
-                            className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
-                          >
-                            Abrir <ChevronRight className="size-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </HubPanel>
+                          <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)] opacity-40 transition-all group-hover:translate-x-0.5 group-hover:text-[var(--brand-primary)] group-hover:opacity-100" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -534,36 +646,6 @@ export default function MessageModelsHubPage() {
           <HubSubHeader
             icon={<Workflow className="size-5" />}
             title="Flows interativos"
-            actions={
-              <>
-                <ButtonGlass
-                  type="button"
-                  size="sm"
-                  variant="glass"
-                  onClick={() => {
-                    setImportOpen(true);
-                    void refetchMetaFlows();
-                  }}
-                >
-                  <Download className="size-4" />
-                  <span className="ml-2">Importar da Meta</span>
-                </ButtonGlass>
-                <ButtonGlass
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={createFlowMutation.isPending}
-                  onClick={() => createFlowMutation.mutate()}
-                >
-                  {createFlowMutation.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Workflow className="size-4" />
-                  )}
-                  <span className="ml-2">Novo flow</span>
-                </ButtonGlass>
-              </>
-            }
           >
             Desenhe um flow direto no CRM ou importe um já publicado na WABA; depois{" "}
             <strong className="font-bold text-[var(--text-secondary)]">mapeie cada resposta para o campo do lead</strong>.
@@ -574,12 +656,35 @@ export default function MessageModelsHubPage() {
             nos templates da Meta.
           </HubSubHeader>
 
-          <HubStatGrid>
-            <HubStat tone="brand" icon={<Workflow className="size-5" />} value={flowCount} label="Flows no total" />
-            <HubStat tone="success" icon={<CheckCircle2 className="size-5" />} value={flowPublished} label="Publicados" />
-            <HubStat tone="warn" icon={<FileText className="size-5" />} value={flowDraft} label="Rascunhos" />
-            <HubStat tone="violet" icon={<LayoutTemplate className="size-5" />} value={flowWithMeta} label="Com Meta flow id" />
-          </HubStatGrid>
+          <section
+            className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
+            aria-label="Indicadores de flows"
+          >
+            <KpiCard
+              label="Flows no total"
+              value={flowCount.toLocaleString("pt-BR")}
+              icon={<Workflow className="size-5" />}
+              tone="brand"
+            />
+            <KpiCard
+              label="Publicados"
+              value={flowPublished.toLocaleString("pt-BR")}
+              icon={<CheckCircle2 className="size-5" />}
+              tone="success"
+            />
+            <KpiCard
+              label="Rascunhos"
+              value={flowDraft.toLocaleString("pt-BR")}
+              icon={<FileText className="size-5" />}
+              tone="warning"
+            />
+            <KpiCard
+              label="Com Meta flow id"
+              value={flowWithMeta.toLocaleString("pt-BR")}
+              icon={<LayoutTemplate className="size-5" />}
+              tone="violet"
+            />
+          </section>
 
           <HubCallout tone="info" icon={<Info className="size-[18px]" />}>
             Flows criados só no <strong className="font-bold text-[var(--brand-primary-dark)]">Meta Business Manager</strong>{" "}
@@ -588,110 +693,70 @@ export default function MessageModelsHubPage() {
             (ex.: estagiário) e configurar o mapeamento das respostas no lead.
           </HubCallout>
 
-          <HubPanel>
-            <HubToolbar
-              searchValue={flowQuery}
-              onSearchChange={setFlowQuery}
-              placeholder="Buscar flow por nome ou Meta flow id..."
-            >
-              <HubChip active={flowFilter === "all"} onClick={() => setFlowFilter("all")} count={flowCount}>
-                Todos
-              </HubChip>
-              <HubChip active={flowFilter === "PUBLISHED"} onClick={() => setFlowFilter("PUBLISHED")} count={flowPublished}>
-                Publicados
-              </HubChip>
-              <HubChip active={flowFilter === "DRAFT"} onClick={() => setFlowFilter("DRAFT")} count={flowDraft}>
-                Rascunhos
-              </HubChip>
-            </HubToolbar>
-
-            {loadingFlows ? (
-              <div className="space-y-2 p-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : flowRows.length === 0 ? (
+          {loadingFlows ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Skeleton className="h-[104px] w-full rounded-[var(--radius-lg)]" />
+              <Skeleton className="h-[104px] w-full rounded-[var(--radius-lg)]" />
+            </div>
+          ) : flowRows.length === 0 ? (
+            <HubPanel>
               <div className="flex flex-col items-center gap-2 px-5 py-14 text-center">
                 <Workflow className="size-9 text-[var(--glass-border)]" />
                 <h3 className="text-[15px] font-bold text-[var(--text-secondary)]">Nenhum flow encontrado</h3>
                 <p className="text-[13px] text-[var(--text-muted)]">Ajuste a busca ou importe um flow já publicado na Meta.</p>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[820px] border-collapse text-left">
-                  <thead>
-                    <tr className="[&>th]:px-4 [&>th]:py-3 [&>th]:text-[11px] [&>th]:font-bold [&>th]:uppercase [&>th]:tracking-[0.06em] [&>th]:text-[var(--text-muted)] [&>th]:shadow-[0_1px_0_var(--glass-border-subtle)]">
-                      <th>Nome</th>
-                      <th className="w-[140px]">Estado</th>
-                      <th className="w-[200px]">Meta flow id</th>
-                      <th className="w-[180px]">Atualizado</th>
-                      <th className="w-[170px] text-right">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {flowRows.map((f) => (
-                      <tr
-                        key={f.id}
-                        className="border-b border-[var(--glass-border-subtle)] transition-colors last:border-0 hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]"
+            </HubPanel>
+          ) : (
+            <div className="space-y-2.5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {flowRows.map((f) => (
+                  <div
+                    key={f.id}
+                    className="group relative flex min-w-0 items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+                      <Workflow className="size-[18px]" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[14px] font-bold text-[var(--text-primary)]">{f.name}</div>
+                      <div className="mt-0.5 truncate text-[11.5px] text-[var(--text-muted)]">
+                        {f.metaFlowId ? `Meta flow id ${f.metaFlowId}` : "Criado no CRM"}
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <FlowStateBadge published={f.status === "PUBLISHED"} />
+                        <span className="text-[11px] text-[var(--text-muted)]">
+                          {new Date(f.updatedAt).toLocaleDateString("pt-BR")}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        aria-label="Excluir flow"
+                        onClick={() => deleteFlowMutation.mutate(f.id)}
+                        disabled={deleteFlowMutation.isPending}
+                        className="flex size-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger)]/40 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] disabled:opacity-50"
                       >
-                        <td className="px-4 py-3.5 align-middle">
-                          <div className="flex items-center gap-3">
-                            <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
-                              <Workflow className="size-[18px]" />
-                            </span>
-                            <div className="min-w-0">
-                              <div className="truncate font-bold text-[var(--text-primary)]">{f.name}</div>
-                              <div className="mt-0.5 text-[11.5px] text-[var(--text-muted)]">
-                                {f.metaFlowId ? "Importado da Meta" : "Criado no CRM"}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 align-middle">
-                          <FlowStateBadge published={f.status === "PUBLISHED"} />
-                        </td>
-                        <td className="px-4 py-3.5 align-middle">
-                          {f.metaFlowId ? (
-                            <span className="font-mono text-[12px] text-[var(--text-secondary)]">{f.metaFlowId}</span>
-                          ) : (
-                            <span className="text-[var(--text-muted)] opacity-60">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3.5 align-middle text-[12.5px] text-[var(--text-secondary)]">
-                          {new Date(f.updatedAt).toLocaleString("pt-BR")}
-                        </td>
-                        <td className="px-4 py-3.5 align-middle">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              aria-label="Excluir flow"
-                              onClick={() => deleteFlowMutation.mutate(f.id)}
-                              disabled={deleteFlowMutation.isPending}
-                              className="flex size-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger)]/40 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] disabled:opacity-50"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => router.push(`/settings/message-models/flows/${f.shortId ?? f.id}`)}
-                              className="rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-1.5 text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
-                            >
-                              Editar
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        <Trash2 className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/settings/message-models/flows/${f.shortId ?? f.id}`)}
+                        className="rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-1.5 text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
+                      >
+                        Editar
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[var(--glass-border-subtle)] px-[18px] py-3">
-              <span className="text-[12.5px] text-[var(--text-muted)]">
-                {flowRows.length} {flowRows.length === 1 ? "flow" : "flows"}
-              </span>
+              <div className="px-0.5">
+                <span className="text-[12.5px] text-[var(--text-muted)]">
+                  {flowRows.length} {flowRows.length === 1 ? "flow" : "flows"}
+                </span>
+              </div>
             </div>
-          </HubPanel>
+          )}
         </div>
       )}
 
@@ -816,32 +881,27 @@ export default function MessageModelsHubPage() {
   );
 }
 
-function OverviewTypeBadge({ type }: { type: "interno" | "waba" | "flow" }) {
-  const map = {
-    interno: {
-      label: "Interno",
-      icon: <FileText className="size-3.5" />,
-      cls: "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
-    },
-    waba: {
-      label: "WhatsApp",
-      icon: <MessageCircle className="size-3.5" />,
-      cls: "border-[color-mix(in_srgb,var(--color-success)_30%,transparent)] bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
-    },
-    flow: {
-      label: "Flow",
-      icon: <Workflow className="size-3.5" />,
-      cls: "border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-[var(--color-info)]",
-    },
-  } as const;
-  const m = map[type];
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-2.5 py-1 text-[11.5px] font-bold", m.cls)}>
-      {m.icon}
-      {m.label}
-    </span>
-  );
-}
+/** Grupos da Visão geral (cards agrupados por canal). */
+const OVERVIEW_GROUPS = [
+  {
+    type: "interno",
+    title: "Internos",
+    icon: <FileText className="size-[17px]" />,
+    badge: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+  },
+  {
+    type: "waba",
+    title: "WhatsApp",
+    icon: <MessageCircle className="size-[17px]" />,
+    badge: "bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
+  },
+  {
+    type: "flow",
+    title: "Flows",
+    icon: <Workflow className="size-[17px]" />,
+    badge: "bg-[var(--color-info-bg)] text-[var(--color-info)]",
+  },
+] as const;
 
 function StatusPill({
   kind,
@@ -869,15 +929,40 @@ function FlowStateBadge({ published }: { published: boolean }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
+        "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] px-2.5 py-1 text-[11.5px] font-bold",
         published
           ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
           : "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
       )}
     >
       <span className={cn("size-1.5 rounded-full", published ? "bg-[var(--color-online)]" : "bg-[var(--text-muted)] opacity-60")} />
-      {published ? "Published" : "Draft"}
+      {published ? "Publicado" : "Rascunho"}
     </span>
+  );
+}
+
+// ── Menu hamburger (CTAs da página) ────────────────────────────────────────
+
+type ModelsMenuItem = {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  divider?: boolean;
+};
+
+function ModelsActionsMenu({ items }: { items: ModelsMenuItem[] }) {
+  return (
+    <PageActionsMenu
+      items={items.map((it, idx) => ({
+        icon: it.icon,
+        label: it.label,
+        onClick: it.onClick,
+        disabled: it.disabled,
+        divider: it.divider,
+        primary: idx === 0,
+      }))}
+    />
   );
 }
 

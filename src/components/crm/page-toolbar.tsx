@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
-import { IconArrowLeft, IconSearch } from "@tabler/icons-react";
+import { IconArrowLeft, IconMenu2, IconSearch } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 
@@ -76,7 +77,7 @@ export function PageSearchBar({
 }: PageSearchBarProps) {
   if (variant === "compact") {
     return (
-      <div className={cn("relative w-full max-w-md", className)}>
+      <div className={cn("relative w-full", className)}>
         <IconSearch
           size={15}
           className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
@@ -188,7 +189,7 @@ export function PageSegmentedControl({
             aria-selected={active}
             onClick={() => onChange(item.value)}
             className={cn(
-              "cursor-pointer rounded-full font-display font-bold transition-colors",
+              "shrink-0 cursor-pointer whitespace-nowrap rounded-full font-display font-bold transition-colors",
               compact
                 ? "px-3 py-1 text-xs"
                 : "px-4 py-2 text-[13px]",
@@ -297,5 +298,173 @@ export function PagePrimaryButton({
     <button type={type} className={cls} {...props}>
       {children}
     </button>
+  );
+}
+
+// ── Menu hamburger (padrão Pipeline) ─────────────────────────────────────────
+//
+// Referência: PipelineKebabMenu
+//   • 1º CTA (primary): azul permanente + hover fundo brand/8
+//   • Demais itens: cinza → hover fundo primary-soft + texto/ícone azul
+//   • Ícones herdam a cor do botão (sem wrapper muted)
+
+export type PageActionsMenuItem = {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  /** Separador acima deste item. */
+  divider?: boolean;
+  /**
+   * CTA primário (azul permanente).
+   * - `true`: força azul
+   * - `false`: nunca azul (mesmo sendo o 1º)
+   * - omitido: o 1º item da lista vira CTA se ninguém marcar `true`
+   */
+  primary?: boolean;
+  /** Estado ativo (ex.: modo demo ligado). */
+  active?: boolean;
+};
+
+/** Classes do item de menu — use quando o menu for montado manualmente. */
+export function pageActionsMenuItemClass(opts?: {
+  primary?: boolean;
+  active?: boolean;
+}) {
+  if (opts?.primary) {
+    return "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/8 disabled:opacity-40";
+  }
+  if (opts?.active) {
+    return "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold bg-[var(--brand-primary)]/8 text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)] disabled:opacity-40";
+  }
+  return "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)] disabled:opacity-40";
+}
+
+export const pageActionsMenuPanelClass =
+  "fixed z-(--z-popover) w-[220px] overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] py-1.5 shadow-[0_8px_28px_rgba(15,23,42,0.13)] backdrop-blur-md";
+
+const PAGE_ACTIONS_MENU_WIDTH = 220;
+
+export const pageActionsMenuTriggerClass =
+  "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105";
+
+export function PageActionsMenu({
+  items,
+  "aria-label": ariaLabel = "Ações",
+  className,
+  menuClassName,
+}: {
+  items: PageActionsMenuItem[];
+  "aria-label"?: string;
+  className?: string;
+  menuClassName?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [coords, setCoords] = React.useState<{ top: number; right: number } | null>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+
+  const updateCoords = React.useCallback(() => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const right = Math.min(
+      Math.max(8, window.innerWidth - rect.right),
+      Math.max(8, window.innerWidth - PAGE_ACTIONS_MENU_WIDTH - 8),
+    );
+    const top = Math.min(rect.bottom + 6, window.innerHeight - 8);
+    setCoords({ top, right });
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    updateCoords();
+  }, [open, updateCoords]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    function onDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (
+        (!triggerRef.current || !triggerRef.current.contains(target)) &&
+        (!panelRef.current || !panelRef.current.contains(target))
+      ) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", updateCoords, { passive: true, capture: true });
+    window.addEventListener("resize", updateCoords, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", updateCoords, true);
+      window.removeEventListener("resize", updateCoords);
+    };
+  }, [open, updateCoords]);
+
+  const hasForcedPrimary = items.some((it) => it.primary === true);
+
+  return (
+    <div className={cn("relative shrink-0", className)}>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        className={cn(
+          pageActionsMenuTriggerClass,
+          open && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
+        )}
+      >
+        <IconMenu2 size={18} stroke={2.2} />
+      </button>
+      {open && coords && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={panelRef}
+              className={cn(pageActionsMenuPanelClass, menuClassName)}
+              style={{ top: coords.top, right: coords.right }}
+              role="menu"
+            >
+              {items.map((it, idx) => {
+                const isPrimary =
+                  it.primary === true ||
+                  (!hasForcedPrimary &&
+                    it.primary !== false &&
+                    idx === 0 &&
+                    !it.active);
+                return (
+                  <div key={it.label}>
+                    {it.divider && (
+                      <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
+                    )}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={it.disabled}
+                      onClick={() => {
+                        setOpen(false);
+                        it.onClick();
+                      }}
+                      className={pageActionsMenuItemClass({
+                        primary: isPrimary,
+                        active: it.active,
+                      })}
+                    >
+                      <span className="shrink-0">{it.icon}</span>
+                      {it.label}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
   );
 }

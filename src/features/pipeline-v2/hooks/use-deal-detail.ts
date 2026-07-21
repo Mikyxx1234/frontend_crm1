@@ -14,6 +14,9 @@ export function useDealDetail(dealId: string | null) {
     queryKey: dealDetailKey(dealId),
     queryFn: () => getDeal(dealId as string),
     enabled: !!dealId,
-    staleTime: 15_000,
+    staleTime: 30_000,
+    // Reabrir o mesmo deal (ou voltar via histórico) usa cache sem skeleton.
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 }

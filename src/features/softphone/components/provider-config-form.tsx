@@ -112,27 +112,29 @@ export function ProviderConfigForm() {
             e.preventDefault();
             mutation.mutate();
           }}
-          className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4"
+          className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4"
         >
-          <div className="flex flex-col gap-1.5">
+          <div className="grid gap-1.5">
             <Label>Provedor</Label>
             <DropdownGlass
               options={PROVIDER_OPTIONS}
               value={providerKey}
               onValueChange={setProviderKey}
+              triggerClassName="w-full"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="grid gap-1.5">
             <Label>Auth Mode</Label>
             <DropdownGlass
               options={AUTH_MODE_OPTIONS}
               value={authMode}
               onValueChange={setAuthMode}
+              triggerClassName="w-full"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="grid gap-1.5">
             <Label>Webhook Secret</Label>
             <InputGlass
               type="text"
@@ -142,17 +144,18 @@ export function ProviderConfigForm() {
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="grid gap-1.5">
             <Label>Recording Delivery</Label>
             <DropdownGlass
               options={RECORDING_OPTIONS}
               value={recordingDelivery}
               onValueChange={setRecordingDelivery}
+              triggerClassName="w-full"
             />
           </div>
 
           {mutation.isError && (
-            <p className="text-xs text-[var(--color-danger)]">{(mutation.error as Error)?.message}</p>
+            <p className="text-[11px] text-[var(--color-danger)]">{(mutation.error as Error)?.message}</p>
           )}
 
           <div className="flex gap-2">

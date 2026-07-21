@@ -16,6 +16,7 @@ import {
   avatarInitials,
   formatRelative,
 } from "@/features/inbox-v2/adapters";
+import { personNameFromDealTitle, sanitizeContactName } from "@/lib/display-name";
 
 // ─────────────────────────────────────────────────────────────────
 // Cores de avatar (9 do v0). Hash determinístico do nome.
@@ -113,7 +114,11 @@ function formatCurrencyBR(value: number): string {
 
 /** BoardDealDto → Deal (DealCard). */
 export function toDealCard(deal: BoardDealDto): Deal {
-  const contactName = deal.contact?.name?.trim() || deal.title || "Sem nome";
+  // Contato = pessoa; título do deal ("Negócio …") fica no subtitle.
+  const contactName =
+    sanitizeContactName(deal.contact?.name) ||
+    personNameFromDealTitle(deal.title) ||
+    "Sem nome";
   const ownerName = deal.owner?.name?.trim() || "Sem responsavel";
   const lastMessage = deal.lastMessage;
   return {
@@ -146,6 +151,10 @@ export function toDealCard(deal: BoardDealDto): Deal {
       deal.status === "LOST" && deal.lostReason?.trim()
         ? deal.lostReason.trim()
         : undefined,
+    channel: deal.channel ?? (deal.contact?.phone ? "whatsapp" : null),
+    contactId: deal.contact?.id ?? null,
+    avatarUrl: deal.contact?.avatarUrl ?? null,
+    phone: deal.contact?.phone ?? null,
   };
 }
 
@@ -218,7 +227,10 @@ const DEAL_STATUS_TO_LIST: Record<string, DealListStatus> = {
 
 /** DealListItemDto (payload de `/api/deals`) → DealListRow (tabela DS). */
 export function toDealListRow(deal: DealListItemDto): DealListRow {
-  const contactName = deal.contact?.name?.trim() || deal.title || "Sem nome";
+  const contactName =
+    sanitizeContactName(deal.contact?.name) ||
+    personNameFromDealTitle(deal.title) ||
+    "Sem nome";
   const ownerName = deal.owner?.name?.trim() || null;
   return {
     id: deal.id,

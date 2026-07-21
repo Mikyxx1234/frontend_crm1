@@ -49,10 +49,19 @@ export function useToggleConversationResolve(
   return useMutation<
     Awaited<ReturnType<typeof postConversationAction>>,
     Error,
-    { conversationId: string; action: "resolve" | "reopen" }
+    {
+      conversationId: string;
+      action: "resolve" | "reopen";
+      tabulationId?: string | null;
+    }
   >({
     mutationFn: (vars) =>
-      postConversationAction(vars.conversationId, { action: vars.action }),
+      postConversationAction(
+        vars.conversationId,
+        vars.action === "resolve"
+          ? { action: "resolve", tabulationId: vars.tabulationId ?? null }
+          : { action: vars.action },
+      ),
     onSuccess: (data, vars) => {
       const isReopen = vars.action === "reopen";
       const newId =
@@ -106,11 +115,24 @@ export function useMarkConversationRead() {
 /** Ações em lote (bulk) — usadas no modo de seleção. */
 export function useBulkConversationAction() {
   const qc = useQueryClient();
-  return useMutation<void, Error, { ids: string[]; action: BulkAction }>({
+  return useMutation<
+    Awaited<ReturnType<typeof postBulkAction>>,
+    Error,
+    { ids: string[]; action: BulkAction }
+  >({
     mutationFn: (vars) => postBulkAction(vars.ids, vars.action),
-    onSuccess: () => {
+    onSuccess: (result, vars) => {
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
       qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
+      if (
+        vars.action === "resolve" &&
+        Array.isArray(result?.skipped) &&
+        result.skipped.length > 0
+      ) {
+        toast.info(
+          `${result.skipped.length} conversa(s) exigem tabulação e não foram encerradas. Encerre individualmente.`,
+        );
+      }
     },
     onError: (err) => toast.error(err.message),
   });

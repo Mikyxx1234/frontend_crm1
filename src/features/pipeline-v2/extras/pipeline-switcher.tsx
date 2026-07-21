@@ -4,15 +4,15 @@
  * Seletor de pipeline — usa o mesmo DropdownGlass do FilterBar do dashboard
  * para manter visual consistente em toda a V2.
  *
+ * Duas variantes:
+ *  - `dropdown` (default): gatilho padrão com nome do funil (Settings, Lista).
+ *  - `icon`: chevron compacto para plugar ao lado do título (Kanban).
+ *
  * Envolto em <ClientOnly> porque o `DropdownMenu` do Radix usa `useId()`
- * internamente e a contagem de chamadas estava divergindo entre SSR e
- * CSR (irmaos lazy-mounted entre o trigger e a posicao na arvore),
- * gerando hydration mismatch ("id=radix-_R_1... vs _R_5..."). O fallback
- * preserva exatamente o footprint do trigger (h-10, min-w-180px) — sem
- * layout shift no mount.
+ * internamente e a contagem de chamadas estava divergindo entre SSR e CSR.
  */
 
-import { IconFilter } from "@tabler/icons-react";
+import { IconChevronDown, IconFilter } from "@tabler/icons-react";
 
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { ClientOnly } from "@/components/util/client-only";
@@ -21,9 +21,10 @@ import { usePipelines } from "@/features/pipeline-v2/hooks";
 interface PipelineSwitcherProps {
   selectedId: string | null;
   onChange: (id: string) => void;
+  variant?: "dropdown" | "icon";
 }
 
-export function PipelineSwitcher({ selectedId, onChange }: PipelineSwitcherProps) {
+export function PipelineSwitcher({ selectedId, onChange, variant = "dropdown" }: PipelineSwitcherProps) {
   const { data: pipelines = [] } = usePipelines();
 
   const options = pipelines.map((p) => ({
@@ -31,6 +32,37 @@ export function PipelineSwitcher({ selectedId, onChange }: PipelineSwitcherProps
     label: p.name,
     icon: <IconFilter size={15} />,
   }));
+
+  if (variant === "icon") {
+    const current = pipelines.find((p) => p.id === selectedId);
+    return (
+      <ClientOnly
+        fallback={
+          <div
+            aria-hidden
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]"
+          />
+        }
+      >
+        <DropdownGlass
+          options={options}
+          value={selectedId ?? undefined}
+          onValueChange={onChange}
+          menuLabel="Trocar de funil"
+          align="start"
+          trigger={
+            <button
+              type="button"
+              aria-label={current ? `Funil: ${current.name}` : "Selecionar funil"}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] transition-colors hover:border-[var(--brand-primary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)] data-[state=open]:border-[var(--brand-primary)] data-[state=open]:bg-[var(--brand-primary)] data-[state=open]:text-white"
+            >
+              <IconChevronDown size={16} stroke={2.4} />
+            </button>
+          }
+        />
+      </ClientOnly>
+    );
+  }
 
   return (
     <ClientOnly

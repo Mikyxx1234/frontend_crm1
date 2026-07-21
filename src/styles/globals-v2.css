@@ -69,7 +69,7 @@
      bolhas out em tema claro/gradiente, dando a impressão de que a
      entrega nunca era marcada como lida mesmo quando a Meta entregava
      o evento read via webhook. */
-  --wa-tick-read:    #53bdeb;   /* ticks azuis = lido */
+  --wa-tick-read:    #38bdf8;   /* ticks azuis = lido (ciano vivo p/ contrastar na bolha indigo) */
   --wa-tick-fail:    #fca5a5;   /* ícone de falha = rosa */
 
   /* Toggle unchecked */
@@ -316,6 +316,31 @@
   --channel-telegram:  #229ed9;
   --channel-email:     var(--brand-primary);
   --channel-webchat:   var(--brand-primary);
+
+  /* ── Avatar (contato = sólido; interno = glass) ─────────────────────────── */
+  --avatar-fallback-1: #2563eb;
+  --avatar-fallback-2: #059669;
+  --avatar-fallback-3: #7c3aed;
+  --avatar-fallback-4: #db2777;
+  --avatar-fallback-5: #0891b2;
+  --avatar-fallback-6: #d97706;
+  --avatar-fallback-7: #dc2626;
+  --avatar-fallback-8: #0f766e;
+  --avatar-bot-bg:     #475569;
+  --avatar-unread-bg:  #22c55e;
+  --avatar-ring:       var(--color-background, #fff);
+  --avatar-size-xs:    24px;
+  --avatar-size-sm:    28px;
+  --avatar-size-md:    36px;
+  --avatar-size-lg:    44px;
+  --avatar-size-xl:    56px;
+  --avatar-size-inbox: 48px;
+  --avatar-glass-blue:   linear-gradient(to bottom right, #5DFF7B, color-mix(in srgb, #5DFF7B 60%, transparent), #356823);
+  --avatar-glass-teal:   linear-gradient(to bottom right, #5D90FF, color-mix(in srgb, #5D90FF 60%, transparent), #37A5FF);
+  --avatar-glass-orange: linear-gradient(to bottom right, #FAFF5D, color-mix(in srgb, #FAFF5D 60%, transparent), #FF6C37);
+  --avatar-glass-purple: linear-gradient(to bottom right, #D15DFF, color-mix(in srgb, #D15DFF 60%, transparent), #AF37FF);
+  --avatar-glass-pink:   linear-gradient(to bottom right, #FF5DFC, color-mix(in srgb, #FF5DFC 60%, transparent), #3752FF);
+  --avatar-glass-coral:  linear-gradient(to bottom right, #FF5D6D, color-mix(in srgb, #FF5D6D 60%, transparent), #FFC037);
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -361,6 +386,17 @@ html[data-nav-expanded="true"] {
   }
   .v2-screen {
     grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* Chat aberto: esconde a bottom nav global e zera a altura reservada
+     para o composer/barra Mensagem|Nota ficar fixo na base da conversa. */
+  html[data-mobile-chat-open="1"] {
+    --mobile-bottom-nav-h: 0px;
+  }
+  html[data-mobile-chat-open="1"] [data-mobile-bottom-nav] {
+    transform: translateY(100%) !important;
+    pointer-events: none !important;
+    visibility: hidden;
   }
 }
 
@@ -480,6 +516,47 @@ html[data-nav-expanded="true"] {
 .v2-root * {
   scrollbar-width: thin;
   scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
+}
+
+/* ── Listas Contatos/Empresas: scrollbar horizontal bem visível ──
+   Sobrescreve o thumb de 6px transparente — aqui o usuário PRECISA
+   perceber que há colunas fora da viewport. */
+.v2-root .list-hscroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: color-mix(in srgb, var(--brand-primary) 55%, transparent)
+    color-mix(in srgb, var(--brand-primary) 10%, transparent);
+}
+.v2-root .list-hscroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.v2-root .list-hscroll::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--brand-primary) 8%, transparent);
+  border-radius: 9999px;
+  margin: 0 4px;
+}
+.v2-root .list-hscroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--brand-primary) 45%, transparent);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.v2-root .list-hscroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--brand-primary) 70%, transparent);
+  background-clip: padding-box;
+}
+.v2-dark .v2-root .list-hscroll {
+  scrollbar-color: rgba(148, 163, 255, 0.55) rgba(148, 163, 255, 0.12);
+}
+.v2-dark .v2-root .list-hscroll::-webkit-scrollbar-track {
+  background: rgba(148, 163, 255, 0.10);
+}
+.v2-dark .v2-root .list-hscroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 255, 0.45);
+}
+.v2-dark .v2-root .list-hscroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 255, 0.7);
 }
 
 /* ══════════════════════════════════════════════════════════════════

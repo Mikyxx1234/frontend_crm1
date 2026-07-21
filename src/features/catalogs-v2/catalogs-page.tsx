@@ -1,245 +1,212 @@
 "use client";
 
 import * as React from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  IconAlertTriangle,
   IconBookmark,
   IconBoxMultiple,
-  IconLoader2,
+  IconPackage,
   IconPencil,
   IconPlus,
-  IconSearch,
   IconStar,
-  IconStars,
   IconTag,
   IconTrash,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
+import { KpiCard } from "@/components/crm/kpi-card";
+import { PageActionsMenu } from "@/components/crm/page-toolbar";
+import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
+import {
+  ListColumnLabel,
+  SortableHeader,
+  listTableHeadRowClass,
+  type SortDir,
+} from "@/components/crm/sortable-header";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
+import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
+import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { useConfirm } from "@/components/ui/confirm-dialog";
 
 import { ProductDialog } from "@/features/products-v2/product-dialog";
-import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
-
 import { CatalogWizard } from "./catalog-wizard";
 import { capabilityMeta } from "./constants";
-import {
-  useCatalogs,
-  useDeleteCatalog,
-  useSaveAsTemplate,
-} from "./hooks";
+import { useCatalogs, useSaveAsTemplate } from "./hooks";
 import type { CatalogView } from "./types";
 
-/* ────────────────────────────────────────────────────────────────────── *
- *  STATS
- * ────────────────────────────────────────────────────────────────────── */
+/** Grid: [check] Nome | Produtos | Capacidades | Ações */
+const LIST_GRID = "32px minmax(0,1fr) 80px minmax(0,180px) 108px";
 
-type StatTone = "brand" | "purple" | "green" | "amber";
+type SortField = "name" | "products" | "capabilities";
 
-function StatCard({
-  icon,
-  value,
-  label,
-  tone,
-}: {
-  icon: React.ReactNode;
-  value: number | string;
-  label: string;
-  tone: StatTone;
-}) {
-  const toneClass = {
-    brand: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
-    purple:
-      "bg-[color-mix(in_srgb,var(--brand-secondary)_18%,transparent)] text-[var(--brand-secondary)]",
-    green:
-      "bg-[var(--color-success-bg)] text-[color-mix(in_srgb,var(--color-success)_75%,black)]",
-    amber:
-      "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
-  }[tone];
-
-  return (
-    <div className="flex min-w-0 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md sm:px-4 sm:py-3.5">
-      <div
-        aria-hidden
-        className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
-          toneClass,
-        )}
-      >
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <div className="font-display text-[21px] font-extrabold leading-none tracking-tight text-[var(--text-primary)]">
-          {value}
-        </div>
-        <div className="mt-1 text-[11.5px] font-semibold text-[var(--text-muted)]">
-          {label}
-        </div>
-      </div>
-    </div>
-  );
+async function deleteCatalogRequest(id: string) {
+  const res = await fetch(apiUrl(`/api/catalogs/${id}`), { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { message?: string })?.message ?? "Erro ao excluir catálogo");
+  }
 }
-
-/* ────────────────────────────────────────────────────────────────────── *
- *  CARD DE CATÁLOGO
- * ────────────────────────────────────────────────────────────────────── */
-
-function CatalogCard({
-  cat,
-  onEdit,
-  onSaveTemplate,
-  onDelete,
-  templatePending,
-  deletePending,
-}: {
-  cat: CatalogView;
-  onEdit: () => void;
-  onSaveTemplate: () => void;
-  onDelete: () => void;
-  templatePending: boolean;
-  deletePending: boolean;
-}) {
-  const activeCaps = cat.capabilities.filter((c) => c.enabled);
-  const productCount = cat._count?.products ?? 0;
-
-  return (
-    <article className="flex min-w-0 flex-col gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-3 shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)] sm:p-4">
-      <div className="flex items-start gap-3">
-        <div
-          aria-hidden
-          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]"
-        >
-          <IconBoxMultiple size={22} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onEdit}
-              className="min-w-0 max-w-full truncate font-display text-[15px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
-            >
-              {cat.name}
-            </button>
-            {cat.isDefault && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--brand-primary)]">
-                <IconStar size={11} /> Padrão
-              </span>
-            )}
-            {cat.isTemplate && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border-subtle)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-secondary)]">
-                <IconBookmark size={11} /> Template
-              </span>
-            )}
-          </div>
-          {cat.description && (
-            <p className="mt-1 text-pretty break-words text-[12.5px] leading-snug text-[var(--text-muted)]">
-              {cat.description}
-            </p>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            title="Editar catálogo"
-            aria-label="Editar catálogo"
-            onClick={onEdit}
-            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-          >
-            <IconPencil size={15} />
-          </button>
-          <button
-            type="button"
-            title="Salvar como template"
-            aria-label="Salvar como template"
-            onClick={onSaveTemplate}
-            disabled={templatePending}
-            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
-          >
-            <IconBookmark size={15} />
-          </button>
-          {!cat.isDefault && (
-            <button
-              type="button"
-              title="Excluir catálogo"
-              aria-label="Excluir catálogo"
-              onClick={onDelete}
-              disabled={deletePending}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
-            >
-              <IconTrash size={15} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 border-t border-[var(--glass-border-subtle)] pt-2.5">
-        {activeCaps.length === 0 ? (
-          <span className="text-[11.5px] italic text-[var(--text-muted)]">
-            Sem capacidades ativas
-          </span>
-        ) : (
-          activeCaps.map((c) => {
-            const meta = capabilityMeta(c.capabilityKey);
-            const Icon = meta.icon;
-            return (
-              <span
-                key={c.id}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[12px] font-bold text-[var(--text-secondary)]"
-              >
-                <Icon size={12} className="text-[var(--brand-secondary)]" />
-                {meta.short}
-              </span>
-            );
-          })
-        )}
-        <span className="w-full text-[12px] font-semibold text-[var(--text-muted)] sm:ml-auto sm:w-auto">
-          · {productCount} produto{productCount === 1 ? "" : "s"}
-        </span>
-      </div>
-    </article>
-  );
-}
-
-/* ────────────────────────────────────────────────────────────────────── *
- *  MANAGER
- * ────────────────────────────────────────────────────────────────────── */
 
 export function CatalogsManager() {
-  const { data: catalogs, isLoading } = useCatalogs();
-  const deleteMutation = useDeleteCatalog();
-  const templateMutation = useSaveAsTemplate();
   const slots = useSettingsHeaderSlots();
+  const queryClient = useQueryClient();
+  const { data: catalogs = [], isLoading } = useCatalogs();
+  const templateMutation = useSaveAsTemplate();
+
+  const [query, setQuery] = React.useState("");
   const [wizardOpen, setWizardOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<CatalogView | null>(null);
   const [newProductCatalogId, setNewProductCatalogId] = React.useState<string | null>(null);
-  const [query, setQuery] = React.useState("");
-  const { confirm, dialog } = useConfirm();
+  const [deleting, setDeleting] = React.useState<CatalogView | null>(null);
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [confirmBulk, setConfirmBulk] = React.useState(false);
+  const [sortBy, setSortBy] = React.useState<SortField>("name");
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
 
-  async function handleDelete(id: string, name: string) {
-    const ok = await confirm({
-      title: `Excluir o catálogo "${name}"?`,
-      description: "Os produtos ficarão sem catálogo.",
-      confirmLabel: "Excluir",
-      destructive: true,
-    });
-    if (!ok) return;
-    deleteMutation.mutate(id, {
-      onSuccess: () => toast.success("Catálogo excluído."),
-      onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao excluir"),
-    });
-  }
+  const deleteMut = useMutation({
+    mutationFn: deleteCatalogRequest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["catalogs"] });
+      toast.success("Catálogo removido.");
+      setDeleting(null);
+    },
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "Erro ao excluir catálogo."),
+  });
 
-  function handleSaveTemplate(id: string) {
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      let fail = 0;
+      for (const id of ids) {
+        try {
+          await deleteCatalogRequest(id);
+        } catch {
+          fail += 1;
+        }
+      }
+      return { ok: ids.length - fail, fail };
+    },
+    onSuccess: ({ ok, fail }) => {
+      queryClient.invalidateQueries({ queryKey: ["catalogs"] });
+      setSelected(new Set());
+      setConfirmBulk(false);
+      if (fail === 0)
+        toast.success(ok === 1 ? "Catálogo removido." : `${ok} catálogos removidos.`);
+      else if (ok === 0)
+        toast.error("Não foi possível remover os catálogos selecionados.");
+      else toast.error(`${ok} removido(s), ${fail} falharam.`);
+    },
+  });
+
+  /* Métricas — somam todos os catálogos sem filtro (visão organizacional). */
+  const stats = React.useMemo(() => {
+    const activeCapabilities = catalogs.reduce(
+      (sum, c) => sum + c.capabilities.filter((cap) => cap.enabled).length,
+      0,
+    );
+    const totalProducts = catalogs.reduce((sum, c) => sum + (c._count?.products ?? 0), 0);
+    const defaults = catalogs.filter((c) => c.isDefault).length;
+    const templates = catalogs.filter((c) => c.isTemplate).length;
+    return { total: catalogs.length, activeCapabilities, totalProducts, defaults, templates };
+  }, [catalogs]);
+
+  /* Filtro por busca, case-insensitive sobre name+description. */
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return catalogs;
+    return catalogs.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.description?.toLowerCase().includes(q) ?? false),
+    );
+  }, [catalogs, query]);
+
+  /* Ordenação client-side. */
+  const sorted = React.useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case "name":
+          cmp = a.name.localeCompare(b.name, "pt-BR");
+          break;
+        case "products":
+          cmp = (a._count?.products ?? 0) - (b._count?.products ?? 0);
+          break;
+        case "capabilities":
+          cmp =
+            a.capabilities.filter((c) => c.enabled).length -
+            b.capabilities.filter((c) => c.enabled).length;
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
+  /* Limpa seleção ao mudar busca. */
+  React.useEffect(() => {
+    setSelected(new Set());
+  }, [query]);
+
+  const allChecked = sorted.length > 0 && sorted.every((c) => selected.has(c.id));
+  const someChecked = sorted.some((c) => selected.has(c.id));
+
+  const toggleAll = React.useCallback(() => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (sorted.every((c) => next.has(c.id))) sorted.forEach((c) => next.delete(c.id));
+      else sorted.forEach((c) => next.add(c.id));
+      return next;
+    });
+  }, [sorted]);
+
+  const toggleOne = React.useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSort = React.useCallback((field: SortField) => {
+    setSortBy((prevField) => {
+      if (prevField === field) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prevField;
+      }
+      setSortDir(field === "name" ? "asc" : "desc");
+      return field;
+    });
+  }, []);
+
+  const dirFor = (f: SortField): SortDir => (sortBy === f ? sortDir : null);
+
+  /* IDs selecionados que podem ser excluídos (ignora isDefault). */
+  const bulkableSelected = React.useMemo(
+    () =>
+      [...selected].filter((id) => {
+        const cat = catalogs.find((c) => c.id === id);
+        return cat && !cat.isDefault;
+      }),
+    [selected, catalogs],
+  );
+
+  function handleSaveTemplate(cat: CatalogView) {
     templateMutation.mutate(
-      { id },
+      { id: cat.id },
       {
         onSuccess: () => toast.success("Salvo como template da organização."),
         onError: (err) =>
@@ -248,215 +215,333 @@ export function CatalogsManager() {
     );
   }
 
-  /* Métricas — somam todos os catálogos sem filtro (visão organizacional). */
-  const stats = React.useMemo(() => {
-    const list = catalogs ?? [];
-    const activeCapabilities = list.reduce(
-      (sum, c) => sum + c.capabilities.filter((cap) => cap.enabled).length,
-      0,
-    );
-    const totalProducts = list.reduce(
-      (sum, c) => sum + (c._count?.products ?? 0),
-      0,
-    );
-    const defaults = list.filter((c) => c.isDefault).length;
-    return {
-      total: list.length,
-      activeCapabilities,
-      totalProducts,
-      defaults,
-    };
-  }, [catalogs]);
+  /* Injeta busca (center) + ações (actions) no PageHeader do
+     SettingsV2Shell — padrão canônico. */
+  const searchNode = React.useMemo(
+    () => (
+      <SettingsListFilterBar
+        search={query}
+        onSearch={setQuery}
+        placeholder="Buscar catálogo..."
+        ariaLabel="Buscar catálogo"
+        onClearAll={() => setQuery("")}
+      />
+    ),
+    [query],
+  );
 
-  /* Filtro por busca, case-insensitive sobre name+description. */
-  const filtered = React.useMemo(() => {
-    const list = catalogs ?? [];
-    const q = query.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        (c.description?.toLowerCase().includes(q) ?? false),
-    );
-  }, [catalogs, query]);
+  const actionsNode = React.useMemo(
+    () => (
+      <PageActionsMenu
+        items={[
+          {
+            icon: <IconPlus size={16} />,
+            label: "Novo catálogo",
+            onClick: () => setWizardOpen(true),
+            primary: true,
+          },
+        ]}
+      />
+    ),
+    [],
+  );
 
-  /* Injeta apenas a ação no PageHeader do SettingsV2Shell — compacta pra
-     não competir com o título no mobile. A busca fica no corpo da página
-     (ver abaixo), então o effect não depende de `query`. */
   React.useEffect(() => {
     if (!slots) return;
-    slots.setActions(
-      <ButtonGlass
-        variant="primary"
-        size="sm"
-        onClick={() => setWizardOpen(true)}
-        className="shrink-0 gap-1.5 whitespace-nowrap"
-      >
-        <IconPlus size={16} />
-        <span className="sm:hidden">Novo</span>
-        <span className="hidden sm:inline">Novo catálogo</span>
-      </ButtonGlass>,
-    );
+    slots.setCenter(searchNode);
+    slots.setActions(actionsNode);
     return () => {
+      slots.setCenter(null);
       slots.setActions(null);
     };
-  }, [slots]);
+  }, [slots, searchNode, actionsNode]);
 
   return (
-    <div className="flex min-w-0 w-full flex-col gap-3.5">
-      {/* MÉTRICAS */}
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          tone="brand"
-          icon={<IconBoxMultiple size={20} />}
-          value={stats.total}
-          label="Catálogos na organização"
-        />
-        <StatCard
-          tone="purple"
-          icon={<IconTag size={20} />}
-          value={stats.activeCapabilities}
-          label="Capacidades ativas"
-        />
-        <StatCard
-          tone="green"
-          icon={<IconBookmark size={20} />}
-          value={stats.totalProducts}
-          label="Produtos cadastrados"
-        />
-        <StatCard
-          tone="amber"
-          icon={<IconStars size={20} />}
-          value={stats.defaults}
-          label="Catálogo padrão"
-        />
-      </div>
-
-      {/* BUSCA — no corpo (não no PageHeader) pra não disputar espaço com o
-          título/botão no mobile. Fallback com botão "Novo" quando não há
-          slots de header (ex.: rota standalone). */}
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        <label className="flex h-10 w-full min-w-0 items-center gap-2.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 text-[var(--text-muted)] transition-shadow focus-within:border-[var(--input-border-focus)] focus-within:shadow-[0_0_0_3px_var(--input-ring-focus)] sm:h-[42px] sm:max-w-[440px] sm:px-4">
-          <IconSearch size={16} className="shrink-0" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar catálogo..."
-            aria-label="Buscar catálogo"
-            className="min-w-0 flex-1 border-none bg-transparent text-[14px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
-          />
-        </label>
-        {!slots && (
-          <ButtonGlass
-            variant="primary"
-            onClick={() => setWizardOpen(true)}
-            className="w-full shrink-0 sm:w-auto"
-          >
-            <IconPlus size={16} /> Novo catálogo
-          </ButtonGlass>
-        )}
-      </div>
-
-      {/* PAINEL — lista de catálogos */}
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
+      {/* KPI MINI-DASH */}
       <section
-        aria-label="Catálogos da organização"
-        className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]"
+        className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
+        aria-label="Indicadores de catálogos"
       >
-        <header className="sticky top-0 z-10 flex min-w-0 items-center gap-2.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-3 py-3 v2-dark:bg-[var(--glass-bg-modal)] sm:px-4 sm:py-3.5">
-          <span
-            aria-hidden
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-          >
-            <IconBoxMultiple size={16} />
-          </span>
-          <span className="min-w-0 truncate font-display text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-            Catálogos da organização
-          </span>
-          <span className="shrink-0 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px text-[11px] font-bold text-[var(--text-muted)]">
-            {filtered.length}
-          </span>
-          {query && (
-            <span className="shrink-0 text-[11.5px] text-[var(--text-muted)]">
-              de {stats.total}
-            </span>
-          )}
-        </header>
-
-        <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:gap-3.5 sm:p-4">
-          {isLoading && (
-            <div className="col-span-full flex items-center justify-center gap-2 py-12 text-[13px] text-[var(--text-muted)]">
-              <IconLoader2 size={16} className="animate-spin" />
-              Carregando catálogos…
-            </div>
-          )}
-
-          {!isLoading && filtered.length === 0 && query && (
-            <div className="col-span-full flex flex-col items-center gap-2 py-10 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]">
-                <IconSearch size={20} />
-              </div>
-              <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-                Nenhum catálogo encontrado para “{query}”
-              </p>
-              <p className="text-[12px] text-[var(--text-muted)]">
-                Tente outro termo ou crie um novo catálogo.
-              </p>
-            </div>
-          )}
-
-          {!isLoading &&
-            filtered.map((cat) => (
-              <CatalogCard
-                key={cat.id}
-                cat={cat}
-                onEdit={() => setEditing(cat)}
-                onSaveTemplate={() => handleSaveTemplate(cat.id)}
-                onDelete={() => handleDelete(cat.id, cat.name)}
-                templatePending={templateMutation.isPending}
-                deletePending={deleteMutation.isPending}
-              />
-            ))}
-
-          {!isLoading && !query && (
-            <button
-              type="button"
-              onClick={() => setWizardOpen(true)}
-              className="flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-6 text-[var(--text-muted)] transition-all hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-            >
-              <span
-                aria-hidden
-                className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-              >
-                <IconPlus size={20} />
-              </span>
-              <span className="font-display text-[13.5px] font-bold">
-                Novo catálogo
-              </span>
-            </button>
-          )}
-        </div>
+        <KpiCard
+          label="Catálogos"
+          value={stats.total.toLocaleString("pt-BR")}
+          icon={<IconBoxMultiple size={20} stroke={2.2} />}
+          tone="brand"
+        />
+        <KpiCard
+          label="Capacidades ativas"
+          value={stats.activeCapabilities.toLocaleString("pt-BR")}
+          icon={<IconTag size={20} stroke={2.2} />}
+          tone="violet"
+        />
+        <KpiCard
+          label="Produtos"
+          value={stats.totalProducts.toLocaleString("pt-BR")}
+          icon={<IconPackage size={20} stroke={2.2} />}
+          tone="success"
+        />
+        <KpiCard
+          label="Padrão"
+          value={stats.defaults.toLocaleString("pt-BR")}
+          icon={<IconStar size={20} stroke={2.2} />}
+          tone="warning"
+        />
+        <KpiCard
+          label="Templates"
+          value={stats.templates.toLocaleString("pt-BR")}
+          icon={<IconBookmark size={20} stroke={2.2} />}
+          tone="neutral"
+        />
       </section>
 
-      {/* DIALOGS */}
-      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle>Novo catálogo</DialogTitle>
-            <DialogDescription>
-              Responda perguntas de negócio — o catálogo monta as capacidades para você.
-            </DialogDescription>
-          </DialogHeader>
-          <CatalogWizard
-            onDone={(createdId) => {
-              setWizardOpen(false);
-              if (createdId) setNewProductCatalogId(createdId);
-            }}
-            onCancel={() => setWizardOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* BULK BAR */}
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 backdrop-blur-md">
+          <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+            {selected.size} selecionado{selected.size > 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Limpar
+            </ButtonGlass>
+            <ButtonGlass
+              variant="danger"
+              size="sm"
+              type="button"
+              disabled={bulkableSelected.length === 0}
+              onClick={() => setConfirmBulk(true)}
+            >
+              <IconTrash size={14} /> Excluir
+            </ButtonGlass>
+          </div>
+        </div>
+      )}
 
+      {/* LIST */}
+      {isLoading ? (
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[64px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
+            />
+          ))}
+        </div>
+      ) : sorted.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16">
+          <IconBoxMultiple size={40} className="text-[var(--text-muted)] opacity-40" />
+          <p className="text-sm text-[var(--text-muted)]">
+            {query
+              ? `Nenhum catálogo encontrado para "${query}".`
+              : "Nenhum catálogo encontrado."}
+          </p>
+          {!query && (
+            <ButtonGlass variant="glass" size="sm" onClick={() => setWizardOpen(true)}>
+              <IconPlus size={14} /> Criar primeiro
+            </ButtonGlass>
+          )}
+        </div>
+      ) : (
+        <div className="flex min-w-0 flex-col gap-2">
+          {/* Cabeçalho de colunas — padrão canônico. */}
+          <div
+            className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
+            style={{ gridTemplateColumns: LIST_GRID }}
+          >
+            <span>
+              <CheckboxGlass
+                checked={allChecked}
+                indeterminate={!allChecked && someChecked}
+                onChange={toggleAll}
+                aria-label="Selecionar todos"
+              />
+            </span>
+            <SortableHeader
+              label="Nome"
+              sort={dirFor("name")}
+              onSort={() => toggleSort("name")}
+            />
+            <SortableHeader
+              label="Produtos"
+              sort={dirFor("products")}
+              onSort={() => toggleSort("products")}
+            />
+            <SortableHeader
+              label="Capacidades"
+              sort={dirFor("capabilities")}
+              onSort={() => toggleSort("capabilities")}
+            />
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
+          </div>
+
+          {sorted.map((cat) => {
+            const isSelected = selected.has(cat.id);
+            const activeCaps = cat.capabilities.filter((c) => c.enabled);
+            const productCount = cat._count?.products ?? 0;
+            return (
+              <div
+                key={cat.id}
+                style={{ gridTemplateColumns: LIST_GRID }}
+                className={cn(
+                  "group grid items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+                  isSelected
+                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] hover:border-[var(--input-border-focus)]",
+                )}
+              >
+                {/* Checkbox */}
+                <span>
+                  <CheckboxGlass
+                    checked={isSelected}
+                    onChange={() => toggleOne(cat.id)}
+                    aria-label={`Selecionar ${cat.name}`}
+                  />
+                </span>
+
+                {/* Nome + badges + descrição */}
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]">
+                    <IconBoxMultiple size={17} stroke={2.2} />
+                  </span>
+                  <div className="min-w-0 leading-tight">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setEditing(cat)}
+                        className="block max-w-full truncate text-left font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                      >
+                        {cat.name}
+                      </button>
+                      {cat.isDefault && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--brand-primary)]">
+                          <IconStar size={10} /> Padrão
+                        </span>
+                      )}
+                      {cat.isTemplate && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border-subtle)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-secondary)]">
+                          <IconBookmark size={10} /> Template
+                        </span>
+                      )}
+                    </div>
+                    {cat.description && (
+                      <div className="truncate font-body text-[12px] text-[var(--text-muted)]">
+                        {cat.description}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Produtos */}
+                <span className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                  {productCount.toLocaleString("pt-BR")}
+                </span>
+
+                {/* Capacidades — pills truncadas */}
+                <div className="flex min-w-0 flex-wrap items-center gap-1">
+                  {activeCaps.length === 0 ? (
+                    <span className="text-[11px] italic text-[var(--text-muted)]">—</span>
+                  ) : (
+                    <>
+                      {activeCaps.slice(0, 2).map((c) => {
+                        const meta = capabilityMeta(c.capabilityKey);
+                        const Icon = meta.icon;
+                        return (
+                          <span
+                            key={c.id}
+                            className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-secondary)]"
+                          >
+                            <Icon size={10} className="text-[var(--brand-secondary)]" />
+                            {meta.short}
+                          </span>
+                        );
+                      })}
+                      {activeCaps.length > 2 && (
+                        <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                          +{activeCaps.length - 2}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Ações: editar / salvar-template / excluir */}
+                <div className="flex items-center justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(cat)}
+                    aria-label={`Editar ${cat.name}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
+                  >
+                    <IconPencil size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSaveTemplate(cat)}
+                    aria-label={`Salvar ${cat.name} como template`}
+                    disabled={templateMutation.isPending}
+                    className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+                  >
+                    <IconBookmark size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleting(cat)}
+                    aria-label={`Excluir ${cat.name}`}
+                    disabled={cat.isDefault}
+                    className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] hover:text-[var(--color-danger)] disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <IconTrash size={15} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* WIZARD — criar */}
+      <FormSheet
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        size="lg"
+        title="Novo catálogo"
+        description="Responda perguntas de negócio — o catálogo monta as capacidades para você."
+      >
+        <CatalogWizard
+          onDone={(createdId) => {
+            setWizardOpen(false);
+            if (createdId) setNewProductCatalogId(createdId);
+          }}
+          onCancel={() => setWizardOpen(false)}
+        />
+      </FormSheet>
+
+      {/* WIZARD — editar */}
+      <FormSheet
+        open={!!editing}
+        onOpenChange={(o) => !o && setEditing(null)}
+        size="lg"
+        title="Editar catálogo"
+        description="Ajuste capacidades, modos e políticas de override deste catálogo."
+      >
+        {editing && (
+          <CatalogWizard
+            key={editing.id}
+            catalog={editing}
+            onDone={() => setEditing(null)}
+            onCancel={() => setEditing(null)}
+          />
+        )}
+      </FormSheet>
+
+      {/* Pós-criação: abre dialog de produto vinculado. */}
       <ProductDialog
         open={!!newProductCatalogId}
         onOpenChange={(o) => !o && setNewProductCatalogId(null)}
@@ -465,25 +550,87 @@ export function CatalogsManager() {
         onCreated={() => setNewProductCatalogId(null)}
       />
 
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent size="lg">
+      {/* Dialog de exclusão individual */}
+      <Dialog open={deleting !== null} onOpenChange={(next) => !next && setDeleting(null)}>
+        <DialogContent size="sm">
           <DialogHeader>
-            <DialogTitle>Editar catálogo</DialogTitle>
-            <DialogDescription>
-              Ajuste capacidades, modos e políticas de override deste catálogo.
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] text-[var(--color-danger)]">
+                <IconAlertTriangle size={18} />
+              </span>
+              <DialogTitle className="text-base">Excluir catálogo?</DialogTitle>
+            </div>
+            <DialogDescription className="text-[13px] leading-relaxed">
+              {deleting
+                ? `"${deleting.name}" será removido. Os produtos ficarão sem catálogo.`
+                : ""}
             </DialogDescription>
           </DialogHeader>
-          {editing && (
-            <CatalogWizard
-              key={editing.id}
-              catalog={editing}
-              onDone={() => setEditing(null)}
-              onCancel={() => setEditing(null)}
-            />
-          )}
+          <DialogFooter>
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setDeleting(null)}
+              disabled={deleteMut.isPending}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Cancelar
+            </ButtonGlass>
+            <ButtonGlass
+              variant="danger"
+              size="sm"
+              type="button"
+              disabled={deleteMut.isPending}
+              onClick={() => deleting && deleteMut.mutate(deleting.id)}
+            >
+              <IconTrash size={14} /> {deleteMut.isPending ? "Excluindo..." : "Excluir"}
+            </ButtonGlass>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-      {dialog}
+
+      {/* Dialog de exclusão em lote */}
+      <Dialog open={confirmBulk} onOpenChange={(next) => !next && setConfirmBulk(false)}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] text-[var(--color-danger)]">
+                <IconAlertTriangle size={18} />
+              </span>
+              <DialogTitle className="text-base">
+                {`Excluir ${bulkableSelected.length === 1 ? "catálogo" : `${bulkableSelected.length} catálogos`}?`}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-[13px] leading-relaxed">
+              Os catálogos selecionados serão removidos. Catálogos padrão são ignorados
+              automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => setConfirmBulk(false)}
+              disabled={bulkDeleteMut.isPending}
+              className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+            >
+              Cancelar
+            </ButtonGlass>
+            <ButtonGlass
+              variant="danger"
+              size="sm"
+              type="button"
+              disabled={bulkDeleteMut.isPending}
+              onClick={() => bulkDeleteMut.mutate(bulkableSelected)}
+            >
+              <IconTrash size={14} />{" "}
+              {bulkDeleteMut.isPending ? "Excluindo..." : "Excluir"}
+            </ButtonGlass>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import {
-  IconCheck,
   IconChevronDown,
   IconChevronsLeft,
   IconChevronsRight,
@@ -17,6 +16,7 @@ import {
   IconUserCircle,
 } from "@tabler/icons-react";
 import { signOut, useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 import { useEffect, useRef, useState } from "react";
 
@@ -47,6 +47,7 @@ import {
 import { useSidebarPreferences } from "@/features/sidebar/hooks";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { useOrganization } from "@/hooks/use-organization";
+import { SoftphoneNavIcon } from "@/features/softphone/components/softphone-nav-icon";
 
 /**
  * Cache local da preferencia da sidebar. O react-query perde o cache a cada
@@ -57,6 +58,12 @@ import { useOrganization } from "@/hooks/use-organization";
  */
 const SIDEBAR_PREFS_CACHE = "crm:sidebar-prefs-items";
 const SIDEBAR_EXPANDED_CACHE = "crm:sidebar-expanded";
+
+/** Menus Conta/Perfil — branco sólido (não glass cinza do `bg-popover`). */
+const ACCOUNT_MENU_CONTENT =
+  "z-(--z-popover) w-60 rounded-xl border border-black/5 bg-[var(--color-bg-card)] p-1 text-[var(--color-popover-foreground)] shadow-[0_8px_32px_rgba(0,0,0,0.10)] dark:border-white/10";
+const ACCOUNT_MENU_ITEM =
+  "gap-2 px-2 py-1.5 text-[13px] text-[var(--color-popover-foreground)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)] focus:bg-[var(--color-primary-soft)] focus:text-[var(--brand-primary)]";
 
 function readCachedSidebarItems(): SidebarItemPreference[] | undefined {
   if (typeof window === "undefined") return undefined;
@@ -141,15 +148,13 @@ export function NavRailV2({ className }: { className?: string }) {
     (session?.user as { organizationId?: string | null } | undefined)
       ?.organizationId ??
     "";
-  const [accountIdCopied, setAccountIdCopied] = useState(false);
   async function copyAccountId() {
     if (!accountId) return;
     try {
       await navigator.clipboard.writeText(accountId);
-      setAccountIdCopied(true);
-      window.setTimeout(() => setAccountIdCopied(false), 1500);
+      toast.success("ID da conta copiado");
     } catch {
-      /* clipboard indisponível — ignora */
+      toast.error("Não foi possível copiar o ID");
     }
   }
 
@@ -296,6 +301,11 @@ export function NavRailV2({ className }: { className?: string }) {
 
   const isProfileActive = pathname.startsWith("/settings/profile");
 
+  // Foto do perfil (User.avatarUrl espelhado em session.user.image). Quando
+  // presente, sobrepõe as iniciais — "quem manda é o perfil".
+  const userImage =
+    (session?.user as { image?: string | null } | undefined)?.image ?? null;
+
   // Classes reutilizadas: item da lista quando expandido — icone + label lado a lado.
   const expandedItemBase =
     "group flex h-11 w-full shrink-0 items-center gap-3 rounded-[var(--radius-md)] px-3 text-[13px] font-medium transition-colors";
@@ -339,7 +349,7 @@ export function NavRailV2({ className }: { className?: string }) {
       </button>
 
       {/* Avatar da empresa: iniciais do nome da org (estilo Kommo). Ao clicar,
-          abre um popover com o nome e o ID da conta (copiável) + atalho Início.
+          abre menu no mesmo padrão do avatar do usuário (header + itens).
           Gate `mounted` idêntico ao avatar do usuário: no SSR/1o render usamos
           um Link estático (preserva navegação sem JS) e trocamos pelo dropdown
           após o mount, evitando hydration mismatch do useId. */}
@@ -367,50 +377,37 @@ export function NavRailV2({ className }: { className?: string }) {
             {companyInitials}
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="start" className="w-64">
+          <DropdownMenuContent align="start" className={ACCOUNT_MENU_CONTENT}>
             <div className="flex items-center gap-3 px-2 py-2">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[13px] font-bold text-white">
                 {companyInitials}
               </div>
               <div className="min-w-0">
-                <p className="truncate font-display text-[13px] font-bold text-foreground">
+                <p className="truncate font-display text-[13px] font-bold text-[var(--color-popover-foreground)]">
                   {companyName || "Minha empresa"}
                 </p>
-                <p className="text-[11px] text-muted-foreground">Conta</p>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  {accountId || "Conta"}
+                </p>
               </div>
             </div>
 
             <DropdownMenuSeparator />
 
-            <div className="px-2 py-1.5">
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                ID da conta
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="min-w-0 flex-1 truncate rounded bg-muted px-1.5 py-1 font-mono text-[11px] text-foreground">
-                  {accountId || "—"}
-                </code>
-                <button
-                  type="button"
-                  onClick={copyAccountId}
-                  disabled={!accountId}
-                  aria-label="Copiar ID da conta"
-                  title={accountIdCopied ? "Copiado!" : "Copiar ID da conta"}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
-                >
-                  {accountIdCopied ? (
-                    <IconCheck size={14} className="text-[var(--color-success,#16a34a)]" />
-                  ) : (
-                    <IconCopy size={14} />
-                  )}
-                </button>
-              </div>
-            </div>
+            <DropdownMenuItem
+              className={ACCOUNT_MENU_ITEM}
+              onClick={() => void copyAccountId()}
+              disabled={!accountId}
+            >
+              <IconCopy size={16} className="shrink-0" />
+              <span className="font-medium">Copiar ID da conta</span>
+            </DropdownMenuItem>
 
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem onClick={() => router.push("/dashboard")}>
-              <IconHome size={16} className="text-muted-foreground" />
+            <DropdownMenuItem
+              className={ACCOUNT_MENU_ITEM}
+              onClick={() => router.push("/dashboard")}
+            >
+              <IconHome size={16} className="shrink-0" />
               <span className="font-medium">Início</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -482,40 +479,36 @@ export function NavRailV2({ className }: { className?: string }) {
         )}
       </div>
 
-      {/* Ícones inferiores: status + settings + avatar.
-          Dark/light mode migrou pro dropdown do perfil (reduz ruido). */}
+      {/* Ícones inferiores: status do agente | telefonia + settings + avatar.
+          Sem badge/ping no softphone — o idle fica só no ícone sólido da rail. */}
       <div className={cn("flex w-full shrink-0 flex-col gap-2 px-3", expanded ? "items-stretch" : "items-center")}>
-      {/* Status do agente (Online / Ausente / Offline) */}
+      {/* Status do agente + telefonia (wifi | phone sólido) — sem badge de status */}
       {expanded ? (
-        <button
-          type="button"
-          onClick={() => setStatusPopupOpen(true)}
-          aria-label={`Status: ${statusMeta.label}`}
-          className={cn(expandedItemBase, expandedItemIdle)}
-        >
-          <span className="relative inline-flex shrink-0">
-            <StatusIcon size={20} style={{ color: statusMeta.color }} />
-            <span
-              className="absolute -bottom-0.5 -right-0.5 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-panel)]"
-              style={{ backgroundColor: statusMeta.color }}
-            />
-          </span>
-          <span className="truncate">Status: {statusMeta.label}</span>
-        </button>
+        <div className={cn(expandedItemBase, expandedItemIdle, "cursor-default hover:bg-transparent")}>
+          <button
+            type="button"
+            onClick={() => setStatusPopupOpen(true)}
+            aria-label={`Status: ${statusMeta.label}`}
+            className="inline-flex min-w-0 flex-1 items-center gap-3 text-left"
+          >
+            <StatusIcon size={20} className="shrink-0" style={{ color: statusMeta.color }} />
+            <span className="truncate">Status: {statusMeta.label}</span>
+          </button>
+          <SoftphoneNavIcon expanded withPipe className="ml-1" />
+        </div>
       ) : (
-        <DockButton
-          title={`Status: ${statusMeta.label}`}
-          onClick={() => setStatusPopupOpen(true)}
-          disablePop
-        >
-          <span className="relative inline-flex">
+        // Colapsada (72px): empilha wifi + phone — lado a lado + pipe
+        // estoura a largura (DockButton 44px + pipe + phone).
+        <div className="flex flex-col items-center gap-1">
+          <DockButton
+            title={`Status: ${statusMeta.label}`}
+            onClick={() => setStatusPopupOpen(true)}
+            disablePop
+          >
             <StatusIcon size={20} style={{ color: statusMeta.color }} />
-            <span
-              className="absolute -bottom-0.5 -right-0.5 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-panel)]"
-              style={{ backgroundColor: statusMeta.color }}
-            />
-          </span>
-        </DockButton>
+          </DockButton>
+          <SoftphoneNavIcon />
+        </div>
       )}
 
       {/* Configurações */}
@@ -557,14 +550,19 @@ export function NavRailV2({ className }: { className?: string }) {
         >
           <div
             className={cn(
-              "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
+              "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
               !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
             )}
           >
-            {initials}
+            {userImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={userImage} alt={displayName} className="size-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              initials
+            )}
             <span
               className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-[var(--glass-bg-strong)]"
               style={{ backgroundColor: statusMeta.color }}
@@ -588,14 +586,19 @@ export function NavRailV2({ className }: { className?: string }) {
         >
           <div
             className={cn(
-              "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
+              "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
               !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
             )}
           >
-            {initials}
+            {userImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={userImage} alt={displayName} className="size-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              initials
+            )}
             <span
               className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-[var(--glass-bg-strong)]"
               style={{ backgroundColor: statusMeta.color }}
@@ -611,13 +614,18 @@ export function NavRailV2({ className }: { className?: string }) {
           )}
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="start" className="w-60">
+        <DropdownMenuContent align="start" className={ACCOUNT_MENU_CONTENT}>
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[11px] font-bold text-white">
-              {initials}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[11px] font-bold text-white">
+              {userImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={userImage} alt={displayName} className="size-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                initials
+              )}
             </div>
             <div className="min-w-0">
-              <p className="truncate font-display text-[13px] font-bold text-foreground">
+              <p className="truncate font-display text-[13px] font-bold text-[var(--color-popover-foreground)]">
                 {displayName}
               </p>
               {email && (
@@ -628,7 +636,10 @@ export function NavRailV2({ className }: { className?: string }) {
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => setStatusPopupOpen(true)}>
+          <DropdownMenuItem
+            className={ACCOUNT_MENU_ITEM}
+            onClick={() => setStatusPopupOpen(true)}
+          >
             <span
               className="inline-flex h-4 w-4 items-center justify-center"
               aria-hidden
@@ -641,19 +652,22 @@ export function NavRailV2({ className }: { className?: string }) {
             <span className="font-medium">Status: {statusMeta.label}</span>
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
-            <IconUserCircle size={16} className="text-muted-foreground" />
+          <DropdownMenuItem
+            className={ACCOUNT_MENU_ITEM}
+            onClick={() => router.push("/settings/profile")}
+          >
+            <IconUserCircle size={16} className="shrink-0" />
             <span className="font-medium">Meu perfil</span>
           </DropdownMenuItem>
 
           {/* Toggle de tema migrado do trilho pro dropdown de perfil —
               reduz a quantidade de icones visíveis na NavRail sem esconder
               a funcionalidade. */}
-          <DropdownMenuItem onClick={toggle}>
+          <DropdownMenuItem className={ACCOUNT_MENU_ITEM} onClick={toggle}>
             {theme === "light" ? (
-              <IconMoon size={16} className="text-muted-foreground" />
+              <IconMoon size={16} className="shrink-0" />
             ) : (
-              <IconSun size={16} className="text-muted-foreground" />
+              <IconSun size={16} className="shrink-0" />
             )}
             <span className="font-medium">
               {theme === "light" ? "Modo escuro" : "Modo claro"}
@@ -664,9 +678,12 @@ export function NavRailV2({ className }: { className?: string }) {
 
           <DropdownMenuItem
             onClick={() => void signOut({ callbackUrl: "/login" })}
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
+            className={cn(
+              ACCOUNT_MENU_ITEM,
+              "text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive",
+            )}
           >
-            <IconLogout size={16} />
+            <IconLogout size={16} className="shrink-0" />
             <span className="font-medium">Sair</span>
           </DropdownMenuItem>
           </DropdownMenuContent>

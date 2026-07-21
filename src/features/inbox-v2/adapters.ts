@@ -11,7 +11,9 @@
 
 import type { Conversation, LastMessageType } from "@/components/crm/conversation-card";
 import type { Message, FormField } from "@/components/crm/message-bubble";
+import { avatarInitials as avatarInitialsFromLib } from "@/lib/avatar";
 import type { ConnectionRef } from "@/lib/connection-label";
+import { sanitizeContactName } from "@/lib/display-name";
 
 import type {
   ContactDetail,
@@ -47,17 +49,9 @@ export function colorFromName(name: string | null | undefined): Conversation["av
   return CONV_COLORS[sum % CONV_COLORS.length];
 }
 
-/** Iniciais (até 2 chars maiúsculas) — "Ana Silva" → "AS". */
+/** Iniciais (até 2 chars maiúsculas) — "Ana Silva" → "AS"; ignora emojis. */
 export function avatarInitials(name: string | null | undefined): string {
-  const safe = (name ?? "").trim();
-  if (!safe) return "?";
-  return safe
-    .split(/\s+/)
-    .map((w) => w[0] ?? "")
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  return avatarInitialsFromLib(name);
 }
 
 /** "Agora", "5min", "2h", "14:20", "ontem", "3d", "2sem", "10/03". */
@@ -227,7 +221,10 @@ export function toConversationCard(
   row: ConversationListRow,
   options?: { active?: boolean },
 ): Conversation {
-  const name = row.contact?.name?.trim() || "Sem nome";
+  const name =
+    sanitizeContactName(row.contact?.name) ||
+    row.contact?.name?.trim() ||
+    "Sem nome";
   const lastActivity = row.lastMessageAt ?? row.lastInboundAt ?? null;
   // Sessao da Meta (24h da ultima mensagem inbound do cliente).
   const sess = sessionRemainingFromInbound(row.lastInboundAt);
@@ -381,6 +378,32 @@ export function toMessageBubble(
   dto: InboxMessageDto,
   contactName: string,
 ): Message {
+  // Separador de ticket (item sintético de ?history=1): extrai metadados do
+  // `content` JSON e devolve uma Message com `ticketInfo` populado. O
+  // `type` é irrelevante — o ChatArea verifica `messageType` antes de tentar
+  // renderizar como bolha.
+  if (dto.messageType === "ticket-separator") {
+    let info: { number: number; closedAt: string | null; isCurrent?: boolean } = {
+      number: 0,
+      closedAt: null,
+    };
+    try {
+      info = JSON.parse(dto.content ?? "{}");
+    } catch { /* fallback com valores padrão */ }
+    return {
+      id: dto.id,
+      content: "",
+      time: "",
+      type: "incoming",
+      messageType: "ticket-separator",
+      ticketInfo: {
+        number: info.number ?? 0,
+        closedAt: info.closedAt ?? null,
+        isCurrent: info.isCurrent,
+      },
+    };
+  }
+
   // Backend serializa direction em minúsculas ("in" / "out" / "system").
   // Aceitamos também as variantes UPPER por defesa (caso outro endpoint
   // ou SSE futuro mude o casing — nunca regredir o lado dos balões).
@@ -395,6 +418,23 @@ export function toMessageBubble(
     dto.authorType === "bot" ||
     dto.sender?.kind === "BOT" ||
     (!isInbound && dto.senderName === "Automação");
+
+  // Disparo manual de automação (colab): a mensagem REAL enviada pelos steps
+  // vem tagueada com `triggeredByName` (nome do agente que acionou). O inbox
+  // exibe o selo "Manual" + o avatar (iniciais) do agente ao lado do robô,
+  // reproduzindo a mensagem enviada. Mantém compat com o card legado
+  // `messageType: "automation_run"` (agente ficava em `senderName`).
+  const manualTriggerName =
+    !isInbound && typeof dto.triggeredByName === "string" && dto.triggeredByName.trim()
+      ? dto.triggeredByName.trim()
+      : null;
+  const legacyRunAgent =
+    !isInbound && dto.messageType === "automation_run" && dto.senderName
+      ? dto.senderName
+      : null;
+  const manualAutomationAgent = manualTriggerName ?? legacyRunAgent;
+  const isAutomationRun =
+    !!manualAutomationAgent || (!isInbound && dto.messageType === "automation_run");
 
   // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
   const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;
@@ -421,7 +461,12 @@ export function toMessageBubble(
     // Nome completo do remetente — exibido como tooltip no avatar e rótulo
     // abaixo da bolha outgoing para identificar agente ou automação.
     senderName: !isInbound && dto.senderName ? dto.senderName : undefined,
-    isBot: isBot || undefined,
+    isBot: isBot || isAutomationRun || undefined,
+    isAutomationRun: isAutomationRun || undefined,
+    automationAgentName: manualAutomationAgent ?? undefined,
+    automationAgentInitials: manualAutomationAgent
+      ? avatarInitials(manualAutomationAgent)
+      : undefined,
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
     messageType: dto.messageType ?? undefined,
@@ -431,9 +476,10 @@ export function toMessageBubble(
     // MessageBubble (sem isso a nota era renderizada como balão de saída
     // azul, indistinguível de mensagem enviada ao cliente).
     isNote:
-      dto.isPrivate === true ||
-      dto.private === true ||
-      dto.messageType === "note" ||
+      (!isAutomationRun &&
+        (dto.isPrivate === true ||
+          dto.private === true ||
+          dto.messageType === "note")) ||
       undefined,
     mediaUrl: dto.mediaUrl ?? dto.media?.url ?? undefined,
     // Ticks de entrega (estilo WhatsApp) — apenas para mensagens out.
@@ -509,7 +555,10 @@ export interface ChatContactView {
 }
 
 export function toChatContact(row: ConversationListRow): ChatContactView {
-  const name = row.contact?.name?.trim() || "Sem nome";
+  const name =
+    sanitizeContactName(row.contact?.name) ||
+    row.contact?.name?.trim() ||
+    "Sem nome";
   return {
     name,
     initials: avatarInitials(name),
@@ -598,6 +647,8 @@ export interface ContactAsideView {
   entry: string;
   phone: string;
   email: string;
+  /** @ do WhatsApp (Contact.whatsappUsername), quando disponível. */
+  whatsappUsername?: string;
   cpf: string;
   rg: string;
   cep: string;
@@ -663,7 +714,8 @@ export function toContactAside(
   row: ConversationListRow,
   connection?: ContactConnection | null,
 ): ContactAsideView {
-  const name = contact?.name ?? row.contact?.name ?? "Sem nome";
+  const rawName = contact?.name ?? row.contact?.name ?? "Sem nome";
+  const name = sanitizeContactName(rawName) || rawName;
   const financial = toFinancialStatus(row);
   const tags = contact?.tags ?? row.tags ?? [];
   const firstDeal = contact?.deals?.[0];
@@ -774,6 +826,7 @@ export function toContactAside(
     entry: FALLBACK_FIELD,
     phone: contact?.phone ?? row.contact?.phone ?? FALLBACK_FIELD,
     email: contact?.email ?? row.contact?.email ?? FALLBACK_FIELD,
+    whatsappUsername: contact?.whatsappUsername ?? undefined,
     cpf: contact?.cpf ?? FALLBACK_FIELD,
     rg: contact?.rg ?? FALLBACK_FIELD,
     cep: contact?.cep ?? FALLBACK_FIELD,

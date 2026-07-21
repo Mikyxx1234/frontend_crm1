@@ -60,6 +60,8 @@ interface FetchDealsListParams {
   search?: string;
   page?: number;
   perPage?: number;
+  /** Filtros avançados (mesmo shape do kanban) — enviados como JSON em `filters`. */
+  filters?: Record<string, unknown>;
 }
 
 function buildQuery(params: FetchDealsListParams): string {
@@ -71,6 +73,9 @@ function buildQuery(params: FetchDealsListParams): string {
   if (params.search) sp.set("search", params.search);
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
+  if (params.filters && Object.keys(params.filters).length > 0) {
+    sp.set("filters", JSON.stringify(params.filters));
+  }
   const s = sp.toString();
   return s ? `?${s}` : "";
 }

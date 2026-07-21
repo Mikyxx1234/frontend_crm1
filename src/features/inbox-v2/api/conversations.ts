@@ -30,7 +30,8 @@ function buildConversationsUrl(p: ListConversationsParams): string {
     tab: p.tab,
   });
   if (p.page && p.page > 1) q.set("page", String(p.page));
-  if (p.ownerId) q.set("ownerId", p.ownerId);
+  if (p.withoutOwner) q.set("withoutOwner", "1");
+  else if (p.ownerId) q.set("ownerId", p.ownerId);
   if (p.channel) q.set("channel", p.channel);
   if (p.stageId) q.set("stageId", p.stageId);
   if (p.tagIds?.length) q.set("tagIds", p.tagIds.join(","));
@@ -88,9 +89,41 @@ export async function listConversationsForForwardPicker(): Promise<ConversationL
 }
 
 export type ConversationActionPayload =
-  | { action: "resolve" }
+  | { action: "resolve"; tabulationId?: string | null }
   | { action: "reopen" }
   | { action: "assign"; assignedToId: string | null };
+
+export type TabulationNode = {
+  id: string;
+  parentId: string | null;
+  name: string;
+  color: string | null;
+  position: number;
+  active: boolean;
+  children: TabulationNode[];
+};
+
+export interface TabulationsResponse {
+  departmentId: string;
+  requireTabulationOnClose: boolean;
+  tree: TabulationNode[];
+}
+
+/** GET /api/tabulations?departmentId=xxx — leitura para agentes */
+export async function getTabulations(
+  departmentId: string,
+): Promise<TabulationsResponse> {
+  const res = await fetch(
+    apiUrl(`/api/tabulations?departmentId=${encodeURIComponent(departmentId)}`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao carregar tabulacoes",
+    );
+  }
+  return data as TabulationsResponse;
+}
 
 /**
  * Retorno de POST /api/conversations/:id/actions.
@@ -155,18 +188,114 @@ export async function pinConversationNote(
 
 export type BulkAction = "resolve" | "reopen" | "delete" | "assign";
 
+export interface BulkActionResult {
+  updated?: number;
+  /** IDs pulados por regra do backend (ex.: dept exige tabulacao). */
+  skipped?: string[];
+}
+
 /** POST /api/conversations/bulk */
 export async function postBulkAction(
   ids: string[],
   action: BulkAction,
   extra?: Record<string, unknown>,
-): Promise<void> {
+): Promise<BulkActionResult> {
   const res = await fetch(apiUrl("/api/conversations/bulk"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids, action, ...extra }),
   });
-  if (!res.ok) throw new Error("Falha em acao em lote");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Falha em acao em lote",
+    );
+  }
+  return (data ?? {}) as BulkActionResult;
+}
+
+export type ActiveAutomationDto = {
+  contextId: string;
+  automationId: string;
+  name: string;
+  status: "RUNNING" | "PAUSED";
+  stepLabel: string | null;
+  timeoutAt: string | null;
+  updatedAt: string;
+};
+
+/** GET /api/conversations/:id/active-automations — chip "robô em execução" */
+export async function getActiveAutomations(
+  conversationId: string,
+): Promise<{ items: ActiveAutomationDto[] }> {
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/active-automations`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao carregar automações ativas",
+    );
+  }
+  return data as { items: ActiveAutomationDto[] };
+}
+
+/** GET /api/contacts/:id/active-automations — botão "Robôs ativos" (inbox/deal) */
+export async function getContactActiveAutomations(
+  contactId: string,
+): Promise<{ items: ActiveAutomationDto[] }> {
+  const res = await fetch(
+    apiUrl(`/api/contacts/${contactId}/active-automations`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao carregar automações ativas",
+    );
+  }
+  return data as { items: ActiveAutomationDto[] };
+}
+
+export type AutomationHistoryDto = {
+  contextId: string;
+  automationId: string;
+  name: string;
+  status: "COMPLETED" | "TIMED_OUT";
+  startedAt: string;
+  finishedAt: string;
+};
+
+/** GET /api/contacts/:id/automation-history — histórico de execuções encerradas */
+export async function getContactAutomationHistory(
+  contactId: string,
+): Promise<{ items: AutomationHistoryDto[] }> {
+  const res = await fetch(
+    apiUrl(`/api/contacts/${contactId}/automation-history`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao carregar histórico",
+    );
+  }
+  return data as { items: AutomationHistoryDto[] };
+}
+
+/** DELETE /api/contacts/:id/active-automations/:contextId — interromper automação */
+export async function cancelContactAutomation(
+  contactId: string,
+  contextId: string,
+): Promise<void> {
+  const res = await fetch(
+    apiUrl(`/api/contacts/${contactId}/active-automations/${contextId}`),
+    { method: "DELETE" },
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao interromper o robô",
+    );
+  }
 }
 
 /** POST /api/conversations/create */

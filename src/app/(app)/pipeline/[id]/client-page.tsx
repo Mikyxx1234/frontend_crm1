@@ -105,11 +105,16 @@ interface DealDetailExtra {
    *  os retorna em `dealPanelFields`; o legado `deal.customFields` nunca
    *  era populado por `GET /api/deals/:id`. */
   dealPanelFields?: DealPanelField[];
+  /** Tags do negócio, achatadas pelo backend para `[{ id, name, color }]`. */
+  tags?: { id: string; name: string; color: string | null }[];
+  /** Origem do negócio (Deal.source). */
+  source?: string | null;
   contact?: {
     id?: string;
     name?: string | null;
     phone?: string | null;
     email?: string | null;
+    source?: string | null;
     conversations?: DealContactConversation[];
   } | null;
 }
@@ -186,9 +191,9 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
     ];
 
     const contactFields: DealField[] = [
-      { label: "Nome", value: contact?.name ?? undefined },
+      { label: "Nome", value: contact?.name ?? undefined, emphasis: "name" },
       { label: "E-mail", value: contact?.email ?? undefined },
-      { label: "Telefone", value: contact?.phone ?? undefined },
+      { label: "Telefone", value: contact?.phone ?? undefined, emphasis: "link" },
     ];
 
     // Campos personalizados — consome `dealPanelFields` (filtrados por
@@ -209,20 +214,43 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
       })
       .filter((f): f is DealField => f !== null);
 
+    const dealNumber = deal.number;
+    const numberLabel =
+      dealNumber != null ? `#${dealNumber}` : `#${deal.id.slice(0, 6)}`;
+
     const groups: DealFieldGroup[] = [
-      { title: "Informações do negócio", fields: dealFields },
-      { title: "Contato", fields: contactFields },
+      {
+        title: "Informações do Negócio",
+        meta: numberLabel,
+        icon: "deal",
+        fields: dealFields,
+      },
+      {
+        title: "Informações do Contato",
+        icon: "contact",
+        fields: contactFields,
+      },
     ];
     if (customFields.length) {
-      groups.push({ title: "Campos personalizados", fields: customFields });
+      groups.push({ title: "Campos personalizados", icon: "tag", fields: customFields });
     }
 
-    const dealNumber = deal.number;
+    // Canal exibido no grid do header: nome da inbox/canal da 1ª conversa.
+    const firstConv = contact?.conversations?.[0];
+    const channelLabel = firstConv
+      ? [firstConv.channel, firstConv.inboxName].filter(Boolean).join(" · ") || null
+      : null;
+
     return {
-      leadNumber:
-        dealNumber != null ? `Lead #${dealNumber}` : `Lead #${deal.id.slice(0, 6)}`,
+      leadNumber: `Lead ${numberLabel}`,
       tag: deal.title || "Sem título",
+      dealNumber: numberLabel,
       funnelStage: stageObj?.name ?? "—",
+      stageColor: stageObj?.color ?? null,
+      ownerName: owner?.name ?? null,
+      origin: deal.source ?? contact?.source ?? null,
+      channelLabel,
+      tags: deal.tags ?? [],
       pipelineName: (stageObj as { pipeline?: { name?: string } } | null)?.pipeline?.name ?? null,
       segments: segments.length
         ? segments

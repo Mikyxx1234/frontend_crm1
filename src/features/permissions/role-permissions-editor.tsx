@@ -18,9 +18,8 @@
  *    `settings` e `nav` editáveis diretamente.
  */
 
-import { createElement, useId, useState, type ReactNode } from "react";
+import { createElement, useState, type ReactNode } from "react";
 import {
-  IconAlertTriangle,
   IconBolt,
   IconBriefcase,
   IconBuilding,
@@ -51,7 +50,6 @@ import {
   LEVELS,
   actionTier,
   applyLevel,
-  deriveNav,
   levelOf,
   withDerivedNav,
 } from "./level-matrix";
@@ -178,8 +176,6 @@ export function RolePermissionsEditor({
   disabled = false,
   variant = "full",
 }: RolePermissionsEditorProps) {
-  const settingsResource = resources.find((r) => r.resource === "settings");
-  const navResource = resources.find((r) => r.resource === "nav");
   const mainResources = resources.filter(
     (r) => r.resource !== "settings" && r.resource !== "nav",
   );
@@ -252,21 +248,8 @@ export function RolePermissionsEditor({
               ))}
             </Panel>
           )}
-
-          {/* Configurações administrativas */}
-          {settingsResource && (
-            <SettingsGrid
-              resource={settingsResource}
-              checked={checked}
-              onChange={onChange}
-              disabled={disabled}
-            />
-          )}
-
-          {/* Navegação derivada */}
-          <NavDerivedFooter checked={checked} />
         </>
-      ) : mainResources.length === 0 && !settingsResource && !navResource ? (
+      ) : mainResources.length === 0 ? (
         <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]">
           <EmptyCatalog />
         </div>
@@ -285,26 +268,6 @@ export function RolePermissionsEditor({
               ))}
             </CategoryGroup>
           ))}
-          {(settingsResource || navResource) && (
-            <CategoryGroup label="Administração & Sistema">
-              {settingsResource && (
-                <GranularSection
-                  resource={settingsResource}
-                  checked={checked}
-                  onChange={onChange}
-                  disabled={disabled}
-                />
-              )}
-              {navResource && (
-                <GranularSection
-                  resource={navResource}
-                  checked={checked}
-                  onChange={onChange}
-                  disabled={disabled}
-                />
-              )}
-            </CategoryGroup>
-          )}
         </>
       )}
     </div>
@@ -550,142 +513,6 @@ function ActionCheckboxRow({
         <code className="font-mono text-[10px] text-[var(--text-muted)]">{key}</code>
       </label>
     </li>
-  );
-}
-
-/* ── Configurações administrativas (switches em grid 2 col) ──────────────── */
-
-function SettingsGrid({
-  resource,
-  checked,
-  onChange,
-  disabled,
-}: {
-  resource: ResourceDef;
-  checked: Set<string>;
-  onChange: (next: Set<string>) => void;
-  disabled?: boolean;
-}) {
-  function toggle(key: string) {
-    const next = new Set(checked);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    onChange(withDerivedNav(next));
-  }
-
-  return (
-    <Panel icon={<IconSettings size={18} />} title="Configurações administrativas">
-      <div className="grid grid-cols-1 sm:grid-cols-2">
-        {resource.actions.map((action) => {
-          const key = `${resource.resource}:${action.action}`;
-          const on = checked.has(key);
-          const isPermissions = key === "settings:permissions";
-          return (
-            <div
-              key={key}
-              className="flex items-start gap-2.5 border-b border-r border-[var(--glass-border-subtle)] px-3 py-2.5 last:border-b-0 sm:[&:nth-child(2n)]:border-r-0 sm:[&:nth-last-child(-n+2)]:border-b-0"
-            >
-              <SwitchPill
-                on={on}
-                disabled={disabled}
-                label={action.label}
-                onToggle={() => toggle(key)}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="text-[11px] font-medium text-[var(--text-primary)]">
-                    {action.label}
-                  </span>
-                  {isPermissions && on && (
-                    <IconAlertTriangle
-                      size={12}
-                      className="shrink-0 text-[var(--color-warning)]"
-                      aria-label="Atenção: concede gestão de permissões"
-                    />
-                  )}
-                </div>
-                <code className="font-mono text-[9px] text-[var(--text-muted)]">{key}</code>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </Panel>
-  );
-}
-
-function SwitchPill({
-  on,
-  disabled,
-  label,
-  onToggle,
-}: {
-  on: boolean;
-  disabled?: boolean;
-  label: string;
-  onToggle: () => void;
-}) {
-  const id = useId();
-  return (
-    <button
-      id={id}
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onToggle}
-      className={cn(
-        "relative mt-0.5 h-[18px] w-8 shrink-0 cursor-pointer rounded-full border transition-colors",
-        "focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)]",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        on
-          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
-          : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
-      )}
-    >
-      <span
-        aria-hidden
-        className={cn(
-          "absolute top-1/2 size-3 -translate-y-1/2 rounded-full bg-[var(--color-primary-foreground)] shadow-[var(--glass-shadow-sm)] transition-all",
-          on ? "left-[16px]" : "left-[2px]",
-        )}
-      />
-    </button>
-  );
-}
-
-/* ── Rodapé: navegação derivada (nav:*) ──────────────────────────────────── */
-
-function NavDerivedFooter({ checked }: { checked: Set<string> }) {
-  const navKeys = deriveNav(checked).sort();
-  return (
-    <footer
-      aria-label="Permissões de navegação derivadas"
-      className="flex flex-col gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-3 py-2.5"
-    >
-      <p className="text-[10px] leading-relaxed text-[var(--text-muted)]">
-        Os itens da sidebar (<code className="font-mono">nav:*</code>) são derivados
-        automaticamente da permissão <code className="font-mono">:view</code> de cada
-        módulo — não precisam ser marcados manualmente neste modo.
-      </p>
-      <div className="flex flex-wrap gap-1">
-        {navKeys.length === 0 ? (
-          <span className="text-[10px] italic text-[var(--text-muted)]">
-            Nenhum item de menu ativo
-          </span>
-        ) : (
-          navKeys.map((k) => (
-            <code
-              key={k}
-              className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-mono text-[10px] text-[var(--text-secondary)]"
-            >
-              {k}
-            </code>
-          ))
-        )}
-      </div>
-    </footer>
   );
 }
 

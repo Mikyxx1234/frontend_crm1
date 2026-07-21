@@ -301,7 +301,7 @@
   --chat-bubble-sent-bg: linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%);
   --chat-bubble-sent-text: #ffffff;
   --chat-bubble-sent-time: rgba(255, 255, 255, 0.7);
-  --chat-bubble-sent-check-read: #c7d2fe;
+  --chat-bubble-sent-check-read: #38bdf8;
   --chat-bg: transparent;
   --chat-bubble-received-text: #1e2a3b;
   --chat-bubble-received-time: #4b5563;
@@ -343,7 +343,7 @@
   --chat-bubble-sent-bg: linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%);
   --chat-bubble-sent-text: #ffffff;
   --chat-bubble-sent-time: rgba(255, 255, 255, 0.7);
-  --chat-bubble-sent-check-read: #c7d2fe;
+  --chat-bubble-sent-check-read: #38bdf8;
   --chat-bg: transparent;
 }
 
@@ -575,6 +575,15 @@
   .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(100, 130, 180, 0.30); border-radius: 99px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 
+  /* Scrollbar fina do redesign dos asides (ref. Stitch): 4px, thumb slate-300. */
+  .aside-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .aside-scrollbar::-webkit-scrollbar { width: 4px; }
+  .aside-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .aside-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
   /* Chat no workspace do negócio (Kanban): barra vertical mais legível que `scrollbar-thin`. */
   .scrollbar-workspace {
     scrollbar-width: auto;
@@ -740,6 +749,13 @@
 @keyframes pulse-custom {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.7; transform: scale(1.2); }
+}
+@keyframes softphone-dot-fade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.softphone-dot-fade {
+  animation: softphone-dot-fade 1.8s ease-in-out infinite;
 }
 @keyframes wave {
   0%, 100% { transform: scaleY(1); }

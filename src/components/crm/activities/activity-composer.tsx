@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils"
 import { InputGlass } from "@/components/crm/input-glass"
 import { ButtonGlass } from "@/components/crm/button-glass"
 import { Textarea } from "@/components/ui/textarea"
+import { useTeamUsers } from "@/features/pipeline-v2/hooks/use-deal-mutations"
+import { useDepartments } from "@/features/conversations-settings/hooks/use-departments"
 import {
   ACTIVITY_KINDS,
   ACTIVITY_KIND_ORDER,
@@ -34,6 +36,14 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
   const [withWhom, setWithWhom] = useState("")
   const [location, setLocation] = useState("")
   const [notes, setNotes] = useState("")
+  const [assignKind, setAssignKind] = useState<"user" | "department">("user")
+  const [assigneeUserId, setAssigneeUserId] = useState("")
+  const [departmentId, setDepartmentId] = useState("")
+
+  const usersQuery = useTeamUsers(open)
+  const departmentsQuery = useDepartments()
+  const users = usersQuery.data ?? []
+  const departments = departmentsQuery.data ?? []
 
   // Sincroniza a data ao abrir
   useEffect(() => {
@@ -43,6 +53,9 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
       setWithWhom("")
       setLocation("")
       setNotes("")
+      setAssignKind("user")
+      setAssigneeUserId("")
+      setDepartmentId("")
     }
   }, [open, defaultDate])
 
@@ -51,6 +64,8 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
 
   const submit = () => {
     if (!title.trim()) return
+    if (assignKind === "department" && !departmentId) return
+    const isDept = assignKind === "department"
     onCreate({
       id: `a-${Date.now()}`,
       kind,
@@ -61,9 +76,15 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
       withWhom: withWhom.trim() || undefined,
       location: usesLocation ? location.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
+      assigneeType: isDept ? "department" : "user",
+      assigneeUserId: isDept ? null : assigneeUserId || null,
+      departmentId: isDept ? departmentId : null,
     })
     onOpenChange(false)
   }
+
+  const selectCls =
+    "h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -205,6 +226,69 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
             )}
           </div>
 
+          {/* Responsável — usuário ou departamento (tarefa compartilhada) */}
+          <div className="mb-4 flex flex-col gap-1.5">
+            <span className={labelCls}>Responsável</span>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => setAssignKind("user")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
+                  assignKind === "user"
+                    ? "border-transparent bg-[var(--brand-primary)] text-white"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]",
+                )}
+              >
+                Usuário
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignKind("department")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
+                  assignKind === "department"
+                    ? "border-transparent bg-[var(--brand-primary)] text-white"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]",
+                )}
+              >
+                Departamento
+              </button>
+            </div>
+            {assignKind === "user" ? (
+              <select
+                className={selectCls}
+                value={assigneeUserId}
+                onChange={(e) => setAssigneeUserId(e.target.value)}
+              >
+                <option value="">Eu (padrão)</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                className={selectCls}
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+              >
+                <option value="">Selecione um departamento…</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {assignKind === "department" && (
+              <p className="font-body text-[11px] text-[var(--text-muted)]">
+                Todos os membros do departamento verão e poderão concluir esta tarefa.
+              </p>
+            )}
+          </div>
+
           {/* Notas */}
           <div className="mb-5 flex flex-col gap-1.5">
             <label htmlFor="ac-notes" className={labelCls}>
@@ -225,7 +309,11 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
             <Dialog.Close asChild>
               <ButtonGlass variant="glass">Cancelar</ButtonGlass>
             </Dialog.Close>
-            <ButtonGlass variant="primary" onClick={submit} disabled={!title.trim()}>
+            <ButtonGlass
+              variant="primary"
+              onClick={submit}
+              disabled={!title.trim() || (assignKind === "department" && !departmentId)}
+            >
               Agendar tarefa
             </ButtonGlass>
           </div>

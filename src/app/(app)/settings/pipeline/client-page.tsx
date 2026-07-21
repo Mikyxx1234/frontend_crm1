@@ -23,23 +23,33 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { ScrollMap } from "@/components/crm/scroll-map";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { PasswordInput } from "@/components/ui/password-input";
 import { usePipelines, useBoard } from "@/features/pipeline-v2/hooks";
 import { boardKey } from "@/features/pipeline-v2/hooks/use-board";
+import { archivePipeline } from "@/features/pipeline-v2/api";
 import { useAutomations } from "@/features/automations-v2/hooks";
+import { useUserRole } from "@/hooks/use-user-role";
 import { apiUrl } from "@/lib/api";
 import { SETTINGS_HUB_BACK } from "../_v2-shell";
 import { AddAutomationDrawer } from "./add-automation-drawer";
+import { LostStageReasonsPanel } from "./lost-stage-reasons";
+import {
+  conditionsEqual,
+  parseConditions,
+  sanitizeConditions,
+  type TriggerCondition,
+} from "./trigger-conditions";
 
 // ─── Constantes ───────────────────────────────────────────────────
 
 const STAGE_TRIGGER_LABELS: Record<string, string> = {
   STAGE_ENTERED: "Quando criado nesta etapa",
+  STAGE_MOVED_IN: "Quando movido para esta etapa",
   STAGE_EXITED: "Quando sair desta etapa",
   DEAL_CREATED: "Quando negócio for criado",
   MESSAGE_RECEIVED: "Quando mensagem for recebida",
@@ -100,6 +110,10 @@ function labelForBackendTrigger(
   ) {
     return "Quando sair desta etapa";
   }
+  // Entrar/ser movido para esta etapa (toStageId aponta pro estágio).
+  if (triggerType === "stage_changed" && cfg?.toStageId === stageId) {
+    return "Quando movido para esta etapa";
+  }
   return BACKEND_TRIGGER_LABELS[triggerType] ?? triggerType;
 }
 
@@ -133,6 +147,11 @@ interface Automation {
    * direto do backend, vale o próprio `id`.
    */
   baseAutomationId?: string;
+  /**
+   * Condições extras (Tag/Campo/Canal) — salvas em `triggerConfig.conditions`
+   * e avaliadas com semântica E pelo backend. `undefined`/[] = sem condições.
+   */
+  conditions?: TriggerCondition[];
 }
 
 /**
@@ -145,23 +164,32 @@ function triggerFromLabel(
   label: string,
   pipelineId: string,
   stageId: string,
+  conditions?: TriggerCondition[],
 ): { triggerType: string; triggerConfig: Record<string, unknown> } | null {
+  // Condições sanitizadas são mescladas no triggerConfig como `conditions`.
+  // Vazio → chave omitida (mantém o config limpo pra automações sem condição).
+  const clean = sanitizeConditions(conditions ?? []);
+  const withConditions = (
+    cfg: Record<string, unknown>,
+  ): Record<string, unknown> => (clean.length > 0 ? { ...cfg, conditions: clean } : cfg);
+
   switch (label) {
     case "Quando criado nesta etapa":
     case "Quando negócio for criado":
-      return { triggerType: "deal_created", triggerConfig: { pipelineId, stageId } };
+      return { triggerType: "deal_created", triggerConfig: withConditions({ pipelineId, stageId }) };
     case "Quando entra nesta etapa":
-      return { triggerType: "stage_changed", triggerConfig: { pipelineId, toStageId: stageId } };
+    case "Quando movido para esta etapa":
+      return { triggerType: "stage_changed", triggerConfig: withConditions({ pipelineId, toStageId: stageId }) };
     case "Quando sair desta etapa":
-      return { triggerType: "stage_changed", triggerConfig: { pipelineId, fromStageId: stageId } };
+      return { triggerType: "stage_changed", triggerConfig: withConditions({ pipelineId, fromStageId: stageId }) };
     case "Quando negócio for ganho":
-      return { triggerType: "deal_won", triggerConfig: { pipelineId } };
+      return { triggerType: "deal_won", triggerConfig: withConditions({ pipelineId }) };
     case "Quando negócio for perdido":
-      return { triggerType: "deal_lost", triggerConfig: { pipelineId } };
+      return { triggerType: "deal_lost", triggerConfig: withConditions({ pipelineId }) };
     case "Quando mensagem for recebida":
-      return { triggerType: "message_received", triggerConfig: { pipelineId, stageId } };
+      return { triggerType: "message_received", triggerConfig: withConditions({ pipelineId, stageId }) };
     case "Execução manual":
-      return { triggerType: "manual", triggerConfig: { pipelineId } };
+      return { triggerType: "manual", triggerConfig: withConditions({ pipelineId }) };
     default:
       return null;
   }
@@ -382,7 +410,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(automation); }}
-                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-muted"
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
               >
                 <IconPencil size={13} className="text-ink-subtle" />
                 Editar gatilho
@@ -558,7 +586,7 @@ function StageOptionsMenu({
           <button
             type="button"
             onClick={() => { onRename(); close(); }}
-            className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-muted"
+            className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
           >
             <IconPencil size={14} className="text-ink-subtle" />
             Renomear estágio
@@ -568,7 +596,7 @@ function StageOptionsMenu({
           <button
             type="button"
             onClick={() => setShowColors((v) => !v)}
-            className="flex w-full cursor-pointer items-center justify-between gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-muted"
+            className="flex w-full cursor-pointer items-center justify-between gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
           >
             <span className="flex items-center gap-2.5">
               <IconPalette size={14} className="text-ink-subtle" />
@@ -850,6 +878,7 @@ function AddStageModal({
 
 interface StageColumnProps {
   stage: StageConfig;
+  pipelineId: string | null;
   isFirst: boolean;
   isLast: boolean;
   isDragOver: boolean;
@@ -871,6 +900,7 @@ interface StageColumnProps {
 
 function StageColumn({
   stage,
+  pipelineId,
   isFirst,
   isLast,
   isDragOver,
@@ -890,6 +920,7 @@ function StageColumn({
   onDragEnd,
 }: StageColumnProps) {
   const locked = isTerminalStage(stage);
+  const isLost = Boolean(stage.isLost);
   return (
     <section
       aria-label={`Estágio ${stage.name}`}
@@ -899,7 +930,8 @@ function StageColumn({
       onDrop={(e) => { e.preventDefault(); onDrop(stage.id); }}
       onDragEnd={onDragEnd}
       className={cn(
-        "kanban-col flex w-[300px] shrink-0 flex-col rounded-xl border bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md transition-all duration-150",
+        "kanban-col flex shrink-0 flex-col rounded-xl border bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md transition-all duration-150",
+        isLost ? "w-[360px]" : "w-[300px]",
         isDragOver
           ? "scale-[1.02] border-[var(--brand-primary)] shadow-[0_0_0_2px_rgba(91,111,245,0.25),var(--glass-shadow)]"
           : "border-[var(--glass-border)]",
@@ -966,6 +998,9 @@ function StageColumn({
 
       {/* Lista de cards */}
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+        {isLost && pipelineId && (
+          <LostStageReasonsPanel pipelineId={pipelineId} />
+        )}
         {stage.automations.map((auto) => (
           <AutomationCard
             key={auto.id}
@@ -1069,6 +1104,94 @@ function NewPipelineModal({
   );
 }
 
+// ─── Modal "Apagar pipeline" ──────────────────────────────────────
+
+function ArchivePipelineModal({
+  open,
+  pipelineName,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  pipelineName: string;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (password: string) => void;
+}) {
+  const [password, setPassword] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setPassword("");
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+      onClick={busy ? undefined : onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-6 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[color-mix(in_srgb,var(--color-danger)_25%,transparent)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]">
+            <IconTrash size={18} />
+          </span>
+          <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+            Apagar pipeline
+          </h2>
+        </div>
+        <p className="font-body text-[13px] leading-relaxed text-[var(--text-secondary)]">
+          O pipeline{" "}
+          <strong className="font-semibold text-[var(--text-primary)]">{pipelineName}</strong>,
+          suas etapas e negócios deixarão de aparecer no CRM. Os dados não são apagados
+          definitivamente — ficam arquivados no banco. Confirme com sua senha de login para
+          continuar.
+        </p>
+        <PasswordInput
+          ref={inputRef}
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && password && !busy) onConfirm(password);
+            if (e.key === "Escape" && !busy) onClose();
+          }}
+          placeholder="Sua senha de login..."
+          disabled={busy}
+          className="mt-4"
+        />
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            disabled={busy || !password}
+            onClick={() => onConfirm(password)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-danger)] px-4 py-2 font-display text-[12px] font-bold text-white shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-px hover:brightness-95 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <IconTrash size={13} />
+            {busy ? "Apagando..." : "Apagar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── TabsOverride ─────────────────────────────────────────────────
 
 interface TabsOverrideProps {
@@ -1077,6 +1200,9 @@ interface TabsOverrideProps {
   onSave: () => void;
   hasChanges: boolean;
   saving: boolean;
+  onDeletePipeline?: () => void;
+  canDelete?: boolean;
+  deleteDisabled?: boolean;
 }
 
 function PipelineSettingsTabs({
@@ -1085,6 +1211,9 @@ function PipelineSettingsTabs({
   onSave,
   hasChanges,
   saving,
+  onDeletePipeline,
+  canDelete,
+  deleteDisabled,
 }: TabsOverrideProps) {
   return (
     <div className="flex w-full items-center gap-2">
@@ -1106,6 +1235,23 @@ function PipelineSettingsTabs({
           <IconStar size={15} />
         </button>
       </TooltipGlass>
+
+      {canDelete && (
+        <TooltipGlass
+          label={deleteDisabled ? "Não é possível apagar o único pipeline" : "Apagar este pipeline"}
+          side="bottom"
+        >
+          <button
+            type="button"
+            onClick={onDeletePipeline}
+            disabled={deleteDisabled}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-danger)_35%,transparent)] bg-[var(--color-danger-bg)] px-4 py-1.5 font-display text-[12px] font-bold text-[var(--color-danger-text)] transition-all hover:-translate-y-px hover:brightness-95 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-40"
+          >
+            <IconTrash size={14} />
+            Apagar pipeline
+          </button>
+        </TooltipGlass>
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         <button
@@ -1132,10 +1278,16 @@ function PipelineSettingsTabs({
 export default function PipelineSettingsClientPage() {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
+  const { role, isSuperAdmin } = useUserRole();
+  const canDeletePipeline = role === "ADMIN" || isSuperAdmin;
 
   const { data: pipelines } = usePipelines(isAuthenticated);
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [newPipelineOpen, setNewPipelineOpen] = useState(false);
+
+  // Modal "Apagar pipeline"
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [archiveBusy, setArchiveBusy] = useState(false);
 
   // Automações por estágio (estado local)
   const [stageAutomationsMap, setStageAutomationsMap] = useState<Record<string, Automation[]>>({});
@@ -1254,7 +1406,13 @@ export default function PipelineSettingsClientPage() {
   const automationsBaselineRef = useRef<
     Map<
       string,
-      { stageId: string; trigger: string; triggerType: string; triggerConfig: Record<string, unknown> | null }
+      {
+        stageId: string;
+        trigger: string;
+        triggerType: string;
+        triggerConfig: Record<string, unknown> | null;
+        conditions: TriggerCondition[];
+      }
     >
   >(new Map());
 
@@ -1294,7 +1452,13 @@ export default function PipelineSettingsClientPage() {
     const map: Record<string, Automation[]> = {};
     const baselineNext = new Map<
       string,
-      { stageId: string; trigger: string; triggerType: string; triggerConfig: Record<string, unknown> | null }
+      {
+        stageId: string;
+        trigger: string;
+        triggerType: string;
+        triggerConfig: Record<string, unknown> | null;
+        conditions: TriggerCondition[];
+      }
     >();
     for (const stage of board) {
       const matches: Automation[] = [];
@@ -1304,12 +1468,14 @@ export default function PipelineSettingsClientPage() {
           continue;
         }
         const label = labelForBackendTrigger(dto.triggerType, cfg, stage.id);
+        const conditions = parseConditions(cfg);
         matches.push({
           id: dto.id,
           baseAutomationId: dto.id,
           name: dto.name,
           description: dto.description ?? undefined,
           stageTrigger: label,
+          conditions,
         });
         // Cada automação real só pode estar em 1 estágio (1 triggerConfig).
         // Se já entrou aqui, ignora repetição em outros estágios — defensivo
@@ -1320,6 +1486,7 @@ export default function PipelineSettingsClientPage() {
             trigger: label,
             triggerType: dto.triggerType,
             triggerConfig: cfg,
+            conditions,
           });
         }
       }
@@ -1367,6 +1534,7 @@ export default function PipelineSettingsClientPage() {
         if (!prev) return true; // ID real que não existia no baseline (defensivo)
         if (prev.stageId !== stageId) return true;
         if (prev.trigger !== auto.stageTrigger) return true;
+        if (!conditionsEqual(prev.conditions, auto.conditions)) return true;
       }
     }
     for (const id of automationsBaseline.keys()) {
@@ -1454,8 +1622,8 @@ export default function PipelineSettingsClientPage() {
       const realIdsSeen = new Set<string>();
 
       type AutomationOp =
-        | { kind: "create"; stageRealId: string; baseId: string; label: string }
-        | { kind: "update"; id: string; stageRealId: string; label: string }
+        | { kind: "create"; stageRealId: string; baseId: string; label: string; conditions?: TriggerCondition[] }
+        | { kind: "update"; id: string; stageRealId: string; label: string; conditions?: TriggerCondition[] }
         | { kind: "unbind"; id: string };
 
       const ops: AutomationOp[] = [];
@@ -1466,14 +1634,18 @@ export default function PipelineSettingsClientPage() {
           if (auto.id.startsWith("local-auto-")) {
             const baseId = auto.baseAutomationId;
             if (!baseId) continue; // defensivo — não deveria acontecer
-            ops.push({ kind: "create", stageRealId, baseId, label: auto.stageTrigger });
+            ops.push({ kind: "create", stageRealId, baseId, label: auto.stageTrigger, conditions: auto.conditions });
             continue;
           }
           realIdsSeen.add(auto.id);
           const prev = automationsBaseline.get(auto.id);
           if (!prev) continue; // ID real sem baseline — ignorado (defensivo)
-          if (prev.stageId !== stageRealId || prev.trigger !== auto.stageTrigger) {
-            ops.push({ kind: "update", id: auto.id, stageRealId, label: auto.stageTrigger });
+          if (
+            prev.stageId !== stageRealId ||
+            prev.trigger !== auto.stageTrigger ||
+            !conditionsEqual(prev.conditions, auto.conditions)
+          ) {
+            ops.push({ kind: "update", id: auto.id, stageRealId, label: auto.stageTrigger, conditions: auto.conditions });
           }
         }
       }
@@ -1502,7 +1674,7 @@ export default function PipelineSettingsClientPage() {
             steps?: { type: string; config: unknown }[];
           };
 
-          const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId);
+          const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId, op.conditions);
           if (!tr) {
             throw new Error(`Gatilho desconhecido: "${op.label}".`);
           }
@@ -1530,7 +1702,7 @@ export default function PipelineSettingsClientPage() {
             throw new Error(body?.message ?? "Falha ao criar automação no estágio.");
           }
         } else if (op.kind === "update") {
-          const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId);
+          const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId, op.conditions);
           if (!tr) {
             throw new Error(`Gatilho desconhecido: "${op.label}".`);
           }
@@ -1778,10 +1950,14 @@ export default function PipelineSettingsClientPage() {
     ({
       automationId,
       trigger,
+      targetStageId,
+      conditions,
     }: {
       automationId: string;
       trigger: string;
       applyToExisting: boolean;
+      targetStageId?: string;
+      conditions?: TriggerCondition[];
     }) => {
       if (!addAutomationStageId) return;
       const autoDto = automationsData?.items.find((a) => a.id === automationId);
@@ -1796,11 +1972,18 @@ export default function PipelineSettingsClientPage() {
         stageTrigger: STAGE_TRIGGER_LABELS[trigger] ?? trigger,
         name: autoDto.name,
         description: autoDto.description ?? undefined,
+        conditions: sanitizeConditions(conditions ?? []),
       };
+
+      // Gatilho "movido para etapa": a automação pertence à etapa de DESTINO
+      // escolhida no seletor inline (pode diferir do card onde foi aberto).
+      // O `handleSaveAll` converte o label → triggerConfig.toStageId usando a
+      // chave do mapa, então basta arquivar sob a etapa-alvo.
+      const fileStageId = targetStageId ?? addAutomationStageId;
 
       setStageAutomationsMap((prev) => ({
         ...prev,
-        [addAutomationStageId]: [...(prev[addAutomationStageId] ?? []), newAuto],
+        [fileStageId]: [...(prev[fileStageId] ?? []), newAuto],
       }));
       setAddAutomationStageId(null);
     },
@@ -1818,10 +2001,14 @@ export default function PipelineSettingsClientPage() {
     ({
       automationId,
       trigger,
+      targetStageId,
+      conditions,
     }: {
       automationId: string;
       trigger: string;
       applyToExisting: boolean;
+      targetStageId?: string;
+      conditions?: TriggerCondition[];
     }) => {
       if (!editingAutomation) return;
       const { automation, stageId } = editingAutomation;
@@ -1835,13 +2022,23 @@ export default function PipelineSettingsClientPage() {
         stageTrigger: STAGE_TRIGGER_LABELS[trigger] ?? trigger,
         name: autoDto?.name ?? automation.name,
         description: autoDto?.description ?? automation.description,
+        conditions: sanitizeConditions(conditions ?? []),
       };
-      setStageAutomationsMap((prev) => ({
-        ...prev,
-        [stageId]: (prev[stageId] ?? []).map((a) =>
-          a.id === automation.id ? updatedAuto : a,
-        ),
-      }));
+      // "Movido para etapa" pode ter destino diferente da etapa atual do card:
+      // move a automação para a chave da etapa-alvo (remove da origem).
+      const destStageId = targetStageId ?? stageId;
+      setStageAutomationsMap((prev) => {
+        const next = { ...prev };
+        if (destStageId !== stageId) {
+          next[stageId] = (prev[stageId] ?? []).filter((a) => a.id !== automation.id);
+          next[destStageId] = [...(prev[destStageId] ?? []), updatedAuto];
+        } else {
+          next[stageId] = (prev[stageId] ?? []).map((a) =>
+            a.id === automation.id ? updatedAuto : a,
+          );
+        }
+        return next;
+      });
       setEditingAutomation(null);
     },
     [editingAutomation, automationsData?.items],
@@ -1927,16 +2124,47 @@ export default function PipelineSettingsClientPage() {
     }
   }, [pipelineId, queryClient]);
 
+  // Apagar pipeline (soft-archive) — ADMIN only. Guarda client-side de
+  // "último pipeline" espelha a validação 409 do backend, evitando um round
+  // trip óbvio; o backend segue sendo a fonte da verdade (defesa em
+  // profundidade caso a lista local esteja desatualizada).
+  const canArchiveCurrentPipeline = (pipelines?.length ?? 0) > 1;
+
+  const handleArchivePipeline = useCallback(
+    async (password: string) => {
+      if (!pipelineId) return;
+      setArchiveBusy(true);
+      try {
+        await archivePipeline(pipelineId, password);
+        const remaining = (pipelines ?? []).filter((p) => p.id !== pipelineId);
+        setArchiveModalOpen(false);
+        setPipelineId(remaining[0]?.id ?? null);
+        setStageOrder([]);
+        setStageNameOverrides({});
+        setStageColorOverrides({});
+        setStageAutomationsMap({});
+        await queryClient.invalidateQueries({ queryKey: ["pipelines-v2"] });
+        toast.success("Pipeline apagado.");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Erro ao apagar pipeline.");
+      } finally {
+        setArchiveBusy(false);
+      }
+    },
+    [pipelineId, pipelines, queryClient],
+  );
+
+  const currentPipelineName = useMemo(
+    () => pipelines?.find((p) => p.id === pipelineId)?.name ?? "",
+    [pipelines, pipelineId],
+  );
+
   return (
     <>
-      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] grid-rows-1 gap-4 p-4">
-        <NavRailV2 />
-
-        <div
-          ref={boardWrapperRef}
-          className="flex min-w-0 flex-col gap-3"
-          style={{ height: "calc(100dvh / var(--v2-scale, 1) - 2rem)", overflow: "clip" }}
-        >
+      <div
+        ref={boardWrapperRef}
+        className="flex min-w-0 flex-1 flex-col gap-3 overflow-hidden"
+      >
           <PipelineHeader
             hideActions
             back={SETTINGS_HUB_BACK}
@@ -1959,6 +2187,9 @@ export default function PipelineSettingsClientPage() {
                 onSave={handleSaveAll}
                 hasChanges={hasChanges}
                 saving={saving}
+                onDeletePipeline={() => setArchiveModalOpen(true)}
+                canDelete={canDeletePipeline}
+                deleteDisabled={!pipelineId || !canArchiveCurrentPipeline}
               />
             }
           />
@@ -1974,6 +2205,7 @@ export default function PipelineSettingsClientPage() {
                 <StageColumn
                   key={stage.id}
                   stage={stage}
+                  pipelineId={pipelineId}
                   isFirst={idx === 0}
                   isLast={idx === stages.length - 1 || isTerminalStage(stages[idx + 1])}
                   isDragOver={dragOverId === stage.id}
@@ -2014,12 +2246,19 @@ export default function PipelineSettingsClientPage() {
           <ScrollMap boardRef={boardRef} columnCount={stages.length + 1} />
           </div>{/* fim relative wrapper */}
         </div>
-      </div>
 
       <NewPipelineModal
         open={newPipelineOpen}
         onClose={() => setNewPipelineOpen(false)}
         onConfirm={handleNewPipeline}
+      />
+
+      <ArchivePipelineModal
+        open={archiveModalOpen}
+        pipelineName={currentPipelineName}
+        busy={archiveBusy}
+        onClose={() => setArchiveModalOpen(false)}
+        onConfirm={handleArchivePipeline}
       />
 
       <RenameStageModal
@@ -2046,6 +2285,8 @@ export default function PipelineSettingsClientPage() {
       <AddAutomationDrawer
         open={!!addAutomationStageId}
         stageName={addAutomationStageName}
+        stages={stages}
+        currentStageId={addAutomationStageId ?? undefined}
         onClose={() => setAddAutomationStageId(null)}
         onConfirm={handleDrawerConfirm}
       />
@@ -2058,6 +2299,10 @@ export default function PipelineSettingsClientPage() {
             ? (stages.find((s) => s.id === editingAutomation.stageId)?.name ?? "")
             : ""
         }
+        stages={stages}
+        currentStageId={editingAutomation?.stageId ?? undefined}
+        initialTargetStageId={editingAutomation?.stageId ?? undefined}
+        initialConditions={editingAutomation?.automation.conditions ?? []}
         initialAutomationId={editingAutomation?.automation.id ?? null}
         initialTrigger={
           // Reverter label para value

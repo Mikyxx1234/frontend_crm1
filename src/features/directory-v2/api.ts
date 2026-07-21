@@ -81,11 +81,32 @@ export interface ContactListItemDto {
   avatarUrl: string | null;
   leadScore: number | null;
   lifecycleStage: string | null;
+  source: string | null;
   createdAt: string;
+  updatedAt: string;
+  assignedTo: { id: string; name: string; avatarUrl: string | null } | null;
   company: { id: string; name: string; domain: string | null } | null;
   // O backend (getContacts) ja achata as tags: `tags: c.tags.map((t) => t.tag)`,
   // entao a resposta vem como [{ id, name, color }], NAO [{ tag: {...} }].
   tags: { id: string; name: string; color: string | null }[];
+  // Valores de campos customizados achatados por id: { [customFieldId]: value }.
+  customFields: Record<string, string>;
+}
+
+// Definição de um campo customizado de contato (para o configurador de colunas).
+export interface ContactFieldDefDto {
+  id: string;
+  name: string;
+  label: string;
+  type: string;
+  options: string[];
+}
+
+export function fetchContactFieldDefs(): Promise<ContactFieldDefDto[]> {
+  return getJson<ContactFieldDefDto[]>(
+    "/api/custom-fields?entity=contact",
+    "Erro ao carregar campos personalizados.",
+  );
 }
 
 export interface ContactListPage {
@@ -99,6 +120,22 @@ export interface FetchContactsParams {
   search?: string;
   page?: number;
   perPage?: number;
+  /** Estágio do ciclo de vida (LEAD, CUSTOMER…). */
+  lifecycleStage?: string;
+  /** Filtra por tags (OR entre elas). */
+  tagIds?: string[];
+  /** Somente contatos sem responsável atribuído. */
+  unassigned?: boolean;
+  /** Intervalo de criação (YYYY-MM-DD). */
+  createdFrom?: string;
+  createdTo?: string;
+  /** Intervalo de modificação (YYYY-MM-DD). */
+  updatedFrom?: string;
+  updatedTo?: string;
+  /** Campo de ordenação. */
+  sortBy?: "name" | "email" | "createdAt" | "updatedAt" | "leadScore" | "lifecycleStage";
+  /** Direção da ordenação. */
+  sortOrder?: "asc" | "desc";
 }
 
 export function fetchContacts(params: FetchContactsParams = {}): Promise<ContactListPage> {
@@ -107,10 +144,91 @@ export function fetchContacts(params: FetchContactsParams = {}): Promise<Contact
   if (params.search) sp.set("search", params.search);
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
+  if (params.lifecycleStage) sp.set("lifecycleStage", params.lifecycleStage);
+  if (params.tagIds && params.tagIds.length > 0) sp.set("tagIds", params.tagIds.join(","));
+  if (params.unassigned) sp.set("unassigned", "1");
+  if (params.createdFrom) sp.set("createdFrom", params.createdFrom);
+  if (params.createdTo) sp.set("createdTo", params.createdTo);
+  if (params.updatedFrom) sp.set("updatedFrom", params.updatedFrom);
+  if (params.updatedTo) sp.set("updatedTo", params.updatedTo);
+  if (params.sortBy) sp.set("sortBy", params.sortBy);
+  if (params.sortOrder) sp.set("sortOrder", params.sortOrder);
   const qs = sp.toString();
   return getJson<ContactListPage>(
     `/api/contacts${qs ? `?${qs}` : ""}`,
     "Erro ao carregar contatos.",
+  );
+}
+
+// Contagens agregadas por segmento (stat cards do diretório).
+export interface ContactStatsDto {
+  total: number;
+  unassigned: number;
+  byStage: Record<string, number>;
+}
+
+export function fetchContactStats(): Promise<ContactStatsDto> {
+  return getJson<ContactStatsDto>(
+    "/api/contacts/stats",
+    "Erro ao carregar estatísticas de contatos.",
+  );
+}
+
+// Tags da organização com contagem de uso (chips de filtro).
+export interface TagWithCountDto {
+  id: string;
+  name: string;
+  color: string | null;
+  dealCount: number;
+  contactCount: number;
+}
+
+export function fetchTagsWithCounts(): Promise<TagWithCountDto[]> {
+  return getJson<TagWithCountDto[]>(
+    "/api/tags?counts=1",
+    "Erro ao carregar tags.",
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Duplicatas de contatos
+// ─────────────────────────────────────────────────────────────────
+
+export interface DuplicateContactSnap {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+  company: { id: string; name: string } | null;
+  assignedTo: { id: string; name: string } | null;
+}
+
+export interface DuplicateGroup {
+  key: string;
+  field: "phone" | "email";
+  contacts: DuplicateContactSnap[];
+}
+
+export interface DuplicatesResponseDto {
+  groups: DuplicateGroup[];
+}
+
+export function fetchDuplicates(): Promise<DuplicatesResponseDto> {
+  return getJson<DuplicatesResponseDto>(
+    "/api/contacts/duplicates",
+    "Erro ao localizar duplicatas.",
+  );
+}
+
+export function mergeContacts(keepId: string, removeId: string): Promise<{ ok: true }> {
+  return sendJson<{ ok: true }>(
+    "/api/contacts/merge",
+    "POST",
+    { keepId, removeId },
+    "Erro ao mesclar contatos.",
   );
 }
 
@@ -244,6 +362,9 @@ export interface CompanyListItemDto {
   size: string | null;
   phone: string | null;
   address: string | null;
+  cep: string | null;
+  city: string | null;
+  state: string | null;
   createdAt: string;
   _count: { contacts: number };
 }
@@ -255,10 +376,60 @@ export interface CompanyListPage {
   perPage: number;
 }
 
+export type CompanySegment = "todos" | "com-contatos" | "sem-email" | "sem-telefone";
+
+export type CompanySortField = "name" | "createdAt" | "updatedAt";
+
 export interface FetchCompaniesParams {
   search?: string;
   page?: number;
   perPage?: number;
+  segment?: CompanySegment;
+  city?: string;
+  state?: string;
+  industry?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  sortBy?: CompanySortField;
+  sortOrder?: "asc" | "desc";
+}
+
+export interface CompanyFacetsDto {
+  states: string[];
+  cities: string[];
+  industries: string[];
+}
+
+export function fetchCompanyFacets(): Promise<CompanyFacetsDto> {
+  if (isDirectoryMock()) {
+    return Promise.resolve({ states: [], cities: [], industries: [] });
+  }
+  return getJson<CompanyFacetsDto>(
+    "/api/companies/facets",
+    "Erro ao carregar filtros de empresas.",
+  );
+}
+
+export interface CompanyStatsDto {
+  total: number;
+  withContacts: number;
+  withoutEmail: number;
+  withoutPhone: number;
+}
+
+export function fetchCompanyStats(): Promise<CompanyStatsDto> {
+  if (isDirectoryMock()) {
+    return Promise.resolve({
+      total: 24,
+      withContacts: 20,
+      withoutEmail: 4,
+      withoutPhone: 6,
+    });
+  }
+  return getJson<CompanyStatsDto>(
+    "/api/companies/stats",
+    "Erro ao carregar estatísticas de empresas.",
+  );
 }
 
 export function fetchCompanies(params: FetchCompaniesParams = {}): Promise<CompanyListPage> {
@@ -267,6 +438,14 @@ export function fetchCompanies(params: FetchCompaniesParams = {}): Promise<Compa
   if (params.search) sp.set("search", params.search);
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
+  if (params.segment && params.segment !== "todos") sp.set("segment", params.segment);
+  if (params.city) sp.set("city", params.city);
+  if (params.state) sp.set("state", params.state);
+  if (params.industry) sp.set("industry", params.industry);
+  if (params.createdFrom) sp.set("createdFrom", params.createdFrom);
+  if (params.createdTo) sp.set("createdTo", params.createdTo);
+  if (params.sortBy) sp.set("sortBy", params.sortBy);
+  if (params.sortOrder) sp.set("sortOrder", params.sortOrder);
   const qs = sp.toString();
   return getJson<CompanyListPage>(
     `/api/companies${qs ? `?${qs}` : ""}`,
@@ -293,6 +472,9 @@ export interface CompanyDetailDto {
   size: string | null;
   phone: string | null;
   address: string | null;
+  cep: string | null;
+  city: string | null;
+  state: string | null;
   createdAt: string;
   updatedAt: string;
   contacts: CompanyContactDto[];
@@ -313,6 +495,9 @@ export interface CompanyWriteBody {
   size?: string | null;
   phone?: string | null;
   address?: string | null;
+  cep?: string | null;
+  city?: string | null;
+  state?: string | null;
 }
 
 export function createCompany(body: CompanyWriteBody): Promise<CompanyDetailDto> {
@@ -361,6 +546,7 @@ export interface ActivityListItemDto {
   completedAt: string | null;
   createdAt: string;
   user: { id: string; name: string; email: string | null; avatarUrl: string | null } | null;
+  department?: { id: string; name: string; color: string | null; icon: string | null } | null;
   contact: { id: string; name: string; email: string | null } | null;
   deal: { id: string; title: string; stageId: string } | null;
 }
@@ -372,11 +558,14 @@ export interface ActivityListPage {
   perPage: number;
 }
 
+export type ActivityScope = "mine" | "department" | "all";
+
 export interface FetchActivitiesParams {
   type?: ActivityTypeDto;
   completed?: boolean;
   page?: number;
   perPage?: number;
+  scope?: ActivityScope;
 }
 
 export function fetchActivities(
@@ -390,6 +579,7 @@ export function fetchActivities(
   if (params.completed !== undefined) sp.set("completed", String(params.completed));
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
+  if (params.scope) sp.set("scope", params.scope);
   const qs = sp.toString();
   return getJson<ActivityListPage>(
     `/api/activities${qs ? `?${qs}` : ""}`,
@@ -409,6 +599,10 @@ export interface CreateActivityPayload {
   scheduledAt?: string | null;
   contactId?: string | null;
   dealId?: string | null;
+  /** Responsável usuário (opcional se atribuída a departamento). */
+  userId?: string | null;
+  /** Responsável departamento (tarefa compartilhada). */
+  departmentId?: string | null;
 }
 
 export function createActivity(payload: CreateActivityPayload): Promise<ActivityListItemDto> {
@@ -429,6 +623,8 @@ export interface UpdateActivityPayload {
   completedAt?: string | null;
   contactId?: string | null;
   dealId?: string | null;
+  userId?: string | null;
+  departmentId?: string | null;
 }
 
 export function updateActivity(

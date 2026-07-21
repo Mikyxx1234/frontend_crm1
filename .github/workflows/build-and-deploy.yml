@@ -143,6 +143,8 @@ jobs:
           NEXTAUTH_URL: ${{ steps.env.outputs.NEXTAUTH_URL }}
           NEXTAUTH_SECRET: ${{ steps.env.outputs.NEXTAUTH_SECRET }}
           AUTH_SECRET: ${{ steps.env.outputs.NEXTAUTH_SECRET }}
+          BUILD_ID: ${{ github.sha }}
+          GITHUB_SHA: ${{ github.sha }}
         run: npm run build
 
       # ── Empacotar em imagem Docker (so COPY, ~10s) ───────────────────────

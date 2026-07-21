@@ -96,6 +96,18 @@ export interface ConversationListRow {
   createdAt?: string | null;
   /** Ultima atualizacao (mensagem/status/atribuicao). */
   updatedAt?: string | null;
+  /**
+   * Departamento vinculado a conversa. Usado para checar
+   * `requireTabulationOnClose` antes de encerrar.
+   */
+  departmentId?: string | null;
+  department?: {
+    id: string;
+    name: string;
+    requireTabulationOnClose: boolean;
+  } | null;
+  /** Tabulacao final escolhida ao encerrar (folha). Null enquanto OPEN. */
+  tabulationId?: string | null;
 }
 
 export interface ConversationListResponse {
@@ -117,6 +129,8 @@ export interface TabCounts {
 
 export interface InboxFilters {
   ownerId?: string;
+  /** true = só conversas sem responsável (`assignedToId` null). */
+  withoutOwner?: boolean;
   channel?: string;
   stageId?: string;
   tagIds?: string[];
@@ -140,6 +154,7 @@ export function hasInboxServerFilters(
   const { sortBy: _sb, sortOrder: _so, windowState: _ws, ...server } = f;
   return (
     Boolean(server.ownerId) ||
+    Boolean(server.withoutOwner) ||
     Boolean(server.channel) ||
     Boolean(server.stageId) ||
     (server.tagIds?.length ?? 0) > 0 ||
@@ -207,6 +222,13 @@ export interface InboxMessageDto {
    * real da automação em `senderName` sem quebrar a detecção do bot na UI.
    */
   authorType?: "human" | "bot" | "system";
+  /**
+   * Nome do agente que disparou a automação MANUALMENTE (gatilho `manual`).
+   * Presente nas mensagens `out` de bot enviadas por um disparo manual — o
+   * inbox exibe o selo "Manual" + o avatar do agente ao lado do robô (colab).
+   * NULL para envios automáticos/reativos.
+   */
+  triggeredByName?: string | null;
   /** Status bruto de envio (string livre do backend: sent/delivered/read/failed). */
   sendStatus?: string | null;
   /**

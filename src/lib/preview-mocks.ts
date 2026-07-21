@@ -824,28 +824,6 @@ const ROLES = [
   },
 ];
 
-const GROUPS = [
-  {
-    id: "grp-sp",    name: "Time SP",     description: "Equipe de São Paulo", color: "#3b82f6", isActive: true,
-    roleId: "role-supervisor", role: ROLES.find((r) => r.id === "role-supervisor"),
-    channelGrants: ["whatsapp"], stageGrants: [],
-    _count: { members: 2 },
-    _members: [
-      { id: "mem-1", userId: "u-juliana", user: { id: "u-juliana", name: "Juliana Costa",  email: "juliana@eduit.com.br", avatarUrl: null }, roleId: null, role: null, joinedAt: "2026-05-01T00:00:00Z" },
-      { id: "mem-2", userId: "u-rafael",  user: { id: "u-rafael",  name: "Rafael Almeida", email: "rafael@eduit.com.br",  avatarUrl: null }, roleId: null, role: null, joinedAt: "2026-05-15T00:00:00Z" },
-    ],
-  },
-  {
-    id: "grp-vendas", name: "Time Vendas", description: "Equipe comercial geral", color: "#10b981", isActive: true,
-    roleId: "role-member", role: ROLES.find((r) => r.id === "role-member"),
-    channelGrants: [], stageGrants: [],
-    _count: { members: 1 },
-    _members: [
-      { id: "mem-3", userId: "u-camila", user: { id: "u-camila", name: "Camila Souza", email: "camila@eduit.com.br", avatarUrl: null }, roleId: null, role: null, joinedAt: "2026-06-01T00:00:00Z" },
-    ],
-  },
-];
-
 const PERMISSION_CATALOG_MOCK = [
   {
     resource: "deal", label: "Negócios",
@@ -1103,6 +1081,15 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
     },
   },
   {
+    test: (u) => u.pathname === "/api/companies/stats",
+    handler: () => ({
+      total: COMPANIES_LIST.length,
+      withContacts: COMPANIES_LIST.filter((c) => (c._count?.contacts ?? 0) > 0).length,
+      withoutEmail: COMPANIES_LIST.filter((c) => !c.domain).length,
+      withoutPhone: COMPANIES_LIST.filter((c) => !c.phone).length,
+    }),
+  },
+  {
     test: (u) => u.pathname === "/api/companies",
     handler: () => ({
       items: COMPANIES_LIST,
@@ -1253,28 +1240,6 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
   {
     test: (u) => /^\/api\/roles\/[^/]+$/.test(u.pathname),
     handler: (u) => ROLES.find((r) => r.id === u.pathname.split("/")[3]) ?? ROLES[0],
-  },
-
-  /* ── RBAC v2: Groups ── */
-  {
-    test: (u) => u.pathname === "/api/groups",
-    handler: () => GROUPS,
-  },
-  {
-    test: (u) => /^\/api\/groups\/[^/]+\/members$/.test(u.pathname),
-    handler: (u) => {
-      const groupId = u.pathname.split("/")[3];
-      const group = GROUPS.find((g) => g.id === groupId) ?? GROUPS[0];
-      return group._members ?? [];
-    },
-  },
-  {
-    test: (u) => /^\/api\/groups\/[^/]+\/members\/[^/]+$/.test(u.pathname),
-    handler: () => ({ ok: true }),
-  },
-  {
-    test: (u) => /^\/api\/groups\/[^/]+$/.test(u.pathname),
-    handler: (u) => GROUPS.find((g) => g.id === u.pathname.split("/")[3]) ?? GROUPS[0],
   },
 
   /* ── RBAC v2: Permissions catalog ── */

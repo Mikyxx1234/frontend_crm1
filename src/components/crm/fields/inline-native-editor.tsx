@@ -196,8 +196,9 @@ export function InlineNativeEditor({
             : (textClassName ?? "font-display text-[13px] font-bold text-[var(--text-primary)]"),
         )}
         aria-label={`Editar ${fieldKey}`}
+        title={isEmpty ? undefined : String(display)}
       >
-        <span className="min-w-0 break-words">{display}</span>
+        <span className="min-w-0 truncate">{display}</span>
         <IconPencil
           size={12}
           className={cn(

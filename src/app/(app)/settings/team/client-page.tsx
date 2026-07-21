@@ -24,21 +24,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
+import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
+import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-toolbar";
 import {
-  listTableHeadRowClass,
+  SettingsListFilterBar,
+  type SettingsFilterGroup,
+} from "@/components/crm/settings-filter-bar";
+import {
   ListColumnLabel,
+  SortableHeader,
+  listTableHeadRowClass,
+  type SortDir,
 } from "@/components/crm/sortable-header";
-import {
-  PagePrimaryButton,
-  PageSearchBar,
-} from "@/components/crm/page-toolbar";
+import { UserAvatar } from "@/components/crm/user-avatar";
+import { ExpedienteTab } from "@/features/legacy-v1/settings/schedules";
+import { DepartmentsTab } from "@/features/conversations-settings/components/DepartmentsTab";
+import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   CRM_ACTION_KEYS,
@@ -50,7 +59,11 @@ import {
 import { useRoles } from "@/features/permissions/hooks";
 import { useIsDesktop } from "@/hooks/use-media-query";
 
-import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
+import {
+  SETTINGS_HUB_BACK,
+  SettingsV2Shell,
+  useSettingsHeaderSlots,
+} from "../_v2-shell";
 import { TelephonyToggle } from "@/features/telephony/telephony-toggle";
 
 type UserRole = "ADMIN" | "MANAGER" | "MEMBER";
@@ -62,6 +75,7 @@ type UserRow = {
   name: string;
   email: string;
   role: UserRole;
+  avatarUrl?: string | null;
   assignedRoles?: AssignedRole[];
 };
 
@@ -69,31 +83,14 @@ type CrmPermissionDraft = Record<CrmActionKey, boolean>;
 
 const DEFAULT_PER_PAGE = 25;
 
+/** Grid da lista de usuários: [check] | Usuário | E-mail | Função | Telefonia | Ações */
+const USER_LIST_GRID = "32px minmax(0,1.5fr) minmax(0,1.3fr) 200px 104px 88px";
+
 const DEFAULT_INVITE_PERMISSIONS: CrmPermissionDraft = {
   editLeads: true,
   runAutomations: true,
   assignOwner: true,
 };
-
-const AVATAR_COLORS = [
-  "var(--brand-primary)",
-  "var(--brand-secondary)",
-  "var(--color-success)",
-  "var(--brand-primary-light)",
-];
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase() || "?";
-}
-
-function avatarColor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
 
 /** Classes do badge de função (espelha o HTML de referência DS v2). */
 function roleBadgeClass(isAdminRole: boolean): string {
@@ -134,10 +131,51 @@ async function fetchUsers(): Promise<UserRow[]> {
 }
 
 export default function TeamV2ClientPage() {
+  return (
+    <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
+      title="Equipe"
+      description="Usuários, funções, permissões, expediente e departamentos"
+      icon={<IconUsers size={22} />}
+    >
+      <TeamContent />
+    </SettingsV2Shell>
+  );
+}
+
+/**
+ * Injeta busca (center) + ações (actions) no header do SettingsV2Shell.
+ * Montado apenas nas abas Usuários/Expediente — desmonta na aba
+ * Departamentos, cedendo os slots ao DepartmentsTab sem conflito.
+ */
+function TeamHeaderSlots({
+  center,
+  actions,
+}: {
+  center: React.ReactNode;
+  actions: React.ReactNode;
+}) {
+  const headerSlots = useSettingsHeaderSlots();
+  React.useEffect(() => {
+    if (!headerSlots) return;
+    headerSlots.setCenter(center);
+    headerSlots.setActions(actions);
+    return () => {
+      headerSlots.setCenter(null);
+      headerSlots.setActions(null);
+    };
+  }, [headerSlots, center, actions]);
+  return null;
+}
+
+function TeamContent() {
   const qc = useQueryClient();
   const { data: session, status } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
+  const canManageDepartments =
+    session?.user?.role === "ADMIN" || session?.user?.role === "MANAGER";
   const isDesktop = useIsDesktop();
+  const searchParams = useSearchParams();
 
   // Funções disponíveis (modelo híbrido): ADMIN preset + roles customizadas.
   const { data: roles = [] } = useRoles();
@@ -157,10 +195,25 @@ export default function TeamV2ClientPage() {
     [adminRole, customRoles],
   );
 
+  // 0 = Usuários, 1 = Expediente, 2 = Departamentos. Suporta deep-link
+  // via ?tab= (usado pelo redirect da rota antiga /settings/departments).
+  const [activeTab, setActiveTab] = React.useState(() => {
+    const t = searchParams?.get("tab");
+    if (t === "departamentos") return 2;
+    if (t === "expediente") return 1;
+    return 0;
+  });
   const [search, setSearch] = React.useState("");
+  const [roleFilter, setRoleFilter] = React.useState("all");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(DEFAULT_PER_PAGE);
+  const [sortBy, setSortBy] = React.useState<"name" | "email">("name");
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
+
+  // Expediente tab (busca própria + modal "Novo expediente")
+  const [expedienteSearch, setExpedienteSearch] = React.useState("");
+  const [expedienteNewOpen, setExpedienteNewOpen] = React.useState(false);
 
   const [inviteOpen, setInviteOpen] = React.useState(false);
   const [inviteName, setInviteName] = React.useState("");
@@ -193,31 +246,63 @@ export default function TeamV2ClientPage() {
 
   // ─── Derivados: busca client-side ──────────────────────────────────────
   const term = search.trim().toLowerCase();
-  const filtered = React.useMemo(() => {
-    if (!term) return users;
-    return users.filter(
-      (u) =>
-        u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term),
-    );
-  }, [users, term]);
+  const filtered = React.useMemo(
+    () =>
+      users.filter((u) => {
+        if (roleFilter !== "all" && u.role !== roleFilter) return false;
+        if (
+          term &&
+          !u.name.toLowerCase().includes(term) &&
+          !u.email.toLowerCase().includes(term)
+        )
+          return false;
+        return true;
+      }),
+    [users, term, roleFilter],
+  );
 
   React.useEffect(() => {
     setSelected(new Set());
-  }, [term]);
+  }, [term, roleFilter]);
 
   React.useEffect(() => {
     setPage(1);
-  }, [term, perPage]);
+  }, [term, roleFilter, perPage]);
 
-  const total = filtered.length;
+  const sorted = React.useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const cmp =
+        sortBy === "email"
+          ? a.email.localeCompare(b.email, "pt-BR")
+          : a.name.localeCompare(b.name, "pt-BR");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
+  const toggleSort = React.useCallback((field: "name" | "email") => {
+    setSortBy((prev) => {
+      if (prev === field) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+      setSortDir("asc");
+      return field;
+    });
+  }, []);
+
+  const dirFor = (f: "name" | "email"): SortDir => (sortBy === f ? sortDir : null);
+
+  const total = sorted.length;
   const lastPage = Math.max(1, Math.ceil(total / perPage));
   const currentPage = Math.min(page, lastPage);
   const pageItems = React.useMemo(
-    () => filtered.slice((currentPage - 1) * perPage, currentPage * perPage),
-    [filtered, currentPage, perPage],
+    () => sorted.slice((currentPage - 1) * perPage, currentPage * perPage),
+    [sorted, currentPage, perPage],
   );
 
-  const visibleUsers = isDesktop ? pageItems : filtered;
+  const visibleUsers = isDesktop ? pageItems : sorted;
 
   React.useEffect(() => {
     if (isDesktop) setSelected(new Set());
@@ -429,28 +514,145 @@ export default function TeamV2ClientPage() {
     }
   }
 
-  return (
-    <SettingsV2Shell
-      back={SETTINGS_HUB_BACK}
-      title="Equipe"
-      description="Usuários, convites e permissões CRM"
-      center={
-        <PageSearchBar
-          variant="compact"
-          value={search}
-          onChange={setSearch}
+  // Membro sem gestão não acessa Departamentos — se cair na aba via
+  // deep-link, volta para Usuários assim que a sessão resolve.
+  React.useEffect(() => {
+    if (activeTab === 2 && session && !canManageDepartments) setActiveTab(0);
+  }, [activeTab, session, canManageDepartments]);
+
+  const roleFilterGroup = React.useMemo<SettingsFilterGroup>(
+    () => ({
+      key: "role",
+      label: "Filtrar por função",
+      value: roleFilter,
+      onChange: setRoleFilter,
+      options: [
+        { value: "all", label: "Todos", count: users.length },
+        {
+          value: "ADMIN",
+          label: "Admin",
+          count: users.filter((u) => u.role === "ADMIN").length,
+        },
+        {
+          value: "MANAGER",
+          label: "Gerente",
+          count: users.filter((u) => u.role === "MANAGER").length,
+        },
+        {
+          value: "MEMBER",
+          label: "Atendente",
+          count: users.filter((u) => u.role === "MEMBER").length,
+        },
+      ],
+    }),
+    [roleFilter, users],
+  );
+
+  const searchNode = React.useMemo(
+    () =>
+      activeTab === 0 ? (
+        <SettingsListFilterBar
+          search={search}
+          onSearch={setSearch}
           placeholder="Buscar por nome, e-mail..."
-          aria-label="Buscar usuários"
+          ariaLabel="Buscar usuários"
+          groups={[roleFilterGroup]}
+          onClearAll={() => {
+            setSearch("");
+            setRoleFilter("all");
+          }}
+          popoverTitle="Filtros de equipe"
         />
-      }
-      actions={
-        <PagePrimaryButton type="button" onClick={() => setInviteOpen(true)}>
-          <IconPlus size={16} />
-          <span className="sm:hidden">Novo</span>
-          <span className="hidden sm:inline">Novo usuário</span>
-        </PagePrimaryButton>
-      }
-    >
+      ) : (
+        <SettingsListFilterBar
+          search={expedienteSearch}
+          onSearch={setExpedienteSearch}
+          placeholder="Buscar agente…"
+          ariaLabel="Buscar agente por nome ou e-mail"
+          onClearAll={() => setExpedienteSearch("")}
+        />
+      ),
+    [activeTab, search, roleFilterGroup, expedienteSearch],
+  );
+
+  // Segmented control compartilhado pelas 3 abas. É reusado tanto no
+  // header próprio de Usuários/Expediente quanto injetado no header do
+  // DepartmentsTab (via tabsSlot) — garante que as abas fiquem sempre
+  // visíveis, inclusive na aba Departamentos.
+  const segmentedControl = React.useMemo(() => {
+    const tabValue =
+      activeTab === 2 ? "departamentos" : activeTab === 1 ? "expediente" : "usuarios";
+    return (
+      <div className="toolbar-hscroll min-w-0 max-w-full">
+        <PageSegmentedControl
+          size="compact"
+          aria-label="Abas da equipe"
+          items={[
+            { value: "usuarios", label: "Usuários" },
+            { value: "expediente", label: "Expediente" },
+            ...(canManageDepartments
+              ? [{ value: "departamentos", label: "Departamentos" }]
+              : []),
+          ]}
+          value={tabValue}
+          onChange={(v) =>
+            setActiveTab(v === "departamentos" ? 2 : v === "expediente" ? 1 : 0)
+          }
+        />
+      </div>
+    );
+  }, [activeTab, canManageDepartments]);
+
+  const actionsNode = React.useMemo(
+    () => (
+      <div className="flex items-center gap-2">
+        {segmentedControl}
+        <PageActionsMenu
+          aria-label="Ações da equipe"
+          items={
+            activeTab === 0
+              ? [
+                  {
+                    icon: <IconPlus size={14} stroke={2.6} />,
+                    label: "Novo usuário",
+                    onClick: () => setInviteOpen(true),
+                    primary: true,
+                  },
+                ]
+              : [
+                  {
+                    icon: <IconPlus size={14} stroke={2.6} />,
+                    label: "Novo expediente",
+                    onClick: () => setExpedienteNewOpen(true),
+                    primary: true,
+                  },
+                ]
+          }
+        />
+      </div>
+    ),
+    [activeTab, segmentedControl],
+  );
+
+  return (
+    <>
+      {/* Header (busca + ações) das abas Usuários/Expediente. Na aba
+          Departamentos quem gerencia o header é o próprio DepartmentsTab
+          (com o segmented control injetado via tabsSlot) — nunca os dois
+          ao mesmo tempo, evitando disputa pelos slots do shell. */}
+      {activeTab !== 2 && (
+        <TeamHeaderSlots center={searchNode} actions={actionsNode} />
+      )}
+      {activeTab === 2 ? (
+        <DepartmentsTab tabsSlot={segmentedControl} />
+      ) : activeTab === 1 ? (
+        <ExpedienteTab
+          search={expedienteSearch}
+          newExpedienteOpen={expedienteNewOpen}
+          onNewExpedienteOpenChange={setExpedienteNewOpen}
+        />
+      ) : (
+      <>
       {/* STATS — shrink-0: toolbar-hscroll/overflow em flex-col colapsava a altura
           (~só o topo dos ícones visível). Mobile: 3 mini-cards; desktop: StatCards. */}
       <div className="grid shrink-0 grid-cols-3 gap-2 sm:hidden">
@@ -527,156 +729,156 @@ export default function TeamV2ClientPage() {
         </p>
       ) : null}
 
-      {/* LIST — mesma estrutura glass-grid de /contacts */}
+      {/* LISTA — linha a linha (padrão canônico) */}
       {isLoading && users.length === 0 ? (
-        <GlassCard variant="panel" className="h-[400px] animate-pulse">{null}</GlassCard>
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[64px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
+            />
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <GlassCard variant="panel" className="px-6 py-12 text-center font-body text-[13px] text-[var(--text-muted)]">
-          {term
-            ? `Nenhum usuário encontrado para "${search.trim()}".`
+          {term || roleFilter !== "all"
+            ? "Nenhum usuário encontrado para os filtros atuais."
             : "Nenhum usuário cadastrado ainda."}
         </GlassCard>
       ) : (
-        <GlassCard variant="panel" className="min-w-0 shrink-0 overflow-x-hidden p-3 sm:p-4">
-          <p className="mb-2.5 px-1 font-body text-[12px] text-[var(--text-muted)]">
-            {filtered.length.toLocaleString("pt-BR")}{" "}
-            {filtered.length === 1 ? "usuário" : "usuários"}
-          </p>
-
-          <div className="mb-2.5 hidden sm:block">
-            <div className={listTableHeadRowClass("grid-cols-[42px_2.6fr_1.1fr_1.3fr]")}>
-              <span>
-                <CheckboxGlass
-                  checked={allChecked}
-                  indeterminate={!allChecked && someChecked}
-                  onChange={toggleAll}
-                  aria-label="Selecionar todos"
-                />
-              </span>
-              <ListColumnLabel>Usuário</ListColumnLabel>
-              <ListColumnLabel>Função</ListColumnLabel>
-              <ListColumnLabel align="right">Ações</ListColumnLabel>
-            </div>
-          </div>
-
-          <div className="mb-2 flex items-center gap-2 sm:hidden">
-            <CheckboxGlass
-              checked={allChecked}
-              indeterminate={!allChecked && someChecked}
-              onChange={toggleAll}
-              aria-label="Selecionar todos"
-            />
-            <span className="font-body text-[12px] text-[var(--text-muted)]">
-              Selecionar todos
+        <MobileTableScroll minWidth={780}>
+          {/* Cabeçalho de colunas */}
+          <div
+            className={listTableHeadRowClass("gap-3 border border-transparent px-4")}
+            style={{ gridTemplateColumns: USER_LIST_GRID }}
+          >
+            <span>
+              <CheckboxGlass
+                checked={allChecked}
+                indeterminate={!allChecked && someChecked}
+                onChange={toggleAll}
+                aria-label="Selecionar todos"
+              />
             </span>
+            <SortableHeader label="Nome" sort={dirFor("name")} onSort={() => toggleSort("name")} />
+            <SortableHeader label="E-mail" sort={dirFor("email")} onSort={() => toggleSort("email")} />
+            <ListColumnLabel>Função</ListColumnLabel>
+            <ListColumnLabel>Telefonia</ListColumnLabel>
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
           </div>
 
-          <div className="flex flex-col gap-2.5">
-            {visibleUsers.map((u) => {
-              const isSelected = selected.has(u.id);
-              const fnRole = userFunctionRole(u, adminRole?.id);
-              const isAdminRole = fnRole?.systemPreset === "ADMIN";
-              const fnLabel = fnRole?.name ?? "Sem função";
-              // Garante que o valor atual apareça no dropdown mesmo se for um
-              // preset legado (MANAGER/MEMBER) fora das opções base.
-              const rowOptions =
-                fnRole && fnRole.id !== "__admin__" &&
-                !baseRoleOptions.some((o) => o.value === fnRole.id)
-                  ? [{ value: fnRole.id, label: fnLabel }, ...baseRoleOptions]
-                  : baseRoleOptions;
-              return (
-                <div
-                  key={u.id}
-                  className={cn(
-                    "flex flex-col gap-3 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)]",
-                    "sm:grid sm:grid-cols-[42px_2.6fr_1.1fr_1.3fr] sm:items-center sm:gap-3.5 sm:px-3.5 sm:py-3",
-                    isSelected
-                      ? "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
-                      : "border-[var(--glass-border-subtle)]",
-                  )}
-                >
-                  <div className="flex items-start gap-3 sm:contents">
-                    <span>
-                      <CheckboxGlass
-                        checked={isSelected}
-                        onChange={() => toggleOne(u.id)}
-                        aria-label={`Selecionar ${u.name}`}
-                      />
+          {visibleUsers.map((u) => {
+            const isSelected = selected.has(u.id);
+            const fnRole = userFunctionRole(u, adminRole?.id);
+            const isAdminRole = fnRole?.systemPreset === "ADMIN";
+            const fnLabel = fnRole?.name ?? "Sem função";
+            // Garante que o valor atual apareça no dropdown mesmo se for um
+            // preset legado (MANAGER/MEMBER) fora das opções base.
+            const rowOptions =
+              fnRole && fnRole.id !== "__admin__" &&
+              !baseRoleOptions.some((o) => o.value === fnRole.id)
+                ? [{ value: fnRole.id, label: fnLabel }, ...baseRoleOptions]
+                : baseRoleOptions;
+            return (
+              <div
+                key={u.id}
+                style={{ gridTemplateColumns: USER_LIST_GRID }}
+                className={cn(
+                  "group grid items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+                  isSelected
+                    ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] hover:border-[var(--input-border-focus)]",
+                )}
+              >
+                <span>
+                  <CheckboxGlass
+                    checked={isSelected}
+                    onChange={() => toggleOne(u.id)}
+                    aria-label={`Selecionar ${u.name}`}
+                  />
+                </span>
+
+                {/* Usuário */}
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <UserAvatar size={32} name={u.name} imageUrl={u.avatarUrl} />
+                  <div className="min-w-0 leading-tight">
+                    <span className="block max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+                      {u.name}
                     </span>
-
-                    <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
-                      <span
-                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
-                        style={{ background: avatarColor(u.id) }}
-                      >
-                        {initials(u.name)}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="break-words font-display text-[13px] font-bold text-[var(--text-primary)]">
-                            {u.name}
-                          </span>
-                          <span
-                            className={cn(
-                              "inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-display text-[10px] font-bold",
-                              roleBadgeClass(isAdminRole),
-                            )}
-                          >
-                            <IconShield size={11} className="opacity-85" />
-                            {fnLabel}
-                          </span>
-                        </div>
-                        <div className="mt-0.5 flex items-start gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
-                          <IconMail size={13} className="mt-0.5 flex-shrink-0" />
-                          <span className="break-all">{u.email}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="min-w-0">
-                    <DropdownGlass
-                      options={rowOptions}
-                      value={fnRole && fnRole.id !== "__admin__" ? fnRole.id : undefined}
-                      placeholder="Definir função"
-                      onValueChange={(next) => {
-                        if (fnRole && next === fnRole.id) return;
-                        setPrimaryRole.mutate({ id: u.id, roleId: next });
-                      }}
-                      disabled={setPrimaryRole.isPending || !isAdmin}
-                      matchTriggerWidth={false}
-                      triggerClassName="h-9 w-full min-w-0 sm:w-auto sm:min-w-[160px]"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    {isAdmin ? (
-                      <>
-                        <TelephonyToggle userId={u.id} />
-                        <button
-                          type="button"
-                          onClick={() => openPasswordDialog(u)}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-display text-[12px] font-bold text-[var(--brand-primary-dark,#3d52e8)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)]"
-                        >
-                          <IconKey size={13} /> Senha
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(u)}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-danger,#e11d48)] px-3 py-2 font-display text-[12px] font-bold text-white transition-all hover:-translate-y-px"
-                        >
-                          <IconTrash size={13} /> Excluir
-                        </button>
-                      </>
-                    ) : (
-                      <span className="font-body text-[12px] text-[var(--text-muted)]">—</span>
-                    )}
+                    <span
+                      className={cn(
+                        "mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-px font-display text-[10px] font-bold",
+                        roleBadgeClass(isAdminRole),
+                      )}
+                    >
+                      <IconShield size={10} className="opacity-85" />
+                      {fnLabel}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </GlassCard>
+
+                {/* E-mail */}
+                <div className="flex min-w-0 items-center gap-1.5 font-body text-[13px] text-[var(--text-secondary)]">
+                  <IconMail size={13} className="shrink-0 text-[var(--text-muted)]" />
+                  <span className="truncate">{u.email}</span>
+                </div>
+
+                {/* Função */}
+                <div className="min-w-0">
+                  <DropdownGlass
+                    options={rowOptions}
+                    value={fnRole && fnRole.id !== "__admin__" ? fnRole.id : undefined}
+                    placeholder="Definir função"
+                    onValueChange={(next) => {
+                      if (fnRole && next === fnRole.id) return;
+                      setPrimaryRole.mutate({ id: u.id, roleId: next });
+                    }}
+                    disabled={setPrimaryRole.isPending || !isAdmin}
+                    matchTriggerWidth={false}
+                    triggerClassName="h-9 w-full min-w-0"
+                  />
+                </div>
+
+                {/* Telefonia */}
+                <div className="flex items-center">
+                  {isAdmin ? (
+                    <TelephonyToggle userId={u.id} />
+                  ) : (
+                    <span className="font-body text-[12px] text-[var(--text-muted)]">—</span>
+                  )}
+                </div>
+
+                {/* Ações */}
+                <div className="flex items-center justify-end gap-1">
+                  {isAdmin ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openPasswordDialog(u)}
+                        aria-label={`Trocar senha de ${u.name}`}
+                        title="Trocar senha"
+                        className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
+                      >
+                        <IconKey size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(u)}
+                        aria-label={`Excluir ${u.name}`}
+                        title="Excluir usuário"
+                        className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] hover:text-[var(--color-danger)]"
+                      >
+                        <IconTrash size={14} />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="font-body text-[12px] text-[var(--text-muted)]">—</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </MobileTableScroll>
       )}
 
       {isDesktop && filtered.length > 0 ? (
@@ -693,18 +895,32 @@ export default function TeamV2ClientPage() {
           }}
         />
       ) : null}
+      </>
+      )}
 
-      {/* ─── Dialog: criar usuário ─── */}
-      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Criar usuário</DialogTitle>
-            <DialogDescription>
-              O usuário é criado na hora e já acessa com o e-mail e a senha
-              definidos abaixo. Nenhum e-mail de convite é enviado.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-2">
+      {/* ─── Drawer: criar usuário ─── */}
+      <FormSheet
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        busy={invite.isPending}
+        title="Criar usuário"
+        description="O usuário é criado na hora e já acessa com o e-mail e a senha definidos abaixo. Nenhum e-mail de convite é enviado."
+        footer={
+          <>
+            <ButtonGlass type="button" variant="glass" onClick={() => setInviteOpen(false)}>Cancelar</ButtonGlass>
+            <ButtonGlass
+              type="button"
+              variant="primary"
+              disabled={invite.isPending || !inviteName.trim() || !inviteEmail.trim() || invitePassword.length < 6}
+              onClick={() => invite.mutate()}
+            >
+              {invite.isPending ? <Loader2 className="size-4 animate-spin" /> : <IconPlus size={16} />}
+              Criar usuário
+            </ButtonGlass>
+          </>
+        }
+      >
+        <div className="grid gap-3">
             <div className="grid gap-1.5">
               <label htmlFor="invite-name" className="text-sm font-medium">
                 Nome
@@ -813,71 +1029,56 @@ export default function TeamV2ClientPage() {
                 })}
               </div>
             </GlassCard>
-          </div>
           {invite.isError && invite.error instanceof Error ? (
             <p className="text-sm text-[var(--color-danger,#e11d48)]">
               {invite.error.message}
             </p>
           ) : null}
-          <DialogFooter className="gap-2 sm:gap-0">
-            <ButtonGlass
-              type="button"
-              variant="glass"
-              onClick={() => setInviteOpen(false)}
-            >
-              Cancelar
-            </ButtonGlass>
+        </div>
+      </FormSheet>
+
+      {/* ─── Drawer: trocar senha ─── */}
+      <FormSheet
+        open={passwordTarget != null}
+        onOpenChange={(open) => {
+          if (!open) closePasswordDialog();
+        }}
+        busy={updatePassword.isPending}
+        icon={<KeyRound className="size-5 text-[var(--color-lavender)]" />}
+        title="Trocar senha"
+        description={
+          passwordTarget ? (
+            <>
+              Defina uma nova senha para{" "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {passwordTarget.name}
+              </span>{" "}
+              <span className="text-[var(--text-muted)]">
+                ({passwordTarget.email})
+              </span>
+              . O próximo login usará esta senha.
+            </>
+          ) : null
+        }
+        footer={
+          <>
+            <ButtonGlass type="button" variant="glass" onClick={closePasswordDialog} disabled={updatePassword.isPending}>Cancelar</ButtonGlass>
             <ButtonGlass
               type="button"
               variant="primary"
-              disabled={
-                invite.isPending ||
-                !inviteName.trim() ||
-                !inviteEmail.trim() ||
-                invitePassword.length < 6
-              }
-              onClick={() => invite.mutate()}
+              disabled={!canSubmitPassword}
+              onClick={() => {
+                if (!passwordTarget) return;
+                updatePassword.mutate({ id: passwordTarget.id, password: newPassword });
+              }}
             >
-              {invite.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <IconPlus size={16} />
-              )}
-              Criar usuário
+              {updatePassword.isPending ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
+              Salvar nova senha
             </ButtonGlass>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ─── Dialog: trocar senha ─── */}
-      <Dialog
-        open={passwordTarget != null}
-        onOpenChange={(open) => {
-          if (!open && !updatePassword.isPending) closePasswordDialog();
-        }}
+          </>
+        }
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="size-4 text-[var(--color-lavender)]" />
-              Trocar senha
-            </DialogTitle>
-            <DialogDescription>
-              {passwordTarget ? (
-                <>
-                  Defina uma nova senha para{" "}
-                  <span className="font-medium text-[var(--text-primary)]">
-                    {passwordTarget.name}
-                  </span>{" "}
-                  <span className="text-[var(--text-muted)]">
-                    ({passwordTarget.email})
-                  </span>
-                  . O próximo login usará esta senha.
-                </>
-              ) : null}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-2">
+        <div className="grid gap-3">
             <div className="grid gap-1.5">
               <label htmlFor="new-password" className="text-sm font-medium">
                 Nova senha
@@ -922,38 +1123,8 @@ export default function TeamV2ClientPage() {
                 </p>
               ) : null}
             </div>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <ButtonGlass
-              type="button"
-              variant="glass"
-              onClick={closePasswordDialog}
-              disabled={updatePassword.isPending}
-            >
-              Cancelar
-            </ButtonGlass>
-            <ButtonGlass
-              type="button"
-              variant="primary"
-              disabled={!canSubmitPassword}
-              onClick={() => {
-                if (!passwordTarget) return;
-                updatePassword.mutate({
-                  id: passwordTarget.id,
-                  password: newPassword,
-                });
-              }}
-            >
-              {updatePassword.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <KeyRound className="size-4" />
-              )}
-              Salvar nova senha
-            </ButtonGlass>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </FormSheet>
 
       {/* ─── Dialog: excluir (single) ─── */}
       <Dialog
@@ -1053,7 +1224,7 @@ export default function TeamV2ClientPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </SettingsV2Shell>
+    </>
   );
 }
 

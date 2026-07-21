@@ -4,13 +4,14 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { IconCheck as Check, IconChevronDown as ChevronDown, IconMail as Mail, IconPackage as Package, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconX as X } from "@tabler/icons-react";
+import { IconBriefcase as Briefcase, IconCheck as Check, IconChevronDown as ChevronDown, IconMail as Mail, IconPackage as Package, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconUser as User, IconX as X } from "@tabler/icons-react";
 
 import { useConfirm } from "@/hooks/use-confirm";
 import { useFieldLayout } from "@/hooks/use-field-layout";
 import { CustomFieldsSection } from "@/components/contacts/custom-fields-section";
 import { DealCustomFieldsSection } from "@/components/pipeline/deal-custom-fields-section";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
 import { SortableSidebar } from "@/components/ui/sortable-sidebar";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -78,7 +79,8 @@ type WorkspaceSidebarProps = {
   contact: ContactDetail;
   users: UserOption[];
   stageOptions: StageOption[];
-  onStageChange: (stageId: string) => void;
+  /** `toPipelineId` acompanha para caller decidir se precisa invalidar boards cross-pipeline. */
+  onStageChange: (stageId: string, toPipelineId?: string | null) => void;
   stagePending: boolean;
   onOwnerChange: (ownerId: string | null) => void;
   ownerPending: boolean;
@@ -100,7 +102,7 @@ export function WorkspaceCompactDealLeader({
 }: {
   deal: DealDetailData;
   stageOptions: StageOption[];
-  onStageChange: (stageId: string) => void;
+  onStageChange: (stageId: string, toPipelineId?: string | null) => void;
   stagePending: boolean;
 }) {
   const stageIdx = stageOptions.findIndex((s) => s.id === deal.stage.id);
@@ -122,6 +124,7 @@ export function WorkspaceCompactDealLeader({
           <StageDropdown
             stages={stageOptions}
             currentStageId={deal.stage.id}
+            currentPipelineId={deal.stage.pipeline?.id ?? null}
             onChange={onStageChange}
             isPending={stagePending}
             petroleumHeader
@@ -142,6 +145,121 @@ export function WorkspaceCompactDealLeader({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Cabeçalho de referência (Stitch) do aside do negócio: card escuro #2e3b6e
+ * com título, pill de etapa (StageDropdown), anel de progresso, botão branco
+ * de responsável (OwnerSelector), barra de etapas e grid de infos rápidas.
+ * Puramente visual — reaproveita os mesmos handlers/mutations existentes.
+ */
+function WorkspaceReferenceHeader({
+  deal,
+  contact,
+  users,
+  stageOptions,
+  onStageChange,
+  stagePending,
+  onOwnerChange,
+  ownerPending,
+  onAddTagClick,
+}: {
+  deal: DealDetailData;
+  contact: ContactDetail;
+  users: UserOption[];
+  stageOptions: StageOption[];
+  onStageChange: (stageId: string, toPipelineId?: string | null) => void;
+  stagePending: boolean;
+  onOwnerChange: (ownerId: string | null) => void;
+  ownerPending: boolean;
+  onAddTagClick: () => void;
+}) {
+  const stageIdx = stageOptions.findIndex((s) => s.id === deal.stage.id);
+  const nStages = Math.max(1, stageOptions.length);
+  const pos = Math.max(1, (stageIdx >= 0 ? stageIdx : 0) + 1);
+  const stageColor = stageOptions[stageIdx]?.color ?? "#f59e0b";
+  const dealTags = deal.tags ?? [];
+
+  return (
+    <header className="rounded-b-3xl bg-[#2e3b6e] p-5 text-white shadow-lg">
+      {/* Título + pill de etapa */}
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <h1 className="min-w-0 text-lg font-bold leading-snug text-white">
+          <span className="line-clamp-2">{deal.title}</span>
+        </h1>
+        <span className="relative z-30 flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white [&_button]:!text-white [&_button]:hover:!opacity-100">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: stageColor }} />
+          <StageDropdown
+            stages={stageOptions}
+            currentStageId={deal.stage.id}
+            currentPipelineId={deal.stage.pipeline?.id ?? null}
+            onChange={onStageChange}
+            isPending={stagePending}
+            petroleumHeader
+            chevronClassName="text-white/80"
+            className="text-xs font-medium text-white"
+          />
+        </span>
+      </div>
+
+      {/* Anel de progresso + funil + responsável */}
+      <div className="mb-4 flex items-center gap-4">
+        <div className="relative flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-orange-500 bg-white/10">
+          <span className="text-xs font-bold">{pos}/{nStages}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-white">{deal.stage.pipeline?.name ?? "Funil"}</p>
+          <p className="truncate text-xs text-slate-300">Etapa {pos} de {nStages}</p>
+        </div>
+        <div className="relative w-[8.5rem] shrink-0 rounded-md bg-white px-2 py-1.5 text-xs font-bold text-[#2e3b6e] shadow-sm [&_*]:!text-[#2e3b6e]">
+          <OwnerSelector
+            currentOwner={deal.owner}
+            users={users}
+            onChange={onOwnerChange}
+            isPending={ownerPending}
+            inlineMinimal
+          />
+        </div>
+      </div>
+
+      {/* Barra de etapas: 2px, ativo #f59e0b, inativo white/20 */}
+      <div className="mb-4 flex items-center gap-1">
+        {stageOptions.map((s, i) => (
+          <TooltipHost key={s.id} label={s.name} side="top">
+            <div
+              className="h-[2px] flex-1 rounded-full"
+              style={{ backgroundColor: i <= stageIdx ? "#f59e0b" : "rgba(255,255,255,0.2)" }}
+            />
+          </TooltipHost>
+        ))}
+      </div>
+
+      {/* Grid de infos rápidas */}
+      <div className="grid grid-cols-2 gap-y-2 border-t border-white/10 pt-4 text-xs">
+        <span className="text-slate-400">Origem</span>
+        <span className="truncate text-right font-medium">{contact.source ?? "—"}</span>
+        <span className="text-slate-400">Tags</span>
+        <span className="flex flex-wrap items-center justify-end gap-1">
+          {dealTags.slice(0, 3).map(({ tag }) => (
+            <span
+              key={tag.id}
+              className="max-w-full truncate rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[10px] font-semibold"
+            >
+              {tag.name}
+            </span>
+          ))}
+          <button
+            type="button"
+            onClick={onAddTagClick}
+            aria-label="Adicionar tag"
+            className="rounded-full bg-white/10 p-1 transition-colors hover:bg-white/20"
+          >
+            <Plus className="size-3" strokeWidth={2.4} />
+          </button>
+        </span>
+      </div>
+    </header>
   );
 }
 
@@ -171,17 +289,11 @@ export function WorkspaceSidebar({
   const [tagColor, setTagColor] = React.useState(TAG_COLORS[0]!);
   const [showTagComposer, setShowTagComposer] = React.useState(false);
   const [compactProductsAddOpen, setCompactProductsAddOpen] = React.useState(false);
-  const [editingSource, setEditingSource] = React.useState(false);
-  const [draftSource, setDraftSource] = React.useState(contact.source ?? "");
   const [editingExpectedClose, setEditingExpectedClose] = React.useState(false);
   const [draftExpectedClose, setDraftExpectedClose] = React.useState("");
   const [editMode, setEditMode] = React.useState(false);
   const { sections, isAdmin, hasAgentOverride, saveAdmin, saveAdminPending, saveAgent, resetAgent } =
     useFieldLayout("deal_workspace");
-
-  React.useEffect(() => {
-    setDraftSource(contact.source ?? "");
-  }, [contact.source]);
 
   React.useEffect(() => {
     if (!editingExpectedClose) {
@@ -239,13 +351,6 @@ export function WorkspaceSidebar({
     setEditingBasic(false);
   };
 
-  const saveCompactSource = () => {
-    const next = draftSource.trim();
-    const prev = (contact.source ?? "").trim();
-    if (next !== prev) onContactUpdate({ source: next || null });
-    setEditingSource(false);
-  };
-
   const normalizeExpectedClosePayload = (raw: string): string | null => {
     const t = raw.trim();
     if (!t) return null;
@@ -277,89 +382,76 @@ export function WorkspaceSidebar({
       ? `tel:${String(contact.phone).replace(/\s/g, "")}`
       : undefined;
 
+    // Linha de campo dentro do card branco (ref. Stitch): label slate-500 à
+    // esquerda, valor à direita, separador border-top slate-50.
     const kommoRow =
-      "flex items-center justify-between border-b border-[var(--glass-border)] px-4 py-2.5 transition-colors hover:bg-[var(--glass-bg-panel)]";
+      "flex items-center justify-between gap-2 border-t border-slate-50 py-2 text-sm first:border-t-0";
+    // Card branco arredondado do conteúdo (ref. Stitch).
+    const sectionCard =
+      "mx-4 mb-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm";
+    const refHeading = (title: React.ReactNode, icon: React.ReactNode, actions?: React.ReactNode) => (
+      <div className="flex items-center justify-between px-4 pb-2 pt-4">
+        <div className="flex items-center gap-2 text-slate-600">
+          <span className="flex shrink-0 items-center">{icon}</span>
+          <h2 className="text-sm font-bold text-slate-700">{title}</h2>
+        </div>
+        {actions ? <div className="flex items-center gap-2 text-slate-400">{actions}</div> : null}
+      </div>
+    );
 
     const renderSection = (section: SectionConfig) => {
       switch (section.id) {
         case "negocio":
           return (
             <div key="negocio">
-              <SidebarSectionHeading>Negócio</SidebarSectionHeading>
-              <div className={kommoRow}>
-                <span className="text-[12px] text-[var(--color-ink-muted)]">Responsável</span>
-                <OwnerSelector currentOwner={deal.owner} users={users} onChange={onOwnerChange} isPending={ownerPending} inlineMinimal />
-              </div>
-              <div className={kommoRow}>
-                <span className="text-[12px] text-[var(--color-ink-muted)]">Origem</span>
-                <div className="flex min-w-0 max-w-[70%] flex-1 items-center justify-end gap-1.5">
-                  {editingSource ? (
-                    <Input value={draftSource} onChange={(e) => setDraftSource(e.target.value)} placeholder="Origem do lead" className="h-7 min-w-0 flex-1 rounded-md border-border text-[12px]" />
-                  ) : (
-                    <span className={cn("truncate text-[12px] font-medium", contact.source ? "text-[var(--color-ink-soft)]" : dt.text.muted)}>{contact.source ?? "—"}</span>
-                  )}
-                  <button type="button" onClick={editingSource ? saveCompactSource : () => setEditingSource(true)} disabled={isUpdating} className="shrink-0 text-[var(--color-ink-muted)] hover:text-primary disabled:opacity-50">
-                    {editingSource ? <Check className="size-3" /> : <Pencil className="size-3" />}
-                  </button>
+              {refHeading("Informações do Negócio", <Briefcase className="size-4" />)}
+              <div className={sectionCard}>
+                <div className={kommoRow}>
+                  <span className="font-medium text-slate-500">Previsão</span>
+                  <div className="flex min-w-0 max-w-[70%] flex-1 items-center justify-end gap-1.5">
+                    {editingExpectedClose && onDealUpdate ? (
+                      <div className="min-w-0 flex-1">
+                        <DatePicker value={draftExpectedClose || null} onChange={(v) => setDraftExpectedClose(v)} placeholder="Data" className="w-full min-w-0 text-[12px]" disabled={dealUpdatePending} />
+                      </div>
+                    ) : (
+                      <span className={cn("truncate font-display font-semibold", deal.expectedClose ? "text-[var(--text-primary)]" : "text-slate-400 italic")}>
+                        {deal.expectedClose ? formatDate(deal.expectedClose) : "Indefinida"}
+                      </span>
+                    )}
+                  </div>
                 </div>
+                <TagComposer
+                  open={showTagComposer}
+                  draft={tagInput}
+                  setDraft={setTagInput}
+                  color={tagColor}
+                  setColor={setTagColor}
+                  canCreateTag={canCreateTag}
+                  existingTagIds={new Set(dealTags.map((t) => t.tag.id))}
+                  embedded
+                  onSubmit={() => {
+                    if (tagInput.trim()) addTagMutation.mutate({ tagName: tagInput.trim(), color: tagColor });
+                  }}
+                  onSelectExisting={(tag) => addTagMutation.mutate({ tagId: tag.id })}
+                  isPending={addTagMutation.isPending}
+                  onClose={() => setShowTagComposer(false)}
+                />
               </div>
-              <div className={kommoRow}>
-                <span className="text-[12px] text-[var(--color-ink-muted)]">Previsão</span>
-                <div className="flex min-w-0 max-w-[70%] flex-1 items-center justify-end gap-1.5">
-                  {editingExpectedClose && onDealUpdate ? (
-                    <div className="min-w-0 flex-1">
-                      <DatePicker value={draftExpectedClose || null} onChange={(v) => setDraftExpectedClose(v)} placeholder="Data" className="w-full min-w-0 text-[12px]" disabled={dealUpdatePending} />
-                    </div>
-                  ) : (
-                    <span className={cn("truncate text-[12px] font-medium", deal.expectedClose ? "text-[var(--color-ink-soft)]" : dt.text.muted)}>
-                      {deal.expectedClose ? formatDate(deal.expectedClose) : "Indefinida"}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className={kommoRow}>
-                <span className="text-[12px] text-[var(--color-ink-muted)]">Tags</span>
-                <div className="flex max-w-[72%] flex-wrap items-center justify-end gap-1">
-                  {dealTags.slice(0, 3).map(({ tag }) => (
-                    <span key={tag.id} className={cn(dt.pill.sm, "max-w-full gap-1")} style={tagPillStyle(tag.name, tag.color)}>
-                      {tag.name}
-                    </span>
-                  ))}
-                  <button type="button" onClick={() => setShowTagComposer(true)} className="ml-0.5 text-base leading-none text-[var(--color-ink-muted)] transition-colors hover:text-primary">
-                    +
-                  </button>
-                </div>
-              </div>
-              <TagComposer
-                open={showTagComposer}
-                draft={tagInput}
-                setDraft={setTagInput}
-                color={tagColor}
-                setColor={setTagColor}
-                canCreateTag={canCreateTag}
-                existingTagIds={new Set(dealTags.map((t) => t.tag.id))}
-                embedded
-                onSubmit={() => {
-                  if (tagInput.trim()) addTagMutation.mutate({ tagName: tagInput.trim(), color: tagColor });
-                }}
-                onSelectExisting={(tag) => addTagMutation.mutate({ tagId: tag.id })}
-                isPending={addTagMutation.isPending}
-                onClose={() => setShowTagComposer(false)}
-              />
             </div>
           );
         case "produtos":
           return (
-            <div key="produtos" className="border-b border-[var(--glass-border)]">
-              <div className="flex items-center justify-between px-4 pt-2">
-                <span className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Produtos</span>
+            <div key="produtos">
+              {refHeading(
+                "Produtos",
+                <Package className="size-4" />,
                 <TooltipHost label={compactProductsAddOpen ? "Fechar" : "Adicionar produto"} side="left">
-                  <button type="button" onClick={() => setCompactProductsAddOpen((v) => !v)} className="text-base leading-none text-[var(--color-ink-muted)] transition-colors hover:text-primary">
-                    +
+                  <button type="button" onClick={() => setCompactProductsAddOpen((v) => !v)} aria-label="Adicionar produto" className="text-slate-400 transition-colors hover:text-blue-500">
+                    <Plus className={cn("size-4 transition-transform", compactProductsAddOpen && "rotate-45")} strokeWidth={2.4} />
                   </button>
-                </TooltipHost>
-              </div>
-              <div className="px-4 pb-2.5 pt-1">
+                </TooltipHost>,
+              )}
+              <div className={sectionCard}>
                 <ProductsCard dealId={deal.id} compact naked dense addPanelOpen={compactProductsAddOpen} onAddPanelOpenChange={setCompactProductsAddOpen} />
               </div>
             </div>
@@ -367,40 +459,66 @@ export function WorkspaceSidebar({
         case "contato":
           return (
             <div key="contato">
-              <div className="mt-1 border-t border-[var(--glass-border)]">
-                <div className="flex items-center justify-between px-4 pt-3 pb-1">
-                  <span className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Contato</span>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); editingBasic ? saveBasic() : startEdit(); }} className="text-[var(--color-ink-muted)] transition-colors hover:text-primary">
-                    {editingBasic ? <Check className="size-3" /> : <Pencil className="size-3" />}
-                  </button>
-                </div>
-              </div>
-              {editingBasic ? (
-                <div className="flex flex-col gap-2 px-4 pb-3 pt-1">
-                  <Input type="tel" value={draft.phone} onChange={(e) => setDraft((p) => ({ ...p, phone: e.target.value }))} className="h-8 rounded-lg border-border text-[12px]" placeholder="Telefone" />
-                  <Input type="email" value={draft.email} onChange={(e) => setDraft((p) => ({ ...p, email: e.target.value }))} className="h-8 rounded-lg border-border text-[12px]" placeholder="E-mail" />
-                </div>
-              ) : (
-                <>
-                  {contact.phone && telHref ? <div className={kommoRow}><span className="text-[12px] text-[var(--color-ink-muted)]">Telefone</span><a href={telHref} onClick={(e) => e.stopPropagation()} className="max-w-[60%] truncate text-[12px] font-medium text-primary hover:underline">{contact.phone}</a></div> : null}
-                  {contact.email ? <div className={kommoRow}><span className="text-[12px] text-[var(--color-ink-muted)]">E-mail</span><a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()} className="max-w-[60%] truncate text-[12px] font-medium text-primary hover:underline">{contact.email}</a></div> : null}
-                  {contact.company ? <div className={kommoRow}><span className="text-[12px] text-[var(--color-ink-muted)]">Empresa</span><span className="truncate text-[12px] font-medium text-[var(--color-ink-soft)]">{contact.company.name}</span></div> : null}
-                </>
+              {refHeading(
+                "Informações do Contato",
+                <User className="size-4" />,
+                <button type="button" onClick={(e) => { e.stopPropagation(); editingBasic ? saveBasic() : startEdit(); }} aria-label={editingBasic ? "Salvar" : "Editar contato"} className="text-slate-400 transition-colors hover:text-blue-500">
+                  {editingBasic ? <Check className="size-4" /> : <Pencil className="size-4" />}
+                </button>,
               )}
+              <div className={sectionCard}>
+                {editingBasic ? (
+                  <div className="flex flex-col gap-2">
+                    <Input type="tel" value={draft.phone} onChange={(e) => setDraft((p) => ({ ...p, phone: e.target.value }))} className="h-8 rounded-lg border-border text-[12px]" placeholder="Telefone" />
+                    <Input type="email" value={draft.email} onChange={(e) => setDraft((p) => ({ ...p, email: e.target.value }))} className="h-8 rounded-lg border-border text-[12px]" placeholder="E-mail" />
+                  </div>
+                ) : (
+                  <>
+                    <div className={kommoRow}>
+                      <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><User className="size-3" /> Nome</span>
+                      <span className="truncate rounded bg-indigo-50 px-2 py-0.5 text-right font-bold text-indigo-600">{contact.name}</span>
+                    </div>
+                    {contact.phone && telHref ? (
+                      <div className={kommoRow}>
+                        <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><Phone className="size-3" /> Telefone</span>
+                        <a href={telHref} onClick={(e) => e.stopPropagation()} className="max-w-[60%] truncate font-semibold text-indigo-600 hover:underline">{contact.phone}</a>
+                      </div>
+                    ) : null}
+                    <div className={kommoRow}>
+                      <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><Mail className="size-3" /> E-mail</span>
+                      {contact.email ? (
+                        <a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()} className="max-w-[60%] truncate font-semibold text-[var(--text-primary)] hover:underline">{contact.email}</a>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </div>
+                    {contact.company ? (
+                      <div className={kommoRow}>
+                        <span className="flex shrink-0 items-center gap-2 font-medium text-slate-500"><Briefcase className="size-3" /> Empresa</span>
+                        <span className="truncate font-semibold text-[var(--text-primary)]">{contact.company.name}</span>
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
             </div>
           );
         case "campos_deal":
           return (
             <div key="campos_deal">
-              <SidebarSectionHeading>Campos do negócio</SidebarSectionHeading>
-              <DealCustomFieldsSection dealId={deal.id} variant="kompact" />
+              {refHeading("Campos do Negócio", <Briefcase className="size-4" />)}
+              <div className={sectionCard}>
+                <DealCustomFieldsSection dealId={deal.id} variant="kompact" />
+              </div>
             </div>
           );
         case "campos_contato":
           return (
             <div key="campos_contato">
-              <SidebarSectionHeading className="mt-1 border-t border-[var(--glass-border)]">Campos do contato</SidebarSectionHeading>
-              <CustomFieldsSection contactId={contact.id} variant="kompact" />
+              {refHeading("Campos do Contato", <User className="size-4" />)}
+              <div className={sectionCard}>
+                <CustomFieldsSection contactId={contact.id} variant="kompact" />
+              </div>
             </div>
           );
         default:
@@ -409,7 +527,18 @@ export function WorkspaceSidebar({
     };
 
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div className="aside-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <WorkspaceReferenceHeader
+          deal={deal}
+          contact={contact}
+          users={users}
+          stageOptions={stageOptions}
+          onStageChange={onStageChange}
+          stagePending={stagePending}
+          onOwnerChange={onOwnerChange}
+          ownerPending={ownerPending}
+          onAddTagClick={() => setShowTagComposer(true)}
+        />
         <SortableSidebar
           sections={sections}
           isAdmin={isAdmin}
@@ -451,6 +580,7 @@ export function WorkspaceSidebar({
             <StageDropdown
               stages={stageOptions}
               currentStageId={deal.stage.id}
+              currentPipelineId={deal.stage.pipeline?.id ?? null}
               onChange={onStageChange}
               isPending={stagePending}
             />
@@ -765,6 +895,7 @@ function ContactRow({
 function StageDropdown({
   stages,
   currentStageId,
+  currentPipelineId,
   onChange,
   isPending,
   className,
@@ -775,7 +906,8 @@ function StageDropdown({
 }: {
   stages: StageOption[];
   currentStageId: string;
-  onChange: (stageId: string) => void;
+  currentPipelineId: string | null;
+  onChange: (stageId: string, toPipelineId?: string | null) => void;
   isPending: boolean;
   className?: string;
   /** Ex.: posição no pipeline; default `índice/total` quando omitido. */
@@ -904,41 +1036,16 @@ function StageDropdown({
               {stages.length} etapas
             </span>
           </div>
-          <ul role="listbox" className="max-h-[320px] min-w-[220px] overflow-y-auto py-1">
-            {stages.map((stage) => {
-              const isActive = stage.id === currentStageId;
-              const color = stage.color ?? "#94a3b8";
-              return (
-                <li key={stage.id} className="min-w-0">
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={isActive}
-                    onClick={() => { onChange(stage.id); setOpen(false); }}
-                    disabled={isPending || isActive}
-                    className={cn(
-                      "flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-[13px] font-bold",
-                      "tracking-tight text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]",
-                      isActive && "cursor-default bg-primary-soft/60 text-primary-dark",
-                    )}
-                  >
-                    <span
-                      className="size-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: color }}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 flex-1 truncate">{stage.name}</span>
-                    {isActive ? (
-                      <Check
-                        className="size-3.5 shrink-0 text-primary"
-                        strokeWidth={2.5}
-                      />
-                    ) : null}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <MoveToStageMenu
+            stages={stages}
+            currentStageId={currentStageId}
+            currentPipelineId={currentPipelineId}
+            isPending={isPending}
+            onSelect={(stageId, toPipeId) => {
+              onChange(stageId, toPipeId);
+              setOpen(false);
+            }}
+          />
         </div>
       ) : null}
     </div>

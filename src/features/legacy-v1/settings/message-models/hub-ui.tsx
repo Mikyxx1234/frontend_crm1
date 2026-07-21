@@ -184,13 +184,16 @@ export function HubToolbar({
  * sólida (em vez de todos ficarem azul-marca), pra identificar o canal de
  * cara na barra de filtros — igual ao badge de tipo na tabela abaixo.
  */
-type HubChipTone = "brand" | "neutral" | "success" | "info";
+type HubChipTone = "brand" | "neutral" | "success" | "info" | "selected";
 
 const CHIP_ACTIVE_TONE: Record<HubChipTone, string> = {
   brand: "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-[0_4px_14px_rgba(91,111,245,0.30)]",
   neutral: "border-[var(--text-primary)] bg-[var(--text-primary)] text-white shadow-[var(--glass-shadow-sm)]",
   success: "border-[var(--color-success)] bg-[var(--color-success)] text-white shadow-[0_4px_14px_rgba(16,185,129,0.30)]",
   info: "border-[var(--color-info)] bg-[var(--color-info)] text-white shadow-[0_4px_14px_rgba(59,130,246,0.30)]",
+  // Seleção secundária (DS v2): preenchimento suave tonal, sem usar a cor
+  // primária sólida — esta fica reservada para o CTA. Usado nos filtros.
+  selected: "border-[var(--input-border-focus)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary-dark)] shadow-[var(--glass-shadow-sm)]",
 };
 
 export function HubChip({
@@ -231,7 +234,11 @@ export function HubChip({
         <span
           className={cn(
             "rounded-[var(--radius-full)] px-1.5 text-[11px]",
-            active ? "bg-white/25" : "bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)]",
+            active
+              ? tone === "selected"
+                ? "bg-[color-mix(in_srgb,var(--brand-primary)_18%,transparent)] text-[var(--brand-primary-dark)]"
+                : "bg-white/25"
+              : "bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)]",
           )}
         >
           {count}

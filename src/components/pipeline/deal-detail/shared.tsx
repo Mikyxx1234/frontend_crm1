@@ -2,9 +2,10 @@
 
 import * as React from "react";
 
-import { IconBuilding as Building2, IconExternalLink as ExternalLink, IconMail as Mail, IconPhone as Phone, IconUser as User } from "@tabler/icons-react";
+import { IconAt as AtSign, IconBuilding as Building2, IconExternalLink as ExternalLink, IconMail as Mail, IconPhone as Phone, IconUser as User } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
+import { formatPhoneDisplay } from "@/lib/phone";
 
 export type DealDetailUser = { id: string; name: string; email: string | null };
 
@@ -38,6 +39,8 @@ export type DealDetailData = {
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
   stage: { id: string; name: string; color?: string | null; pipeline: { id: string; name: string } };
   owner: DealDetailUser | null;
+  /** Unidade organizacional (filial) do negócio. Base p/ ofertas por unidade + cotas. */
+  orgUnitId?: string | null;
   tags?: { tag: { id: string; name: string; color: string } }[];
   activities: DealDetailActivity[];
   notes: DealDetailNote[];
@@ -69,6 +72,8 @@ export type ContactDetail = {
   name: string;
   email: string | null;
   phone: string | null;
+  /** @ do WhatsApp (Contact.whatsappUsername), quando disponível. */
+  whatsappUsername?: string | null;
   avatarUrl: string | null;
   leadScore: number;
   lifecycleStage: string;
@@ -264,7 +269,18 @@ export function ContactInfoRows({ contact }: { contact: ContactDetail }) {
     <div className="grid gap-2 text-sm">
       <CompactRow icon={<User className="size-4" />} value={contact.name} />
       <CompactRow icon={<Mail className="size-4" />} value={contact.email} copyable />
-      <CompactRow icon={<Phone className="size-4" />} value={contact.phone} copyable />
+      <CompactRow
+        icon={<Phone className="size-4" />}
+        value={contact.phone ? formatPhoneDisplay(contact.phone) : null}
+        copyable
+      />
+      {contact.whatsappUsername && (
+        <CompactRow
+          icon={<AtSign className="size-4" />}
+          value={`@${contact.whatsappUsername.replace(/^@/, "")}`}
+          copyable
+        />
+      )}
       {contact.company && <CompactRow icon={<Building2 className="size-4" />} value={contact.company.name} />}
       {contact.source && <CompactRow icon={<ExternalLink className="size-4" />} value={contact.source} />}
       {contact.assignedTo && <CompactRow icon={<User className="size-4" />} value={contact.assignedTo.name} />}

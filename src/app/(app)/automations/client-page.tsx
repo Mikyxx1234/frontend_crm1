@@ -1,15 +1,21 @@
 "use client"
 
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   IconActivity,
+  IconAdjustmentsHorizontal,
   IconBolt,
+  IconCheck,
   IconCircleCheck,
   IconClock,
+  IconLoader2,
   IconPlus,
+  IconRobot,
+  IconRotateClockwise,
+  IconSearch,
   IconUpload,
 } from "@tabler/icons-react"
 
@@ -17,15 +23,11 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2"
 import { RestrictedScreen } from "@/components/crm/restricted-screen"
 import { useRequireManager } from "@/hooks/use-user-role"
 import { PageHeader } from "@/components/crm/page-header"
+import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-toolbar"
 import { PageDemoBanner } from "@/components/crm/page-demo-banner"
-import {
-  PageGhostButton,
-  PagePrimaryButton,
-  PageSearchBar,
-  PageSegmentedControl,
-} from "@/components/crm/page-toolbar"
 import { AutomationsGallery } from "@/components/crm/automations-gallery"
 import { EmptyState } from "@/components/crm/empty-state"
+import { cn } from "@/lib/utils"
 import {
   useAutomations,
   useCreateAutomation,
@@ -38,7 +40,6 @@ import { MOCK_AUTOMATIONS_PAGE } from "@/features/automations-v2/mock-automation
 import { isPageMockMode } from "@/lib/page-mock-mode"
 import { AUTOMATION_TRIGGER_TYPES } from "@/lib/automation-workflow"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import { cn } from "@/lib/utils"
 
 const FILTERS = ["Todas", "Ativas", "Pausadas"] as const
 
@@ -297,85 +298,60 @@ export default function V2AutomationsClientPage() {
       <NavRailV2 />
 
       <main className="flex min-w-0 flex-col gap-3 overflow-hidden sm:gap-4">
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={handleImportFile}
+        />
+
         <PageHeader
-          icon={<IconBolt size={22} stroke={2.2} />}
+          icon={<IconRobot size={22} stroke={2.2} />}
           title="Automações"
-          description="Fluxos disparados por eventos do CRM."
           center={
-            <PageSearchBar
-              variant="compact"
-              value={query}
-              onChange={setQuery}
-              placeholder="Buscar automações..."
-              aria-label="Buscar automações"
+            <AutomationsSearchFilterBar
+              search={query}
+              onSearch={setQuery}
+              filter={filter}
+              onFilterChange={setFilter}
+              counts={{ all: items.length, active: summary.active, paused: summary.paused }}
+              onClearAll={() => {
+                setQuery("")
+                setFilter(0)
+              }}
             />
           }
           actions={
-            <div className="flex shrink-0 flex-nowrap items-center gap-2">
+            <div className="flex items-center gap-2">
               <PageSegmentedControl
                 size="compact"
-                aria-label="Filtrar automações"
-                className="w-max shrink-0"
-                items={FILTERS.map((label, index) => ({
-                  value: String(index),
-                  label,
-                }))}
-                value={String(filter)}
-                onChange={(v) => setFilter(Number(v))}
+                aria-label="Automações e campanhas"
+                items={[
+                  { value: "automations", label: "Automações" },
+                  { value: "campaigns", label: "Campanhas" },
+                ]}
+                value="automations"
+                onChange={(v) => {
+                  if (v === "campaigns") router.push("/campaigns")
+                }}
               />
-              <input
-                ref={importInputRef}
-                type="file"
-                accept=".json,application/json"
-                className="hidden"
-                onChange={handleImportFile}
+              <AutomationsActionsMenu
+                onNew={() => router.push("/automations/new")}
+                onImport={handleImportClick}
+                importing={isImporting}
               />
-              <PageGhostButton
-                type="button"
-                onClick={handleImportClick}
-                disabled={isImporting}
-                className="shrink-0"
-              >
-                <IconUpload size={15} />
-                {isImporting ? "Importando..." : "Importar .json"}
-              </PageGhostButton>
-              <PagePrimaryButton href="/automations/new" className="shrink-0">
-                <IconPlus size={15} stroke={2.4} /> Nova automação
-              </PagePrimaryButton>
             </div>
           }
         />
 
-        <section
-          className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
-          aria-label="Indicadores"
-        >
-          <KpiCard
-            label="Ativas"
-            value={summary.active}
-            hint={`de ${items.length}`}
-            icon={<IconBolt size={20} stroke={2.2} />}
-            tone="brand"
-          />
-          <KpiCard
-            label="Execuções hoje"
-            value={summary.runsToday}
-            icon={<IconActivity size={20} />}
-            tone="violet"
-          />
-          <KpiCard
-            label="Taxa média de sucesso"
-            value={`${summary.avgSuccess}%`}
-            icon={<IconCircleCheck size={20} />}
-            tone="success"
-          />
-          <KpiCard
-            label="Pausadas"
-            value={summary.paused}
-            icon={<IconClock size={20} />}
-            tone="neutral"
-          />
-        </section>
+        <AutomationsMiniDash
+          active={summary.active}
+          total={items.length}
+          runsToday={summary.runsToday}
+          avgSuccess={summary.avgSuccess}
+          paused={summary.paused}
+        />
 
         {isDemo && (
           <PageDemoBanner>
@@ -442,49 +418,264 @@ export default function V2AutomationsClientPage() {
   )
 }
 
-const KPI_TONES = {
-  brand: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
-  violet: "bg-[rgba(167,139,250,0.18)] text-[var(--brand-secondary)]",
-  success: "bg-[var(--color-success-bg)] text-[var(--color-success)]",
-  neutral: "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-} as const
+// ── Mini-dash ────────────────────────────────────────────────────────────
 
-function KpiCard({
-  label,
-  value,
-  hint,
-  icon,
-  tone,
+function AutomationsMiniDash({
+  active,
+  total,
+  runsToday,
+  avgSuccess,
+  paused,
 }: {
-  label: string
-  value: React.ReactNode
-  hint?: string
-  icon: React.ReactNode
-  tone: keyof typeof KPI_TONES
+  active: number
+  total: number
+  runsToday: number
+  avgSuccess: number
+  paused: number
 }) {
+  const coverage = total > 0 ? Math.round((active / total) * 100) : 0
+  const cards: {
+    key: string
+    label: string
+    value: string
+    percent?: number
+    accent: string
+    icon: React.ReactNode
+  }[] = [
+    {
+      key: "active",
+      label: `Ativas · de ${total}`,
+      value: active.toLocaleString("pt-BR"),
+      percent: coverage,
+      accent: "var(--brand-primary)",
+      icon: <IconBolt size={16} stroke={2.2} />,
+    },
+    {
+      key: "runs",
+      label: "Execuções hoje",
+      value: runsToday.toLocaleString("pt-BR"),
+      accent: "var(--brand-secondary, #a78bfa)",
+      icon: <IconActivity size={16} />,
+    },
+    {
+      key: "success",
+      label: "Taxa média de sucesso",
+      value: `${avgSuccess}%`,
+      accent: "var(--color-success)",
+      icon: <IconCircleCheck size={16} />,
+    },
+    {
+      key: "paused",
+      label: "Pausadas",
+      value: paused.toLocaleString("pt-BR"),
+      accent: "var(--text-muted)",
+      icon: <IconClock size={16} />,
+    },
+  ]
+
   return (
-    <div className="flex items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4.5 py-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <span
+    <section
+      className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      aria-label="Indicadores"
+    >
+      {cards.map((c) => (
+        <div
+          key={c.key}
+          className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+        >
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            style={{
+              background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
+              color: c.accent,
+            }}
+          >
+            {c.icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-display text-[11.5px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
+              {c.label}
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
+                {c.value}
+              </span>
+              {c.percent !== undefined && (
+                <span
+                  className="font-display text-[12px] font-bold tabular-nums"
+                  style={{ color: c.accent }}
+                >
+                  {c.percent}%
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+// ── Busca + popover de filtros (status) ──────────────────────────────────
+
+function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null
+  return (
+    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[10px] font-bold leading-none text-white">
+      {count}
+    </span>
+  )
+}
+
+function AutomationsSearchFilterBar({
+  search,
+  onSearch,
+  filter,
+  onFilterChange,
+  counts,
+  onClearAll,
+}: {
+  search: string
+  onSearch: (v: string) => void
+  filter: number
+  onFilterChange: (v: number) => void
+  counts: { all: number; active: number; paused: number }
+  onClearAll: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
+  const activeCount = filter !== 0 ? 1 : 0
+  const countFor = (index: number) =>
+    index === 0 ? counts.all : index === 1 ? counts.active : counts.paused
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", onDown)
+    return () => document.removeEventListener("mousedown", onDown)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <IconSearch
+        size={15}
+        className="absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]"
+      />
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => onSearch(e.target.value)}
+        onFocus={() => setOpen(true)}
+        placeholder="Pesquisar e filtrar automações..."
+        aria-label="Buscar e filtrar automações"
+        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-11 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+      />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Filtros"
         className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
-          KPI_TONES[tone],
+          "absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors",
+          activeCount > 0 || open
+            ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+            : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
         )}
       >
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="font-body text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]">
-          {label}
-        </p>
-        <p className="font-display text-[24px] font-extrabold leading-tight tracking-tight text-[var(--text-primary)]">
-          {value}
-          {hint && (
-            <small className="ml-1.5 text-[13px] font-semibold text-[var(--text-muted)]">
-              {hint}
-            </small>
-          )}
-        </p>
-      </div>
+        <IconAdjustmentsHorizontal size={15} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex w-[min(100vw-2rem,380px)] flex-col overflow-visible rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
+          <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
+            <div className="flex items-center gap-2">
+              <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">
+                Filtrar por status
+              </span>
+              <CountBadge count={activeCount} />
+            </div>
+            <button
+              type="button"
+              onClick={onClearAll}
+              disabled={activeCount === 0 && !search}
+              className="flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)] disabled:opacity-40"
+            >
+              <IconRotateClockwise size={13} /> Limpar
+            </button>
+          </div>
+
+          <div className="max-h-[min(60vh,420px)] overflow-y-auto px-4 pb-4">
+            <div className="flex flex-wrap gap-1.5">
+              {FILTERS.map((label, index) => {
+                const selected = filter === index
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => onFilterChange(index)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                      selected
+                        ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                        : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                    )}
+                  >
+                    {selected && <IconCheck size={12} stroke={2.4} />}
+                    {label}
+                    <span
+                      className={cn(
+                        "min-w-[18px] rounded-full px-1.5 text-center text-[10px] font-bold",
+                        selected
+                          ? "bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]"
+                          : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                      )}
+                    >
+                      {countFor(index)}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+// ── Menu hamburger (CTAs da página) ──────────────────────────────────────
+
+function AutomationsActionsMenu({
+  onNew,
+  onImport,
+  importing,
+}: {
+  onNew: () => void
+  onImport: () => void
+  importing: boolean
+}) {
+  return (
+    <PageActionsMenu
+      items={[
+        {
+          icon: <IconPlus size={14} stroke={2.6} />,
+          label: "Nova automação",
+          onClick: onNew,
+          primary: true,
+        },
+        {
+          icon: importing ? (
+            <IconLoader2 size={13} className="animate-spin" />
+          ) : (
+            <IconUpload size={13} />
+          ),
+          label: importing ? "Importando…" : "Importar .json",
+          onClick: onImport,
+          disabled: importing,
+          divider: true,
+        },
+      ]}
+    />
   )
 }

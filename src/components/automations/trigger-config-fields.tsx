@@ -448,11 +448,151 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
           </div>
         </div>
       );
+    case "conversation_tabulated":
+      return (
+        <ConversationTabulatedFields value={value} patch={patch} set={set} />
+      );
     default:
       return (
         <p className="text-sm text-muted-foreground">Selecione um tipo de gatilho.</p>
       );
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// conversation_tabulated — seletor departamento + arvore
+// ─────────────────────────────────────────────────────────────
+
+type TabulationNodeApi = {
+  id: string;
+  parentId: string | null;
+  name: string;
+  color: string | null;
+  position: number;
+  active: boolean;
+  children: TabulationNodeApi[];
+};
+
+function ConversationTabulatedFields({
+  value,
+  patch,
+  set,
+}: {
+  value: Record<string, unknown>;
+  patch: (n: Record<string, unknown>) => void;
+  set: (k: string, v: unknown) => void;
+}) {
+  const departmentId = String(value.departmentId ?? "");
+  const tabulationId = String(value.tabulationId ?? "");
+
+  const departmentsQuery = useQuery({
+    queryKey: ["automation-trigger-departments"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<{ id: string; name: string; icon?: string }[]> => {
+      const res = await fetch(apiUrl("/api/settings/departments"));
+      if (!res.ok) return [];
+      return (await res.json()) as { id: string; name: string; icon?: string }[];
+    },
+  });
+
+  const treeQuery = useQuery({
+    queryKey: ["automation-trigger-tabulations", departmentId],
+    enabled: !!departmentId,
+    staleTime: 30_000,
+    queryFn: async (): Promise<{ tree: TabulationNodeApi[] }> => {
+      const res = await fetch(
+        apiUrl(`/api/tabulations?departmentId=${encodeURIComponent(departmentId)}`),
+      );
+      if (!res.ok) return { tree: [] };
+      return (await res.json()) as { tree: TabulationNodeApi[] };
+    },
+  });
+
+  // Achata a arvore em opcoes indentadas: cada nó carrega seu caminho
+  // completo pra o operador identificar rapidamente. Categorias tambem
+  // podem ser escolhidas (mirar categoria vale pra todos os descendentes).
+  const flat = flattenTabulationTree(treeQuery.data?.tree ?? []);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Disparado quando um agente encerra uma conversa e escolhe uma
+        tabulação. Filtre por departamento e/ou tabulação; escolher uma
+        categoria pai também dispara para todos os itens abaixo dela.
+      </p>
+
+      <div className="space-y-2">
+        <Label htmlFor="tc-tab-dept">Departamento (opcional)</Label>
+        <SelectNative
+          id="tc-tab-dept"
+          value={departmentId}
+          onChange={(e) =>
+            patch({
+              departmentId: e.target.value,
+              tabulationId: "",
+              tabulationLabel: "",
+            })
+          }
+        >
+          <option value="">Qualquer departamento</option>
+          {(departmentsQuery.data ?? []).map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.icon ? `${d.icon} ` : ""}
+              {d.name}
+            </option>
+          ))}
+        </SelectNative>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="tc-tab-node">Tabulação (opcional)</Label>
+        <SelectNative
+          id="tc-tab-node"
+          value={tabulationId}
+          disabled={!departmentId}
+          onChange={(e) => {
+            const id = e.target.value;
+            const found = flat.find((f) => f.id === id);
+            patch({
+              tabulationId: id,
+              tabulationLabel: found?.label ?? "",
+            });
+          }}
+        >
+          <option value="">Qualquer tabulação do departamento</option>
+          {flat.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.label}
+            </option>
+          ))}
+        </SelectNative>
+        {!departmentId ? (
+          <p className="text-xs text-muted-foreground">
+            Escolha um departamento para listar as tabulações.
+          </p>
+        ) : null}
+      </div>
+      {/* eslint-disable-next-line @typescript-eslint/no-unused-expressions */}
+      {set && null}
+    </div>
+  );
+}
+
+function flattenTabulationTree(
+  nodes: TabulationNodeApi[],
+  depth = 0,
+  prefix = "",
+): { id: string; label: string }[] {
+  const out: { id: string; label: string }[] = [];
+  for (const n of nodes) {
+    const indent = "— ".repeat(depth);
+    const path = prefix ? `${prefix} › ${n.name}` : n.name;
+    out.push({ id: n.id, label: `${indent}${n.name}` });
+    if (n.children.length > 0) {
+      out.push(...flattenTabulationTree(n.children, depth + 1, path));
+    }
+  }
+  return out;
 }
 
 export function TriggerTypeSelect({

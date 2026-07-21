@@ -1,6 +1,8 @@
 export { AssigneePopover } from "./assignee-popover";
 export { TagsPopover } from "./tags-popover";
 export { StagePicker } from "./stage-picker";
+export { MoveToStageMenu } from "./move-to-stage-menu";
+export type { MoveToStageMenuStage } from "./move-to-stage-menu";
 export { InlineEditText } from "./inline-edit";
 export { DealActionsMenu, WinButton, DealDeleteButton } from "./actions-menu";
 export { AddDealDialog } from "./add-deal-dialog";

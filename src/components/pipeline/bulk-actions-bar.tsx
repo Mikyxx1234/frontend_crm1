@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconArrowsLeftRight as ArrowRightLeft, IconCircleCheck as CheckCircle2, IconChevronDown as ChevronDown, IconLoader2 as Loader2, IconPencil as Pencil, IconTrash as Trash2, IconTrophy as Trophy, IconUserCog as UserCog, IconX as X, IconCircleX as XCircle } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ import {
 } from "@/components/pipeline/bulk-edit-fields-dialog";
 import { BulkOperationProgressDialog } from "@/components/pipeline/bulk-operation-progress-dialog";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
+import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -171,6 +172,20 @@ export function BulkActionsBar({
   const [pendingLostMoveStage, setPendingLostMoveStage] =
     React.useState<StageOption | null>(null);
 
+  const { data: lossMeta } = useQuery({
+    queryKey: ["pipeline-loss-reasons", pipelineId],
+    queryFn: async () => {
+      const res = await fetch(
+        apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),
+      );
+      if (!res.ok) return { lossReasonRequired: false };
+      return res.json() as Promise<{ lossReasonRequired?: boolean }>;
+    },
+    enabled: !!pipelineId,
+    staleTime: 30_000,
+  });
+  const lossReasonsActive = Boolean(lossMeta?.lossReasonRequired);
+
   // ID e total da BulkOperation atualmente acompanhada. Quando setado,
   // o `BulkOperationProgressDialog` abre e faz polling no backend.
   const [progressOperationId, setProgressOperationId] = React.useState<string | null>(null);
@@ -292,29 +307,31 @@ export function BulkActionsBar({
               <ChevronDown className="size-3" />
             </Button>
             {moveOpen && (
-              <div className="absolute bottom-full left-0 mb-2 min-w-[180px] rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-xl">
-                {stages.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => {
-                      // Estágio Perdido: pede a tabulação do motivo antes.
-                      if (s.isLost) {
-                        setPendingLostMoveStage(s);
-                      } else {
-                        mutation.mutate({ dealIds, action: "move_stage", stageId: s.id });
-                      }
-                      setMoveOpen(false);
-                    }}
-                  >
-                    <span
-                      className="size-2 rounded-full"
-                      style={{ backgroundColor: s.color ?? "var(--brand-primary)" }}
-                    />
-                    {s.name}
-                  </button>
-                ))}
+              <div className="absolute bottom-full left-0 mb-2 min-w-[220px] rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-xl">
+                <MoveToStageMenu
+                  stages={stages}
+                  currentStageId={null}
+                  currentPipelineId={pipelineId}
+                  isPending={mutation.isPending}
+                  onSelect={(stageId, toPipelineId) => {
+                    // Cross-pipeline bulk: quando o estágio destino é de
+                    // outro funil, a validação de lostReason acontece no
+                    // backend (lossReasonRequired do funil DESTINO).
+                    // Para o funil ATUAL usamos a meta já carregada e
+                    // abrimos o diálogo local pra manter UX consistente.
+                    const local = stages.find((x) => x.id === stageId);
+                    if (
+                      local?.isLost &&
+                      lossReasonsActive &&
+                      (!toPipelineId || toPipelineId === pipelineId)
+                    ) {
+                      setPendingLostMoveStage(local);
+                    } else {
+                      mutation.mutate({ dealIds, action: "move_stage", stageId });
+                    }
+                    setMoveOpen(false);
+                  }}
+                />
               </div>
             )}
           </div>
@@ -349,7 +366,7 @@ export function BulkActionsBar({
                   <button
                     key={u.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-accent hover:text-accent-foreground"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
                     onClick={() => {
                       mutation.mutate({ dealIds, action: "change_owner", ownerId: u.id });
                       setOwnerOpen(false);
@@ -393,7 +410,10 @@ export function BulkActionsBar({
             size="sm"
             className="h-8 gap-1.5 rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-bg)] text-[12px] text-[var(--color-danger-text)] shadow-none hover:bg-[var(--color-danger-bg)] dark:border-[var(--color-danger)]/40 dark:bg-[var(--color-danger)]/15 dark:text-[var(--color-danger)] dark:hover:bg-[var(--color-danger)]/25"
             disabled={mutation.isPending}
-            onClick={() => setLostOpen(true)}
+            onClick={() => {
+              if (lossReasonsActive) setLostOpen(true);
+              else mutation.mutate({ dealIds, action: "mark_lost" });
+            }}
           >
             <XCircle className="size-3.5" />
             Perdido
@@ -419,6 +439,7 @@ export function BulkActionsBar({
       <LossReasonDialog
         open={lostOpen}
         onOpenChange={setLostOpen}
+        pipelineId={pipelineId}
         onConfirm={(reason) => {
           mutation.mutate({ dealIds, action: "mark_lost", lostReason: reason });
           setLostOpen(false);
@@ -433,6 +454,7 @@ export function BulkActionsBar({
         onOpenChange={(o) => {
           if (!o) setPendingLostMoveStage(null);
         }}
+        pipelineId={pipelineId}
         onConfirm={(reason) => {
           if (!pendingLostMoveStage) return;
           mutation.mutate({

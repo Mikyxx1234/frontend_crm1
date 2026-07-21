@@ -87,6 +87,7 @@ export function ColumnResizer({
     <button
       type="button"
       aria-label="Redimensionar coluna"
+      title="Arrastar para tornar mais estreito ou mais largo"
       onPointerDown={onPointerDown}
       className={cn(
         "group absolute top-0 z-20 flex h-full w-3 cursor-col-resize items-center justify-center",
@@ -94,10 +95,13 @@ export function ColumnResizer({
         className,
       )}
     >
+      {/* Alça sempre visível (sinaliza resize); reforça no hover / arrasto. */}
       <span
         className={cn(
-          "h-12 w-[3px] rounded-full bg-[var(--glass-border)] opacity-0 transition-all group-hover:opacity-100",
-          dragging && "bg-[var(--brand-primary)] opacity-100",
+          "h-[58%] min-h-3 w-[2px] rounded-full transition-all",
+          "bg-[color-mix(in_srgb,var(--text-muted)_45%,transparent)]",
+          "group-hover:h-[70%] group-hover:w-[3px] group-hover:bg-[var(--brand-primary)]",
+          dragging && "h-[70%] w-[3px] bg-[var(--brand-primary)]",
         )}
       />
     </button>
@@ -140,4 +144,93 @@ export function usePersistentWidth(
   );
 
   return [v, setAndSave];
+}
+
+/** Extrai px de classes Tailwind `w-[150px]`. */
+export function parseWidthClass(width: string, fallback = 140): number {
+  const m = width.match(/w-\[(\d+)px\]/);
+  return m ? Number(m[1]) : fallback;
+}
+
+/**
+ * Larguras de várias colunas de lista, persistidas em localStorage.
+ * Keys estáveis (ex.: "phone", "__name__").
+ */
+export function useColumnWidths(
+  storageKey: string,
+  defaults: Record<string, number>,
+): {
+  widths: Record<string, number>;
+  getWidth: (key: string, fallback?: number) => number;
+  setWidth: (key: string, px: number) => void;
+} {
+  const [widths, setWidths] = useState<Record<string, number>>(defaults);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (!parsed || typeof parsed !== "object") return;
+      const next: Record<string, number> = { ...defaults };
+      for (const [k, v] of Object.entries(parsed)) {
+        const n = typeof v === "number" ? v : Number(v);
+        if (Number.isFinite(n) && n > 0) next[k] = Math.round(n);
+      }
+      setWidths(next);
+    } catch {
+      /* ignore */
+    }
+    // defaults é tratado como constante estável pelo caller
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  const setWidth = useCallback(
+    (key: string, px: number) => {
+      setWidths((prev) => {
+        const next = { ...prev, [key]: Math.round(px) };
+        try {
+          window.localStorage.setItem(storageKey, JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
+        return next;
+      });
+    },
+    [storageKey],
+  );
+
+  const getWidth = useCallback(
+    (key: string, fallback = 140) => widths[key] ?? defaults[key] ?? fallback,
+    [widths, defaults],
+  );
+
+  return { widths, getWidth, setWidth };
+}
+
+/** Célula de cabeçalho com alça de resize (filho deve ser o rótulo). */
+export function ResizableColumnHead({
+  width,
+  onResize,
+  min = 72,
+  max = 480,
+  className,
+  children,
+}: {
+  width: number;
+  onResize: (px: number) => void;
+  min?: number;
+  max?: number;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn("relative min-w-0 shrink-0 overflow-hidden pr-1", className)}
+      style={{ width, minWidth: width, maxWidth: width }}
+    >
+      {children}
+      <ColumnResizer value={width} onChange={onResize} min={min} max={max} />
+    </div>
+  );
 }

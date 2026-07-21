@@ -24,6 +24,8 @@ import {
 import { useSoftphone } from "../hooks/use-softphone";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 
 /**
  * Bloco de feedback pós-conexão — extraído pra que o discriminated
@@ -104,15 +106,17 @@ function WebhookFallback({
         <code className="min-w-0 flex-1 truncate rounded border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-1 font-mono text-[11px] text-[var(--text-primary)]">
           {webhookUrl}
         </code>
-        <button
+        <ButtonGlass
           type="button"
+          variant="glass"
+          size="sm"
           onClick={() => onCopy(webhookUrl)}
-          className="inline-flex h-7 shrink-0 items-center gap-1 rounded border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+          className="shrink-0"
           title="Copiar URL"
         >
           {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
           {copied ? "Copiado" : "Copiar"}
-        </button>
+        </ButtonGlass>
       </div>
       <p className="text-pretty break-words text-[11px] text-[var(--text-muted)]">
         Sem isso, as chamadas funcionam mas não aparecem na lista
@@ -213,16 +217,17 @@ function ConnectedSummary({
   );
 }
 
-export function Api4ComConnectForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+/**
+ * Card "Status da conexão" — mostra o estado atual do ramal Api4Com.
+ * Conectado → banner verde (ConnectedSummary) + linha do webhook.
+ * Desconectado → aviso curto direcionando à Configuração do ramal.
+ * "Reconectar" delega ao pai (`onReconnect`) para focar o form Api4Com.
+ */
+export function Api4ComStatusCard({ onReconnect }: { onReconnect?: () => void }) {
   const [copied, setCopied] = useState(false);
-  // `showForm` força mostrar o form mesmo quando há conexão ativa
-  // (usuário clicou em "Reconectar" pra trocar conta).
-  const [showForm, setShowForm] = useState(false);
-
   const queryClient = useQueryClient();
   const softphone = useSoftphone();
+  const { confirm, dialog } = useConfirm();
 
   const statusQuery = useQuery({
     queryKey: ["softphone", "api4com-status"],
@@ -249,7 +254,7 @@ export function Api4ComConnectForm() {
       //    GET /me/credentials, e o SoftphoneWidget para de tentar
       //    conectar automaticamente).
       queryClient.removeQueries({ queryKey: ["softphone", "credentials"] });
-      // 3. Atualiza status pra mostrar o form vazio imediatamente.
+      // 3. Atualiza status pra mostrar o estado desconectado imediatamente.
       queryClient.setQueryData<Api4ComStatus>(["softphone", "api4com-status"], {
         connected: false,
         email: null,
@@ -257,11 +262,93 @@ export function Api4ComConnectForm() {
         domain: null,
         webhook: { configured: false, webhookUrl: null },
       });
-      // 4. Limpa o form local pra próximo reconnect começar do zero.
-      setEmail("");
-      setPassword("");
-      setShowForm(false);
     },
+  });
+
+  const copyUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // clipboard pode falhar em http (não-https). Usuário pode
+      // selecionar manualmente no <code> ainda.
+    }
+  };
+
+  if (statusQuery.isLoading) {
+    return (
+      <div className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
+        <IconLoader2 size={12} className="animate-spin" />
+        Carregando status do softphone…
+      </div>
+    );
+  }
+
+  const status = statusQuery.data;
+
+  if (!status?.connected) {
+    return (
+      <div className="flex min-w-0 items-start gap-2 rounded-[var(--radius-md)] bg-[var(--glass-bg-subtle)] px-3.5 py-3 text-[13px] text-[var(--text-secondary)]">
+        <IconAlertTriangle size={16} className="mt-0.5 shrink-0 text-[var(--color-warning)]" />
+        <span className="min-w-0 text-pretty break-words">
+          Nenhum ramal conectado. Configure abaixo em{" "}
+          <strong>Configuração do ramal</strong> para começar a fazer e receber
+          chamadas.
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 w-full flex-col gap-2">
+      <ConnectedSummary
+        status={status}
+        copied={copied}
+        onCopy={copyUrl}
+        onReconnect={() => onReconnect?.()}
+        onDisconnect={async () => {
+          const ok = await confirm({
+            title: "Desconectar sua conta Api4Com?",
+            description:
+              "O ramal salvo será apagado e você precisará informar e-mail + senha de novo pra usar telefonia. Chamadas em andamento serão encerradas.",
+            confirmLabel: "Desconectar",
+            destructive: true,
+          });
+          if (ok) disconnectMutation.mutate();
+        }}
+        disconnecting={disconnectMutation.isPending}
+      />
+      {disconnectMutation.isError && (
+        <p className="text-xs text-[var(--color-danger)]">
+          {(disconnectMutation.error as Error)?.message ?? "Falha ao desconectar"}
+        </p>
+      )}
+      {dialog}
+    </div>
+  );
+}
+
+/**
+ * Formulário de conexão Api4Com (e-mail + senha) — vive no card
+ * "Configuração do ramal" quando o tipo Api4Com está selecionado.
+ * Quando já há conexão, o botão vira "Reconectar" e o e-mail salvo é
+ * pré-preenchido.
+ */
+export function Api4ComConnectForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const queryClient = useQueryClient();
+  const softphone = useSoftphone();
+
+  const statusQuery = useQuery({
+    queryKey: ["softphone", "api4com-status"],
+    queryFn: getApi4ComStatus,
+    retry: false,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const mutation = useMutation({
@@ -289,13 +376,10 @@ export function Api4ComConnectForm() {
       //    rota (defensivo — hoje vive no layout global), garante
       //    que o registro SIP suba imediatamente sem precisar de F5.
       void softphone.connect();
-      // 4. Reseta UI de "Reconectar" e limpa senha do state.
+      // 4. Limpa senha do state.
       setPassword("");
-      setShowForm(false);
     },
   });
-
-  const { confirm, dialog } = useConfirm();
 
   const copyUrl = async (url: string) => {
     try {
@@ -303,60 +387,18 @@ export function Api4ComConnectForm() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      // clipboard pode falhar em http (não-https). Usuário pode
-      // selecionar manualmente no <code> ainda.
+      /* clipboard pode falhar em http (não-https). */
     }
   };
 
-  // Quando clica em "Reconectar", pré-preenche email salvo pra UX.
+  // Pré-preenche o e-mail salvo (reconexão / troca de conta).
   useEffect(() => {
-    if (showForm && statusQuery.data?.email && !email) {
+    if (statusQuery.data?.email && !email) {
       setEmail(statusQuery.data.email);
     }
-  }, [showForm, statusQuery.data?.email, email]);
-
-  // Estados de loading inicial — evita piscar o form vazio
-  if (statusQuery.isLoading) {
-    return (
-      <div className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
-        <IconLoader2 size={12} className="animate-spin" />
-        Carregando status do softphone…
-      </div>
-    );
-  }
+  }, [statusQuery.data?.email, email]);
 
   const status = statusQuery.data;
-  const showConnectedView = status?.connected && !showForm;
-
-  if (showConnectedView) {
-    return (
-      <div className="flex min-w-0 w-full flex-col gap-2">
-        <ConnectedSummary
-          status={status}
-          copied={copied}
-          onCopy={copyUrl}
-          onReconnect={() => setShowForm(true)}
-          onDisconnect={async () => {
-            const ok = await confirm({
-              title: "Desconectar sua conta Api4Com?",
-              description:
-                "O ramal salvo será apagado e você precisará informar e-mail + senha de novo pra usar telefonia. Chamadas em andamento serão encerradas.",
-              confirmLabel: "Desconectar",
-              destructive: true,
-            });
-            if (ok) disconnectMutation.mutate();
-          }}
-          disconnecting={disconnectMutation.isPending}
-        />
-        {disconnectMutation.isError && (
-          <p className="text-xs text-[var(--color-danger)]">
-            {(disconnectMutation.error as Error)?.message ?? "Falha ao desconectar"}
-          </p>
-        )}
-        {dialog}
-      </div>
-    );
-  }
 
   return (
     <form
@@ -364,30 +406,29 @@ export function Api4ComConnectForm() {
         e.preventDefault();
         if (email && password) mutation.mutate();
       }}
-      className="flex min-w-0 w-full flex-col gap-3"
+      className="grid min-w-0 w-full gap-4"
     >
-      <p className="font-body text-[13px] text-[var(--text-muted)]">
-        {status?.connected
-          ? "Reconectar Api4Com — informe a senha (e o e-mail se for trocar de conta)."
-          : "Informe suas credenciais Api4Com. O CRM detectará automaticamente o ramal vinculado ao seu e-mail."}
-      </p>
+      <div className="grid min-w-0 gap-1.5">
+        <Label>E-mail Api4Com</Label>
+        <InputGlass
+          type="email"
+          placeholder="voce@empresa.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
 
-      <InputGlass
-        type="email"
-        placeholder="E-mail Api4Com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-
-      <InputGlass
-        type="password"
-        placeholder="Senha Api4Com"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+      <div className="grid min-w-0 gap-1.5">
+        <Label>Senha Api4Com</Label>
+        <PasswordInput
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
 
       {mutation.isError && (
-        <p className="text-xs text-[var(--color-danger)]">
+        <p className="text-[11px] text-[var(--color-danger)]">
           {(mutation.error as Error)?.message ?? "Falha ao conectar"}
         </p>
       )}
@@ -396,12 +437,11 @@ export function Api4ComConnectForm() {
         <ConnectSuccessFeedback data={mutation.data} copied={copied} onCopy={copyUrl} />
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex justify-end">
         <ButtonGlass
           type="submit"
           variant="primary"
           disabled={!email || !password || mutation.isPending}
-          className="flex-1"
         >
           {mutation.isPending ? (
             <IconLoader2 size={14} className="animate-spin" />
@@ -410,20 +450,6 @@ export function Api4ComConnectForm() {
           )}
           {status?.connected ? "Reconectar" : "Conectar Api4Com"}
         </ButtonGlass>
-
-        {status?.connected && showForm && (
-          <ButtonGlass
-            type="button"
-            variant="glass"
-            onClick={() => {
-              setShowForm(false);
-              setPassword("");
-              mutation.reset();
-            }}
-          >
-            Cancelar
-          </ButtonGlass>
-        )}
       </div>
     </form>
   );

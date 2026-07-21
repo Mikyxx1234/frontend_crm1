@@ -57,8 +57,18 @@ export function useInboxRealtime(options: {
           const data = JSON.parse((e as MessageEvent).data) as {
             conversationId?: string;
           };
-          if (data.conversationId && data.conversationId === activeRef.current) {
-            qc.invalidateQueries({ queryKey: messagesKey(activeRef.current) });
+          if (data.conversationId) {
+            if (data.conversationId === activeRef.current) {
+              // Conversa aberta: refetch imediato para exibir a mensagem.
+              qc.invalidateQueries({ queryKey: messagesKey(activeRef.current) });
+            } else {
+              // Outra conversa: marca stale sem refetch imediato.
+              // Quando o operador navegar até ela, verá dados frescos.
+              qc.invalidateQueries({
+                queryKey: messagesKey(data.conversationId),
+                refetchType: "none",
+              });
+            }
           }
           scheduleInboxRefresh();
         } catch {
@@ -70,9 +80,54 @@ export function useInboxRealtime(options: {
         try {
           const data = JSON.parse((e as MessageEvent).data) as {
             conversationId?: string;
+            /** Id da bolha (= externalId/wamid no Meta). */
+            messageId?: string;
+            /** UUID interno — fallback p/ payloads antigos. */
+            internalId?: string;
+            status?: string;
           };
-          if (data.conversationId && data.conversationId === activeRef.current) {
-            qc.invalidateQueries({ queryKey: messagesKey(activeRef.current) });
+          if (data.conversationId) {
+            // Atualização otimista do tick (sent→delivered→read) sem
+            // esperar o refetch — evita atraso perceptível nos ticks azuis.
+            if (data.messageId && data.status) {
+              const mapped = ({
+                pending: "PENDING",
+                sent: "SENT",
+                delivered: "DELIVERED",
+                read: "READ",
+                failed: "FAILED",
+              } as Record<string, string>)[data.status.toLowerCase()];
+              if (mapped) {
+                const bubbleId = data.messageId;
+                const internalId = data.internalId;
+                qc.setQueryData(
+                  messagesKey(data.conversationId),
+                  (old: { messages?: Array<{ id: string; status?: string; sendStatus?: string | null }> } | undefined) => {
+                    if (!old?.messages) return old;
+                    return {
+                      ...old,
+                      messages: old.messages.map((m) =>
+                        m.id === bubbleId || (internalId != null && m.id === internalId)
+                          ? { ...m, status: mapped, sendStatus: data.status!.toLowerCase() }
+                          : m,
+                      ),
+                    };
+                  },
+                );
+              }
+            }
+            // Refetch forçado na conversa aberta — invalidate sozinho
+            // às vezes não dispara a tempo do tick azul.
+            if (data.conversationId === activeRef.current) {
+              void qc.refetchQueries({
+                queryKey: messagesKey(data.conversationId),
+              });
+            } else {
+              qc.invalidateQueries({
+                queryKey: messagesKey(data.conversationId),
+                refetchType: "none",
+              });
+            }
           }
           scheduleInboxRefresh();
         } catch {
@@ -113,6 +168,36 @@ export function useInboxRealtime(options: {
 
       es.addEventListener("presence_update", () => {
         qc.invalidateQueries({ queryKey: ["my-agent-status"] });
+      });
+
+      // Ciclo de vida de automações (robô iniciou/avançou/terminou) —
+      // atualiza o chip "robô em execução" do chat aberto. O evento traz
+      // contactId (contexto não referencia conversa), então invalidamos a
+      // query da conversa ativa; se o contato não for o mesmo, o refetch
+      // é barato e o resultado idêntico.
+      es.addEventListener("automation_state", (e) => {
+        // Invalida o botão "Robôs ativos" (por contato) do evento e,
+        // por compat, o chip antigo (por conversa ativa).
+        try {
+          const data = JSON.parse((e as MessageEvent).data) as {
+            contactId?: string;
+          };
+          if (data.contactId) {
+            qc.invalidateQueries({
+              queryKey: ["active-automations-contact", data.contactId],
+            });
+            qc.invalidateQueries({
+              queryKey: ["automation-history-contact", data.contactId],
+            });
+          }
+        } catch {
+          /* ignore */
+        }
+        if (activeRef.current) {
+          qc.invalidateQueries({
+            queryKey: ["active-automations", activeRef.current],
+          });
+        }
       });
 
       es.onerror = () => {

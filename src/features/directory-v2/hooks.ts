@@ -14,8 +14,15 @@ import {
   fetchActivities,
   fetchCompanies,
   fetchCompany,
+  fetchCompanyFacets,
+  fetchCompanyStats,
   fetchContact,
   fetchContacts,
+  fetchContactFieldDefs,
+  fetchContactStats,
+  fetchDuplicates,
+  fetchTagsWithCounts,
+  mergeContacts,
   removeContactTag,
   updateActivity,
   updateCompany,
@@ -24,12 +31,20 @@ import {
   type ActivityListPage,
   type ActivityTypeDto,
   type CompanyDetailDto,
+  type CompanyFacetsDto,
   type CompanyListPage,
+  type CompanySegment,
+  type CompanySortField,
+  type CompanyStatsDto,
   type CompanyWriteBody,
   type ContactDetailDto,
   type ContactListPage,
   type ContactNoteDto,
+  type ContactFieldDefDto,
+  type ContactStatsDto,
   type ContactWriteBody,
+  type DuplicatesResponseDto,
+  type TagWithCountDto,
   type CreateActivityPayload,
   type UpdateActivityPayload,
 } from "./api";
@@ -49,16 +64,105 @@ export function useContacts(params: {
   search?: string;
   page?: number;
   perPage?: number;
+  lifecycleStage?: string;
+  tagIds?: string[];
+  unassigned?: boolean;
+  createdFrom?: string;
+  createdTo?: string;
+  updatedFrom?: string;
+  updatedTo?: string;
+  sortBy?: "name" | "email" | "createdAt" | "updatedAt" | "leadScore" | "lifecycleStage";
+  sortOrder?: "asc" | "desc";
   enabled?: boolean;
 }) {
   const page = params.page ?? 1;
   const perPage = params.perPage ?? 30;
+  const tagIds = params.tagIds ?? [];
   return useQuery<ContactListPage>({
-    queryKey: ["v2-contacts", params.search ?? "", page, perPage],
-    queryFn: () => fetchContacts({ search: params.search, page, perPage }),
+    queryKey: [
+      "v2-contacts",
+      params.search ?? "",
+      page,
+      perPage,
+      params.lifecycleStage ?? "",
+      tagIds.join(","),
+      params.unassigned ? "1" : "",
+      params.createdFrom ?? "",
+      params.createdTo ?? "",
+      params.updatedFrom ?? "",
+      params.updatedTo ?? "",
+      params.sortBy ?? "",
+      params.sortOrder ?? "",
+    ],
+    queryFn: () =>
+      fetchContacts({
+        search: params.search,
+        page,
+        perPage,
+        lifecycleStage: params.lifecycleStage,
+        tagIds: tagIds.length > 0 ? tagIds : undefined,
+        unassigned: params.unassigned,
+        createdFrom: params.createdFrom,
+        createdTo: params.createdTo,
+        updatedFrom: params.updatedFrom,
+        updatedTo: params.updatedTo,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
+      }),
     enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,
     placeholderData: (prev) => prev,
+  });
+}
+
+export function useContactStats(enabled?: boolean) {
+  return useQuery<ContactStatsDto>({
+    queryKey: ["v2-contact-stats"],
+    queryFn: fetchContactStats,
+    enabled: resolveEnabled(enabled),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useContactTags(enabled?: boolean) {
+  return useQuery<TagWithCountDto[]>({
+    queryKey: ["v2-contact-tags"],
+    queryFn: fetchTagsWithCounts,
+    enabled: resolveEnabled(enabled),
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useContactFieldDefs(enabled?: boolean) {
+  return useQuery<ContactFieldDefDto[]>({
+    queryKey: ["v2-contact-field-defs"],
+    queryFn: fetchContactFieldDefs,
+    enabled: resolveEnabled(enabled),
+    staleTime: 5 * 60_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useContactDuplicates(enabled?: boolean) {
+  return useQuery<DuplicatesResponseDto>({
+    queryKey: ["v2-contact-duplicates"],
+    queryFn: fetchDuplicates,
+    enabled: resolveEnabled(enabled),
+    staleTime: 30_000,
+  });
+}
+
+export function useMergeContacts() {
+  const qc = useQueryClient();
+  return useMutation<{ ok: true }, Error, { keepId: string; removeId: string }>({
+    mutationFn: ({ keepId, removeId }) => mergeContacts(keepId, removeId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["v2-contacts"], exact: false });
+      qc.invalidateQueries({ queryKey: ["v2-contact-stats"] });
+      qc.invalidateQueries({ queryKey: ["v2-contact-duplicates"] });
+    },
   });
 }
 
@@ -73,6 +177,7 @@ export function useContact(id: string | null) {
 
 function invalidateContacts(qc: ReturnType<typeof useQueryClient>, id?: string) {
   qc.invalidateQueries({ queryKey: ["v2-contacts"], exact: false });
+  qc.invalidateQueries({ queryKey: ["v2-contact-stats"] });
   if (id) qc.invalidateQueries({ queryKey: ["v2-contact", id] });
 }
 
@@ -128,15 +233,70 @@ export function useCompanies(params: {
   search?: string;
   page?: number;
   perPage?: number;
+  segment?: CompanySegment;
+  city?: string;
+  state?: string;
+  industry?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  sortBy?: CompanySortField;
+  sortOrder?: "asc" | "desc";
   enabled?: boolean;
 }) {
   const page = params.page ?? 1;
   const perPage = params.perPage ?? 30;
+  const segment = params.segment ?? "todos";
   return useQuery<CompanyListPage>({
-    queryKey: ["v2-companies", params.search ?? "", page, perPage],
-    queryFn: () => fetchCompanies({ search: params.search, page, perPage }),
+    queryKey: [
+      "v2-companies",
+      params.search ?? "",
+      page,
+      perPage,
+      segment,
+      params.city ?? "",
+      params.state ?? "",
+      params.industry ?? "",
+      params.createdFrom ?? "",
+      params.createdTo ?? "",
+      params.sortBy ?? "name",
+      params.sortOrder ?? "asc",
+    ],
+    queryFn: () =>
+      fetchCompanies({
+        search: params.search,
+        page,
+        perPage,
+        segment,
+        city: params.city,
+        state: params.state,
+        industry: params.industry,
+        createdFrom: params.createdFrom,
+        createdTo: params.createdTo,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
+      }),
     enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useCompanyStats(enabled?: boolean) {
+  return useQuery<CompanyStatsDto>({
+    queryKey: ["v2-company-stats"],
+    queryFn: fetchCompanyStats,
+    enabled: resolveEnabled(enabled),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useCompanyFacets(enabled?: boolean) {
+  return useQuery<CompanyFacetsDto>({
+    queryKey: ["v2-company-facets"],
+    queryFn: fetchCompanyFacets,
+    enabled: resolveEnabled(enabled),
+    staleTime: 60_000,
     placeholderData: (prev) => prev,
   });
 }
@@ -152,6 +312,7 @@ export function useCompany(id: string | null) {
 
 function invalidateCompanies(qc: ReturnType<typeof useQueryClient>, id?: string) {
   qc.invalidateQueries({ queryKey: ["v2-companies"], exact: false });
+  qc.invalidateQueries({ queryKey: ["v2-company-stats"] });
   if (id) qc.invalidateQueries({ queryKey: ["v2-company", id] });
 }
 
@@ -212,6 +373,7 @@ export function useActivities(params: {
   completed?: boolean;
   page?: number;
   perPage?: number;
+  scope?: "mine" | "department" | "all";
   enabled?: boolean;
 }) {
   const page = params.page ?? 1;
@@ -221,6 +383,7 @@ export function useActivities(params: {
       "v2-activities",
       params.type ?? "__any__",
       params.completed === undefined ? "__any__" : params.completed,
+      params.scope ?? "all",
       page,
       perPage,
     ],
@@ -228,6 +391,7 @@ export function useActivities(params: {
       fetchActivities({
         type: params.type,
         completed: params.completed,
+        scope: params.scope,
         page,
         perPage,
       }),

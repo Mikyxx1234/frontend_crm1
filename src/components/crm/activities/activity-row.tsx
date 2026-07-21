@@ -6,6 +6,7 @@ import {
   IconClock,
   IconMapPin,
   IconUser,
+  IconUsersGroup,
   IconTrash,
   IconDotsVertical,
   IconCircleCheck,
@@ -97,6 +98,19 @@ export function ActivityRow({ activity, overdue, onToggle, onDelete }: ActivityR
             <span className="inline-flex items-center gap-1">
               <IconMapPin size={13} />
               {activity.location}
+            </span>
+          )}
+          {activity.assigneeType === "department" && activity.assigneeLabel && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10px] font-bold"
+              style={{
+                backgroundColor: "rgba(167,139,250,0.14)",
+                color: "#8b5cf6",
+              }}
+              title={`Tarefa do departamento ${activity.assigneeLabel}`}
+            >
+              <IconUsersGroup size={12} />
+              {activity.assigneeLabel}
             </span>
           )}
         </div>

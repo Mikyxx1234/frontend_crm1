@@ -12,7 +12,7 @@ import {
   sendMessage,
   type WhatsappTemplate,
 } from "@/features/inbox-v2/api";
-import { messagesKey, useMessages } from "@/features/inbox-v2/hooks";
+import { emitConversationReopened, messagesKey, useMessages } from "@/features/inbox-v2/hooks";
 import type { InboxMessageDto } from "@/features/inbox-v2/api/types";
 import {
   interpolateInternalTemplate,
@@ -430,10 +430,15 @@ export function TemplatePickerList({
         // mesmo quando há ambiguidade de nome entre orgs.
         templateGraphId: tpl.metaTemplateId ?? null,
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Template enviado");
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      // Conversa encerrada reaberta como novo ticket → troca o chat ativo.
+      if (data.reopenedConversationId) {
+        qc.invalidateQueries({ queryKey: messagesKey(data.reopenedConversationId) });
+        emitConversationReopened(data.reopenedConversationId);
+      }
       onClose?.();
     },
     onError: (err: Error) =>

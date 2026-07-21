@@ -12,6 +12,9 @@ import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
 import { SidebarSection } from "@/components/pipeline/deal-detail/shared";
 import { cn } from "@/lib/utils";
+import { CustomFieldsGroupedView } from "@/components/crm/fields/custom-fields-grouped-view";
+import { useFieldLayout, type FieldLayoutContext } from "@/hooks/use-field-layout";
+import { resolveCustomFieldGroups } from "@/lib/field-layout";
 
 type FieldWithValue = {
   fieldId: string;
@@ -45,9 +48,15 @@ const compactDlToolbarBtn =
 export function CustomFieldsSection({
   contactId,
   variant = "default",
+  layoutContext,
 }: {
   contactId: string;
   variant?: "default" | "compactDl" | "compactCards" | "kompact";
+  /**
+   * Contexto de layout para resolver grupos de campos personalizados
+   * (PRD Agrupamento de Campos). Só afeta o variant `default`.
+   */
+  layoutContext?: FieldLayoutContext;
 }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = React.useState(false);
@@ -57,6 +66,25 @@ export function CustomFieldsSection({
     queryKey: ["contact-custom-fields", contactId],
     queryFn: () => fetchFieldValues(contactId),
   });
+
+  const effectiveLayoutContext: FieldLayoutContext = layoutContext ?? "inbox_lead_v2";
+  const { sections: layoutSections } = useFieldLayout(effectiveLayoutContext);
+  const hasRealGroups = React.useMemo(() => {
+    if (!layoutContext) return false;
+    const groups = resolveCustomFieldGroups(
+      layoutSections,
+      fields.map((f) => ({
+        id: f.fieldId,
+        name: f.name,
+        label: f.label,
+        type: f.type,
+        options: f.options,
+        required: f.required,
+      })),
+      "contact",
+    );
+    return groups.some((g) => g.group !== null);
+  }, [layoutContext, layoutSections, fields]);
 
   const saveMutation = useMutation({
     mutationFn: (values: { fieldId: string; value: string }[]) =>
@@ -301,6 +329,25 @@ export function CustomFieldsSection({
 
   if (isLoading) return <div className="py-3 text-xs text-muted-foreground">Carregando campos…</div>;
   if (fields.length === 0) return null;
+
+  if (layoutContext && hasRealGroups) {
+    return (
+      <CustomFieldsGroupedView
+        fields={fields}
+        entity="contact"
+        layoutContext={layoutContext}
+        editing={editing}
+        draft={draft}
+        onDraftChange={(fieldId, value) =>
+          setDraft((p) => ({ ...p, [fieldId]: value }))
+        }
+        onStartEdit={startEdit}
+        onCancelEdit={() => setEditing(false)}
+        onSave={onSave}
+        savePending={saveMutation.isPending}
+      />
+    );
+  }
 
   return (
     <SidebarSection

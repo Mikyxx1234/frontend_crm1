@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { IconLock, IconSend, IconX } from "@tabler/icons-react";
 
 import { sendTemplate, type WhatsappTemplate } from "@/features/inbox-v2/api";
-import { messagesKey } from "@/features/inbox-v2/hooks";
+import { emitConversationReopened, messagesKey } from "@/features/inbox-v2/hooks";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 
 /** Template selecionado, pronto para validação/envio. */
@@ -135,10 +135,15 @@ export function TemplateComposePanel({
         templateGraphId: template.metaTemplateId ?? null,
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Template enviado");
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      // Conversa encerrada reaberta como novo ticket → troca o chat ativo.
+      if (data.reopenedConversationId) {
+        qc.invalidateQueries({ queryKey: messagesKey(data.reopenedConversationId) });
+        emitConversationReopened(data.reopenedConversationId);
+      }
       onSent?.();
     },
     onError: (err: Error) => toast.error(err.message || "Falha ao enviar template"),

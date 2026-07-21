@@ -1,16 +1,14 @@
 import {
-  IconBolt,
   IconBuilding,
+  IconBuildingStore,
   IconChecklist,
   IconClipboardList,
   IconFilter,
   IconLayoutDashboard,
   IconMail,
   IconMessageCircle,
-  IconPhone,
-  IconPlugConnected,
+  IconRobot,
   IconRoute,
-  IconSend,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
@@ -122,20 +120,11 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "automations",
     title: "Automações",
     href: "/automations",
-    icon: IconBolt,
-    description: "Fluxos automáticos e gatilhos.",
+    icon: IconRobot,
+    description: "Fluxos automáticos e gatilhos (inclui campanhas).",
     locked: false,
     allowedRoles: ["ADMIN", "MANAGER"],
     requiredPermission: "nav:automations",
-  },
-  {
-    key: "campaigns",
-    title: "Campanhas",
-    href: "/campaigns",
-    icon: IconSend,
-    description: "Disparos em massa via WhatsApp com rastreamento.",
-    locked: false,
-    requiredPermission: "nav:campaigns",
   },
   {
     key: "distribution",
@@ -161,7 +150,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "widgets",
     title: "Widgets",
     href: "/widgets",
-    icon: IconPlugConnected,
+    icon: IconBuildingStore,
     description: "Central de extensões da organização.",
     locked: false,
     requiredPermission: "nav:widgets",
@@ -175,15 +164,9 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     locked: false,
     requiredPermission: "nav:email",
   },
-  {
-    key: "calls",
-    title: "Chamadas",
-    href: "/widgets/calls",
-    icon: IconPhone,
-    description: "Histórico de chamadas recebidas e realizadas.",
-    locked: false,
-    requiredPermission: "nav:calls",
-  },
+  // "Chamadas" foi movido do ícone da nav rail para dentro de Logs
+  // (aba "Chamadas"). O histórico continua acessível via /widgets/calls,
+  // mas não é mais um item independente do trilho.
 ] as const;
 
 export const SIDEBAR_CATALOG_KEYS: ReadonlySet<string> = new Set(

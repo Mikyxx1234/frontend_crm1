@@ -15,7 +15,10 @@ import type {
 export async function getMessages(
   conversationId: string,
 ): Promise<MessagesResponse> {
-  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages`));
+  // history=1: inclui mensagens de tickets anteriores do mesmo contato,
+  // com separadores de ticket injetados pelo backend. Sempre ativo no
+  // inbox v2 para exibir a linha do tempo contínua (comportamento Kommo).
+  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages?history=1`));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(
@@ -70,10 +73,18 @@ export async function sendMessage(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return parseApiResponse<{ message: InboxMessageDto; metaError?: string }>(
-    res,
-    "Erro ao enviar mensagem",
-  );
+  return parseApiResponse<{
+    message: InboxMessageDto;
+    metaError?: string;
+    /** Id da conversa onde a mensagem foi de fato gravada. */
+    conversationId?: string;
+    /**
+     * Presente quando a conversa estava ENCERRADA e o envio reabriu como
+     * NOVO ticket (regra "reabrir = novo id"). O frontend deve trocar o
+     * chat ativo para este id.
+     */
+    reopenedConversationId?: string;
+  }>(res, "Erro ao enviar mensagem");
 }
 
 /** POST /api/conversations/:id/attachments — multipart/form-data */
@@ -86,7 +97,7 @@ export async function sendAttachment(
     /** Mesma semântica do `channelId` em `sendMessage` (override por mensagem). */
     channelId?: string | null;
   },
-): Promise<{ message: InboxMessageDto }> {
+): Promise<{ message: InboxMessageDto; reopenedConversationId?: string }> {
   const form = new FormData();
   form.append(
     "file",
@@ -110,7 +121,7 @@ export async function sendAttachment(
       `Salvo localmente, mas falhou via WhatsApp: ${data.metaError}`,
     );
   }
-  return data as { message: InboxMessageDto };
+  return data as { message: InboxMessageDto; reopenedConversationId?: string };
 }
 
 /** POST /api/messages/:id/reactions */
@@ -174,7 +185,7 @@ export async function sendTemplate(
     flowActionData?: Record<string, unknown> | null;
     templateGraphId?: string | null;
   },
-): Promise<{ message: InboxMessageDto }> {
+): Promise<{ message: InboxMessageDto; reopenedConversationId?: string }> {
   const res = await fetch(apiUrl(`/api/conversations/${conversationId}/template`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -189,7 +200,10 @@ export async function sendTemplate(
       ...(vars.templateGraphId ? { templateGraphId: vars.templateGraphId } : {}),
     }),
   });
-  return parseApiResponse<{ message: InboxMessageDto }>(res, "Erro ao enviar template");
+  return parseApiResponse<{ message: InboxMessageDto; reopenedConversationId?: string }>(
+    res,
+    "Erro ao enviar template",
+  );
 }
 
 /** POST /api/media/transcribe */

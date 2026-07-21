@@ -1,25 +1,39 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   IconAlertTriangle,
-  IconAntennaBars5,
-  IconBan,
-  IconEye,
+  IconChevronDown,
+  IconColumns,
+  IconFilter,
+  IconInfoCircle,
   IconKey,
   IconLayoutSidebar,
   IconLoader2,
-  IconMessagePlus,
-  IconSend,
-  IconSettings,
+  IconMail,
+  IconPhoto,
+  IconPlus,
   IconShield,
-  IconUsers,
+  IconShieldCheck,
+  IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AvatarGlass } from "@/components/crm/avatar-glass";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 import {
@@ -27,23 +41,54 @@ import {
   useDeleteRole,
   usePermissionsCatalog,
   useRole,
-  useRoleScopeGrants,
-  useScopeChannelOptions,
   useUpdateRole,
-  useUpdateRoleScopeGrants,
 } from "./hooks";
-import type { RoleSidebarItem } from "./types";
+import type { FieldGrantEntry, RoleSidebarItem, StageGrantEntry } from "./types";
 import {
   RolePermissionsEditor,
   type PermissionsEditorMode,
 } from "./role-permissions-editor";
-import { ScopeMultiSelect, normalizeScope } from "./user-permissions-view";
 import {
   SidebarItemsEditor,
   toEditorItems,
   toPersistItems,
   type SidebarEditorItem,
 } from "@/features/sidebar/sidebar-customization";
+
+// ─── Data helpers (etapas do funil + campos personalizados) ──────────────────
+
+type PipelineWithStages = { id: string; name: string; stages: { id: string; name: string }[] };
+type CustomFieldDef = { id: string; name: string; label: string };
+
+async function getJson<T>(path: string): Promise<T> {
+  const res = await fetch(apiUrl(path));
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+function usePipelinesWithStages() {
+  return useQuery<PipelineWithStages[]>({
+    queryKey: ["pipelines-stages"],
+    queryFn: () => getJson<PipelineWithStages[]>("/api/pipelines"),
+    staleTime: 60_000,
+  });
+}
+
+function useEntityFields(entity: string) {
+  return useQuery<CustomFieldDef[]>({
+    queryKey: ["custom-fields", entity],
+    queryFn: () => getJson<CustomFieldDef[]>(`/api/custom-fields?entity=${entity}`),
+    staleTime: 60_000,
+  });
+}
+
+const FIELD_ENTITIES = ["deal", "contact", "company", "product"] as const;
+const FIELD_ENTITY_LABEL: Record<string, string> = {
+  deal: "Negócio",
+  contact: "Contato",
+  company: "Empresa",
+  product: "Produto",
+};
 
 interface RoleEditorProps {
   roleId: string | null;
@@ -66,6 +111,11 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   const [mode, setMode] = useState<PermissionsEditorMode>("levels");
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  // Grants migrados de Grupos: etapas do funil, campos e extras.
+  const [sharedInbox, setSharedInbox] = useState(true);
+  const [mediaAccess, setMediaAccess] = useState(true);
+  const [stageGrants, setStageGrants] = useState<Record<string, { canView: boolean; canEdit: boolean }>>({});
+  const [fieldGrants, setFieldGrants] = useState<Record<string, FieldGrantEntry>>({});
   // Menu lateral do papel — controlado localmente e enviado no save. Quando
   // o admin nunca mexeu, `sidebarOverride` fica false: nao envia `sidebarItems`
   // no payload (backend mantem `null` = usa catalogo padrao). Ao habilitar o
@@ -82,9 +132,7 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   );
 
   // Editor unificado: exibe TODAS as permissões do catálogo, incluindo
-  // mensageria (conversas, canais, templates, campanhas). A gestão de
-  // mensageria foi consolidada aqui — em /settings/conversations sobrou
-  // apenas um atalho.
+  // mensageria (conversas, canais, templates, campanhas).
   const editorResources = catalog?.resources ?? [];
 
   useEffect(() => {
@@ -96,11 +144,17 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
       } else {
         setChecked(new Set(role.permissions));
       }
-      // Sidebar: se o papel ja tem override, pre-carrega os items no editor;
-      // senao, deixa desligado (envia null no save == "usa catalogo padrao").
       const hasOverride = Array.isArray(role.sidebarItems) && role.sidebarItems.length > 0;
       setSidebarOverride(hasOverride);
       setSidebarItems(toEditorItems(hasOverride ? role.sidebarItems : null));
+      setSharedInbox(role.sharedInbox ?? true);
+      setMediaAccess(role.mediaAccess ?? true);
+      const sg: Record<string, { canView: boolean; canEdit: boolean }> = {};
+      for (const g of role.stageGrants ?? []) sg[g.stageId] = { canView: g.canView, canEdit: g.canEdit };
+      setStageGrants(sg);
+      const fg: Record<string, FieldGrantEntry> = {};
+      for (const f of role.fieldGrants ?? []) fg[`${f.entity}.${f.fieldKey}`] = f;
+      setFieldGrants(fg);
     }
   }, [role, allCatalogKeys]);
 
@@ -110,23 +164,26 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   const saving = createRole.isPending || updateRole.isPending;
   const deleting = deleteRole.isPending;
 
-  // Contadores do resumo (coluna de identidade). `nav:*` são derivadas,
-  // então não entram na contagem de "permissões ativas".
-  const permsCount = Array.from(checked).filter(
-    (k) => !k.startsWith("nav:"),
-  ).length;
+  // Contadores dos stat cards. `nav:*` são derivadas, então não entram na
+  // contagem de "permissões ativas".
+  const permsCount = Array.from(checked).filter((k) => !k.startsWith("nav:")).length;
   const usersCount = role?._count?.assignments ?? 0;
+  const fieldRestrictions = Object.values(fieldGrants).filter(
+    (f) => !f.canView || !f.canEdit,
+  ).length;
+  const stageRules = Object.values(stageGrants).filter((v) => v.canView || v.canEdit).length;
+  const assignments = role?.assignments ?? [];
 
   async function handleSave() {
     setError(null);
-    const permissions = isAdminPreset
-      ? ["*"]
-      : Array.from(checked);
-    // sidebarItems: null = "sem override" (backend usa catalogo padrao).
-    // Quando o admin ligou o toggle, enviamos a lista serializada.
+    const permissions = isAdminPreset ? ["*"] : Array.from(checked);
     const sidebarPayload: RoleSidebarItem[] | null = sidebarOverride
       ? toPersistItems(sidebarItems)
       : null;
+    const stagePayload: StageGrantEntry[] = Object.entries(stageGrants)
+      .filter(([, v]) => v.canView || v.canEdit)
+      .map(([stageId, v]) => ({ stageId, canView: v.canView, canEdit: v.canEdit }));
+    const fieldPayload: FieldGrantEntry[] = Object.values(fieldGrants);
     try {
       if (isNew) {
         const created = await createRole.mutateAsync({
@@ -134,6 +191,10 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
           description: description.trim(),
           permissions,
           sidebarItems: sidebarPayload,
+          sharedInbox,
+          mediaAccess,
+          stageGrants: stagePayload,
+          fieldGrants: fieldPayload,
         });
         onSaved?.(created.id);
       } else if (roleId) {
@@ -142,6 +203,10 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
           ...(isSystem ? {} : { name: name.trim(), description: description.trim() }),
           permissions,
           sidebarItems: sidebarPayload,
+          sharedInbox,
+          mediaAccess,
+          stageGrants: stagePayload,
+          fieldGrants: fieldPayload,
         });
         onSaved?.(roleId);
       }
@@ -151,7 +216,10 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   }
 
   async function handleDelete() {
-    if (!roleId || !deleteConfirm) { setDeleteConfirm(true); return; }
+    if (!roleId || !deleteConfirm) {
+      setDeleteConfirm(true);
+      return;
+    }
     setError(null);
     try {
       await deleteRole.mutateAsync(roleId);
@@ -171,153 +239,542 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   }
 
   const fieldsDisabled = isSystem && !isNew;
+  const headerName = isNew ? "Novo papel" : name || role?.name || "";
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
-      {/* ── COLUNA ESQUERDA: identidade do role (fixa) ─────────────────── */}
-      <aside className="flex flex-col gap-3 lg:sticky lg:top-2">
-        <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow-sm)]">
-          {/* Cabeçalho: ícone + nome + badge de preset */}
-          <div className="flex flex-col items-center gap-2.5 border-b border-[var(--glass-border-subtle)] px-6 py-5 text-center">
-            <div className="flex size-12 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
-              <IconShield size={22} />
-            </div>
-            <h2 className="font-display text-[14px] font-bold leading-tight text-[var(--text-primary)]">
-              {isNew ? "Novo role" : (role?.name ?? "")}
+    <div className="flex min-w-0 flex-col gap-5">
+      {/* ── Header (nome + badge + ações) ─────────────────────────────────── */}
+      <div className="flex items-start gap-4 border-b border-[var(--glass-border-subtle)] pb-5">
+        <span className="flex size-[52px] shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]">
+          {isSystem ? <IconShieldCheck size={24} /> : <IconShield size={24} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-display text-[19px] font-extrabold tracking-[-0.02em] text-[var(--text-primary)]">
+              {headerName}
             </h2>
-            {isSystem && (
-              <Badge variant="outline" className="text-[10px]">
-                Preset do sistema
-              </Badge>
-            )}
-          </div>
-
-          {/* Campos editáveis + resumo */}
-          <div className="flex flex-col gap-3.5 px-5 py-4">
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Nome</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={fieldsDisabled}
-                placeholder="Ex.: Supervisor SP"
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Descrição</Label>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={fieldsDisabled}
-                placeholder="Opcional"
-                className="h-8 text-xs"
-              />
-            </div>
-
-            {/* Resumo */}
-            <div className="flex flex-col gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] p-3">
-              <div className="flex items-center gap-2 text-[12px] text-[var(--text-secondary)]">
-                <IconKey size={13} className="shrink-0 text-[var(--brand-primary)]" />
-                <span>
-                  <strong className="text-[var(--text-primary)]">
-                    {isAdminPreset ? "Todas" : permsCount}
-                  </strong>{" "}
-                  {isAdminPreset ? "as permissões" : "permissões ativas"}
-                </span>
-              </div>
-              {!isNew && (
-                <div className="flex items-center gap-2 text-[12px] text-[var(--text-secondary)]">
-                  <IconUsers size={13} className="shrink-0 text-[var(--text-muted)]" />
-                  <span>
-                    <strong className="text-[var(--text-primary)]">{usersCount}</strong>{" "}
-                    usuário(s) com este role
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Ações */}
-          <div className="flex flex-col gap-2 border-t border-[var(--glass-border-subtle)] px-5 py-4">
-            <Button
-              size="sm"
-              onClick={() => void handleSave()}
-              disabled={saving || (!isNew && !name.trim())}
-              className="h-9 w-full justify-center text-xs"
-            >
-              {saving && <IconLoader2 className="mr-1.5 size-3 animate-spin" />}
-              Salvar
-            </Button>
-            <Button
-              size="sm"
+            <Badge
               variant="outline"
-              onClick={onClose}
-              className="h-9 w-full justify-center text-xs"
+              className="text-[10px] font-bold uppercase tracking-wide"
             >
-              Cancelar
-            </Button>
-            {!isNew && !isSystem && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void handleDelete()}
-                disabled={deleting}
-                className={cn(
-                  "mt-1 h-9 w-full justify-center text-xs",
-                  deleteConfirm
-                    ? "border-[var(--color-destructive)] bg-[var(--color-destructive-soft)] text-[var(--color-destructive)]"
-                    : "text-[var(--color-destructive)]",
-                )}
-              >
-                {deleting ? <IconLoader2 className="mr-1.5 size-3 animate-spin" /> : null}
-                {deleteConfirm ? "Confirmar exclusão" : "Deletar role"}
-              </Button>
+              {isAdminPreset ? "Admin" : isSystem ? "Sistema" : "Base"}
+            </Badge>
+          </div>
+          <p className="mt-1 truncate font-body text-[12.5px] text-[var(--text-muted)]">
+            {description.trim() || (isSystem ? "Papel padrão do sistema" : "Papel personalizado")}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Button
+            size="sm"
+            onClick={() => void handleSave()}
+            disabled={saving || (!isNew && !name.trim())}
+            className="h-8 text-xs"
+          >
+            {saving && <IconLoader2 className="mr-1.5 size-3 animate-spin" />}
+            Salvar
+          </Button>
+          <Button size="sm" variant="outline" onClick={onClose} className="h-8 text-xs">
+            Cancelar
+          </Button>
+          {!isNew && !isSystem && (
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={deleting}
+              className={cn(
+                "flex h-8 items-center gap-1 rounded-[var(--radius-md)] border px-2.5 font-display text-[12px] font-semibold transition-colors",
+                deleteConfirm
+                  ? "border-[var(--color-destructive)] bg-[var(--color-destructive-soft)] text-[var(--color-destructive)]"
+                  : "border-[var(--glass-border)] text-[var(--text-muted)] hover:border-red-200 hover:bg-red-50 hover:text-red-500",
+              )}
+            >
+              {deleting ? <IconLoader2 className="size-3.5 animate-spin" /> : <IconTrash size={14} />}
+              {deleteConfirm ? "Confirmar" : "Excluir"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Identidade editável (papéis não-sistema) ──────────────────────── */}
+      {!fieldsDisabled && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Nome</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex.: Supervisor SP"
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Descrição</Label>
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Opcional"
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Stat cards (estilo Departamentos) ─────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3">
+        <StatBox value={usersCount} label={usersCount === 1 ? "usuário com este papel" : "usuários com este papel"} />
+        <StatBox
+          value={isAdminPreset ? "Todas" : permsCount}
+          label={isAdminPreset ? "permissões (acesso total)" : "permissões ativas"}
+        />
+        <StatBox
+          value={fieldRestrictions}
+          label={fieldRestrictions === 1 ? "campo com restrição" : "campos com restrição"}
+        />
+      </div>
+
+      {/* ── Banner informativo (estilo Departamentos) ─────────────────────── */}
+      <div className="flex items-start gap-2.5 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/6 px-4 py-3">
+        <IconInfoCircle size={16} className="mt-0.5 shrink-0 text-[var(--brand-primary)]" />
+        <p className="font-body text-[12.5px] leading-relaxed text-[var(--text-secondary,var(--text-muted))]">
+          <strong className="font-semibold text-[var(--text-primary)]">O que este papel controla:</strong>{" "}
+          as <strong className="font-semibold text-[var(--text-primary)]">permissões</strong> de cada módulo, a{" "}
+          <strong className="font-semibold text-[var(--text-primary)]">visibilidade por funil e por campo</strong> e os{" "}
+          <strong className="font-semibold text-[var(--text-primary)]">acessos extras</strong> (caixa
+          compartilhada e mídia). As restrições de funil/campo só valem com o escopo granular ativado; o
+          preset Admin sempre tem acesso total.
+        </p>
+      </div>
+
+      {/* Avatares dos membros (quando houver) */}
+      {!isNew && assignments.length > 0 && (
+        <div className="flex items-center gap-3">
+          <span className="font-display text-[11px] font-bold uppercase tracking-[0.07em] text-[var(--text-muted)]">
+            Membros
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {assignments.slice(0, 8).map((a) => (
+              <div key={a.id} className="flex items-center gap-1.5" title={a.user.name}>
+                <AvatarGlass size="sm" name={a.user.name} imageUrl={a.user.avatarUrl} />
+              </div>
+            ))}
+            {assignments.length > 8 && (
+              <span className="font-body text-[11.5px] text-[var(--text-muted)]">
+                +{assignments.length - 8}
+              </span>
             )}
           </div>
         </div>
+      )}
 
-        {/* Erro */}
-        {error && (
-          <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-destructive)] bg-[var(--color-destructive-soft)] px-3 py-2 text-xs text-[var(--color-destructive)]">
-            <IconAlertTriangle className="size-3.5 shrink-0" />
-            {error}
+      {error && (
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-destructive)] bg-[var(--color-destructive-soft)] px-3 py-2 text-xs text-[var(--color-destructive)]">
+          <IconAlertTriangle className="size-3.5 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* ── Seções recolhíveis ────────────────────────────────────────────── */}
+      <CollapsibleSection
+        icon={<IconKey size={16} />}
+        title="Permissões"
+        sub="o que este papel pode fazer em cada módulo"
+        defaultOpen
+      >
+        <div className="p-4">
+          <RolePermissionsEditor
+            resources={editorResources}
+            checked={checked}
+            onChange={setChecked}
+            mode={mode}
+            onModeChange={setMode}
+            disabled={isAdminPreset || saving}
+          />
+          {isAdminPreset && (
+            <p className="mt-3 text-[11px] text-[var(--text-muted)]">
+              O preset Admin sempre possui acesso total (
+              <code className="font-mono">*</code>) — as permissões não são editáveis.
+            </p>
+          )}
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        icon={<IconFilter size={16} />}
+        title="Visibilidade por funil"
+        sub={stageRules > 0 ? `${stageRules} etapa(s) com regra` : "quais deals este papel enxerga e edita"}
+      >
+        <StagePanel grants={stageGrants} setGrants={setStageGrants} />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        icon={<IconColumns size={16} />}
+        title="Permissões por campo"
+        sub="restrinja campos sensíveis de negócios e contatos"
+      >
+        <FieldPanel grants={fieldGrants} setGrants={setFieldGrants} />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        icon={<IconMail size={16} />}
+        title="Acessos extras"
+        sub="caixa compartilhada e mídia"
+      >
+        <ExtraToggle
+          icon={<IconMail size={16} />}
+          title="Caixa de entrada compartilhada"
+          desc="Permite ler e responder conversas não atribuídas. Desmarque para restringir somente aos próprios atendimentos."
+          checked={sharedInbox}
+          onChange={setSharedInbox}
+        />
+        <ExtraToggle
+          icon={<IconPhoto size={16} />}
+          title="Acesso à mídia"
+          desc="Baixar e visualizar arquivos, imagens e áudios anexados às conversas e negócios."
+          checked={mediaAccess}
+          onChange={setMediaAccess}
+        />
+      </CollapsibleSection>
+
+      {/* Menu lateral do papel — reutiliza a customização existente. */}
+      <RoleSidebarSection
+        override={sidebarOverride}
+        onOverrideChange={setSidebarOverride}
+        items={sidebarItems}
+        onItemsChange={setSidebarItems}
+        disabled={saving}
+      />
+    </div>
+  );
+}
+
+// ─── Stat card (estilo Departamentos) ────────────────────────────────────────
+
+function StatBox({ value, label }: { value: ReactNode; label: string }) {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+      <p className="font-display text-[22px] font-extrabold leading-none text-[var(--text-primary)]">{value}</p>
+      <p className="mt-1 font-body text-[11.5px] text-[var(--text-muted)]">{label}</p>
+    </div>
+  );
+}
+
+// ─── Seção recolhível ─────────────────────────────────────────────────────────
+
+function CollapsibleSection({
+  icon,
+  title,
+  sub,
+  defaultOpen = false,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  sub?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--glass-bg-strong)]"
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]">
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-[13.5px] font-bold text-[var(--text-primary)]">{title}</span>
+          {sub && (
+            <span className="block truncate font-body text-[11.5px] text-[var(--text-muted)]">{sub}</span>
+          )}
+        </span>
+        <IconChevronDown
+          size={16}
+          className={cn("shrink-0 text-[var(--text-muted)] transition-transform", open && "rotate-180")}
+        />
+      </button>
+      {open && <div className="border-t border-[var(--glass-border-subtle)]">{children}</div>}
+    </div>
+  );
+}
+
+// ─── Painel de etapas do funil ────────────────────────────────────────────────
+
+function StagePanel({
+  grants,
+  setGrants,
+}: {
+  grants: Record<string, { canView: boolean; canEdit: boolean }>;
+  setGrants: Dispatch<SetStateAction<Record<string, { canView: boolean; canEdit: boolean }>>>;
+}) {
+  const { data: pipelines = [] } = usePipelinesWithStages();
+
+  function set(stageId: string, patch: Partial<{ canView: boolean; canEdit: boolean }>) {
+    setGrants((p) => {
+      const cur = p[stageId] ?? { canView: true, canEdit: false };
+      return { ...p, [stageId]: { ...cur, ...patch } };
+    });
+  }
+
+  if (pipelines.length === 0) {
+    return (
+      <p className="px-4 py-4 text-[12px] text-[var(--text-muted)]">
+        Nenhum funil encontrado. Sem regras, o papel enxerga todas as etapas.
+      </p>
+    );
+  }
+
+  return (
+    <div>
+      {pipelines.map((pl) =>
+        pl.stages.map((st) => {
+          const g = grants[st.id] ?? { canView: true, canEdit: false };
+          return (
+            <div
+              key={st.id}
+              className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-2.5 last:border-b-0 hover:bg-black/[0.015]"
+            >
+              <div className="min-w-0">
+                <span className="font-display text-[10px] font-bold uppercase tracking-[0.4px] text-[var(--text-muted)]">
+                  {pl.name}
+                </span>
+                <div className="truncate text-[13.5px] font-semibold text-[var(--text-primary)]">{st.name}</div>
+              </div>
+              <div className="ml-auto flex items-center gap-4">
+                <MiniToggle label="Ver" checked={g.canView} onChange={(v) => set(st.id, { canView: v })} />
+                <MiniToggle label="Editar" checked={g.canEdit} onChange={(v) => set(st.id, { canEdit: v })} />
+              </div>
+            </div>
+          );
+        }),
+      )}
+    </div>
+  );
+}
+
+// ─── Painel de campos ─────────────────────────────────────────────────────────
+
+function FieldPanel({
+  grants,
+  setGrants,
+}: {
+  grants: Record<string, FieldGrantEntry>;
+  setGrants: Dispatch<SetStateAction<Record<string, FieldGrantEntry>>>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const entries = Object.values(grants);
+
+  function set(key: string, patch: Partial<FieldGrantEntry>) {
+    setGrants((p) => ({ ...p, [key]: { ...p[key]!, ...patch } }));
+  }
+  function remove(key: string) {
+    setGrants((p) => {
+      const next = { ...p };
+      delete next[key];
+      return next;
+    });
+  }
+  function add(entity: string, field: CustomFieldDef) {
+    const key = `${entity}.${field.name}`;
+    setGrants((p) => ({
+      ...p,
+      [key]: { entity, fieldKey: field.name, canView: true, canEdit: true },
+    }));
+    setAdding(false);
+  }
+
+  return (
+    <div>
+      {entries.length === 0 && !adding && (
+        <p className="px-4 py-4 text-[12px] text-[var(--text-muted)]">
+          Nenhuma restrição de campo. Por padrão, o papel vê e edita todos os campos permitidos.
+        </p>
+      )}
+      {entries.map((f) => {
+        const key = `${f.entity}.${f.fieldKey}`;
+        return (
+          <div
+            key={key}
+            className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-2.5 last:border-b-0 hover:bg-black/[0.015]"
+          >
+            <div className="min-w-0">
+              <span className="font-display text-[10px] font-bold uppercase tracking-[0.4px] text-[var(--text-muted)]">
+                {FIELD_ENTITY_LABEL[f.entity] ?? f.entity}
+              </span>
+              <div className="truncate text-[13.5px] font-semibold text-[var(--text-primary)]">{f.fieldKey}</div>
+              <span className="block text-[11px] text-[var(--text-muted)]">
+                {f.entity}.{f.fieldKey}
+              </span>
+            </div>
+            <div className="ml-auto flex items-center gap-4">
+              <MiniToggle label="Ver" checked={f.canView} onChange={(v) => set(key, { canView: v })} />
+              <MiniToggle label="Editar" checked={f.canEdit} onChange={(v) => set(key, { canEdit: v })} />
+              <button
+                type="button"
+                onClick={() => remove(key)}
+                className="rounded p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--color-destructive)]"
+                title="Remover regra"
+              >
+                <IconTrash size={14} />
+              </button>
+            </div>
           </div>
-        )}
-      </aside>
+        );
+      })}
 
-      {/* ── COLUNA DIREITA: matriz de permissões (painéis soltos, DS v2) ── */}
-      <div className="flex min-w-0 flex-col gap-4">
-        <RolePermissionsEditor
-          resources={editorResources}
-          checked={checked}
-          onChange={setChecked}
-          mode={mode}
-          onModeChange={setMode}
-          disabled={isAdminPreset || saving}
+      {adding ? (
+        <FieldPicker existing={new Set(Object.keys(grants))} onPick={add} onClose={() => setAdding(false)} />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="flex w-full items-center gap-2.5 px-4 py-3 font-display text-[13px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-black/[0.015]"
+        >
+          <span className="flex size-6 items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-[var(--glass-border)]">
+            <IconPlus size={14} />
+          </span>
+          Definir permissões para outro campo
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FieldPicker({
+  existing,
+  onPick,
+  onClose,
+}: {
+  existing: Set<string>;
+  onPick: (entity: string, field: CustomFieldDef) => void;
+  onClose: () => void;
+}) {
+  const [entity, setEntity] = useState<(typeof FIELD_ENTITIES)[number]>("deal");
+  const { data: fields = [], isLoading } = useEntityFields(entity);
+  const available = fields.filter((f) => !existing.has(`${entity}.${f.name}`));
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-[var(--glass-border-subtle)] bg-black/[0.015] px-4 py-3">
+      <div className="flex items-center gap-2">
+        <DropdownGlass
+          options={FIELD_ENTITIES.map((e) => ({ value: e, label: FIELD_ENTITY_LABEL[e] ?? e }))}
+          value={entity}
+          onValueChange={(v) => setEntity(v as (typeof FIELD_ENTITIES)[number])}
         />
-        {isAdminPreset && (
-          <p className="text-[11px] text-[var(--text-muted)]">
-            O preset Admin sempre possui acesso total (
-            <code className="font-mono">*</code>) — as permissões não são editáveis.
-          </p>
-        )}
-
-        {/* Canais por papel: só faz sentido para papéis não-admin já criados
-            (precisa de roleId para persistir o grant). */}
-        {!isNew && !isAdminPreset && roleId && <RoleChannelScope roleId={roleId} />}
-
-        {/* Menu lateral do papel — decisão 14/jul/26 (ver AGENT.md). Salvo
-            no mesmo submit do papel; usuários com este papel veem esta config
-            (união com outros papéis que o usuário tiver). */}
-        <RoleSidebarSection
-          override={sidebarOverride}
-          onOverrideChange={setSidebarOverride}
-          items={sidebarItems}
-          onItemsChange={setSidebarItems}
-          disabled={saving}
-        />
+        <button
+          type="button"
+          onClick={onClose}
+          className="ml-auto rounded p-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+        >
+          <IconX size={15} />
+        </button>
       </div>
+      <div className="max-h-40 overflow-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white">
+        {isLoading ? (
+          <p className="px-2.5 py-2 text-[12px] text-[var(--text-muted)]">Carregando…</p>
+        ) : available.length === 0 ? (
+          <p className="px-2.5 py-2 text-[12px] text-[var(--text-muted)]">
+            Nenhum campo personalizado disponível para {FIELD_ENTITY_LABEL[entity] ?? entity}.
+          </p>
+        ) : (
+          available.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => onPick(entity, f)}
+              className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12.5px] transition-colors hover:bg-black/[0.04]"
+            >
+              <span className="font-semibold text-[var(--text-primary)]">{f.label}</span>
+              <span className="text-[11px] text-[var(--text-muted)]">
+                {entity}.{f.name}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Toggles ──────────────────────────────────────────────────────────────────
+
+function MiniToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2">
+      <span className="text-[11.5px] font-semibold text-[var(--text-secondary)]">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          "relative inline-flex h-[22px] w-[38px] shrink-0 items-center rounded-full transition-colors",
+          checked ? "bg-[var(--brand-primary)]" : "bg-[var(--toggle-bg-off)]",
+        )}
+      >
+        <span
+          className={cn(
+            "inline-block size-4 rounded-full bg-white shadow-[var(--glass-shadow-sm)] transition-transform",
+            checked ? "translate-x-[19px]" : "translate-x-[3px]",
+          )}
+        />
+      </button>
+    </label>
+  );
+}
+
+function ExtraToggle({
+  icon,
+  title,
+  desc,
+  checked,
+  onChange,
+}: {
+  icon: ReactNode;
+  title: string;
+  desc: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-4 last:border-b-0">
+      <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">{title}</div>
+        <div className="mt-0.5 max-w-[560px] text-[12px] text-[var(--text-muted)]">{desc}</div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={title}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          "relative mt-0.5 inline-flex h-[22px] w-[38px] shrink-0 items-center rounded-full transition-colors",
+          checked ? "bg-[var(--brand-primary)]" : "bg-[var(--toggle-bg-off)]",
+        )}
+      >
+        <span
+          className={cn(
+            "inline-block size-4 rounded-full bg-white shadow-[var(--glass-shadow-sm)] transition-transform",
+            checked ? "translate-x-[19px]" : "translate-x-[3px]",
+          )}
+        />
+      </button>
     </div>
   );
 }
@@ -342,24 +799,24 @@ function RoleSidebarSection({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow)]">
+    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-1.5">
-          <IconLayoutSidebar size={14} className="mt-0.5 text-[var(--text-muted)]" />
+        <div className="flex items-start gap-2.5">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]">
+            <IconLayoutSidebar size={16} />
+          </span>
           <div className="min-w-0">
-            <span className="block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            <span className="block font-display text-[13.5px] font-bold text-[var(--text-primary)]">
               Menu lateral
             </span>
-            <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-muted)]">
-              Define quais atalhos aparecem na sidebar e a ordem — vale para todos os
-              usuários com este papel. Sem personalização, o papel usa o catálogo padrão do CRM.
+            <p className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--text-muted)]">
+              Define quais atalhos aparecem na sidebar e a ordem — vale para todos os usuários com este
+              papel. Sem personalização, o papel usa o catálogo padrão do CRM.
             </p>
           </div>
         </div>
         <label className="inline-flex shrink-0 cursor-pointer items-center gap-2">
-          <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
-            Personalizar
-          </span>
+          <span className="text-[11px] font-semibold text-[var(--text-secondary)]">Personalizar</span>
           <input
             type="checkbox"
             checked={override}
@@ -370,150 +827,7 @@ function RoleSidebarSection({
         </label>
       </div>
 
-      {override && (
-        <SidebarItemsEditor
-          items={items}
-          onChange={onItemsChange}
-          disabled={disabled}
-        />
-      )}
-    </div>
-  );
-}
-
-/**
- * Escopo de CANAIS por papel. Concede a todos os usuários com este papel acesso
- * a ver / enviar nos canais selecionados (eixo aditivo ao override por usuário).
- * Persiste em `permissions.scope.grants.v1` via
- * `PUT /api/roles/[id]/scope-grants`. Só tem efeito real com a flag
- * `rbac_granular_scope_v1` ativa.
- */
-function RoleChannelScope({ roleId }: { roleId: string }) {
-  const { data, isLoading } = useRoleScopeGrants(roleId);
-  const channels = useScopeChannelOptions();
-  const update = useUpdateRoleScopeGrants(roleId);
-
-  const [channelViewIds, setChannelViewIds] = useState<string[] | null>(null);
-  const [channelSendIds, setChannelSendIds] = useState<string[] | null>(null);
-  const [channelInitiateIds, setChannelInitiateIds] = useState<string[] | null>(null);
-  const [channelManageIds, setChannelManageIds] = useState<string[] | null>(null);
-  const [channelDenyIds, setChannelDenyIds] = useState<string[] | null>(null);
-  const [dirty, setDirty] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!data) return;
-    setChannelViewIds(normalizeScope(data.channelViewIds));
-    setChannelSendIds(normalizeScope(data.channelSendIds));
-    setChannelInitiateIds(normalizeScope(data.channelInitiateIds));
-    setChannelManageIds(normalizeScope(data.channelManageIds));
-    setChannelDenyIds(normalizeScope(data.channelDenyIds));
-    setDirty(false);
-  }, [data]);
-
-  const markDirty = (setter: (v: string[] | null) => void) => (v: string[] | null) => {
-    setter(v);
-    setDirty(true);
-    setSaved(false);
-  };
-
-  async function handleSave() {
-    setErr(null);
-    try {
-      await update.mutateAsync({
-        channelViewIds,
-        channelSendIds,
-        channelInitiateIds,
-        channelManageIds,
-        channelDenyIds,
-      });
-      setDirty(false);
-      setSaved(true);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Erro ao salvar canais.");
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow)]">
-      <div className="flex items-center gap-1.5">
-        <IconAntennaBars5 size={14} className="text-[var(--text-muted)]" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-          Canais deste papel
-        </span>
-      </div>
-      <p className="text-[11px] text-[var(--text-muted)]">
-        Define quais canais os usuários com este papel podem ver/usar. Some-se ao
-        que cada usuário já tenha liberado individualmente.
-      </p>
-
-      <ScopeMultiSelect
-        label="Canais — ver mensagens"
-        icon={<IconEye size={12} className="text-[var(--text-muted)]" />}
-        options={channels.data ?? []}
-        value={channelViewIds}
-        onChange={markDirty(setChannelViewIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais — responder mensagens"
-        icon={<IconSend size={12} className="text-[var(--text-muted)]" />}
-        options={channels.data ?? []}
-        value={channelSendIds}
-        onChange={markDirty(setChannelSendIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais — iniciar nova conversa"
-        icon={<IconMessagePlus size={12} className="text-[var(--text-muted)]" />}
-        options={channels.data ?? []}
-        value={channelInitiateIds}
-        onChange={markDirty(setChannelInitiateIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais — administrar (configurar/conectar)"
-        icon={<IconSettings size={12} className="text-[var(--text-muted)]" />}
-        options={channels.data ?? []}
-        value={channelManageIds}
-        onChange={markDirty(setChannelManageIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais bloqueados (nega tudo, exceto se também administra o canal)"
-        icon={<IconBan size={12} className="text-[var(--text-muted)]" />}
-        options={channels.data ?? []}
-        value={channelDenyIds}
-        onChange={markDirty(setChannelDenyIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Nenhum canal bloqueado"
-      />
-
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => void handleSave()}
-          disabled={!dirty || update.isPending}
-          className="h-7 shrink-0 gap-1 text-[11px]"
-        >
-          {update.isPending ? <IconLoader2 className="size-3 animate-spin" /> : null}
-          Salvar canais
-        </Button>
-        {saved && !dirty && (
-          <span className="text-[11px] text-[var(--text-muted)]">Salvo</span>
-        )}
-        {err && <span className="text-[11px] text-[var(--color-destructive)]">{err}</span>}
-      </div>
+      {override && <SidebarItemsEditor items={items} onChange={onItemsChange} disabled={disabled} />}
     </div>
   );
 }

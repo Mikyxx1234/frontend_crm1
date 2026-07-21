@@ -109,6 +109,29 @@ export async function syncCalls(): Promise<{
   return fetchJson(`${BASE}/calls/sync`, { method: "POST" });
 }
 
+export interface CallsStats {
+  total: number;
+  inbound: number;
+  outbound: number;
+  answered: number;
+  completed: number;
+}
+
+export async function getCallsStats(
+  filters: Pick<
+    ListCallsFilters,
+    "search" | "dateFrom" | "dateTo" | "extensionId" | "contactId"
+  > = {},
+): Promise<CallsStats> {
+  const params = new URLSearchParams();
+  if (filters.extensionId) params.set("extensionId", filters.extensionId);
+  if (filters.contactId) params.set("contactId", filters.contactId);
+  if (filters.search) params.set("search", filters.search);
+  if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+  if (filters.dateTo) params.set("dateTo", filters.dateTo);
+  return fetchJson<CallsStats>(`${BASE}/calls/stats?${params.toString()}`);
+}
+
 export async function listCalls(filters: ListCallsFilters = {}): Promise<ListCallsResponse> {
   const params = new URLSearchParams();
   if (filters.extensionId) params.set("extensionId", filters.extensionId);
@@ -118,6 +141,8 @@ export async function listCalls(filters: ListCallsFilters = {}): Promise<ListCal
   if (filters.search) params.set("search", filters.search);
   if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
   if (filters.dateTo) params.set("dateTo", filters.dateTo);
+  if (filters.sortBy) params.set("sortBy", filters.sortBy);
+  if (filters.sortDir) params.set("sortDir", filters.sortDir);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.perPage) params.set("perPage", String(filters.perPage));
 

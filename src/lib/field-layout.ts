@@ -5,13 +5,92 @@ export type FieldItem = {
   hidden?: boolean;
 };
 
+/**
+ * Discriminador opcional de seção (PRD Agrupamento de Campos na Aside):
+ *   - undefined  → seção estática (blocos fixos do painel; comportamento legado).
+ *   - "custom_fields_group" → subgrupo de campos personalizados. `entity`
+ *     obrigatório; cada `fields[i].id` referencia um `CustomField.id`
+ *     real. Se nenhum grupo existir para a entidade, a aside renderiza
+ *     a lista flat como hoje (RN-05).
+ */
+export type SectionKind = "custom_fields_group";
+
 export type SectionConfig = {
   id: string;
   label: string;
   fixed?: boolean;
   hidden?: boolean;
   fields: FieldItem[];
+  kind?: SectionKind;
+  entity?: "contact" | "deal";
+  collapsedDefault?: boolean;
 };
+
+export type CustomFieldDef = {
+  id: string;
+  name: string;
+  label: string;
+  type: string;
+  options?: string[];
+  required?: boolean;
+};
+
+export type ResolvedCustomFieldGroup = {
+  /** Null = bucket virtual "Outros campos" (nunca persistido). */
+  group: {
+    id: string;
+    label: string;
+    collapsedDefault: boolean;
+  } | null;
+  fields: CustomFieldDef[];
+};
+
+/**
+ * Espelho de `resolveCustomFieldGroups` do backend
+ * (`backend_crm1/src/lib/field-layout.ts`). Mantenha os dois em sync
+ * quando alterar a semântica de agrupamento.
+ */
+export function resolveCustomFieldGroups(
+  sections: SectionConfig[],
+  allCustomFields: CustomFieldDef[],
+  entity: "contact" | "deal",
+): ResolvedCustomFieldGroup[] {
+  const byId = new Map(allCustomFields.map((f) => [f.id, f] as const));
+  const groups = sections.filter(
+    (s) => s.kind === "custom_fields_group" && s.entity === entity && !s.hidden,
+  );
+  if (groups.length === 0) {
+    return allCustomFields.length === 0
+      ? []
+      : [{ group: null, fields: allCustomFields }];
+  }
+  const used = new Set<string>();
+  const resolved: ResolvedCustomFieldGroup[] = [];
+  for (const s of groups) {
+    const fields: CustomFieldDef[] = [];
+    for (const item of s.fields) {
+      const def = byId.get(item.id);
+      if (!def) continue;
+      used.add(def.id);
+      if (item.hidden) continue;
+      fields.push(def);
+    }
+    if (fields.length === 0) continue;
+    resolved.push({
+      group: {
+        id: s.id,
+        label: s.label,
+        collapsedDefault: Boolean(s.collapsedDefault),
+      },
+      fields,
+    });
+  }
+  const orphans = allCustomFields.filter((f) => !used.has(f.id));
+  if (orphans.length > 0) {
+    resolved.push({ group: null, fields: orphans });
+  }
+  return resolved;
+}
 
 export const DEFAULT_SECTIONS_DEAL_WORKSPACE: SectionConfig[] = [
   {
@@ -196,6 +275,11 @@ export function mergeLayouts(
       return {
         ...adminSection,
         hidden: agentSection.hidden,
+        collapsedDefault:
+          adminSection.kind === "custom_fields_group" &&
+          agentSection.collapsedDefault !== undefined
+            ? agentSection.collapsedDefault
+            : adminSection.collapsedDefault,
         fields: agentSection.fields
           .map((af) => {
             const adminField = adminSection.fields.find((f) => f.id === af.id);

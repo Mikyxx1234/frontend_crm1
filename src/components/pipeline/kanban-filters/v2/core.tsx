@@ -12,11 +12,32 @@
 "use client";
 
 import * as React from "react";
-import { IconCheck as Check, IconChevronDown as ChevronDown, IconSearch as Search, IconDeviceFloppy as Save, IconTrash as Trash2, IconBookmark as Bookmark, IconLock as Lock, IconUsers as UsersIcon, IconX as X } from "@tabler/icons-react";
+import {
+  IconCheck as Check,
+  IconChevronDown as ChevronDown,
+  IconFlag,
+  IconSearch as Search,
+  IconDeviceFloppy as Save,
+  IconSparkles,
+  IconTrash as Trash2,
+  IconBookmark as Bookmark,
+  IconLock as Lock,
+  IconUsers as UsersIcon,
+  IconX as X,
+} from "@tabler/icons-react";
+
+import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
 
 import { cn } from "@/lib/utils";
 import { ds } from "@/lib/design-system";
-import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import {
+  DropdownGlass,
+  FILTER_FIELD_ITEM_CLASS,
+  FILTER_FIELD_MENU_CLASS,
+  FILTER_FIELD_TRIGGER_CLASS,
+} from "@/components/crm/dropdown-glass";
+import { useModalPortalContainer } from "@/components/ui/modal-portal-context";
+import { DatePicker } from "@/components/ui/date-picker";
 import { SelectNative } from "@/components/ui/select";
 
 import {
@@ -25,7 +46,7 @@ import {
   detectPreset,
   type DatePresetKey,
 } from "../date-presets";
-import { fetchSavedFilters } from "../api";
+import { fetchSavedFilters, searchContactsForFilter, type ContactFilterHit } from "../api";
 import type {
   AdvancedDealFilters,
   CustomField,
@@ -200,12 +221,147 @@ export function ChipToggle({
         "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors",
         active
           ? "border-transparent bg-primary text-white"
-          : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+          : "border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
       )}
     >
       {active && <Check className="size-3" />}
       {children}
     </button>
+  );
+}
+
+type MultiSelectOption = {
+  value: string;
+  label: React.ReactNode;
+  searchText?: string;
+};
+
+/**
+ * Dropdown multi-select para listas nos filtros.
+ * Clique no item faz toggle sem fechar o menu.
+ */
+export function MultiSelectDropdown({
+  options,
+  selected,
+  onToggle,
+  placeholder = "Selecionar…",
+  emptyLabel = "Nenhuma opção.",
+  searchable,
+  searchPlaceholder = "Buscar…",
+  leading,
+}: {
+  options: MultiSelectOption[];
+  selected: string[];
+  onToggle: (value: string) => void;
+  placeholder?: string;
+  emptyLabel?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  leading?: React.ReactNode;
+}) {
+  const [search, setSearch] = React.useState("");
+  const portalContainer = useModalPortalContainer();
+  const selectedSet = React.useMemo(() => new Set(selected), [selected]);
+
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => {
+      const hay =
+        o.searchText ??
+        (typeof o.label === "string" ? o.label : String(o.value));
+      return hay.toLowerCase().includes(q);
+    });
+  }, [options, search]);
+
+  const summary =
+    selected.length === 0
+      ? placeholder
+      : selected.length === 1
+        ? (() => {
+            const hit = options.find((o) => o.value === selected[0]);
+            return (
+              hit?.searchText ??
+              (typeof hit?.label === "string" ? hit.label : "1 selecionado")
+            );
+          })()
+        : `${selected.length} selecionados`;
+
+  return (
+    <DropdownPrimitive.Root modal={false} onOpenChange={(open) => !open && setSearch("")}>
+      <DropdownPrimitive.Trigger asChild>
+        <button
+          type="button"
+          className={cn(
+            FILTER_FIELD_TRIGGER_CLASS,
+            selected.length && "text-[var(--text-primary)]",
+          )}
+        >
+          <span className="min-w-0 flex-1 truncate text-left">{summary}</span>
+          <ChevronDown
+            size={15}
+            className="shrink-0 text-current opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180"
+          />
+        </button>
+      </DropdownPrimitive.Trigger>
+      <DropdownPrimitive.Portal container={portalContainer ?? undefined}>
+        <DropdownPrimitive.Content
+          align="start"
+          sideOffset={6}
+          className={cn(
+            FILTER_FIELD_MENU_CLASS,
+            "w-[var(--radix-dropdown-menu-trigger-width)] min-w-[220px]",
+            "animate-in fade-in-0 zoom-in-95",
+          )}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
+          {searchable && (
+            <div className="sticky top-0 z-[1] mb-1 bg-[var(--dropdown-solid-bg,var(--glass-bg-modal,#fff))] p-1">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="h-8 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] pl-8 pr-2 text-[12px] text-[var(--text-primary)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+          )}
+          {leading}
+          {filtered.length === 0 ? (
+            <p className="px-2.5 py-3 text-center text-[12px] text-[var(--text-muted)]">
+              {search.trim() ? "Nenhum resultado." : emptyLabel}
+            </p>
+          ) : (
+            filtered.map((opt) => {
+              const isOn = selectedSet.has(opt.value);
+              return (
+                <DropdownPrimitive.Item
+                  key={opt.value}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    onToggle(opt.value);
+                  }}
+                  className={cn(
+                    FILTER_FIELD_ITEM_CLASS,
+                    isOn && "bg-[var(--color-primary-soft)] text-[var(--brand-primary)]",
+                  )}
+                >
+                  <span className="min-w-0 flex-1 truncate">{opt.label}</span>
+                  {isOn && (
+                    <Check size={15} strokeWidth={2.5} className="shrink-0 text-[var(--brand-primary)]" />
+                  )}
+                </DropdownPrimitive.Item>
+              );
+            })
+          )}
+        </DropdownPrimitive.Content>
+      </DropdownPrimitive.Portal>
+    </DropdownPrimitive.Root>
   );
 }
 
@@ -234,7 +390,9 @@ export function TextField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={cn(
-          "h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20",
+          "h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] shadow-none outline-none transition-colors",
+          "hover:bg-[var(--color-primary-soft)] hover:border-[var(--input-border-focus)]",
+          "focus:border-[var(--brand-primary)]/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20",
           icon && "pl-8",
         )}
       />
@@ -258,7 +416,6 @@ function DateRangeField({ value, onChange }: { value?: DateRangeValue; onChange:
           if (key === "any") return onChange(undefined);
           onChange(dateRangeFromPreset(key) ?? undefined);
         }}
-        triggerClassName="h-9 w-full rounded-lg text-[13px]"
       />
       {preset === "custom" && (
         <div className="flex items-center gap-2">
@@ -266,14 +423,14 @@ function DateRangeField({ value, onChange }: { value?: DateRangeValue; onChange:
             type="date"
             value={value?.from ?? ""}
             onChange={(e) => onChange({ ...value, from: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+            className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-2 text-[13px] text-[var(--text-primary)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
           />
           <span className="shrink-0 text-[12px] text-ink-subtle">até</span>
           <input
             type="date"
             value={value?.to ?? ""}
             onChange={(e) => onChange({ ...value, to: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+            className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-2 text-[13px] text-[var(--text-primary)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
           />
         </div>
       )}
@@ -297,71 +454,61 @@ export function SearchSection({ draft, setDraftField }: SectionProps) {
 }
 
 export function StatusSection({ draft, setDraftField, toggleArray }: SectionProps) {
+  const selected = draft.statuses ?? [];
   return (
-    <FieldCard label="Status" active={!!draft.statuses?.length} onClear={() => setDraftField("statuses", undefined)}>
-      <div className="flex flex-wrap gap-1.5">
-        {STATUS_OPTIONS.map((s) => (
-          <ChipToggle
-            key={s.value}
-            active={(draft.statuses ?? []).includes(s.value)}
-            onClick={() => setDraftField("statuses", toggleArray(draft.statuses, s.value) as typeof draft.statuses)}
-          >
-            {s.label}
-          </ChipToggle>
-        ))}
-      </div>
+    <FieldCard label="Status" active={!!selected.length} onClear={() => setDraftField("statuses", undefined)}>
+      <MultiSelectDropdown
+        placeholder="Selecionar status…"
+        selected={selected}
+        options={STATUS_OPTIONS.map((s) => ({ value: s.value, label: s.label, searchText: s.label }))}
+        onToggle={(v) =>
+          setDraftField("statuses", toggleArray(draft.statuses, v) as typeof draft.statuses)
+        }
+      />
     </FieldCard>
   );
 }
 
 export function StagesSection({ draft, options, optionsLoading, setDraftField, toggleArray }: SectionProps) {
   const stages = options?.pipelines.flatMap((p) => p.stages) ?? [];
+  const selected = draft.stageIds ?? [];
   return (
-    <FieldCard label="Etapas" active={!!draft.stageIds?.length} onClear={() => setDraftField("stageIds", undefined)}>
+    <FieldCard label="Etapas" active={!!selected.length} onClear={() => setDraftField("stageIds", undefined)}>
       {optionsLoading ? (
         <p className="text-[12px] text-ink-subtle">Carregando…</p>
-      ) : stages.length === 0 ? (
-        <p className="text-[12px] text-ink-subtle">Nenhuma etapa.</p>
       ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {stages.map((stage) => {
-            const active = (draft.stageIds ?? []).includes(stage.id);
-            return (
-              <button
-                key={stage.id}
-                type="button"
-                onClick={() => setDraftField("stageIds", toggleArray(draft.stageIds, stage.id))}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors",
-                  active
-                    ? "border-transparent bg-primary text-white"
-                    : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                )}
-              >
-                <span className="size-2 shrink-0 rounded-full" style={{ background: stage.color || "#94a3b8" }} />
+        <MultiSelectDropdown
+          placeholder="Selecionar etapas…"
+          emptyLabel="Nenhuma etapa."
+          searchable={stages.length > 8}
+          searchPlaceholder="Buscar etapa…"
+          selected={selected}
+          options={stages.map((stage) => ({
+            value: stage.id,
+            searchText: stage.name,
+            label: (
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ background: stage.color || "#94a3b8" }}
+                />
                 {stage.name}
-              </button>
-            );
-          })}
-        </div>
+              </span>
+            ),
+          }))}
+          onToggle={(id) => setDraftField("stageIds", toggleArray(draft.stageIds, id))}
+        />
       )}
     </FieldCard>
   );
 }
 
 export function SourcesSection({ draft, options, setDraftField, toggleArray }: SectionProps) {
-  const [search, setSearch] = React.useState("");
   const allSources = options?.sources ?? [];
-  const filtered = search
-    ? allSources.filter((s) => s.toLowerCase().includes(search.toLowerCase()))
-    : allSources;
   const selected = (draft.sources ?? []).filter((s) => s !== SOURCE_NONE);
-
-  function toggleSource(source: string) {
-    const next = toggleArray(selected, source);
-    setDraftField("sources", next);
-    setDraftField("withoutSource", undefined);
-  }
+  const selectedKeys = draft.withoutSource
+    ? ["__none__", ...selected]
+    : selected;
 
   return (
     <FieldCard
@@ -372,56 +519,35 @@ export function SourcesSection({ draft, options, setDraftField, toggleArray }: S
         setDraftField("withoutSource", undefined);
       }}
     >
-      <div className="space-y-2">
-        <TextField
-          value={search}
-          onChange={setSearch}
-          placeholder="Buscar origem…"
-          icon={<Search className="size-3.5" />}
-        />
-        <div className="max-h-40 space-y-0.5 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setDraftField("withoutSource", !draft.withoutSource || undefined);
-              setDraftField("sources", undefined);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-              draft.withoutSource ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
-            )}
-          >
-            <span className="inline-block size-2.5 shrink-0 rounded-full border border-dashed border-black/15" />
-            Sem origem
-            {draft.withoutSource && <Check className="ml-auto size-3.5" />}
-          </button>
-          {filtered.map((source) => {
-            const active = selected.includes(source);
-            return (
-              <button
-                key={source}
-                type="button"
-                onClick={() => toggleSource(source)}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-                  active ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
-                )}
-              >
-                <span className="flex-1 truncate text-left">{source}</span>
-                {active && <Check className="size-3.5 shrink-0" />}
-              </button>
-            );
-          })}
-          {filtered.length === 0 && search && (
-            <p className="px-2 py-3 text-center text-[12px] text-ink-subtle">Nenhuma origem encontrada.</p>
-          )}
-          {allSources.length === 0 && !search && (
-            <p className="px-2 py-2 text-[12px] text-ink-subtle">
-              Nenhuma origem cadastrada ainda. Use &quot;Sem origem&quot; ou cadastre a origem nos contatos.
-            </p>
-          )}
-        </div>
-      </div>
+      <MultiSelectDropdown
+        placeholder="Selecionar origem…"
+        emptyLabel="Nenhuma origem cadastrada."
+        searchable={allSources.length > 6}
+        searchPlaceholder="Buscar origem…"
+        selected={selectedKeys}
+        options={[
+          {
+            value: "__none__",
+            label: "Sem origem",
+            searchText: "Sem origem",
+          },
+          ...allSources.map((source) => ({
+            value: source,
+            label: source,
+            searchText: source,
+          })),
+        ]}
+        onToggle={(value) => {
+          if (value === "__none__") {
+            const next = !draft.withoutSource;
+            setDraftField("withoutSource", next || undefined);
+            if (next) setDraftField("sources", undefined);
+            return;
+          }
+          setDraftField("withoutSource", undefined);
+          setDraftField("sources", toggleArray(selected, value));
+        }}
+      />
     </FieldCard>
   );
 }
@@ -429,32 +555,29 @@ export function SourcesSection({ draft, options, setDraftField, toggleArray }: S
 export function LossReasonsSection({ draft, options, setDraftField, toggleArray }: SectionProps) {
   const reasons = options?.lossReasons ?? [];
   if (reasons.length === 0) return null;
+  const selected = draft.lostReasons ?? [];
   return (
     <FieldCard
       label="Motivo da perda"
-      active={!!draft.lostReasons?.length}
+      active={!!selected.length}
       onClear={() => setDraftField("lostReasons", undefined)}
     >
-      <div className="flex flex-wrap gap-1.5">
-        {reasons.map((r) => (
-          <ChipToggle
-            key={r}
-            active={(draft.lostReasons ?? []).includes(r)}
-            onClick={() => setDraftField("lostReasons", toggleArray(draft.lostReasons, r))}
-          >
-            {r}
-          </ChipToggle>
-        ))}
-      </div>
+      <MultiSelectDropdown
+        placeholder="Selecionar motivos…"
+        searchable={reasons.length > 6}
+        searchPlaceholder="Buscar motivo…"
+        selected={selected}
+        options={reasons.map((r) => ({ value: r, label: r, searchText: r }))}
+        onToggle={(r) => setDraftField("lostReasons", toggleArray(draft.lostReasons, r))}
+      />
     </FieldCard>
   );
 }
 
 export function OwnersSection({ draft, options, setDraftField }: SectionProps) {
   const users = options?.users ?? [];
-  const [search, setSearch] = React.useState("");
   const selected = (draft.ownerIds ?? []).filter((id): id is string => !!id);
-  const filtered = search ? users.filter((u) => u.name.toLowerCase().includes(search.toLowerCase())) : users;
+  const selectedKeys = draft.withoutOwner ? ["__none__", ...selected] : selected;
 
   return (
     <FieldCard
@@ -465,66 +588,94 @@ export function OwnersSection({ draft, options, setDraftField }: SectionProps) {
         setDraftField("withoutOwner", undefined);
       }}
     >
-      <div className="space-y-2">
-        <TextField value={search} onChange={setSearch} placeholder="Buscar usuário…" icon={<Search className="size-3.5" />} />
-        <div className="max-h-40 space-y-0.5 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setDraftField("ownerIds", undefined);
-              setDraftField("withoutOwner", !draft.withoutOwner || undefined);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-              draft.withoutOwner ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
-            )}
-          >
-            <span className={ds.avatar.empty + " size-6"}>
-              <X className="size-3" />
-            </span>
-            Sem responsável
-            {draft.withoutOwner && <Check className="ml-auto size-3.5" />}
-          </button>
-          {filtered.map((u) => {
-            const active = selected.includes(u.id);
-            return (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() => {
-                  const next = active ? selected.filter((x) => x !== u.id) : [...selected, u.id];
-                  setDraftField("ownerIds", next.length ? next : undefined);
-                  setDraftField("withoutOwner", undefined);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-                  active ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
-                )}
-              >
+      <MultiSelectDropdown
+        placeholder="Selecionar responsável…"
+        searchable={users.length > 6}
+        searchPlaceholder="Buscar usuário…"
+        selected={selectedKeys}
+        options={[
+          {
+            value: "__none__",
+            label: (
+              <span className="inline-flex items-center gap-2">
+                <span className={ds.avatar.empty + " size-5"}>
+                  <X className="size-2.5" />
+                </span>
+                Sem responsável
+              </span>
+            ),
+            searchText: "Sem responsável",
+          },
+          ...users.map((u) => ({
+            value: u.id,
+            searchText: u.name,
+            label: (
+              <span className="inline-flex items-center gap-2">
                 <span
-                  className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+                  className="flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white"
                   style={{ background: `hsl(${(u.name.charCodeAt(0) * 47) % 360} 55% 50%)` }}
                 >
                   {u.name[0]?.toUpperCase()}
                 </span>
-                <span className="flex-1 truncate text-left">{u.name}</span>
-                {active && <Check className="size-3.5 shrink-0" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+                {u.name}
+              </span>
+            ),
+          })),
+        ]}
+        onToggle={(value) => {
+          if (value === "__none__") {
+            const next = !draft.withoutOwner;
+            setDraftField("withoutOwner", next || undefined);
+            if (next) setDraftField("ownerIds", undefined);
+            return;
+          }
+          const active = selected.includes(value);
+          const next = active ? selected.filter((x) => x !== value) : [...selected, value];
+          setDraftField("ownerIds", next.length ? next : undefined);
+          setDraftField("withoutOwner", undefined);
+        }}
+      />
     </FieldCard>
   );
 }
 
 export function ContactSection({ draft, setDraftField }: SectionProps) {
+  const search = draft.contactSearch ?? "";
+  const [debounced, setDebounced] = React.useState("");
+  const [hits, setHits] = React.useState<ContactFilterHit[]>([]);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const t = window.setTimeout(() => setDebounced(search.trim()), 250);
+    return () => window.clearTimeout(t);
+  }, [search]);
+
+  React.useEffect(() => {
+    if (debounced.length < 2) {
+      setHits([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    void searchContactsForFilter(debounced).then((rows) => {
+      if (cancelled) return;
+      setHits(rows);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [debounced]);
+
   const active = !!(
     draft.contactSearch ||
     draft.contactHasPhone != null ||
     draft.contactHasEmail != null ||
     draft.withoutContact
   );
+  const showResults = debounced.length >= 2;
+
   return (
     <FieldCard
       label="Contato"
@@ -538,10 +689,55 @@ export function ContactSection({ draft, setDraftField }: SectionProps) {
     >
       <div className="space-y-2">
         <TextField
-          value={draft.contactSearch ?? ""}
+          value={search}
           onChange={(v) => setDraftField("contactSearch", v || undefined)}
           placeholder="Nome, telefone, e-mail…"
+          icon={<Search className="size-3.5" />}
         />
+        {showResults && (
+          <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1">
+            {loading ? (
+              <p className="px-2 py-1.5 text-[12px] text-ink-subtle">Buscando…</p>
+            ) : hits.length === 0 ? (
+              <p className="px-2 py-1.5 text-[12px] text-ink-subtle">Nenhum contato encontrado.</p>
+            ) : (
+              hits.map((c) => {
+                const selected = search.trim().toLowerCase() === c.name.trim().toLowerCase();
+                const subtitle = [c.phone, c.email].filter(Boolean).join(" · ");
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setDraftField("contactSearch", c.name);
+                      setDraftField("withoutContact", undefined);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
+                      selected
+                        ? "bg-primary-soft font-medium text-primary-dark"
+                        : "text-ink-soft hover:bg-muted",
+                    )}
+                  >
+                    <span
+                      className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+                      style={{ background: `hsl(${(c.name.charCodeAt(0) * 47) % 360} 55% 50%)` }}
+                    >
+                      {c.name[0]?.toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1 text-left">
+                      <span className="block truncate">{c.name}</span>
+                      {subtitle ? (
+                        <span className="block truncate text-[11px] text-ink-subtle">{subtitle}</span>
+                      ) : null}
+                    </span>
+                    {selected && <Check className="size-3.5 shrink-0" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap gap-1.5">
           {[
             { label: "Tem telefone", field: "contactHasPhone" as const },
@@ -578,7 +774,7 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Mínimo"
           value={draft.valueFrom ?? ""}
           onChange={(e) => setDraftField("valueFrom", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+          className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
         />
         <span className="shrink-0 text-[12px] text-ink-subtle">–</span>
         <input
@@ -586,58 +782,165 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Máximo"
           value={draft.valueTo ?? ""}
           onChange={(e) => setDraftField("valueTo", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-primary/40 focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+          className="h-9 w-full rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
         />
       </div>
     </FieldCard>
   );
 }
 
-export function CreatedAtSection({ draft, setDraftField }: SectionProps) {
+/** Presets rápidos — mesmos do filtro de Contatos (aba Período). */
+const CREATED_PRESETS: { key: DatePresetKey; label: string }[] = [
+  { key: "today", label: "Hoje" },
+  { key: "last_7", label: "Últimos 7 dias" },
+  { key: "last_30", label: "Últimos 30 dias" },
+  { key: "this_month", label: "Este mês" },
+];
+
+const DATE_TRIGGER_CLASS = cn(
+  "h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-3 shadow-none",
+  "hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
+  "focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
+);
+
+function patchDateSide(
+  current: DateRangeValue | undefined,
+  side: "from" | "to",
+  raw: string,
+): DateRangeValue | undefined {
+  const next: DateRangeValue = { ...current, [side]: raw || null };
+  if (!next.from && !next.to) return undefined;
+  return next;
+}
+
+/**
+ * Aba Datas no modelo Contatos: atalhos (criação) + ranges Criação / Fechamento.
+ * Substitui os dropdowns "Qualquer data" anteriores.
+ */
+export function DatesPeriodSection({ draft, setDraftField }: SectionProps) {
+  const createdActive = !!(draft.createdAt?.from || draft.createdAt?.to);
+  const closedActive = !!(draft.closedAt?.from || draft.closedAt?.to);
+  const createdPreset = detectPreset(draft.createdAt);
+
+  function applyCreatedPreset(key: DatePresetKey) {
+    const range = dateRangeFromPreset(key);
+    if (!range) return;
+    setDraftField("createdAt", range);
+  }
+
   return (
-    <FieldCard
-      label="Data de criação"
-      active={!!(draft.createdAt?.from || draft.createdAt?.to)}
-      onClear={() => setDraftField("createdAt", undefined)}
-    >
-      <DateRangeField value={draft.createdAt} onChange={(v) => setDraftField("createdAt", v)} />
-    </FieldCard>
+    <div className="flex flex-col gap-3">
+      <div>
+        <p className="mb-2 font-display text-[11px] font-semibold text-[var(--text-muted)]">
+          Atalhos rápidos (data de criação)
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {CREATED_PRESETS.map((p) => {
+            const on = createdPreset === p.key;
+            return (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => applyCreatedPreset(p.key)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                  on
+                    ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.3)]"
+                    : "border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
+                )}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Criação */}
+      <div
+        className={cn(
+          "rounded-[16px] border p-3",
+          createdActive
+            ? "border-[var(--brand-primary)]/35 bg-[var(--color-primary-soft)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
+        )}
+      >
+        <div className="mb-2.5 flex items-center gap-1.5">
+          <IconSparkles
+            size={14}
+            className={createdActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}
+          />
+          <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            Criação
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <DatePicker
+            value={draft.createdAt?.from ?? null}
+            onChange={(v) => setDraftField("createdAt", patchDateSide(draft.createdAt, "from", v))}
+            placeholder="dd/mm/aaaa"
+            className="min-w-0 flex-1"
+            triggerClassName={DATE_TRIGGER_CLASS}
+          />
+          <span className="shrink-0 font-body text-[12px] text-[var(--text-muted)]">até</span>
+          <DatePicker
+            value={draft.createdAt?.to ?? null}
+            onChange={(v) => setDraftField("createdAt", patchDateSide(draft.createdAt, "to", v))}
+            placeholder="dd/mm/aaaa"
+            className="min-w-0 flex-1"
+            triggerClassName={DATE_TRIGGER_CLASS}
+          />
+        </div>
+      </div>
+
+      {/* Fechamento */}
+      <div
+        className={cn(
+          "rounded-[16px] border p-3",
+          closedActive
+            ? "border-[var(--brand-primary)]/35 bg-[var(--color-primary-soft)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
+        )}
+      >
+        <div className="mb-2.5 flex items-center gap-1.5">
+          <IconFlag
+            size={14}
+            className={closedActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}
+          />
+          <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            Fechamento
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <DatePicker
+            value={draft.closedAt?.from ?? null}
+            onChange={(v) => setDraftField("closedAt", patchDateSide(draft.closedAt, "from", v))}
+            placeholder="dd/mm/aaaa"
+            className="min-w-0 flex-1"
+            triggerClassName={DATE_TRIGGER_CLASS}
+          />
+          <span className="shrink-0 font-body text-[12px] text-[var(--text-muted)]">até</span>
+          <DatePicker
+            value={draft.closedAt?.to ?? null}
+            onChange={(v) => setDraftField("closedAt", patchDateSide(draft.closedAt, "to", v))}
+            placeholder="dd/mm/aaaa"
+            className="min-w-0 flex-1"
+            triggerClassName={DATE_TRIGGER_CLASS}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
-export function OtherDatesSection({ draft, setDraftField }: SectionProps) {
-  const active = !!(
-    draft.updatedAt?.from ||
-    draft.updatedAt?.to ||
-    draft.closedAt?.from ||
-    draft.closedAt?.to ||
-    draft.lastInteractionAt?.from ||
-    draft.lastInteractionAt?.to
-  );
-  return (
-    <FieldCard
-      label="Outras datas"
-      active={active}
-      onClear={() => {
-        setDraftField("updatedAt", undefined);
-        setDraftField("closedAt", undefined);
-        setDraftField("lastInteractionAt", undefined);
-      }}
-    >
-      <div className="space-y-2.5">
-        {[
-          { label: "Atualizado em", key: "updatedAt" as const },
-          { label: "Fechado em", key: "closedAt" as const },
-          { label: "Última interação", key: "lastInteractionAt" as const },
-        ].map(({ label, key }) => (
-          <div key={key}>
-            <span className="mb-1 block text-[11px] text-ink-subtle">{label}</span>
-            <DateRangeField value={draft[key]} onChange={(v) => setDraftField(key, v)} />
-          </div>
-        ))}
-      </div>
-    </FieldCard>
-  );
+/** @deprecated Use `DatesPeriodSection` — mantido para imports legados. */
+export function CreatedAtSection(props: SectionProps) {
+  return <DatesPeriodSection {...props} />;
+}
+
+/** @deprecated Conteúdo migrado para `DatesPeriodSection`. */
+export function OtherDatesSection(_props: SectionProps) {
+  return null;
 }
 
 // ── Custom fields ──
@@ -665,15 +968,29 @@ function CustomFieldRow({
       ? (filter.value as DateRangeValue)
       : {};
 
+  const solidPanel = "bg-[var(--dropdown-solid-bg,var(--glass-bg-modal,#fff))]";
+  const inputCls =
+    "h-8 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] px-2 text-[12px] text-[var(--text-primary)] shadow-none outline-none transition-colors hover:bg-[var(--color-primary-soft)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20";
+
   return (
-    <div className="space-y-2 rounded-lg border border-[var(--glass-border)] bg-muted/60 p-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[12px] font-semibold text-ink-soft">{field.label}</span>
-        <button type="button" onClick={onRemove} className="text-ink-subtle transition-colors hover:text-destructive" aria-label="Remover">
+    <div className="space-y-1.5 rounded-lg border border-[var(--glass-border)] bg-white/70 px-2 py-2">
+      <div className="flex items-center gap-1.5">
+        <span
+          className="min-w-0 flex-1 truncate rounded-md bg-[var(--brand-primary)]/8 px-2 py-1 text-[12px] font-semibold text-[var(--brand-primary)]"
+          title={field.label}
+        >
+          {field.label}
+        </span>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/8 hover:text-[var(--color-danger)]"
+          aria-label={`Remover ${field.label}`}
+        >
           <X className="size-3.5" />
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex flex-wrap items-center gap-1.5">
         <DropdownGlass
           options={allowedOps.map((op) => ({
             value: op,
@@ -681,22 +998,23 @@ function CustomFieldRow({
           }))}
           value={currentOp}
           onValueChange={(v) => onChange({ ...filter, operator: v as CustomFieldOperator, value: undefined })}
-          triggerClassName="h-9 w-full rounded-lg text-[12px]"
+          triggerClassName="h-8 w-[120px] shrink-0 text-[12px] px-2"
+          className={solidPanel}
         />
         {opDef?.needsValue ? (
           currentOp === "between" ? (
-            <div className="col-span-1 grid grid-cols-2 gap-1">
+            <div className="grid min-w-0 flex-1 basis-full grid-cols-2 gap-1">
               <input
                 type="date"
                 value={dateVal.from ?? ""}
                 onChange={(e) => onChange({ ...filter, value: { ...dateVal, from: e.target.value || null } })}
-                className="h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[12px] text-[var(--text-primary)] outline-none focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+                className={inputCls}
               />
               <input
                 type="date"
                 value={dateVal.to ?? ""}
                 onChange={(e) => onChange({ ...filter, value: { ...dateVal, to: e.target.value || null } })}
-                className="h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[12px] text-[var(--text-primary)] outline-none focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+                className={inputCls}
               />
             </div>
           ) : hasOptions ? (
@@ -705,7 +1023,7 @@ function CustomFieldRow({
                 multiple
                 value={Array.isArray(filter.value) ? filter.value : []}
                 onChange={(e) => onChange({ ...filter, value: Array.from(e.target.selectedOptions).map((o) => o.value) })}
-                className="h-20 rounded-lg text-[12px]"
+                className="min-w-0 flex-1 basis-[140px] rounded-md text-[12px]"
               >
                 {field.options.map((o) => (
                   <option key={o} value={o}>
@@ -718,8 +1036,9 @@ function CustomFieldRow({
                 options={field.options.map((o) => ({ value: o, label: o }))}
                 value={typeof filter.value === "string" ? filter.value || undefined : undefined}
                 onValueChange={(v) => onChange({ ...filter, value: v })}
-                placeholder="— escolha —"
-                triggerClassName="h-9 w-full rounded-lg text-[12px]"
+                placeholder="— valor —"
+                triggerClassName="h-8 min-w-0 flex-1 basis-[140px] text-[12px] px-2"
+                className={solidPanel}
               />
             )
           ) : (
@@ -728,11 +1047,11 @@ function CustomFieldRow({
               value={typeof filter.value === "string" ? filter.value : ""}
               onChange={(e) => onChange({ ...filter, value: e.target.value })}
               placeholder="Valor"
-              className="h-9 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[12px] text-[var(--text-primary)] outline-none focus:bg-[var(--glass-bg-modal)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+              className={cn(inputCls, "min-w-0 flex-1 basis-[140px]")}
             />
           )
         ) : (
-          <span className="self-center text-[11px] italic text-ink-subtle">sem valor</span>
+          <span className="flex-1 text-[11px] italic text-[var(--text-muted)]">sem valor</span>
         )}
       </div>
     </div>
@@ -752,20 +1071,20 @@ function CustomFieldsSection({
   entityKey: "dealCustomFields" | "contactCustomFields";
   fieldsKey: "dealCustomFields" | "contactCustomFields";
 }) {
-  const [pick, setPick] = React.useState("");
   const available = options?.[entityKey] ?? [];
   const selected = draft[fieldsKey] ?? [];
   if (available.length === 0 && selected.length === 0) return null;
 
-  function addField() {
-    const cf = available.find((d) => d.id === pick);
+  const unused = available.filter((cf) => !selected.some((x) => x.name === cf.name));
+
+  function addFieldById(id: string) {
+    const cf = available.find((d) => d.id === id);
     if (!cf) return;
-    if (selected.some((x) => x.name === cf.name)) {
-      setPick("");
-      return;
-    }
-    setDraftField(fieldsKey, [...selected, { name: cf.name, operator: operatorsForType(cf.type)[0], value: "" }]);
-    setPick("");
+    if (selected.some((x) => x.name === cf.name)) return;
+    setDraftField(fieldsKey, [
+      ...selected,
+      { name: cf.name, operator: operatorsForType(cf.type)[0], value: "" },
+    ]);
   }
 
   return (
@@ -773,24 +1092,15 @@ function CustomFieldsSection({
       <div className="space-y-2">
         {optionsLoading ? (
           <p className="text-[12px] text-ink-subtle">Carregando…</p>
+        ) : unused.length > 0 ? (
+          <DropdownGlass
+            options={unused.map((cf) => ({ value: cf.id, label: cf.label }))}
+            value={undefined}
+            onValueChange={addFieldById}
+            placeholder="+ Escolher campo…"
+          />
         ) : (
-          <div className="flex items-center gap-2">
-            <DropdownGlass
-              options={available.map((cf) => ({ value: cf.id, label: cf.label }))}
-              value={pick || undefined}
-              onValueChange={setPick}
-              placeholder="+ Adicionar critério…"
-              triggerClassName="h-9 flex-1 rounded-lg text-[12px]"
-            />
-            <button
-              type="button"
-              onClick={addField}
-              disabled={!pick}
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-muted px-3 text-[13px] font-medium text-ink-soft transition-colors hover:bg-subtle disabled:opacity-50"
-            >
-              +
-            </button>
-          </div>
+          <p className="text-[12px] text-[var(--text-muted)]">Todos os campos já foram adicionados.</p>
         )}
         {selected.map((cf) => {
           const def = available.find((d) => d.name === cf.name);
@@ -805,6 +1115,11 @@ function CustomFieldsSection({
             />
           );
         })}
+        {selected.length > 0 && (
+          <p className="text-[11px] text-[var(--text-muted)]">
+            Defina operador e valor em cada linha — o filtro fica ativo na hora.
+          </p>
+        )}
       </div>
     </FieldCard>
   );
@@ -835,13 +1150,20 @@ export function ContactCustomFieldsSection(props: SectionProps) {
 // ── Tags ──
 
 export function TagsSection({ draft, options, setDraftField }: SectionProps) {
-  const [search, setSearch] = React.useState("");
   const allTags = options?.tags ?? [];
-  const filtered = search ? allTags.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())) : allTags;
   const selectedIds = draft.tagIds ?? [];
+  const selectedKeys = draft.withoutTags ? ["__none__", ...selectedIds] : selectedIds;
 
   function toggleTag(id: string) {
-    const next = selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id];
+    if (id === "__none__") {
+      const next = !draft.withoutTags;
+      setDraftField("withoutTags", next || undefined);
+      if (next) setDraftField("tagIds", undefined);
+      return;
+    }
+    const next = selectedIds.includes(id)
+      ? selectedIds.filter((x) => x !== id)
+      : [...selectedIds, id];
     setDraftField("tagIds", next.length ? next : undefined);
     setDraftField("withoutTags", undefined);
   }
@@ -861,62 +1183,49 @@ export function TagsSection({ draft, options, setDraftField }: SectionProps) {
             options={TAG_MODE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
             value={draft.tagMode ?? "any"}
             onValueChange={(v) => setDraftField("tagMode", v as TagMode)}
-            triggerClassName="h-9 w-full rounded-lg text-[12px]"
           />
         )}
-        <TextField value={search} onChange={setSearch} placeholder="Localizar tags" icon={<Search className="size-3.5" />} />
-        <div className="max-h-48 space-y-0.5 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setDraftField("withoutTags", !draft.withoutTags || undefined);
-              setDraftField("tagIds", undefined);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-              draft.withoutTags ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
-            )}
-          >
-            <span className="inline-block size-2.5 shrink-0 rounded-full border border-dashed border-black/15" />
-            Sem tags
-            {draft.withoutTags && <Check className="ml-auto size-3.5" />}
-          </button>
-          {filtered.map((tag) => {
-            const isSelected = selectedIds.includes(tag.id);
-            const color = tag.color || "#6366f1";
-            return (
-              <button
-                key={tag.id}
-                type="button"
-                onClick={() => toggleTag(tag.id)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors",
-                  isSelected ? "bg-primary-soft/60" : "hover:bg-muted",
-                )}
-              >
-                <span
-                  className="max-w-[160px] truncate rounded-md px-2 py-0.5 text-[11px] font-semibold"
-                  style={{
-                    background: isSelected ? color : `${color}1f`,
-                    color: isSelected ? "#fff" : color,
-                    border: `1px solid ${color}40`,
-                  }}
-                >
-                  {tag.name}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  {tag.dealCount != null && (
-                    <span className="tabular-nums text-[11px] text-ink-subtle">{tag.dealCount.toLocaleString("pt-BR")}</span>
-                  )}
-                  {isSelected && <Check className="size-3.5 text-primary" />}
-                </span>
-              </button>
-            );
-          })}
-          {filtered.length === 0 && search && (
-            <p className="px-2 py-3 text-center text-[12px] text-ink-subtle">Nenhuma tag encontrada.</p>
-          )}
-        </div>
+        <MultiSelectDropdown
+          placeholder="Selecionar tags…"
+          emptyLabel="Nenhuma tag."
+          searchable={allTags.length > 6}
+          searchPlaceholder="Localizar tags…"
+          selected={selectedKeys}
+          options={[
+            {
+              value: "__none__",
+              label: "Sem tags",
+              searchText: "Sem tags",
+            },
+            ...allTags.map((tag) => {
+              const color = tag.color || "#6366f1";
+              return {
+                value: tag.id,
+                searchText: tag.name,
+                label: (
+                  <span className="inline-flex min-w-0 items-center gap-2">
+                    <span
+                      className="max-w-[160px] truncate rounded-md px-2 py-0.5 text-[11px] font-semibold"
+                      style={{
+                        background: `${color}1f`,
+                        color,
+                        border: `1px solid ${color}40`,
+                      }}
+                    >
+                      {tag.name}
+                    </span>
+                    {tag.dealCount != null && (
+                      <span className="tabular-nums text-[11px] text-ink-subtle">
+                        {tag.dealCount.toLocaleString("pt-BR")}
+                      </span>
+                    )}
+                  </span>
+                ),
+              };
+            }),
+          ]}
+          onToggle={toggleTag}
+        />
       </div>
     </FieldCard>
   );
@@ -961,8 +1270,8 @@ export function QuickFiltersList({
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors",
                 active
-                  ? "border-transparent bg-primary text-white"
-                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-ink-soft hover:text-foreground",
+                  ? "border-transparent bg-[var(--brand-primary)] text-white shadow-sm"
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-ink-soft hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
               )}
             >
               {qf.dot && <span className="size-2 rounded-full" style={{ background: qf.dot }} />}
@@ -985,7 +1294,9 @@ export function QuickFiltersList({
             onClick={() => onApply(qf.filters)}
             className={cn(
               "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors",
-              active ? "bg-primary-soft font-semibold text-primary-dark" : "text-ink-soft hover:bg-muted hover:text-foreground",
+              active
+                ? "bg-[var(--brand-primary)]/12 font-semibold text-[var(--brand-primary)] ring-1 ring-inset ring-[var(--brand-primary)]/25"
+                : "text-ink-soft hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
             )}
           >
             {qf.dot && <span className="size-2 shrink-0 rounded-full" style={{ background: qf.dot }} />}
@@ -1007,7 +1318,9 @@ export function QuickFiltersList({
                 onClick={() => onApply(sf.filterConfig as AdvancedDealFilters)}
                 className={cn(
                   "group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors",
-                  active ? "bg-primary-soft font-semibold text-primary-dark" : "text-ink-soft hover:bg-muted hover:text-foreground",
+                  active
+                    ? "bg-[var(--brand-primary)]/12 font-semibold text-[var(--brand-primary)] ring-1 ring-inset ring-[var(--brand-primary)]/25"
+                    : "text-ink-soft hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
                 )}
               >
                 <Bookmark className="size-3.5 shrink-0 text-primary/60" />

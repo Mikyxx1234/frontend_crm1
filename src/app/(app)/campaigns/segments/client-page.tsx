@@ -24,7 +24,6 @@ export default function SegmentsClientPage() {
           back={{ href: "/campaigns", label: "Campanhas" }}
           icon={<IconUsers size={22} />}
           title="Segmentos"
-          description="Filtros salvos para usar nas campanhas"
           actions={
             <PagePrimaryButton type="button" onClick={() => openNewRef.current?.()}>
               <IconPlus size={16} /> Novo segmento

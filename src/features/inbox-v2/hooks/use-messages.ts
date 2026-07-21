@@ -30,6 +30,9 @@ export function useMessages(conversationId: string | null) {
     queryFn: () => getMessages(conversationId as string),
     enabled: !!conversationId,
     staleTime: 5_000,
+    // Fallback p/ ticks de leitura quando o SSE atrasa/bufferiza (rewrite,
+    // multi-réplica). 5s é aceitável na conversa aberta.
+    refetchInterval: 5_000,
   });
 }
 
@@ -37,7 +40,12 @@ export function useMessages(conversationId: string | null) {
 export function useSendMessage(conversationId: string | null) {
   const qc = useQueryClient();
   return useMutation<
-    { message: InboxMessageDto; metaError?: string },
+    {
+      message: InboxMessageDto;
+      metaError?: string;
+      conversationId?: string;
+      reopenedConversationId?: string;
+    },
     Error,
     {
       content: string;
@@ -48,9 +56,15 @@ export function useSendMessage(conversationId: string | null) {
   >({
     mutationFn: (vars) =>
       sendMessage(conversationId as string, vars),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
+      // Reabriu como novo ticket: invalida também o histórico do id novo
+      // para o chat carregar a linha do tempo já com a mensagem enviada.
+      if (data.reopenedConversationId) {
+        qc.invalidateQueries({ queryKey: messagesKey(data.reopenedConversationId) });
+      }
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
     },
   });
 }
@@ -185,11 +199,27 @@ export function useFavoriteMessagesList(
   });
 }
 
+/**
+ * Nome do evento global disparado quando um envio reabre uma conversa
+ * encerrada como NOVO ticket. O `_v2-client` escuta e troca o chat ativo.
+ * (Evento em vez de prop-drilling: os botões de anexo/áudio ficam 3 níveis
+ * abaixo do orquestrador.)
+ */
+export const CONVERSATION_REOPENED_EVENT = "inbox:conversation-reopened";
+
+export function emitConversationReopened(newId: string) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(CONVERSATION_REOPENED_EVENT, { detail: { newId } }),
+    );
+  }
+}
+
 /** Mutation: enviar anexo (arquivo, áudio, imagem). */
 export function useSendAttachment(conversationId: string | null) {
   const qc = useQueryClient();
   return useMutation<
-    { message: InboxMessageDto },
+    { message: InboxMessageDto; reopenedConversationId?: string },
     Error,
     {
       file: File | Blob;
@@ -204,9 +234,13 @@ export function useSendAttachment(conversationId: string | null) {
         fileName: vars.fileName,
         channelId: vars.channelId,
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      if (data.reopenedConversationId) {
+        qc.invalidateQueries({ queryKey: messagesKey(data.reopenedConversationId) });
+        emitConversationReopened(data.reopenedConversationId);
+      }
     },
   });
 }

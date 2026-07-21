@@ -16,14 +16,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass";
@@ -60,14 +53,17 @@ const KIND_ICON: Record<ProductKind, React.ReactNode> = {
 };
 
 /**
- * Tipos oferecidos na CRIAÇÃO: apenas a distinção genérica Produto × Serviço.
- * Especializações como "vaga" e "curso" não são tipos — vêm das CAPACIDADES
- * do catálogo (allocation=seats, fulfillment=recruiting/enrollment, …).
- * `COURSE`/`JOB_OPENING` permanecem apenas para edição de produtos legados.
+ * Tipos oferecidos na CRIAÇÃO. Curso é um "kind" primeira-classe (schema
+ * já suporta `Product.kind = COURSE` + `CourseConfig`); mantemos a política
+ * genérica multi-tipo — nenhuma vertical hardcoded, apenas o kind + as
+ * capacidades do catálogo é que definem o comportamento.
+ * `JOB_OPENING` fica só para edição de produtos legados (criação via a
+ * tela Vagas).
  */
 const CREATE_TYPES: { kind: ProductKind; label: string }[] = [
   { kind: "PHYSICAL", label: "Produto" },
   { kind: "SERVICE", label: "Serviço" },
+  { kind: "COURSE", label: "Curso" },
 ];
 
 type Props = {
@@ -207,12 +203,19 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: name.trim(),
+            kind,
             type: kind === "SERVICE" ? "SERVICE" : "PRODUCT",
             price: Number(price) || 0,
-            unit,
+            unit:
+              kind === "SERVICE"
+                ? "serviço"
+                : kind === "COURSE"
+                  ? "matrícula"
+                  : unit,
             sku: sku.trim() || null,
             description: description.trim() || null,
             catalogId: catalogId || null,
+            ...(kind === "COURSE" ? { courseMode } : {}),
           }),
         });
         const created = await res.json().catch(() => ({}));
@@ -251,17 +254,25 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
   }, [catalogs, catalogId]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="xl">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Editar produto" : "Novo produto"}</DialogTitle>
-          <DialogDescription>
-            Escolha Produto ou Serviço. As especializações (vaga, curso…) vêm das
-            capacidades do catálogo.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      size="md"
+      title={isEdit ? "Editar produto" : "Novo produto"}
+      description="Escolha Produto ou Serviço. As especializações (vaga, curso…) vêm das capacidades do catálogo."
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {isEdit ? "Fechar" : "Cancelar"}
+          </Button>
+          <Button onClick={handleSave} disabled={saving || !name.trim()}>
+            {saving && <IconLoader2 size={14} className="mr-1.5 animate-spin" />}
+            {isEdit ? "Salvar" : "Criar"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
           {/* Seletor de tipo */}
           <div className={sectionClass}>
             <p className={sectionTitleClass}>Tipo de produto</p>
@@ -277,7 +288,7 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {CREATE_TYPES.map(({ kind: k, label }) => {
                     const selected = kind === k;
                     return (
@@ -555,6 +566,15 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
                 </div>
               </div>
 
+              <p className="mt-3 rounded-[var(--radius-md)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-2 text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                Duração, Público-Alvo e Observações (ex.: 5 estrelas MEC) são
+                Campos Personalizados. Cadastre em{" "}
+                <span className="font-medium text-[var(--text-primary)]">
+                  Ajustes → Campos personalizados
+                </span>{" "}
+                (entidade: Produto) e edite os valores em cada curso.
+              </p>
+
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                   Turmas
@@ -671,17 +691,6 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
             </div>
           )}
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {isEdit ? "Fechar" : "Cancelar"}
-          </Button>
-          <Button onClick={handleSave} disabled={saving || !name.trim()}>
-            {saving && <IconLoader2 size={14} className="mr-1.5 animate-spin" />}
-            {isEdit ? "Salvar" : "Criar"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </FormSheet>
   );
 }

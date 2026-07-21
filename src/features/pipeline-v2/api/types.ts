@@ -66,4 +66,19 @@ export interface PipelineListItemDto {
   id: string;
   name: string;
   isDefault?: boolean;
+  /**
+   * Estágios do funil (retornados pelo GET /api/pipelines) — usados
+   * pelo MoveToStageMenu para permitir troca cross-pipeline sem uma
+   * segunda requisição por funil.
+   */
+  stages?: PipelineListStageDto[];
+}
+
+export interface PipelineListStageDto {
+  id: string;
+  name: string;
+  color: string | null;
+  position: number;
+  isWon?: boolean;
+  isLost?: boolean;
 }

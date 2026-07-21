@@ -1,4 +1,4 @@
-import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconClock as Clock, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutKanban as Kanban, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPhone as Phone, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconArrowsShuffle as Shuffle, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconThumbDown as ThumbsDown, IconUsers as Users } from "@tabler/icons-react";
+import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconUsers as Users } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { UserRole } from "@/lib/prisma-enum-types";
 
@@ -98,22 +98,21 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         requiredPermission: "settings:permissions",
       },
       {
+        id: "tabulations",
+        label: "Tabulações",
+        description: "Motivos hierárquicos ao encerrar",
+        icon: LayoutList,
+        href: "/settings/tabulations",
+        allowedRoles: GESTAO,
+        eyebrow: "Novo",
+      },
+      {
         id: "notifications",
         label: "Notificações",
         description: "Push, e-mail e alertas por canal",
         icon: Bell,
         href: "/settings/notifications",
         requiredPermission: "settings:webhooks",
-      },
-      {
-        id: "softphone",
-        label: "Softphone",
-        description: "Ramal SIP e provedor de chamadas",
-        icon: Phone,
-        href: "/settings/softphone",
-        allowedRoles: GESTAO,
-        requiredPermission: "sip_extension:manage",
-        eyebrow: "Novo",
       },
       {
         id: "email-accounts",
@@ -172,48 +171,15 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         requiredPermission: "catalog:view",
         eyebrow: "Novo",
       },
-    ],
-  },
-
-  {
-    id: "vendas",
-    label: "Vendas & Pipeline",
-    icon: Kanban,
-    description: "Funis, regras e distribuição",
-    items: [
       {
-        id: "pipeline",
-        label: "Pipeline",
-        description: "Estágios e regras de movimentação",
-        icon: Kanban,
-        href: "/settings/pipeline",
+        id: "cotas",
+        label: "Cotas de desconto",
+        description: "Cupons com estoque, vigência e cumulatividade",
+        icon: Tag,
+        href: "/settings/cotas",
         allowedRoles: GESTAO,
-        // manage_stages (e nao pipeline:view): a tela administra estagios.
-        requiredPermission: "pipeline:manage_stages",
-      },
-      {
-        id: "loss-reasons",
-        label: "Motivos de perda",
-        description: "Razões padrão ao marcar perdido",
-        icon: ThumbsDown,
-        href: "/settings/loss-reasons",
-        allowedRoles: GESTAO,
-        // Configuracao do funil — mesma permission da tela de Pipeline.
-        requiredPermission: "pipeline:manage_stages",
-      },
-      {
-        id: "distribution",
-        label: "Distribuição",
-        description: "Round-robin, priorização e regras",
-        icon: Shuffle,
-        href: "/settings/distribution",
-        allowedRoles: GESTAO,
-        // distribution:manage e key DEDICADA do modulo (so ADMIN/MANAGER tem
-        // por default). Antes usavamos conversation:reassign_others, mas
-        // operadores senior tambem ganham essa permissao (pra puxar leads
-        // pra si na inbox) — usar essa key vazava o item de Distribuicao
-        // pra qualquer atendente, contrariando "Distribuicao = gestao".
-        requiredPermission: "distribution:manage",
+        requiredPermission: "quota:view",
+        eyebrow: "Novo",
       },
     ],
   },
@@ -222,7 +188,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
     id: "equipe-operacao",
     label: "Equipe & Operação",
     icon: Headphones,
-    description: "Pessoas e expediente",
+    description: "Pessoas, distribuição e expediente",
     items: [
       {
         id: "team",
@@ -230,15 +196,6 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         description: "Membros, funções e convites",
         icon: Users,
         href: "/settings/team",
-        allowedRoles: GESTAO,
-        requiredPermission: "settings:team",
-      },
-      {
-        id: "schedules",
-        label: "Horários e disponibilidade",
-        description: "Expediente e status dos agentes",
-        icon: Clock,
-        href: "/settings/schedules",
         allowedRoles: GESTAO,
         requiredPermission: "settings:team",
       },

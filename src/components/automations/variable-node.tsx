@@ -5,12 +5,17 @@ import { IconTrash as Trash2, IconVariable as Variable } from "@tabler/icons-rea
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { NodeInlineConfig } from "./node-inline-config";
 
 export type VariableNodeData = {
   label: string;
   summary: string;
   stepIndex?: number;
   onDelete?: () => void;
+  stepType?: string;
+  config?: Record<string, unknown>;
+  stepOptions?: Array<{ value: string; label: string }>;
+  onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
 /**
@@ -21,7 +26,8 @@ export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[210px] max-w-[270px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        selected ? "min-w-[340px] max-w-[400px]" : "min-w-[210px] max-w-[270px]",
         selected
           ? "border-fuchsia-400/60 ring-2 ring-fuchsia-300/30 shadow-[0_10px_30px_-10px_rgba(217,70,239,0.4)]"
           : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-fuchsia-300/50 hover:shadow-[0_10px_30px_-10px_rgba(217,70,239,0.3)]"
@@ -37,7 +43,7 @@ export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
         position={Position.Left}
         className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
-      <div className="flex items-start gap-3 px-3.5 py-3">
+      <div className="node-drag-handle flex cursor-grab items-start gap-3 px-3.5 py-3 active:cursor-grabbing">
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-fuchsia-soft)] text-[var(--color-fuchsia)] ring-1 ring-[var(--color-fuchsia-soft)]">
           <Variable className="size-4" strokeWidth={2.4} aria-hidden />
         </span>
@@ -65,6 +71,13 @@ export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
           </TooltipHost>
         )}
       </div>
+      <NodeInlineConfig
+        selected={selected}
+        stepType={data.stepType ?? "set_variable"}
+        config={data.config}
+        stepOptions={data.stepOptions ?? []}
+        onChange={(next) => data.onConfigChange?.(next)}
+      />
       <Handle
         type="source"
         position={Position.Right}

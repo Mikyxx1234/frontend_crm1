@@ -53,6 +53,14 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: "atrasadas", label: "Atrasadas" },
 ]
 
+type ScopeFilter = "all" | "mine" | "department"
+
+const SCOPE_FILTERS: { key: ScopeFilter; label: string }[] = [
+  { key: "all", label: "Todas" },
+  { key: "mine", label: "Minhas" },
+  { key: "department", label: "Departamento" },
+]
+
 const PANEL =
   "rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow)] backdrop-blur-md"
 
@@ -79,11 +87,12 @@ export default function V2ActivitiesClientPage() {
   const [viewDate, setViewDate] = useState(() => new Date())
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todas")
+  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("all")
   const [kindFilter, setKindFilter] = useState<ActivityKind | "all">("all")
   const [composerOpen, setComposerOpen] = useState(false)
   const [calendarOpen, setCalendarOpen] = useState(false)
 
-  const activitiesQuery = useActivities({ perPage: 200 })
+  const activitiesQuery = useActivities({ perPage: 200, scope: scopeFilter })
   const createMutation = useCreateActivity()
   const updateMutation = useUpdateActivity()
   const deleteMutation = useDeleteActivity()
@@ -174,6 +183,8 @@ export default function V2ActivitiesClientPage() {
         description: a.notes ?? null,
         scheduledAt: localDateTimeToIso(a.start),
         completed: a.status === "concluida",
+        userId: a.assigneeType === "department" ? null : a.assigneeUserId ?? undefined,
+        departmentId: a.assigneeType === "department" ? a.departmentId ?? null : null,
       },
       {
         onSuccess: () => {
@@ -199,7 +210,6 @@ export default function V2ActivitiesClientPage() {
         <PageHeader
           icon={<IconCalendarEvent size={22} stroke={2.2} />}
           title="Tarefas"
-          description="Agende e acompanhe tarefas, reuniões, ligações e eventos."
           actions={
             <PagePrimaryButton type="button" onClick={() => setComposerOpen(true)}>
               <IconPlus size={15} stroke={2.4} /> Nova tarefa
@@ -449,7 +459,18 @@ export default function V2ActivitiesClientPage() {
                     )}
                   </p>
                 </div>
-                <div className="toolbar-hscroll min-w-0 w-full max-w-full sm:w-auto">
+                <div className="toolbar-hscroll flex min-w-0 w-full max-w-full flex-wrap items-center gap-2 sm:w-auto">
+                  <PageSegmentedControl
+                    size="compact"
+                    aria-label="Escopo das tarefas"
+                    className="w-max shrink-0"
+                    items={SCOPE_FILTERS.map((f) => ({
+                      value: f.key,
+                      label: f.label,
+                    }))}
+                    value={scopeFilter}
+                    onChange={(v) => setScopeFilter(v as ScopeFilter)}
+                  />
                   <PageSegmentedControl
                     size="compact"
                     aria-label="Filtrar tarefas"

@@ -97,6 +97,34 @@ export const dt = {
     noteLabel: "text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground",
   },
 
+  /**
+   * Avatar — dois papéis:
+   * - contato/conversa: `ChatAvatar` (foto | sólido + badge de canal)
+   * - pessoa interna: `AvatarGlass` (gradiente glass, sem badge de canal)
+   * Cores/tamanhos: CSS vars `--avatar-*` em globals-v2.css.
+   */
+  avatar: {
+    size: {
+      xs: "size-6", // 24
+      sm: "size-7", // 28
+      md: "size-9", // 36
+      lg: "size-11", // 44
+      xl: "size-14", // 56
+      inbox: "size-12", // 48 — lista Inbox
+    },
+    initials:
+      "pointer-events-none font-semibold uppercase leading-none text-white/95",
+    ring: "border-[var(--avatar-ring)]",
+    glass: {
+      blue: "bg-[image:var(--avatar-glass-blue)]",
+      teal: "bg-[image:var(--avatar-glass-teal)]",
+      orange: "bg-[image:var(--avatar-glass-orange)]",
+      purple: "bg-[image:var(--avatar-glass-purple)]",
+      pink: "bg-[image:var(--avatar-glass-pink)]",
+      coral: "bg-[image:var(--avatar-glass-coral)]",
+    },
+  },
+
   /** Nomes de ícones Lucide alinhados a `SidebarFieldIcon` em `sidebar-field.tsx`. */
   icons: {
     stage: "Clock",

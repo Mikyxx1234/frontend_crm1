@@ -13,6 +13,11 @@ export type ActivityFeedFilters = {
   dateFrom?: string | null;
   dateTo?: string | null;
   q?: string | null;
+  /** Transição de fase — quando qualquer campo é informado, o backend
+   *  força type=STAGE_CHANGED e filtra pelos ids no meta JSON. */
+  stagePipelineId?: string | null;
+  stageFrom?: string[];
+  stageTo?: string[];
   limit?: number;
 };
 
@@ -41,6 +46,9 @@ function buildQuery(filters: ActivityFeedFilters, cursor: string | null): string
   if (filters.dateFrom) sp.set("dateFrom", filters.dateFrom);
   if (filters.dateTo) sp.set("dateTo", filters.dateTo);
   if (filters.q) sp.set("q", filters.q);
+  if (filters.stagePipelineId) sp.set("stagePipelineId", filters.stagePipelineId);
+  if (filters.stageFrom?.length) sp.set("stageFrom", filters.stageFrom.join(","));
+  if (filters.stageTo?.length) sp.set("stageTo", filters.stageTo.join(","));
   return sp.toString();
 }
 

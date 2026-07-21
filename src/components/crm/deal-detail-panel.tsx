@@ -8,10 +8,13 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd"
 import { cn } from "@/lib/utils"
+import { Row } from "@/components/crm/aside-row"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
-import { PageSegmentedControl } from "@/components/crm/page-toolbar"
 import {
   IconArrowLeft,
+  IconBriefcase,
+  IconChevronDown,
+  IconChevronUp,
   IconCircleX,
   IconDotsVertical,
   IconGripVertical,
@@ -33,6 +36,8 @@ import {
   IconCircleCheck,
   IconCircleDashed,
   IconAffiliate,
+  IconBrandWhatsapp,
+  IconMail,
   IconPackage,
   IconUser,
   IconStarFilled,
@@ -48,10 +53,15 @@ import {
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
 import { RequirePermission } from "@/components/auth/require-permission"
 import { FavoritesPanel } from "@/components/crm/favorites-panel"
+import { TabulationDialog } from "@/features/inbox-v2/extras/tabulation-dialog"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
+import { resolveCustomFieldGroups, type CustomFieldDef } from "@/lib/field-layout"
+import { CustomFieldGroupBlock } from "@/components/crm/fields/custom-field-group-block"
 import { useContactSources } from "@/hooks/use-contact-sources"
+import { formatPhoneDisplay } from "@/lib/phone"
 import { useIsDesktop } from "@/hooks/use-media-query"
+import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
 // Mudancas (DD4 + DD5 do questionario):
@@ -124,6 +134,8 @@ export interface DealDetail {
   avatarColor: string
   phone?: string
   email?: string | null
+  /** @ do WhatsApp (Contact.whatsappUsername), quando disponível. Só leitura. */
+  whatsappUsername?: string | null
   /** Valor do negócio (campo "Venda" no painel Kommo). */
   value?: number | string | null
   online?: boolean
@@ -352,9 +364,31 @@ export function DealDetailPanel({
   // Toggle foco ↔ compacto (compartilhado com contact-aside via localStorage).
   const [viewMode, setViewMode] = useAsideViewMode()
 
+  // Hero recolhido: esconde anel/barra/grid pra ampliar a área de campos.
+  const [heroCollapsed, setHeroCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false
+    try {
+      return window.localStorage.getItem("deal-aside-hero-collapsed") === "1"
+    } catch {
+      return false
+    }
+  })
+  const toggleHeroCollapsed = useCallback(() => {
+    setHeroCollapsed((v) => {
+      try {
+        window.localStorage.setItem("deal-aside-hero-collapsed", v ? "0" : "1")
+      } catch {
+        /* fail-silent */
+      }
+      return !v
+    })
+  }, [])
+
   // Detecção de viewport: < lg (1024px) ativa o layout mobile (painel único +
   // switcher Conversa | Detalhes). Desktop mantém o grid 2-colunas com resize.
   const isDesktop = useIsDesktop()
+  // Mobile: esconde bottom nav global enquanto o chat do deal estiver aberto.
+  useMobileChatChrome(Boolean(isOpen && (messagesSlot || composerSlot || sessionAlertSlot)))
   const [mobilePane, setMobilePane] = useState<"conversa" | "detalhes">("conversa")
 
   // DD8 do questionario: respeitar visibilidade de blocos configurada via
@@ -376,6 +410,54 @@ export function DealDetailPanel({
     }
     return hidden
   }, [fieldLayoutSections])
+
+  // ── Agrupamento visual dos campos personalizados (PRD Agrupamento de
+  //    Campos na Aside). Resolve os grupos configurados em
+  //    field_layout_configs (context=deal_panel_v2) considerando as duas
+  //    entidades (deal/contact) presentes no customFieldsSlot. Sem
+  //    grupos → devolve um único bucket com todos os campos (fallback
+  //    flat = RN-05/CA-01), preservando o layout atual em grade.
+  type SlotItem = NonNullable<typeof customFieldsSlot>[number]
+  const customFieldGroups = useMemo<
+    Array<{ id: string; title: string | null; collapsedDefault: boolean; fields: SlotItem[] }>
+  >(() => {
+    const slot = customFieldsSlot ?? []
+    if (slot.length === 0) return []
+    const dealDefs: CustomFieldDef[] = []
+    const contactDefs: CustomFieldDef[] = []
+    const bySlotId = new Map<string, SlotItem>()
+    for (const f of slot) {
+      bySlotId.set(f.fieldId, f)
+      const def: CustomFieldDef = { id: f.fieldId, name: f.fieldId, label: f.label, type: f.type ?? "TEXT" }
+      if (f.entityType === "deal") dealDefs.push(def)
+      else contactDefs.push(def)
+    }
+    const dealGroups = resolveCustomFieldGroups(fieldLayoutSections ?? [], dealDefs, "deal")
+    const contactGroups = resolveCustomFieldGroups(fieldLayoutSections ?? [], contactDefs, "contact")
+    const hasRealDeal = dealGroups.some((g) => g.group !== null)
+    const hasRealContact = contactGroups.some((g) => g.group !== null)
+    if (!hasRealDeal && !hasRealContact) {
+      // Fallback flat: 1 bucket com todos os campos, sem header (mantém
+      // o card único "Informações do Negócio" como estava).
+      return [{ id: "__all__", title: null, collapsedDefault: false, fields: slot }]
+    }
+    const out: Array<{ id: string; title: string | null; collapsedDefault: boolean; fields: SlotItem[] }> = []
+    const orphans: SlotItem[] = []
+    const emit = (groups: typeof dealGroups) => {
+      for (const g of groups) {
+        const fields = g.fields.map((d) => bySlotId.get(d.id)).filter(Boolean) as SlotItem[]
+        if (fields.length === 0) continue
+        if (g.group === null) orphans.push(...fields)
+        else out.push({ id: g.group.id, title: g.group.label, collapsedDefault: g.group.collapsedDefault, fields })
+      }
+    }
+    emit(dealGroups)
+    emit(contactGroups)
+    if (orphans.length > 0) {
+      out.push({ id: "__orphans__", title: "Outros campos", collapsedDefault: false, fields: orphans })
+    }
+    return out
+  }, [customFieldsSlot, fieldLayoutSections])
 
   // ── Resize da sidebar do detalhe (drag horizontal) ───────────────
   // Largura persistida em localStorage por operador. Min 280 evita
@@ -499,7 +581,9 @@ export function DealDetailPanel({
   }, [onResizeMove, onResizeEnd])
 
   // Enquanto isOpen=true mas o detail ainda está carregando (API assíncrona),
-  // mostra o frame do painel com skeleton para dar feedback imediato ao clique.
+  // mostra o MESMO frame do painel carregado (hero na sidebar + área de
+  // conversa) — o skeleton antigo (barra de topo glass) gerava flash de
+  // "layout legado" a cada clique.
   if (!deal) {
     if (!isOpen) return null;
     return (
@@ -512,31 +596,68 @@ export function DealDetailPanel({
         }}
       >
         <div className="flex h-full flex-col gap-3.5 overflow-hidden p-4">
-          <header className="flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-5.5 py-3.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
-            <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]">
-              <IconX size={18} />
-            </button>
-            <div className="h-9 w-9 animate-pulse rounded-full bg-[var(--glass-bg-strong)]" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-4 w-40 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
-              <div className="h-3 w-24 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
-            </div>
-          </header>
-          <div className="flex min-h-0 flex-1 gap-3.5">
-            <div className="flex w-[320px] shrink-0 flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-5 backdrop-blur-md">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="space-y-1">
-                  <div className="h-2.5 w-16 animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
-                  <div className="h-4 w-full animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
+          <div
+            className={cn(
+              "min-h-0 flex-1 overflow-hidden",
+              isDesktop ? "grid gap-1" : "flex flex-col gap-2",
+            )}
+            style={isDesktop ? { gridTemplateColumns: `${sidebarWidth}px 8px 1fr` } : undefined}
+          >
+            {(isDesktop || mobilePane === "detalhes") && (
+              <aside
+                aria-label="Carregando detalhes do negócio"
+                aria-busy="true"
+                className={cn(
+                  "flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+                  !isDesktop && "flex-1",
+                )}
+              >
+                <div className="shrink-0 px-3 pt-2">
+                  <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+                    <div className="relative flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Voltar"
+                        className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-white backdrop-blur-sm transition-all hover:bg-white/25 hover:border-white/40"
+                      >
+                        <IconArrowLeft size={13} strokeWidth={2.5} />
+                        <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
+                      </button>
+                    </div>
+                    <div className="relative mt-3 flex items-center gap-3">
+                      <div className="size-11 animate-pulse rounded-full bg-white/20" />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="h-4 w-36 animate-pulse rounded bg-white/25" />
+                        <div className="h-3 w-20 animate-pulse rounded bg-white/15" />
+                      </div>
+                    </div>
+                  </header>
                 </div>
-              ))}
-            </div>
-            <div className="flex flex-1 items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md">
-              <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--glass-border)] border-t-[var(--brand-primary)]" />
-                <span className="font-display text-[12px]">Carregando…</span>
+                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3.5 pb-4 pt-1">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div className="h-2.5 w-16 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
+                      <div className="h-8 w-full animate-pulse rounded-lg bg-[var(--glass-bg-strong)]" />
+                    </div>
+                  ))}
+                </div>
+              </aside>
+            )}
+            {isDesktop && <div aria-hidden className="w-2" />}
+            {(isDesktop || mobilePane === "conversa") && (
+              <div
+                className={cn(
+                  "flex min-h-0 flex-col items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+                  !isDesktop && "min-h-0 flex-1",
+                )}
+              >
+                <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--glass-border)] border-t-[var(--brand-primary)]" />
+                  <span className="font-display text-[12px]">Carregando negócio…</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -650,28 +771,38 @@ export function DealDetailPanel({
                 contact-aside do inbox (fundo brand + anel de progresso).
                 Pill "Negócio" removida (redundante, pedido do operador). */}
             <div className="shrink-0 px-3 pt-2">
-              {/* ── Hero header: paridade total com o hero do inbox (DealInline).
-                  Fundo sólido da NavRail, edge-to-edge no topo do container via
-                  margens negativas + cantos superiores acompanhando o raio. ── */}
-              <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] bg-[var(--nav-bg)] px-3.5 pb-2.5 pt-3 text-white">
-                {/* Bolhas decorativas */}
-                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-t-[var(--radius-xl)]">
-                  <div className="absolute -right-8 -top-10 size-28 rounded-full bg-white/10" />
-                  <div className="absolute -bottom-10 -left-6 size-24 rounded-full bg-white/10" />
-                </div>
-
-                {/* Linha de controles: Voltar (esq) + spacer + kebab + engrenagem */}
+              {/* ── Hero header (ref. Stitch): card escuro #2e3b6e, edge-to-edge
+                  no topo do container via margens negativas, cantos inferiores
+                  grandes (rounded-b-3xl) e sombra. ── */}
+              <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+                {/* Linha de controles: Voltar (esq) + spacer + etapa + kebab. */}
                 <div className="relative flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={onClose}
                     aria-label="Voltar"
-                    className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-white backdrop-blur-sm transition-all hover:bg-white/25 hover:border-white/40"
+                    className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:border-white/40"
                   >
                     <IconArrowLeft size={13} strokeWidth={2.5} />
                     <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
                   </button>
                   <div className="flex-1" />
+                  {stageDropdownSlot ? (
+                    <div className="relative z-30 shrink-0 inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white [&_button]:!text-xs [&_button]:!text-white [&_button]:hover:!opacity-100 [&_svg]:!size-3">
+                      {stageDropdownSlot}
+                    </div>
+                  ) : deal.stage ? (
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs backdrop-blur-sm">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor:
+                            sortedFunnel?.[currentSegIdx]?.color || "#fb923c",
+                        }}
+                      />
+                      {deal.stage}
+                    </span>
+                  ) : null}
                   {moreActionsSlot && (
                     <div className="[&_button]:!text-white [&_button:hover]:!bg-white/15 [&_button]:!rounded-[var(--radius-sm)]">
                       {moreActionsSlot}
@@ -679,87 +810,60 @@ export function DealDetailPanel({
                   )}
                 </div>
 
-                {/* Linha topo: título + #num + editar (esq) + pill de etapa (dir) */}
-                <div className="relative mt-2 flex items-center justify-between gap-2">
-                  <h2 className="flex min-w-0 items-baseline gap-1.5 font-display text-[14px] font-bold leading-snug text-white">
-                    <span className="min-w-0 truncate">{deal.name}</span>
-                    <span className="shrink-0 font-mono text-[10px] font-semibold text-white/65">
-                      #{deal.number ?? deal.id.slice(-6).toUpperCase()}
-                    </span>
-                    {contactEditSlot && (
-                      <span className="shrink-0 self-center [&_button]:!text-white/70 [&_button:hover]:!text-white">
-                        {contactEditSlot}
+                {/* Linha topo: título (até 2 linhas) + #num */}
+                <div className="relative mt-2 flex items-center gap-2">
+                  <h2 className="min-w-0 text-[15px] font-bold leading-snug text-white">
+                    <span className="line-clamp-2">
+                      {deal.name}
+                      <span className="ml-1.5 whitespace-nowrap text-[12px] font-normal text-slate-400">
+                        #{deal.number ?? deal.id.slice(-6).toUpperCase()}
                       </span>
-                    )}
-                  </h2>
-
-                  {stageDropdownSlot ? (
-                    <div className="relative z-30 shrink-0 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
-                      {stageDropdownSlot}
-                    </div>
-                  ) : (
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium backdrop-blur-sm">
-                      {deal.stage ?? "Em processo"}
                     </span>
-                  )}
+                  </h2>
                 </div>
 
-                {/* Linha base: anel de progresso + pipeline info + responsável */}
-                <div className="relative mt-2 flex items-center gap-2.5">
+                {!heroCollapsed && (
+                <>
+                {/* Linha base: anel de progresso (cor da etapa atual) + pipeline + responsável */}
+                <div className="relative mt-2.5 flex items-center gap-3">
                   <div
-                    className="grid size-9 shrink-0 place-items-center rounded-full"
+                    className="relative flex size-10 shrink-0 items-center justify-center rounded-full border-2 bg-white/10"
                     style={{
-                      background:
-                        sortedFunnel && sortedFunnel.length > 0
-                          ? (() => {
-                              const stepPct = 100 / sortedFunnel.length
-                              const stops = sortedFunnel
-                                .map((seg, i) => {
-                                  const color = seg.color || "var(--brand-primary)"
-                                  const active = i <= currentSegIdx
-                                  const c = active
-                                    ? color
-                                    : `color-mix(in srgb, ${color} 22%, rgba(255,255,255,0.35))`
-                                  return `${c} ${i * stepPct}% ${(i + 1) * stepPct}%`
-                                })
-                                .join(", ")
-                              return `conic-gradient(${stops})`
-                            })()
-                          : "conic-gradient(rgba(255,255,255,0.25) 0% 100%)",
+                      borderColor:
+                        (currentSegIdx >= 0 ? sortedFunnel?.[currentSegIdx]?.color : null) ||
+                        "#f59e0b",
                     }}
                   >
-                    <div className="grid size-[26px] place-items-center rounded-full bg-[var(--brand-primary)]">
-                      <span className="font-display text-[9px] font-bold text-white">
-                        {funnelTotal > 0 ? `${funnelCurrent}/${funnelTotal}` : "—"}
-                      </span>
-                    </div>
+                    <span className="text-[11px] font-bold">
+                      {funnelTotal > 0 ? `${funnelCurrent}/${funnelTotal}` : "—"}
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1 text-[10.5px] text-white/80">
-                    <p className="truncate font-semibold text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
-                    <p className="truncate">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
+                    <p className="truncate text-xs text-slate-300">
                       {funnelTotal > 0
                         ? `Etapa ${funnelCurrent} de ${funnelTotal}`
                         : (deal.stage ?? "Em processo")}
                     </p>
                   </div>
                   {ownerSlot && (
-                    <div className="shrink-0 [&_button]:!rounded-full [&_button]:!border-transparent [&_button]:!bg-white [&_button]:!text-[var(--brand-primary)] [&_button]:shadow-sm [&_span]:!rounded-full [&_span]:!border-transparent [&_span]:!bg-white [&_span]:!text-[var(--brand-primary)] [&_span]:shadow-sm">
+                    <div className="shrink-0 [&_button]:!rounded-md [&_button]:!border-transparent [&_button]:!bg-white [&_button]:!text-[#2e3b6e] [&_button]:shadow-sm [&_span]:!rounded-md [&_span]:!border-transparent [&_span]:!bg-white [&_span]:!text-[#2e3b6e] [&_span]:shadow-sm">
                       {ownerSlot}
                     </div>
                   )}
                 </div>
 
-                {/* Barra de funil segmentada — dentro do hero (igual inbox) */}
+                {/* Barra de etapas: 2px, ativo na cor da etapa, inativo white/20 */}
                 {sortedFunnel && sortedFunnel.length > 0 && (
-                  <div className="relative mt-2 flex gap-1 px-0.5">
+                  <div className="relative mt-2.5 flex items-center gap-1">
                     {sortedFunnel.map((seg, i) => (
                       <TooltipGlass key={seg.id} label={seg.name} side="top">
                         <span
-                          className="h-[3px] flex-1 rounded-full transition-colors"
+                          className="h-[2px] flex-1 rounded-full transition-colors"
                           style={{
                             background: i <= currentSegIdx
-                              ? (seg.color || "var(--brand-primary)")
-                              : "rgba(255,255,255,0.28)",
+                              ? seg.color || "#f59e0b"
+                              : "rgba(255,255,255,0.2)",
                           }}
                         />
                       </TooltipGlass>
@@ -767,54 +871,70 @@ export function DealDetailPanel({
                   </div>
                 )}
 
-                {/* Origem + Canal + Tags — seção inferior do hero (igual inbox) */}
-                <div className="relative mt-2 flex flex-col gap-0 divide-y divide-white/15 rounded-[var(--radius-md)] bg-white/10 px-2.5 py-1">
-                  <div className="flex items-center justify-between gap-2 py-1">
-                    <span className="shrink-0 text-[11px] text-white/60">Origem</span>
-                    <div className="ml-auto min-w-0 text-right [&_input]:!bg-white [&_input]:!text-[var(--text-primary)] [&_input]:!rounded [&_input]:!px-1">
-                      {deal.contactId ? (
-                        <InlineNativeEditor
-                          value={deal.contactSource ?? undefined}
-                          entityType="contact"
-                          entityId={deal.contactId}
-                          fieldKey="source"
-                          placeholder="Adicionar origem"
-                          suggestions={contactSources}
-                          invalidateKeys={[
-                            ["contact-sidebar", deal.contactId],
-                            ["deal-detail-v2", deal.id],
-                          ]}
-                          textClassName="font-display text-[11.5px] font-semibold text-white"
-                          emptyClassName="font-display text-[11.5px] italic text-white/55"
-                        />
-                      ) : (
-                        <span className="text-[11.5px] italic text-white/60">
-                          Vincule um contato
-                        </span>
-                      )}
-                    </div>
+                {/* Grid 2 colunas de infos rápidas — Origem / Canal / Tags
+                    (espelho exato do hero do contact-aside/Inbox). */}
+                <div className="relative mt-2.5 grid grid-cols-[52px_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 border-t border-white/10 pt-2.5 text-xs">
+                  <span className="text-slate-400">Origem</span>
+                  <div className="flex min-w-0 justify-start text-left font-medium [&_input]:!bg-white [&_input]:!text-[var(--text-primary)] [&_input]:!rounded [&_input]:!px-1">
+                    {deal.contactId ? (
+                      <InlineNativeEditor
+                        value={deal.contactSource ?? undefined}
+                        entityType="contact"
+                        entityId={deal.contactId}
+                        fieldKey="source"
+                        placeholder="Adicionar origem"
+                        suggestions={contactSources}
+                        invalidateKeys={[
+                          ["contact-sidebar", deal.contactId],
+                          ["deal-detail-v2", deal.id],
+                        ]}
+                        textClassName="text-xs font-medium text-white"
+                        emptyClassName="text-xs italic text-white/55"
+                      />
+                    ) : (
+                      <span className="text-xs italic text-white/60">
+                        Vincule um contato
+                      </span>
+                    )}
                   </div>
                   {connection && (
-                    <div className="flex items-center justify-between gap-2 py-1">
-                      <span className="shrink-0 text-[11px] text-white/60">Canal</span>
+                    <>
+                      <span className="text-slate-400">Canal</span>
                       <TooltipGlass
                         label={`Conversando por ${formatConnectionLabel(connection)}`}
                         side="left"
                       >
-                        <span className="inline-flex items-center gap-1 truncate text-right text-[11.5px] font-semibold text-white">
+                        <span className="inline-flex min-w-0 items-center gap-1 truncate font-medium text-white">
                           <IconAffiliate size={11} className="shrink-0" />
                           {formatConnectionShort(connection)}
                         </span>
                       </TooltipGlass>
-                    </div>
+                    </>
                   )}
-                  <div className="flex flex-wrap items-center gap-1.5 py-1.5 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:!border-white/20">
-                    <span className="shrink-0 text-[11px] text-white/60">Tags</span>
+                  <span className="text-slate-400">Tags</span>
+                  <span className="flex min-w-0 flex-nowrap items-center justify-start gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:shrink [&_.tag-chip]:truncate">
                     {tagsSlot ?? (
-                      <span className="text-[11.5px] text-white/60">Nenhuma tag</span>
+                      <span className="text-xs text-white/60">Nenhuma tag</span>
                     )}
-                  </div>
+                  </span>
                 </div>
+                </>
+                )}
+
+                {/* Split: recolhe anel/barra/grid pra ampliar a área de campos. */}
+                <button
+                  type="button"
+                  onClick={toggleHeroCollapsed}
+                  aria-label={heroCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+                  aria-expanded={!heroCollapsed}
+                  className="absolute -bottom-3 left-1/2 z-10 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-[#2e3b6e] shadow-md transition-colors hover:bg-slate-100"
+                >
+                  {heroCollapsed ? (
+                    <IconChevronDown size={14} strokeWidth={2.5} />
+                  ) : (
+                    <IconChevronUp size={14} strokeWidth={2.5} />
+                  )}
+                </button>
               </header>
 
               {/* Motivo da perda — destaque vermelho quando deal está LOST. */}
@@ -836,23 +956,34 @@ export function DealDetailPanel({
             </div>
 
             {/* Conteúdo rolável: lista densa de campos */}
-            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5.5 py-4">
+            <div className="aside-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4">
                 <div className="flex min-w-0 flex-col gap-5">
                   {/* Origem + Tags migraram para dentro do hero (paridade com o
                       aside do inbox). */}
 
-                  {/* ── Pills: Perfil / Produto + toggle de visão ── */}
-                  <div className="flex items-center gap-2">
-                    <PageSegmentedControl
-                      items={SIDEBAR_TAB_ITEMS}
-                      value={activeSidebarTab}
-                      onChange={(v) => setActiveSidebarTab(v as SidebarTab)}
-                      aria-label="Alternar entre Perfil e Produto"
-                      size="compact"
-                      className="flex-1 [&>button]:flex [&>button]:flex-1 [&>button]:items-center [&>button]:justify-center"
-                    />
+                  {/* ── Abas: Perfil / Produto + toggle de visão (ref. Stitch) ── */}
+                  <nav className="flex items-center gap-2" aria-label="Alternar entre Perfil e Produto">
+                    {SIDEBAR_TAB_ITEMS.map((item) => {
+                      const active = activeSidebarTab === item.value
+                      return (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => setActiveSidebarTab(item.value as SidebarTab)}
+                          aria-pressed={active}
+                          className={cn(
+                            "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-[13px] font-semibold transition-colors",
+                            active
+                              ? "border border-slate-200 bg-white text-indigo-600 shadow-sm"
+                              : "bg-slate-200/50 text-slate-600 hover:bg-slate-200",
+                          )}
+                        >
+                          {item.label}
+                        </button>
+                      )
+                    })}
                     <ViewModeToggle mode={viewMode} onChange={setViewMode} />
-                  </div>
+                  </nav>
 
                 <DragDropContext onDragEnd={handleSidebarDragEnd}>
                   <Droppable droppableId="sidebar-sections">
@@ -886,27 +1017,45 @@ export function DealDetailPanel({
                                   {sectionId === "contato" && (
                                     <FieldCard
                                       title="Informações do Contato"
+                                      titleMeta={
+                                        deal.contactNumber != null ? (
+                                          <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                            #{deal.contactNumber}
+                                          </span>
+                                        ) : undefined
+                                      }
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                       titleActions={
-                                        resolvedContactConfig && (
-                                          <TooltipGlass
-                                            label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
-                                            side="top"
-                                          >
-                                            <button
-                                              type="button"
-                                              onClick={() => setContactConfigOpen((v) => !v)}
-                                              aria-label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
-                                              className={cn(
-                                                "flex h-6 w-6 items-center justify-center rounded transition-colors",
-                                                contactConfigOpen
-                                                  ? "bg-[var(--brand-primary)] text-white"
-                                                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
-                                              )}
-                                            >
-                                              {contactConfigOpen ? <IconX size={12} /> : <IconSettings size={12} />}
-                                            </button>
-                                          </TooltipGlass>
+                                        (contactEditSlot || resolvedContactConfig) && (
+                                          <div className="flex items-center gap-0.5">
+                                            {/* Lápis de edição do contato — movido do header
+                                                pra ficar ao lado da engrenagem do contato. */}
+                                            {contactEditSlot && (
+                                              <span className="[&_button]:h-6 [&_button]:w-6 [&_span]:h-6 [&_span]:w-6">
+                                                {contactEditSlot}
+                                              </span>
+                                            )}
+                                            {resolvedContactConfig && (
+                                              <TooltipGlass
+                                                label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
+                                                side="top"
+                                              >
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setContactConfigOpen((v) => !v)}
+                                                  aria-label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
+                                                  className={cn(
+                                                    "flex h-6 w-6 items-center justify-center rounded transition-colors",
+                                                    contactConfigOpen
+                                                      ? "bg-[var(--brand-primary)] text-white"
+                                                      : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                                                  )}
+                                                >
+                                                  {contactConfigOpen ? <IconX size={12} /> : <IconSettings size={12} />}
+                                                </button>
+                                              </TooltipGlass>
+                                            )}
+                                          </div>
                                         )
                                       }
                                     >
@@ -915,87 +1064,55 @@ export function DealDetailPanel({
                                             {resolvedContactConfig}
                                           </div>
                                         )}
-                                        {viewMode === "compact" ? (
-                                        /* ── Compact: flat rows (mesmo padrão dos campos de negócio) ── */
-                                        <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] overflow-hidden mt-1">
-                                          {/* Telefone */}
-                                          <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Telefone</span>
-                                            <div className="min-w-0 flex-1">
-                                              {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)]" />
-                                              ) : (
-                                                <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12px] font-semibold text-[var(--brand-primary)]">{deal.phone || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
-                                              )}
-                                            </div>
-                                          </div>
-                                          {/* Email */}
-                                          <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Email</span>
-                                            <div className="min-w-0 flex-1">
-                                              {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)] break-all" />
-                                              ) : (
-                                                <span className="font-display text-[12px] font-semibold text-[var(--brand-primary)] break-all">{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                          {/* Canal */}
-                                          <div className="flex items-baseline gap-2 px-3 py-1.5">
-                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Canal</span>
-                                            <div className="min-w-0 flex-1">
-                                              {connection ? (
-                                                <span className="inline-flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-primary)]">
-                                                  <IconAffiliate size={11} className="shrink-0 text-[var(--brand-primary)]" />
-                                                  {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
-                                                </span>
-                                              ) : (
-                                                <span className="font-display text-[12px] italic text-[var(--text-muted)]">—</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        /* ── Focus: grid 2 colunas de cards ── */
-                                        <div className="py-2 grid grid-cols-2 gap-1.5">
-                                          {/* Telefone */}
-                                          <div className="flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
-                                            <span className="text-[10px] font-medium text-[var(--text-muted)]">Telefone</span>
+                                        {/* ── Rows compartilhadas (aside-row) — espelho exato do
+                                            aside do inbox: mesmo Row, mesmas classes de valor;
+                                            foco × compacto = prop `compact` (py-2 vs py-1.5). ── */}
+                                        <div className="px-3.5 py-1">
+                                          <Row label="Nome" isFirst icon={<IconUser size={12} />} compact={viewMode === "compact"}>
                                             {deal.contactId ? (
-                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
-                                            ) : onCreateContactForField ? (
-                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="deal" entityId={deal.id} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" customSave={(v) => onCreateContactForField("phone", v)} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
+                                              <InlineNativeEditor value={dealNative["name"] ?? deal.name} entityType="contact" entityId={deal.contactId} fieldKey="name" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, name: v }))} textClassName="rounded bg-indigo-50 px-2 py-0.5 font-display text-[13px] font-bold text-indigo-600" />
                                             ) : (
-                                              <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all">{deal.phone || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
+                                              <span className="min-w-0 truncate rounded bg-indigo-50 px-2 py-0.5 text-right font-display text-[13px] font-bold text-indigo-600" title={deal.name}>{deal.name || <span className="italic text-slate-400">+ Adicionar</span>}</span>
                                             )}
-                                          </div>
-                                          {/* Email */}
-                                          <div className={cn("flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2", (dealNative["email"] ?? deal.email ?? "").length > 20 ? "col-span-2" : "")}>
-                                            <span className="text-[10px] font-medium text-[var(--text-muted)]">Email</span>
+                                          </Row>
+                                          <Row label="Telefone" icon={<IconPhone size={12} />} compact={viewMode === "compact"}>
                                             {deal.contactId ? (
-                                              <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
+                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="text-right font-display text-[13px] font-semibold text-indigo-600" />
                                             ) : onCreateContactForField ? (
-                                              <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="deal" entityId={deal.id} fieldKey="email" inputType="email" placeholder="+ Adicionar" customSave={(v) => onCreateContactForField("email", v)} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all" />
+                                              <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="deal" entityId={deal.id} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" formatDisplay={(v) => formatPhoneDisplay(v)} customSave={(v) => onCreateContactForField("phone", v)} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="text-right font-display text-[13px] font-semibold text-indigo-600" />
                                             ) : (
-                                              <span className="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all">{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
+                                              <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="min-w-0 truncate text-right font-display text-[13px] font-semibold text-indigo-600" title={deal.phone ? formatPhoneDisplay(deal.phone) : undefined}>{deal.phone ? formatPhoneDisplay(deal.phone) : <span className="italic text-slate-400">+ Adicionar</span>}</a>
                                             )}
-                                          </div>
-                                          {/* Canal */}
-                                          <div className="col-span-2 flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
-                                            <span className="text-[10px] font-medium text-[var(--text-muted)]">Canal</span>
-                                            {connection ? (
+                                          </Row>
+                                          <Row label="Email" icon={<IconMail size={12} />} compact={viewMode === "compact"}>
+                                            {deal.contactId ? (
+                                              <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="text-right font-display text-[13px] font-semibold text-[var(--text-primary)]" />
+                                            ) : onCreateContactForField ? (
+                                              <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="deal" entityId={deal.id} fieldKey="email" inputType="email" placeholder="+ Adicionar" customSave={(v) => onCreateContactForField("email", v)} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="text-right font-display text-[13px] font-semibold text-[var(--text-primary)]" />
+                                            ) : (
+                                              <span className="min-w-0 truncate text-right font-display text-[13px] font-semibold text-[var(--text-primary)]" title={deal.email ?? undefined}>{deal.email || <span className="italic text-slate-400">+ Adicionar</span>}</span>
+                                            )}
+                                          </Row>
+                                          {/* @ WhatsApp — só leitura, vem do webhook Meta */}
+                                          {deal.whatsappUsername && (
+                                            <Row
+                                              label="@ WhatsApp"
+                                              value={`@${deal.whatsappUsername.replace(/^@/, "")}`}
+                                              icon={<IconBrandWhatsapp size={12} />}
+                                              compact={viewMode === "compact"}
+                                            />
+                                          )}
+                                          {connection && (
+                                            <Row label="Canal" icon={<IconAffiliate size={12} />} compact={viewMode === "compact"}>
                                               <TooltipGlass label={`Conversando por ${formatConnectionLabel(connection)}`} side="left">
-                                                <span className="inline-flex items-center gap-1 font-display text-[12.5px] font-bold text-[var(--text-primary)]">
-                                                  <IconAffiliate size={12} className="shrink-0 text-[var(--brand-primary)]" />
-                                                  <span className="break-all">{channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}</span>
+                                                <span className="inline-flex min-w-0 items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                  <IconBrandWhatsapp size={14} className="shrink-0 text-[#25d366]" />
+                                                  <span className="min-w-0 truncate">{channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}</span>
                                                 </span>
                                               </TooltipGlass>
-                                            ) : (
-                                              <span className="font-display text-[12.5px] italic text-[var(--text-muted)]">—</span>
-                                            )}
-                                          </div>
+                                            </Row>
+                                          )}
                                         </div>
-                                      )}
                                     </FieldCard>
                                   )}
 
@@ -1026,6 +1143,14 @@ export function DealDetailPanel({
                                       resolvedDealConfig) && (
                                     <FieldCard
                                       title="Informações do Negócio"
+                                      plain={viewMode !== "compact"}
+                                      titleMeta={
+                                        deal.number != null ? (
+                                          <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                            #{deal.number}
+                                          </span>
+                                        ) : undefined
+                                      }
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                       titleActions={
                                         <>
@@ -1074,95 +1199,137 @@ export function DealDetailPanel({
                                           {resolvedDealConfig}
                                         </div>
                                       )}
-                                      {viewMode === "compact" ? (
-                                        /* ── Compact: flat rows ── */
-                                        <div className="divide-y divide-[var(--glass-border-subtle)] py-1">
-                                          {(customFieldsSlot ?? []).map((field) => {
-                                            const currentValue = fieldValues[field.fieldId] ?? field.value
-                                            const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
-                                            const canEdit = !!field.entityType && !!field.entityId
-                                            return (
-                                              <div key={field.fieldId} className="flex items-baseline gap-2 px-1 py-1.5">
-                                                <span className="w-[38%] shrink-0 text-[11px] text-[var(--text-muted)] leading-tight">{field.label}</span>
-                                                <div className="min-w-0 flex-1">
-                                                  {dealCustomEditMode && canEdit ? (
-                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
-                                                  ) : hl ? (
-                                                    <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
-                                                  ) : canEdit ? (
-                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
-                                                  ) : (
-                                                    <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || <span className="italic text-[var(--text-muted)]">—</span>}</span>
-                                                  )}
-                                                </div>
-                                              </div>
-                                            )
-                                          })}
-                                        </div>
-                                      ) : (
-                                        /* ── Focus (padrão): grid de cards ── */
-                                        <div className="grid grid-cols-2 gap-1.5 py-2">
-                                          {(customFieldsSlot ?? []).map((field) => {
-                                            const currentValue = fieldValues[field.fieldId] ?? field.value
-                                            const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
-                                            const canEdit = !!field.entityType && !!field.entityId
-                                            const isLong = (currentValue ?? "").toString().length > 18 || (currentValue ?? "").toString().includes("@")
-                                            return (
-                                              <div
-                                                key={field.fieldId}
-                                                className={cn(
-                                                  "flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2",
-                                                  isLong && "col-span-2",
+                                      {(() => {
+                                        // Renderer de UMA linha compacta (label à esquerda + valor/editor).
+                                        const renderCompactRow = (field: SlotItem, fieldIdx: number) => {
+                                          const currentValue = fieldValues[field.fieldId] ?? field.value
+                                          const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
+                                          const canEdit = !!field.entityType && !!field.entityId
+                                          return (
+                                            <div
+                                              key={field.fieldId}
+                                              className={cn(
+                                                "flex items-center justify-between gap-2 py-2 text-sm",
+                                                fieldIdx > 0 && "border-t border-slate-50",
+                                              )}
+                                            >
+                                              <span className="w-[38%] shrink-0 text-[12px] font-medium leading-tight text-slate-500">{field.label}</span>
+                                              <div className="min-w-0 flex-1">
+                                                {dealCustomEditMode && canEdit ? (
+                                                  <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
+                                                ) : hl ? (
+                                                  <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
+                                                ) : canEdit ? (
+                                                  <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
+                                                ) : (
+                                                  <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
                                                 )}
-                                              >
-                                                <span className="text-[10px] font-medium text-[var(--text-muted)]">
-                                                  {field.label}
-                                                </span>
-                                                <div className="min-w-0 w-full">
-                                                  {dealCustomEditMode && canEdit ? (
-                                                    <InlineFieldEditor
-                                                      fieldId={field.fieldId}
-                                                      fieldType={(field as { type?: string }).type ?? "TEXT"}
-                                                      fieldOptions={field.options ?? []}
-                                                      value={currentValue ?? null}
-                                                      entityType={field.entityType!}
-                                                      entityId={field.entityId!}
-                                                      editMode={dealCustomEditMode}
-                                                      invalidateKeys={[["deal-detail-v2", deal.id]]}
-                                                      onSaved={(v) =>
-                                                        setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
-                                                      }
-                                                      textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all"
-                                                      placeholder="+ Adicionar"
-                                                    />
-                                                  ) : hl ? (
-                                                    <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
-                                                  ) : canEdit ? (
-                                                    <InlineFieldEditor
-                                                      fieldId={field.fieldId}
-                                                      fieldType={(field as { type?: string }).type ?? "TEXT"}
-                                                      fieldOptions={field.options ?? []}
-                                                      value={currentValue ?? null}
-                                                      entityType={field.entityType!}
-                                                      entityId={field.entityId!}
-                                                      invalidateKeys={[["deal-detail-v2", deal.id]]}
-                                                      onSaved={(v) =>
-                                                        setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
-                                                      }
-                                                      textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all"
-                                                      placeholder="+ Adicionar"
-                                                    />
-                                                  ) : (
-                                                    <span className="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all">
-                                                      {currentValue || <span className="italic text-[var(--text-muted)]">—</span>}
-                                                    </span>
-                                                  )}
-                                                </div>
                                               </div>
-                                            )
-                                          })}
-                                        </div>
-                                      )}
+                                            </div>
+                                          )
+                                        }
+                                        // Renderer de UM card no grid (focus mode).
+                                        const renderGridCard = (field: SlotItem) => {
+                                          const currentValue = fieldValues[field.fieldId] ?? field.value
+                                          const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
+                                          const canEdit = !!field.entityType && !!field.entityId
+                                          const isEmpty = !currentValue || currentValue === "—"
+                                          const isLong =
+                                            !isEmpty && ((currentValue ?? "").length > 18 || (currentValue ?? "").includes("@"))
+                                          return (
+                                            <div
+                                              key={field.fieldId}
+                                              className={cn(
+                                                "flex flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
+                                                isLong && "col-span-2",
+                                              )}
+                                            >
+                                              <span className="text-[11px] font-medium text-slate-500">
+                                                {field.label}
+                                              </span>
+                                              <div className="min-w-0 w-full">
+                                                {dealCustomEditMode && canEdit ? (
+                                                  <InlineFieldEditor
+                                                    fieldId={field.fieldId}
+                                                    fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                    fieldOptions={field.options ?? []}
+                                                    value={currentValue ?? null}
+                                                    entityType={field.entityType!}
+                                                    entityId={field.entityId!}
+                                                    editMode={dealCustomEditMode}
+                                                    invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                    onSaved={(v) =>
+                                                      setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                    }
+                                                    textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                                    placeholder="+ Adicionar"
+                                                  />
+                                                ) : hl ? (
+                                                  <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
+                                                ) : canEdit ? (
+                                                  <InlineFieldEditor
+                                                    fieldId={field.fieldId}
+                                                    fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                    fieldOptions={field.options ?? []}
+                                                    value={currentValue ?? null}
+                                                    entityType={field.entityType!}
+                                                    entityId={field.entityId!}
+                                                    invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                    onSaved={(v) =>
+                                                      setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                    }
+                                                    textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                                    placeholder="+ Adicionar"
+                                                  />
+                                                ) : (
+                                                  <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                    {currentValue || "—"}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          )
+                                        }
+                                        return viewMode === "compact" ? (
+                                          <div className="p-4 pt-2">
+                                            {customFieldGroups.map((g) => {
+                                              const body = g.fields.map((f, i) => renderCompactRow(f, i))
+                                              if (!g.title) return <div key={g.id}>{body}</div>
+                                              return (
+                                                <CustomFieldGroupBlock
+                                                  key={g.id}
+                                                  storageKey={`aside_grupos:deal_panel_v2:${g.id}`}
+                                                  title={g.title}
+                                                  collapsedInitial={g.collapsedDefault}
+                                                >
+                                                  {body}
+                                                </CustomFieldGroupBlock>
+                                              )
+                                            })}
+                                          </div>
+                                        ) : (
+                                          <div className="flex flex-col gap-3">
+                                            {customFieldGroups.map((g) => {
+                                              const grid = (
+                                                <div className="grid grid-cols-2 gap-2">
+                                                  {g.fields.map(renderGridCard)}
+                                                </div>
+                                              )
+                                              if (!g.title) return <div key={g.id}>{grid}</div>
+                                              return (
+                                                <CustomFieldGroupBlock
+                                                  key={g.id}
+                                                  storageKey={`aside_grupos:deal_panel_v2:${g.id}`}
+                                                  title={g.title}
+                                                  collapsedInitial={g.collapsedDefault}
+                                                >
+                                                  {grid}
+                                                </CustomFieldGroupBlock>
+                                              )
+                                            })}
+                                          </div>
+                                        )
+                                      })()}
                                     </FieldCard>
                                   )}
                                 </div>
@@ -1270,7 +1437,7 @@ export function DealDetailPanel({
             <main
               aria-label="Conversa"
               className={cn(
-                "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
                 !isDesktop && "min-h-0 flex-1",
               )}
             >
@@ -1288,15 +1455,40 @@ export function DealDetailPanel({
                 callButtonSlot={callButtonSlot}
               />
 
+              {/* Faixa verde sutil de conversa resolvida — substitui o chip
+                  "ENCERRADA" do TabsBar. Mesmo padrao do ChatArea (inbox). */}
+              {isResolved && (
+                <div
+                  role="status"
+                  className="flex shrink-0 items-center justify-center gap-1.5 border-b border-emerald-500/15 bg-emerald-500/10 px-4 py-1 text-[11px] font-medium text-emerald-700 v2-dark:text-emerald-400"
+                >
+                  <IconLock size={11} className="shrink-0" />
+                  Conversa resolvida
+                  {conversationClosedAt && (() => {
+                    const d = new Date(conversationClosedAt)
+                    if (Number.isNaN(d.getTime())) return null
+                    const dd = String(d.getDate()).padStart(2, "0")
+                    const mm = String(d.getMonth() + 1).padStart(2, "0")
+                    const hh = String(d.getHours()).padStart(2, "0")
+                    const mi = String(d.getMinutes()).padStart(2, "0")
+                    return <span className="text-emerald-700/70 v2-dark:text-emerald-400/70">· {dd}/{mm} às {hh}:{mi}</span>
+                  })()}
+                </div>
+              )}
+
               {pinnedMessageSlot}
 
-              <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
+              <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
                 {messagesSlot}
               </div>
 
-              {sessionAlertSlot}
-
-              {composerSlot ? composerSlot : <FallbackComposer />}
+              <div
+                data-chat-composer-footer
+                className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1.5 backdrop-blur-md"
+              >
+                {sessionAlertSlot}
+                {composerSlot ? composerSlot : <FallbackComposer />}
+              </div>
             </main>
           ) : (
             // Default: container com header de tabs + ChatArea mock.
@@ -1343,6 +1535,8 @@ function TabsBar({
   conversationNumber,
   conversationClosedAt,
   callButtonSlot,
+  conversationDepartmentId,
+  conversationRequiresTabulation,
 }: {
   activeTab: TabId
   onChange: (id: TabId) => void
@@ -1359,10 +1553,14 @@ function TabsBar({
   /** Botao "Ligar" (softphone) — renderizado no canto direito, ao lado do
    *  kebab de acoes da conversa. Antes vivia no header do card do deal. */
   callButtonSlot?: React.ReactNode
+  /** Departamento da conversa — abre modal de tabulacao no encerrar quando exige. */
+  conversationDepartmentId?: string | null
+  conversationRequiresTabulation?: boolean
 }) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
+  const [tabulationOpen, setTabulationOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const toggleResolve = useToggleConversationResolve()
 
@@ -1388,69 +1586,46 @@ function TabsBar({
       <header className="flex items-center gap-2 px-4 py-3">
         {/* Tabs pill group — oculta enquanto busca está aberta */}
         {!(searchOpen && activeTab === "conversa") && (
-          <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
-            {TABS.map((tab) => {
-              const Icon = tab.icon
-              const isActive = activeTab === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => onChange(tab.id)}
-                  className={cn(
-                    "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
-                    isActive
-                      ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
-                      : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                  )}
-                >
-                  <Icon size={14} />
-                  {tab.label}
-                  {tab.count !== undefined && (
-                    <span
-                      className={cn(
-                        "rounded-full px-1.5 font-display text-[10px] font-bold",
-                        isActive ? "bg-[var(--glass-bg)] text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-                      )}
-                    >
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
+          <div className="toolbar-hscroll min-w-0 max-w-full flex-1">
+            <div className="inline-flex w-max flex-nowrap items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+              {TABS.map((tab) => {
+                const Icon = tab.icon
+                const isActive = activeTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => onChange(tab.id)}
+                    className={cn(
+                      "inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
+                      isActive
+                        ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
+                  >
+                    <Icon size={14} />
+                    {tab.label}
+                    {tab.count !== undefined && (
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 font-display text-[10px] font-bold",
+                          isActive ? "bg-[var(--glass-bg)] text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                        )}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
 
-        {/* Chip minimalista com o "ticket number" da conversa. Fica logo
-            apos os pills de aba, dentro do proprio TabsBar — sem card
-            lateral. Padrao Contact.number / Deal.number (#N por org).
-            Ver AGENT.md "ID de conversa + logs + gatilho". */}
-        {!(searchOpen && activeTab === "conversa") && typeof conversationNumber === "number" && (
-          <span
-            title={`Conversa #${conversationNumber}`}
-            aria-label={`Conversa numero ${conversationNumber}`}
-            className="shrink-0 font-mono text-[11px] font-medium tabular-nums text-[var(--text-muted)] select-all"
-          >
-            #{conversationNumber}
-          </span>
-        )}
-
-        {/* Chip "Encerrada" — indica de relance o status resolvido, sem
-            depender de abrir o kebab. Fica em linha com o #N no TabsBar. */}
-        {!(searchOpen && activeTab === "conversa") && isResolved && (
-          <span
-            title={
-              conversationClosedAt
-                ? `Encerrada em ${new Date(conversationClosedAt).toLocaleString("pt-BR")}`
-                : "Conversa encerrada"
-            }
-            className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
-          >
-            <IconLock size={10} />
-            Encerrada
-          </span>
-        )}
+        {/* Header enxuto (pedido 17/jul/26): sem chip #N e sem chip
+            "Encerrada" no TabsBar. O status resolvido virou faixa verde
+            sutil abaixo do TabsBar; o #N segue acessivel no separador de
+            ticket da timeline da conversa. */}
 
         {/* Busca inline — ocupa o flex-1 quando aberta */}
         {searchOpen && activeTab === "conversa" ? (
@@ -1549,6 +1724,15 @@ function TabsBar({
                       type="button"
                       disabled={toggleResolve.isPending}
                       onClick={() => {
+                        if (
+                          !isResolved &&
+                          conversationRequiresTabulation &&
+                          conversationDepartmentId
+                        ) {
+                          setMenuOpen(false)
+                          setTabulationOpen(true)
+                          return
+                        }
                         toggleResolve.mutate(
                           { conversationId, action: isResolved ? "reopen" : "resolve" },
                           { onSuccess: () => setMenuOpen(false) },
@@ -1573,6 +1757,19 @@ function TabsBar({
         open={favoritesOpen}
         onOpenChange={setFavoritesOpen}
         conversationId={conversationId ?? null}
+      />
+      <TabulationDialog
+        open={tabulationOpen}
+        onOpenChange={setTabulationOpen}
+        departmentId={conversationDepartmentId ?? null}
+        submitting={toggleResolve.isPending}
+        onConfirm={(tabulationId) => {
+          if (!conversationId) return
+          toggleResolve.mutate(
+            { conversationId, action: "resolve", tabulationId },
+            { onSuccess: () => setTabulationOpen(false) },
+          )
+        }}
       />
     </div>
   )
@@ -1633,17 +1830,23 @@ function HighlightBadge({
  *  Quando `dragHandleProps` é fornecido, exibe alça de arraste no header. */
 function FieldCard({
   title,
+  titleMeta,
   dragLabel,
   dragHandleProps,
   titleActions,
+  plain,
   children,
 }: {
   title?: string
+  /** Sufixo ao lado do título (ex.: #123 do contato/negócio). */
+  titleMeta?: React.ReactNode
   /** Texto acessível para a alça quando não há título. */
   dragLabel?: string
   dragHandleProps?: React.HTMLAttributes<HTMLElement>
   /** Ações extras no cabeçalho (botões, ícones). */
   titleActions?: React.ReactNode
+  /** Sem o card branco ao redor (ex.: grid de pills do modo foco). */
+  plain?: boolean
   children: React.ReactNode
 }) {
   return (
@@ -1660,19 +1863,33 @@ function FieldCard({
           </span>
         )}
         {title && (
-          <span className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-            {title}
+          <span className="flex items-center gap-2 text-slate-600">
+            {title === "Informações do Contato" ? (
+              <IconUser size={16} className="shrink-0" />
+            ) : (
+              <IconBriefcase size={16} className="shrink-0" />
+            )}
+            <span className="flex items-baseline gap-1.5 text-sm font-bold">
+              {title}
+              {titleMeta ? <span className="font-normal opacity-60">{titleMeta}</span> : null}
+            </span>
           </span>
         )}
         {titleActions && (
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-1 [&_button]:text-slate-400 [&_button:hover]:text-blue-500">
             {titleActions}
           </div>
         )}
       </div>
-      <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4">
-        {children}
-      </div>
+      {/* Card branco (ref. Stitch) — rows/cards internos controlam o padding.
+          `plain` pula o card (grid de pills do modo foco, paridade inbox). */}
+      {plain ? (
+        children
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-sm">
+          {children}
+        </div>
+      )}
     </section>
   )
 }

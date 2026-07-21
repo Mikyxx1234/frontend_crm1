@@ -41,7 +41,6 @@ import { cn } from "@/lib/utils";
 import { useFieldLayout, type FieldLayoutContext } from "@/hooks/use-field-layout";
 import { type SectionConfig } from "@/lib/field-layout";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
-import { Textarea } from "@/components/ui/textarea";
 import {
   type HighlightRule,
   type HighlightOp,
@@ -76,10 +75,10 @@ const ENTITY_LABEL: Record<FieldConfigEntity, string> = {
 
 const TYPES = [
   { value: "TEXT", label: "Texto" },
-  { value: "NUMBER", label: "Número" },
-  { value: "DATE", label: "Data" },
   { value: "SELECT", label: "Seleção" },
   { value: "MULTI_SELECT", label: "Multi-seleção" },
+  { value: "NUMBER", label: "Número" },
+  { value: "DATE", label: "Data" },
   { value: "BOOLEAN", label: "Sim/Não" },
   { value: "URL", label: "URL" },
   { value: "EMAIL", label: "E-mail" },
@@ -265,6 +264,15 @@ export function FieldConfigPanel({ entities, context, onClose }: FieldConfigPane
 
       {/* Lista de campos da entidade ativa */}
       <EntityFieldsSection entity={activeEntity} panelCtx={panelCtx} />
+
+      {/* Grupos de campos personalizados (PRD Agrupamento de Campos) */}
+      {isAdmin && (
+        <EntityGroupsSection
+          entity={activeEntity}
+          sections={effectiveSections}
+          onSectionsChange={setLocalSections}
+        />
+      )}
 
       {/* Blocos do painel (só admin) */}
       {isAdmin && effectiveSections.length > 0 && (
@@ -636,6 +644,306 @@ function EntityFieldsSection({
   );
 }
 
+/* ─────────── grupos de campos personalizados (PRD) ─────────── */
+
+/**
+ * Editor de subgrupos de custom fields dentro do painel. Usa o próprio
+ * `SectionConfig` (kind="custom_fields_group") para persistir — sem
+ * tabelas novas. Cada mutação altera `localSections`; a persistência é
+ * feita pelo botão "Salvar layout" existente logo abaixo.
+ */
+export function EntityGroupsSection({
+  entity,
+  sections,
+  onSectionsChange,
+}: {
+  entity: FieldConfigEntity;
+  sections: SectionConfig[];
+  onSectionsChange: (next: SectionConfig[]) => void;
+}) {
+  const { data: allFields = [] } = useQuery({
+    queryKey: ["field-config-fields", entity],
+    queryFn: () => fetchFields(entity),
+  });
+
+  const groups = sections.filter(
+    (s) => s.kind === "custom_fields_group" && s.entity === entity,
+  );
+  const assigned = new Set(
+    groups.flatMap((g) => g.fields.map((f) => f.id)),
+  );
+  const orphans = allFields.filter((f) => !assigned.has(f.id));
+
+  const [newName, setNewName] = React.useState("");
+
+  const genGroupId = () =>
+    `cfg_${entity}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+
+  const addGroup = () => {
+    const label = newName.trim();
+    if (!label) return;
+    const next: SectionConfig = {
+      id: genGroupId(),
+      label,
+      kind: "custom_fields_group",
+      entity,
+      fields: [],
+      collapsedDefault: false,
+    };
+    onSectionsChange([...sections, next]);
+    setNewName("");
+  };
+
+  const renameGroup = (groupId: string, label: string) => {
+    onSectionsChange(
+      sections.map((s) => (s.id === groupId ? { ...s, label } : s)),
+    );
+  };
+
+  const deleteGroup = (groupId: string) => {
+    onSectionsChange(sections.filter((s) => s.id !== groupId));
+  };
+
+  const assignField = (groupId: string, fieldId: string, fieldLabel: string) => {
+    onSectionsChange(
+      sections.map((s) => {
+        if (s.id === groupId) {
+          // Já está no grupo? no-op.
+          if (s.fields.some((f) => f.id === fieldId)) return s;
+          return { ...s, fields: [...s.fields, { id: fieldId, label: fieldLabel }] };
+        }
+        // Se o campo estiver em outro grupo (custom_fields_group da mesma
+        // entidade), remove — 1 campo por grupo é regra do PRD (RN-01).
+        if (s.kind === "custom_fields_group" && s.entity === entity) {
+          return { ...s, fields: s.fields.filter((f) => f.id !== fieldId) };
+        }
+        return s;
+      }),
+    );
+  };
+
+  const removeFieldFromGroup = (groupId: string, fieldId: string) => {
+    onSectionsChange(
+      sections.map((s) =>
+        s.id === groupId
+          ? { ...s, fields: s.fields.filter((f) => f.id !== fieldId) }
+          : s,
+      ),
+    );
+  };
+
+  return (
+    <section>
+      <p className="mb-2 font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+        Grupos de campos personalizados
+      </p>
+
+      <div className="flex flex-col gap-2">
+        {groups.map((g) => (
+          <GroupCard
+            key={g.id}
+            group={g}
+            allFields={allFields}
+            orphans={orphans}
+            onRename={(label) => renameGroup(g.id, label)}
+            onDelete={() => deleteGroup(g.id)}
+            onAssign={(fieldId, fieldLabel) => assignField(g.id, fieldId, fieldLabel)}
+            onRemoveField={(fieldId) => removeFieldFromGroup(g.id, fieldId)}
+          />
+        ))}
+
+        {/* Bucket virtual de órfãos — só informativo, não persiste. */}
+        {orphans.length > 0 && (
+          <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-2.5">
+            <p className="mb-1.5 font-display text-[11px] font-semibold text-[var(--text-muted)]">
+              Sem grupo ({orphans.length})
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {orphans.map((f) => (
+                <span
+                  key={f.id}
+                  className="rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 font-display text-[10.5px] text-[var(--text-secondary)]"
+                >
+                  {f.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Adicionar novo grupo */}
+        <div className="mt-1 flex items-center gap-1.5">
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addGroup();
+              }
+            }}
+            placeholder="Nome do novo grupo (ex.: Documentos)"
+            className="h-8 flex-1 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 font-display text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
+          />
+          <button
+            type="button"
+            onClick={addGroup}
+            disabled={!newName.trim()}
+            className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-primary)] px-3 py-1 font-display text-[11px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            <IconPlus size={12} /> Grupo
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GroupCard({
+  group,
+  allFields,
+  orphans,
+  onRename,
+  onDelete,
+  onAssign,
+  onRemoveField,
+}: {
+  group: SectionConfig;
+  allFields: CustomFieldItem[];
+  orphans: CustomFieldItem[];
+  onRename: (label: string) => void;
+  onDelete: () => void;
+  onAssign: (fieldId: string, fieldLabel: string) => void;
+  onRemoveField: (fieldId: string) => void;
+}) {
+  const [editingName, setEditingName] = React.useState(false);
+  const [draft, setDraft] = React.useState(group.label);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+
+  const commitRename = () => {
+    const v = draft.trim();
+    if (v && v !== group.label) onRename(v);
+    setEditingName(false);
+  };
+
+  const fieldsById = new Map(allFields.map((f) => [f.id, f] as const));
+
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2.5">
+      <div className="mb-2 flex items-center gap-1.5">
+        {editingName ? (
+          <input
+            autoFocus
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitRename();
+              } else if (e.key === "Escape") {
+                setDraft(group.label);
+                setEditingName(false);
+              }
+            }}
+            className="h-7 flex-1 rounded-[var(--radius-sm)] border border-[var(--brand-primary)] bg-[var(--glass-bg-strong)] px-2 font-display text-[12px] font-semibold text-[var(--text-primary)] outline-none"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(group.label);
+              setEditingName(true);
+            }}
+            className="flex-1 text-left font-display text-[12.5px] font-semibold text-[var(--text-primary)] hover:underline"
+          >
+            {group.label}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label="Excluir grupo"
+          className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] hover:text-[var(--color-danger)]"
+        >
+          <IconTrash size={13} />
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {group.fields.length === 0 && (
+          <span className="font-body text-[11px] italic text-[var(--text-muted)]">
+            Nenhum campo neste grupo.
+          </span>
+        )}
+        {group.fields.map((f) => {
+          const def = fieldsById.get(f.id);
+          const label = def?.label ?? f.label;
+          const missing = !def;
+          return (
+            <span
+              key={f.id}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-display text-[10.5px]",
+                missing
+                  ? "border-dashed border-[var(--color-warning-border)] text-[var(--color-warning-text)]"
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-secondary)]",
+              )}
+              title={missing ? "Campo excluído (será ignorado)" : undefined}
+            >
+              {label}
+              <button
+                type="button"
+                onClick={() => onRemoveField(f.id)}
+                aria-label={`Remover ${label} deste grupo`}
+                className="text-[var(--text-muted)] hover:text-[var(--color-danger)]"
+              >
+                <IconX size={10} />
+              </button>
+            </span>
+          );
+        })}
+      </div>
+
+      {/* Picker: adicionar campos órfãos */}
+      <div className="relative mt-2">
+        <button
+          type="button"
+          onClick={() => setPickerOpen((v) => !v)}
+          disabled={orphans.length === 0}
+          className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
+        >
+          <IconPlus size={11} />
+          {orphans.length === 0 ? "Sem campos disponíveis" : "Adicionar campo"}
+        </button>
+        {pickerOpen && orphans.length > 0 && (
+          <div className="absolute left-0 top-full z-10 mt-1 max-h-52 w-64 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-1 shadow-[var(--glass-shadow)]">
+            {orphans.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => {
+                  onAssign(f.id, f.label);
+                  setPickerOpen(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1 text-left font-display text-[11.5px] text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+              >
+                <IconPlus size={11} className="text-[var(--text-muted)]" />
+                <span className="truncate">{f.label}</span>
+                <span className="ml-auto font-body text-[10px] text-[var(--text-muted)]">
+                  {TYPE_LABEL[f.type] ?? f.type}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─────────── mini-form de campo ─────────── */
 
 function FieldForm({
@@ -654,21 +962,34 @@ function FieldForm({
   const [label, setLabel] = React.useState(initial?.label ?? "");
   const [type, setType] = React.useState(initial?.type ?? "TEXT");
   const [required, setRequired] = React.useState(initial?.required ?? false);
-  const [optionsText, setOptionsText] = React.useState(
-    initial?.options.join("\n") ?? "",
+  const [options, setOptions] = React.useState<string[]>(
+    initial?.options ?? [],
   );
+  const [optionsError, setOptionsError] = React.useState<string | null>(null);
+  const [optionDraft, setOptionDraft] = React.useState("");
   const [highlightRules, setHighlightRules] = React.useState<HighlightRule[]>(
     () => parseHighlightRules(initial?.highlightRules ?? []),
   );
 
   const showOptions = type === "SELECT" || type === "MULTI_SELECT";
 
+  function addOption() {
+    const value = optionDraft.trim();
+    if (!value || options.includes(value)) {
+      setOptionDraft("");
+      return;
+    }
+    setOptions((prev) => [...prev, value]);
+    setOptionDraft("");
+    setOptionsError(null);
+  }
+
+  function removeOption(index: number) {
+    setOptions((prev) => prev.filter((_, i) => i !== index));
+  }
+
   const mutation = useMutation({
     mutationFn: async () => {
-      const options = optionsText
-        .split("\n")
-        .map((o) => o.trim())
-        .filter(Boolean);
       if (isEdit && initial) {
         return updateField(initial.id, { label, type, options, required, highlightRules });
       }
@@ -677,6 +998,15 @@ function FieldForm({
     onSuccess: onSaved,
     onError: (e: Error) => toast.error(e.message),
   });
+
+  function handleSubmit() {
+    if (showOptions && options.length === 0) {
+      setOptionsError("Adicione pelo menos uma alternativa");
+      return;
+    }
+    setOptionsError(null);
+    mutation.mutate();
+  }
 
   return (
     <div className="mt-2 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/30 bg-[color-mix(in_srgb,var(--brand-primary)_5%,transparent)] p-3">
@@ -747,20 +1077,70 @@ function FieldForm({
             </div>
           )}
 
-          {/* Opções */}
+          {/* Alternativas */}
           {showOptions && (
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="font-display text-[10.5px] font-semibold text-[var(--text-muted)]">
-                Opções (uma por linha)
+                Alternativas
               </span>
-              <Textarea
-                value={optionsText}
-                onChange={(e) => setOptionsText(e.target.value)}
-                rows={3}
-                placeholder={"Opção 1\nOpção 2"}
-                className="resize-none text-[12px]"
-              />
-            </label>
+              <span className="-mt-0.5 font-body text-[10.5px] text-[var(--text-muted)]">
+                Opções exibidas na lista de seleção
+              </span>
+
+              {options.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {options.map((opt, i) => (
+                    <span
+                      key={`${opt}-${i}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pl-2 pr-1 py-0.5 font-body text-[11.5px] text-[var(--text-primary)]"
+                    >
+                      {opt}
+                      <button
+                        type="button"
+                        onClick={() => removeOption(i)}
+                        className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500"
+                        title={`Remover "${opt}"`}
+                      >
+                        <IconX size={9} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="font-body text-[11px] text-[var(--text-muted)]/80">
+                  Adicione pelo menos uma alternativa
+                </span>
+              )}
+
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={optionDraft}
+                  onChange={(e) => setOptionDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addOption();
+                    }
+                  }}
+                  placeholder="Nova alternativa"
+                  className="h-7 flex-1 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 font-display text-[11.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
+                />
+                <button
+                  type="button"
+                  onClick={addOption}
+                  className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 font-display text-[11px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                >
+                  Adicionar
+                </button>
+              </div>
+
+              {optionsError && (
+                <span className="font-body text-[10.5px] text-red-500">
+                  {optionsError}
+                </span>
+              )}
+            </div>
           )}
 
           {/* Obrigatório */}
@@ -796,7 +1176,7 @@ function FieldForm({
         </button>
         <button
           type="button"
-          onClick={() => mutation.mutate()}
+          onClick={handleSubmit}
           disabled={mutation.isPending || !label.trim()}
           className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1.5 font-display text-[11px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >

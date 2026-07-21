@@ -21,7 +21,6 @@ export default function V2InboxPage() {
       pageHeader={{
         icon: <IconMessageCircle size={22} />,
         title: "Caixa de entrada",
-        description: "Atenda e acompanhe as conversas com seus leads.",
       }}
     />
   );

@@ -161,6 +161,16 @@ export interface Message {
   senderName?: string
   /** Mensagem enviada por bot/automação — exibe badge "AUTOMAÇÃO" */
   isBot?: boolean
+  /**
+   * Confirmação de automação disparada MANUALMENTE pela conversa. Renderiza
+   * o cartão de automação com badge "Manual" e o avatar (iniciais) do agente
+   * que acionou sobreposto ao robô — estilo colaboração.
+   */
+  isAutomationRun?: boolean
+  /** Nome do agente que disparou a automação manual (tooltip do avatar colab). */
+  automationAgentName?: string
+  /** Iniciais do agente que disparou — chip sobre o robô. */
+  automationAgentInitials?: string
   /** Campos parseados de resposta de formulário Meta Flow */
   formFields?: FormField[]
   /** Título do formulário (ex: "form_estag") */
@@ -227,6 +237,16 @@ export interface Message {
    * `isPinned` (usado só para notas na aba "Notas").
    */
   isPinnedMessage?: boolean
+  /**
+   * Metadados de separador de ticket (messageType === "ticket-separator").
+   * Presente apenas nos itens sintéticos injetados pelo backend quando
+   * `?history=1` para marcar o início de cada ticket na linha do tempo.
+   */
+  ticketInfo?: {
+    number: number
+    closedAt: string | null
+    isCurrent?: boolean
+  }
 }
 
 
@@ -255,7 +275,7 @@ function StatusTicks({
   return (
     <IconChecks
       size={15}
-      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read)]" : solid)}
+      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read,#38bdf8)]" : solid)}
       aria-label={status === "read" ? "Lida" : "Entregue"}
     />
   )
@@ -327,6 +347,9 @@ export interface MessageBubbleProps {
   message: Message
   /** Iniciais do agente logado — exibidas no avatar das mensagens outgoing. */
   agentInitials?: string
+  /** Foto do agente logado (User.avatarUrl). Sobrepõe as iniciais no token
+   *  outgoing quando a bolha representa o próprio agente. */
+  agentImageUrl?: string | null
   className?: string
   /** Esta nota está fixada na conversa? Exibe indicador âmbar. */
   isPinned?: boolean
@@ -355,33 +378,56 @@ export interface MessageBubbleProps {
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as const
 
 /**
- * Paleta da bolha de AUTOMAÇÃO (referência V0): lavanda com acento
- * violeta. Hardcoded — em v2-dark os tokens de tema flipam para claro e
- * perdem o contraste contra o fundo claro fixo desta bolha.
+ * Paleta da bolha de AUTOMAÇÃO: cinza escuro com texto claro. Hardcoded —
+ * invariante ao data-chat-theme e ao modo dark/light, garantindo contraste
+ * do texto, dos badges e dos ticks (inclusive o azul de "lida") em qualquer
+ * tema. `ACCENT` (violeta) segue como cor do avatar do robô.
  */
-const AUTOMATION_BG = "#efedfd"
-const AUTOMATION_TEXT = "#1e1b39"
+const AUTOMATION_BG = "#374151"
+const AUTOMATION_TEXT = "#f3f4f6"
 const AUTOMATION_ACCENT = "#6c5ce7"
 
 /**
- * Botões de resposta rápida (interactive/template) renderizados como
- * cards empilhados abaixo do corpo — igual ao WhatsApp e à referência V0.
- * `onLightBg` = bolha clara (automação): card branco com acento violeta.
+ * Botões de resposta rápida (interactive/template) — replicam o visual do
+ * WhatsApp: cada opção é um card full-width com ícone de "responder" e o
+ * rótulo centralizado, empilhados abaixo do corpo e separados por uma
+ * divisória fina. Preview não-clicável no CRM (só reproduz o que o cliente
+ * vê no WhatsApp), mas com feedback de hover para parecer interativo.
+ * `onLightBg` = bolha clara (automação): botão branco com acento violeta;
+ * caso contrário (bolha azul do agente): translúcido sobre o fundo.
  */
 function MessageButtons({ buttons, onLightBg }: { buttons: string[]; onLightBg: boolean }) {
+  const accent = onLightBg ? AUTOMATION_ACCENT : "#ffffff"
+  const dividerStyle = onLightBg
+    ? { background: `${AUTOMATION_ACCENT}24` }
+    : { background: "rgba(255,255,255,0.22)" }
+  const btnStyle = onLightBg
+    ? {
+        borderColor: `${AUTOMATION_ACCENT}2e`,
+        background: "#ffffff",
+        color: AUTOMATION_ACCENT,
+      }
+    : {
+        borderColor: "rgba(255,255,255,0.32)",
+        background: "rgba(255,255,255,0.14)",
+        color: "#ffffff",
+      }
   return (
-    <div className="mt-2.5 grid gap-1.5">
+    <div className="mt-2 -mx-1 flex flex-col gap-1">
+      {/* Divisória fina separando o corpo da mensagem dos botões (ref. WhatsApp) */}
+      <span className="mx-1 mb-1 h-px w-[calc(100%-0.5rem)]" style={dividerStyle} />
       {buttons.map((b, i) => (
         <span
           key={`${b}-${i}`}
-          className="rounded-lg border px-3 py-1.5 text-center font-display text-[12.5px] font-semibold"
-          style={
-            onLightBg
-              ? { borderColor: `${AUTOMATION_ACCENT}4d`, background: "#ffffff", color: AUTOMATION_ACCENT }
-              : { borderColor: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.14)", color: "#ffffff" }
-          }
+          className={cn(
+            "flex w-full min-w-0 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-center font-display text-[13px] font-semibold leading-snug shadow-[0_1px_2px_rgba(15,20,40,0.06)] transition-colors",
+            onLightBg ? "hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,white)]" : "hover:bg-white/20",
+          )}
+          style={btnStyle}
+          title={b}
         >
-          {b}
+          <IconArrowBackUp size={14} stroke={2.1} className="shrink-0" style={{ color: accent, opacity: 0.85 }} />
+          <span className="line-clamp-2 [overflow-wrap:anywhere]">{b}</span>
         </span>
       ))}
     </div>
@@ -1159,6 +1205,7 @@ function MenuItem({
 export function MessageBubble({
   message,
   agentInitials,
+  agentImageUrl,
   className,
   isPinned,
   onPinNote,
@@ -1173,6 +1220,7 @@ export function MessageBubble({
   const isBot = message.isBot ?? false
   const isNote = message.isNote === true
   const hasForm = !!(message.formFields && message.formFields.length > 0)
+  const hasButtons = !!(message.buttons && message.buttons.length > 0)
   const senderName = message.senderName
 
   // Menu WhatsApp-like só entra nas RECEBIDAS. Nas outgoing/notas/forms
@@ -1332,36 +1380,78 @@ export function MessageBubble({
       )}
     >
       <div className={cn("group flex items-end gap-2.5", isOutgoing && "flex-row-reverse")}>
-        {/* Avatar: robô para bot, iniciais para agente — com tooltip do nome */}
+        {/* Avatar: robô para bot, iniciais para agente — com tooltip do nome.
+            Automação manual (colab): robô + chip de iniciais do agente que
+            acionou, sobreposto no canto inferior direito. */}
         {isOutgoing && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
-                  !isBot && "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
-                )}
-                style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
-              >
-                {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
-              </div>
-            </TooltipTrigger>
-            {senderName && (
-              <TooltipContent side="left" className="font-medium text-[11px]">
-                {senderName}
-              </TooltipContent>
-            )}
-          </Tooltip>
+          message.isAutomationRun && message.automationAgentInitials ? (
+            <div className="relative flex shrink-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="flex h-8 w-8 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
+                    style={{ background: AUTOMATION_ACCENT }}
+                  >
+                    <IconRobot size={16} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="font-medium text-[11px]">
+                  Automação
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="absolute -bottom-1 -right-1 flex h-[18px] min-w-[18px] cursor-default items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] px-0.5 font-display text-[9px] font-bold leading-none text-white shadow-[0_1px_3px_rgba(15,20,40,0.28)]">
+                    {message.automationAgentInitials}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="font-medium text-[11px]">
+                  Disparada por {message.automationAgentName || "agente"}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn(
+                    "flex h-7 w-7 shrink-0 cursor-default items-center justify-center overflow-hidden rounded-full font-display text-[10px] font-bold text-white",
+                    !isBot && "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
+                  )}
+                  style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
+                >
+                  {isBot ? (
+                    <IconRobot size={14} />
+                  ) : !message.senderInitials && agentImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={agentImageUrl}
+                      alt={agentInitials ?? "Você"}
+                      className="size-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    message.senderInitials || agentInitials || "?"
+                  )}
+                </div>
+              </TooltipTrigger>
+              {senderName && (
+                <TooltipContent side="left" className="font-medium text-[11px]">
+                  {senderName}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          )
         )}
         <div
           className={cn(
             "relative min-w-0 rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
             isOutgoing
               ? isBot
-                // Bolha de AUTOMAÇÃO: lavanda com acento violeta (ref. V0).
+                // Bolha de AUTOMAÇÃO: cinza escuro com texto claro.
                 // Cores hardcoded (não usar --text-primary) porque em v2-dark
-                // o token flipa para cinza claro e some contra o bg claro.
-                ? "rounded-br border border-[rgba(108,92,231,0.22)] shadow-[0_2px_10px_rgba(108,92,231,0.14)]"
+                // o token flipa e some contra o fundo fixo desta bolha.
+                ? "rounded-br border border-white/10 shadow-[0_3px_12px_rgba(15,20,40,0.28)]"
                 : "rounded-br shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
               : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
@@ -1400,11 +1490,15 @@ export function MessageBubble({
             <div className="mb-1.5 flex items-center gap-1.5">
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest"
-                style={{ background: `${AUTOMATION_ACCENT}1f`, color: AUTOMATION_ACCENT }}
-                title={senderName || "Automação"}
+                style={{ background: "rgba(199,210,254,0.18)", color: "#e0e7ff" }}
+                title={
+                  message.isAutomationRun
+                    ? "Automação disparada manualmente"
+                    : senderName || "Automação"
+                }
               >
                 <IconRobot size={10} />
-                {senderName || "Automação"}
+                {message.isAutomationRun ? "Manual" : senderName || "Automação"}
               </span>
             </div>
           )}
@@ -1450,7 +1544,7 @@ export function MessageBubble({
               snippet={message.replyTo.snippet}
               direction={message.replyTo.direction ?? "out"}
               senderName={message.replyTo.senderName ?? null}
-              onLightBg={!isOutgoing || isBot}
+              onLightBg={!isOutgoing}
             />
           )}
           {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
@@ -1458,12 +1552,19 @@ export function MessageBubble({
           {/* Botões de resposta rápida (interactive/template) — cards
               empilhados abaixo do corpo, estilo WhatsApp/V0. */}
           {message.buttons && message.buttons.length > 0 && (
-            <MessageButtons buttons={message.buttons} onLightBg={!isOutgoing || isBot} />
+            <MessageButtons buttons={message.buttons} onLightBg={!isOutgoing} />
           )}
+          {/* Horário + ticks. Sem botões, flutua no canto inferior direito
+              (padrão WhatsApp). COM botões, entra em fluxo abaixo deles,
+              alinhado à direita — senão o horário/ticks ficam cortados por
+              cima do último botão. */}
           <span
             className={cn(
-              "pointer-events-none absolute bottom-1.5 right-2.5 inline-flex select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
-              isOutgoing && isBot && "text-[var(--text-muted)]",
+              "pointer-events-none select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
+              hasButtons
+                ? "mt-1.5 flex w-full justify-end"
+                : "absolute bottom-1.5 right-2.5 inline-flex",
+              isOutgoing && isBot && "text-white/70",
               !isOutgoing && "text-[var(--text-muted)]",
             )}
             style={
@@ -1480,7 +1581,7 @@ export function MessageBubble({
               <StatusIndicator
                 status={message.status}
                 sendError={message.sendError}
-                onLightBg={isBot}
+                onLightBg={false}
               />
             )}
           </span>
@@ -1622,6 +1723,49 @@ export function ConnectionDivider({ label }: ConnectionDividerProps) {
         via {label}
       </span>
       <span className="h-px w-6 bg-[var(--glass-border)]" />
+    </div>
+  )
+}
+
+interface TicketDividerProps {
+  /** Número sequencial do ticket (#N). */
+  number: number
+  /** ISO do encerramento — null para o ticket atual (em andamento). */
+  closedAt: string | null
+  /** Ticket em andamento (mais recente) — estilo ligeiramente diferente. */
+  isCurrent?: boolean
+}
+
+/**
+ * Separador de ticket na linha do tempo contínua do contato.
+ * Aparece no início de cada ticket quando `history=1` está ativo,
+ * distinguindo ciclos de atendimento distintos sem esconder o histórico.
+ */
+export function TicketDivider({ number, closedAt, isCurrent }: TicketDividerProps) {
+  let dateLabel = ""
+  if (closedAt) {
+    const d = new Date(closedAt)
+    if (!Number.isNaN(d.getTime())) {
+      const dd = String(d.getDate()).padStart(2, "0")
+      const mm = String(d.getMonth() + 1).padStart(2, "0")
+      const yyyy = d.getFullYear()
+      dateLabel = ` · encerrado ${dd}/${mm}/${yyyy}`
+    }
+  }
+  return (
+    <div className="my-3 flex items-center gap-2 self-stretch">
+      <span className="h-px flex-1 bg-[var(--glass-border)]" />
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[10.5px] font-semibold",
+          isCurrent
+            ? "border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+        )}
+      >
+        {isCurrent ? "Conversa atual" : `#${number}${dateLabel}`}
+      </span>
+      <span className="h-px flex-1 bg-[var(--glass-border)]" />
     </div>
   )
 }

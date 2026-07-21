@@ -2,6 +2,8 @@
 
 import { cn } from "@/lib/utils"
 import { IconCircleX, IconClock, IconMessage } from "@tabler/icons-react"
+import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar"
+import { AVATAR_SIZE } from "@/lib/avatar"
 import { Chip } from "./chip"
 
 export type AvatarColor =
@@ -21,6 +23,7 @@ export interface Deal {
   name: string
   subtitle: string
   initials: string
+  /** @deprecated Preferir ChatAvatar (sólido determinístico). Mantido p/ adapters. */
   avatarColor: AvatarColor
   online?: boolean
   dealNumber: string
@@ -38,6 +41,11 @@ export interface Deal {
   }
   /** Motivo da perda — exibido em destaque quando o deal está perdido. */
   lostReason?: string
+  /** Canal do contato/conversa — badge no avatar (padrão Inbox). */
+  channel?: string | null
+  contactId?: string | null
+  avatarUrl?: string | null
+  phone?: string | null
 }
 
 interface DealCardProps {
@@ -126,22 +134,18 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
         </label>
       ) : null}
 
-      {/* Top row: avatar + name + dealNumber/date */}
+      {/* Top row: avatar Inbox (foto | sólido + badge canal) + name + dealNumber/date */}
       <div className="flex items-center gap-2">
-        <div
-          className={cn(
-            `av-${deal.avatarColor}`,
-            "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white font-display text-[10px] font-bold text-white",
-          )}
-        >
-          {deal.initials}
-          {deal.online !== undefined && (
-            <span
-              className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-[1.5px] border-white"
-              style={{ background: deal.online ? "var(--color-online)" : "var(--color-offline)" }}
-            />
-          )}
-        </div>
+        <ChatAvatar
+          user={{
+            id: deal.contactId ?? deal.id,
+            name: deal.name,
+            imageUrl: deal.avatarUrl ?? null,
+          }}
+          phone={deal.phone ?? undefined}
+          channel={(deal.channel as ChatAvatarChannel) ?? null}
+          size={AVATAR_SIZE.sm}
+        />
         <div className="min-w-0 flex-1">
           <div className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
             {deal.name}

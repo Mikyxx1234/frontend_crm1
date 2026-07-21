@@ -9,7 +9,7 @@ export default function SchedulesV2ClientPage() {
   return (
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
-      title="Horários e disponibilidade"
+      title="Expediente"
       description="Expediente e status dos agentes"
       icon={<IconClock size={22} />}
     >

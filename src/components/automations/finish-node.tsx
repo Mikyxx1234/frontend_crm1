@@ -5,12 +5,17 @@ import { IconPlayerStop as StopCircle, IconTrash as Trash2 } from "@tabler/icons
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { NodeInlineConfig } from "./node-inline-config";
 
 export type FinishNodeData = {
   label: string;
   summary: string;
   stepIndex?: number;
   onDelete?: () => void;
+  stepType?: string;
+  config?: Record<string, unknown>;
+  stepOptions?: Array<{ value: string; label: string }>;
+  onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
 /**
@@ -23,7 +28,8 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[200px] max-w-[260px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        selected ? "min-w-[340px] max-w-[400px]" : "min-w-[200px] max-w-[260px]",
         selected
           ? "border-[var(--color-danger)]/60 ring-2 ring-[var(--color-danger)]/30 shadow-[0_10px_30px_-10px_rgba(244,63,94,0.4)]"
           : "border-[var(--glass-border)] shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[0_10px_30px_-10px_rgba(244,63,94,0.3)]"
@@ -45,7 +51,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
       <div className="overflow-hidden rounded-lg">
         {/* Header rose distinto, igual em estrutura ao TriggerNode pra
             fechar o fluxo visualmente */}
-        <div className="relative overflow-hidden bg-linear-to-br from-rose-500 via-rose-500 to-rose-600 px-4 py-3 text-white">
+        <div className="node-drag-handle relative cursor-grab overflow-hidden bg-linear-to-br from-rose-500 via-rose-500 to-rose-600 px-4 py-3 text-white active:cursor-grabbing">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/70 to-transparent" />
           <div className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-[var(--glass-bg-subtle)] blur-2xl" />
 
@@ -86,6 +92,13 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
             </p>
           </div>
         )}
+        <NodeInlineConfig
+          selected={selected}
+          stepType={data.stepType ?? "finish"}
+          config={data.config}
+          stepOptions={data.stepOptions ?? []}
+          onChange={(next) => data.onConfigChange?.(next)}
+        />
       </div>
     </div>
   );

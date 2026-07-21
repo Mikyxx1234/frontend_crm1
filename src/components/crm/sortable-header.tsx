@@ -6,10 +6,13 @@ import { cn } from "@/lib/utils";
 
 export type SortDir = "asc" | "desc" | null;
 
-/** Faixa de cabeçalho de colunas — referência: `/logs` (Feed). */
+/** Faixa de cabeçalho de colunas — referência: `/logs` (Feed).
+ *  Default `grid`; passe a classe `flex` para tabelas com scroll-X (contatos). */
 export function listTableHeadRowClass(className?: string) {
+  const usesFlex = /(^|\s)flex(\s|$)/.test(className ?? "");
   return cn(
-    "grid items-center gap-3.5 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,transparent)] px-3.5 py-2.5",
+    "items-center gap-3.5 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,transparent)] px-3.5 py-2.5",
+    !usesFlex && "grid",
     className,
   );
 }

@@ -16,6 +16,7 @@ import ReactFlow, {
   type Node,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import "./flow-editor.css";
 
 import { AnimatedEdge, AnimatedEdgeDefs, type AnimatedEdgeData } from "./animated-edge";
 
@@ -52,7 +53,6 @@ import { InteractiveNode } from "./interactive-node";
 import { NodePalette, readPaletteDragType } from "./node-palette";
 import { QuestionNode } from "./question-node";
 import { WaitNode } from "./wait-node";
-import { StepConfigPanel } from "./step-config-panel";
 import { TriggerNode } from "./trigger-node";
 import { VariableNode } from "./variable-node";
 
@@ -82,7 +82,9 @@ type RfPos = { x: number; y: number };
 
 const START_X = 200;
 const NODE_Y = 300;
-const GAP_X = 300;
+// Espelha `GAP_X` de `@/lib/automation-layout` — nós expandidos (~400px)
+// precisam de folga maior que 300 pra não cobrir o próximo step.
+const GAP_X = 480;
 
 function readRfPos(config: unknown): RfPos | null {
   if (typeof config !== "object" || config === null) return null;
@@ -454,10 +456,15 @@ function WorkflowCanvasInner({
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { theme } = useThemeV2();
   const isDark = theme === "dark";
-  const [configOpen, setConfigOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<AutomationStep | null>(null);
   const stepsRef = useRef(steps);
   stepsRef.current = steps;
+  // Quando a edição inline altera só a config, patchamos o node in-place
+  // e pulamos o rebuild completo (senão o React Flow remonta o input e
+  // o foco some a cada tecla — "só edita se clicar e segurar").
+  const skipStepsSyncRef = useRef(false);
+  const patchStepConfigRef = useRef<
+    (stepId: string, next: Record<string, unknown>) => void
+  >(() => {});
 
   // Posição inicial do nó ao começar um arraste — usada pra distinguir
   // clique (sem movimento) de arraste real na pílula "+ adicionar passo".
@@ -583,6 +590,13 @@ function WorkflowCanvasInner({
       const stepIndexById = new Map<string, number>();
       list.forEach((s, i) => stepIndexById.set(s.id, i + 1));
 
+      // stepOptions p/ campos `kind: "step"` do editor inline —
+      // exclui o próprio nó pra evitar auto-referência acidental.
+      const buildStepOptions = (currentId: string) =>
+        list
+          .filter((s) => s.id !== currentId)
+          .map((s, i) => ({ value: s.id, label: `${i + 1}. ${stepTypeLabel(s.type)}` }));
+
       const stepNodes: Node[] = list.map((step, index) => {
         const saved = readRfPos(step.config);
         const pos = saved ?? { x: START_X + index * GAP_X, y: NODE_Y };
@@ -605,8 +619,18 @@ function WorkflowCanvasInner({
           onDelete: () => onDelete(step.id),
           stats: ss ? { success: ss.success, failed: ss.failed, skipped: ss.skipped } : undefined,
           onStatsClick: () => onStepLogsOpenRef.current?.(step.id),
+          // Edição inline — o slot NodeInlineConfig dentro de cada
+          // node component consome estes props quando `selected`.
+          config: (step.config ?? {}) as Record<string, unknown>,
+          stepOptions: buildStepOptions(step.id),
+          onConfigChange: (next: Record<string, unknown>) =>
+            patchStepConfigRef.current(step.id, next),
         };
 
+        // Card inteiro arrasta (sem dragHandle) — os campos do editor
+        // inline têm `nodrag`/stopPropagation, então digitar/clicar em
+        // inputs não move o node. `nodeDragThreshold` no <ReactFlow>
+        // garante que o clique de seleção não vire micro-drag.
         if (isInteractiveStep(step.type)) {
           const cfg = step.config as Record<string, unknown>;
           const buttons = Array.isArray(cfg.buttons) ? cfg.buttons : [];
@@ -719,6 +743,68 @@ function WorkflowCanvasInner({
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
+
+  const patchStepConfig = useCallback(
+    (stepId: string, next: Record<string, unknown>) => {
+      const cur = stepsRef.current;
+      const step = cur.find((s) => s.id === stepId);
+      if (!step) return;
+      const updated = cur.map((s) =>
+        s.id === stepId ? { ...s, config: next } : s
+      );
+      stepsRef.current = updated;
+      skipStepsSyncRef.current = true;
+      onStepsChange(updated);
+
+      const stepIndexById = new Map<string, number>();
+      updated.forEach((s, i) => stepIndexById.set(s.id, i + 1));
+
+      let summary = summarizeStepConfig(step.type, next, stageNameLookup);
+      if (step.type === "goto") {
+        const tgt = typeof next.targetStepId === "string" ? next.targetStepId : "";
+        const tgtIdx = tgt ? stepIndexById.get(tgt) : undefined;
+        summary = tgtIdx != null ? `Ir para: passo ${tgtIdx}` : summary;
+      }
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id !== stepId) return n;
+          const data: Record<string, unknown> = {
+            ...(n.data as Record<string, unknown>),
+            config: next,
+            summary,
+            incomplete: isStepIncomplete(step.type, next),
+          };
+          if (isInteractiveStep(step.type)) {
+            data.buttons = Array.isArray(next.buttons) ? next.buttons : [];
+          }
+          if (step.type === "condition") {
+            data.branches = normalizeConditionConfig(next).branches;
+          }
+          if (step.type === "wait_for_reply") {
+            const tMs = Number(next.timeoutMs ?? 0);
+            let timeoutLabel = "Cronômetro";
+            if (tMs > 0) {
+              const h = Math.floor(tMs / 3_600_000);
+              const m = Math.floor((tMs % 3_600_000) / 60_000);
+              const s = Math.floor((tMs % 60_000) / 1000);
+              const parts: string[] = [];
+              if (h > 0) parts.push(`${h} horas`);
+              if (m > 0) parts.push(`${m} min`);
+              if (s > 0) parts.push(`${s} seg`);
+              timeoutLabel = `Cronômetro: ${parts.join(" ")}`;
+            }
+            data.hasReceivedGoto = !!next.receivedGotoStepId;
+            data.hasTimeoutGoto = !!next.timeoutGotoStepId;
+            data.timeoutLabel = timeoutLabel;
+          }
+          return { ...n, data };
+        })
+      );
+    },
+    [onStepsChange, setNodes, stageNameLookup]
+  );
+  patchStepConfigRef.current = patchStepConfig;
 
   const removeStep = useCallback(
     (id: string) => {
@@ -849,22 +935,42 @@ function WorkflowCanvasInner({
   onAddStepRef.current = addStepAfter;
 
   useEffect(() => {
-    setNodes(buildNodes(steps, removeStep, addStepAfter));
+    // Edição inline já patchou o node — não rebuildar (preserva foco).
+    if (skipStepsSyncRef.current) {
+      skipStepsSyncRef.current = false;
+      return;
+    }
+    // Rebuild preservando `selected` (React Flow guarda seleção no
+    // próprio node object; se recriamos os nós do zero, a seleção do
+    // card editado some ao soltar o mouse quando algum re-render
+    // dispara este effect).
+    setNodes((prev) => {
+      const selectedIds = new Set(
+        prev.filter((n) => n.selected).map((n) => n.id)
+      );
+      const next = buildNodes(steps, removeStep, addStepAfter);
+      if (selectedIds.size === 0) return next;
+      return next.map((n) =>
+        selectedIds.has(n.id) ? { ...n, selected: true } : n
+      );
+    });
   }, [steps, buildNodes, removeStep, addStepAfter, setNodes]);
 
-  // 27/mai/26 — Recentraliza o viewport quando o operador clica em
-  // "Auto alinhar". O `autoAlignVersion` é um contador; quando muda,
-  // chamamos `fitView` pra enquadrar todos os nodes na tela.
-  // Esperamos uns ticks porque `setNodes` acima é assíncrono — sem o
-  // setTimeout o fitView calcula bounds usando os nodes antigos.
-  // `autoAlignVersion === 0` é o estado inicial, pulamos pra não
-  // mexer no zoom inicial do operador.
+  // Recentraliza o viewport após "Auto alinhar". Espera o React Flow
+  // aplicar as novas posições (setNodes é assíncrono). `maxZoom: 1`
+  // evita zoom-in excessivo em fluxos curtos (empurrava o fluxo pra
+  // baixo da tela no shell v2 com CSS zoom).
   useEffect(() => {
     if (!autoAlignVersion) return;
-    const timer = setTimeout(() => {
-      fitView({ duration: 400, padding: 0.2 });
-    }, 100);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      void fitView({ duration: 380, padding: 0.22, maxZoom: 1, minZoom: 0.35 });
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [autoAlignVersion, fitView]);
 
   const edges = useMemo(
@@ -1243,11 +1349,9 @@ function WorkflowCanvasInner({
       onTriggerClickRef.current?.();
       return;
     }
-    const st = stepsRef.current.find((s) => s.id === node.id);
-    if (st) {
-      setSelectedStep(st);
-      setConfigOpen(true);
-    }
+    // Edição inline: o clique só seleciona; o próprio node expande o
+    // NodeConfigEditor quando `selected === true` (React Flow gerencia
+    // a seleção internamente via onNodesChange).
   }, []);
 
   const onEdgeClick = useCallback(
@@ -1406,23 +1510,14 @@ function WorkflowCanvasInner({
     e.dataTransfer.dropEffect = "copy";
   }, []);
 
-  const handleSaveStep = useCallback(
-    (updated: AutomationStep) => {
-      const next = stepsRef.current.map((s) =>
-        s.id === updated.id ? updated : s
-      );
-      onStepsChange(next);
-      setSelectedStep(updated);
-    },
-    [onStepsChange]
-  );
-
   return (
     <div className={cn("automation-editor flex w-full", className)}>
-      {/* Canvas area — radial gradients no fundo dão profundidade
-          "engenharia premium" sem competir com os nodes. */}
+      {/* Palette — esquerda (antes do canvas) */}
+      <NodePalette className="w-[240px] shrink-0" />
+
+      {/* Canvas area */}
       <div
-        className="automation-canvas relative min-h-0 min-w-0 flex-1 bg-[var(--color-primary-soft)] bg-[radial-gradient(ellipse_at_top_left,rgba(80,125,241,0.08)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.06)_0%,transparent_55%)]"
+        className="automation-canvas relative min-h-0 min-w-0 flex-1 bg-[var(--bg-base)]"
         onDrop={onDrop}
         onDragOver={onDragOver}
       >
@@ -1448,6 +1543,9 @@ function WorkflowCanvasInner({
           edgeTypes={edgeTypes}
           fitView
           fitViewOptions={{ padding: 0.2 }}
+          // Card inteiro arrasta; o threshold evita que o clique de
+          // seleção (com 1-2px de tremida) vire um micro-drag.
+          nodeDragThreshold={4}
           proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={{ style: { cursor: "pointer" } }}
         >
@@ -1527,18 +1625,6 @@ function WorkflowCanvasInner({
           </>
         )}
       </div>
-
-      {/* Palette */}
-      <NodePalette className="w-[240px] shrink-0" />
-
-      {/* Step config */}
-      <StepConfigPanel
-        open={configOpen}
-        onOpenChange={setConfigOpen}
-        step={selectedStep}
-        onSave={handleSaveStep}
-        allSteps={steps}
-      />
     </div>
   );
 }

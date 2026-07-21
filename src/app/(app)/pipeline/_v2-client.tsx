@@ -12,17 +12,13 @@ import {
 } from "@hello-pangea/dnd";
 
 import {
-  IconAbc,
   IconAntenna,
-  IconArrowNarrowDown,
-  IconArrowNarrowUp,
   IconArrowsExchange,
-  IconArrowsSort,
   IconCheckbox,
   IconChevronDown,
-  IconClock,
   IconDotsVertical,
   IconDownload,
+  IconMenu2,
   IconPencil,
   IconPlus,
   IconSettings,
@@ -38,13 +34,14 @@ import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
 import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
-import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar";
+import { DealProductsSection, DealQuotasSection } from "@/components/pipeline/deal-detail/sidebar";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { Chip } from "@/components/crm/chip";
+import { AvatarGlass } from "@/components/crm/avatar-glass";
 
 import {
   toKanbanColumns,
@@ -68,15 +65,17 @@ import {
   type MoveVars,
 } from "@/features/pipeline-v2/hooks";
 import { dealDetailKey } from "@/features/pipeline-v2/hooks/use-deal-detail";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { updateDeal } from "@/features/pipeline-v2/api";
 import { createContact } from "@/features/directory-v2/api";
+import { personNameFromDealTitle, sanitizeContactName } from "@/lib/display-name";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
 import type { BulkScopeContext } from "@/components/pipeline/bulk-edit-fields-dialog";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
+import { apiUrl } from "@/lib/api";
 import type {
   BoardDealDto,
   BoardSortParam,
@@ -90,6 +89,7 @@ import {
   DealNotesTab,
   DealTimelineTab,
   InlineEditText,
+  MoveToStageMenu,
   PipelineSwitcher,
   StagePicker,
   TagsPopover,
@@ -99,14 +99,18 @@ import {
 import { PipelineChannelsModal } from "@/features/pipeline-v2/extras/pipeline-channels-modal";
 import { computePopoverPosition } from "@/features/pipeline-v2/extras/use-portal-popover";
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
-import { FilterModalThreeCol } from "@/components/pipeline/kanban-filters/v2";
+import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
+import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
+import { useKanbanFilters } from "@/components/pipeline/kanban-filters/use-kanban-filters";
 import {
-  countActiveFilters,
   isEmptyFilters,
   hasServerSideFilters,
   type AdvancedDealFilters,
 } from "@/components/pipeline/kanban-filters/types";
+
+const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
+const PIPELINE_SORT_LS = "kanban-pipeline-sort:v1";
 
 type SortKey =
   | "default"
@@ -194,12 +198,17 @@ export default function KanbanV2ClientPage({
   const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
     null,
   );
-  const [filters, setFilters] = useState<AdvancedDealFilters>({});
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const { filters, setFilters, patch: patchFilters, clear: clearFilters } = useKanbanFilters();
+  const [search, setSearch] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return localStorage.getItem(PIPELINE_SEARCH_LS) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [filterOptions, setFilterOptions] = useState<import("@/components/pipeline/kanban-filters/types").FilterOptionsResponse | null>(null);
   const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
-  const filtersBtnRef = useRef<HTMLButtonElement>(null);
   const kebabBtnRef = useRef<HTMLButtonElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
@@ -217,7 +226,42 @@ export default function KanbanV2ClientPage({
   // >100 registros. Os sorts `name_*` continuam client-side (o backend
   // ainda não expõe esses campos como sort) — limitação conhecida e
   // documentada no AGENT.md.
-  const [sortKey, setSortKey] = useState<SortKey>("default");
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    if (typeof window === "undefined") return "default";
+    try {
+      const raw = localStorage.getItem(PIPELINE_SORT_LS);
+      if (
+        raw === "default" ||
+        raw === "interaction_newest" ||
+        raw === "interaction_oldest" ||
+        raw === "name_az" ||
+        raw === "name_za" ||
+        raw === "created_newest" ||
+        raw === "created_oldest"
+      ) {
+        return raw;
+      }
+    } catch {
+      /* noop */
+    }
+    return "default";
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PIPELINE_SEARCH_LS, search);
+    } catch {
+      /* noop */
+    }
+  }, [search]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PIPELINE_SORT_LS, sortKey);
+    } catch {
+      /* noop */
+    }
+  }, [sortKey]);
 
   const status = BOARD_STATUS;
   const { data: pipelines } = usePipelines(isAuthenticated);
@@ -305,27 +349,42 @@ export default function KanbanV2ClientPage({
   const moveDeal = useMoveDeal(pipelineId, status);
 
   // ── Tabulação de motivo da perda ─────────────────────────────────
-  // Mover para o estágio Perdido exige motivo: o move fica pendente até
-  // o usuário confirmar no LossReasonDialog (cancelar = não move).
+  // Só pede motivo se a etapa Perdido do funil estiver com tabulação
+  // Ativa (pipelines.lossReasonRequired). Cancelar = não move.
   const [pendingLostMove, setPendingLostMove] = useState<MoveVars | null>(null);
+
+  const lossMetaQuery = useQuery({
+    queryKey: ["pipeline-loss-reasons", pipelineId],
+    queryFn: async () => {
+      const res = await fetch(
+        apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),
+      );
+      if (!res.ok) return { lossReasonRequired: false };
+      return res.json() as Promise<{ lossReasonRequired?: boolean }>;
+    },
+    enabled: !!pipelineId,
+    staleTime: 30_000,
+  });
+  const lossReasonsActive = Boolean(lossMetaQuery.data?.lossReasonRequired);
 
   const requestMove = useCallback(
     (vars: MoveVars) => {
       const target = board.find((s) => s.id === vars.toStageId);
-      // Entrar no estágio Perdido (vindo de OUTRA etapa) sempre pede o
-      // motivo. Baseamos em `fromStageId !== toStageId` em vez do
-      // `status` do card — esse último fica defasado logo após uma
-      // reabertura otimista (o onMutate move o card mas não atualiza o
-      // status), o que fazia a tabulação ser pulada ou bugar ao mover um
-      // lead reaberto de volta pra Perdido. Reordenar dentro da própria
-      // coluna Perdido (from === to) não dispara o diálogo.
-      if (target?.isLost && vars.fromStageId !== vars.toStageId) {
+      // Cross-pipeline: quando o estágio destino não pertence ao board
+      // atual, não temos como saber isLost/lossReasonRequired sem uma
+      // requisição extra. Deixamos o backend validar (LOST_REASON_REQUIRED
+      // → toast de erro) e o operador tenta novamente pelo funil destino.
+      if (
+        target?.isLost &&
+        vars.fromStageId !== vars.toStageId &&
+        lossReasonsActive
+      ) {
         setPendingLostMove(vars);
         return;
       }
       moveDeal.mutate(vars);
     },
-    [board, moveDeal],
+    [board, moveDeal, lossReasonsActive],
   );
 
   // ── Seleção em massa (resgatada da versão antiga) ────────────────
@@ -379,7 +438,7 @@ export default function KanbanV2ClientPage({
   // da primeira abertura nunca apareciam sem dar reload na página.
   // Mantém as opções anteriores em caso de erro (não pisca pra vazio).
   useEffect(() => {
-    if (!filtersOpen) return;
+    if (!isAuthenticated) return;
     let cancelled = false;
     setFilterOptionsLoading(true);
     fetchFilterOptions()
@@ -387,7 +446,7 @@ export default function KanbanV2ClientPage({
       .catch(() => { /* mantém opções já carregadas */ })
       .finally(() => { if (!cancelled) setFilterOptionsLoading(false); });
     return () => { cancelled = true; };
-  }, [filtersOpen]);
+  }, [isAuthenticated]);
 
   // Aplica filtros client-side ANTES de virar colunas.
   const filteredBoard = useMemo(() => {
@@ -568,11 +627,6 @@ export default function KanbanV2ClientPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealDetail?.id]);
 
-  // Campos personalizados: mesma fonte do contact-aside (inboxLeadPanelFields + dealInboxPanelFields).
-  // O contactId vem do dealDetail para garantir que está sempre associado ao deal aberto.
-  const dealContactId = dealDetail?.contact?.id ?? null;
-  const { data: dealContact } = useContactSidebar(dealContactId);
-
   // Encontra o stage corrente do deal aberto pra alimentar o header de pills.
   const activeDealStage = useMemo(() => {
     if (!activeDealId) return undefined;
@@ -581,37 +635,89 @@ export default function KanbanV2ClientPage({
   const activeDealStageName = activeDealStage?.name;
   const activeDealStageId = activeDealStage?.id ?? null;
 
+  // Seed otimista a partir do card do board — o painel abre no layout final
+  // com nome/telefone/etapa já preenchidos, sem esperar GET /deals/:id.
+  const boardDealSeed = useMemo(() => {
+    if (!activeDealId) return null;
+    return dealById.get(activeDealId) ?? null;
+  }, [activeDealId, dealById]);
+
+  // Campos personalizados: mesma fonte do contact-aside (inboxLeadPanelFields + dealInboxPanelFields).
+  // Prefer contactId do detail; no loading usa o do card do board.
+  const dealContactId =
+    dealDetail?.contact?.id ?? boardDealSeed?.contact?.id ?? null;
+  const { data: dealContact } = useContactSidebar(dealContactId);
+
   const dealDetailVm: DealDetail | null = useMemo(() => {
-    if (!dealDetail) return null;
-    const contactName = dealDetail.contact?.name?.trim() || dealDetail.title || "Sem nome";
-    const ownerName = dealDetail.owner?.name?.trim() || "Sem responsavel";
+    if (dealDetail) {
+      // Contato = pessoa; título do deal ("Negócio …") nunca vira nome de contato.
+      const contactName =
+        sanitizeContactName(dealDetail.contact?.name) ||
+        personNameFromDealTitle(dealDetail.title) ||
+        "Sem nome";
+      const ownerName = dealDetail.owner?.name?.trim() || "Sem responsavel";
+      return {
+        id: dealDetail.id,
+        number: (dealDetail as { number?: number }).number ?? null,
+        contactId: dealDetail.contact?.id ?? null,
+        contactNumber: (dealDetail.contact as { number?: number } | null)?.number ?? null,
+        name: contactName,
+        initials: avatarInitials(contactName),
+        avatarColor: avatarColorSlugFromName(contactName),
+        phone: dealDetail.contact?.phone ?? undefined,
+        email: dealDetail.contact?.email ?? null,
+        whatsappUsername:
+          (dealDetail.contact as { whatsappUsername?: string | null } | null)?.whatsappUsername ?? null,
+        contactSource:
+          (dealDetail.contact as { source?: string | null } | null)?.source ?? null,
+        value: dealDetail.value ?? null,
+        online: undefined,
+        stage: activeDealStageName,
+        pipelineName:
+          (dealDetail as { stage?: { pipeline?: { name?: string } } }).stage?.pipeline?.name ?? null,
+        owner: {
+          initials: avatarInitials(ownerName),
+          name: ownerName,
+          avatarColor: avatarColorSlugFromName(ownerName),
+        },
+        status: (dealDetail as { status?: "OPEN" | "WON" | "LOST" }).status ?? null,
+        lostReason:
+          (dealDetail as { lostReason?: string | null }).lostReason ?? null,
+      };
+    }
+
+    // Enquanto a API não responde: monta VM parcial do card do kanban.
+    if (!boardDealSeed) return null;
+    const contactName =
+      sanitizeContactName(boardDealSeed.contact?.name) ||
+      personNameFromDealTitle(boardDealSeed.title) ||
+      "Sem nome";
+    const ownerName = boardDealSeed.owner?.name?.trim() || "Sem responsavel";
     return {
-      id: dealDetail.id,
-      number: (dealDetail as { number?: number }).number ?? null,
-      contactId: dealDetail.contact?.id ?? null,
-      contactNumber: (dealDetail.contact as { number?: number } | null)?.number ?? null,
+      id: boardDealSeed.id,
+      number: boardDealSeed.number ?? null,
+      contactId: boardDealSeed.contact?.id ?? null,
+      contactNumber: boardDealSeed.contact?.number ?? null,
       name: contactName,
       initials: avatarInitials(contactName),
       avatarColor: avatarColorSlugFromName(contactName),
-      phone: dealDetail.contact?.phone ?? undefined,
-      email: dealDetail.contact?.email ?? null,
-      contactSource:
-        (dealDetail.contact as { source?: string | null } | null)?.source ?? null,
-      value: dealDetail.value ?? null,
+      phone: boardDealSeed.contact?.phone ?? undefined,
+      email: boardDealSeed.contact?.email ?? null,
+      whatsappUsername: null,
+      contactSource: null,
+      value: boardDealSeed.value ?? null,
       online: undefined,
       stage: activeDealStageName,
-      pipelineName:
-        (dealDetail as { stage?: { pipeline?: { name?: string } } }).stage?.pipeline?.name ?? null,
+      pipelineName: pipelines?.find((p) => p.id === pipelineId)?.name ?? null,
       owner: {
         initials: avatarInitials(ownerName),
         name: ownerName,
         avatarColor: avatarColorSlugFromName(ownerName),
       },
-      status: (dealDetail as { status?: "OPEN" | "WON" | "LOST" }).status ?? null,
-      lostReason:
-        (dealDetail as { lostReason?: string | null }).lostReason ?? null,
+      status: (boardDealSeed.status as "OPEN" | "WON" | "LOST" | undefined) ?? null,
+      lostReason: boardDealSeed.lostReason ?? null,
     };
-  }, [dealDetail, activeDealStageName]);
+  }, [dealDetail, boardDealSeed, activeDealStageName, pipelines, pipelineId]);
 
   // Negócio SEM contato vinculado: cria um contato com o telefone/email
   // digitado e vincula ao deal (o painel chama isso via customSave do
@@ -622,8 +728,10 @@ export default function KanbanV2ClientPage({
       const v = value.trim();
       if (!v) return;
       try {
+        // Nunca gravar "Negócio …" como nome do contato — só o nome da pessoa.
         const name =
-          dealDetail?.title?.trim() || (field === "email" ? "Novo contato" : v);
+          personNameFromDealTitle(dealDetail?.title) ||
+          (field === "email" ? "Novo contato" : v);
         const contact = await createContact({
           name,
           ...(field === "phone" ? { phone: v } : { email: v }),
@@ -653,7 +761,9 @@ export default function KanbanV2ClientPage({
     )?.conversations?.[0] ?? null;
   const dealConversationId = dealConversation?.id ?? null;
   const dealContactName =
-    dealDetail?.contact?.name?.trim() || dealDetail?.title || "Contato";
+    sanitizeContactName(dealDetail?.contact?.name) ||
+    personNameFromDealTitle(dealDetail?.title) ||
+    "Contato";
   const { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote, pinnedMessageSlot, connection: dealConnection } =
     useDealChatBinding({
       conversationId: dealConversationId,
@@ -697,70 +807,96 @@ export default function KanbanV2ClientPage({
           onViewChange={(view) => {
             if (view === "list" && listHref) router.push(listHref);
           }}
-          pipelineNameSlot={
+          titleAccessory={
             <PipelineSwitcher
+              variant="icon"
               selectedId={pipelineId}
               onChange={(id) => setPipelineId(id)}
             />
           }
-          settingsSlot={
-            <div>
-              <TooltipGlass label="Ordenar, importar e exportar" side="bottom">
-                <button
-                  ref={kebabBtnRef}
-                  type="button"
-                  onClick={() => setKebabOpen((v) => !v)}
-                  className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-                >
-                  <IconDotsVertical size={15} />
-                </button>
-              </TooltipGlass>
-              <PipelineKebabMenu
-                open={kebabOpen}
-                anchorRef={kebabBtnRef}
-                sortKey={sortKey}
-                onSortChange={(k) => { setSortKey(k); setKebabOpen(false); }}
-                onImport={() => { setImportExportOpen("import"); setKebabOpen(false); }}
-                onExport={() => { setImportExportOpen("export"); setKebabOpen(false); }}
-                onChannels={() => { setChannelsModalOpen(true); setKebabOpen(false); }}
-                onSettings={() => { router.push("/settings/pipeline"); setKebabOpen(false); }}
-                selectionMode={selectionMode}
-                onToggleSelectionMode={() => {
-                  setSelectionMode((v) => {
-                    const next = !v;
-                    if (!next) setSelectedIds(new Set());
-                    return next;
-                  });
-                  setKebabOpen(false);
-                }}
-                onClose={() => setKebabOpen(false)}
-              />
-            </div>
+          searchSlot={
+            <PipelineSearchFilterBar
+              search={search}
+              onSearch={setSearch}
+              filters={filters}
+              onApplyFilters={setFilters}
+              onClearFilters={clearFilters}
+              options={filterOptions}
+              optionsLoading={filterOptionsLoading}
+              sortKey={sortKey}
+              onSortKeyChange={(k) => setSortKey(k)}
+            />
           }
-          filtersButtonRef={filtersBtnRef}
-          onFiltersClick={() => setFiltersOpen((v) => !v)}
-          activeFiltersCount={countActiveFilters(filters) + (search.trim() ? 1 : 0)}
-          search={search}
-          onSearchChange={setSearch}
+          menuSlot={
+            <TooltipGlass label="Ordenar, importar e exportar" side="bottom">
+              <button
+                ref={kebabBtnRef}
+                type="button"
+                data-pipeline-kebab-trigger=""
+                onClick={() => setKebabOpen((v) => !v)}
+                aria-label="Ações do pipeline"
+                aria-expanded={kebabOpen}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-[filter,box-shadow] hover:brightness-105",
+                  kebabOpen && "ring-2 ring-[var(--brand-primary)]/35 brightness-95",
+                )}
+              >
+                <IconMenu2 size={18} stroke={2.2} />
+              </button>
+            </TooltipGlass>
+          }
+        />
+        {/*
+         * PipelineKebabMenu vive FORA do PageHeader porque este renderiza
+         * `actions` em dois blocos (desktop `lg:flex` + mobile `lg:hidden`) —
+         * colocá-lo dentro do menuSlot duplicaria o portal do menu.
+         */}
+        <PipelineKebabMenu
+          open={kebabOpen}
+          anchorRef={kebabBtnRef}
           onNewDeal={
             columns.length > 0
-              ? () =>
-                  setAddStage({
-                    id: columns[0].stageId,
-                    name: columns[0].title,
-                  })
+              ? () => {
+                  setAddStage({ id: columns[0].stageId, name: columns[0].title });
+                  setKebabOpen(false);
+                }
               : undefined
           }
+          onImport={() => { setImportExportOpen("import"); setKebabOpen(false); }}
+          onExport={() => { setImportExportOpen("export"); setKebabOpen(false); }}
+          onChannels={() => { setChannelsModalOpen(true); setKebabOpen(false); }}
+          onSettings={() => { router.push("/settings/pipeline"); setKebabOpen(false); }}
+          selectionMode={selectionMode}
+          onToggleSelectionMode={() => {
+            setSelectionMode((v) => {
+              const next = !v;
+              if (!next) setSelectedIds(new Set());
+              return next;
+            });
+            setKebabOpen(false);
+          }}
+          onClose={() => setKebabOpen(false)}
         />
-        <FilterModalThreeCol
-          open={filtersOpen}
-          onOpenChange={setFiltersOpen}
-          value={filters}
-          options={filterOptions}
-          optionsLoading={filterOptionsLoading}
-          onApply={setFilters}
-          onClear={() => setFilters({})}
-        />
+
+        {!isEmptyFilters(filters) && (
+          <div className="flex flex-wrap items-center gap-2 px-0.5">
+            <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+              Filtros ativos
+            </span>
+            <FilterChips
+              filters={filters}
+              options={filterOptions}
+              onPatch={patchFilters}
+            />
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="font-display text-[11px] font-semibold text-[var(--text-muted)] underline-offset-2 hover:text-[var(--brand-primary)] hover:underline"
+            >
+              Limpar todos
+            </button>
+          </div>
+        )}
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -876,6 +1012,7 @@ export default function KanbanV2ClientPage({
                 <StageDropdown
                   stages={board}
                   currentStageId={activeDealStageId}
+                  currentPipelineId={pipelineId}
                   isPending={isPending}
                   onSelect={onSelectStage}
                 />
@@ -1065,7 +1202,12 @@ export default function KanbanV2ClientPage({
             : undefined
         }
         productsSlot={
-          activeDealId ? <DealProductsSection dealId={activeDealId} compact /> : null
+          activeDealId ? (
+            <div className="flex flex-col gap-3">
+              <DealProductsSection dealId={activeDealId} compact />
+              <DealQuotasSection dealId={activeDealId} />
+            </div>
+          ) : null
         }
         onCreateContactForField={handleCreateContactForField}
         tagsSlot={
@@ -1075,17 +1217,17 @@ export default function KanbanV2ClientPage({
             const visibleTags = allTags.slice(0, MAX_VISIBLE);
             const hiddenTags = allTags.slice(MAX_VISIBLE);
             return (
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
                 {visibleTags.map((t) => (
-                  // Mesmo padrão do card kanban: max-w + truncate + tooltip.
-                  // Sem isso, tags longas no header do deal detail estouravam
-                  // o slot e empurravam o resto do cabeçalho.
+                  // Linha única no grid do hero: chips truncam (max-w) e o
+                  // container não quebra — "+N" e "+" ficam sempre visíveis
+                  // na mesma linha.
                   <TooltipGlass key={t.id} label={t.name} side="top">
                     {/* Chip claro (color-mix com white) — mesmo padrão do
                         DealTagsTray do inbox, garante contraste legível sobre
                         o hero escuro (--nav-bg). */}
                     <span
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
+                      className="inline-block max-w-[7.5rem] min-w-0 truncate rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
                       style={{
                         background: `color-mix(in srgb, ${t.color ?? "#5b6ff5"} 18%, white)`,
                         color: `color-mix(in srgb, ${t.color ?? "#5b6ff5"} 75%, black)`,
@@ -1180,6 +1322,7 @@ export default function KanbanV2ClientPage({
         onOpenChange={(o) => {
           if (!o) setPendingLostMove(null);
         }}
+        pipelineId={pipelineId}
         // NÃO usar `moveDeal.isPending` aqui: é a mesma mutation usada na
         // reabertura do lead, então um move anterior ainda em voo deixava o
         // "Confirmar perda" desabilitado mesmo com o motivo já selecionado.
@@ -1223,13 +1366,15 @@ export default function KanbanV2ClientPage({
 function StageDropdown({
   stages,
   currentStageId,
+  currentPipelineId,
   isPending,
   onSelect,
 }: {
   stages: BoardStageDto[];
   currentStageId: string | null;
+  currentPipelineId: string | null;
   isPending: boolean;
-  onSelect: (stageId: string) => void;
+  onSelect: (stageId: string, toPipelineId?: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -1300,39 +1445,16 @@ function StageDropdown({
             style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width }}
             className="z-(--z-popover) overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
           >
-            {[...stages]
-              .sort((a, b) => a.position - b.position)
-              .map((s) => {
-                const isActive = s.id === currentStageId;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => {
-                      onSelect(s.id);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 px-3.5 py-2 text-left font-display text-[13px] font-semibold transition-colors",
-                      isActive
-                        ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                        : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
-                    )}
-                  >
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: s.color ?? "var(--brand-primary)" }}
-                    />
-                    <span className="min-w-0 flex-1 whitespace-nowrap">{s.name}</span>
-                    {isActive && (
-                      <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-                        Atual
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+            <MoveToStageMenu
+              stages={stages}
+              currentStageId={currentStageId}
+              currentPipelineId={currentPipelineId}
+              isPending={isPending}
+              onSelect={(stageId, toPipeId) => {
+                onSelect(stageId, toPipeId);
+                setOpen(false);
+              }}
+            />
           </div>,
           document.body,
         )}
@@ -1373,7 +1495,12 @@ function CardMoveMenu({
   pipelineId: string | null;
   statusFilter: StatusFilter;
   stages: BoardStageDto[];
-  onRequestMove?: (vars: { dealId: string; fromStageId: string; toStageId: string }) => void;
+  onRequestMove?: (vars: {
+    dealId: string;
+    fromStageId: string;
+    toStageId: string;
+    toPipelineId?: string | null;
+  }) => void;
 }) {
   return (
     <StagePicker
@@ -1387,6 +1514,7 @@ function CardMoveMenu({
         <CardMoveDropdown
           stages={stages}
           currentStageId={currentStageId}
+          currentPipelineId={pipelineId}
           isPending={isPending}
           onSelect={onSelectStage}
         />
@@ -1398,13 +1526,15 @@ function CardMoveMenu({
 function CardMoveDropdown({
   stages,
   currentStageId,
+  currentPipelineId,
   isPending,
   onSelect,
 }: {
   stages: BoardStageDto[];
   currentStageId: string;
+  currentPipelineId: string | null;
   isPending: boolean;
-  onSelect: (stageId: string) => void;
+  onSelect: (stageId: string, toPipelineId?: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
@@ -1447,44 +1577,23 @@ function CardMoveDropdown({
             transform: "translate(-100%, -100%)",
             marginBottom: "6px",
           }}
-          className="max-h-[260px] min-w-[200px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)]"
+          className="max-h-[320px] min-w-[220px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)]"
         >
-          <div className="px-3 py-1.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-            Mover para
-          </div>
-          {[...stages]
-            .sort((a, b) => a.position - b.position)
-            .map((s) => {
-              const isActive = s.id === currentStageId;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={isPending || isActive}
-                  onClick={() => {
-                    onSelect(s.id);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left font-display text-[12px] font-semibold transition-colors",
-                    isActive
-                      ? "cursor-default bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                      : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
-                  )}
-                >
-                  <span
-                    className="h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ background: s.color ?? "var(--brand-primary)" }}
-                  />
-                  <span className="min-w-0 flex-1 truncate">{s.name}</span>
-                  {isActive && (
-                    <span className="shrink-0 font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-                      Atual
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          <MoveToStageMenu
+            stages={stages}
+            currentStageId={currentStageId}
+            currentPipelineId={currentPipelineId}
+            isPending={isPending}
+            header={
+              <div className="px-3 py-1.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                Mover para
+              </div>
+            }
+            onSelect={(stageId, toPipeId) => {
+              onSelect(stageId, toPipeId);
+              setOpen(false);
+            }}
+          />
         </div>,
         document.body,
       )
@@ -1538,7 +1647,12 @@ function DroppableColumn({
   selectionMode: boolean;
   onToggleSelect: (id: string) => void;
   onToggleSelectAllInColumn: (ids: string[]) => void;
-  onRequestMove?: (vars: { dealId: string; fromStageId: string; toStageId: string }) => void;
+  onRequestMove?: (vars: {
+    dealId: string;
+    fromStageId: string;
+    toStageId: string;
+    toPipelineId?: string | null;
+  }) => void;
 }) {
   // Estado de seleção em massa restrito aos deals JÁ CARREGADOS desta
   // coluna. Replica o comportamento do kanban antigo.
@@ -1677,23 +1791,19 @@ function DroppableColumn({
                           statusFilter={statusFilter}
                           trigger={
                             raw?.owner?.name ? (
-                              // Owner: mini-avatar colorido (paleta av-* por hash do
-                              // nome) + nome. Devolve identidade que o antigo Chip
-                              // monocromático indigo tinha suprimido; o círculo
-                              // colorido diferencia responsáveis "de relance".
+                              // Owner: AvatarGlass (pessoa interna) — sem badge de canal.
                               <span
                                 className="inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-px pl-px pr-2 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]"
                                 title={raw.owner.name}
                               >
-                                <span
-                                  className={cn(
-                                    `av-${deal.owner.avatarColor}`,
-                                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-full font-display text-[8px] font-bold text-white",
-                                  )}
-                                  aria-hidden
-                                >
-                                  {deal.owner.initials}
-                                </span>
+                                <AvatarGlass
+                                  name={raw.owner.name}
+                                  seed={raw.owner.id ?? raw.owner.name}
+                                  imageUrl={raw.owner.avatarUrl ?? null}
+                                  initials={deal.owner.initials}
+                                  size="sm"
+                                  className="!h-4 !w-4 !border !text-[8px]"
+                                />
                                 <span className="min-w-0 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
                                   {raw.owner.name}
                                 </span>
@@ -1786,21 +1896,10 @@ function avatarColorSlugFromName(name: string | null | undefined): string {
 
 // ─── PipelineKebabMenu ─────────────────────────────────────���──────
 
-const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
-  { key: "default",             label: "Padrão (posição)",            icon: <IconArrowsSort size={13} /> },
-  { key: "interaction_newest",  label: "Última interação: mais recente", icon: <IconArrowNarrowDown size={13} /> },
-  { key: "interaction_oldest",  label: "Última interação: mais antiga",  icon: <IconArrowNarrowUp size={13} /> },
-  { key: "name_az",             label: "Nome: A → Z",                 icon: <IconAbc size={13} /> },
-  { key: "name_za",             label: "Nome: Z → A",                 icon: <IconAbc size={13} /> },
-  { key: "created_newest",      label: "Criação: mais recente",       icon: <IconClock size={13} /> },
-  { key: "created_oldest",      label: "Criação: mais antigo",        icon: <IconClock size={13} /> },
-];
-
 interface PipelineKebabMenuProps {
   open: boolean;
   anchorRef: React.RefObject<HTMLButtonElement | null>;
-  sortKey: SortKey;
-  onSortChange: (k: SortKey) => void;
+  onNewDeal?: () => void;
   onImport: () => void;
   onExport: () => void;
   onChannels: () => void;
@@ -1813,8 +1912,7 @@ interface PipelineKebabMenuProps {
 function PipelineKebabMenu({
   open,
   anchorRef,
-  sortKey,
-  onSortChange,
+  onNewDeal,
   onImport,
   onExport,
   onChannels,
@@ -1826,6 +1924,19 @@ function PipelineKebabMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
+  // O `menuSlot` do PageHeader é montado em dois blocos (desktop/mobile),
+  // então o ref anexado ao botão pode terminar apontando pra cópia oculta.
+  // `resolveAnchor` procura, em tempo real, o botão visível pelo data-attr.
+  const resolveAnchor = useCallback((): HTMLElement | null => {
+    const nodes = document.querySelectorAll<HTMLElement>(
+      "[data-pipeline-kebab-trigger]",
+    );
+    for (const el of Array.from(nodes)) {
+      if (el.offsetParent !== null) return el;
+    }
+    return anchorRef.current;
+  }, [anchorRef]);
+
   // useLayoutEffect: mede o anchor antes do paint para não piscar em (0,0).
   useLayoutEffect(() => {
     if (!open) {
@@ -1833,7 +1944,8 @@ function PipelineKebabMenu({
       return;
     }
     function updateRect() {
-      if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect());
+      const el = resolveAnchor();
+      if (el) setRect(el.getBoundingClientRect());
     }
     updateRect();
     window.addEventListener("scroll", updateRect, true);
@@ -1842,25 +1954,26 @@ function PipelineKebabMenu({
       window.removeEventListener("scroll", updateRect, true);
       window.removeEventListener("resize", updateRect);
     };
-  }, [open, anchorRef]);
+  }, [open, resolveAnchor]);
 
   useEffect(() => {
     if (!open) return;
     const fn = (e: MouseEvent) => {
       const t = e.target as Node;
       if (!document.contains(t)) return;
+      const anchor = resolveAnchor();
       if (
         menuRef.current &&
         !menuRef.current.contains(t) &&
-        anchorRef.current &&
-        !anchorRef.current.contains(t)
+        anchor &&
+        !anchor.contains(t)
       ) {
         onClose();
       }
     };
     document.addEventListener("mousedown", fn, true);
     return () => document.removeEventListener("mousedown", fn, true);
-  }, [open, onClose, anchorRef]);
+  }, [open, onClose, resolveAnchor]);
 
   if (!open || !rect) return null;
 
@@ -1885,35 +1998,19 @@ function PipelineKebabMenu({
       style={{ top, left, maxHeight }}
       className="scrollbar-thin fixed z-[60] w-52 overflow-y-auto overscroll-contain rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[0_8px_28px_rgba(15,23,42,0.13)] [-webkit-overflow-scrolling:touch] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
     >
-      {/* Seção: ordenar */}
-      <div className="px-3 pb-1 pt-2.5">
-        <p className="font-display text-[9.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
-          Ordenar cards
-        </p>
-      </div>
-      {SORT_OPTIONS.map((opt) => (
-        <button
-          key={opt.key}
-          type="button"
-          onClick={() => onSortChange(opt.key)}
-          className={cn(
-            "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold transition-colors",
-            sortKey === opt.key
-              ? "bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
-              : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
-          )}
-        >
-          <span className={cn("shrink-0", sortKey === opt.key && "text-[var(--brand-primary)]")}>
-            {opt.icon}
-          </span>
-          {opt.label}
-          {sortKey === opt.key && (
-            <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-primary)]" />
-          )}
-        </button>
-      ))}
-
-      <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
+      {onNewDeal && (
+        <>
+          <button
+            type="button"
+            onClick={onNewDeal}
+            className="flex w-full items-center gap-2.5 px-3 pb-2 pt-3 text-left font-display text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/8"
+          >
+            <IconPlus size={14} stroke={2.6} className="shrink-0" />
+            Adicionar negócio
+          </button>
+          <div className="mx-3 my-1 h-px bg-[var(--glass-border-subtle)]" />
+        </>
+      )}
 
       {/* Seção: seleção */}
       <button
@@ -1923,7 +2020,7 @@ function PipelineKebabMenu({
           "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold transition-colors",
           selectionMode
             ? "bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
-            : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+            : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
         )}
       >
         <IconCheckbox size={13} className="shrink-0" />
@@ -1942,7 +2039,7 @@ function PipelineKebabMenu({
         <button
           type="button"
           onClick={onImport}
-          className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
         >
           <IconUpload size={13} className="shrink-0" />
           Importar CSV
@@ -1952,7 +2049,7 @@ function PipelineKebabMenu({
         <button
           type="button"
           onClick={onExport}
-          className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
         >
           <IconDownload size={13} className="shrink-0" />
           Exportar CSV
@@ -1965,7 +2062,7 @@ function PipelineKebabMenu({
       <button
         type="button"
         onClick={onChannels}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
       >
         <IconAntenna size={13} className="shrink-0" />
         Canais do funil
@@ -1973,7 +2070,7 @@ function PipelineKebabMenu({
       <button
         type="button"
         onClick={onSettings}
-        className="flex w-full items-center gap-2.5 px-3 py-2 pb-3 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+        className="flex w-full items-center gap-2.5 px-3 py-2 pb-3 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
       >
         <IconSettings size={13} className="shrink-0" />
         Configurar pipeline

@@ -25,6 +25,7 @@ import {
 import { getContact } from "@/features/inbox-v2/api/misc";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
+import { ActiveBotsButton } from "./active-bots-button";
 import { AudioRecorderButton, type AudioRecordState } from "./audio-recorder-button";
 import { ChannelSelector } from "./channel-selector";
 import { ComposerMenu } from "./composer-menu";
@@ -72,6 +73,8 @@ export function Composer({
   onSelectChannel,
   replyTo,
   onCancelReply,
+  departmentId,
+  requireTabulationOnClose,
 }: {
   conversationId: string | null;
   value: string;
@@ -121,6 +124,10 @@ export function Composer({
   } | null;
   /** Handler do X para cancelar a resposta. */
   onCancelReply?: () => void;
+  /** Departamento da conversa — propagado ao ComposerMenu para abrir
+   *  modal de tabulacao ao encerrar quando o dept exige. */
+  departmentId?: string | null;
+  requireTabulationOnClose?: boolean;
 }) {
   const [noteMode, setNoteMode] = useState(false);
   const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
@@ -342,7 +349,7 @@ export function Composer({
   }
 
   return (
-    <div ref={rootRef} className="relative mx-5.5 mb-5.5">
+    <div ref={rootRef} className="relative mx-5.5 mb-5.5 max-md:mx-3 max-md:mb-2">
       {/* Painel de validação do template do WhatsApp — flutua acima do composer */}
       {pendingTemplate && conversationId ? (
         <TemplateComposePanel
@@ -550,7 +557,7 @@ export function Composer({
 
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4.5 py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)]"
+        className="flex min-h-11 items-center gap-2 rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4.5 py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)]"
       >
         {/* Controles padrão — ocultos durante gravação de áudio */}
         {!isAudioActive && (
@@ -565,6 +572,8 @@ export function Composer({
               templateContext={templateContext}
               onPickInternal={insertTemplateText}
               onPickTemplate={(tpl) => setPendingTemplate(whatsappTemplateToPending(tpl))}
+              departmentId={departmentId ?? null}
+              requireTabulationOnClose={requireTabulationOnClose}
             />
             <ButtonGlass
               type="button"
@@ -595,7 +604,9 @@ export function Composer({
               placeholder={
                 noteMode
                   ? "Nota interna (não enviada ao cliente)..."
-                  : placeholder ?? "Escreva uma mensagem ou / para modelos..."
+                  : inputDisabled
+                    ? "Sessão encerrada — use um template ou Nota interna"
+                    : placeholder ?? "Escreva uma mensagem ou / para modelos..."
               }
               disabled={inputDisabled || sending}
               className="w-full resize-none overflow-hidden border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
@@ -611,6 +622,11 @@ export function Composer({
             className="h-9 w-9 shrink-0"
             onStateChange={setAudioRecState}
           />
+        )}
+
+        {/* Automações em execução — botão ao lado do enviar (inbox e deal). */}
+        {!isAudioActive && contactId && (
+          <ActiveBotsButton inline contactId={contactId} />
         )}
 
         {/* Botão enviar — oculto durante gravação (AudioRecorderButton tem o seu próprio) */}

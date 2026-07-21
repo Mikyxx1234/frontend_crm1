@@ -24,6 +24,7 @@ import { TemplatePickerList, InternalTemplatePickerList } from "./template-picke
 import { ScheduleDialog } from "./schedule-dialog";
 import { TaskDialog } from "./task-dialog";
 import { AutomationPickerList } from "./automation-picker-list";
+import { TabulationDialog } from "./tabulation-dialog";
 
 /**
  * Menu unificado "+" do composer (estilo WhatsApp). Reúne as ações
@@ -46,6 +47,8 @@ export function ComposerMenu({
   onPickInternal,
   onPickTemplate,
   onReopenNewConversation,
+  departmentId,
+  requireTabulationOnClose,
 }: {
   conversationId: string | null;
   className?: string;
@@ -61,11 +64,15 @@ export function ComposerMenu({
   /** Callback quando "Reabrir" cria novo ticket (modelo de ticket). Ver
    *  ConversationActionsMenu e useToggleConversationResolve. */
   onReopenNewConversation?: (newConversationId: string) => void;
+  /** Departamento vinculado — abre modal de tabulacao quando encerrar. */
+  departmentId?: string | null;
+  requireTabulationOnClose?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"root" | "template" | "internal" | "automation">("root");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
+  const [tabulationOpen, setTabulationOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const toggleResolve = useToggleConversationResolve({
     onNewConversation: (newId) => {
@@ -101,9 +108,22 @@ export function ComposerMenu({
 
   function handleToggleResolve() {
     if (!conversationId) return;
+    if (!isResolved && requireTabulationOnClose && departmentId) {
+      closeMenu();
+      setTabulationOpen(true);
+      return;
+    }
     toggleResolve.mutate(
       { conversationId, action: isResolved ? "reopen" : "resolve" },
       { onSuccess: closeMenu },
+    );
+  }
+
+  function handleConfirmTabulation(tabulationId: string) {
+    if (!conversationId) return;
+    toggleResolve.mutate(
+      { conversationId, action: "resolve", tabulationId },
+      { onSuccess: () => setTabulationOpen(false) },
     );
   }
 
@@ -250,6 +270,13 @@ export function ComposerMenu({
         onClose={() => setTaskOpen(false)}
         conversationId={conversationId}
         contactId={contactId}
+      />
+      <TabulationDialog
+        open={tabulationOpen}
+        onOpenChange={setTabulationOpen}
+        departmentId={departmentId ?? null}
+        submitting={toggleResolve.isPending}
+        onConfirm={handleConfirmTabulation}
       />
     </div>
   );

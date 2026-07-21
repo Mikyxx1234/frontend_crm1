@@ -8,13 +8,7 @@ import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { SwitchGlass } from "@/components/crm/switch-glass";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { connectEmailAccount, testEmailConnection } from "../api/accounts";
 import type { ConnectEmailInput, EmailEncryption, EmailVisibility } from "../api/types";
 
@@ -85,56 +79,64 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!loading) { if (!o) resetAndClose(); else onOpenChange(true); } }}>
-      <DialogContent className="max-w-lg">
-        {step === "email" ? (
+  if (step === "email") {
+    return (
+      <FormSheet
+        open={open}
+        onOpenChange={(o) => { if (!o) resetAndClose(); else onOpenChange(true); }}
+        busy={loading}
+        icon={<IconMail size={20} />}
+        title="Conecte seu endereço de e-mail"
+        description="Conecte uma conta de e-mail para enviar, receber e vincular mensagens automaticamente aos seus contatos no CRM."
+        footer={
           <>
-            <DialogHeader>
-              <div className="flex items-center gap-2 mb-1">
-                <IconMail size={20} className="text-[var(--text-secondary)]" />
-                <DialogTitle>Conecte seu endereço de e-mail</DialogTitle>
-              </div>
-              <p className="text-sm text-[var(--text-muted)] mt-1">
-                Conecte uma conta de e-mail para enviar, receber e vincular mensagens
-                automaticamente aos seus contatos no CRM.
-              </p>
-            </DialogHeader>
-
-            <div className="space-y-3 py-2">
-              <div>
-                <Label htmlFor="email-input">Endereço de e-mail</Label>
-                <InputGlass
-                  id="email-input"
-                  type="email"
-                  placeholder="voce@empresa.com"
-                  value={form.email}
-                  onChange={(e) => setField("email", e.target.value)}
-                  className="mt-1"
-                  autoFocus
-                />
-                {errors.email && (
-                  <p className="text-xs text-destructive mt-1">{errors.email}</p>
-                )}
-              </div>
-            </div>
-
-            <DialogFooter>
-              <ButtonGlass variant="glass" onClick={resetAndClose}>Cancelar</ButtonGlass>
-              <ButtonGlass variant="primary" onClick={handleStep1Continue}>Continuar</ButtonGlass>
-            </DialogFooter>
+            <ButtonGlass variant="glass" onClick={resetAndClose}>Cancelar</ButtonGlass>
+            <ButtonGlass variant="primary" onClick={handleStep1Continue}>Continuar</ButtonGlass>
           </>
-        ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle className="text-base">{form.email}</DialogTitle>
-              <p className="text-sm text-[var(--text-muted)] mt-1">
-                Mensagens enviadas desse endereço serão vinculadas automaticamente
-                ao contato correspondente no CRM.
-              </p>
-            </DialogHeader>
+        }
+      >
+        <div>
+          <Label htmlFor="email-input">Endereço de e-mail</Label>
+          <InputGlass
+            id="email-input"
+            type="email"
+            placeholder="voce@empresa.com"
+            value={form.email}
+            onChange={(e) => setField("email", e.target.value)}
+            className="mt-1"
+            autoFocus
+          />
+          {errors.email && (
+            <p className="text-xs text-destructive mt-1">{errors.email}</p>
+          )}
+        </div>
+      </FormSheet>
+    );
+  }
 
-            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={(o) => { if (!o) resetAndClose(); else onOpenChange(true); }}
+      busy={loading}
+      title={form.email}
+      description="Mensagens enviadas desse endereço serão vinculadas automaticamente ao contato correspondente no CRM."
+      footer={
+        <>
+          <ButtonGlass variant="glass" onClick={() => setStep("email")}>Voltar</ButtonGlass>
+          <ButtonGlass variant="primary" onClick={handleConnect} disabled={loading}>
+            {loading ? (
+              <><IconLoader2 size={14} className="animate-spin mr-1" /> Conectando…</>
+            ) : (
+              <><IconCheck size={14} className="mr-1" /> Conectar</>
+            )}
+          </ButtonGlass>
+        </>
+      }
+    >
+      <>
+        {/* Wrapper para preservar o mesmo espacamento interno original */}
+        <div className="flex flex-col gap-4">
               {/* Senha */}
               <FieldRow label="Senha do e-mail" error={errors.password}>
                 <InputGlass
@@ -255,22 +257,9 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
                   </span>
                 </label>
               </div>
-            </div>
-
-            <DialogFooter>
-              <ButtonGlass variant="glass" onClick={() => setStep("email")}>Voltar</ButtonGlass>
-              <ButtonGlass variant="primary" onClick={handleConnect} disabled={loading}>
-                {loading ? (
-                  <><IconLoader2 size={14} className="animate-spin mr-1" /> Conectando…</>
-                ) : (
-                  <><IconCheck size={14} className="mr-1" /> Conectar</>
-                )}
-              </ButtonGlass>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+        </div>
+      </>
+    </FormSheet>
   );
 }
 

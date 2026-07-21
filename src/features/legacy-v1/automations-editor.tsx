@@ -10,7 +10,6 @@ import {
   IconPencil as Pencil,
   IconDeviceFloppy as Save,
   IconAdjustments as Settings2,
-  IconSparkles as Sparkles,
   IconTrash as Trash2,
   IconCheck,
   IconAlertTriangle,
@@ -35,17 +34,11 @@ const WorkflowCanvas = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center bg-[var(--color-primary-soft)]">
+      <div className="flex h-full w-full items-center justify-center bg-[var(--bg-base)]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     ),
   },
-);
-// Pesado (depende de react-query + fetches) e irrelevante no load
-// inicial — carregar só quando o operador abrir o painel.
-const CopilotPanel = dynamic(
-  () => import("@/components/automations/copilot-panel").then((m) => m.CopilotPanel),
-  { ssr: false },
 );
 import {
   TriggerConfigFields,
@@ -62,6 +55,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -716,7 +710,6 @@ export default function AutomationDetailPage() {
   const [configOpen, setConfigOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
   const [stepLogsId, setStepLogsId] = useState<string | null>(null);
-  const [copilotOpen, setCopilotOpen] = useState(false);
   const [inspectRow, setInspectRow] = useState<LogRow | null>(null);
   // 27/mai/26 — Contador pra trigger `fitView` no canvas após o
   // auto-alinhar. Incrementa a cada click; canvas observa via
@@ -955,12 +948,9 @@ export default function AutomationDetailPage() {
   }
 
   return (
-    <div className="-m-6 flex h-[calc(100dvh-0px)] flex-col overflow-hidden md:-m-8">
-      {/* ═══ Top bar premium ═══
-          glassmorphism + pill buttons + glow no Salvar — alinhado ao
-          design system EduIT Premium. ActiveSwitch local mantido pra
-          não desalinhar com os outros usos no Config dialog. */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border/60 bg-[var(--glass-bg-overlay)] px-4 py-2.5 shadow-[0_1px_0_rgba(13,27,62,0.04)] backdrop-blur-xl">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+      {/* ═══ Top bar — glass (padrão PageHeader / builder-topbar v2) ═══ */}
+      <div className="flex shrink-0 items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
         {/* Breadcrumb */}
         <Link
           href={listHref}
@@ -1025,34 +1015,13 @@ export default function AutomationDetailPage() {
             </button>
           </TooltipHost>
 
-          <TooltipHost
-            label={copilotOpen ? "Fechar Copilot" : "Copilot IA (auditoria + sugestões)"}
-            side="bottom"
-          >
-            <button
-              type="button"
-              onClick={() => setCopilotOpen((o) => !o)}
-              aria-label="Copilot"
-              aria-pressed={copilotOpen}
-              className={cn(
-                "flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12px] font-bold tracking-tight transition-all",
-                copilotOpen
-                  ? "bg-primary text-white shadow-[var(--shadow-indigo-glow)] hover:-translate-y-px"
-                  : "border border-border bg-[var(--color-bg-card)] text-foreground hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm",
-              )}
-            >
-              <Sparkles className="size-3.5" strokeWidth={2.4} />
-              Copilot
-            </button>
-          </TooltipHost>
-
           <TooltipHost label="Auto alinhar fluxo" side="bottom">
             <button
               type="button"
               onClick={handleAutoAlign}
-              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm"
             >
-              <Sparkles className="size-3.5" strokeWidth={2.4} />
+              <IconSitemap className="size-3.5" strokeWidth={2.4} />
               Auto alinhar
             </button>
           </TooltipHost>
@@ -1108,9 +1077,9 @@ export default function AutomationDetailPage() {
         </div>
       )}
 
-      {/* ═══ Canvas + Copilot lateral ═══ */}
-      <div className="flex min-h-0 flex-1">
-        <div className="min-w-0 flex-1">
+      {/* ═══ Canvas ═══ */}
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]">
+        <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
           {hydrated ? (
             <WorkflowCanvas
               steps={steps}
@@ -1131,19 +1100,6 @@ export default function AutomationDetailPage() {
             <Skeleton className="h-full w-full" />
           )}
         </div>
-        {copilotOpen && hydrated && (
-          <CopilotPanel
-            automationId={id}
-            automationName={name}
-            description={description}
-            triggerType={triggerType}
-            triggerConfig={triggerConfig}
-            active={active}
-            steps={steps}
-            onStepsChange={handleStepsChange}
-            onClose={() => setCopilotOpen(false)}
-          />
-        )}
       </div>
 
       {/* ═══ Config dialog ═══ */}
@@ -1325,35 +1281,24 @@ export default function AutomationDetailPage() {
       <LogInspectModal row={inspectRow} onClose={() => setInspectRow(null)} />
 
       {/* ═══ Name edit ═══ */}
-      <Dialog open={nameDialogOpen} onOpenChange={setNameDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar nome</DialogTitle>
-            <DialogDescription>
-              Altere o nome desta automação.
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveName();
-            }}
-          />
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setNameDialogOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="button" onClick={saveName} disabled={!nameDraft.trim()}>
-              OK
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormSheet
+        open={nameDialogOpen}
+        onOpenChange={setNameDialogOpen}
+        title="Editar nome"
+        description="Altere o nome desta automação."
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setNameDialogOpen(false)}>Cancelar</Button>
+            <Button type="button" onClick={saveName} disabled={!nameDraft.trim()}>OK</Button>
+          </>
+        }
+      >
+        <Input
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") saveName(); }}
+        />
+      </FormSheet>
 
       {/* ═══ Delete confirm ═══ */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

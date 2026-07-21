@@ -5,12 +5,17 @@ import { IconClock as Timer, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { NodeInlineConfig } from "./node-inline-config";
 
 export type DelayNodeData = {
   label: string;
   summary: string;
   stepIndex?: number;
   onDelete?: () => void;
+  stepType?: string;
+  config?: Record<string, unknown>;
+  stepOptions?: Array<{ value: string; label: string }>;
+  onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
 /**
@@ -22,7 +27,8 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[210px] max-w-[270px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        selected ? "min-w-[340px] max-w-[400px]" : "min-w-[210px] max-w-[270px]",
         selected
           ? "border-orange-400/60 ring-2 ring-orange-300/30 shadow-[0_10px_30px_-10px_rgba(249,115,22,0.4)]"
           : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-orange-300/50 hover:shadow-[0_10px_30px_-10px_rgba(249,115,22,0.3)]"
@@ -38,7 +44,7 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
         position={Position.Left}
         className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
-      <div className="flex items-start gap-3 px-3.5 py-3">
+      <div className="node-drag-handle flex cursor-grab items-start gap-3 px-3.5 py-3 active:cursor-grabbing">
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-warn-subtle)] text-[var(--color-warn-text)] ring-1 ring-[var(--color-warn-subtle)]">
           <Timer className="size-4" strokeWidth={2.4} aria-hidden />
         </span>
@@ -66,6 +72,13 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
           </TooltipHost>
         )}
       </div>
+      <NodeInlineConfig
+        selected={selected}
+        stepType={data.stepType ?? "delay"}
+        config={data.config}
+        stepOptions={data.stepOptions ?? []}
+        onChange={(next) => data.onConfigChange?.(next)}
+      />
       <Handle
         type="source"
         position={Position.Right}

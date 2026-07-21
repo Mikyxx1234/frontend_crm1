@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { InputGlass } from "@/components/crm/input-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { Label } from "@/components/ui/label";
@@ -274,30 +275,37 @@ export default function DistributionSettingsPage() {
         </div>
       )}
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent size="md">
-          <DialogClose />
-          <DialogHeader>
-            <DialogTitle>Nova regra de distribuição</DialogTitle>
-            <DialogDescription>
-              Escolha o modo, opcionalmente limite a um pipeline e selecione os membros da equipe.
-            </DialogDescription>
-          </DialogHeader>
-
-          {dialogLoading ? (
-            <div className="space-y-3 py-4">
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-          ) : (
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (canSubmitCreate) createMutation.mutate();
-              }}
-            >
+      <FormSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        busy={createMutation.isPending}
+        title="Nova regra de distribuição"
+        description="Escolha o modo, opcionalmente limite a um pipeline e selecione os membros da equipe."
+        footer={
+          <>
+            <ButtonGlass type="button" variant="glass" onClick={() => setCreateOpen(false)}>Cancelar</ButtonGlass>
+            <ButtonGlass type="submit" form="new-dist-form" variant="primary" disabled={!canSubmitCreate} className="gap-2">
+              {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+              Criar
+            </ButtonGlass>
+          </>
+        }
+      >
+        {dialogLoading ? (
+          <div className="space-y-3 py-4">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : (
+          <form
+            id="new-dist-form"
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (canSubmitCreate) createMutation.mutate();
+            }}
+          >
               <div className="space-y-2">
                 <Label htmlFor="dist-name">Nome</Label>
                 <InputGlass
@@ -365,21 +373,9 @@ export default function DistributionSettingsPage() {
                     : "Erro ao criar."}
                 </p>
               ) : null}
-              <DialogFooter className="gap-2">
-                <ButtonGlass type="button" variant="glass" onClick={() => setCreateOpen(false)}>
-                  Cancelar
-                </ButtonGlass>
-                <ButtonGlass type="submit" variant="primary" disabled={!canSubmitCreate} className="gap-2">
-                  {createMutation.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : null}
-                  Criar
-                </ButtonGlass>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+          </form>
+        )}
+      </FormSheet>
     </div>
   );
 }

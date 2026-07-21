@@ -15,10 +15,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useEmbeddedSignup } from "@/hooks/use-embedded-signup";
+import { useFacebookLogin } from "@/hooks/use-facebook-login";
 
 type Step = 1 | 2 | 3;
 
@@ -114,8 +116,15 @@ export function CreateChannelDialog({
   // assinatura x-hub-signature-256 dos POSTs recebidos). Coletado no modal
   // Webhook porque o fluxo manual usa o App Meta proprio do cliente.
   const [appSecret, setAppSecret] = useState("");
+  // Estado do fluxo Facebook Login (Messenger / Instagram): armazena o
+  // code OAuth, a lista de Paginas devolvida pelo backend e a Pagina
+  // selecionada pelo usuario antes de confirmar o provisionamento.
+  const [fbLoginCode, setFbLoginCode] = useState<string | null>(null);
+  const [fbPages, setFbPages] = useState<{ id: string; name: string }[]>([]);
+  const [fbSelectedPageId, setFbSelectedPageId] = useState<string>("");
 
   const embeddedSignup = useEmbeddedSignup();
+  const facebookLogin = useFacebookLogin();
 
   function reset() {
     setStep(1);
@@ -134,7 +143,11 @@ export function CreateChannelDialog({
     setWebhookModalOpen(false);
     setCopiedField(null);
     setAppSecret("");
+    setFbLoginCode(null);
+    setFbPages([]);
+    setFbSelectedPageId("");
     embeddedSignup.reset();
+    facebookLogin.reset();
   }
 
   async function fetchWebhookInfo() {
@@ -230,6 +243,114 @@ export function CreateChannelDialog({
       handleOpenChange(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Erro no Embedded Signup.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleMessagingLogin() {
+    if (channelType !== "FACEBOOK") return;
+    const platform = "messenger" as const;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const { code } = await facebookLogin.launchLogin();
+      // Primeiro POST: sem pageId -> backend devolve lista de Paginas.
+      const res = await fetch(apiUrl("/api/channels/meta-messaging/connect"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, platform }),
+      });
+      const data = (await res.json()) as {
+        needsPageSelection?: boolean;
+        pages?: { id: string; name: string }[];
+        message?: string;
+      };
+      if (!res.ok) {
+        throw new Error(data.message ?? "Falha ao conectar com o Facebook.");
+      }
+      const pages = data.pages ?? [];
+      if (pages.length === 0) {
+        throw new Error(
+          "Nenhuma Pagina do Facebook encontrada na sua conta (verifique permissoes).",
+        );
+      }
+      setFbLoginCode(code);
+      setFbPages(pages);
+      setFbSelectedPageId(pages[0]?.id ?? "");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Falha no login do Facebook.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleInstagramLogin() {
+    // Instagram Login direto: OAuth por REDIRECT em instagram.com,
+    // nao via FB SDK. Abrimos popup apontando pra rota /oauth/start
+    // do backend, que redireciona (302) pro instagram.com/oauth/authorize.
+    setError(null);
+    const popup = window.open(
+      apiUrl("/api/channels/instagram/oauth/start"),
+      "ig-oauth",
+      "popup=1,width=560,height=720",
+    );
+    if (!popup) {
+      setError("Popup bloqueado pelo navegador. Libere popups e tente novamente.");
+      return;
+    }
+    const listener = (event: MessageEvent) => {
+      const raw = typeof event.data === "string" ? event.data : "";
+      if (!raw) return;
+      let msg: { type?: string; ok?: boolean; channelId?: string; username?: string };
+      try {
+        // A callback route serializa `{type, ok, ...}` DUAS vezes (postMessage
+        // recebe uma string JSON contendo o payload). Fazemos parse duplo
+        // defensivo.
+        const first = JSON.parse(raw) as unknown;
+        msg = typeof first === "string" ? (JSON.parse(first) as typeof msg) : (first as typeof msg);
+      } catch {
+        return;
+      }
+      if (msg?.type !== "IG_OAUTH_DONE") return;
+      window.removeEventListener("message", listener);
+      if (msg.ok) {
+        onCreated?.();
+        handleOpenChange(false);
+      } else {
+        setError("Falha ao conectar Instagram. Tente novamente.");
+      }
+    };
+    window.addEventListener("message", listener);
+  }
+
+  async function submitMessagingConnect() {
+    if (!fbLoginCode || !fbSelectedPageId) {
+      setError("Selecione uma Pagina para conectar.");
+      return;
+    }
+    const platform = channelType === "INSTAGRAM" ? "instagram" : "messenger";
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch(apiUrl("/api/channels/meta-messaging/connect"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: fbLoginCode,
+          platform,
+          pageId: fbSelectedPageId,
+          name: name.trim() || undefined,
+        }),
+      });
+      const data = (await res.json()) as { message?: string };
+      if (!res.ok) {
+        throw new Error(data.message ?? "Erro ao conectar canal.");
+      }
+      onCreated?.();
+      handleOpenChange(false);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erro ao conectar canal.");
     } finally {
       setSubmitting(false);
     }
@@ -331,27 +452,95 @@ export function CreateChannelDialog({
   const showEmbeddedSignup =
     effectiveProvider === "META_CLOUD_API" && embeddedSignup.isConfigured;
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        size="lg"
-        panelClassName="max-h-[90vh]"
-        className="p-0"
-      >
-        <div className="p-6">
-          <DialogHeader className="text-left">
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="size-5 text-[var(--brand-primary)]" />
-              Novo canal
-            </DialogTitle>
-            <DialogDescription>
-              {step === 1 && "Escolha o tipo de canal."}
-              {step === 2 && channelType === "WHATSAPP" && "Configure o provedor."}
-              {step === 3 && "Finalize a configuração."}
-            </DialogDescription>
-          </DialogHeader>
+  const sheetFooter = (
+    <div className="flex w-full flex-wrap items-center gap-2">
+      {step > 1 ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-1"
+          onClick={() => {
+            if (step === 3) {
+              if (channelType === "WHATSAPP") setStep(2);
+              else setStep(1);
+            } else if (step === 2) {
+              setStep(1);
+            }
+          }}
+        >
+          <ChevronLeft className="size-4" />
+          Voltar
+        </Button>
+      ) : null}
+      <div className="flex flex-1 flex-wrap justify-end gap-2">
+        {step === 3 &&
+        effectiveProvider === "META_CLOUD_API" &&
+        channelType === "WHATSAPP" ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-1.5"
+            disabled={webhookLoading}
+            onClick={() => void fetchWebhookInfo()}
+          >
+            {webhookLoading ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Webhook className="size-3.5" />
+            )}
+            Webhook
+          </Button>
+        ) : null}
+        <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
+          Cancelar
+        </Button>
+        {step < 3 ? (
+          <Button
+            type="button"
+            disabled={step === 1 ? !channelType : !canAdvanceFromStep2()}
+            onClick={() => {
+              if (step === 1 && channelType) {
+                if (channelType === "WHATSAPP") setStep(2);
+                else setStep(3);
+              } else if (step === 2) {
+                setStep(3);
+              }
+            }}
+          >
+            Continuar
+          </Button>
+        ) : (showEmbeddedSignup && !showManualConfig) ||
+          channelType === "FACEBOOK" ||
+          channelType === "INSTAGRAM" ? null : (
+          <Button type="button" onClick={() => void submit()} disabled={submitting}>
+            {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
+            Criar canal
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 
-          <div className="mt-6 space-y-6">
+  const stepDescription =
+    step === 1
+      ? "Escolha o tipo de canal."
+      : step === 2 && channelType === "WHATSAPP"
+        ? "Configure o provedor."
+        : "Finalize a configuração.";
+
+  return (
+    <>
+    <FormSheet
+      open={open}
+      onOpenChange={handleOpenChange}
+      busy={submitting}
+      size="lg"
+      icon={<Sparkles className="size-5 text-[var(--brand-primary)]" />}
+      title="Novo canal"
+      description={stepDescription}
+      footer={sheetFooter}
+    >
+        <div className="space-y-6">
             {step === 1 ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {TYPES.map(({ type, label, description, icon: Icon, cardClass }) => (
@@ -443,7 +632,108 @@ export function CreateChannelDialog({
                   />
                 </div>
 
-                {effectiveProvider === "META_CLOUD_API" ? (
+                {channelType === "INSTAGRAM" ? (
+                  <div className="space-y-3">
+                    <div className="rounded-xl border-2 border-[var(--color-brand-primary)]/20 bg-[var(--color-info)]/5 p-4">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        Conectar Instagram diretamente
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Login direto pela conta Instagram Business. Nao requer Pagina do Facebook.
+                      </p>
+                      <Button
+                        type="button"
+                        className="mt-3 w-full gap-2 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white"
+                        disabled={submitting}
+                        onClick={() => handleInstagramLogin()}
+                      >
+                        <svg className="size-4" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98C.014 8.333 0 8.741 0 12s.014 3.667.072 4.947c.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24s3.667-.014 4.947-.072c4.354-.2 6.782-2.618 6.979-6.98C23.986 15.667 24 15.259 24 12s-.014-3.667-.072-4.947c-.196-4.354-2.617-6.78-6.979-6.98C15.667.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+                        </svg>
+                        Entrar com Instagram
+                      </Button>
+                    </div>
+                  </div>
+                ) : channelType === "FACEBOOK" ? (
+                  <div className="space-y-3">
+                    <div className="rounded-xl border-2 border-[var(--color-brand-primary)]/20 bg-[var(--color-info)]/5 p-4">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        Conectar com Facebook
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Autorize o acesso as suas Paginas do Facebook. Voce escolhe qual Pagina conectar.
+                      </p>
+                      {fbPages.length === 0 ? (
+                        <Button
+                          type="button"
+                          className="mt-3 w-full gap-2 bg-[var(--channel-facebook)] text-white hover:bg-[var(--channel-facebook)]"
+                          disabled={submitting || !facebookLogin.sdkReady || !facebookLogin.isConfigured}
+                          onClick={() => void handleMessagingLogin()}
+                        >
+                          {submitting ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <svg
+                              className="size-4"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                            </svg>
+                          )}
+                          Entrar com Facebook
+                        </Button>
+                      ) : null}
+                      {!facebookLogin.isConfigured ? (
+                        <p className="mt-2 text-[11px] text-[var(--color-warn-text)]">
+                          App Meta nao configurado (NEXT_PUBLIC_META_APP_ID / MESSENGER_CONFIG_ID ausente).
+                        </p>
+                      ) : null}
+                    </div>
+
+                    {fbPages.length > 0 ? (
+                      <div className="space-y-2 rounded-lg border bg-[var(--glass-bg-overlay)] p-3">
+                        <Label>Escolha a Pagina do Facebook</Label>
+                        <div className="max-h-60 space-y-1 overflow-auto">
+                          {fbPages.map((p) => (
+                            <label
+                              key={p.id}
+                              className={cn(
+                                "flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm",
+                                fbSelectedPageId === p.id
+                                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/5"
+                                  : "border-transparent hover:bg-[var(--glass-bg-overlay)]",
+                              )}
+                            >
+                              <input
+                                type="radio"
+                                name="fb-page"
+                                value={p.id}
+                                checked={fbSelectedPageId === p.id}
+                                onChange={() => setFbSelectedPageId(p.id)}
+                              />
+                              <span className="flex-1">{p.name}</span>
+                              <span className="text-[10px] text-[var(--text-muted)]">
+                                {p.id}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          className="mt-2 w-full gap-2"
+                          disabled={submitting || !fbSelectedPageId}
+                          onClick={() => void submitMessagingConnect()}
+                        >
+                          {submitting ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : null}
+                          Conectar canal
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : effectiveProvider === "META_CLOUD_API" ? (
                   <>
                     {showEmbeddedSignup ? (
                       <div className="space-y-3">
@@ -600,87 +890,8 @@ export function CreateChannelDialog({
                 {error}
               </p>
             ) : null}
-          </div>
         </div>
-
-        <DialogFooter className="flex-row flex-wrap gap-2 border-t bg-[var(--glass-bg-overlay)] px-6 py-4">
-          {step > 1 ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="gap-1"
-              onClick={() => {
-                if (step === 3) {
-                  if (channelType === "WHATSAPP") setStep(2);
-                  else setStep(1);
-                } else if (step === 2) {
-                  setStep(1);
-                }
-              }}
-            >
-              <ChevronLeft className="size-4" />
-              Voltar
-            </Button>
-          ) : (
-            <span />
-          )}
-          <div className="flex flex-1 flex-wrap justify-end gap-2">
-            {step === 3 && effectiveProvider === "META_CLOUD_API" ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-1.5"
-                disabled={webhookLoading}
-                onClick={() => void fetchWebhookInfo()}
-              >
-                {webhookLoading ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Webhook className="size-3.5" />
-                )}
-                Webhook
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => handleOpenChange(false)}
-            >
-              Cancelar
-            </Button>
-            {step < 3 ? (
-              <Button
-                type="button"
-                disabled={
-                  step === 1
-                    ? !channelType
-                    : step === 2
-                      ? !canAdvanceFromStep2()
-                      : false
-                }
-                onClick={() => {
-                  if (step === 1 && channelType) {
-                    if (channelType === "WHATSAPP") setStep(2);
-                    else setStep(3);
-                  } else if (step === 2) {
-                    setStep(3);
-                  }
-                }}
-              >
-                Continuar
-              </Button>
-            ) : (showEmbeddedSignup && !showManualConfig) ? null : (
-              <Button type="button" onClick={() => void submit()} disabled={submitting}>
-                {submitting ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : null}
-                Criar canal
-              </Button>
-            )}
-          </div>
-        </DialogFooter>
-        <DialogClose />
-      </DialogContent>
+    </FormSheet>
 
       <Dialog open={webhookModalOpen} onOpenChange={setWebhookModalOpen}>
         <DialogContent size="md" panelClassName="max-h-[90vh]">
@@ -817,6 +1028,6 @@ export function CreateChannelDialog({
           <DialogClose />
         </DialogContent>
       </Dialog>
-    </Dialog>
+    </>
   );
 }

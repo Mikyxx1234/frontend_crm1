@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconLoader2, IconMessageCirclePlus, IconPinFilled, IconX } from "@tabler/icons-react";
+import { IconChevronDown, IconLoader2, IconMessageCirclePlus, IconPinFilled, IconX } from "@tabler/icons-react";
 
 import { apiUrl } from "@/lib/api";
 import { getInitials } from "@/lib/utils";
@@ -260,6 +260,103 @@ export function useDealChatBinding(params: {
     }
   }, [pinnedMessagesPreview.length, activePinIndex]);
 
+  // ── Scroll até o fim + botão flutuante "descer" (estilo WhatsApp) ────
+  // O chat do deal fica num drawer e o container rolável (overflow-y-auto)
+  // é do DealDetailPanel, não deste hook. Então localizamos esse container
+  // subindo a partir da âncora `bottomRef` e ajustamos o scrollTop direto.
+  // Mesmo comportamento do inbox (ChatArea): rola ao enviar/receber quando
+  // perto do fim; se o operador está lendo histórico e o cliente escreve,
+  // mostra o botão com o contador em vez de puxar a tela.
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollElRef = useRef<HTMLElement | null>(null);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const findScrollEl = useCallback(() => {
+    if (scrollElRef.current?.isConnected) return scrollElRef.current;
+    let el: HTMLElement | null = bottomRef.current?.parentElement ?? null;
+    while (el) {
+      const oy = getComputedStyle(el).overflowY;
+      if (oy === "auto" || oy === "scroll") {
+        scrollElRef.current = el;
+        return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }, []);
+
+  const scrollToEnd = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const el = findScrollEl();
+      if (!el) {
+        bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+      } else {
+        requestAnimationFrame(() =>
+          el.scrollTo({ top: el.scrollHeight, behavior }),
+        );
+      }
+      setShowScrollDown(false);
+      setUnreadCount(0);
+    },
+    [findScrollEl],
+  );
+
+  // Esconde o botão quando o operador chega perto do fim manualmente.
+  useEffect(() => {
+    const el = findScrollEl();
+    if (!el) return;
+    const onScroll = () => {
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
+      if (nearBottom) {
+        setShowScrollDown(false);
+        setUnreadCount(0);
+      }
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [findScrollEl, effectiveConversationId, bubbles.length > 0]);
+
+  const prevFirstIdRef = useRef<string | null>(null);
+  const prevLastIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const el = findScrollEl();
+    const firstId = bubbles[0]?.id ?? null;
+    const last = bubbles[bubbles.length - 1];
+    const lastId = last?.id ?? null;
+    const prevFirst = prevFirstIdRef.current;
+    const prevLast = prevLastIdRef.current;
+    prevFirstIdRef.current = firstId;
+    prevLastIdRef.current = lastId;
+
+    if (lastId === prevLast) return;
+
+    const isSwitchOrInitial = prevLast === null || firstId !== prevFirst;
+    if (isSwitchOrInitial) {
+      // Dois rAFs: espera o layout refletir as bolhas antes de rolar.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const e = findScrollEl();
+          if (e) e.scrollTop = e.scrollHeight;
+        }),
+      );
+      setShowScrollDown(false);
+      setUnreadCount(0);
+      return;
+    }
+
+    const nearBottom = el
+      ? el.scrollHeight - el.scrollTop - el.clientHeight < 200
+      : true;
+    const ownMessage = last?.type === "outgoing";
+    if (ownMessage || nearBottom) {
+      scrollToEnd("smooth");
+    } else {
+      setShowScrollDown(true);
+      setUnreadCount((n) => n + 1);
+    }
+  }, [bubbles, effectiveConversationId, findScrollEl, scrollToEnd]);
+
   const scrollToMessage = useCallback((messageId: string) => {
     // O chat do deal fica num drawer; pode haver a mesma âncora montada no
     // inbox por baixo. Pega a ÚLTIMA ocorrência no DOM (o drawer é renderizado
@@ -422,6 +519,7 @@ export function useDealChatBinding(params: {
           Nenhuma mensagem ainda.
         </div>
         {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
+        <div ref={bottomRef} />
       </>
     );
   } else {
@@ -487,6 +585,28 @@ export function useDealChatBinding(params: {
       <>
         {bubbleNodes}
         {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
+        <div ref={bottomRef} />
+        {showScrollDown && (
+          <div className="pointer-events-none sticky bottom-2 z-20 -mb-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => scrollToEnd("smooth")}
+              aria-label={
+                unreadCount > 0
+                  ? `${unreadCount} mensagens não lidas — ir para o fim`
+                  : "Ir para a última mensagem"
+              }
+              className="pointer-events-auto relative flex size-10 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-px hover:text-[var(--brand-primary)] active:scale-95"
+            >
+              <IconChevronDown size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute -right-1 -top-1.5 inline-flex min-w-[18px] items-center justify-center rounded-full bg-primary px-1 py-0.5 text-[10px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
       </>
     );
   }

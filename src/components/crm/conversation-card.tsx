@@ -2,6 +2,8 @@
 
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
+import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar"
+import { AVATAR_SIZE } from "@/lib/avatar"
 import {
   IconClock,
   IconPaperclip,
@@ -195,7 +197,7 @@ export function ConversationCard({
       ? typeLabelMap[conversation.lastMessageType]
       : null
   const isOutgoing = conversation.lastMessageDirection === "out"
-  const ch = channelBadge(conversation.channel)
+  const hasChannel = Boolean((conversation.channel ?? "").trim())
 
   return (
     <article
@@ -233,42 +235,24 @@ export function ConversationCard({
           />
         )}
         <div className="relative shrink-0">
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white font-display text-sm font-bold text-white"
-            style={{ background: avatarGradients[conversation.avatarColor] }}
-          >
-            {conversation.initials}
-          </div>
-          {/*
-            Badge no canto inferior-direito do avatar. Posicionado a
-            ~3-4px DENTRO do quadrado para coincidir com o raio do
-            círculo (avatar redondo de 48px tem o ponto a 45° em ~7px
-            do canto). Antes ficava em `bottom-0 right-0` parecendo
-            "cortado" — agora encaixa visualmente no contorno.
-            Quando há `channel`, mostra o logo da plataforma. Senão,
-            cai no status dot online/offline tradicional.
-          */}
-          {ch ? (
-            <TooltipGlass label={ch.title} side="top">
-              <span
-                aria-label={ch.title}
-                className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-white shadow-sm"
-                style={{ background: ch.bg, color: ch.fg }}
-              >
-                <ch.Icon size={10} stroke={2.5} />
-              </span>
-            </TooltipGlass>
-          ) : (
-            conversation.status !== "none" && (
-              <span
-                className={cn(
-                  "absolute bottom-[2px] right-[2px] h-2.5 w-2.5 rounded-full border-2 border-white",
-                  conversation.status === "online"
-                    ? "bg-[var(--color-online)]"
-                    : "bg-[var(--color-offline)]",
-                )}
-              />
-            )
+          <ChatAvatar
+            user={{
+              id: conversation.id,
+              name: conversation.name,
+            }}
+            channel={(conversation.channel as ChatAvatarChannel) ?? null}
+            size={AVATAR_SIZE.inbox}
+          />
+          {/* Sem canal: status online/offline no canto (padrão legado). */}
+          {!hasChannel && conversation.status !== "none" && (
+            <span
+              className={cn(
+                "absolute bottom-[2px] right-[2px] z-10 h-2.5 w-2.5 rounded-full border-2 border-[var(--avatar-ring)]",
+                conversation.status === "online"
+                  ? "bg-[var(--color-online)]"
+                  : "bg-[var(--color-offline)]",
+              )}
+            />
           )}
         </div>
 

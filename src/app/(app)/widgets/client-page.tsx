@@ -1,8 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { IconLayoutGrid } from "@tabler/icons-react";
+import {
+  IconBuildingStore,
+  IconInfoCircle,
+  IconLayoutGrid,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
@@ -18,8 +23,11 @@ import {
   useWidgets,
 } from "@/features/widgets/hooks";
 import type { WidgetDto } from "@/features/widgets/types";
+import { WIDGET_CONFIG_REGISTRY } from "@/features/widgets/config-registry";
+import { useMyPermissions } from "@/hooks/use-my-permissions";
 
 import { WidgetsBento } from "./_components/widgets-bento";
+import { WidgetConfigDrawer } from "./_components/widget-config-drawer";
 
 interface WidgetsClientPageProps {
   navRail?: React.ReactNode;
@@ -39,8 +47,40 @@ export default function WidgetsClientPage({
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "installed" | "available">("all");
   const [query, setQuery] = useState("");
+  const [configSlug, setConfigSlug] = useState<string | null>(null);
 
   const widgets: WidgetDto[] = widgetsQuery.data?.items ?? [];
+
+  // Permissões: computa uma vez o conjunto de slugs para os quais o
+  // usuário pode ver o botão "Configurar" (widget instalado + permissão).
+  const { data: perms } = useMyPermissions();
+  const configurableSlugs = useMemo(() => {
+    const set = new Set<string>();
+    const list = perms?.permissions ?? [];
+    const hasWildcard = list.includes("*");
+    for (const w of widgets) {
+      if (!w.installed || w.disabled) continue;
+      const entry = WIDGET_CONFIG_REGISTRY[w.slug];
+      if (!entry) continue;
+      if (hasWildcard || list.includes(entry.requiredPermission)) {
+        set.add(w.slug);
+      }
+    }
+    return set;
+  }, [widgets, perms]);
+
+  // Deep link: `/widgets?configure=<slug>` abre o drawer direto. Suporta os
+  // redirects vindos das antigas rotas `/settings/distribution` e
+  // `/settings/softphone`. Só abre depois que os widgets carregam e o
+  // slug é configurável para este usuário.
+  const searchParams = useSearchParams();
+  const configureParam = searchParams?.get("configure") ?? null;
+  useEffect(() => {
+    if (!configureParam) return;
+    if (widgets.length === 0) return;
+    if (!configurableSlugs.has(configureParam)) return;
+    setConfigSlug(configureParam);
+  }, [configureParam, widgets, configurableSlugs]);
 
   const counts = useMemo(
     () => ({
@@ -100,9 +140,8 @@ export default function WidgetsClientPage({
 
       <main className="flex min-w-0 flex-col gap-3 overflow-y-auto pr-1 sm:gap-4">
         <PageHeader
-          icon={<IconLayoutGrid size={22} />}
+          icon={<IconBuildingStore size={22} />}
           title="Widgets"
-          description="Central de extensões — instale recursos extras na sua organização"
           center={
             <PageSearchBar
               variant="compact"
@@ -140,10 +179,29 @@ export default function WidgetsClientPage({
             widgets={filteredWidgets}
             canManage={canManage}
             pendingSlug={pendingSlug}
+            configurableSlugs={configurableSlugs}
             onInstall={handleInstall}
             onUninstall={handleUninstall}
+            onConfigure={setConfigSlug}
           />
         )}
+
+        <WidgetConfigDrawer
+          slug={configSlug}
+          onClose={() => setConfigSlug(null)}
+        />
+
+        {/* Rodapé do marketplace (ref. mockup) */}
+        <footer className="mt-auto flex flex-col gap-3 border-t border-[var(--glass-border)] pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <span className="flex items-center gap-2 font-body text-[12px] text-[var(--text-muted)]">
+            <IconInfoCircle size={15} className="shrink-0" />
+            Precisa de um widget customizado? Entre em contato com o suporte.
+          </span>
+          <div className="flex items-center gap-5 font-display text-[12px] font-bold text-[#2563eb]">
+            <span className="cursor-pointer hover:underline">Documentação da API</span>
+            <span className="cursor-pointer hover:underline">Termos de Uso</span>
+          </div>
+        </footer>
       </main>
     </div>
   );
@@ -151,11 +209,11 @@ export default function WidgetsClientPage({
 
 function LoadingState() {
   return (
-    <div className="grid min-w-0 auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,360px),1fr))] sm:gap-4">
-      {Array.from({ length: 6 }).map((_, i) => (
+    <div className="grid min-w-0 auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="h-[320px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]"
+          className="h-[380px] animate-pulse rounded-lg border border-slate-200 bg-white"
         />
       ))}
     </div>

@@ -208,7 +208,7 @@ export function LeadInfoPanel({ contact, onUpdate, isUpdating }: Props) {
       <Separator />
 
       {/* Custom Fields */}
-      <CustomFieldsSection contactId={contact.id} />
+      <CustomFieldsSection contactId={contact.id} layoutContext="inbox_lead_v2" />
 
       <Separator />
 

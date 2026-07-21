@@ -6,6 +6,7 @@ import { IconFilter as Filter, IconGitBranch as GitBranch, IconTrash as Trash2 }
 import { TooltipHost } from "@/components/ui/tooltip";
 import type { ConditionBranch } from "@/lib/automation-condition";
 import { cn } from "@/lib/utils";
+import { NodeInlineConfig } from "./node-inline-config";
 
 export type ConditionNodeData = {
   label: string;
@@ -15,6 +16,11 @@ export type ConditionNodeData = {
   onDelete?: () => void;
   stats?: { success: number; failed: number; skipped: number };
   onStatsClick?: () => void;
+  /** Edição inline (populado por buildNodes no workflow-canvas). */
+  stepType?: string;
+  config?: Record<string, unknown>;
+  stepOptions?: Array<{ value: string; label: string }>;
+  onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
 const OP_LABEL: Record<string, string> = {
@@ -75,14 +81,15 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
 
       <div
         className={cn(
-          "relative w-[300px] overflow-hidden rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+          "relative overflow-hidden rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+          selected ? "w-[380px]" : "w-[300px]",
           selected
             ? "border-[var(--color-cyan)] shadow-[var(--shadow-lavender-glow)] ring-2 ring-[var(--color-cyan)]/30"
             : "border-[var(--color-cyan)]/80 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-[var(--color-cyan)] hover:shadow-[var(--shadow-lavender-glow)]"
         )}
       >
         {/* Header */}
-        <div className="flex items-center gap-2 border-b border-[var(--color-cyan)]/70 bg-[var(--color-cyan-soft)] px-3 py-2">
+        <div className="node-drag-handle flex cursor-grab items-center gap-2 border-b border-[var(--color-cyan)]/70 bg-[var(--color-cyan-soft)] px-3 py-2 active:cursor-grabbing">
           <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--color-bg-card)] text-[var(--color-cyan)] ring-1 ring-[var(--color-cyan)]/15">
             <GitBranch className="size-3.5" strokeWidth={2.4} />
           </span>
@@ -161,6 +168,13 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
             />
           </li>
         </ul>
+        <NodeInlineConfig
+          selected={selected}
+          stepType={data.stepType ?? "condition"}
+          config={data.config}
+          stepOptions={data.stepOptions ?? []}
+          onChange={(next) => data.onConfigChange?.(next)}
+        />
       </div>
     </div>
   );

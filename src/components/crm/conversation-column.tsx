@@ -12,6 +12,7 @@ import {
   IconInbox,
   IconCornerUpLeft,
   IconCircleCheck,
+  IconRobot,
   type Icon as TablerIcon,
 } from "@tabler/icons-react"
 import { InputGlass } from "./input-glass"
@@ -132,6 +133,12 @@ function statusVisual(label: string | undefined): {
       Icon: IconCornerUpLeft,
       bg: "var(--color-enterprise-bg)",
       fg: "var(--brand-primary)",
+    }
+  if (l.includes("automa"))
+    return {
+      Icon: IconRobot,
+      bg: "rgba(139,92,246,0.14)",
+      fg: "rgb(124,58,237)",
     }
   if (l.includes("resolv") || l.includes("finaliz"))
     return {

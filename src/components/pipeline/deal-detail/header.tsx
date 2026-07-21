@@ -2,10 +2,11 @@
 
 import { IconPencil as Pencil, IconRotate2 as RotateCcw, IconTrash as Trash2, IconTrophy as Trophy, IconCircleX as XCircle } from "@tabler/icons-react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDate, getInitials } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { AVATAR_SIZE } from "@/lib/avatar";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
 import { RunAutomationButton } from "@/components/automations/run-automation-button";
 
@@ -57,11 +58,16 @@ export function DealHeader({
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="flex items-start gap-3">
-                  <Avatar className="size-11 border border-border bg-[var(--glass-bg-subtle)] shadow-sm">
-                    <AvatarFallback className="bg-[var(--glass-bg-subtle)] text-sm font-bold text-foreground">
-                    {getInitials(contact?.name ?? deal.title)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <ChatAvatar
+                    user={{
+                      id: contact?.id ?? deal.id,
+                      name: contact?.name ?? deal.title,
+                      imageUrl: contact?.avatarUrl ?? null,
+                    }}
+                    phone={contact?.phone}
+                    channel={contact?.phone ? "whatsapp" : null}
+                    size={AVATAR_SIZE.lg}
+                  />
 
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">

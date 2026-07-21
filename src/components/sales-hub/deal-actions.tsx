@@ -34,6 +34,7 @@ import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SUBTLE_SPRING } from "@/lib/design-system";
+import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
 
 type StatusFilter = "OPEN" | "WON" | "LOST" | "ALL";
 
@@ -70,13 +71,16 @@ function applyQuickMove(
 ): BoardStage[] {
   const next = cloneBoard(stages);
   const src = next.find((s) => s.id === fromId);
-  const dst = next.find((s) => s.id === toId);
-  if (!src || !dst) return stages;
+  if (!src) return stages;
   const idx = src.deals.findIndex((d) => d.id === dealId);
   if (idx < 0) return stages;
   const [moved] = src.deals.splice(idx, 1);
   if (!moved) return stages;
-  dst.deals.unshift(moved);
+  const dst = next.find((s) => s.id === toId);
+  // Cross-pipeline: quando o estágio destino não pertence ao board
+  // atual, o card apenas sai da origem — o board do funil destino é
+  // atualizado via invalidação global em `onSettled`.
+  if (dst) dst.deals.unshift(moved);
   for (const col of next) col.deals.forEach((d, i) => { d.position = i; });
   return next;
 }
@@ -87,7 +91,13 @@ function dealValue(deal: BoardDeal): number {
   return Number.isNaN(n) ? 0 : n;
 }
 
-type MovePayload = { dealId: string; fromStageId: string; toStageId: string };
+type MovePayload = {
+  dealId: string;
+  fromStageId: string;
+  toStageId: string;
+  /** Funil de destino — informado quando o estágio pertence a outro pipeline. */
+  toPipelineId?: string | null;
+};
 type StatusPayload = { dealId: string; status: "WON" | "LOST" };
 
 /**
@@ -130,9 +140,27 @@ export function useMoveMutation({
         );
       return { prev };
     },
-    onSuccess: (_d, vars) => {
+    onSuccess: (data, vars) => {
       const dest = stages.find((s) => s.id === vars.toStageId);
-      if (dest) toast.success(`Movido para "${dest.name}"`, { duration: 2000 });
+      if (dest) {
+        toast.success(`Movido para "${dest.name}"`, { duration: 2000 });
+      } else {
+        // Cross-pipeline: pega o nome do estágio (e funil) do payload
+        // retornado pelo backend. Fallback: mensagem genérica.
+        const payload = data as
+          | { stage?: { name?: string; pipeline?: { name?: string } | null } }
+          | undefined;
+        const toName = payload?.stage?.name ?? null;
+        const toPipeName = payload?.stage?.pipeline?.name ?? null;
+        toast.success(
+          toPipeName && toName
+            ? `Movido para "${toPipeName} → ${toName}"`
+            : toName
+              ? `Movido para "${toName}"`
+              : "Negócio movido",
+          { duration: 2000 },
+        );
+      }
       onMoved?.(vars.dealId);
     },
     onError: (e, _v, ctx) => {
@@ -143,10 +171,15 @@ export function useMoveMutation({
         );
       toast.error(e instanceof Error ? e.message : "Erro ao mover negócio");
     },
-    onSettled: () => {
+    onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
         queryKey: ["pipeline-board", pipelineId],
       });
+      // Cross-pipeline: invalida tambem o board do funil destino,
+      // caso esteja aberto em outra tela/aba.
+      if (vars.toPipelineId && vars.toPipelineId !== pipelineId) {
+        queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
+      }
     },
   });
 }
@@ -244,51 +277,21 @@ export function DealStageSelector({
                 {stages.length} etapas
               </span>
             </div>
-            <ul
-              role="listbox"
-              className="scrollbar-thin max-h-[280px] overflow-y-auto py-1"
-            >
-              {stages.map((stage) => {
-                const isCurrent = stage.id === deal.stageId;
-                return (
-                  <li key={stage.id}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={isCurrent}
-                      onClick={() => {
-                        if (!isCurrent) {
-                          moveMutation.mutate({
-                            dealId: deal.id,
-                            fromStageId: deal.stageId,
-                            toStageId: stage.id,
-                          });
-                        }
-                        setStageOpen(false);
-                      }}
-                      disabled={isCurrent}
-                      className={cn(
-                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12px] font-bold tracking-tight text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]",
-                        isCurrent &&
-                          "cursor-default bg-[var(--color-indigo-soft)]/60 text-blue-700",
-                      )}
-                    >
-                      <span
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: stage.color ?? "#94a3b8" }}
-                      />
-                      <span className="truncate">{stage.name}</span>
-                      {isCurrent && (
-                        <Check
-                          className="ml-auto size-3.5 text-[var(--color-info)]"
-                          strokeWidth={2.5}
-                        />
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <MoveToStageMenu
+              stages={stages}
+              currentStageId={deal.stageId}
+              currentPipelineId={pipelineId}
+              isPending={moveMutation.isPending}
+              onSelect={(stageId, toPipelineId) => {
+                moveMutation.mutate({
+                  dealId: deal.id,
+                  fromStageId: deal.stageId,
+                  toStageId: stageId,
+                  toPipelineId,
+                });
+                setStageOpen(false);
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>

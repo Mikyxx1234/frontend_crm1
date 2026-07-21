@@ -94,6 +94,32 @@ export function useTagOptions() {
   return { options: q.data ?? [], isLoading: q.isLoading }
 }
 
+type RawChannel = { id: string; name?: string; type?: string; status?: string }
+
+/** Canais da org (para condições de gatilho "Se canal = X"). value: channelId. */
+export function useChannelOptions() {
+  const q = useQuery({
+    queryKey: ["editor-channels"],
+    staleTime: STALE,
+    queryFn: async (): Promise<Opt[]> => {
+      const json = await getJson("/api/channels")
+      const list = (
+        Array.isArray(json)
+          ? json
+          : Array.isArray((json as { channels?: unknown[] })?.channels)
+            ? (json as { channels: unknown[] }).channels
+            : asArray(json)
+      ) as RawChannel[]
+      return list.map((c) => ({
+        value: c.id,
+        label: c.name || c.id,
+        group: c.type || undefined,
+      }))
+    },
+  })
+  return { options: q.data ?? [], isLoading: q.isLoading }
+}
+
 type RawTemplate = { metaTemplateName?: string; name?: string; label?: string; languageCode?: string }
 
 export function useTemplateOptions() {

@@ -147,9 +147,11 @@ export function DealSidebar({
         removeTagPending={removeTagMutation.isPending}
       />
 
+      <DealOrgUnitSection dealId={deal.id} currentUnitId={deal.orgUnitId ?? null} />
       <DealProductsSection dealId={deal.id} compact />
-      <DealCustomFieldsSection dealId={deal.id} />
-      <CustomFieldsSection contactId={contact.id} />
+      <DealQuotasSection dealId={deal.id} />
+      <DealCustomFieldsSection dealId={deal.id} layoutContext="deal_panel_v2" />
+      <CustomFieldsSection contactId={contact.id} layoutContext="inbox_lead_v2" />
 
       <SidebarSection
         title="Contato"
@@ -1164,6 +1166,403 @@ function ProductCustomFieldsInline({ productId }: { productId: string }) {
           <span className="font-medium text-[var(--color-ink-soft)]">{v.label}:</span> {v.value}
         </span>
       ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Cotas de Desconto (PRD Cotas — Fase 1). Painel visual espelha o
+   DealProductsSection: header + lista + painel "Adicionar" colapsável.
+   Consome os endpoints:
+     GET /api/deals/[id]/cotas-disponiveis
+     GET/POST /api/deals/[id]/quotas
+     DELETE /api/deals/[id]/quotas/[quotaId]
+   Cumulatividade e reserva são resolvidas no backend; a UI apenas
+   destaca o estado (SELECTED/RESERVED/CONSUMED) e mostra o preço
+   final calculado (snapshot vindo do backend).
+   ═══════════════════════════════════════════════════════════════════ */
+
+type AvailableQuota = {
+  id: string;
+  name: string;
+  discountType: "PERCENT" | "FIXED";
+  discountValue: number;
+  qtyTotal: number | null;
+  qtyConsumed: number;
+  balance: number | null;
+  validTo: string | null;
+  exclusionGroup: string | null;
+  maxStacks: number;
+  calcMode: "CASCADE" | "SUM_SIMPLE";
+  categoryId: string | null;
+  categoryName: string | null;
+  linked: boolean;
+};
+
+type LinkedQuota = {
+  id: string;
+  quotaId: string;
+  status: "SELECTED" | "RESERVED" | "CONSUMED" | "RETURNED" | "EXPIRED";
+  valueSnapshot: number;
+  typeSnapshot: "PERCENT" | "FIXED";
+  reservedAt: string | null;
+  expiresAt: string | null;
+  quota: {
+    id: string;
+    name: string;
+    discountType: "PERCENT" | "FIXED";
+    discountValue: number;
+    calcMode: "CASCADE" | "SUM_SIMPLE";
+    validTo: string | null;
+    balance: number | null;
+  };
+};
+
+type QuotasResponse = {
+  items: LinkedQuota[];
+  priceFullSnapshot: number | null;
+  priceFinalSnapshot: number | null;
+};
+
+function formatDiscount(type: "PERCENT" | "FIXED", value: number): string {
+  return type === "PERCENT" ? `${value}%` : formatCurrency(value);
+}
+
+function formatValidity(validTo: string | null): string {
+  if (!validTo) return "Sem prazo";
+  const date = new Date(validTo);
+  return `até ${date.toLocaleDateString("pt-BR")}`;
+}
+
+const STATUS_LABEL_QUOTA: Record<LinkedQuota["status"], { label: string; className: string }> = {
+  SELECTED: {
+    label: "Selecionada",
+    className: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
+  },
+  RESERVED: {
+    label: "Reservada",
+    className: "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
+  },
+  CONSUMED: {
+    label: "Consumida",
+    className: "bg-[var(--color-success)]/15 text-[var(--color-success)]",
+  },
+  RETURNED: {
+    label: "Devolvida",
+    className: "bg-[var(--glass-bg-subtle)] text-[var(--text-muted)]",
+  },
+  EXPIRED: {
+    label: "Expirada",
+    className: "bg-[var(--color-danger)]/15 text-[var(--color-danger)]",
+  },
+};
+
+export function DealQuotasSection({ dealId }: { dealId: string }) {
+  const queryClient = useQueryClient();
+  const [showAdd, setShowAdd] = React.useState(false);
+
+  const linkedKey = ["deal-quotas", dealId] as const;
+  const availableKey = ["deal-quotas-available", dealId] as const;
+
+  const { data: linkedData } = useQuery({
+    queryKey: linkedKey,
+    queryFn: async (): Promise<QuotasResponse> => {
+      const res = await fetch(apiUrl(`/api/deals/${dealId}/quotas`));
+      if (!res.ok) return { items: [], priceFullSnapshot: null, priceFinalSnapshot: null };
+      return (await res.json()) as QuotasResponse;
+    },
+  });
+  const linked = linkedData?.items ?? [];
+
+  const { data: available = [] } = useQuery({
+    queryKey: availableKey,
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/deals/${dealId}/cotas-disponiveis`));
+      if (!res.ok) return [] as AvailableQuota[];
+      const data = (await res.json()) as { quotas: AvailableQuota[] };
+      return data.quotas;
+    },
+    enabled: showAdd,
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: linkedKey });
+    queryClient.invalidateQueries({ queryKey: availableKey });
+    queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
+  };
+
+  const selectMutation = useMutation({
+    mutationFn: async (quotaId: string) => {
+      const res = await fetch(apiUrl(`/api/deals/${dealId}/quotas`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quotaId }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { message?: string; code?: string };
+        throw new Error(data.message || "Falha ao vincular cota.");
+      }
+    },
+    onSuccess: () => {
+      invalidate();
+      setShowAdd(false);
+      toast.success("Cota vinculada.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: async (quotaId: string) => {
+      const res = await fetch(apiUrl(`/api/deals/${dealId}/quotas/${quotaId}`), {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(data.message || "Falha ao remover cota.");
+      }
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Cota removida.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const priceFull = linkedData?.priceFullSnapshot ?? null;
+  const priceFinal = linkedData?.priceFinalSnapshot ?? null;
+  const hasDiscount =
+    priceFull !== null &&
+    priceFinal !== null &&
+    priceFinal < priceFull;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+      <div className="flex items-center gap-2 px-4 py-3">
+        <span className="text-sm font-bold text-foreground">Cotas / Descontos</span>
+        {linked.length > 0 && (
+          <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--brand-primary)]">
+            {linked.length}
+          </span>
+        )}
+        <div className="flex-1" />
+        <button
+          type="button"
+          onClick={() => setShowAdd((v) => !v)}
+          aria-label={showAdd ? "Fechar busca de cota" : "Adicionar cota"}
+          className="flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1 text-[12px] font-semibold text-white transition-all hover:brightness-110 active:scale-95"
+        >
+          <Plus className="size-3" strokeWidth={2.5} />
+          Adicionar
+        </button>
+      </div>
+
+      {showAdd && (
+        <div className="space-y-2 border-t border-border px-4 pb-3 pt-2">
+          <div className="max-h-52 overflow-y-auto rounded-xl border border-border bg-white shadow-sm">
+            {available.length === 0 ? (
+              <p className="px-3 py-3 text-center text-xs text-muted-foreground">
+                Nenhuma cota disponível.
+              </p>
+            ) : (
+              available.map((q) => (
+                <button
+                  key={q.id}
+                  type="button"
+                  disabled={q.linked || selectMutation.isPending}
+                  onClick={() => selectMutation.mutate(q.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left text-sm transition-colors",
+                    q.linked
+                      ? "cursor-not-allowed bg-[var(--color-bg-subtle)] opacity-60"
+                      : "hover:bg-[var(--color-bg-subtle)]",
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="truncate font-semibold text-foreground">
+                        {q.categoryName ?? q.name}
+                      </span>
+                      {q.balance !== null && q.balance <= 3 && q.balance > 0 && (
+                        <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                          {q.balance} restante{q.balance === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {q.balance === null ? "Ilimitada" : `Saldo ${q.balance}`}
+                      {" • "}
+                      {formatValidity(q.validTo)}
+                      {q.exclusionGroup ? ` • grupo ${q.exclusionGroup}` : ""}
+                      {q.maxStacks > 1 ? ` • combina até ${q.maxStacks}` : ""}
+                    </div>
+                  </div>
+                  <span className="shrink-0 font-semibold tabular-nums text-success">
+                    − {formatDiscount(q.discountType, q.discountValue)}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {linked.length === 0 ? (
+        <div className="border-t border-border px-4 py-4 text-sm text-muted-foreground">
+          Nenhuma cota vinculada.
+        </div>
+      ) : (
+        <div>
+          {linked.map((dq, idx) => {
+            const status = STATUS_LABEL_QUOTA[dq.status];
+            return (
+              <div
+                key={dq.id}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3",
+                  idx === 0 && "border-t border-border",
+                  idx < linked.length - 1 && "border-b border-border/60",
+                )}
+              >
+                <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+                  <Package className="size-[18px]" strokeWidth={1.8} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-foreground">
+                    {dq.quota.name}
+                  </div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                    <span className="font-semibold text-success">
+                      − {formatDiscount(dq.typeSnapshot, dq.valueSnapshot)}
+                    </span>
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                        status.className,
+                      )}
+                    >
+                      {status.label}
+                    </span>
+                    {dq.expiresAt && dq.status === "RESERVED" && (
+                      <span>Reserva até {new Date(dq.expiresAt).toLocaleString("pt-BR")}</span>
+                    )}
+                  </div>
+                </div>
+                {dq.status !== "RETURNED" && dq.status !== "EXPIRED" && (
+                  <button
+                    type="button"
+                    onClick={() => removeMutation.mutate(dq.quotaId)}
+                    disabled={removeMutation.isPending}
+                    aria-label={`Remover cota ${dq.quota.name}`}
+                    className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] hover:text-[var(--color-danger)]"
+                  >
+                    <X className="size-3.5" strokeWidth={2.2} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {hasDiscount && (
+            <div className="border-t border-border bg-[var(--color-bg-subtle)]/60 px-4 py-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Preço cheio</span>
+                <span className="tabular-nums text-muted-foreground line-through">
+                  {formatCurrency(priceFull!)}
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-center justify-between text-sm">
+                <span className="font-semibold text-foreground">Preço final</span>
+                <span className="font-bold tabular-nums text-success">
+                  {formatCurrency(priceFinal!)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Seletor da Unidade (filial) do negócio. Alterar a unidade dispara:
+ *   - relist de cotas disponíveis (`cotas-disponiveis`)
+ *   - relist de produtos do deal (o preço aplicado ao ADICIONAR produtos
+ *     passa a considerar a ProductOffer da nova unidade — itens já
+ *     adicionados mantêm o preço original)
+ *
+ * Compacto: 1 linha, exibe unidade atual + dropdown. Sem unidade, o
+ * matching de cotas cai em "somente cotas globais" (categoria sem unidade).
+ */
+function DealOrgUnitSection({
+  dealId,
+  currentUnitId,
+}: {
+  dealId: string;
+  currentUnitId: string | null;
+}) {
+  const queryClient = useQueryClient();
+  type UnitOption = { id: string; name: string };
+
+  const { data: units = [] } = useQuery({
+    queryKey: ["quotas-org-units"],
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/org-units`));
+      if (!res.ok) return [] as UnitOption[];
+      const data = (await res.json()) as {
+        items?: UnitOption[];
+        orgUnits?: UnitOption[];
+      };
+      return data.items ?? data.orgUnits ?? [];
+    },
+  });
+
+  const updateMut = useMutation({
+    mutationFn: async (orgUnitId: string | null) => {
+      const res = await fetch(apiUrl(`/api/deals/${dealId}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgUnitId }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(data.message || "Falha ao atualizar unidade.");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["deal-quotas-available", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["deal-quotas", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["deal-products", dealId] });
+      toast.success("Unidade atualizada.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <span className="text-sm font-bold text-foreground">Unidade</span>
+        <div className="flex-1" />
+        <select
+          value={currentUnitId ?? ""}
+          disabled={updateMut.isPending}
+          onChange={(e) => updateMut.mutate(e.target.value || null)}
+          className="h-8 max-w-[220px] rounded-lg border border-border bg-[var(--color-bg-subtle)] px-2 text-[13px] font-medium text-foreground"
+        >
+          <option value="">— Sem unidade —</option>
+          {units.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      {!currentUnitId && (
+        <div className="border-t border-border px-4 py-2 text-[11px] text-muted-foreground">
+          Defina a unidade para aplicar o preço da oferta e ver as cotas
+          alocadas para essa filial.
+        </div>
+      )}
     </div>
   );
 }

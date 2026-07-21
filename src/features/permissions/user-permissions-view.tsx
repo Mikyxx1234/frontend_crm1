@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { IconBan as Ban, IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconEye as Eye, IconLoader2 as Loader2, IconMessagePlus as MessageSquarePlus, IconPlus as Plus, IconRadio as Radio, IconSend as Send, IconSettings as Settings, IconShield as Shield, IconUsers as Users, IconHierarchy as Workflow, IconX as X } from "@tabler/icons-react";
+import { IconBan as Ban, IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconEye as Eye, IconLoader2 as Loader2, IconMessagePlus as MessageSquarePlus, IconPlus as Plus, IconRadio as Radio, IconSend as Send, IconSettings as Settings, IconShield as Shield, IconHierarchy as Workflow, IconX as X } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,37 +121,6 @@ export function UserPermissionsView({
 
       {/* Acesso a funis e canais (escopo por usuário) */}
       {editable && <UserScopeEditor userId={userId} />}
-
-      {/* Grupos */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-1.5">
-          <Users className="size-3.5" style={{ color: "var(--text-muted)" }} />
-          <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-            Grupos
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {data.groups.length === 0 ? (
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Sem grupos</span>
-          ) : (
-            data.groups.map((g) => (
-              <Badge key={g.id} variant="secondary" className="text-xs">
-                {g.name}
-                {(g.channelGrants.length > 0 || g.stageGrants.length > 0) && (
-                  <span className="ml-1.5 opacity-70">
-                    {[
-                      g.channelGrants.length > 0 && g.channelGrants.join(", "),
-                      g.stageGrants.length > 0 && `${g.stageGrants.length} fase(s)`,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                )}
-              </Badge>
-            ))
-          )}
-        </div>
-      </div>
 
       {/* Canais efetivos */}
       {data.channelGrants.length > 0 && (

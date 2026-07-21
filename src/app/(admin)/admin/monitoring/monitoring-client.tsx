@@ -10,6 +10,7 @@ import {
   IconCpu as Cpu,
   IconDatabase as Database,
   IconServer as Server,
+  IconDeviceSdCard as Memory,
   IconStack2 as Stack,
   IconActivity as Activity,
   IconCircleCheck as CircleCheck,
@@ -166,6 +167,14 @@ export function MonitoringClient({ initial }: { initial: PerfReport | null }) {
     if (list.length === 0) return null;
     return list.reduce((min, d) => (d.freePct < min.freePct ? d : min));
   }, [report]);
+  const totalCpuPct = useMemo(
+    () => (report?.containers ?? []).reduce((s, c) => s + c.cpuPct, 0),
+    [report],
+  );
+  const totalMemBytes = useMemo(
+    () => (report?.containers ?? []).reduce((s, c) => s + c.memBytes, 0),
+    [report],
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -258,9 +267,21 @@ export function MonitoringClient({ initial }: { initial: PerfReport | null }) {
             />
             <HubStat
               tone="brand"
-              icon={<Cpu className="size-5" />}
+              icon={<Stack className="size-5" />}
               value={report.containers.length}
               label="Containers monitorados"
+            />
+            <HubStat
+              tone={totalCpuPct > 300 ? "warn" : "brand"}
+              icon={<Cpu className="size-5" />}
+              value={`${totalCpuPct.toFixed(0)}%`}
+              label="CPU (soma dos serviços)"
+            />
+            <HubStat
+              tone="violet"
+              icon={<Memory className="size-5" />}
+              value={fmtBytes(totalMemBytes)}
+              label="Memória (soma dos serviços)"
             />
             <HubStat
               tone={report.host.load1 > 4 ? "warn" : "violet"}

@@ -35,6 +35,8 @@ import {
   IconAffiliate,
   IconPackage,
   IconUser,
+  IconStarFilled,
+  IconLock,
 } from "@tabler/icons-react"
 import { useAsideViewMode, type AsideViewMode } from "@/hooks/use-aside-view-mode"
 import {
@@ -45,6 +47,7 @@ import {
 } from "@/lib/connection-label"
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
 import { RequirePermission } from "@/components/auth/require-permission"
+import { FavoritesPanel } from "@/components/crm/favorites-panel"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
 import { useContactSources } from "@/hooks/use-contact-sources"
@@ -171,6 +174,9 @@ interface DealDetailPanelProps {
   messagesSlot?: React.ReactNode
   composerSlot?: React.ReactNode
   sessionAlertSlot?: React.ReactNode
+  /** Banner de mensagem fixada (estilo WhatsApp) — renderizado entre o
+   *  header de tabs e a lista de mensagens, na tab "Conversa". */
+  pinnedMessageSlot?: React.ReactNode
   /**
    * Override por tab. Quando definido para a tab atual, substitui o
    * painel <main> inteiro pelo node. Util para Atividades/Notas/
@@ -235,6 +241,16 @@ interface DealDetailPanelProps {
   /** Estado de resolução da conversa — para mostrar "Encerrar" ou "Reabrir". */
   isResolved?: boolean
   /**
+   * ID amigavel sequencial da conversa (#N por organizacao). Quando
+   * presente, renderiza um chip mono minimalista no TabsBar da conversa,
+   * dentro do proprio container do chat — sem card lateral. Mesma
+   * filosofia do `conversationNumber` do `ChatArea` (inbox). Opcional
+   * pra manter compat com callers sem conversa ativa.
+   */
+  conversationNumber?: number | null
+  /** ISO do `closedAt` da conversa — usado no chip "Encerrada" do TabsBar. */
+  conversationClosedAt?: string | null
+  /**
    * Conexão (Channel) por onde o contato está conversando (qual WhatsApp).
    * Exibida como chip no header do contato — distingue quando a pessoa fala
    * por contas/fontes diferentes.
@@ -293,6 +309,7 @@ export function DealDetailPanel({
   messagesSlot,
   composerSlot,
   sessionAlertSlot,
+  pinnedMessageSlot,
   tabContentOverride,
   customFieldsSlot,
   fieldConfigSlot,
@@ -302,6 +319,8 @@ export function DealDetailPanel({
   funnelSegments,
   conversationId,
   isResolved,
+  conversationNumber,
+  conversationClosedAt,
   connection,
 }: DealDetailPanelProps) {
   // Retrocompatibilidade: split slots sobrepõem o legado fieldConfigSlot
@@ -1264,8 +1283,12 @@ export function DealDetailPanel({
                 onSearchChange={setSearchQuery}
                 conversationId={conversationId}
                 isResolved={isResolved}
+                conversationNumber={conversationNumber}
+                conversationClosedAt={conversationClosedAt}
                 callButtonSlot={callButtonSlot}
               />
+
+              {pinnedMessageSlot}
 
               <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
                 {messagesSlot}
@@ -1317,6 +1340,8 @@ function TabsBar({
   onSearchChange,
   conversationId,
   isResolved,
+  conversationNumber,
+  conversationClosedAt,
   callButtonSlot,
 }: {
   activeTab: TabId
@@ -1327,12 +1352,17 @@ function TabsBar({
   onSearchChange?: (q: string) => void
   conversationId?: string | null
   isResolved?: boolean
+  /** #N sequencial da conversa — chip minimalista no header do container. */
+  conversationNumber?: number | null
+  /** ISO de encerramento — vira tooltip no chip "Encerrada". */
+  conversationClosedAt?: string | null
   /** Botao "Ligar" (softphone) — renderizado no canto direito, ao lado do
    *  kebab de acoes da conversa. Antes vivia no header do card do deal. */
   callButtonSlot?: React.ReactNode
 }) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [favoritesOpen, setFavoritesOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const toggleResolve = useToggleConversationResolve()
 
@@ -1390,6 +1420,36 @@ function TabsBar({
               )
             })}
           </div>
+        )}
+
+        {/* Chip minimalista com o "ticket number" da conversa. Fica logo
+            apos os pills de aba, dentro do proprio TabsBar — sem card
+            lateral. Padrao Contact.number / Deal.number (#N por org).
+            Ver AGENT.md "ID de conversa + logs + gatilho". */}
+        {!(searchOpen && activeTab === "conversa") && typeof conversationNumber === "number" && (
+          <span
+            title={`Conversa #${conversationNumber}`}
+            aria-label={`Conversa numero ${conversationNumber}`}
+            className="shrink-0 font-mono text-[11px] font-medium tabular-nums text-[var(--text-muted)] select-all"
+          >
+            #{conversationNumber}
+          </span>
+        )}
+
+        {/* Chip "Encerrada" — indica de relance o status resolvido, sem
+            depender de abrir o kebab. Fica em linha com o #N no TabsBar. */}
+        {!(searchOpen && activeTab === "conversa") && isResolved && (
+          <span
+            title={
+              conversationClosedAt
+                ? `Encerrada em ${new Date(conversationClosedAt).toLocaleString("pt-BR")}`
+                : "Conversa encerrada"
+            }
+            className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+          >
+            <IconLock size={10} />
+            Encerrada
+          </span>
         )}
 
         {/* Busca inline — ocupa o flex-1 quando aberta */}
@@ -1467,6 +1527,21 @@ function TabsBar({
                   </button>
                 )}
 
+                {/* Mensagens favoritas — marcador pessoal, estilo WhatsApp */}
+                {conversationId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFavoritesOpen(true)
+                      setMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-subtle)]"
+                  >
+                    <IconStarFilled size={14} className="shrink-0 text-amber-500" />
+                    Mensagens favoritas
+                  </button>
+                )}
+
                 {/* Encerrar / Reabrir conversa */}
                 {conversationId && (
                   <RequirePermission permission="conversation:close">
@@ -1494,6 +1569,11 @@ function TabsBar({
           </div>
         )}
       </header>
+      <FavoritesPanel
+        open={favoritesOpen}
+        onOpenChange={setFavoritesOpen}
+        conversationId={conversationId ?? null}
+      />
     </div>
   )
 }

@@ -155,7 +155,7 @@ export function ChannelCard({
   return (
     <article
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]",
+        "relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]",
       )}
     >
       {/* Faixa de status vertical à esquerda */}
@@ -177,7 +177,7 @@ export function ChannelCard({
         </span>
         <div className="min-w-0 flex-1">
           <h3
-            className="truncate font-display text-[16.5px] font-extrabold tracking-[-0.3px] text-[var(--text-primary)]"
+            className="break-words font-display text-[16.5px] font-extrabold tracking-[-0.3px] text-[var(--text-primary)]"
             title={channel.name}
           >
             {channel.name}
@@ -239,8 +239,8 @@ export function ChannelCard({
       </div>
 
       {/* Rodapé: toggle + ações */}
-      <div className="mt-auto flex items-center gap-3 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-5 py-3">
-        <div className="flex items-center gap-2">
+      <div className="mt-auto flex flex-wrap items-center gap-3 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-5 py-3">
+        <div className="flex shrink-0 items-center gap-2">
           <Switch
             checked={isActive}
             onCheckedChange={handleToggle}
@@ -267,7 +267,7 @@ export function ChannelCard({
           </span>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           {status === "QR_READY" || status === "CONNECTING" ? (
             <button
               type="button"

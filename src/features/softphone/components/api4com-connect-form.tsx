@@ -43,23 +43,23 @@ function ConnectSuccessFeedback({
 }) {
   const { api4com, webhook } = data;
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-xs text-[var(--color-success)]/80">
+    <div className="flex min-w-0 flex-col gap-2">
+      <p className="text-pretty break-words text-xs text-[var(--color-success)]/80">
         Conectado! Ramal: {api4com.ramal} ({api4com.domain}). O softphone
         está se registrando — acompanhe o chip no canto inferior direito.
       </p>
 
       {!webhook && (
-        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-warning)]/80">
-          <IconAlertTriangle size={12} />
+        <p className="inline-flex items-start gap-1.5 text-pretty break-words text-xs text-[var(--color-warning)]/80">
+          <IconAlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
           Webhook de chamadas não está configurado. Atualize o backend
           (commit 269af93+) e reconecte pra que ligações aparecem em /calls.
         </p>
       )}
 
       {webhook?.configured ? (
-        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-success)]/80">
-          <IconCheck size={12} stroke={2.5} />
+        <p className="inline-flex items-start gap-1.5 text-pretty break-words text-xs text-[var(--color-success)]/80">
+          <IconCheck size={12} stroke={2.5} className="mt-0.5 flex-shrink-0" />
           Webhook de chamadas configurado automaticamente — o histórico em
           /calls vai registrar cada ligação.
         </p>
@@ -87,34 +87,34 @@ function WebhookFallback({
   onCopy: (url: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-warning)]/40 bg-[var(--color-warning-soft)] p-3">
-      <div className="inline-flex items-start gap-1.5 text-xs text-[var(--text-primary)]">
+    <div className="flex min-w-0 flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-warning)]/40 bg-[var(--color-warning-soft)] p-3">
+      <div className="flex min-w-0 items-start gap-1.5 text-xs text-[var(--text-primary)]">
         <IconAlertTriangle size={14} className="mt-0.5 flex-shrink-0 text-[var(--color-warning)]" />
-        <span>
+        <span className="min-w-0 text-pretty break-words">
           <strong>Setup manual do webhook necessário.</strong> Não
           conseguimos configurar automaticamente: {reason}
         </span>
       </div>
-      <p className="text-xs text-[var(--text-secondary)]">
+      <p className="text-pretty break-words text-xs text-[var(--text-secondary)]">
         Cole esta URL no portal Api4Com →{" "}
         <em>Integrações → Webhook</em> (eventos:{" "}
         <code>channel-answer</code>, <code>channel-hangup</code>):
       </p>
-      <div className="flex items-center gap-2">
-        <code className="flex-1 truncate rounded border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-1 font-mono text-[11px] text-[var(--text-primary)]">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+        <code className="min-w-0 flex-1 truncate rounded border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-1 font-mono text-[11px] text-[var(--text-primary)]">
           {webhookUrl}
         </code>
         <button
           type="button"
           onClick={() => onCopy(webhookUrl)}
-          className="inline-flex h-7 items-center gap-1 rounded border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+          className="inline-flex h-7 shrink-0 items-center gap-1 rounded border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
           title="Copiar URL"
         >
           {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
           {copied ? "Copiado" : "Copiar"}
         </button>
       </div>
-      <p className="text-[11px] text-[var(--text-muted)]">
+      <p className="text-pretty break-words text-[11px] text-[var(--text-muted)]">
         Sem isso, as chamadas funcionam mas não aparecem na lista
         /calls. Após colar a URL, próximas ligações serão registradas.
       </p>
@@ -144,13 +144,13 @@ function ConnectedSummary({
   disconnecting: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] p-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-2">
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] p-3">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-2">
             <IconPhoneCheck size={16} className="mt-0.5 flex-shrink-0 text-[var(--color-success)]" />
-            <div className="flex flex-col gap-0.5">
-              <p className="text-sm font-medium text-[var(--text-primary)]">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <p className="min-w-0 break-words text-pretty text-sm font-medium text-[var(--text-primary)]">
                 Conectado{status.email ? ` como ${status.email}` : ""}
               </p>
               <p className="text-xs text-[var(--text-secondary)]">
@@ -159,7 +159,7 @@ function ConnectedSummary({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap gap-1.5 sm:shrink-0">
             <ButtonGlass
               variant="glass"
               size="sm"
@@ -190,8 +190,8 @@ function ConnectedSummary({
       </div>
 
       {status.webhook.configured ? (
-        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-success)]/80">
-          <IconCheck size={12} stroke={2.5} />
+        <p className="inline-flex items-start gap-1.5 text-pretty break-words text-xs text-[var(--color-success)]/80">
+          <IconCheck size={12} stroke={2.5} className="mt-0.5 flex-shrink-0" />
           Webhook de chamadas configurado — histórico em /calls registra
           cada ligação.
         </p>
@@ -203,9 +203,9 @@ function ConnectedSummary({
           onCopy={onCopy}
         />
       ) : (
-        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-warning)]/80">
-          <IconAlertTriangle size={12} />
-          Webhook de chamadas não configurado. Clique em "Reconectar"
+        <p className="inline-flex items-start gap-1.5 text-pretty break-words text-xs text-[var(--color-warning)]/80">
+          <IconAlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
+          Webhook de chamadas não configurado. Clique em &quot;Reconectar&quot;
           para tentar a configuração automática novamente.
         </p>
       )}
@@ -330,7 +330,7 @@ export function Api4ComConnectForm() {
 
   if (showConnectedView) {
     return (
-      <div className="flex flex-col gap-2">
+      <div className="flex min-w-0 w-full flex-col gap-2">
         <ConnectedSummary
           status={status}
           copied={copied}
@@ -364,7 +364,7 @@ export function Api4ComConnectForm() {
         e.preventDefault();
         if (email && password) mutation.mutate();
       }}
-      className="flex flex-col gap-3"
+      className="flex min-w-0 w-full flex-col gap-3"
     >
       <p className="font-body text-[13px] text-[var(--text-muted)]">
         {status?.connected

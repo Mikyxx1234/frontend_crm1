@@ -139,18 +139,19 @@ export default function LossReasonsPage() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 w-full space-y-4">
       {/* Toggle obrigatório */}
-      <div className="flex items-center justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-5 py-4 shadow-[var(--glass-shadow-sm)]">
-        <div>
-          <p className="text-sm font-semibold text-[var(--text-secondary)]">Motivo obrigatório</p>
-          <p className="text-xs text-[var(--text-muted)]">Exigir um motivo ao marcar negócio como perdido</p>
+      <div className="flex flex-col gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-5 py-4 shadow-[var(--glass-shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-pretty break-words text-sm font-semibold text-[var(--text-secondary)]">Motivo obrigatório</p>
+          <p className="text-pretty break-words text-xs text-[var(--text-muted)]">Exigir um motivo ao marcar negócio como perdido</p>
         </div>
         <SwitchGlass
           checked={isRequired}
           onChange={(v) => toggleRequired.mutate(v)}
           disabled={toggleRequired.isPending}
           aria-label="Motivo obrigatório"
+          className="shrink-0"
         />
       </div>
 
@@ -160,10 +161,10 @@ export default function LossReasonsPage() {
           profundidade — UI + service `assertLostReasonAllowed`). Recomendado
           desligar quando o histórico mostra crescimento desorganizado de
           motivos digitados livremente. */}
-      <div className="flex items-center justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-5 py-4 shadow-[var(--glass-shadow-sm)]">
-        <div>
-          <p className="text-sm font-semibold text-[var(--text-secondary)]">Permitir motivo personalizado</p>
-          <p className="text-xs text-[var(--text-muted)]">
+      <div className="flex flex-col gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-5 py-4 shadow-[var(--glass-shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-pretty break-words text-sm font-semibold text-[var(--text-secondary)]">Permitir motivo personalizado</p>
+          <p className="text-pretty break-words text-xs text-[var(--text-muted)]">
             Mostra a opção “Outro…” no momento de marcar como perdido. Desligue para forçar uso apenas dos motivos cadastrados abaixo.
           </p>
         </div>
@@ -172,6 +173,7 @@ export default function LossReasonsPage() {
           onChange={(v) => toggleAllowOther.mutate(v)}
           disabled={toggleAllowOther.isPending}
           aria-label={allowOther ? "Desligar motivo personalizado" : "Ligar motivo personalizado"}
+          className="shrink-0"
         />
       </div>
 

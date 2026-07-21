@@ -340,9 +340,28 @@
    clica o botão `»`, sem quebrar o layout do grid. */
 :root {
   --nav-rail-w: 72px;
+  --mobile-bottom-nav-h: 0px;
 }
 html[data-nav-expanded="true"] {
   --nav-rail-w: 220px;
+}
+
+/* Mobile (< md / 768px): rail lateral some; bottom nav global assume a navegação.
+   Com NavRail em `display:none`, forçamos 1 coluna pra o main ocupar 100%
+   (senão o item restante cairia na faixa de 72px do grid antigo).
+   A barra inferior é `fixed` e SOBREPPÕE o conteúdo — sem padding-bottom —
+   para, ao ocultar no scroll-down, o usuário recuperar a altura total. */
+@media (max-width: 767px) {
+  :root {
+    --nav-rail-w: 0px;
+    --mobile-bottom-nav-h: 62px;
+  }
+  html[data-nav-expanded="true"] {
+    --nav-rail-w: 0px;
+  }
+  .v2-screen {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
 }
 
 .v2-root {

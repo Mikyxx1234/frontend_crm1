@@ -227,13 +227,13 @@ function TagsPage() {
   }, [slots, filter, unusedCount, tags.length, bulkDeleteUnused.isPending]);
 
   return (
-    <GlassCard variant="panel" className="overflow-hidden">
+    <GlassCard variant="panel" className="min-w-0 overflow-hidden">
       {/* ── Criar nova tag ── */}
-      <div className="border-b border-[var(--glass-border-subtle)] p-4">
+      <div className="border-b border-[var(--glass-border-subtle)] p-3 sm:p-4">
         <p className="mb-3 font-display text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
           Nova tag
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {/* Color picker */}
           <div className="flex flex-wrap items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1.5">
             {TAG_COLORS.map((c) => (
@@ -258,7 +258,7 @@ function TagsPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nome da tag…"
-            className="flex-1"
+            className="min-w-0 w-full sm:flex-1"
             onKeyDown={(e) => {
               if (e.key === "Enter" && newName.trim()) {
                 e.preventDefault();
@@ -270,7 +270,7 @@ function TagsPage() {
           {/* Preview */}
           {newName.trim() && (
             <span
-              className="shrink-0 rounded-full px-2.5 py-1 font-display text-[11px] font-semibold"
+              className="max-w-full shrink-0 truncate self-start rounded-full px-2.5 py-1 font-display text-[11px] font-semibold sm:self-auto"
               style={{
                 background: `${newColor}22`,
                 color: newColor,
@@ -287,7 +287,7 @@ function TagsPage() {
               newName.trim() && createMutation.mutate({ name: newName.trim(), color: newColor })
             }
             disabled={!newName.trim() || createMutation.isPending}
-            className="shrink-0"
+            className="w-full shrink-0 sm:w-auto"
           >
             <IconPlus size={15} />
             Criar
@@ -379,7 +379,7 @@ function TagRowItem({
   const isUnused = tag.dealCount === 0 && tag.contactCount === 0;
 
   return (
-    <div className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--glass-bg-overlay)]">
+    <div className="group flex min-w-0 items-center gap-2 px-3 py-3 transition-colors hover:bg-[var(--glass-bg-overlay)] sm:gap-3 sm:px-4">
       {/* Color dot + picker */}
       <div className="relative">
         <TooltipGlass label="Alterar cor" side="top">
@@ -523,8 +523,8 @@ function DeleteConfirmDialog({
   isPending: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <GlassCard variant="panel" className="w-full max-w-sm p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <GlassCard variant="panel" className="w-full max-w-sm p-5 sm:p-6">
         <div className="mb-1 flex items-center gap-2">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-danger)]/12">
             <IconTrash size={18} className="text-[var(--color-danger)]" />

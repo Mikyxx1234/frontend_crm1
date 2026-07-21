@@ -99,7 +99,10 @@ export function PermissionsClientPage() {
       description="Papéis, grupos e usuários"
       icon={<IconShieldCheck size={22} />}
     >
-      <div className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-[300px_minmax(0,1fr)]">
+      {/* Mobile: coluna única, altura natural (page scroll) — lista antes,
+          detail embaixo. Em lg+: duas colunas com altura travada ao viewport
+          e scroll interno em cada painel (comportamento anterior). */}
+      <div className="grid min-w-0 grid-cols-1 gap-3 lg:h-full lg:min-h-0 lg:grid-cols-[300px_minmax(0,1fr)]">
         <Sidebar selection={selection} onSelect={select} />
         <DetailPane
           selection={selection}
@@ -125,7 +128,7 @@ function Sidebar({
   const { data: users = [], isLoading: usersLoading } = useUsers();
 
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow)] backdrop-blur-md v2-dark:bg-[var(--glass-bg-modal)]">
+    <aside className="flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow)] backdrop-blur-md v2-dark:bg-[var(--glass-bg-modal)] lg:h-full lg:min-h-0">
       <div className="flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3.5 py-3">
         <span className="text-[var(--brand-primary)]">
           <IconShieldCheck size={16} />
@@ -134,7 +137,7 @@ function Sidebar({
           Acessos
         </h2>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-2.5">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 overflow-y-auto p-2.5">
         <Section
           icon={<IconShield size={13} />}
           title="Papéis"
@@ -478,7 +481,7 @@ function PaneShell({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+        "flex min-w-0 flex-col overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] backdrop-blur-md lg:h-full lg:min-h-0",
         empty ? "items-center justify-center p-6" : "p-5",
       )}
     >

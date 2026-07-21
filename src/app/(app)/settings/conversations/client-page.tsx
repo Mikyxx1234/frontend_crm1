@@ -40,22 +40,24 @@ export function ConversationsSettingsClientPage() {
       icon={<IconMessageCircle size={22} />}
     >
       {/* Inner tab navigation */}
-      <div className="flex gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={[
-              "flex-1 rounded-[var(--radius-md)] px-4 py-2 font-display text-[13px] font-semibold transition-colors",
-              activeTab === tab.id
-                ? "bg-white text-[var(--text-primary)] shadow-sm dark:bg-[var(--glass-bg-strong)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-            ].join(" ")}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="toolbar-hscroll max-w-full min-w-0">
+        <div className="inline-flex w-max flex-nowrap gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={[
+                "shrink-0 whitespace-nowrap rounded-[var(--radius-md)] px-3 py-1.5 font-display text-[13px] font-semibold transition-colors sm:px-4 sm:py-2",
+                activeTab === tab.id
+                  ? "bg-white text-[var(--text-primary)] shadow-sm dark:bg-[var(--glass-bg-strong)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+              ].join(" ")}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab content */}

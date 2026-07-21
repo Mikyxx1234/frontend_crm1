@@ -285,8 +285,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="w-full space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
+    <div className="w-full min-w-0 space-y-6">
+      <div className="grid min-w-0 gap-4 sm:gap-6 lg:grid-cols-2">
         <ProfileCard profile={profile} queryClient={queryClient} update={update} />
         <TokensCard />
       </div>
@@ -394,13 +394,13 @@ function ProfileCard({
   });
 
   return (
-    <GlassCard variant="overlay" className="p-8">
+    <GlassCard variant="overlay" className="min-w-0 p-5 sm:p-8">
       <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
         Dados do seu perfil
       </h2>
 
       {/* ── Avatar + banner ── */}
-      <div className="mt-6 flex items-start gap-5">
+      <div className="mt-6 flex min-w-0 items-start gap-5">
         {/*
           Avatar editável: clique no botão de camera dispara o <input type="file">
           escondido. Preview imediato via `avatarUrl` local — persistência
@@ -712,8 +712,8 @@ function TokensCard() {
   const hasTokens = tokens.length > 0;
 
   return (
-    <GlassCard variant="overlay" className="p-8">
-      <div className="flex items-start justify-between gap-4">
+    <GlassCard variant="overlay" className="min-w-0 p-5 sm:p-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
             Tokens de Acesso
@@ -732,7 +732,7 @@ function TokensCard() {
               setJustCreated(null);
               setCreateOpen(true);
             }}
-            className="shrink-0"
+            className="shrink-0 self-start sm:self-auto"
           >
             <Plus className="size-3.5" />
             Novo token
@@ -749,7 +749,7 @@ function TokensCard() {
           {tokens.map((t) => (
             <li
               key={t.id}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 px-4 py-3"
+              className="flex min-w-0 items-center gap-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 px-4 py-3"
             >
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-primary">
                 <Key className="size-4" />

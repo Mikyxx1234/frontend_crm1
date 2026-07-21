@@ -28,6 +28,7 @@
 .ds-flow .topbar {
   flex-shrink: 0;
   width: 100%;
+  min-width: 0;
   background: transparent;
   border: none;
   box-shadow: none;
@@ -37,6 +38,12 @@
   align-items: center;
   gap: 16px;
   z-index: 30;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.ds-flow .topbar > * {
+  flex-shrink: 0;
 }
 .ds-flow .page-icon {
   width: 44px;

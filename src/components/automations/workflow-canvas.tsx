@@ -1513,7 +1513,7 @@ function WorkflowCanvasInner({
   return (
     <div className={cn("automation-editor flex w-full", className)}>
       {/* Palette — esquerda (antes do canvas) */}
-      <NodePalette className="w-[240px] shrink-0" />
+      <NodePalette className="hidden w-[240px] shrink-0 md:flex" />
 
       {/* Canvas area */}
       <div

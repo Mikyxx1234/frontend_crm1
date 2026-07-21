@@ -60,7 +60,7 @@ import { resolveCustomFieldGroups, type CustomFieldDef } from "@/lib/field-layou
 import { CustomFieldGroupBlock } from "@/components/crm/fields/custom-field-group-block"
 import { useContactSources } from "@/hooks/use-contact-sources"
 import { formatPhoneDisplay } from "@/lib/phone"
-import { useIsDesktop } from "@/hooks/use-media-query"
+import { useIsMobile } from "@/hooks/use-media-query"
 import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
@@ -384,12 +384,12 @@ export function DealDetailPanel({
     })
   }, [])
 
-  // Detecção de viewport: < lg (1024px) ativa o layout mobile (painel único +
-  // switcher Conversa | Detalhes). Desktop mantém o grid 2-colunas com resize.
-  const isDesktop = useIsDesktop()
+  // Detecção de viewport: < 768px (phone) empilha aside + chat verticalmente,
+  // ambos sempre visíveis (sem switcher). Desktop/tablet mantém o grid
+  // 2-colunas com resize.
+  const isMobile = useIsMobile()
   // Mobile: esconde bottom nav global enquanto o chat do deal estiver aberto.
   useMobileChatChrome(Boolean(isOpen && (messagesSlot || composerSlot || sessionAlertSlot)))
-  const [mobilePane, setMobilePane] = useState<"conversa" | "detalhes">("conversa")
 
   // DD8 do questionario: respeitar visibilidade de blocos configurada via
   // FieldConfigPanel admin (PUT /api/field-layout, context=deal_panel_v2).
@@ -563,11 +563,6 @@ export function DealDetailPanel({
     return () => window.removeEventListener("keydown", onKey)
   }, [isOpen, onClose])
 
-  // Ao abrir o painel no mobile, volta para Conversa (tab primária).
-  useEffect(() => {
-    if (isOpen) setMobilePane("conversa")
-  }, [isOpen])
-
   // Cleanup defensivo: se o componente desmontar (painel fechado) durante
   // um drag em andamento, removemos listeners pra evitar memory leak e
   // restauramos o cursor/seleção globais.
@@ -599,65 +594,68 @@ export function DealDetailPanel({
           <div
             className={cn(
               "min-h-0 flex-1 overflow-hidden",
-              isDesktop ? "grid gap-1" : "flex flex-col gap-2",
+              isMobile ? "flex flex-col gap-2" : "grid gap-1",
             )}
-            style={isDesktop ? { gridTemplateColumns: `${sidebarWidth}px 8px 1fr` } : undefined}
+            style={
+              !isMobile
+                ? {
+                    gridTemplateColumns: `${sidebarWidth}px 8px minmax(0, 1fr)`,
+                    gridTemplateRows: "minmax(0, 1fr)",
+                  }
+                : undefined
+            }
           >
-            {(isDesktop || mobilePane === "detalhes") && (
-              <aside
-                aria-label="Carregando detalhes do negócio"
-                aria-busy="true"
-                className={cn(
-                  "flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
-                  !isDesktop && "flex-1",
-                )}
-              >
-                <div className="shrink-0 px-3 pt-2">
-                  <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
-                    <div className="relative flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={onClose}
-                        aria-label="Voltar"
-                        className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-white backdrop-blur-sm transition-all hover:bg-white/25 hover:border-white/40"
-                      >
-                        <IconArrowLeft size={13} strokeWidth={2.5} />
-                        <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
-                      </button>
+            <aside
+              aria-label="Carregando detalhes do negócio"
+              aria-busy="true"
+              className={cn(
+                "flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+                isMobile && "max-h-[42vh] h-auto shrink-0",
+              )}
+            >
+              <div className="shrink-0 px-3 pt-2">
+                <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+                  <div className="relative flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      aria-label="Voltar"
+                      className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-white backdrop-blur-sm transition-all hover:bg-white/25 hover:border-white/40"
+                    >
+                      <IconArrowLeft size={13} strokeWidth={2.5} />
+                      <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
+                    </button>
+                  </div>
+                  <div className="relative mt-3 flex items-center gap-3">
+                    <div className="size-11 animate-pulse rounded-full bg-white/20" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-4 w-36 animate-pulse rounded bg-white/25" />
+                      <div className="h-3 w-20 animate-pulse rounded bg-white/15" />
                     </div>
-                    <div className="relative mt-3 flex items-center gap-3">
-                      <div className="size-11 animate-pulse rounded-full bg-white/20" />
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="h-4 w-36 animate-pulse rounded bg-white/25" />
-                        <div className="h-3 w-20 animate-pulse rounded bg-white/15" />
-                      </div>
-                    </div>
-                  </header>
-                </div>
-                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3.5 pb-4 pt-1">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="space-y-1.5">
-                      <div className="h-2.5 w-16 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
-                      <div className="h-8 w-full animate-pulse rounded-lg bg-[var(--glass-bg-strong)]" />
-                    </div>
-                  ))}
-                </div>
-              </aside>
-            )}
-            {isDesktop && <div aria-hidden className="w-2" />}
-            {(isDesktop || mobilePane === "conversa") && (
-              <div
-                className={cn(
-                  "flex min-h-0 flex-col items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
-                  !isDesktop && "min-h-0 flex-1",
-                )}
-              >
-                <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--glass-border)] border-t-[var(--brand-primary)]" />
-                  <span className="font-display text-[12px]">Carregando negócio…</span>
-                </div>
+                  </div>
+                </header>
               </div>
-            )}
+              <div className="aside-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3.5 pb-4 pt-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="h-2.5 w-16 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
+                    <div className="h-8 w-full animate-pulse rounded-lg bg-[var(--glass-bg-strong)]" />
+                  </div>
+                ))}
+              </div>
+            </aside>
+            {!isMobile && <div aria-hidden className="w-2" />}
+            <div
+              className={cn(
+                "flex h-full min-h-0 flex-col items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+                isMobile && "flex-1",
+              )}
+            >
+              <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--glass-border)] border-t-[var(--brand-primary)]" />
+                <span className="font-display text-[12px]">Carregando negócio…</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -718,53 +716,29 @@ export function DealDetailPanel({
             "ENTERPRISE" hardcoded (dado falso). Os controles essenciais (voltar,
             editar contato, chip de conexão) foram realocados para o hero. */}
 
-        {/* 2 COLS (desktop lg+): SIDEBAR + CONTENT com resize horizontal.
-            Mobile (< lg): painel único + switcher Conversa | Detalhes. */}
+        {/* 2 COLS (desktop/tablet ≥768px): SIDEBAR + CONTENT com resize
+            horizontal. Phone (< 768px): pilha vertical, aside + chat SEMPRE
+            visíveis juntos (sem switcher) — campos ficam a um scroll de
+            distância em vez de escondidos numa aba "Detalhes". */}
         <div
           className={cn(
             "min-h-0 flex-1 overflow-hidden",
-            isDesktop ? "grid gap-1" : "flex flex-col gap-2",
+            isMobile ? "flex flex-col gap-2" : "grid gap-1",
           )}
-          style={isDesktop ? { gridTemplateColumns: `${sidebarWidth}px 8px 1fr` } : undefined}
+          style={
+            !isMobile
+              ? {
+                  gridTemplateColumns: `${sidebarWidth}px 8px minmax(0, 1fr)`,
+                  gridTemplateRows: "minmax(0, 1fr)",
+                }
+              : undefined
+          }
         >
-          {/* Switcher mobile — visível apenas em viewports < lg */}
-          {!isDesktop && (
-            <div className="shrink-0 flex rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
-              <button
-                type="button"
-                onClick={() => setMobilePane("conversa")}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-3 py-2.5 font-display text-[13px] font-bold transition-all",
-                  mobilePane === "conversa"
-                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                )}
-              >
-                <IconMessageCircle size={14} />
-                Conversa
-              </button>
-              <button
-                type="button"
-                onClick={() => setMobilePane("detalhes")}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-3 py-2.5 font-display text-[13px] font-bold transition-all",
-                  mobilePane === "detalhes"
-                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                )}
-              >
-                <IconLayoutList size={14} />
-                Detalhes
-              </button>
-            </div>
-          )}
-          {/* SIDEBAR — desktop sempre visível; mobile só no pane "Detalhes" */}
-          {(isDesktop || mobilePane === "detalhes") && (
           <aside
             aria-label="Detalhes do negócio"
             className={cn(
-              "flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
-              !isDesktop && "flex-1",
+              "flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+              isMobile && "max-h-[42vh] h-auto shrink-0",
             )}
           >
             {/* Cabeçalho fixo: hero do negócio — paridade visual com o
@@ -1360,10 +1334,9 @@ export function DealDetailPanel({
                   ContactAside do inbox, que ja tinha produtos arrastaveis. */}
             </div>
           </aside>
-          )}
 
-          {/* Handle de resize — desktop only */}
-          {isDesktop && (
+          {/* Handle de resize — desktop/tablet only */}
+          {!isMobile && (
           <div
             role="separator"
             aria-label="Redimensionar painel de detalhes"
@@ -1418,17 +1391,19 @@ export function DealDetailPanel({
           </div>
           )}
 
-          {/* CONTENT — desktop sempre; mobile só no pane "Conversa" */}
-          {(isDesktop || mobilePane === "conversa") && (tabContentOverride?.[activeTab] ? (
+          {/* CONTENT — chat, sempre visível junto com o aside */}
+          {tabContentOverride?.[activeTab] ? (
             <main
               aria-label={activeTab}
               className={cn(
-                "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
-                !isDesktop && "min-h-0 flex-1",
+                "flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                isMobile && "flex-1",
               )}
             >
               <TabsBar activeTab={activeTab} onChange={setActiveTab} />
-              {tabContentOverride[activeTab]}
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {tabContentOverride[activeTab]}
+              </div>
             </main>
           ) : messagesSlot || composerSlot || sessionAlertSlot ? (
             // Quando ha slots reais, montamos um <main> custom com o
@@ -1437,8 +1412,8 @@ export function DealDetailPanel({
             <main
               aria-label="Conversa"
               className={cn(
-                "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
-                !isDesktop && "min-h-0 flex-1",
+                "relative flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                isMobile && "flex-1",
               )}
             >
               <TabsBar
@@ -1495,12 +1470,12 @@ export function DealDetailPanel({
             <main
               aria-label="Conversa"
               className={cn(
-                "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
-                !isDesktop && "min-h-0 flex-1",
+                "flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                isMobile && "flex-1",
               )}
             >
               <TabsBar activeTab={activeTab} onChange={setActiveTab} />
-              <div className="min-h-0 flex-1">
+              <div className="min-h-0 flex-1 overflow-hidden">
                 <ChatArea
                   contact={{ name: deal.name, badge: "enterprise", badgeLabel: "ENTERPRISE" }}
                   messages={fallbackMessages}
@@ -1509,7 +1484,7 @@ export function DealDetailPanel({
                 />
               </div>
             </main>
-          ))}
+          )}
         </div>
       </div>
     </div>
@@ -1586,7 +1561,7 @@ function TabsBar({
       <header className="flex items-center gap-2 px-4 py-3">
         {/* Tabs pill group — oculta enquanto busca está aberta */}
         {!(searchOpen && activeTab === "conversa") && (
-          <div className="toolbar-hscroll min-w-0 max-w-full flex-1">
+          <div className="toolbar-hscroll min-w-0 max-w-full flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="inline-flex w-max flex-nowrap items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
               {TABS.map((tab) => {
                 const Icon = tab.icon
@@ -1629,7 +1604,7 @@ function TabsBar({
 
         {/* Busca inline — ocupa o flex-1 quando aberta */}
         {searchOpen && activeTab === "conversa" ? (
-          <div className="flex flex-1 items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-1.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-1.5">
             <IconSearch size={13} className="shrink-0 text-[var(--text-muted)]" />
             <input
               ref={searchInputRef}
@@ -1657,10 +1632,11 @@ function TabsBar({
               <IconX size={12} />
             </button>
           </div>
-        ) : (
-          <div className="flex-1" />
-        )}
+        ) : null}
 
+        {/* Ações à direita — sem spacer flex-1 no meio (ele roubava largura
+            das abas e cortava "Timeline"/"Chamadas"). */}
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
         {/* Botao "Ligar" (softphone) — vive aqui pra ficar ao lado do
             kebab, canto direito do container da conversa. Antes ficava
             no header do card do deal, mas ergonomicamente pertence
@@ -1752,6 +1728,7 @@ function TabsBar({
             )}
           </div>
         )}
+        </div>
       </header>
       <FavoritesPanel
         open={favoritesOpen}

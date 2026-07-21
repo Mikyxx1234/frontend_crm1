@@ -20,6 +20,9 @@ function applyTheme(t: ThemeV2) {
   document.documentElement.classList.toggle(DARK_CLASS, isDark);
   // Tokens shadcn (text-foreground, bg-muted, text-ink-*) vivem em globals.css sob `.dark`.
   document.documentElement.classList.toggle("dark", isDark);
+  // Mantém form controls/scrollbars nativos (checkbox, select, etc.) coerentes
+  // com o tema — mesmo valor que o script anti-FOUC em layout.tsx já seta.
+  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
 }
 
 /**

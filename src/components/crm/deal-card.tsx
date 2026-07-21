@@ -82,6 +82,12 @@ interface DealCardProps {
   selectionMode?: boolean
 }
 
+function dealOpenHref(deal: Deal): string {
+  const raw = deal.dealNumber.replace(/^#/, "")
+  const param = /^\d+$/.test(raw) ? raw : deal.id
+  return `/pipeline?deal=${encodeURIComponent(param)}`
+}
+
 const tagStyles: Record<TagType, string> = {
   hot: "bg-[rgba(239,68,68,0.12)] text-[var(--color-danger-text)] border-[rgba(239,68,68,0.20)]",
   warm: "bg-[var(--color-lead-bg)] text-[var(--color-warning-text)] border-[rgba(245,158,11,0.25)]",
@@ -98,10 +104,20 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
   // do modo sejam explícitas e previsíveis.
   const showCheckbox = !!selectionMode && !!onToggleSelect
   return (
-    <article
-      onClick={onClick}
+    <a
+      href={dealOpenHref(deal)}
+      draggable={false}
+      aria-label={`Abrir negócio ${deal.dealNumber} — ${deal.name}`}
+      onClick={(e) => {
+        if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+          e.preventDefault()
+          onClick?.()
+        }
+      }}
       className={cn(
-        "group relative cursor-pointer rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] py-1.5 backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-all",
+        // `block` preserva o comportamento de caixa do antigo <article>
+        // (a <a> é inline por padrão e quebraria a largura/altura do card).
+        "group relative block cursor-pointer rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] py-1.5 backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-all",
         "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
         isSelected && "border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/40",
         "active:cursor-grabbing",
@@ -260,6 +276,6 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           </div>
         )}
       </div>
-    </article>
+    </a>
   )
 }

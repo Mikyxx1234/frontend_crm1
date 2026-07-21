@@ -653,8 +653,20 @@ html[data-nav-expanded="true"] {
   --wa-field-border:  #2a3942;
   --wa-header:        #202c33;
 
+  /* Mesh gradient base — usado em <body> (espelha `.dark` de globals.css).
+     Sem isso `--bg-gradient` herdava o valor light (#dde8f5) definido em
+     `:root`, deixando a moldura clara visível ao redor dos cards escuros
+     (mais evidente ainda com `.v2-root { zoom: 0.93 }`). */
+  --bg-gradient: linear-gradient(135deg, #0b1220 0%, #131b30 40%, #1c1530 70%, #0e1426 100%);
+
   /* Scrollbar no dark */
   scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+html.v2-dark,
+html.v2-dark body {
+  background: var(--bg-gradient);
+  background-attachment: fixed;
 }
 
 /* Scrollbars dark */

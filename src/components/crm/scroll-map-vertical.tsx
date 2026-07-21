@@ -174,27 +174,28 @@ export function ScrollMapVertical({
     <div
       aria-hidden="true"
       className={cn(
-        "pointer-events-none absolute right-2 top-2 bottom-14 z-20 flex items-stretch justify-end sm:right-3",
+        "pointer-events-none absolute right-2 top-1/2 z-20 flex -translate-y-1/2 justify-end sm:right-3",
         className,
       )}
     >
+      {/* Trilho curto e fino, centralizado na lateral */}
       <div
         ref={wrapperRef}
         onClick={onTrackClick}
         className={cn(
-          "group/scrollmap-v pointer-events-auto relative w-[10px] cursor-pointer select-none rounded-md",
-          "opacity-35 transition-opacity duration-200 ease-out hover:opacity-100",
+          "group/scrollmap-v pointer-events-auto relative w-[6px] cursor-pointer select-none rounded-full",
+          "opacity-40 transition-opacity duration-200 ease-out hover:opacity-100",
         )}
-        style={{ background: "rgba(91,111,245,0.12)" }}
+        style={{ height: "min(160px, 45vh)", background: "rgba(91,111,245,0.14)" }}
       >
         <div
           onMouseDown={onIndicatorMouseDown}
           onClick={(e) => e.stopPropagation()}
-          className="absolute inset-x-0 cursor-grab rounded-md transition-[top,height] duration-75 ease-linear active:cursor-grabbing"
+          className="absolute inset-x-0 cursor-grab rounded-full transition-[top,height] duration-75 ease-linear group-hover/scrollmap-v:w-2 group-hover/scrollmap-v:-left-px active:cursor-grabbing"
           style={{
             top: `${indicator.top}%`,
-            height: `${indicator.height}%`,
-            background: "rgba(91,111,245,0.45)",
+            height: `max(24px, ${indicator.height}%)`,
+            background: "rgba(91,111,245,0.6)",
           }}
         />
       </div>

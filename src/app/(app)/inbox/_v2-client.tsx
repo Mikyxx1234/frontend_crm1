@@ -1196,7 +1196,7 @@ export default function InboxV2ClientPage({
                     </button>
                   </div>
                 </div>
-                <div className="min-h-0 flex-1 overflow-hidden">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                   {mobilePaneTab === "chat" ? chatNode : asideNode}
                 </div>
               </div>
@@ -1309,7 +1309,7 @@ export default function InboxV2ClientPage({
                   </button>
                 </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-hidden">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 {mobilePaneTab === "chat" ? chatNode : asideNode}
               </div>
             </div>

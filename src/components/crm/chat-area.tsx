@@ -362,7 +362,10 @@ export function ChatArea({
     <main
       aria-label={`Conversa com ${contact.name}`}
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+        // h-full min-h-0: o pai (inbox mobile) limita a altura; sem isso a
+        // lista de mensagens estoura o viewport e o composer some abaixo
+        // do clip em conversas longas.
+        "relative flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
@@ -463,7 +466,7 @@ export function ChatArea({
         const idx = Math.min(activePinIndex, pins.length - 1)
         const current = pins[idx]
         return (
-          <div className="mx-4 mt-3 flex items-center gap-2 rounded-lg border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.06] px-3 py-2">
+          <div className="mx-4 mt-3 flex shrink-0 items-center gap-2 rounded-lg border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.06] px-3 py-2">
             <IconPinFilled size={14} className="shrink-0 text-[var(--brand-primary)]" />
             <button
               type="button"
@@ -497,8 +500,9 @@ export function ChatArea({
           </div>
         )
       })()}
-      {/* MESSAGES */}
-      <div ref={messagesRef} className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
+      {/* MESSAGES — única área rolável; min-h-0 permite encolher e manter
+          o footer (composer) sempre visível na base. */}
+      <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-7 py-6 max-md:px-3">
         {(() => {
           // Separador de dia ("Hoje" / "Ontem" / "DD/MM/AAAA") inserido
           // automaticamente sempre que a data muda entre mensagens. Usa o

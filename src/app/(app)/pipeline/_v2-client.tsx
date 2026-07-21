@@ -353,8 +353,13 @@ export default function KanbanV2ClientPage({
   // Ativa (pipelines.lossReasonRequired). Cancelar = não move.
   const [pendingLostMove, setPendingLostMove] = useState<MoveVars | null>(null);
 
+  // Chave dedicada — o LossReasonDialog usa ["pipeline-loss-reasons", pipelineId]
+  // com refetchOnMount:"always" e shape distinto ({ reasons, required, allowOther }).
+  // Compartilhar a mesma key aqui poluia o cache e fazia lossReasonRequired virar
+  // undefined depois da primeira abertura do modal, resultando em POST /move sem
+  // lostReason no segundo mover-para-Perdido → 400.
   const lossMetaQuery = useQuery({
-    queryKey: ["pipeline-loss-reasons", pipelineId],
+    queryKey: ["pipeline-loss-meta", pipelineId],
     queryFn: async () => {
       const res = await fetch(
         apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),

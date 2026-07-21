@@ -1,4 +1,4 @@
-import { IconBell as Bell, IconRobot as Bot, IconBoxMultiple as Boxes, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconUsers as Users } from "@tabler/icons-react";
+import { IconBell as Bell, IconRobot as Bot, IconDatabase as Database, IconHeadphones as Headphones, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconRadio as Radio, IconAdjustments as Settings2, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconUsers as Users } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { UserRole } from "@/lib/prisma-enum-types";
 
@@ -155,31 +155,11 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         id: "products",
         label: "Produtos",
-        description: "Catálogo usado em negócios",
+        description: "Catálogo, produtos e cotas de desconto",
         icon: Package,
         href: "/settings/products",
         allowedRoles: GESTAO,
         requiredPermission: "product:view",
-      },
-      {
-        id: "catalogs",
-        label: "Catálogos",
-        description: "Catálogos por capacidades (wizard)",
-        icon: Boxes,
-        href: "/settings/catalogs",
-        allowedRoles: GESTAO,
-        requiredPermission: "catalog:view",
-        eyebrow: "Novo",
-      },
-      {
-        id: "cotas",
-        label: "Cotas de desconto",
-        description: "Cupons com estoque, vigência e cumulatividade",
-        icon: Tag,
-        href: "/settings/cotas",
-        allowedRoles: GESTAO,
-        requiredPermission: "quota:view",
-        eyebrow: "Novo",
       },
     ],
   },
@@ -230,43 +210,15 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
   },
 
   {
-    id: "integracoes",
-    label: "Integrações",
-    icon: Plug,
-    description: "APIs externas e tokens",
-    items: [
-      {
-        id: "api-tokens",
-        label: "API e Webhooks",
-        description: "Tokens de integração e eventos",
-        icon: Key,
-        href: "/settings/api-tokens",
-        allowedRoles: SO_ADMIN,
-        requiredPermission: "settings:api_tokens",
-      },
-    ],
-  },
-
-  {
     id: "sistema",
     label: "Sistema",
     icon: Settings2,
     description: "Preferências e acessos",
     items: [
       {
-        id: "permissions",
-        label: "Permissões",
-        description: "Roles, grupos e controle de acesso",
-        icon: Shield,
-        href: "/settings/permissions",
-        allowedRoles: SO_ADMIN,
-        requiredPermission: "settings:permissions",
-        eyebrow: "Novo",
-      },
-      {
         id: "security",
         label: "Segurança",
-        description: "Feature flags e RBAC avançado",
+        description: "Permissões, API e Webhooks e feature flags",
         icon: Lock,
         href: "/settings/security",
         allowedRoles: SO_ADMIN,
@@ -301,8 +253,8 @@ export const SETTINGS_PERSONAL: SettingsNavItem[] = [
   {
     id: "help",
     label: "Suporte",
-    description: "Fale com o time EduIT",
+    description: "Fale com o time de suporte",
     icon: LifeBuoy,
-    href: "mailto:suporte@eduit.com.br",
+    href: "/settings/support",
   },
 ];

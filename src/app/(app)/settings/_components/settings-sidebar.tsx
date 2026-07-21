@@ -58,17 +58,16 @@ export function SettingsSidebar({
     [role, isSuperAdmin, myPerms?.permissions],
   );
 
-  // Achata todos os itens (pessoais + grupos, filtrados por permissão) numa
-  // única lista alfabética. Sem cabeçalhos de grupo — layout mais limpo.
+  // Itens do workspace ficam em ordem alfabética; os itens pessoais
+  // (Meu perfil, Suporte) são fixados no final, nessa ordem — fora da
+  // ordenação alfabética, por decisão de produto.
   const flatItems = useMemo(() => {
-    const fromGroups = filterSettingsNav(SETTINGS_NAV, viewer).flatMap(
-      (g) => g.items,
-    );
-    const all = [...SETTINGS_PERSONAL, ...fromGroups];
-    // Ordena por label em pt-BR (ignora acentos/caixa).
-    return all.sort((a, b) =>
-      a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" }),
-    );
+    const fromGroups = filterSettingsNav(SETTINGS_NAV, viewer)
+      .flatMap((g) => g.items)
+      .sort((a, b) =>
+        a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" }),
+      );
+    return [...fromGroups, ...SETTINGS_PERSONAL];
   }, [viewer]);
 
   const [search, setSearch] = useState("");

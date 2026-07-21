@@ -24,7 +24,7 @@ import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 
 // ─── Selection state via query ──────────────────────────────────────────────
 
-type Selection =
+export type Selection =
   | { kind: "role"; id: string | "new" }
   | { kind: "user"; id: string }
   | { kind: "none" };
@@ -93,18 +93,37 @@ export function PermissionsClientPage() {
       description="Papéis e usuários"
       icon={<IconShieldCheck size={22} />}
     >
-      {/* Mobile: coluna única, altura natural (page scroll) — lista antes,
-          detail embaixo. Em lg+: duas colunas com altura travada ao viewport
-          e scroll interno em cada painel (comportamento anterior). */}
-      <div className="grid min-w-0 grid-cols-1 gap-3 lg:h-full lg:min-h-0 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <Sidebar selection={selection} onSelect={select} />
-        <DetailPane
-          selection={selection}
-          onClear={clearSelection}
-          onSelect={select}
-        />
-      </div>
+      <PermissionsPanel
+        selection={selection}
+        onSelect={select}
+        onClear={clearSelection}
+      />
     </SettingsV2Shell>
+  );
+}
+
+/**
+ * Painel de permissões controlado (sem shell/header próprio). Reutilizado
+ * na página standalone `/settings/permissions` (estado na URL) e como aba
+ * dentro de Segurança (estado local).
+ *
+ * Mobile: coluna única, altura natural (page scroll) — lista antes, detail
+ * embaixo. Em lg+: duas colunas com altura travada e scroll interno.
+ */
+export function PermissionsPanel({
+  selection,
+  onSelect,
+  onClear,
+}: {
+  selection: Selection;
+  onSelect: (s: Selection) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="grid min-w-0 grid-cols-1 gap-3 lg:h-full lg:min-h-0 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <Sidebar selection={selection} onSelect={onSelect} />
+      <DetailPane selection={selection} onClear={onClear} onSelect={onSelect} />
+    </div>
   );
 }
 

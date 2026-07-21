@@ -16,6 +16,8 @@ import {
   IconArrowsExchange,
   IconCheckbox,
   IconChevronDown,
+  IconChevronsDown,
+  IconChevronsUp,
   IconDotsVertical,
   IconDownload,
   IconMenu2,
@@ -938,6 +940,7 @@ export default function KanbanV2ClientPage({
             ) : null}
           </div>
           <ScrollMap boardRef={boardRef} columnCount={columns.length} />
+          <BoardVerticalScrollBar boardRef={boardRef} />
           </div>{/* fim relative wrapper */}
         </DragDropContext>
       </div>
@@ -1481,6 +1484,119 @@ function formatDate(iso: string): string {
 // Coluna drop-friendly: re-renderiza a KanbanColumn original com
 // uma área Droppable em cima dos cards.
 // ─────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────
+// BoardVerticalScrollBar — controles flutuantes ↑/↓ que rolam TODAS
+// as colunas do kanban simultaneamente (o scroll nativo é por coluna).
+// Consulta `.kanban-scroll` dentro do `boardRef`, anima cada uma para
+// 0 ou scrollHeight com scrollTo({ behavior: "smooth" }).
+// ─────────────────────────────────────────────────────────────────
+function BoardVerticalScrollBar({
+  boardRef,
+}: {
+  boardRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [state, setState] = useState<{
+    canUp: boolean;
+    canDown: boolean;
+  }>({ canUp: false, canDown: false });
+
+  // Reavalia habilitação dos botões sob demanda: escuta scroll de cada
+  // coluna e resize do board pra refletir mudança de conteúdo (novos
+  // cards, filtros, colunas adicionadas).
+  useEffect(() => {
+    const board = boardRef.current;
+    if (!board) return;
+
+    const compute = () => {
+      const cols = board.querySelectorAll<HTMLElement>(".kanban-scroll");
+      let canUp = false;
+      let canDown = false;
+      cols.forEach((el) => {
+        if (el.scrollTop > 1) canUp = true;
+        if (el.scrollTop + el.clientHeight < el.scrollHeight - 1) canDown = true;
+      });
+      setState({ canUp, canDown });
+    };
+
+    compute();
+    const cols = Array.from(
+      board.querySelectorAll<HTMLElement>(".kanban-scroll"),
+    );
+    cols.forEach((el) => el.addEventListener("scroll", compute, { passive: true }));
+    const ro = new ResizeObserver(compute);
+    ro.observe(board);
+    cols.forEach((el) => ro.observe(el));
+
+    // MutationObserver: cobre entrada/saída de colunas (troca de funil, filtros).
+    const mo = new MutationObserver(() => {
+      // Re-registra listeners nas colunas atuais.
+      compute();
+    });
+    mo.observe(board, { childList: true, subtree: true });
+
+    return () => {
+      cols.forEach((el) => el.removeEventListener("scroll", compute));
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, [boardRef]);
+
+  const scrollAll = useCallback(
+    (dir: "top" | "bottom") => {
+      const board = boardRef.current;
+      if (!board) return;
+      const cols = board.querySelectorAll<HTMLElement>(".kanban-scroll");
+      cols.forEach((el) => {
+        el.scrollTo({
+          top: dir === "top" ? 0 : el.scrollHeight,
+          behavior: "smooth",
+        });
+      });
+    },
+    [boardRef],
+  );
+
+  // Esconde totalmente quando nenhum dos dois é útil (todas as colunas
+  // cabem sem scroll).
+  if (!state.canUp && !state.canDown) return null;
+
+  return (
+    <div
+      className="pointer-events-none absolute bottom-3 right-3 z-20 flex flex-col gap-1 sm:bottom-4 sm:right-4"
+      aria-label="Rolar todas as fases"
+    >
+      <button
+        type="button"
+        onClick={() => scrollAll("top")}
+        disabled={!state.canUp}
+        aria-label="Rolar todas as fases para o topo"
+        className={cn(
+          "pointer-events-auto flex size-9 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-colors",
+          state.canUp
+            ? "hover:text-[var(--brand-primary)]"
+            : "cursor-not-allowed opacity-40",
+        )}
+      >
+        <IconChevronsUp size={18} />
+      </button>
+      <button
+        type="button"
+        onClick={() => scrollAll("bottom")}
+        disabled={!state.canDown}
+        aria-label="Rolar todas as fases para o fim"
+        className={cn(
+          "pointer-events-auto flex size-9 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-colors",
+          state.canDown
+            ? "hover:text-[var(--brand-primary)]"
+            : "cursor-not-allowed opacity-40",
+        )}
+      >
+        <IconChevronsDown size={18} />
+      </button>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────
 // CardMoveMenu — botão "Mover" no rodapé do card que abre um menu de

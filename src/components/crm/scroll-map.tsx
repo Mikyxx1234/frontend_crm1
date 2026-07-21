@@ -10,10 +10,11 @@ interface ScrollMapProps {
 }
 
 /**
- * ScrollMap — scrollbar horizontal custom, fina e compacta.
+ * ScrollMap — navegador horizontal estilo Kommo.
  *
- * Trilha discreta com thumb proporcional à área visível. Clique na
- * trilha salta para a posição; arrastar o thumb faz scroll proporcional.
+ * Um segmento por coluna. Indicador deslizante mostra a área visível.
+ * Clique num segmento navega para a coluna. Arrastar o indicador faz
+ * scroll proporcional.
  */
 export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -57,17 +58,14 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
     // columnCount nas deps: re-subscreve e re-mede quando o nº de colunas muda
   }, [boardRef, recalc, columnCount]);
 
-  const onTrackClick = useCallback(
-    (e: React.MouseEvent) => {
+  const onSegmentClick = useCallback(
+    (index: number) => {
       const el = boardRef.current;
-      const track = wrapperRef.current;
-      if (!el || !track) return;
-      const rect = track.getBoundingClientRect();
-      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      if (!el) return;
       const maxScroll = el.scrollWidth - el.clientWidth;
-      el.scrollTo({ left: ratio * maxScroll, behavior: "smooth" });
+      el.scrollTo({ left: (index / Math.max(1, columnCount - 1)) * maxScroll, behavior: "smooth" });
     },
-    [boardRef],
+    [boardRef, columnCount],
   );
 
   const onIndicatorMouseDown = useCallback(
@@ -102,36 +100,50 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
 
   if (!visible) return null;
 
+  const segments = Math.max(1, columnCount);
+
   return (
     <div
+      aria-hidden="true"
       className={cn(
-        "pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2",
-        "flex justify-center",
+        "pointer-events-none absolute bottom-3 left-0 right-3 z-20",
+        "flex items-end justify-end",
         className,
       )}
     >
-      {/* Trilha fina, largura compacta e responsiva */}
       <div
         ref={wrapperRef}
-        onClick={onTrackClick}
         className={cn(
-          "group/scrollmap pointer-events-auto relative cursor-pointer select-none rounded-full",
-          "opacity-40 transition-opacity duration-200 ease-out hover:opacity-100",
+          "group/scrollmap pointer-events-auto relative flex select-none items-stretch gap-1",
+          // Transparente em repouso, totalmente visível ao passar o mouse
+          "opacity-35 transition-opacity duration-200 ease-out hover:opacity-100",
         )}
         style={{
-          height: "6px",
-          width: "min(280px, calc(100vw - 160px))",
-          background: "rgba(91,111,245,0.14)",
+          height: "44px",
+          /* Largura mais compacta — ~34px por segmento, limitada à largura útil */
+          width: `min(${segments * 34}px, calc(100vw - 140px))`,
         }}
       >
-        {/* Thumb — reflete a área visível e é arrastável */}
+        {/* Segmentos — um por coluna */}
+        {Array.from({ length: segments }).map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            aria-label={`Ir para coluna ${i + 1}`}
+            onClick={() => onSegmentClick(i)}
+            className="h-full flex-1 cursor-pointer rounded-md transition-colors duration-150 hover:opacity-80"
+            style={{ background: "rgba(91,111,245,0.12)" }}
+          />
+        ))}
+
+        {/* Indicador de posição deslizante */}
         <div
           onMouseDown={onIndicatorMouseDown}
-          className="absolute inset-y-0 cursor-grab rounded-full transition-[left,width] duration-75 ease-linear group-hover/scrollmap:h-2 group-hover/scrollmap:-top-px active:cursor-grabbing"
+          className="absolute inset-y-0 cursor-grab rounded-md transition-[left,width] duration-75 ease-linear active:cursor-grabbing"
           style={{
             left: `${indicator.left}%`,
-            width: `max(28px, ${indicator.width}%)`,
-            background: "rgba(91,111,245,0.6)",
+            width: `${indicator.width}%`,
+            background: "rgba(91,111,245,0.45)",
           }}
         />
       </div>

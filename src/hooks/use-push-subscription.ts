@@ -2,6 +2,8 @@
 
 import { apiUrl } from "@/lib/api";
 import { useCallback, useEffect, useState } from "react";
+import { ensureNotificationPermission } from "@/lib/native/permissions";
+import { isNativePlatform } from "@/lib/native/capacitor";
 
 /**
  * Hook do Web Push do EduIT.
@@ -72,13 +74,15 @@ export function usePushSubscription(): PushSubscriptionState {
     setIsLoading(true);
     try {
       // 1. Permissao
-      let perm = Notification.permission;
-      if (perm === "default") {
-        perm = await Notification.requestPermission();
-        setPermission(perm);
+      const permissionResult = await ensureNotificationPermission();
+      if (permissionResult.status !== "unsupported") {
+        setPermission(permissionResult.status);
       }
-      if (perm !== "granted") {
+      if (!permissionResult.ok) {
         setError("permission_denied");
+        if (isNativePlatform() && permissionResult.error) {
+          console.warn("[push] permissão negada no APK:", permissionResult.error);
+        }
         return false;
       }
 

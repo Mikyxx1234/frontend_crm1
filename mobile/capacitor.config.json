@@ -1,0 +1,41 @@
+{
+  "appId": "br.com.eduit.crm",
+  "appName": "EduIT CRM",
+  "webDir": "www",
+  "server": {
+    "url": "https://crm-dev-frontend.ca31ey.easypanel.host",
+    "cleartext": false,
+    "androidScheme": "https",
+    "allowNavigation": [
+      "crm-dev-frontend.ca31ey.easypanel.host",
+      "*.ca31ey.easypanel.host",
+      "crm.eduit.com.br",
+      "*.eduit.com.br",
+      "localhost",
+      "127.0.0.1",
+      "www.facebook.com",
+      "m.facebook.com",
+      "facebook.com",
+      "*.facebook.com",
+      "web.facebook.com",
+      "www.instagram.com",
+      "instagram.com",
+      "*.instagram.com"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0d1b3e"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#0d1b3e",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0d1b3e"
+    }
+  }
+}

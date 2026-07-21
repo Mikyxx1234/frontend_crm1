@@ -11,6 +11,7 @@ import {
 import { getBrowserIceServers } from "@/lib/webrtc-ice";
 import { sanitizeMetaWhatsappSdpForBrowser, stripSsrcLinesFromSdp } from "@/lib/whatsapp-webrtc-sdp";
 import { useSSE } from "@/hooks/use-sse";
+import { ensureMicrophonePermission } from "@/lib/native/permissions";
 
 function waitIceGatheringComplete(pc: RTCPeerConnection, timeoutMs = 12_000): Promise<void> {
   if (pc.iceGatheringState === "complete") return Promise.resolve();
@@ -183,6 +184,10 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
       }
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Microfone indisponível. Use HTTPS e conceda permissão ao microfone.");
+      }
+      const permission = await ensureMicrophonePermission();
+      if (!permission.ok) {
+        throw new Error(permission.error ?? "Microfone indisponível. Use HTTPS e conceda permissão ao microfone.");
       }
 
       const pc = new RTCPeerConnection({

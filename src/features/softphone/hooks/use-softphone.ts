@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { SipCredentials } from "../api/types";
 import { getMyCredentials } from "../api/extensions";
+import { ensureMicrophonePermission } from "@/lib/native/permissions";
 
 type SoftphoneStatus =
   | "disconnected"
@@ -341,21 +342,11 @@ export function useSoftphone() {
       // completa e (antes) o botão ficava preso sem explicação. Aqui
       // detectamos a ausência/bloqueio e avisamos o usuário na tela.
       void (async () => {
-        try {
-          const md = navigator.mediaDevices;
-          if (!md?.getUserMedia) {
-            throw Object.assign(new Error("no-media-api"), { name: "NotSupportedError" });
-          }
-          const stream = await md.getUserMedia({ audio: true });
-          stream.getTracks().forEach((t) => t.stop());
-        } catch (err) {
-          const name = (err as { name?: string })?.name ?? "";
-          const msg =
-            name === "NotFoundError" || name === "DevicesNotFoundError"
-              ? "Nenhum microfone encontrado. Conecte um microfone para ligar."
-              : name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError"
-                ? "Acesso ao microfone bloqueado. Permita o microfone no navegador para ligar."
-                : "Não foi possível acessar o microfone. Verifique se há um microfone conectado.";
+        const permission = await ensureMicrophonePermission();
+        if (!permission.ok) {
+          const msg = permission.error
+            ? `${permission.error} Não foi possível ligar.`
+            : "Não foi possível acessar o microfone. Verifique se há um microfone conectado.";
           setState((s) => ({
             ...s,
             status: moduleUA ? "registered" : "disconnected",

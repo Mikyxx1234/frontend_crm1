@@ -52,9 +52,31 @@ export interface NativeAppPlugin {
   ): Promise<AppPluginListenerHandle> | AppPluginListenerHandle;
 }
 
+export interface NativeAppUpdateVersion {
+  versionCode: number;
+  versionName: string;
+}
+
+export interface NativeAppUpdateDownloadOptions {
+  url: string;
+}
+
+export interface NativeAppUpdateBooleanResult {
+  value: boolean;
+}
+
+/** Plugin nativo "Atualizar sem APK" (ver AGENT.md § Atualizar sem APK). */
+export interface NativeAppUpdatePlugin {
+  getNativeVersion(): Promise<NativeAppUpdateVersion>;
+  downloadAndInstall(options: NativeAppUpdateDownloadOptions): Promise<void>;
+  canInstallPackages(): Promise<NativeAppUpdateBooleanResult>;
+  openInstallPermissionSettings(): Promise<void>;
+}
+
 export interface CapacitorPluginsMap {
   NativeBiometric?: NativeBiometricPlugin;
   App?: NativeAppPlugin;
+  AppUpdate?: NativeAppUpdatePlugin;
   [pluginName: string]: unknown;
 }
 
@@ -90,4 +112,8 @@ export function getNativeBiometricPlugin(): NativeBiometricPlugin | undefined {
 
 export function getNativeAppPlugin(): NativeAppPlugin | undefined {
   return getCapacitorPlugins()?.App;
+}
+
+export function getAppUpdatePlugin(): NativeAppUpdatePlugin | undefined {
+  return getCapacitorPlugins()?.AppUpdate;
 }

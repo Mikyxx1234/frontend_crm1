@@ -743,12 +743,18 @@
 .settings-sidebar-slide-in {
   animation: settings-sidebar-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
-/* Transição de página (rotas abertas pela NavRail) — mesmo efeito da
-   sidebar de settings, aplicado ao trocar de seção. Usa `backwards` (não
-   `both`) para reverter a `transform: none` ao fim e NÃO deixar um
-   containing block permanente que quebraria filhos `position: fixed`. */
-.v2-page-slide-in {
-  animation: settings-sidebar-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards;
+/* Transição de página (rotas abertas pela NavRail).
+   A NavRail é SEMPRE o primeiro filho de `.v2-screen`; animamos apenas o
+   "recheio" (demais colunas: conteúdo/sidebar/painel), deixando a rail
+   estática. Desliza da direita + fade. `backwards` reverte a
+   `transform: none` ao fim (não cria containing block permanente que
+   quebraria filhos `position: fixed`). */
+@keyframes v2-content-slide-in {
+  0% { opacity: 0; transform: translateX(56px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.v2-route-transition > .v2-screen > *:not(:first-child) {
+  animation: v2-content-slide-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards;
 }
 @keyframes msg-in {
   from { opacity: 0; transform: translateY(10px); }

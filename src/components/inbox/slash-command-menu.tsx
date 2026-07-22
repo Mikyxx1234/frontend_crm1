@@ -28,7 +28,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { IconFileText as FileText, IconLoader2 as Loader2, IconMessageQuestion as MessageSquareQuote } from "@tabler/icons-react";
+import { IconBolt as Bolt, IconFileText as FileText, IconLoader2 as Loader2, IconMessageQuestion as MessageSquareQuote } from "@tabler/icons-react";
 
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -42,7 +42,7 @@ import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template
 // Types
 // ─────────────────────────────────────────────────────────────────
 
-export type SlashItemKind = "internal-template" | "meta-template";
+export type SlashItemKind = "internal-template" | "quick-reply" | "meta-template";
 
 export type SlashItem =
   | {
@@ -52,6 +52,16 @@ export type SlashItem =
       content: string;
       category: string | null;
       channelType: string | null;
+      mediaUrl: string | null;
+      mediaName: string | null;
+    }
+  | {
+      kind: "quick-reply";
+      id: string;
+      name: string;
+      content: string;
+      category: string | null;
+      attachmentUrl: string | null;
     }
   | {
       kind: "meta-template";
@@ -129,6 +139,15 @@ type InternalRow = {
   language?: string;
   status?: string;
   channelType: string | null;
+  mediaUrl?: string | null;
+  mediaName?: string | null;
+};
+type QuickReplyRow = {
+  id: string;
+  title: string;
+  content: string;
+  attachmentUrl?: string | null;
+  group?: { name?: string | null } | null;
 };
 type MetaRow = {
   id: string;
@@ -161,6 +180,14 @@ async function fetchMetaTemplates(): Promise<MetaRow[]> {
   return Array.isArray(data) ? data : [];
 }
 
+async function fetchQuickReplies(): Promise<QuickReplyRow[]> {
+  const r = await fetch(apiUrl("/api/settings/quick-replies"));
+  if (!r.ok) return [];
+  const data = await r.json().catch(() => []);
+  const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+  return list as QuickReplyRow[];
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Hook de estado
 // ─────────────────────────────────────────────────────────────────
@@ -190,6 +217,13 @@ export type UseSlashMenuOptions = {
    * teclado (Enter/Tab), mantendo o comportamento consistente.
    */
   onSelectOverride?: (item: SlashItem) => void;
+  /**
+   * Chamado quando o item escolhido tem mídia anexada (modelo interno ou
+   * mensagem rápida). O composer usa isso para "encostar" o anexo que será
+   * enviado junto com o texto no envio. Ignorado quando `onSelectOverride`
+   * está definido (esse caminho cuida do envio por conta própria).
+   */
+  onInsertMedia?: (media: { url: string; name: string | null }) => void;
   /** Desliga totalmente o atalho (ex.: modo nota, anexo pendente). */
   disabled?: boolean;
 };
@@ -201,6 +235,7 @@ export function useSlashMenu({
   templateContext,
   onPickMetaTemplate,
   onSelectOverride,
+  onInsertMedia,
   disabled = false,
 }: UseSlashMenuOptions) {
   const [open, setOpen] = React.useState(false);
@@ -223,9 +258,16 @@ export function useSlashMenu({
     enabled: queriesEnabled,
     staleTime: 60_000,
   });
+  const quickRepliesQ = useQuery({
+    queryKey: ["slash-quick-replies"],
+    queryFn: fetchQuickReplies,
+    enabled: queriesEnabled,
+    staleTime: 60_000,
+  });
 
   const isLoading =
-    queriesEnabled && (internalsQ.isLoading || metasQ.isLoading);
+    queriesEnabled &&
+    (internalsQ.isLoading || metasQ.isLoading || quickRepliesQ.isLoading);
 
   const items = React.useMemo<SlashItem[]>(() => {
     const q = (token?.query ?? "").trim().toLowerCase();
@@ -242,6 +284,21 @@ export function useSlashMenu({
           content: t.content,
           category: t.category,
           channelType: t.channelType,
+          mediaUrl: t.mediaUrl ?? null,
+          mediaName: t.mediaName ?? null,
+        });
+      }
+    }
+
+    for (const q2 of quickRepliesQ.data ?? []) {
+      if (matches(q2.title) || matches(q2.content) || matches(q2.group?.name ?? "")) {
+        out.push({
+          kind: "quick-reply",
+          id: q2.id,
+          name: q2.title,
+          content: q2.content,
+          category: q2.group?.name ?? null,
+          attachmentUrl: q2.attachmentUrl ?? null,
         });
       }
     }
@@ -270,7 +327,7 @@ export function useSlashMenu({
     }
 
     return out;
-  }, [internalsQ.data, metasQ.data, token]);
+  }, [internalsQ.data, metasQ.data, quickRepliesQ.data, token]);
 
   // Reset activeIndex sempre que a query muda — sem isso o índice
   // pode cair fora do range da nova lista.
@@ -334,13 +391,24 @@ export function useSlashMenu({
         return;
       }
 
-      const replacement = interpolateInternalTemplate(item.content, templateContext ?? {});
+      // internal-template → interpola variáveis; quick-reply → texto literal.
+      const replacement =
+        item.kind === "internal-template"
+          ? interpolateInternalTemplate(item.content, templateContext ?? {})
+          : item.content;
 
       const before = draft.slice(0, token.start);
       const after = draft.slice(token.end);
       const next = before + replacement + after;
       setDraft(next);
       close();
+
+      // Encosta a mídia (se houver) pra ir junto no envio.
+      const mediaUrl =
+        item.kind === "internal-template" ? item.mediaUrl : item.attachmentUrl;
+      const mediaName =
+        item.kind === "internal-template" ? item.mediaName : null;
+      if (mediaUrl) onInsertMedia?.({ url: mediaUrl, name: mediaName });
 
       // Move o cursor pro fim do texto inserido.
       const pos = (before + replacement).length;
@@ -351,7 +419,7 @@ export function useSlashMenu({
         el.setSelectionRange(pos, pos);
       });
     },
-    [draft, setDraft, token, close, onPickMetaTemplate, onSelectOverride, templateContext, textareaRef],
+    [draft, setDraft, token, close, onPickMetaTemplate, onSelectOverride, onInsertMedia, templateContext, textareaRef],
   );
 
   const applyActive = React.useCallback(() => {
@@ -425,25 +493,29 @@ export function useSlashMenu({
 // Componente visual
 // ─────────────────────────────────────────────────────────────────
 
-const KIND_ORDER: SlashItemKind[] = ["internal-template", "meta-template"];
+const KIND_ORDER: SlashItemKind[] = ["internal-template", "quick-reply", "meta-template"];
 
 const KIND_GROUP_LABEL: Record<SlashItemKind, string> = {
   "internal-template": "Modelos internos do CRM",
+  "quick-reply": "Mensagens rápidas",
   "meta-template": "Templates WhatsApp (Meta)",
 };
 
 const KIND_GROUP_HINT: Record<SlashItemKind, string> = {
   "internal-template": "Mensagem do CRM com variáveis preenchidas no envio",
+  "quick-reply": "Resposta pronta — envia o texto (e o anexo, se houver)",
   "meta-template": "Modelo aprovado na Meta — abre painel para confirmar envio",
 };
 
 const KIND_ICON: Record<SlashItemKind, React.ComponentType<{ className?: string }>> = {
   "internal-template": FileText,
+  "quick-reply": Bolt,
   "meta-template": MessageSquareQuote,
 };
 
 const KIND_ICON_COLOR: Record<SlashItemKind, string> = {
   "internal-template": "text-primary",
+  "quick-reply": "text-[var(--color-warning-text,#b45309)]",
   "meta-template": "text-[var(--color-success-text)]",
 };
 
@@ -468,6 +540,7 @@ export function SlashCommandMenu({
   type IndexedItem = { item: SlashItem; globalIndex: number };
   const byKind: Record<SlashItemKind, IndexedItem[]> = {
     "internal-template": [],
+    "quick-reply": [],
     "meta-template": [],
   };
   state.items.forEach((item, i) => {
@@ -537,14 +610,17 @@ export function SlashCommandMenu({
                   {group.map(({ item, globalIndex }) => {
                     const active = globalIndex === state.activeIndex;
                     const title =
-                      item.kind === "internal-template"
-                        ? item.name
-                        : item.label || item.name;
+                      item.kind === "meta-template"
+                        ? item.label || item.name
+                        : item.name;
                     const preview =
-                      item.kind === "internal-template"
-                        ? item.content
-                        : item.bodyPreview;
+                      item.kind === "meta-template"
+                        ? item.bodyPreview
+                        : item.content;
                     const tag = item.category ?? null;
+                    const hasMedia =
+                      (item.kind === "internal-template" && !!item.mediaUrl) ||
+                      (item.kind === "quick-reply" && !!item.attachmentUrl);
                     return (
                       <li key={`${item.kind}-${item.id}`}>
                         <button
@@ -570,6 +646,11 @@ export function SlashCommandMenu({
                               <span className="truncate text-[13px] font-semibold">
                                 {title}
                               </span>
+                              {hasMedia ? (
+                                <span className="shrink-0 text-[11px]" title="Inclui anexo">
+                                  📎
+                                </span>
+                              ) : null}
                               {tag ? (
                                 <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground">
                                   {tag}

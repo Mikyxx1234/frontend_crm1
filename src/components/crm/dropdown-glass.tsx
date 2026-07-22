@@ -16,6 +16,11 @@ export interface DropdownOption {
   /** Estilo de ação destrutiva */
   danger?: boolean
   disabled?: boolean
+  /**
+   * Texto usado no filtro quando `searchable`. Se ausente, cai no `label`
+   * (quando string), `description` e `value`.
+   */
+  searchText?: string
 }
 
 /**
@@ -83,6 +88,10 @@ interface DropdownGlassProps {
   /** Classes adicionais para cada item da lista */
   itemClassName?: string
   disabled?: boolean
+  /** Exibe um campo de busca no topo e filtra as opções client-side. */
+  searchable?: boolean
+  /** Placeholder do campo de busca (quando `searchable`). */
+  searchPlaceholder?: string
 }
 
 /**
@@ -109,14 +118,37 @@ export function DropdownGlass({
   triggerClassName,
   itemClassName,
   disabled,
+  searchable,
+  searchPlaceholder,
 }: DropdownGlassProps) {
   const selected = options.find((o) => o.value === value)
   // Quando dentro de um <dialog> modal (top-layer), portamos o menu pra dentro
   // dele — senão o conteúdo cai no body, atrás do backdrop, e fica inclicável.
   const portalContainer = useModalPortalContainer()
 
+  const [open, setOpen] = React.useState(false)
+  const [q, setQ] = React.useState("")
+
+  const filteredOptions = React.useMemo(() => {
+    if (!searchable || !q.trim()) return options
+    const needle = q.trim().toLowerCase()
+    return options.filter((o) => {
+      const base =
+        o.searchText ?? (typeof o.label === "string" ? o.label : o.value)
+      const hay = `${base ?? ""} ${o.description ?? ""} ${o.value}`.toLowerCase()
+      return hay.includes(needle)
+    })
+  }, [options, q, searchable])
+
   return (
-    <DropdownPrimitive.Root modal={false}>
+    <DropdownPrimitive.Root
+      modal={false}
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o)
+        if (!o) setQ("")
+      }}
+    >
       {/*
        * suppressHydrationWarning: o Radix usa useId internamente para
        * o atributo id="radix-..." do trigger. Em árvores onde algo acima
@@ -166,7 +198,29 @@ export function DropdownGlass({
               {menuLabel}
             </DropdownPrimitive.Label>
           )}
-          {options.map((option) => {
+          {searchable && (
+            <div className="p-1 pb-1.5">
+              <input
+                autoFocus
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                // Deixa Radix cuidar de navegação (setas/enter/esc); as demais
+                // teclas ficam no input (senão o typeahead do menu rouba).
+                onKeyDown={(e) => {
+                  if (!["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(e.key))
+                    e.stopPropagation()
+                }}
+                placeholder={searchPlaceholder ?? "Buscar…"}
+                className={FILTER_FIELD_INPUT_CLASS}
+              />
+            </div>
+          )}
+          {filteredOptions.length === 0 && (
+            <div className="px-2.5 py-3 text-center font-body text-[12px] text-[var(--text-muted)]">
+              Nenhum resultado
+            </div>
+          )}
+          {filteredOptions.map((option) => {
             const isSelected = option.value === value
             return (
               <DropdownPrimitive.Item

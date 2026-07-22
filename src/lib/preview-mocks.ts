@@ -1196,6 +1196,11 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
     handler: () => ({ items: WA_TEMPLATES, total: WA_TEMPLATES.length }),
   },
   {
+    // Automação usa os aprovados (shape de array, igual ao endpoint real).
+    test: (u) => u.pathname === "/api/whatsapp-template-configs/approved",
+    handler: () => WA_TEMPLATES,
+  },
+  {
     test: (u) => u.pathname === "/api/health",
     handler: () => ({ status: "ok", preview: true }),
   },

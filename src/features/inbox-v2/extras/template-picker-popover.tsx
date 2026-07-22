@@ -8,6 +8,7 @@ import { IconAlertTriangle, IconBrandWhatsapp, IconX } from "@tabler/icons-react
 
 import {
   listAgentEnabledTemplates,
+  sendAttachment,
   sendTemplate,
   sendMessage,
   type WhatsappTemplate,
@@ -250,6 +251,9 @@ interface InternalTemplate {
   content: string;
   category: string | null;
   channelType: string | null;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
+  mediaName?: string | null;
 }
 
 async function fetchInternalTemplates(): Promise<InternalTemplate[]> {
@@ -274,9 +278,13 @@ export function InternalTemplatePickerList({
   onClose?: () => void;
   /**
    * Quando fornecido, clicar no modelo INSERE o texto interpolado no composer
-   * (editável, envio pelo botão) em vez de enviar na hora.
+   * (editável, envio pelo botão) em vez de enviar na hora. Se o modelo tiver
+   * mídia, ela é repassada para o composer "encostar" o anexo no envio.
    */
-  onPick?: (text: string) => void;
+  onPick?: (
+    text: string,
+    media?: { url: string; name: string | null } | null,
+  ) => void;
 }) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery<InternalTemplate[]>({
@@ -286,9 +294,21 @@ export function InternalTemplatePickerList({
   });
 
   const sendMutation = useMutation({
-    mutationFn: (tpl: InternalTemplate) => {
+    mutationFn: async (tpl: InternalTemplate) => {
       const text = interpolateInternalTemplate(tpl.content, templateContext ?? {});
-      return sendMessage(conversationId, { content: text });
+      const result = await sendMessage(conversationId, { content: text });
+      if (tpl.mediaUrl) {
+        try {
+          const mediaRes = await fetch(apiUrl(tpl.mediaUrl));
+          if (mediaRes.ok) {
+            const blob = await mediaRes.blob();
+            await sendAttachment(conversationId, blob, { fileName: tpl.mediaName ?? undefined });
+          }
+        } catch {
+          // Media send failed; text was already delivered
+        }
+      }
+      return result;
     },
     onSuccess: () => {
       toast.success("Modelo enviado");
@@ -355,6 +375,9 @@ export function InternalTemplatePickerList({
                     if (onPick) {
                       onPick(
                         interpolateInternalTemplate(tpl.content, templateContext ?? {}),
+                        tpl.mediaUrl
+                          ? { url: tpl.mediaUrl, name: tpl.mediaName ?? null }
+                          : null,
                       );
                       onClose?.();
                     } else {
@@ -363,8 +386,15 @@ export function InternalTemplatePickerList({
                   }}
                   className="block w-full rounded-[var(--radius-sm)] px-2 py-2 text-left hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
                 >
-                  <div className="text-xs font-semibold text-[var(--text-primary)]">
-                    {tpl.name}
+                  <div className="flex items-center gap-1.5">
+                    <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[var(--text-primary)]">
+                      {tpl.name}
+                    </span>
+                    {tpl.mediaUrl && (
+                      <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-px text-[9.5px] text-[var(--text-muted)]">
+                        📎
+                      </span>
+                    )}
                   </div>
                   <div className="mt-0.5 line-clamp-2 text-[11.5px] text-[var(--text-muted)]">
                     {tpl.content}

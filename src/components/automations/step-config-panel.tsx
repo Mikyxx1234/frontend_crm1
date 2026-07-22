@@ -3305,7 +3305,9 @@ function TemplateStepConfig({
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["automation-whatsapp-templates"],
     queryFn: async (): Promise<TemplateOption[]> => {
-      const res = await fetch(apiUrl("/api/whatsapp-template-configs/agent-enabled"));
+      // Automação usa TODOS os templates APROVADOS da WABA da org (não depende
+      // do toggle "Agente"). Ver backend /api/whatsapp-template-configs/approved.
+      const res = await fetch(apiUrl("/api/whatsapp-template-configs/approved"));
       if (!res.ok) return [];
       return res.json();
     },
@@ -3323,16 +3325,21 @@ function TemplateStepConfig({
           <p className="text-xs text-muted-foreground">Carregando templates…</p>
         ) : templates.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            Nenhum template liberado. Libere em Configurações → Templates WhatsApp.
+            Nenhum template aprovado nesta organização. Aprove um template do WhatsApp
+            (Meta) em Configurações → Modelos de mensagem.
           </p>
         ) : (
           <DropdownGlass
             triggerClassName="w-full"
             placeholder="Selecione um template…"
+            searchable
+            searchPlaceholder="Buscar template pelo nome…"
             value={selectedName}
             options={templates.map((t) => ({
               value: t.metaTemplateName,
               label: `${t.label || t.metaTemplateName}${t.category ? ` (${CAT_LABEL[t.category] ?? t.category})` : ""}`,
+              description: t.label ? t.metaTemplateName : undefined,
+              searchText: `${t.label ?? ""} ${t.metaTemplateName}`,
             }))}
             onValueChange={(v) => {
               const tpl = templates.find((t) => t.metaTemplateName === v);

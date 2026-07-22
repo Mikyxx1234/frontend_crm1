@@ -128,7 +128,7 @@ export function useTemplateOptions() {
     staleTime: STALE,
     queryFn: async (): Promise<Opt[]> => {
       const list = asArray(
-        await getJson("/api/whatsapp-template-configs/agent-enabled"),
+        await getJson("/api/whatsapp-template-configs/approved"),
       ) as RawTemplate[]
       return list.map((t) => {
         const v = t.metaTemplateName ?? t.name ?? ""

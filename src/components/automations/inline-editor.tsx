@@ -32,6 +32,7 @@ import {
   usePipelineOptions,
   useStageOptions,
   useTagOptions,
+  useTemplateDetailsMap,
   useTemplateOptions,
   useUserOptions,
   type Opt,
@@ -210,6 +211,10 @@ function Field({
 
     case "updateField":
       return <UpdateFieldEditor config={config} onChange={onChange} />
+
+    case "templatePreview":
+      return <TemplatePreview templateName={str(config.templateName)} />
+
 
     case "builder":
       switch (field.builder) {
@@ -547,6 +552,40 @@ function UpdateFieldEditor({ config, onChange }: { config: Cfg; onChange: (next:
         <InputGlass className="nodrag" value={str(config.value)} onChange={(e) => set("value", e.target.value)} />
       </Labeled>
     </>
+  )
+}
+
+// ─────────────────────── Preview do template WhatsApp ───────────────────────
+
+/** Bloco read-only: corpo do template + botões (quick-reply) do template
+ *  selecionado. Dados do mesmo cache de `useTemplateOptions`. */
+function TemplatePreview({ templateName }: { templateName: string }) {
+  const { detailsMap, isLoading } = useTemplateDetailsMap()
+  if (!templateName) return null
+  const detail = detailsMap.get(templateName)
+  if (isLoading && !detail) {
+    return <p className="cfg-info">Carregando preview…</p>
+  }
+  if (!detail) return null
+  const hasBody = detail.bodyPreview.trim() !== ""
+  const hasBtns = detail.quickReplies.length > 0
+  if (!hasBody && !hasBtns) return null
+  return (
+    <div className="cfg-field">
+      <span className="cfg-label">Pré-visualização</span>
+      <div className="cfg-tpl-preview nodrag nowheel">
+        {hasBody && <p className="cfg-tpl-body">{detail.bodyPreview}</p>}
+        {hasBtns && (
+          <div className="cfg-tpl-btns">
+            {detail.quickReplies.map((t, i) => (
+              <span key={`${t}-${i}`} className="cfg-tpl-btn">
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 

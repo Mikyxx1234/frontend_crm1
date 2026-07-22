@@ -1016,6 +1016,42 @@
   padding: 9px 11px;
   line-height: 1.45;
 }
+/* Preview do template WhatsApp — bolha estilo mensagem (verde suave). */
+.ds-flow .cfg-tpl-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-success);
+  background: var(--color-success-bg);
+}
+.ds-flow .cfg-tpl-body {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ds-flow .cfg-tpl-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+}
+.ds-flow .cfg-tpl-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
+  background: var(--color-bg-card);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand-primary);
+}
 .ds-flow .cfg-row {
   display: flex;
   gap: 6px;

@@ -34,6 +34,7 @@ export type EditorField =
   | (Common & { kind: "hours" })
   | { kind: "info"; text: string }
   | { kind: "updateField" }
+  | { kind: "templatePreview" }
   | { kind: "builder"; key: string; builder: "buttons" | "buttonsTitle" | "condition" | "schedule" | "headers" }
 
 const ACTIVITY_TYPES: Opt[] = [
@@ -89,6 +90,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   send_whatsapp_template: [
     { kind: "source", source: "template", key: "templateName", label: "Template" },
     { kind: "text", key: "languageCode", label: "Idioma", placeholder: "pt_BR" },
+    { kind: "templatePreview" },
   ],
   send_whatsapp_media: [
     { kind: "select", key: "mediaType", label: "Tipo de mídia", options: MEDIA_TYPES },

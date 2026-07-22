@@ -619,13 +619,15 @@ function CustomFieldsPage() {
                               )}
                             </div>
 
-                            {/* Ações */}
-                            <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                            {/* Ações — sempre visíveis no mobile (sem hover);
+                                no desktop só aparecem no hover da linha. */}
+                            <div className="flex items-center justify-end gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                               <button
                                 type="button"
                                 onClick={() => setEditItem(field)}
                                 className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
                                 title="Editar"
+                                aria-label={`Editar ${field.label}`}
                               >
                                 <IconPencil size={13} />
                               </button>
@@ -642,6 +644,7 @@ function CustomFieldsPage() {
                                 }}
                                 className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500"
                                 title="Excluir"
+                                aria-label={`Excluir ${field.label}`}
                               >
                                 <IconTrash size={13} />
                               </button>

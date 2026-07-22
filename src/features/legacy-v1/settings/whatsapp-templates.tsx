@@ -743,7 +743,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                           "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                           cfg?.agentEnabled
                             ? "border-[var(--color-success)] bg-[var(--color-success)]"
-                            : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
+                            : "border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--text-muted)_35%,transparent)]",
                           row.status !== "APPROVED" && "cursor-not-allowed opacity-40",
                         )}
                         onClick={() => saveConfig({ agentEnabled: !cfg?.agentEnabled })}
@@ -760,6 +760,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                         <ButtonGlass
                           type="button"
                           variant="glass"
+                          size="icon"
                           className="size-8"
                           aria-label="Ver texto do template"
                           onClick={() => setPreviewRow(row)}
@@ -769,6 +770,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                         <ButtonGlass
                           type="button"
                           variant="glass"
+                          size="icon"
                           className="size-8"
                           aria-label="Copiar ID Graph"
                           onClick={() => {
@@ -781,6 +783,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                         <ButtonGlass
                           type="button"
                           variant="glass"
+                          size="icon"
                           className="size-8 text-[var(--color-danger)] hover:text-[var(--color-danger)]"
                           aria-label="Excluir na Meta"
                           onClick={async () => {

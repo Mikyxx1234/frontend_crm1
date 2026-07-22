@@ -136,7 +136,10 @@ export default function MessageModelsHubPage() {
   const { data: metaPage, isLoading: loadingMeta } = useQuery({
     queryKey: ["meta-whatsapp-templates", "hub-first"],
     queryFn: async () => {
-      const r = await fetch(apiUrl("/api/meta/whatsapp/message-templates"));
+      // limit=500 pega todos os templates da WABA (padrão da Graph é 100 e o
+      // hub não pagina). Alinha os contadores da Visão geral / WhatsApp (Meta)
+      // com a aba detalhada, que já usa limit=500.
+      const r = await fetch(apiUrl("/api/meta/whatsapp/message-templates?limit=500"));
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return { data: [] as MetaRow[] };
       return j as { data?: MetaRow[] };

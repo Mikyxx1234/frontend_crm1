@@ -513,7 +513,7 @@ export function NavRailV2({ className }: { className?: string }) {
       {/* Configurações */}
       {expanded ? (
         <Link
-          href="/settings"
+          href="/settings/profile"
           aria-label="Configurações"
           className={cn(
             expandedItemBase,
@@ -525,7 +525,7 @@ export function NavRailV2({ className }: { className?: string }) {
         </Link>
       ) : (
         <DockButton
-          href="/settings"
+          href="/settings/profile"
           title="Configurações"
           active={pathname.startsWith("/settings") && !isProfileActive}
           disablePop

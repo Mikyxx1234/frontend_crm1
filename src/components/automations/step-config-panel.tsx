@@ -3285,6 +3285,7 @@ type TemplateOption = {
   hasButtons?: boolean;
   hasVariables?: boolean;
   buttonTypes?: string[];
+  buttons?: { type: string; text: string; url?: string | null }[];
   flowAction?: string | null;
   flowId?: string | null;
 };
@@ -3293,6 +3294,14 @@ const CAT_LABEL: Record<string, string> = {
   UTILITY: "Utilidade",
   MARKETING: "Marketing",
   AUTHENTICATION: "Autenticação",
+};
+
+const BTN_TYPE_LABEL: Record<string, string> = {
+  QUICK_REPLY: "Resposta rápida",
+  URL: "Link",
+  PHONE_NUMBER: "Telefone",
+  COPY_CODE: "Copiar código",
+  FLOW: "Flow",
 };
 
 function TemplateStepConfig({
@@ -3376,6 +3385,28 @@ function TemplateStepConfig({
             <p className="whitespace-pre-wrap text-xs text-foreground/80">
               {selected.bodyPreview}
             </p>
+          )}
+          {selected.buttons && selected.buttons.length > 0 && (
+            <div className="space-y-1 border-t border-border/50 pt-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Botões ({selected.buttons.length})
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {selected.buttons.map((btn, i) => (
+                  <span
+                    key={`${btn.text}-${i}`}
+                    className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-background px-2 py-1 text-[11px] font-medium text-foreground/90"
+                    title={btn.url ?? BTN_TYPE_LABEL[btn.type] ?? btn.type}
+                  >
+                    <span className="text-primary">•</span>
+                    {btn.text || BTN_TYPE_LABEL[btn.type] || btn.type}
+                    <span className="text-[9px] text-muted-foreground">
+                      {BTN_TYPE_LABEL[btn.type] ?? btn.type}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}

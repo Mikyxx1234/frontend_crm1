@@ -28,7 +28,7 @@ import {
 import { ds } from "@/lib/design-system";
 import { dt } from "@/lib/design-tokens";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
-import { AvatarGlass } from "@/components/crm/avatar-glass";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import { TooltipHost } from "@/components/ui/tooltip";
 
 type KanbanCardProps = {
@@ -698,11 +698,12 @@ function CardOwnerSelector({
 
 /**
  * OwnerAvatar — avatar do agente (kanban / sales hub / lista).
- * Pessoa interna → `AvatarGlass` (gradiente), sem badge de canal.
- * PresenceDot indica ONLINE / OFFLINE / AWAY.
+ * Pessoa interna → `UserAvatar` (padrão: gradiente do brand + foto do perfil,
+ * iniciais como fallback), igual ao avatar da conversa. PresenceDot indica
+ * ONLINE / OFFLINE / AWAY.
  */
 function OwnerAvatar({
-  id,
+  id: _id,
   name,
   imageUrl,
   status,
@@ -716,13 +717,7 @@ function OwnerAvatar({
 }) {
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <AvatarGlass
-        name={name ?? "?"}
-        seed={id ?? name ?? "?"}
-        imageUrl={imageUrl ?? null}
-        size="sm"
-        className="!h-full !w-full !text-[10px]"
-      />
+      <UserAvatar name={name ?? "?"} imageUrl={imageUrl ?? null} size={size} />
       <PresenceDot
         status={status}
         className="absolute -bottom-0.5 -right-0.5 z-10"

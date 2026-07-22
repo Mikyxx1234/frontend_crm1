@@ -380,7 +380,7 @@ export function ChatArea({
               }}
               phone={contact.phone}
               channel={contact.channel ?? connection?.type ?? null}
-              size={AVATAR_SIZE.md}
+              size={AVATAR_SIZE.lg}
             />
           </TooltipGlass>
 

@@ -10,6 +10,8 @@ import {
 import { cn } from "@/lib/utils"
 import { Row } from "@/components/crm/aside-row"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
+import { ChatAvatar } from "@/components/inbox/chat-avatar"
+import { AVATAR_SIZE } from "@/lib/avatar"
 import {
   IconBriefcase,
   IconBrandWhatsapp,
@@ -177,6 +179,12 @@ const ASIDE_DEFAULT_ORDER: AsideSection[] = [
 // [negocios, contato, campos-negocio] persistido em localStorage e
 // a nova secao nunca apareceria (`useSectionOrder` mantem o valor salvo).
 const ASIDE_STORAGE_KEY = "crm:contact-aside:section-order-v4"
+
+/** Container branco unificado de cada seção do aside — o título
+ *  (SectionHeader) e o conteúdo ficam DENTRO do mesmo card. Antes o
+ *  título flutuava sobre o fundo do painel, acima do card. */
+const SECTION_CARD_CLASS =
+  "mx-3 mb-3 rounded-[var(--radius-xl)] border border-slate-100 bg-white p-3 shadow-sm"
 
 // ── Abas Perfil / Produto ─────────────────────────────────────────
 // O hero do negócio (secao `negocios`) fica FIXO no topo. As demais
@@ -767,6 +775,24 @@ export function ContactAside({
             <IconChevronLeft size={13} strokeWidth={3} />
           </button>
         </TooltipGlass>
+
+        {/* Avatar do contato no rail recolhido: dá contexto (não fica vazio)
+            e serve de alvo grande para reabrir o painel. */}
+        <TooltipGlass label={`Abrir painel · ${contact.name}`} side="left">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label={`Abrir painel de ${contact.name}`}
+            className="mt-1 rounded-full ring-2 ring-transparent transition-all hover:ring-[var(--brand-primary)] hover:scale-105"
+          >
+            <ChatAvatar
+              user={{ id: contact.contactId ?? contact.name, name: contact.name }}
+              phone={contact.phone}
+              channel={contact.connection?.type ?? null}
+              size={AVATAR_SIZE.lg}
+            />
+          </button>
+        </TooltipGlass>
       </aside>
     )
   }
@@ -864,7 +890,7 @@ export function ContactAside({
                         >
                           {/* ── Detalhes de Contato (campos nativos + personalizados) ── */}
                           {sectionId === "contato" && (
-                            <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-2">
+                            <div className={SECTION_CARD_CLASS}>
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
                                 icon={<IconUser size={16} className="text-orange-500" />}
@@ -910,7 +936,7 @@ export function ContactAside({
                               )}
 
                               {/* Campos nativos */}
-                              <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+                              <div className="pt-1">
                                 <Row label="Nome" isFirst icon={<IconUser size={12} />} compact={viewMode === "compact"}>
                                   <InlineNativeEditor
                                     value={native("name", contact.name)}
@@ -1028,7 +1054,7 @@ export function ContactAside({
                                   )
                                 }
                                 return (
-                                  <div className="mt-3 rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+                                  <div className="mt-1 border-t border-slate-100 pt-2">
                                     {contactFieldGroups.map((g) => {
                                       const rows = g.fields.map((f, i) => renderRow(f, i))
                                       if (!g.title) return <div key={g.id}>{rows}</div>
@@ -1061,7 +1087,7 @@ export function ContactAside({
                               como target — cenario dominante no inbox e um
                               contato com um deal ativo por vez. */}
                           {sectionId === "produtos" && deals[0] && (
-                            <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-2">
+                            <div className={SECTION_CARD_CLASS}>
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
                                 icon={<IconPackage size={16} />}
@@ -1071,7 +1097,7 @@ export function ContactAside({
                                 Produtos
                               </SectionHeader>
                               {productsSectionOpen && (
-                                <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+                                <div className="pt-1">
                                   {/* `hideTitle` evita duplicar o rotulo "Produtos"
                                       — quem provee o cabecalho e o SectionHeader
                                       acima; DealProductsSection so renderiza os
@@ -1085,7 +1111,7 @@ export function ContactAside({
                           {/* ── Campos de Negócio (personalizados) ── */}
                           {sectionId === "campos-negocio" &&
                             (resolvedDealPanelFields.length > 0 || resolvedDealConfig) && (
-                              <div className="px-3 pb-3">
+                              <div className={SECTION_CARD_CLASS}>
                                 <SectionHeader
                                   dragHandleProps={provided.dragHandleProps ?? undefined}
                                   icon={<IconBriefcase size={16} className="text-[var(--brand-primary)]" />}
@@ -1159,7 +1185,7 @@ export function ContactAside({
                                     )
                                   }
                                   return viewMode === "compact" ? (
-                                    <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+                                    <div className="pt-1">
                                       {dealFieldGroups.map((g) => {
                                         const rows = g.fields.map((f, i) => renderCompactRow(f, i))
                                         if (!g.title) return <div key={g.id}>{rows}</div>

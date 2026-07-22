@@ -15,7 +15,6 @@ import { isPageMockMode } from "@/lib/page-mock-mode";
 import type {
   AgentOnlineStatus,
   DistributionResult,
-  DistributionSettings,
   PendingResponse,
   ResponsiblesResponse,
   RetryResult,
@@ -129,27 +128,6 @@ export function fetchPending(): Promise<PendingResponse> {
   return getJson<PendingResponse>(
     "/api/distribution/pending",
     "Erro ao carregar a fila de espera.",
-  );
-}
-
-export function fetchDistributionSettings(): Promise<DistributionSettings> {
-  if (isPageMockMode()) {
-    return Promise.resolve({ distributeByDepartment: false });
-  }
-  return getJson<DistributionSettings>(
-    "/api/distribution/settings",
-    "Erro ao carregar configurações de distribuição.",
-  );
-}
-
-export function updateDistributionSettings(
-  input: Partial<DistributionSettings>,
-): Promise<DistributionSettings> {
-  return sendJson<DistributionSettings>(
-    "/api/distribution/settings",
-    "PATCH",
-    input,
-    "Erro ao salvar configurações de distribuição.",
   );
 }
 

@@ -10,8 +10,6 @@ import {
 import { cn } from "@/lib/utils"
 import { Row } from "@/components/crm/aside-row"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
-import { ChatAvatar } from "@/components/inbox/chat-avatar"
-import { AVATAR_SIZE } from "@/lib/avatar"
 import {
   IconBriefcase,
   IconBrandWhatsapp,
@@ -752,48 +750,22 @@ export function ContactAside({
     reorder(sectionOrder.indexOf(from), sectionOrder.indexOf(to))
   }
 
-  /* ── Estado recolhido ── */
+  /* ── Estado recolhido ──
+     Kommo-style: o painel some por completo (a coluna vira 0px no grid do
+     inbox) e deixamos só uma abinha flutuante grudada na borda direita para
+     reabrir. Sem card, sem avatar, sem largura própria. */
   if (collapsed) {
     return (
-      <aside
-        aria-label="Detalhes do contato (recolhido)"
-        className={cn(
-          "relative flex h-full flex-col items-center justify-start rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pt-3 backdrop-blur-md shadow-[var(--glass-shadow)]",
-          className,
-        )}
-      >
-        {/* Mesma pill do estado expandido, só com o chevron invertido
-            (`<`) — padroniza o elemento de recolher/expandir. Fica na
-            faixa entre o chat e o aside recolhido. */}
-        <TooltipGlass label="Expandir painel de contato" side="left">
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            className="group absolute left-0 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 flex h-10 w-5 items-center justify-center rounded-full border border-[var(--glass-border)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-all hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_14px_rgba(91,111,245,0.40)] hover:scale-110"
-            aria-label="Expandir painel de contato"
-          >
-            <IconChevronLeft size={13} strokeWidth={3} />
-          </button>
-        </TooltipGlass>
-
-        {/* Avatar do contato no rail recolhido: dá contexto (não fica vazio)
-            e serve de alvo grande para reabrir o painel. */}
-        <TooltipGlass label={`Abrir painel · ${contact.name}`} side="left">
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            aria-label={`Abrir painel de ${contact.name}`}
-            className="mt-1 rounded-full ring-2 ring-transparent transition-all hover:ring-[var(--brand-primary)] hover:scale-105"
-          >
-            <ChatAvatar
-              user={{ id: contact.contactId ?? contact.name, name: contact.name }}
-              phone={contact.phone}
-              channel={contact.connection?.type ?? null}
-              size={AVATAR_SIZE.lg}
-            />
-          </button>
-        </TooltipGlass>
-      </aside>
+      <TooltipGlass label={`Abrir painel · ${contact.name}`} side="left">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          aria-label={`Abrir painel de ${contact.name}`}
+          className="group absolute right-0 top-1/2 z-30 flex h-14 w-6 -translate-y-1/2 items-center justify-center rounded-l-[var(--radius-md)] border border-r-0 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow)] backdrop-blur-md transition-all hover:bg-[var(--brand-primary)] hover:text-white"
+        >
+          <IconChevronLeft size={14} strokeWidth={3} />
+        </button>
+      </TooltipGlass>
     )
   }
 

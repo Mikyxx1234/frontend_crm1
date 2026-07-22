@@ -85,11 +85,6 @@ export interface UpdateResponsibleInput {
   type?: string | null;
 }
 
-/** Config de nível-org da distribuição. */
-export interface DistributionSettings {
-  distributeByDepartment: boolean;
-}
-
 /** Rótulos PT-BR dos motivos de bloqueio (para tooltips/badges). */
 export const BLOCK_REASON_LABELS: Record<DistributionBlockReason, string> = {
   INACTIVE: "Inativo (bloqueado pelo admin)",

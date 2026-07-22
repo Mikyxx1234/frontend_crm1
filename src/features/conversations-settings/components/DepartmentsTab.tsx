@@ -304,6 +304,9 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   const [icon, setIcon] = React.useState(dept?.icon ?? "IconBuilding");
   const [color, setColor] = React.useState(dept?.color ?? "#6366f1");
   const [isSupport, setIsSupport] = React.useState(dept?.isSupport ?? false);
+  const [distributionEnabled, setDistributionEnabled] = React.useState(
+    dept?.distributionEnabled ?? false,
+  );
   const updateMutation = useUpdateDepartment();
   const setMembersMutation = useSetDepartmentMembers();
 
@@ -314,7 +317,7 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   const [memberSearch, setMemberSearch] = React.useState("");
 
   React.useEffect(() => {
-    if (dept) { setName(dept.name); setIcon(dept.icon); setColor(dept.color); setIsSupport(dept.isSupport ?? false); setMemberSearch(""); }
+    if (dept) { setName(dept.name); setIcon(dept.icon); setColor(dept.color); setIsSupport(dept.isSupport ?? false); setDistributionEnabled(dept.distributionEnabled ?? false); setMemberSearch(""); }
   }, [dept?.id]);
 
   // Stable key prevents infinite re-render loop when currentMembers reference changes.
@@ -347,7 +350,7 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
     if (!dept) return;
     const deptId = dept.id;
     updateMutation.mutate(
-      { id: deptId, name: name.trim(), icon, color, isSupport },
+      { id: deptId, name: name.trim(), icon, color, isSupport, distributionEnabled },
       {
         onSuccess: () => {
           setMembersMutation.mutate(
@@ -448,6 +451,28 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
             checked={isSupport}
             onChange={setIsSupport}
             aria-label="Departamento de suporte"
+          />
+        </div>
+
+        <div className="flex items-start justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <IconUserCheck size={15} className="text-[var(--brand-primary)]" />
+              <span className="font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
+                Distribuição por departamento
+              </span>
+            </div>
+            <p className="mt-0.5 text-[11.5px] leading-snug text-[var(--text-muted)]">
+              Leads roteados para este departamento são distribuídos apenas
+              entre seus membros elegíveis (a regra individual de cada um
+              continua valendo). Se desligado, este departamento não recebe
+              distribuição automática.
+            </p>
+          </div>
+          <SwitchGlass
+            checked={distributionEnabled}
+            onChange={setDistributionEnabled}
+            aria-label="Distribuição por departamento"
           />
         </div>
 

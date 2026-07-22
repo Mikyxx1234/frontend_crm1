@@ -681,7 +681,7 @@ export default function InboxV2ClientPage({
         className={cn(
           "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
           soundMuted
-            ? "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]"
+            ? "border-[var(--color-warn)]/40 bg-[var(--color-warn-bg)] text-[var(--color-warn)] hover:text-[var(--color-warn)]"
             : "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
         )}
       >
@@ -1263,18 +1263,20 @@ export default function InboxV2ClientPage({
           />
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
-            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "28px" : `${asideWidth}px`}` }}
+            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}` }}
           >
             {conversationColumnNode}
             {chatNode}
             <div className="relative min-h-0 overflow-visible">
-              <ColumnResizer
-                direction="left"
-                value={asideWidth}
-                onChange={setAsideWidth}
-                min={280}
-                max={440}
-              />
+              {!asideCollapsed && (
+                <ColumnResizer
+                  direction="left"
+                  value={asideWidth}
+                  onChange={setAsideWidth}
+                  min={280}
+                  max={440}
+                />
+              )}
               {asideNode}
             </div>
           </div>
@@ -1356,20 +1358,22 @@ export default function InboxV2ClientPage({
       className="v2-screen grid gap-4 p-4"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
-        gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${asideCollapsed ? "28px" : `${asideWidth}px`}`,
+        gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}`,
       }}
     >
       {navRailNode}
       {conversationColumnNode}
       {chatNode}
       <div className="relative min-h-0 overflow-visible">
-        <ColumnResizer
-          direction="left"
-          value={asideWidth}
-          onChange={setAsideWidth}
-          min={280}
-          max={440}
-        />
+        {!asideCollapsed && (
+          <ColumnResizer
+            direction="left"
+            value={asideWidth}
+            onChange={setAsideWidth}
+            min={280}
+            max={440}
+          />
+        )}
         {asideNode}
       </div>
       {templateModalNode}

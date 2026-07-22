@@ -14,9 +14,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  type DropResult,
+} from "@hello-pangea/dnd";
 import {
   IconAdjustments as Settings2,
+  IconGripVertical,
   IconLayoutSidebarLeftCollapse,
 } from "@tabler/icons-react";
 
@@ -32,6 +39,9 @@ import {
   type SettingsNavIcon,
   type SettingsNavItem,
 } from "@/lib/settings-nav";
+
+/** Chave do localStorage para a ordem personalizada do menu. */
+const ORDER_KEY = "settings-sidebar-order-v1";
 
 interface SettingsSidebarProps {
   open: boolean;
@@ -58,30 +68,82 @@ export function SettingsSidebar({
     [role, isSuperAdmin, myPerms?.permissions],
   );
 
-  // Itens do workspace ficam em ordem alfabética; os itens pessoais
-  // (Meu perfil, Suporte) são fixados no final, nessa ordem — fora da
-  // ordenação alfabética, por decisão de produto.
+  // Itens do workspace ficam em ordem alfabética; no final, fora da
+  // ordenação alfabética (decisão de produto), fixamos nesta ordem:
+  // Meu perfil → App Mobile → Suporte.
   const flatItems = useMemo(() => {
-    const fromGroups = filterSettingsNav(SETTINGS_NAV, viewer)
-      .flatMap((g) => g.items)
+    const fromGroups = filterSettingsNav(SETTINGS_NAV, viewer).flatMap(
+      (g) => g.items,
+    );
+    const mobileItem = fromGroups.find((i) => i.id === "mobile-layout");
+    const alphabetical = fromGroups
+      .filter((i) => i.id !== "mobile-layout")
       .sort((a, b) =>
         a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" }),
       );
-    return [...fromGroups, ...SETTINGS_PERSONAL];
+    const profile = SETTINGS_PERSONAL.filter((p) => p.id === "profile");
+    const support = SETTINGS_PERSONAL.filter((p) => p.id === "help");
+    return [
+      ...alphabetical,
+      ...profile,
+      ...(mobileItem ? [mobileItem] : []),
+      ...support,
+    ];
   }, [viewer]);
 
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
   const searching = q.length > 0;
 
+  // Ordem personalizada pelo usuário (drag-and-drop), persistida no
+  // localStorage. É uma lista de ids; itens novos caem no fim (ordem
+  // default) e ids que não existem mais são ignorados.
+  const [order, setOrder] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(ORDER_KEY);
+      if (raw) setOrder(JSON.parse(raw) as string[]);
+    } catch {
+      // localStorage indisponível/JSON inválido — usa ordem default.
+    }
+  }, []);
+
+  // Aplica a ordem salva sobre os itens default (sort estável: ids
+  // conhecidos primeiro na sequência salva; desconhecidos mantêm a
+  // ordem default no fim).
+  const orderedItems = useMemo(() => {
+    if (order.length === 0) return flatItems;
+    const rank = new Map(order.map((id, i) => [id, i]));
+    return [...flatItems].sort((a, b) => {
+      const ra = rank.get(a.id) ?? Number.POSITIVE_INFINITY;
+      const rb = rank.get(b.id) ?? Number.POSITIVE_INFINITY;
+      return ra - rb;
+    });
+  }, [flatItems, order]);
+
   const items = useMemo(() => {
-    if (!searching) return flatItems;
-    return flatItems.filter((it) =>
+    if (!searching) return orderedItems;
+    return orderedItems.filter((it) =>
       [it.label, it.description, it.eyebrow].some((p) =>
         p?.toLowerCase().includes(q),
       ),
     );
-  }, [flatItems, searching, q]);
+  }, [orderedItems, searching, q]);
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination || result.destination.index === result.source.index)
+      return;
+    const next = Array.from(orderedItems);
+    const [moved] = next.splice(result.source.index, 1);
+    next.splice(result.destination.index, 0, moved);
+    const ids = next.map((i) => i.id);
+    setOrder(ids);
+    try {
+      localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
+    } catch {
+      // ignora falha de persistência (modo privado, quota, etc.)
+    }
+  };
 
   return (
     <aside
@@ -135,16 +197,62 @@ export function SettingsSidebar({
         />
       </div>
 
-      {/* Lista rolável — flat + alfabética */}
+      {/* Lista rolável — reordenável por drag-and-drop (exceto durante busca) */}
       <div className="flex-1 overflow-y-auto overscroll-contain px-2 py-2 [-webkit-overflow-scrolling:touch] sm:px-2.5">
         {items.length > 0 ? (
-          <ul className="flex flex-col gap-0.5">
-            {items.map((item) => (
-              <li key={item.id}>
-                <SidebarItem item={item} pathname={pathname} />
-              </li>
-            ))}
-          </ul>
+          searching ? (
+            <ul className="flex flex-col gap-0.5">
+              {items.map((item) => (
+                <li key={item.id}>
+                  <SidebarItem item={item} pathname={pathname} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="settings-sidebar">
+                {(dropProvided) => (
+                  <ul
+                    ref={dropProvided.innerRef}
+                    {...dropProvided.droppableProps}
+                    className="flex flex-col gap-0.5"
+                  >
+                    {items.map((item, index) => (
+                      <Draggable
+                        key={item.id}
+                        draggableId={item.id}
+                        index={index}
+                      >
+                        {(dragProvided, snapshot) => (
+                          <li
+                            ref={dragProvided.innerRef}
+                            {...dragProvided.draggableProps}
+                            className={cn(
+                              "group/row relative rounded-[var(--radius-md)]",
+                              snapshot.isDragging &&
+                                "bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)]",
+                            )}
+                          >
+                            <SidebarItem item={item} pathname={pathname} />
+                            <button
+                              type="button"
+                              {...dragProvided.dragHandleProps}
+                              aria-label={`Reordenar ${item.label}`}
+                              tabIndex={-1}
+                              className="absolute right-1 top-1/2 flex size-6 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] opacity-0 transition-opacity duration-150 hover:text-[var(--brand-primary)] focus-visible:opacity-100 group-hover/row:opacity-100 active:cursor-grabbing"
+                            >
+                              <IconGripVertical className="size-3.5" />
+                            </button>
+                          </li>
+                        )}
+                      </Draggable>
+                    ))}
+                    {dropProvided.placeholder}
+                  </ul>
+                )}
+              </Droppable>
+            </DragDropContext>
+          )
         ) : (
           <div className="mt-4 rounded-[var(--radius-md)] border border-dashed border-[var(--glass-border)] px-3 py-4 text-center">
             <p

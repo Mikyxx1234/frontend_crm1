@@ -1,4 +1,4 @@
-import { IconBell as Bell, IconRobot as Bot, IconDatabase as Database, IconHeadphones as Headphones, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconRadio as Radio, IconAdjustments as Settings2, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconUsers as Users } from "@tabler/icons-react";
+import { IconBroadcast as Broadcast, IconDatabase as Database, IconForms as Forms, IconHeadphones as Headphones, IconLifebuoy as LifeBuoy, IconListTree as ListTree, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconAdjustments as Settings2, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconTemplate as Template, IconUsers as Users } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { UserRole } from "@/lib/prisma-enum-types";
 
@@ -75,7 +75,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         id: "channels",
         label: "Canais",
         description: "WhatsApp, Instagram, e-mail e webchat",
-        icon: Radio,
+        icon: Broadcast,
         href: "/settings/channels",
         allowedRoles: GESTAO,
         requiredPermission: "settings:channels",
@@ -84,7 +84,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         id: "message-models",
         label: "Modelos de mensagem",
         description: "Internos, WhatsApp WABA e Flows (Kommo)",
-        icon: LayoutList,
+        icon: Template,
         href: "/settings/message-models",
         allowedRoles: GESTAO,
       },
@@ -101,18 +101,10 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         id: "tabulations",
         label: "Tabulações",
         description: "Motivos hierárquicos ao encerrar",
-        icon: LayoutList,
+        icon: ListTree,
         href: "/settings/tabulations",
         allowedRoles: GESTAO,
         eyebrow: "Novo",
-      },
-      {
-        id: "notifications",
-        label: "Notificações",
-        description: "Push, e-mail e alertas por canal",
-        icon: Bell,
-        href: "/settings/notifications",
-        requiredPermission: "settings:webhooks",
       },
       {
         id: "email-accounts",
@@ -136,7 +128,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         id: "custom-fields",
         label: "Campos personalizados",
         description: "Contatos, empresas e negócios",
-        icon: LayoutList,
+        icon: Forms,
         href: "/settings/custom-fields",
         allowedRoles: GESTAO,
         requiredPermission: "settings:custom_fields",
@@ -188,15 +180,6 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
     icon: Sparkles,
     description: "Agentes e assistentes inteligentes",
     items: [
-      {
-        id: "ai",
-        label: "IA & Agentes",
-        description: "Chaves de provedores e assistentes",
-        icon: Bot,
-        href: "/ai-agents",
-        allowedRoles: GESTAO,
-        requiredPermission: "ai_agent:view",
-      },
       {
         id: "ai-config",
         label: "Configuração de IA",
@@ -253,7 +236,7 @@ export const SETTINGS_PERSONAL: SettingsNavItem[] = [
   {
     id: "help",
     label: "Suporte",
-    description: "Fale com o time de suporte",
+    description: "Chat interno com o time de suporte",
     icon: LifeBuoy,
     href: "/settings/support",
   },

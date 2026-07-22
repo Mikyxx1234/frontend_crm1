@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import {
   IconAdjustmentsHorizontal,
   IconAlertTriangle,
+  IconBuildingCommunity,
   IconCheck,
   IconCircleCheck,
   IconClockExclamation,
@@ -35,10 +36,12 @@ import { cn } from "@/lib/utils";
 import { useWidgets } from "@/features/widgets/hooks";
 import {
   useDistributionResponsibles,
+  useDistributionSettings,
   usePendingDistributions,
   useRetryPending,
   useSetAgentStatus,
   useSimulateDistribution,
+  useUpdateDistributionSettings,
   useUpdateResponsible,
 } from "@/features/distribution/hooks";
 import {
@@ -93,6 +96,27 @@ export default function DistributionClientPage({
   );
   const simulateMut = useSimulateDistribution();
   const retryMut = useRetryPending();
+
+  const settingsQuery = useDistributionSettings(
+    isAuthenticated && (isPageMockMode() || widgetInstalled),
+  );
+  const updateSettingsMut = useUpdateDistributionSettings();
+  const distributeByDepartment = settingsQuery.data?.distributeByDepartment ?? false;
+  const toggleDepartmentMode = () => {
+    const next = !distributeByDepartment;
+    updateSettingsMut.mutate(
+      { distributeByDepartment: next },
+      {
+        onSuccess: (d) =>
+          toast.success(
+            d.distributeByDepartment
+              ? "Distribuição por departamento ativada."
+              : "Distribuição por departamento desativada.",
+          ),
+        onError: (e) => toast.error(e.message),
+      },
+    );
+  };
 
   const [editing, setEditing] = useState<DistributionResponsibleDto | null>(null);
   const [simResult, setSimResult] = useState<DistributionResult | null>(null);
@@ -231,6 +255,13 @@ export default function DistributionClientPage({
           actions={
             smartInstalled ? (
               <div className="flex flex-wrap items-center justify-end gap-2">
+                {canManage && (
+                  <DepartmentModePill
+                    active={distributeByDepartment}
+                    pending={updateSettingsMut.isPending || settingsQuery.isLoading}
+                    onToggle={toggleDepartmentMode}
+                  />
+                )}
                 <PageSegmentedControl
                   size="compact"
                   aria-label="Visão da distribuição"
@@ -351,6 +382,55 @@ function SegLabel({
         {count}
       </span>
     </span>
+  );
+}
+
+/**
+ * Pill de toggle "Por departamento": liga/desliga a distribuição restrita ao
+ * departamento do lead (Conversation.departmentId). Respeita a regra
+ * individual de cada responsável — só adiciona a fronteira de departamento.
+ */
+function DepartmentModePill({
+  active,
+  pending,
+  onToggle,
+}: {
+  active: boolean;
+  pending: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={pending}
+      role="switch"
+      aria-checked={active}
+      title="Distribuir apenas entre membros do departamento do lead (definido por automação de transferência). A regra individual de cada responsável continua valendo."
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12.5px] font-bold transition-colors disabled:opacity-60",
+        active
+          ? "border-transparent bg-[var(--brand-primary)] text-white shadow-[0_3px_10px_rgba(91,111,245,0.3)]"
+          : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+      )}
+    >
+      {pending ? (
+        <IconLoader2 size={14} className="animate-spin" />
+      ) : (
+        <IconBuildingCommunity size={14} />
+      )}
+      Por departamento
+      <span
+        className={cn(
+          "ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-none",
+          active
+            ? "bg-white/25 text-white"
+            : "bg-[var(--glass-border-subtle)] text-[var(--text-muted)]",
+        )}
+      >
+        {active ? "ON" : "OFF"}
+      </span>
+    </button>
   );
 }
 

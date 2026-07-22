@@ -3,16 +3,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  fetchDistributionSettings,
   fetchPending,
   fetchResponsibles,
   retryPending,
   setAgentStatus,
   simulateDistribution,
+  updateDistributionSettings,
   updateResponsible,
 } from "./api";
 import type {
   AgentOnlineStatus,
   DistributionResult,
+  DistributionSettings,
   PendingResponse,
   ResponsiblesResponse,
   RetryResult,
@@ -21,6 +24,7 @@ import type {
 
 export const DISTRIBUTION_RESPONSIBLES_KEY = ["distribution-responsibles"] as const;
 export const DISTRIBUTION_PENDING_KEY = ["distribution-pending"] as const;
+export const DISTRIBUTION_SETTINGS_KEY = ["distribution-settings"] as const;
 
 export function useDistributionResponsibles(enabled = true) {
   return useQuery<ResponsiblesResponse>({
@@ -63,6 +67,30 @@ export function useSetAgentStatus() {
 export function useSimulateDistribution() {
   return useMutation<DistributionResult, Error, void>({
     mutationFn: () => simulateDistribution(),
+  });
+}
+
+export function useDistributionSettings(enabled = true) {
+  return useQuery<DistributionSettings>({
+    queryKey: DISTRIBUTION_SETTINGS_KEY,
+    queryFn: fetchDistributionSettings,
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useUpdateDistributionSettings() {
+  const qc = useQueryClient();
+  return useMutation<
+    DistributionSettings,
+    Error,
+    Partial<DistributionSettings>
+  >({
+    mutationFn: (input) => updateDistributionSettings(input),
+    onSuccess: (data) => {
+      qc.setQueryData(DISTRIBUTION_SETTINGS_KEY, data);
+      qc.invalidateQueries({ queryKey: DISTRIBUTION_RESPONSIBLES_KEY });
+    },
   });
 }
 

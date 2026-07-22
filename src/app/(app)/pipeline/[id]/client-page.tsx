@@ -14,9 +14,16 @@ import {
   type DealRecord,
   type FunnelSegment,
 } from "@/components/crm/deal-details-panel";
+import { UserAvatar } from "@/components/crm/user-avatar";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { ChatWindow } from "@/components/inbox/chat-window";
 
-import { useBoard, useDealDetail } from "@/features/pipeline-v2/hooks";
+import {
+  useBoard,
+  useDealDetail,
+  useEntityViewers,
+  type EntityViewer,
+} from "@/features/pipeline-v2/hooks";
 import type {
   DealContactConversation,
   DealPanelField,
@@ -122,6 +129,9 @@ interface DealDetailExtra {
 export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPageProps) {
   const router = useRouter();
   const dealQuery = useDealDetail(dealId);
+  // Presença "quem está vendo" (estilo Kommo) — outros usuários com este
+  // deal aberto agora. Lista já vem sem você mesmo.
+  const viewers = useEntityViewers("deal", dealId);
   const deal = dealQuery.data as (typeof dealQuery.data & DealDetailExtra) | undefined;
 
   const conversations = deal?.contact?.conversations ?? [];
@@ -281,6 +291,7 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
             record={record}
             productCount={0}
             onBack={() => router.push("/pipeline")}
+            viewersSlot={<DealViewersStack viewers={viewers} />}
           />
         ) : (
           <DealErrorPanel message="Negócio não encontrado." />
@@ -295,6 +306,53 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
           onSelectConv={setSelectedConv}
         />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Pilha de avatares "Vendo agora" (presença estilo Kommo). Mostra até 5
+ * avatares sobrepostos dos OUTROS usuários com este deal aberto; o excedente
+ * vira um "+N". Não renderiza nada quando ninguém mais está vendo.
+ */
+function DealViewersStack({ viewers }: { viewers: EntityViewer[] }) {
+  if (viewers.length === 0) return null;
+  const MAX = 5;
+  const shown = viewers.slice(0, MAX);
+  const overflow = viewers.length - shown.length;
+  const names = viewers.map((v) => v.name).join(", ");
+
+  return (
+    <div className="mb-4 flex items-center gap-2 text-white/70">
+      <span className="text-[11px] font-medium uppercase tracking-wide text-white/50">
+        Vendo agora
+      </span>
+      <TooltipGlass label={names} side="bottom">
+        <div className="flex items-center">
+          {shown.map((v, i) => (
+            <div
+              key={v.userId}
+              className="rounded-full ring-2 ring-[#2e3b6e]"
+              style={{ marginLeft: i === 0 ? 0 : -8, zIndex: shown.length - i }}
+            >
+              <UserAvatar
+                name={v.name}
+                imageUrl={v.avatarUrl}
+                size={26}
+                status="online"
+              />
+            </div>
+          ))}
+          {overflow > 0 && (
+            <div
+              className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white/15 text-[11px] font-bold text-white ring-2 ring-[#2e3b6e]"
+              style={{ marginLeft: -8 }}
+            >
+              +{overflow}
+            </div>
+          )}
+        </div>
+      </TooltipGlass>
     </div>
   );
 }

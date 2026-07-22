@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   IconBriefcase,
@@ -87,6 +87,8 @@ interface DealDetailsPanelProps {
   productCount?: number;
   onBack?: () => void;
   className?: string;
+  /** Slot de presença ("quem está vendo") — pilha de avatares no header. */
+  viewersSlot?: ReactNode;
 }
 
 const GROUP_ICONS = {
@@ -100,6 +102,7 @@ export function DealDetailsPanel({
   productCount = 1,
   onBack,
   className,
+  viewersSlot,
 }: DealDetailsPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>("Principal");
 
@@ -166,6 +169,8 @@ export function DealDetailsPanel({
             </TooltipGlass>
           </div>
         </div>
+
+        {viewersSlot}
 
         {/* Anel de progresso + funil + responsável */}
         <div className="mb-4 flex items-center gap-4">

@@ -3332,10 +3332,14 @@ function TemplateStepConfig({
           <DropdownGlass
             triggerClassName="w-full"
             placeholder="Selecione um template…"
+            searchable
+            searchPlaceholder="Buscar template pelo nome…"
             value={selectedName}
             options={templates.map((t) => ({
               value: t.metaTemplateName,
               label: `${t.label || t.metaTemplateName}${t.category ? ` (${CAT_LABEL[t.category] ?? t.category})` : ""}`,
+              description: t.label ? t.metaTemplateName : undefined,
+              searchText: `${t.label ?? ""} ${t.metaTemplateName}`,
             }))}
             onValueChange={(v) => {
               const tpl = templates.find((t) => t.metaTemplateName === v);

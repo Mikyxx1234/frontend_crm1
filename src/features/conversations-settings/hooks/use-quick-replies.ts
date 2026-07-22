@@ -49,7 +49,7 @@ export function useQuickReplies(search = "") {
 export function useCreateQuickReply() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { title: string; content: string; groupId?: string | null }) => {
+    mutationFn: async (data: { title: string; content: string; groupId?: string | null; attachmentUrl?: string | null }) => {
       const res = await fetch("/api/settings/quick-replies", {
         method: "POST",
         credentials: "include",

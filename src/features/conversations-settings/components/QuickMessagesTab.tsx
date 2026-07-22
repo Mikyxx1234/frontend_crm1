@@ -5,11 +5,15 @@ import {
   IconBolt,
   IconChevronDown,
   IconChevronRight,
+  IconLoader2,
+  IconPaperclip,
   IconPlus,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
+import { toast } from "sonner";
 
+import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { GlassCard } from "@/components/crm/glass-card";
 import { InputGlass } from "@/components/crm/input-glass";
@@ -112,6 +116,8 @@ function GroupSection({
 
 // ─── Create modal ─────────────────────────────────────────────────────────────
 
+const MEDIA_ACCEPT_QR = "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm";
+
 function CreateQuickReplyModal({
   open,
   onClose,
@@ -124,20 +130,50 @@ function CreateQuickReplyModal({
   const [title, setTitle] = React.useState("");
   const [content, setContent] = React.useState("");
   const [groupId, setGroupId] = React.useState<string>("");
+  const [attachmentUrl, setAttachmentUrl] = React.useState<string | null>(null);
+  const [attachmentName, setAttachmentName] = React.useState<string | null>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const createMutation = useCreateQuickReply();
 
   function handleClose() {
     setTitle("");
     setContent("");
     setGroupId("");
+    setAttachmentUrl(null);
+    setAttachmentName(null);
     onClose();
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 16 * 1024 * 1024) {
+      toast.warning("Arquivo excede o limite de 16 MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(apiUrl("/api/uploads/automation-media"), { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.message ?? "Erro ao enviar arquivo."); return; }
+      setAttachmentUrl(data.url);
+      setAttachmentName(data.fileName ?? file.name);
+    } catch {
+      toast.error("Erro de rede ao enviar arquivo.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
     createMutation.mutate(
-      { title: title.trim(), content: content.trim(), groupId: groupId || null },
+      { title: title.trim(), content: content.trim(), groupId: groupId || null, attachmentUrl: attachmentUrl || null },
       { onSuccess: handleClose },
     );
   }
@@ -218,6 +254,61 @@ function CreateQuickReplyModal({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Media attachment */}
+          <div>
+            <label className="mb-1.5 block font-display text-[12px] font-semibold text-[var(--text-secondary)]">
+              Anexar arquivo (imagem/vídeo)
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={MEDIA_ACCEPT_QR}
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            {attachmentUrl && attachmentName ? (
+              <div className={cn(
+                "flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)]",
+                "bg-[var(--glass-bg-overlay)] px-3 py-2",
+              )}>
+                <IconPaperclip size={15} className="shrink-0 text-[var(--brand-primary)]" />
+                <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-primary)]">
+                  {attachmentName}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setAttachmentUrl(null); setAttachmentName(null); }}
+                  className="shrink-0 rounded-full p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
+                  aria-label="Remover arquivo"
+                >
+                  <IconX size={13} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)]",
+                  "bg-[var(--glass-bg-overlay)] px-3 py-2.5",
+                  "font-body text-[13px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]",
+                  "focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]",
+                  "disabled:cursor-not-allowed disabled:opacity-50",
+                )}
+              >
+                {uploading ? (
+                  <><IconLoader2 size={15} className="animate-spin" /> Enviando…</>
+                ) : (
+                  <><IconPaperclip size={15} /> Selecionar arquivo</>
+                )}
+              </button>
+            )}
+            <p className="mt-1 font-body text-[11px] text-[var(--text-muted)]">
+              Aceita: JPG, PNG, WEBP, GIF, MP4, WEBM — máx. 16 MB. Opcional.
+            </p>
           </div>
 
       </form>

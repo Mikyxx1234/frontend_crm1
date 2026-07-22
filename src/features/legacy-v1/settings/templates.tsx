@@ -4,7 +4,8 @@ import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { IconArrowLeft as ArrowLeft, IconCopy as Copy, IconFileText as FileText, IconStack as Layers, IconLoader2 as Loader2, IconMessage as MessageSquare, IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2, IconVariable as Variable } from "@tabler/icons-react";
+import { IconArrowLeft as ArrowLeft, IconCopy as Copy, IconFileText as FileText, IconStack as Layers, IconLoader2 as Loader2, IconMessage as MessageSquare, IconPaperclip as Paperclip, IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2, IconVariable as Variable, IconX as XIcon } from "@tabler/icons-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -40,6 +41,9 @@ type TemplateRow = {
   status: string;
   channelType: string | null;
   updatedAt: string;
+  mediaUrl: string | null;
+  mediaType: string | null;
+  mediaName: string | null;
 };
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -80,7 +84,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
   });
 
   const createMutation = useMutation({
-    mutationFn: async (body: { name: string; content: string; category?: string; language?: string; channelType?: string }) => {
+    mutationFn: async (body: { name: string; content: string; category?: string; language?: string; channelType?: string; mediaUrl?: string | null; mediaType?: string | null; mediaName?: string | null }) => {
       const res = await fetch(apiUrl("/api/templates"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,7 +103,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...body }: { id: string; name: string; content: string; category?: string; language?: string; channelType?: string | null }) => {
+    mutationFn: async ({ id, ...body }: { id: string; name: string; content: string; category?: string; language?: string; channelType?: string | null; mediaUrl?: string | null; mediaType?: string | null; mediaName?: string | null }) => {
       const res = await fetch(apiUrl(`/api/templates/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -333,6 +337,8 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
   );
 }
 
+const MEDIA_ACCEPT_TEMPLATE = "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm";
+
 function TemplateForm({
   initial,
   onSubmit,
@@ -340,7 +346,7 @@ function TemplateForm({
   onCancel,
 }: {
   initial: TemplateRow | null;
-  onSubmit: (data: { name: string; content: string; category?: string; language?: string; channelType?: string }) => void;
+  onSubmit: (data: { name: string; content: string; category?: string; language?: string; channelType?: string; mediaUrl?: string | null; mediaType?: string | null; mediaName?: string | null }) => void;
   isPending: boolean;
   onCancel: () => void;
 }) {
@@ -351,6 +357,37 @@ function TemplateForm({
   const language = initial?.language ?? "pt_BR";
   const contentRef = React.useRef<HTMLTextAreaElement | null>(null);
 
+  const [mediaUrl, setMediaUrl] = React.useState<string | null>(initial?.mediaUrl ?? null);
+  const [mediaType, setMediaType] = React.useState<string | null>(initial?.mediaType ?? null);
+  const [mediaName, setMediaName] = React.useState<string | null>(initial?.mediaName ?? null);
+  const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 16 * 1024 * 1024) {
+      toast.warning("Arquivo excede o limite de 16 MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(apiUrl("/api/uploads/automation-media"), { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.message ?? "Erro ao enviar arquivo."); return; }
+      setMediaUrl(data.url);
+      setMediaType(data.mimeType);
+      setMediaName(data.fileName ?? file.name);
+    } catch {
+      toast.error("Erro de rede ao enviar arquivo.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !content.trim()) return;
@@ -360,6 +397,9 @@ function TemplateForm({
       category: category.trim() || undefined,
       language,
       channelType: channelType || undefined,
+      mediaUrl: mediaUrl || null,
+      mediaType: mediaType || null,
+      mediaName: mediaName || null,
     });
   };
 
@@ -452,6 +492,48 @@ function TemplateForm({
         <div className="min-w-0">
           <InternalTemplatePreview name={name} content={content} channelType={channelType} />
         </div>
+      </div>
+
+      {/* Media upload */}
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <label className={FIELD_LABEL_CLASS}>Anexar arquivo (imagem/vídeo)</label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={MEDIA_ACCEPT_TEMPLATE}
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        {mediaUrl && mediaName ? (
+          <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+            <Paperclip className="size-4 shrink-0 text-[var(--brand-primary)]" />
+            <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-primary)]">{mediaName}</span>
+            <button
+              type="button"
+              onClick={() => { setMediaUrl(null); setMediaType(null); setMediaName(null); }}
+              className="shrink-0 rounded-full p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
+              aria-label="Remover arquivo"
+            >
+              <XIcon className="size-3.5" />
+            </button>
+          </div>
+        ) : (
+          <ButtonGlass
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="w-full justify-start gap-2 text-[13px]"
+          >
+            {uploading ? (
+              <><Loader2 className="size-4 animate-spin" /> Enviando…</>
+            ) : (
+              <><Paperclip className="size-4" /> Selecionar arquivo</>
+            )}
+          </ButtonGlass>
+        )}
+        <p className="font-body text-[11px] text-[var(--text-muted)]">
+          Aceita: JPG, PNG, WEBP, GIF, MP4, WEBM — máx. 16 MB.
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] pt-3 sm:pt-4">

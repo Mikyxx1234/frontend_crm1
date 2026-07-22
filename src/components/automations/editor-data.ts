@@ -167,6 +167,44 @@ export function useTemplateOptions() {
   return { options: q.data ?? [], isLoading: q.isLoading }
 }
 
+type RawTemplateDetail = {
+  metaTemplateName?: string
+  name?: string
+  bodyPreview?: string
+  buttons?: { type?: string; text?: string }[]
+}
+
+export type TemplateDetail = { bodyPreview: string; quickReplies: string[] }
+
+/**
+ * Mapa nome-do-template → { bodyPreview, quickReplies }. Usado pelo nó
+ * "Template WhatsApp" para exibir o corpo e derivar os botões de resposta
+ * rápida (roteamento). Reusa a MESMA query de useTemplateOptions (cache
+ * compartilhado) para não duplicar fetch.
+ */
+export function useTemplateDetailsMap() {
+  const q = useQuery({
+    queryKey: ["editor-wa-templates-detail"],
+    staleTime: STALE,
+    queryFn: async (): Promise<Map<string, TemplateDetail>> => {
+      const list = asArray(
+        await getJson("/api/whatsapp-template-configs/approved"),
+      ) as RawTemplateDetail[]
+      const map = new Map<string, TemplateDetail>()
+      for (const t of list) {
+        const name = t.metaTemplateName ?? t.name ?? ""
+        if (!name) continue
+        const quickReplies = (t.buttons ?? [])
+          .filter((b) => String(b.type).toUpperCase() === "QUICK_REPLY" && (b.text ?? "").trim() !== "")
+          .map((b) => b.text!.trim())
+        map.set(name, { bodyPreview: (t.bodyPreview ?? "").trim(), quickReplies })
+      }
+      return map
+    },
+  })
+  return { detailsMap: q.data ?? new Map<string, TemplateDetail>(), isLoading: q.isLoading }
+}
+
 type RawAutomation = { id: string; name: string }
 
 export function useAutomationOptions() {

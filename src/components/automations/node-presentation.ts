@@ -22,7 +22,7 @@ function clampSubtitle(text: string, max = 48): string {
   return `${t.slice(0, max - 1)}…`
 }
 
-function interactiveOutputs(config: Record<string, unknown>, withElse: boolean): FlowNodeData["outputs"] {
+function interactiveOutputs(config: Record<string, unknown>, withElse: boolean): NonNullable<FlowNodeData["outputs"]> {
   const buttons = Array.isArray(config.buttons) ? (config.buttons as Btn[]) : []
   const outputs: NonNullable<FlowNodeData["outputs"]> = buttons.map((btn, idx) => ({
     id: `btn_${idx}`,
@@ -82,16 +82,16 @@ export function resolveFlowPresentation(
     }
     case "send_whatsapp_template": {
       const tpl = String(config.templateName ?? "").trim()
+      const body = String(config.bodyPreview ?? "").trim()
+      // Preview: prioriza o corpo real do template; cai pro nome do template.
+      const subtitle = body ? clampSubtitle(body, 90) : tpl ? clampSubtitle(tpl) : data.subtitle
       const buttons = Array.isArray(config.buttons) ? (config.buttons as Btn[]) : []
       // Só vira nó ramificado quando o template tem botões de resposta rápida
       // (roteamento). Sem botões, mantém a saída única padrão (d.source).
       if (buttons.length > 0) {
-        return {
-          outputs: interactiveOutputs(config, true),
-          subtitle: tpl ? clampSubtitle(tpl) : data.subtitle,
-        }
+        return { outputs: interactiveOutputs(config, true), subtitle }
       }
-      return { subtitle: tpl ? clampSubtitle(tpl) : data.subtitle }
+      return { subtitle }
     }
     case "add_tag":
     case "remove_tag": {

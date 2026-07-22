@@ -48,6 +48,34 @@ export function useStageOptions() {
   return { options: q.data ?? [], isLoading: q.isLoading }
 }
 
+/** Funis (pipelines) → value: pipelineId. Para condições `deal.pipelineId`. */
+export function usePipelineOptions() {
+  const q = useQuery({
+    queryKey: ["editor-pipelines-flat"],
+    staleTime: STALE,
+    queryFn: async (): Promise<Opt[]> => {
+      const list = asArray(await getJson("/api/pipelines")) as RawPipeline[]
+      return list.map((p) => ({ value: p.id, label: p.name }))
+    },
+  })
+  return { options: q.data ?? [], isLoading: q.isLoading }
+}
+
+type RawDepartment = { id: string; name: string }
+
+/** Departamentos da org → value: departmentId. Para `conversation.departmentId`. */
+export function useDepartmentOptions() {
+  const q = useQuery({
+    queryKey: ["editor-departments"],
+    staleTime: STALE,
+    queryFn: async (): Promise<Opt[]> => {
+      const list = asArray(await getJson("/api/settings/departments")) as RawDepartment[]
+      return list.map((d) => ({ value: d.id, label: d.name }))
+    },
+  })
+  return { options: q.data ?? [], isLoading: q.isLoading }
+}
+
 type RawUser = { id: string; name?: string; email?: string }
 
 export function useUserOptions() {

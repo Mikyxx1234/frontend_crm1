@@ -13,7 +13,12 @@ import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-gl
 import { InputGlass } from "@/components/crm/input-glass"
 import { cn } from "@/lib/utils"
 import {
+  BOOL_OPTS,
+  CHANNEL_KIND_OPTS,
+  CONDITION_BOOL_FIELDS,
+  CONDITION_FIELDS,
   CONDITION_OPS,
+  DEAL_STATUS_OPTS,
   STEP_FIELDS,
   WEEK_DAYS,
   type EditorField,
@@ -22,13 +27,18 @@ import {
 import {
   useAiAgentOptions,
   useAutomationOptions,
+  useDepartmentOptions,
   useFieldOptions,
+  usePipelineOptions,
   useStageOptions,
   useTagOptions,
   useTemplateOptions,
   useUserOptions,
   type Opt,
 } from "./editor-data"
+
+const CONDITION_FIELD_SET = new Set(CONDITION_FIELDS.map((f) => f.value))
+const CUSTOM_FIELD_SENTINEL = "__custom__"
 
 type Cfg = Record<string, unknown>
 type StepOpt = { value: string; label: string }
@@ -668,6 +678,51 @@ type Branch = { id?: string; label?: string; rules?: Rule[]; nextStepId?: string
 
 const NO_VALUE_OPS = new Set(["empty", "not_empty"])
 
+/**
+ * Widget de VALOR da regra, escolhido pelo campo/operador selecionado.
+ * Cada ramo renderiza um componente próprio que chama seu hook — sem
+ * violar as regras de hooks (o condicional é sobre QUAL componente
+ * renderiza, não sobre chamar hooks condicionalmente).
+ */
+function ConditionValue({
+  field,
+  op,
+  value,
+  onChange,
+}: {
+  field: string
+  op: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  const isTagField = field.endsWith(".tags") || field.endsWith(".tagIds")
+  if (op === "has_tag" || op === "not_has_tag" || isTagField) {
+    return <HookSelect hook={useTagOptions} value={value} onChange={onChange} placeholder="Selecione uma tag…" />
+  }
+  if (CONDITION_BOOL_FIELDS.has(field)) {
+    return <ConfigSelect value={value} options={BOOL_OPTS} onChange={onChange} placeholder="Sim/Não" />
+  }
+  if (field.endsWith("assignedToId") || field.endsWith("ownerId")) {
+    return <OwnerSelect value={value} onChange={onChange} />
+  }
+  if (field === "conversation.departmentId") {
+    return <HookSelect hook={useDepartmentOptions} value={value} onChange={onChange} placeholder="Selecione um departamento…" />
+  }
+  if (field === "deal.stageId") {
+    return <HookSelect hook={useStageOptions} value={value} onChange={onChange} placeholder="Selecione uma etapa…" />
+  }
+  if (field === "deal.pipelineId") {
+    return <HookSelect hook={usePipelineOptions} value={value} onChange={onChange} placeholder="Selecione um funil…" />
+  }
+  if (field === "deal.status") {
+    return <ConfigSelect value={value} options={DEAL_STATUS_OPTS} onChange={onChange} placeholder="Status…" />
+  }
+  if (field === "conversation.channel") {
+    return <ConfigSelect value={value} options={CHANNEL_KIND_OPTS} onChange={onChange} placeholder="Canal…" />
+  }
+  return <InputGlass className="nodrag" placeholder="valor" value={value} onChange={(e) => onChange(e.target.value)} />
+}
+
 function ConditionBuilder({ config, steps, onChange }: { config: Cfg; steps: StepOpt[]; onChange: (next: Cfg) => void }) {
   const branches = asArr<Branch>(config.branches)
   const setBranches = (b: Branch[]) => onChange({ ...config, branches: b })
@@ -697,11 +752,44 @@ function ConditionBuilder({ config, steps, onChange }: { config: Cfg; steps: Ste
             </div>
             {(b.rules ?? []).map((r, ri) => {
               const noVal = NO_VALUE_OPS.has(str(r.op))
+              const field = str(r.field)
+              const isCustom = !!field && !CONDITION_FIELD_SET.has(field)
               return (
                 <div className="cfg-rule" key={ri}>
-                  <InputGlass className="nodrag" placeholder="campo (ex.: contact.tags)" value={str(r.field)} onChange={(e) => updateRule(bi, ri, { field: e.target.value })} />
+                  <ConfigSelect
+                    value={isCustom ? CUSTOM_FIELD_SENTINEL : field}
+                    options={[
+                      ...CONDITION_FIELDS,
+                      { value: CUSTOM_FIELD_SENTINEL, label: "Outro (caminho livre)…" },
+                    ]}
+                    placeholder="campo"
+                    onChange={(v) => {
+                      // Trocar de campo zera o valor (o widget muda de tipo).
+                      // "Outro" injeta um seed editável (`variables.`).
+                      if (v === CUSTOM_FIELD_SENTINEL) {
+                        updateRule(bi, ri, { field: "variables.", value: "" })
+                      } else {
+                        updateRule(bi, ri, { field: v, value: "" })
+                      }
+                    }}
+                  />
+                  {isCustom && (
+                    <InputGlass
+                      className="nodrag"
+                      placeholder="caminho (ex.: variables.resposta)"
+                      value={field}
+                      onChange={(e) => updateRule(bi, ri, { field: e.target.value })}
+                    />
+                  )}
                   <ConfigSelect value={str(r.op)} options={CONDITION_OPS} placeholder="operador" onChange={(v) => updateRule(bi, ri, { op: v })} />
-                  {!noVal && <InputGlass className="nodrag" placeholder="valor" value={str(r.value)} onChange={(e) => updateRule(bi, ri, { value: e.target.value })} />}
+                  {!noVal && (
+                    <ConditionValue
+                      field={field}
+                      op={str(r.op)}
+                      value={str(r.value)}
+                      onChange={(v) => updateRule(bi, ri, { value: v })}
+                    />
+                  )}
                   <button
                     className="cfg-x nodrag"
                     title="Remover regra"

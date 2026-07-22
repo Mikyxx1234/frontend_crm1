@@ -132,7 +132,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
       {showCheckbox ? (
         <label
           className="absolute left-2 top-2 z-20 flex h-5 w-5 cursor-pointer items-center justify-center rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-sm backdrop-blur-md"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSelect() }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
@@ -140,12 +140,9 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           <input
             type="checkbox"
             checked={!!isSelected}
-            onChange={(e) => {
-              e.stopPropagation()
-              onToggleSelect()
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="h-3.5 w-3.5 cursor-pointer accent-[var(--brand-primary)]"
+            readOnly
+            tabIndex={-1}
+            className="pointer-events-none h-3.5 w-3.5 cursor-pointer accent-[var(--brand-primary)]"
           />
         </label>
       ) : null}
@@ -222,7 +219,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           ou iniciar drag ao interagir com popovers injetados. */}
       <div
         className="mb-1 mt-1 flex flex-wrap items-center gap-1"
-        onClick={tagsSlot ? (e) => e.stopPropagation() : undefined}
+        onClick={tagsSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
         onMouseDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
         onPointerDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
         onTouchStart={tagsSlot ? (e) => e.stopPropagation() : undefined}
@@ -242,7 +239,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
             ))}
             <button
               type="button"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
               className="inline-flex cursor-pointer items-center rounded-full border border-dashed border-[var(--glass-border)] bg-transparent px-2 py-px font-display text-[9.5px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
             >
               +
@@ -254,7 +251,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
       {/* Owner — slot tem prioridade. */}
       <div
         className="flex items-center gap-1.5 border-t border-[var(--glass-border-subtle)] pt-1"
-        onClick={ownerSlot ? (e) => e.stopPropagation() : undefined}
+        onClick={ownerSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
         onMouseDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
         onPointerDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
         onTouchStart={ownerSlot ? (e) => e.stopPropagation() : undefined}
@@ -267,7 +264,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
         {moveMenuSlot && (
           <div
             className="ml-auto"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}

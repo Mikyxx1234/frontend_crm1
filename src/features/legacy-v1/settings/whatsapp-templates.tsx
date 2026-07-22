@@ -117,15 +117,30 @@ function meaningfulRejectedReason(status: string, reason: string | undefined): s
   return r;
 }
 
-async function fetchTemplatesPage(after?: string): Promise<ListResponse> {
-  const q = new URLSearchParams();
-  if (after) q.set("after", after);
-  const res = await fetch(apiUrl(`/api/meta/whatsapp/message-templates?${q.toString()}`));
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(typeof data?.message === "string" ? data.message : "Erro ao listar");
+/**
+ * Busca TODOS os templates da WABA percorrendo todas as páginas de cursor da
+ * Graph API. A Meta lista no máximo 500 por página; sem esse loop, o CRM ficava
+ * preso na primeira página (até 100) e não exibia o total real da conta.
+ */
+async function fetchAllTemplates(): Promise<MetaTemplateRow[]> {
+  const all: MetaTemplateRow[] = [];
+  let after: string | undefined;
+  // Guarda de segurança contra loop infinito (500 * 200 = 100k templates).
+  for (let guard = 0; guard < 200; guard++) {
+    const q = new URLSearchParams();
+    q.set("limit", "500");
+    if (after) q.set("after", after);
+    const res = await fetch(apiUrl(`/api/meta/whatsapp/message-templates?${q.toString()}`));
+    const data = (await res.json().catch(() => ({}))) as ListResponse & { message?: string };
+    if (!res.ok) {
+      throw new Error(typeof data?.message === "string" ? data.message : "Erro ao listar");
+    }
+    if (Array.isArray(data.data)) all.push(...data.data);
+    const next = data.paging?.cursors?.after;
+    if (!next || next === after) break;
+    after = next;
   }
-  return data as ListResponse;
+  return all;
 }
 
 async function fetchTemplateConfigs(): Promise<TemplateConfig[]> {
@@ -241,16 +256,12 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
   const confirmDialog = useConfirm();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [afterStack, setAfterStack] = React.useState<string[]>([]);
-  const after = afterStack.length ? afterStack[afterStack.length - 1] : undefined;
-
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["meta-whatsapp-templates", after ?? "first"],
-    queryFn: () => fetchTemplatesPage(after),
+    queryKey: ["meta-whatsapp-templates", "all"],
+    queryFn: fetchAllTemplates,
   });
 
-  const rows = data?.data ?? [];
-  const nextCursor = data?.paging?.cursors?.after;
+  const rows = data ?? [];
 
   const { data: templateConfigs = [] } = useQuery({
     queryKey: ["whatsapp-template-configs"],
@@ -795,22 +806,6 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
           </div>
         )}
       </HubPanel>
-
-      {nextCursor ? (
-        <ButtonGlass
-          type="button"
-          variant="glass"
-          size="sm"
-          onClick={() => setAfterStack((s) => [...s, nextCursor])}
-        >
-          Carregar mais
-        </ButtonGlass>
-      ) : null}
-      {afterStack.length > 0 ? (
-        <ButtonGlass type="button" variant="glass" size="sm" onClick={() => setAfterStack([])}>
-          Voltar ao início da lista
-        </ButtonGlass>
-      ) : null}
 
       <FormSheet
         open={createOpen}

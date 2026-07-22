@@ -225,16 +225,31 @@ export function fetchSegments(): Promise<SegmentRow[]> {
   ).then((d) => d.segments ?? []);
 }
 
-export function fetchTemplates(): Promise<TemplateRow[]> {
+export async function fetchTemplates(): Promise<TemplateRow[]> {
   if (isPageMockMode()) {
     return Promise.resolve(MOCK_TEMPLATES);
   }
   // Templates aprovados vem direto da WABA via Graph (message_templates).
-  // A resposta da Meta tem o formato { data: [ { name, status, language, ... } ] }.
-  return getJson<{ templates?: TemplateRow[]; data?: TemplateRow[] }>(
-    "/api/meta/whatsapp/message-templates",
-    "Erro ao carregar templates.",
-  ).then((d) => d.templates ?? d.data ?? []);
+  // A resposta da Meta tem o formato { data: [...], paging: { cursors: { after } } }.
+  // Percorremos TODAS as páginas de cursor — sem isso a lista ficava presa na
+  // primeira página (até 100) e campanhas não viam o total real da conta.
+  const all: TemplateRow[] = [];
+  let after: string | undefined;
+  for (let guard = 0; guard < 200; guard++) {
+    const q = new URLSearchParams();
+    q.set("limit", "500");
+    if (after) q.set("after", after);
+    const page = await getJson<{
+      templates?: TemplateRow[];
+      data?: TemplateRow[];
+      paging?: { cursors?: { after?: string } };
+    }>(`/api/meta/whatsapp/message-templates?${q.toString()}`, "Erro ao carregar templates.");
+    all.push(...(page.templates ?? page.data ?? []));
+    const next = page.paging?.cursors?.after;
+    if (!next || next === after) break;
+    after = next;
+  }
+  return all;
 }
 
 export interface AudienceFilterOptions {

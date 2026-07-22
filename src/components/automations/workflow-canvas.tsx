@@ -110,8 +110,17 @@ function rfNodeType(stepType: string): keyof typeof nodeTypes {
   return "action";
 }
 
-function isInteractiveStep(type: string): boolean {
-  return type === "question" || type === "send_whatsapp_interactive";
+function isInteractiveStep(step: { type: string; config?: unknown }): boolean {
+  const t = step.type;
+  if (t === "question" || t === "send_whatsapp_interactive") return true;
+  // Template WhatsApp vira nó interativo (1 handle por botão, arraste pra
+  // conectar — estilo Kommo) SÓ quando tem botões de resposta rápida. Sem
+  // botões, segue como envio linear simples.
+  if (t === "send_whatsapp_template") {
+    const cfg = step.config as Record<string, unknown> | undefined;
+    return Array.isArray(cfg?.buttons) && (cfg!.buttons as unknown[]).length > 0;
+  }
+  return false;
 }
 
 const ADD_STEP_ID = "__addStep__";
@@ -164,7 +173,7 @@ function collectLeafStepIds(steps: AutomationStep[]): Set<string> {
   const leaves = new Set<string>();
   for (const step of steps) {
     if (TERMINAL_STEP_TYPES.has(step.type)) continue;
-    if (isInteractiveStep(step.type)) {
+    if (isInteractiveStep(step)) {
       const cfg = step.config as Record<string, unknown>;
       const buttons = Array.isArray(cfg.buttons)
         ? (cfg.buttons as { gotoStepId?: string }[])
@@ -253,7 +262,7 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
     const a = steps[i];
     const cfg = a.config as Record<string, unknown>;
 
-    if (isInteractiveStep(a.type)) {
+    if (isInteractiveStep(a)) {
       const buttons = Array.isArray(cfg.buttons)
         ? (cfg.buttons as { gotoStepId?: string }[])
         : [];
@@ -378,6 +387,11 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
     // branch tem o seu. Pular pra não criar edge fantasma no handle
     // "false" do losango antigo.
     if (a.type === "condition") continue;
+
+    // Nós interativos (question/interactive/template-com-botões) roteiam só
+    // pelos handles (btn_N/else) — não usam nextStepId raiz. Pular evita
+    // edge linear fantasma sobreposto aos ramos dos botões.
+    if (isInteractiveStep(a)) continue;
 
     const explicit = readNextStepId(cfg);
 
@@ -631,7 +645,7 @@ function WorkflowCanvasInner({
         // inline têm `nodrag`/stopPropagation, então digitar/clicar em
         // inputs não move o node. `nodeDragThreshold` no <ReactFlow>
         // garante que o clique de seleção não vire micro-drag.
-        if (isInteractiveStep(step.type)) {
+        if (isInteractiveStep(step)) {
           const cfg = step.config as Record<string, unknown>;
           const buttons = Array.isArray(cfg.buttons) ? cfg.buttons : [];
           return {
@@ -753,7 +767,13 @@ function WorkflowCanvasInner({
         s.id === stepId ? { ...s, config: next } : s
       );
       stepsRef.current = updated;
-      skipStepsSyncRef.current = true;
+      // Normalmente pulamos o rebuild pra preservar o foco do campo. MAS se
+      // a "interatividade" mudou (ex.: template ganhou/perdeu botões), o TIPO
+      // do nó (action↔interactive) precisa ser recomputado — deixamos o
+      // rebuild rodar pra trocar o componente e mostrar os handles por botão.
+      const interactiveChanged =
+        isInteractiveStep(step) !== isInteractiveStep({ type: step.type, config: next });
+      skipStepsSyncRef.current = !interactiveChanged;
       onStepsChange(updated);
 
       const stepIndexById = new Map<string, number>();
@@ -775,7 +795,7 @@ function WorkflowCanvasInner({
             summary,
             incomplete: isStepIncomplete(step.type, next),
           };
-          if (isInteractiveStep(step.type)) {
+          if (isInteractiveStep({ type: step.type, config: next })) {
             data.buttons = Array.isArray(next.buttons) ? next.buttons : [];
           }
           if (step.type === "condition") {
@@ -1011,7 +1031,7 @@ function WorkflowCanvasInner({
       if (sourceHandle) {
         const btnMatch = sourceHandle.match(/^btn_(\d+)$/);
 
-        if (btnMatch && isInteractiveStep(srcStep.type)) {
+        if (btnMatch && isInteractiveStep(srcStep)) {
           const idx = Number(btnMatch[1]);
           const cfg = { ...srcStep.config } as Record<string, unknown>;
           const buttons = Array.isArray(cfg.buttons)
@@ -1167,7 +1187,7 @@ function WorkflowCanvasInner({
       if (srcStep) {
         const btnMatch = sourceHandle.match(/^btn_(\d+)$/);
 
-        if (btnMatch && isInteractiveStep(srcStep.type)) {
+        if (btnMatch && isInteractiveStep(srcStep)) {
           const idx = Number(btnMatch[1]);
           const cfg = { ...srcStep.config } as Record<string, unknown>;
           const buttons = Array.isArray(cfg.buttons)
@@ -1383,7 +1403,7 @@ function WorkflowCanvasInner({
       if (!srcStep) return;
 
       const btnMatch = sourceHandle?.match(/^btn_(\d+)$/);
-      if (btnMatch && isInteractiveStep(srcStep.type)) {
+      if (btnMatch && isInteractiveStep(srcStep)) {
         const idx = Number(btnMatch[1]);
         const cfg = { ...srcStep.config } as Record<string, unknown>;
         const buttons = Array.isArray(cfg.buttons)

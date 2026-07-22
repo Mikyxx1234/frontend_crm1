@@ -8,7 +8,7 @@
  * Toda a UI vive em `.n-config` com as classes `nodrag nopan nowheel` para
  * que digitar/rolar não arraste nem dê pan/zoom no React Flow.
  */
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass"
 import { InputGlass } from "@/components/crm/input-glass"
 import { cn } from "@/lib/utils"
@@ -213,7 +213,7 @@ function Field({
       return <UpdateFieldEditor config={config} onChange={onChange} />
 
     case "templatePreview":
-      return <TemplatePreview config={config} steps={steps} onChange={onChange} />
+      return <TemplatePreview config={config} onChange={onChange} />
 
 
     case "builder":
@@ -557,117 +557,61 @@ function UpdateFieldEditor({ config, onChange }: { config: Cfg; onChange: (next:
 
 // ─────────────────────── Preview do template WhatsApp ───────────────────────
 
-/** Seta de "resposta" do WhatsApp (curva pra esquerda) — marca os botões
- *  de resposta rápida (quick-reply). */
-function ReplyArrow() {
-  return (
-    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 14 4 9l5-5" />
-      <path d="M4 9h11a5 5 0 0 1 5 5v2" />
-    </svg>
-  )
-}
-
 const norm = (s: string) => s.trim().toLowerCase()
 
 /**
- * Preview do template no formato WhatsApp: corpo + botões EMPILHADOS abaixo
- * (modelo original). Cada botão de resposta rápida vira uma AÇÃO roteável:
- * o operador escolhe "Ir para passo" por botão. Isso alimenta
- * `config.buttons[].gotoStepId` (casado por título no backend) — o mesmo que
- * o card usa pra gerar 1 saída/ramo por botão. Botões vêm da Meta (título
- * read-only); só a ação é editável.
+ * Preview do template (estilo WhatsApp): apenas o CORPO da mensagem. Os
+ * botões NÃO aparecem aqui — eles viram linhas com handle no próprio card
+ * (nó interativo), onde cada botão é arrastado para o próximo passo (modelo
+ * Kommo). Aqui só auto-sincronizamos `config.buttons` a partir dos
+ * quick-replies do template (preservando `gotoStepId` por título) + o
+ * `bodyPreview`; é isso que faz o card renderizar 1 handle por botão.
  */
 function TemplatePreview({
   config,
-  steps,
   onChange,
 }: {
   config: Cfg
-  steps: StepOpt[]
   onChange: (next: Cfg) => void
 }) {
   const templateName = str(config.templateName)
   const { detailsMap, isLoading } = useTemplateDetailsMap()
-  if (!templateName) return null
-  const detail = detailsMap.get(templateName)
-  if (isLoading && !detail) {
-    return <p className="cfg-info">Carregando preview…</p>
-  }
-  if (!detail) return null
-  const hasBody = detail.bodyPreview.trim() !== ""
-  const replies = detail.quickReplies
-  const hasBtns = replies.length > 0
-  if (!hasBody && !hasBtns) return null
+  const detail = templateName ? detailsMap.get(templateName) : undefined
 
-  const buttons = asArr(config.buttons) as BtnItem[]
-  const gotoFor = (title: string) =>
-    str(buttons.find((b) => norm(str(b.title ?? b.text)) === norm(title))?.gotoStepId)
-
-  // Grava a ação de um botão preservando as demais; re-sincroniza a lista
-  // com os títulos atuais do template (ids btn_0.. casam com o card).
-  const setGoto = (title: string, gotoStepId: string) => {
-    const next = replies.map((t, i) => {
-      const prev = buttons.find((b) => norm(str(b.title ?? b.text)) === norm(t))
-      return {
-        id: `btn_${i}`,
-        title: t,
-        gotoStepId: norm(t) === norm(title) ? gotoStepId : str(prev?.gotoStepId),
-      }
+  useEffect(() => {
+    if (!detail) return
+    const prev = asArr(config.buttons) as BtnItem[]
+    const desired = detail.quickReplies.map((t, i) => {
+      const match = prev.find((b) => norm(str(b.title ?? b.text)) === norm(t))
+      return { id: `btn_${i}`, title: t, gotoStepId: str(match?.gotoStepId) }
     })
-    onChange({ ...config, buttons: next })
-  }
+    const sameBtns =
+      desired.length === prev.length &&
+      desired.every(
+        (b, i) => b.title === str(prev[i]?.title) && b.gotoStepId === str(prev[i]?.gotoStepId),
+      )
+    const sameBody = str(config.bodyPreview) === detail.bodyPreview
+    if (sameBtns && sameBody) return
+    onChange({ ...config, buttons: desired, bodyPreview: detail.bodyPreview })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateName, detail])
+
+  if (!templateName) return null
+  if (isLoading && !detail) return <p className="cfg-info">Carregando preview…</p>
+  if (!detail || detail.bodyPreview.trim() === "") return null
 
   return (
-    <>
-      <div className="cfg-field">
-        <span className="cfg-label">Pré-visualização</span>
-        <div className="cfg-tpl-preview nodrag nowheel">
-          {hasBody && <p className="cfg-tpl-body">{detail.bodyPreview}</p>}
-          {hasBtns && (
-            <div className="cfg-tpl-btns">
-              {replies.map((t, i) => (
-                <span key={`${t}-${i}`} className="cfg-tpl-btn">
-                  <ReplyArrow />
-                  {t}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+    <div className="cfg-field">
+      <span className="cfg-label">Pré-visualização</span>
+      <div className="cfg-tpl-preview nodrag nowheel">
+        <p className="cfg-tpl-body">{detail.bodyPreview}</p>
       </div>
-
-      {hasBtns && (
-        <div className="cfg-field">
-          <span className="cfg-label">Ação por botão — cada resposta leva a um passo</span>
-          <div className="cfg-list">
-            {replies.map((t, i) => (
-              <div className="cfg-item" key={`${t}-${i}`}>
-                <div className="cfg-tpl-route-title">
-                  <ReplyArrow />
-                  {t}
-                </div>
-                <ConfigSelect
-                  value={gotoFor(t)}
-                  options={steps}
-                  placeholder="Ir para passo…"
-                  onChange={(v) => setGoto(t, v)}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="cfg-item" style={{ marginTop: 8 }}>
-            <div className="cfg-tpl-route-title">Se a resposta não bater com nenhum botão</div>
-            <ConfigSelect
-              value={str(config.elseGotoStepId)}
-              options={steps}
-              placeholder="Ir para passo…"
-              onChange={(v) => onChange({ ...config, elseGotoStepId: v })}
-            />
-          </div>
-        </div>
+      {detail.quickReplies.length > 0 && (
+        <p className="cfg-hint">
+          Os botões aparecem no card — arraste cada um para o próximo passo.
+        </p>
       )}
-    </>
+    </div>
   )
 }
 

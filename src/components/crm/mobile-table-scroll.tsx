@@ -24,7 +24,9 @@ export function MobileTableScroll({
   return (
     <div
       className={cn(
-        "min-w-0 overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch]",
+        // pan-x + pan-y: H-scroll da tabela sem engolir o scroll vertical
+        // da página (touch-pan-x sozinho bloqueava o dedo no mobile/APK).
+        "min-w-0 overflow-x-auto overscroll-x-contain touch-pan-x touch-pan-y [-webkit-overflow-scrolling:touch]",
         className,
       )}
     >

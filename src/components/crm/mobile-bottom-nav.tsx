@@ -151,16 +151,33 @@ export function MobileBottomNav() {
     return () => observer.disconnect();
   }, []);
 
-  // Hide on scroll down / show on scroll up — capture porque o scroll
-  // acontece em containers internos (overflow-y-auto), nao no window.
+  // Hide on scroll down / show on scroll up.
+  // - scroll (capture): containers overflow-y (settings, kanban-scroll…)
+  // - touchmove: fallback no WebView/APK, onde o scroll aninhado às vezes
+  //   não propaga de forma confiável até o document
   useEffect(() => {
     if (!mounted) return;
     const mq = window.matchMedia("(max-width: 767px)");
-    if (!mq.matches) return;
 
-    let lastY = 0;
-    let lastTarget: EventTarget | null = null;
-    const THRESHOLD = 6;
+    const lastScrollTop = new WeakMap<Element, number>();
+    const SCROLL_THRESHOLD = 4;
+    const TOUCH_THRESHOLD = 10;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchLastY = 0;
+    let touchLocked: "h" | "v" | null = null;
+
+    function readScrollTop(t: Element): number {
+      if (t === document.documentElement || t === document.body) {
+        return window.scrollY || document.documentElement.scrollTop;
+      }
+      return (t as HTMLElement).scrollTop;
+    }
+
+    function hideOrShow(delta: number, y: number) {
+      if (delta > 0 && y > 16) setVisible(false);
+      else if (delta < 0) setVisible(true);
+    }
 
     function onScroll(e: Event) {
       if (!mq.matches) return;
@@ -168,30 +185,74 @@ export function MobileBottomNav() {
       if (!(t instanceof Element)) return;
       if (t.closest?.("[data-mobile-bottom-nav]")) return;
 
-      const y =
-        t === document.documentElement || t === document.body
-          ? window.scrollY || document.documentElement.scrollTop
-          : (t as HTMLElement).scrollTop;
+      const y = readScrollTop(t);
+      const prev = lastScrollTop.get(t);
+      lastScrollTop.set(t, y);
+      if (prev === undefined) return;
 
-      if (t !== lastTarget) {
-        lastTarget = t;
-        lastY = y;
+      const delta = y - prev;
+      if (Math.abs(delta) < SCROLL_THRESHOLD) return;
+      hideOrShow(delta, y);
+    }
+
+    function onTouchStart(e: TouchEvent) {
+      if (!mq.matches || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchLastY = t.clientY;
+      touchLocked = null;
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!mq.matches || e.touches.length !== 1) return;
+      const target = e.target;
+      if (target instanceof Element && target.closest("[data-mobile-bottom-nav]")) {
         return;
       }
 
-      const delta = y - lastY;
-      if (Math.abs(delta) < THRESHOLD) return;
-      lastY = y;
+      const t = e.touches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
 
-      if (delta > 0 && y > 24) {
-        setVisible(false);
-      } else if (delta < 0) {
-        setVisible(true);
+      // Trava eixo: H-scroll de tabela/kanban não deve esconder a nav.
+      if (!touchLocked) {
+        if (Math.abs(dx) < TOUCH_THRESHOLD && Math.abs(dy) < TOUCH_THRESHOLD) return;
+        touchLocked = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
       }
+      if (touchLocked === "h") return;
+
+      const deltaFinger = touchLastY - t.clientY; // >0 = dedo sobe = conteúdo desce
+      touchLastY = t.clientY;
+      if (Math.abs(deltaFinger) < TOUCH_THRESHOLD) return;
+
+      // y “efetivo”: se o dedo sobe, trata como scrollDown progressivo
+      hideOrShow(deltaFinger, deltaFinger > 0 ? 32 : 0);
     }
 
-    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
-    return () => document.removeEventListener("scroll", onScroll, true);
+    function bind() {
+      document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+      document.addEventListener("touchstart", onTouchStart, { capture: true, passive: true });
+      document.addEventListener("touchmove", onTouchMove, { capture: true, passive: true });
+    }
+    function unbind() {
+      document.removeEventListener("scroll", onScroll, true);
+      document.removeEventListener("touchstart", onTouchStart, true);
+      document.removeEventListener("touchmove", onTouchMove, true);
+    }
+
+    function onMqChange() {
+      unbind();
+      if (mq.matches) bind();
+      else setVisible(true);
+    }
+
+    if (mq.matches) bind();
+    mq.addEventListener("change", onMqChange);
+    return () => {
+      unbind();
+      mq.removeEventListener("change", onMqChange);
+    };
   }, [mounted]);
 
   const cached = mounted ? readCachedSidebarItems() : undefined;

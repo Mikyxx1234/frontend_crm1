@@ -1,0 +1,7 @@
+{
+  "versionCode": 1,
+  "versionName": "1.0.0",
+  "apkUrl": "",
+  "force": false,
+  "notes": "Versão base do APK. Substitua versionCode/apkUrl ao publicar um build nativo novo."
+}

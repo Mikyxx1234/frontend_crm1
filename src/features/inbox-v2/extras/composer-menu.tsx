@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   IconPlus,
   IconPaperclip,
+  IconCamera,
   IconFileText,
   IconLock,
   IconClock,
@@ -164,6 +165,18 @@ export function ComposerMenu({
               >
                 <span className="inline-flex items-center gap-2.5">
                   <IconPaperclip size={15} /> Anexar arquivo
+                </span>
+              </FilePickerButton>
+
+              <FilePickerButton
+                conversationId={conversationId}
+                accept="image/*"
+                capture="environment"
+                onOpen={closeMenu}
+                className="w-full justify-start rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] transition-colors hover:bg-primary/8 hover:text-primary [&>svg]:transition-colors hover:[&>svg]:text-primary"
+              >
+                <span className="inline-flex items-center gap-2.5">
+                  <IconCamera size={15} /> Tirar foto
                 </span>
               </FilePickerButton>
 

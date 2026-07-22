@@ -33,6 +33,7 @@ import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
 import { ScrollMap } from "@/components/crm/scroll-map";
+import { ScrollMapVertical } from "@/components/crm/scroll-map-vertical";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
 import { DealProductsSection, DealQuotasSection } from "@/components/pipeline/deal-detail/sidebar";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
@@ -937,7 +938,13 @@ export default function KanbanV2ClientPage({
               <EmptyBoard isAuthenticated={isAuthenticated} />
             ) : null}
           </div>
-          <ScrollMap boardRef={boardRef} columnCount={columns.length} />
+          {/* ScrollMap horizontal: só desktop — no mobile a barra inferior atrapalha. */}
+          <ScrollMap
+            boardRef={boardRef}
+            columnCount={columns.length}
+            className="max-md:hidden"
+          />
+          <ScrollMapVertical boardRef={boardRef} columnCount={columns.length} />
           </div>{/* fim relative wrapper */}
         </DragDropContext>
       </div>

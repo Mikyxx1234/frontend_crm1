@@ -32,6 +32,7 @@ import { stepTypeLabel, defaultStepConfig } from "@/lib/automation-workflow"
 import { automationExportToCanvas, type FlowAnalysis } from "./automation-graph"
 import { FLOW_FIXTURES, FLOW_FIXTURE_OPTIONS, type FlowFixtureKey } from "./fixtures"
 import { DropdownGlass } from "@/components/crm/dropdown-glass"
+import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
 
 /** Família de cor do ícone/acento por tipo de ação (espelha o HTML DS v2). */
 type Chip = "blue" | "violet" | "green" | "amber" | "danger"
@@ -795,6 +796,9 @@ function EditorInner() {
 }
 
 export function FlowEditor() {
+  // Mobile: esconde a bottom nav enquanto o editor de fluxo está aberto.
+  useMobileChatChrome(true)
+
   return (
     <ReactFlowProvider>
       <Suspense fallback={<div className="ds-flow automation-editor p-6 text-sm text-[var(--text-muted)]">Carregando editor…</div>}>

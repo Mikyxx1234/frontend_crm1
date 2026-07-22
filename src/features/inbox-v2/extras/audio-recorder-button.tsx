@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { useSendAttachment } from "@/features/inbox-v2/hooks";
+import { ensureMicrophonePermission } from "@/lib/native/permissions";
 
 // ─────────────────────────────────────────────────────────────────
 // Types (exported so Composer can track state)
@@ -119,6 +120,11 @@ export function AudioRecorderButton({
     if (!conversationId) { toast.error("Selecione uma conversa antes de gravar"); return; }
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       toast.error("Gravação não suportada neste navegador"); return;
+    }
+    const permission = await ensureMicrophonePermission();
+    if (!permission.ok) {
+      toast.error(permission.error ?? "Não foi possível acessar o microfone");
+      return;
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });

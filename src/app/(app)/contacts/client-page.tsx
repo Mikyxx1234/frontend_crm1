@@ -1575,11 +1575,11 @@ function CardsView({
                 channel={c.phone ? "whatsapp" : null}
                 size={AVATAR_SIZE.md}
               />
-              <div className="min-w-0 leading-tight">
+              <div className="min-w-0 flex-1 leading-tight">
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onEdit(c); }}
-                  className="truncate text-left font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                  className="block w-full truncate text-left font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
                 >
                   {c.name}
                 </button>

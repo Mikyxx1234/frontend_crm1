@@ -28,6 +28,7 @@ const GROUPS: { title: string; items: PaletteItem[] }[] = [
       { type: "send_email" },
       { type: "move_stage" },
       { type: "assign_owner" },
+      { type: "transfer_department" },
       { type: "add_tag" },
       { type: "remove_tag" },
       { type: "update_field" },
@@ -121,7 +122,7 @@ export function NodePalette({ className }: { className?: string }) {
                     >
                       <Icon className="size-4" />
                     </span>
-                    <span className="truncate text-[13px] font-bold tracking-tight text-foreground">
+                    <span className="min-w-0 flex-1 text-[13px] font-bold leading-tight tracking-tight text-foreground">
                       {stepTypeLabel(type)}
                     </span>
                   </button>

@@ -28,6 +28,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AutomationStats } from "@/lib/automation-stats-types";
+import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome";
 
 const WorkflowCanvas = dynamic(
   () => import("@/components/automations/workflow-canvas").then((m) => m.WorkflowCanvas),
@@ -693,6 +694,9 @@ export default function AutomationDetailPage() {
     ? "/old/automations"
     : "/automations";
 
+  // Mobile: esconde a bottom nav enquanto o canvas de automação está aberto.
+  useMobileChatChrome(true);
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [triggerType, setTriggerType] = useState("contact_created");
@@ -949,21 +953,23 @@ export default function AutomationDetailPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
-      {/* ═══ Top bar — glass (padrão PageHeader / builder-topbar v2) ═══ */}
-      <div className="flex shrink-0 items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      {/* ═══ Top bar — glass (padrão PageHeader / builder-topbar v2) ═══
+          Mobile: overflow-x para não cortar Ativa/Inativa, Salvar, etc. */}
+      <div className="min-w-0 shrink-0 overflow-x-auto overscroll-x-contain rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md [-webkit-overflow-scrolling:touch]">
+        <div className="flex w-max min-w-full items-center gap-3 px-4 py-2.5">
         {/* Breadcrumb */}
         <Link
           href={listHref}
-          className="group/back flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-bold tracking-tight text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-primary-soft)]/60 hover:text-primary"
+          className="group/back flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[13px] font-bold tracking-tight text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-primary-soft)]/60 hover:text-primary"
         >
           <ArrowLeft className="size-4 transition-transform group-hover/back:-translate-x-0.5" strokeWidth={2.4} />
           Automações
         </Link>
-        <ChevronRight className="size-3.5 text-[var(--color-text-muted)]" />
+        <ChevronRight className="size-3.5 shrink-0 text-[var(--color-text-muted)]" />
         <button
           type="button"
           onClick={openNameEdit}
-          className="group/name flex items-center gap-1.5 rounded-lg px-2 py-1 text-[14px] font-extrabold tracking-tighter text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-bg-subtle)]"
+          className="group/name flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[14px] font-extrabold tracking-tighter text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-bg-subtle)]"
         >
           {name}
           <Pencil className="size-3 text-[var(--color-ink-muted)] transition-colors group-hover/name:text-primary" strokeWidth={2.4} />
@@ -971,16 +977,16 @@ export default function AutomationDetailPage() {
 
         {/* Unsaved indicator — pílula âmbar */}
         {dirty && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-amber-soft)] px-2.5 py-0.5 text-[11px] font-extrabold tracking-tight text-[var(--color-amber-text)] ring-1 ring-amber-200">
+          <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--color-amber-soft)] px-2.5 py-0.5 text-[11px] font-extrabold tracking-tight text-[var(--color-amber-text)] ring-1 ring-amber-200">
             <span className="size-1.5 animate-pulse-soft rounded-full bg-amber-500" />
             Alterações não salvas
           </span>
         )}
 
-        <div className="flex-1" />
+        <div className="min-w-3 flex-1" />
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <div
             className={cn(
               "flex items-center gap-2 rounded-full px-3 py-1 ring-1 transition-colors",
@@ -1068,6 +1074,7 @@ export default function AutomationDetailPage() {
             <Save className="size-3.5" strokeWidth={2.4} />
             {saveMutation.isPending ? "Salvando…" : "Salvar"}
           </button>
+        </div>
         </div>
       </div>
 

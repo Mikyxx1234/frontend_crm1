@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
+import { SwitchGlass } from "@/components/crm/switch-glass";
 import { KpiCard } from "@/components/crm/kpi-card";
 import { KpiStrip } from "@/components/crm/kpi-strip";
 import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
@@ -302,6 +303,7 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   const [name, setName] = React.useState(dept?.name ?? "");
   const [icon, setIcon] = React.useState(dept?.icon ?? "IconBuilding");
   const [color, setColor] = React.useState(dept?.color ?? "#6366f1");
+  const [isSupport, setIsSupport] = React.useState(dept?.isSupport ?? false);
   const updateMutation = useUpdateDepartment();
   const setMembersMutation = useSetDepartmentMembers();
 
@@ -312,7 +314,7 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   const [memberSearch, setMemberSearch] = React.useState("");
 
   React.useEffect(() => {
-    if (dept) { setName(dept.name); setIcon(dept.icon); setColor(dept.color); setMemberSearch(""); }
+    if (dept) { setName(dept.name); setIcon(dept.icon); setColor(dept.color); setIsSupport(dept.isSupport ?? false); setMemberSearch(""); }
   }, [dept?.id]);
 
   // Stable key prevents infinite re-render loop when currentMembers reference changes.
@@ -345,7 +347,7 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
     if (!dept) return;
     const deptId = dept.id;
     updateMutation.mutate(
-      { id: deptId, name: name.trim(), icon, color },
+      { id: deptId, name: name.trim(), icon, color, isSupport },
       {
         onSuccess: () => {
           setMembersMutation.mutate(
@@ -427,6 +429,26 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
               />
             ))}
           </div>
+        </div>
+
+        <div className="flex items-start justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <IconLifebuoy size={15} className="text-[var(--brand-primary)]" />
+              <span className="font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
+                Departamento de suporte
+              </span>
+            </div>
+            <p className="mt-0.5 text-[11.5px] leading-snug text-[var(--text-muted)]">
+              Recebe os chamados do chat interno de suporte. Apenas um
+              departamento pode ter isso ativo.
+            </p>
+          </div>
+          <SwitchGlass
+            checked={isSupport}
+            onChange={setIsSupport}
+            aria-label="Departamento de suporte"
+          />
         </div>
 
         <div>

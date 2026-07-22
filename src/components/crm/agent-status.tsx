@@ -63,8 +63,37 @@ export const AGENT_STATUS_META: Record<AgentOnlineStatus, StatusMeta> = {
 
 const STATUS_ORDER: AgentOnlineStatus[] = ["ONLINE", "AWAY", "OFFLINE"];
 
-/** Evita reabrir o modal de status a cada refresh (F5) na mesma aba. */
-const AGENT_STATUS_AUTO_PROMPT_SESSION_KEY = "crm:agent-status-auto-prompt";
+/**
+ * Flag compartilhada entre abas (localStorage) — `sessionStorage` reabriá o
+ * modal em toda nova aba (ex.: negócio aberto em nova guia).
+ * Valor = userId que já viu o prompt neste ciclo de login.
+ * Limpa no logout (ver `clearAgentStatusAutoPrompt`).
+ */
+const AGENT_STATUS_AUTO_PROMPT_KEY = "crm:agent-status-auto-prompt";
+
+export function clearAgentStatusAutoPrompt() {
+  try {
+    localStorage.removeItem(AGENT_STATUS_AUTO_PROMPT_KEY);
+  } catch {
+    /* noop */
+  }
+}
+
+function hasAgentStatusAutoPrompt(userId: string): boolean {
+  try {
+    return localStorage.getItem(AGENT_STATUS_AUTO_PROMPT_KEY) === userId;
+  } catch {
+    return false;
+  }
+}
+
+function markAgentStatusAutoPrompt(userId: string) {
+  try {
+    localStorage.setItem(AGENT_STATUS_AUTO_PROMPT_KEY, userId);
+  } catch {
+    /* noop */
+  }
+}
 
 export interface AgentStatusController {
   status: AgentOnlineStatus;
@@ -122,34 +151,42 @@ export function useAgentStatus(): AgentStatusController {
 }
 
 /**
- * Dispara o modal de "Definir Status" automaticamente ~1,5s após o login
- * quando o agente está OFFLINE — uma vez por sessão da aba.
+ * Dispara o modal de "Definir Status" ~1,5s após o login quando o agente
+ * está OFFLINE — uma vez por ciclo de login (todas as abas). Novas guias
+ * de negócio não reabrem o modal.
  */
 export function useAgentStatusAutoPrompt(
   controller: AgentStatusController,
   open: () => void,
 ) {
-  const { status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const wasAuthenticated = useRef(false);
+
+  // Logout → libera o prompt para o próximo login.
   useEffect(() => {
-    if (sessionStatus !== "authenticated" || !controller.isLoaded) return;
-    if (controller.status !== "OFFLINE") return;
-    try {
-      if (sessionStorage.getItem(AGENT_STATUS_AUTO_PROMPT_SESSION_KEY)) return;
-    } catch {
-      /* noop */
+    if (sessionStatus === "authenticated") {
+      wasAuthenticated.current = true;
+      return;
     }
-    const timer = setTimeout(() => {
-      try {
-        sessionStorage.setItem(AGENT_STATUS_AUTO_PROMPT_SESSION_KEY, "1");
-      } catch {
-        /* noop */
-      }
-      open();
-    }, 1500);
+    if (sessionStatus === "unauthenticated" && wasAuthenticated.current) {
+      wasAuthenticated.current = false;
+      clearAgentStatusAutoPrompt();
+    }
+  }, [sessionStatus]);
+
+  useEffect(() => {
+    if (sessionStatus !== "authenticated" || !userId || !controller.isLoaded)
+      return;
+    if (controller.status !== "OFFLINE") return;
+    if (hasAgentStatusAutoPrompt(userId)) return;
+    // Reserva o slot antes do delay — evita corrida entre abas/NavRail+bottom nav.
+    markAgentStatusAutoPrompt(userId);
+    const timer = setTimeout(() => open(), 1500);
     return () => clearTimeout(timer);
     // `open` é estável o suficiente; evitamos re-disparos por identidade.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, controller.isLoaded, controller.status]);
+  }, [sessionStatus, userId, controller.isLoaded, controller.status]);
 }
 
 /** Modal "Definir Status" (Online / Ausente / Offline). */

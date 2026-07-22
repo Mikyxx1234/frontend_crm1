@@ -1958,3 +1958,13 @@ aplicada com SQL aditivo idempotente em
 - Modelo: Opus (Cursor Grok 4.5 / orquestração)
 - Decisão: cadeado local com `@capgo/capacitor-native-biometric`; só com sessão logada; flag `crm_biometric_lock_enabled` em localStorage; toggle no Perfil; sem Firebase/push neste escopo.
 - Alternativas descartadas: login biométrico substituindo senha; WebAuthn-only no browser; SecureStorage de senha.
+
+### 2026-07-21 — Permissões Android do APK
+- Modelo: Cursor Grok 4.5 / Sonnet (implementação)
+- Decisão: manifesto declara RECORD_AUDIO, CAMERA, READ_MEDIA_*, POST_NOTIFICATIONS, MODIFY_AUDIO_SETTINGS; grants via Capacitor BridgeWebChromeClient; pedidos no contexto (mic ao gravar/ligar; câmera ao tirar foto; notificação ao ativar push). Câmera no composer via input capture. Web Push no APK sem Firebase nesta fase; FCM só se validação falhar.
+- Alternativas descartadas: pedir todas as permissões no cold start; FCM obrigatório já; declarar Contatos/GPS/SMS.
+
+### 2026-07-21 — Atualizar sem APK
+- Modelo: Cursor Grok 4.5 / Sonnet
+- Decisão: nome do fluxo interno fora da Play. Camada A = deploy web (zero APK). Camada B = app baixa APK via plugin AppUpdate + mobile-release.json; UI "Atualizar sem APK". Mesma keystore obrigatória. Sem Capgo nesta fase.
+- Alternativas: Play Store in-app updates; Capgo live update; envio manual de APK por WhatsApp.

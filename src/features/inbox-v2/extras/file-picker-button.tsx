@@ -19,11 +19,17 @@ export function FilePickerButton({
   children,
   className,
   accept,
+  capture,
+  onOpen,
 }: {
   conversationId: string | null;
   children: React.ReactNode;
   className?: string;
   accept?: string;
+  /** Passado ao `<input capture>` — "environment"/"user" abrem a câmera direto em vez do seletor de arquivos. */
+  capture?: "user" | "environment";
+  /** Chamado antes de abrir o picker (ex.: fechar o menu que contém o botão). */
+  onOpen?: () => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const sendAttachment = useSendAttachment(conversationId);
@@ -33,7 +39,10 @@ export function FilePickerButton({
       toast.error("Selecione uma conversa antes de anexar");
       return;
     }
+    // Abre o picker antes de onOpen — se onOpen fechar o menu pai,
+    // o <input> seria desmontado e o click não dispararia.
     ref.current?.click();
+    queueMicrotask(() => onOpen?.());
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -55,6 +64,7 @@ export function FilePickerButton({
         ref={ref}
         type="file"
         accept={accept}
+        capture={capture}
         onChange={handleChange}
         className="hidden"
         aria-hidden

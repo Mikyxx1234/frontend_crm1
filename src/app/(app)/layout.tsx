@@ -16,6 +16,7 @@
 import "@/styles/globals-v2.css";
 import { BiometricLockGate } from "@/components/layout/biometric-lock-gate";
 import { MobileAppUpdateDialog } from "@/components/layout/mobile-app-update-dialog";
+import { NativeApkUpdateDialog } from "@/components/layout/native-apk-update-dialog";
 import { UpdateAvailableBanner } from "@/components/layout/update-banner";
 import { SoftphoneWidget } from "@/features/softphone/components";
 import { ChatThemeApplier } from "@/components/providers/chat-theme-applier";
@@ -36,6 +37,7 @@ export default function AppLayout({
         {children}
         <UpdateAvailableBanner />
         <MobileAppUpdateDialog />
+        <NativeApkUpdateDialog />
         <SoftphoneWidget />
         {/* Teste mobile: barra inferior global (hide-on-scroll). md+ não renderiza. */}
         <MobileBottomNav />

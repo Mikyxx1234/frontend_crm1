@@ -20,6 +20,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { analyzeTemplateComponents } from "@/lib/meta-whatsapp/analyze-template-components";
 import { mergeOperatorVariables, type OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 import { cn } from "@/lib/utils";
+import { ListHScroll } from "@/components/crm/list-hscroll";
+import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
 import {
   HubCallout,
   HubChip,
@@ -29,6 +31,9 @@ import {
   HubSubHeader,
   HubToolbar,
 } from "./message-models/hub-ui";
+
+const TPL_GRID_COLS =
+  "minmax(240px,1.6fr) 160px 84px 150px 150px 100px 84px 120px";
 
 const DOCS_LIST =
   "https://developers.facebook.com/docs/graph-api/reference/whats-app-business-account/message_templates/";
@@ -592,26 +597,27 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse text-left">
-              <thead>
-                <tr className="[&>th]:px-4 [&>th]:py-3 [&>th]:text-[11px] [&>th]:font-bold [&>th]:uppercase [&>th]:tracking-[0.06em] [&>th]:text-[var(--text-muted)] [&>th]:shadow-[0_1px_0_var(--glass-border-subtle)]">
-                <th>Nome</th>
-                <th>Label</th>
-                <th>Idioma</th>
-                <th>Categoria</th>
-                <th>Estado</th>
-                <th>Qualidade</th>
-                <th className="text-center">
-                  <span className="inline-flex items-center justify-center gap-1.5">
+          <div className="p-4">
+          <ListHScroll scrollerClassName="pb-1">
+            <div className="flex w-max min-w-full flex-col gap-2">
+              <div
+                className={listTableHeadRowClass("grid gap-3 border border-transparent px-4 py-2")}
+                style={{ gridTemplateColumns: TPL_GRID_COLS }}
+              >
+                <ListColumnLabel>Nome</ListColumnLabel>
+                <ListColumnLabel>Label</ListColumnLabel>
+                <ListColumnLabel>Idioma</ListColumnLabel>
+                <ListColumnLabel>Categoria</ListColumnLabel>
+                <ListColumnLabel>Estado</ListColumnLabel>
+                <ListColumnLabel>Qualidade</ListColumnLabel>
+                <ListColumnLabel className="text-center">
+                  <span className="inline-flex items-center gap-1.5">
                     <UserCheck className="size-3.5" />
                     Agente
                   </span>
-                </th>
-                <th className="w-[120px] text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
+                </ListColumnLabel>
+                <ListColumnLabel align="right">Ações</ListColumnLabel>
+              </div>
               {filteredRows.map((row) => {
                 const st = STATUS_PT[row.status] ?? row.status;
                 const scoreRaw =
@@ -654,22 +660,28 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                 const isCallPermission = isCallPermissionTemplate(row);
 
                 return (
-                  <tr
+                  <div
                     key={row.id}
-                    className="border-b border-[var(--glass-border-subtle)] transition-colors last:border-0 hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]"
+                    style={{ gridTemplateColumns: TPL_GRID_COLS }}
+                    className="group grid items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]"
                   >
-                    <td className="px-4 py-3.5 align-middle font-mono text-[13px] font-semibold text-[var(--text-primary)]">
-                      <div className="flex items-center gap-2">
-                        <span>{row.name}</span>
-                        {isCallPermission ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-info)] ring-1 ring-[color-mix(in_srgb,var(--color-info)_30%,transparent)]">
-                            <Phone className="size-2.5" />
-                            Voz
-                          </span>
-                        ) : null}
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-success)_14%,transparent)] text-[var(--color-success)]">
+                        <MessageSquare className="size-[18px]" />
+                      </span>
+                      <div className="min-w-0 flex-1 leading-tight">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate font-mono text-[13px] font-semibold text-[var(--text-primary)]">{row.name}</span>
+                          {isCallPermission ? (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-info)] ring-1 ring-[color-mix(in_srgb,var(--color-info)_30%,transparent)]">
+                              <Phone className="size-2.5" />
+                              Voz
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3.5 align-middle">
+                    </div>
+                    <div className="min-w-0">
                       {isEditingLabel ? (
                         <form className="flex items-center gap-1" onSubmit={(e) => {
                           e.preventDefault();
@@ -704,17 +716,17 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                           <Pencil className="size-3 opacity-0 group-hover/lbl:opacity-100" />
                         </button>
                       )}
-                    </td>
-                    <td className="px-4 py-3.5 align-middle tabular-nums text-[var(--text-muted)]">{row.language ?? "—"}</td>
-                    <td className="px-4 py-3.5 align-middle">
+                    </div>
+                    <div className="min-w-0 truncate tabular-nums text-xs text-[var(--text-muted)]">{row.language ?? "—"}</div>
+                    <div className="min-w-0">
                       <span className="text-xs text-[var(--text-secondary)]">
                         {row.category ?? "—"}
                         {row.sub_category ? (
                           <span className="text-[var(--text-muted)]"> · {row.sub_category}</span>
                         ) : null}
                       </span>
-                    </td>
-                    <td className="px-4 py-3.5 align-middle">
+                    </div>
+                    <div className="min-w-0">
                       <span
                         className={cn(
                           "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold",
@@ -733,9 +745,9 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                           {rejectReason}
                         </p>
                       ) : null}
-                    </td>
-                    <td className="px-4 py-3.5 align-middle text-xs text-[var(--text-secondary)]">{q}</td>
-                    <td className="px-4 py-3.5 text-center align-middle">
+                    </div>
+                    <div className="min-w-0 truncate text-xs text-[var(--text-secondary)]">{q}</div>
+                    <div className="flex min-w-0 justify-center">
                       <button
                         type="button"
                         aria-label={cfg?.agentEnabled ? "Bloquear para agentes" : "Liberar para agentes"}
@@ -754,8 +766,8 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                           cfg?.agentEnabled ? "translate-x-5" : "translate-x-0",
                         )} />
                       </button>
-                    </td>
-                    <td className="px-4 py-3.5 align-middle">
+                    </div>
+                    <div className="min-w-0">
                       <div className="flex items-center justify-end gap-1">
                         <ButtonGlass
                           type="button"
@@ -800,12 +812,12 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                           <Trash2 className="size-3.5" />
                         </ButtonGlass>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+          </ListHScroll>
           </div>
         )}
       </HubPanel>

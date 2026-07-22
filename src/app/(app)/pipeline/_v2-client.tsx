@@ -42,7 +42,7 @@ import { DealCallButton } from "@/features/softphone/components/deal-call-button
 import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { Chip } from "@/components/crm/chip";
-import { AvatarGlass } from "@/components/crm/avatar-glass";
+import { UserAvatar } from "@/components/crm/user-avatar";
 
 import {
   toKanbanColumns,
@@ -1803,18 +1803,16 @@ function DroppableColumn({
                           statusFilter={statusFilter}
                           trigger={
                             raw?.owner?.name ? (
-                              // Owner: AvatarGlass (pessoa interna) — sem badge de canal.
+                              // Owner: UserAvatar (padrão do agente — gradiente
+                              // do brand + foto do perfil; iniciais como fallback).
                               <span
                                 className="inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-px pl-px pr-2 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]"
                                 title={raw.owner.name}
                               >
-                                <AvatarGlass
+                                <UserAvatar
                                   name={raw.owner.name}
-                                  seed={raw.owner.id ?? raw.owner.name}
                                   imageUrl={raw.owner.avatarUrl ?? null}
-                                  initials={deal.owner.initials}
-                                  size="sm"
-                                  className="!h-4 !w-4 !border !text-[8px]"
+                                  size={22}
                                 />
                                 <span className="min-w-0 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
                                   {raw.owner.name}

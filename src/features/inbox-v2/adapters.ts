@@ -461,6 +461,8 @@ export function toMessageBubble(
     // Nome completo do remetente — exibido como tooltip no avatar e rótulo
     // abaixo da bolha outgoing para identificar agente ou automação.
     senderName: !isInbound && dto.senderName ? dto.senderName : undefined,
+    // Foto do agente remetente (resolvida no backend). Só outbound humano.
+    senderImageUrl: !isInbound && !isBot ? (dto.senderImageUrl ?? undefined) : undefined,
     isBot: isBot || isAutomationRun || undefined,
     isAutomationRun: isAutomationRun || undefined,
     automationAgentName: manualAutomationAgent ?? undefined,

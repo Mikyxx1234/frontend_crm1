@@ -157,6 +157,8 @@ export interface Message {
   createdAt?: string
   type: "incoming" | "outgoing"
   senderInitials?: string
+  /** Foto de perfil do agente remetente (resolvida no backend). */
+  senderImageUrl?: string | null
   /** Nome completo do agente ou automação que enviou a mensagem. */
   senderName?: string
   /** Mensagem enviada por bot/automação — exibe badge "AUTOMAÇÃO" */
@@ -1420,25 +1422,30 @@ export function MessageBubble({
                   )}
                   style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
                 >
-                  {isBot ? (
-                    <IconRobot size={14} />
-                  ) : agentImageUrl &&
-                    (!message.senderInitials ||
-                      message.senderInitials === agentInitials) ? (
-                    // Foto do perfil do usuário logado — vale para mensagens
-                    // enviadas por ele (iniciais batem) ou sem autoria explícita.
-                    // Outros agentes continuam nas iniciais (não temos a foto
-                    // deles por mensagem no DTO atual).
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={agentImageUrl}
-                      alt={agentInitials ?? "Você"}
-                      className="size-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    message.senderInitials || agentInitials || "?"
-                  )}
+                  {(() => {
+                    // Prioridade: foto do remetente resolvida no backend
+                    // (`senderImageUrl`, por agente) → foto do usuário logado
+                    // quando a mensagem é dele (iniciais batem ou sem autoria).
+                    const selfPhoto =
+                      !message.senderInitials ||
+                      message.senderInitials === agentInitials
+                        ? agentImageUrl
+                        : null
+                    const photo = message.senderImageUrl || selfPhoto
+                    if (isBot) return <IconRobot size={14} />
+                    if (photo) {
+                      return (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={photo}
+                          alt={agentInitials ?? "Você"}
+                          className="size-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      )
+                    }
+                    return message.senderInitials || agentInitials || "?"
+                  })()}
                 </div>
               </TooltipTrigger>
               {senderName && (

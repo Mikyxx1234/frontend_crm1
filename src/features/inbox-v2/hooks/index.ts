@@ -4,6 +4,7 @@ export * from "./use-conversation-actions";
 export * from "./use-conversation-timeline";
 export * from "./use-contact-sidebar";
 export * from "./use-realtime";
+export * from "./use-inbox-sound";
 export * from "./use-permissions";
 export * from "./use-conversation-features";
 export * from "./use-channels";

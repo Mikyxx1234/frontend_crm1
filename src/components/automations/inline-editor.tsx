@@ -213,7 +213,7 @@ function Field({
       return <UpdateFieldEditor config={config} onChange={onChange} />
 
     case "templatePreview":
-      return <TemplatePreview templateName={str(config.templateName)} />
+      return <TemplatePreview config={config} steps={steps} onChange={onChange} />
 
 
     case "builder":
@@ -557,9 +557,37 @@ function UpdateFieldEditor({ config, onChange }: { config: Cfg; onChange: (next:
 
 // ─────────────────────── Preview do template WhatsApp ───────────────────────
 
-/** Bloco read-only: corpo do template + botões (quick-reply) do template
- *  selecionado. Dados do mesmo cache de `useTemplateOptions`. */
-function TemplatePreview({ templateName }: { templateName: string }) {
+/** Seta de "resposta" do WhatsApp (curva pra esquerda) — marca os botões
+ *  de resposta rápida (quick-reply). */
+function ReplyArrow() {
+  return (
+    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h11a5 5 0 0 1 5 5v2" />
+    </svg>
+  )
+}
+
+const norm = (s: string) => s.trim().toLowerCase()
+
+/**
+ * Preview do template no formato WhatsApp: corpo + botões EMPILHADOS abaixo
+ * (modelo original). Cada botão de resposta rápida vira uma AÇÃO roteável:
+ * o operador escolhe "Ir para passo" por botão. Isso alimenta
+ * `config.buttons[].gotoStepId` (casado por título no backend) — o mesmo que
+ * o card usa pra gerar 1 saída/ramo por botão. Botões vêm da Meta (título
+ * read-only); só a ação é editável.
+ */
+function TemplatePreview({
+  config,
+  steps,
+  onChange,
+}: {
+  config: Cfg
+  steps: StepOpt[]
+  onChange: (next: Cfg) => void
+}) {
+  const templateName = str(config.templateName)
   const { detailsMap, isLoading } = useTemplateDetailsMap()
   if (!templateName) return null
   const detail = detailsMap.get(templateName)
@@ -568,24 +596,78 @@ function TemplatePreview({ templateName }: { templateName: string }) {
   }
   if (!detail) return null
   const hasBody = detail.bodyPreview.trim() !== ""
-  const hasBtns = detail.quickReplies.length > 0
+  const replies = detail.quickReplies
+  const hasBtns = replies.length > 0
   if (!hasBody && !hasBtns) return null
+
+  const buttons = asArr(config.buttons) as BtnItem[]
+  const gotoFor = (title: string) =>
+    str(buttons.find((b) => norm(str(b.title ?? b.text)) === norm(title))?.gotoStepId)
+
+  // Grava a ação de um botão preservando as demais; re-sincroniza a lista
+  // com os títulos atuais do template (ids btn_0.. casam com o card).
+  const setGoto = (title: string, gotoStepId: string) => {
+    const next = replies.map((t, i) => {
+      const prev = buttons.find((b) => norm(str(b.title ?? b.text)) === norm(t))
+      return {
+        id: `btn_${i}`,
+        title: t,
+        gotoStepId: norm(t) === norm(title) ? gotoStepId : str(prev?.gotoStepId),
+      }
+    })
+    onChange({ ...config, buttons: next })
+  }
+
   return (
-    <div className="cfg-field">
-      <span className="cfg-label">Pré-visualização</span>
-      <div className="cfg-tpl-preview nodrag nowheel">
-        {hasBody && <p className="cfg-tpl-body">{detail.bodyPreview}</p>}
-        {hasBtns && (
-          <div className="cfg-tpl-btns">
-            {detail.quickReplies.map((t, i) => (
-              <span key={`${t}-${i}`} className="cfg-tpl-btn">
-                {t}
-              </span>
+    <>
+      <div className="cfg-field">
+        <span className="cfg-label">Pré-visualização</span>
+        <div className="cfg-tpl-preview nodrag nowheel">
+          {hasBody && <p className="cfg-tpl-body">{detail.bodyPreview}</p>}
+          {hasBtns && (
+            <div className="cfg-tpl-btns">
+              {replies.map((t, i) => (
+                <span key={`${t}-${i}`} className="cfg-tpl-btn">
+                  <ReplyArrow />
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {hasBtns && (
+        <div className="cfg-field">
+          <span className="cfg-label">Ação por botão — cada resposta leva a um passo</span>
+          <div className="cfg-list">
+            {replies.map((t, i) => (
+              <div className="cfg-item" key={`${t}-${i}`}>
+                <div className="cfg-tpl-route-title">
+                  <ReplyArrow />
+                  {t}
+                </div>
+                <ConfigSelect
+                  value={gotoFor(t)}
+                  options={steps}
+                  placeholder="Ir para passo…"
+                  onChange={(v) => setGoto(t, v)}
+                />
+              </div>
             ))}
           </div>
-        )}
-      </div>
-    </div>
+          <div className="cfg-item" style={{ marginTop: 8 }}>
+            <div className="cfg-tpl-route-title">Se a resposta não bater com nenhum botão</div>
+            <ConfigSelect
+              value={str(config.elseGotoStepId)}
+              options={steps}
+              placeholder="Ir para passo…"
+              onChange={(v) => onChange({ ...config, elseGotoStepId: v })}
+            />
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

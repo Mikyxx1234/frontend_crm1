@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { messagesKey } from "./use-messages";
+import { playInboxPing } from "./use-inbox-sound";
 
 /**
  * SSE em /api/sse/messages — preserva exatamente o comportamento do
@@ -56,7 +57,11 @@ export function useInboxRealtime(options: {
         try {
           const data = JSON.parse((e as MessageEvent).data) as {
             conversationId?: string;
+            direction?: string;
           };
+          // Aviso sonoro só em mensagens RECEBIDAS (inbound) — envios do
+          // próprio agente (direction="out") não tocam. Respeita o mudo.
+          if (data.direction === "in") playInboxPing();
           if (data.conversationId) {
             if (data.conversationId === activeRef.current) {
               // Conversa aberta: refetch imediato para exibir a mensagem.

@@ -78,6 +78,7 @@ export function Composer({
   onCancelReply,
   departmentId,
   requireTabulationOnClose,
+  onReopenNewConversation,
 }: {
   conversationId: string | null;
   value: string;
@@ -131,6 +132,10 @@ export function Composer({
    *  modal de tabulacao ao encerrar quando o dept exige. */
   departmentId?: string | null;
   requireTabulationOnClose?: boolean;
+  /** Reabrir pelo menu "+" cria um NOVO ticket (modelo de ticket); troca o
+   *  chat ativo pro id novo. Sem isto o reopen acontece no backend mas a UI
+   *  fica presa no ticket resolvido (que some do colapso) — parece "não reabriu". */
+  onReopenNewConversation?: (newConversationId: string) => void;
 }) {
   const [noteMode, setNoteMode] = useState(false);
   const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
@@ -637,6 +642,7 @@ export function Composer({
               onPickTemplate={(tpl) => setPendingTemplate(whatsappTemplateToPending(tpl))}
               departmentId={departmentId ?? null}
               requireTabulationOnClose={requireTabulationOnClose}
+              onReopenNewConversation={onReopenNewConversation}
             />
             <ButtonGlass
               type="button"

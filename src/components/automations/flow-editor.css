@@ -1016,41 +1016,63 @@
   padding: 9px 11px;
   line-height: 1.45;
 }
-/* Preview do template WhatsApp — bolha estilo mensagem (verde suave). */
+/* Preview do template WhatsApp — bolha branca estilo mensagem recebida,
+   com botões EMPILHADOS abaixo do corpo (modelo original do WhatsApp). */
 .ds-flow .cfg-tpl-preview {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
+  padding: 0;
+  overflow: hidden;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-success);
-  background: var(--color-success-bg);
+  border: 1px solid color-mix(in srgb, var(--color-success) 45%, transparent);
+  background: var(--color-bg-card);
 }
 .ds-flow .cfg-tpl-body {
   margin: 0;
+  padding: 10px 12px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;
 }
+/* Botões: coluna, largura total, um por linha — cada um é uma resposta
+   (quick-reply) que vira uma ação/ramo no fluxo. */
 .ds-flow .cfg-tpl-btns {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+  flex-direction: column;
+  gap: 0;
 }
 .ds-flow .cfg-tpl-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--glass-border);
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-top: 1px solid color-mix(in srgb, var(--color-success) 25%, transparent);
   background: var(--color-bg-card);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--brand-primary);
+  color: var(--color-success);
+}
+.ds-flow .cfg-tpl-btn svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+/* Linha "Ação por botão": título do botão (read-only) + seletor de passo. */
+.ds-flow .cfg-tpl-route-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-success);
+}
+.ds-flow .cfg-tpl-route-title svg {
+  flex-shrink: 0;
+  opacity: 0.9;
 }
 .ds-flow .cfg-row {
   display: flex;

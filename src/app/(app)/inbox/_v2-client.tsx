@@ -7,6 +7,8 @@ import { RequirePermission } from "@/components/auth/require-permission";
 import { toast } from "sonner";
 import {
   IconArrowLeft,
+  IconBell,
+  IconBellOff,
   IconBriefcase,
   IconChevronDown,
   IconCircleCheck,
@@ -58,6 +60,7 @@ import {
   useSendMessage,
   useTabCounts,
   useWhatsappChannels,
+  useInboxSoundMuted,
   CONVERSATION_REOPENED_EVENT,
 } from "@/features/inbox-v2/hooks";
 import {
@@ -663,6 +666,30 @@ export default function InboxV2ClientPage({
   const useFilteredTabCount =
     hasInboxServerFilters(filters) || debouncedSearch.trim().length > 0;
 
+  // Aviso sonoro por mensagem recebida — o botão só (des)liga a preferência
+  // (persistida no localStorage). O ping em si toca no useInboxRealtime.
+  const [soundMuted, setSoundMuted] = useInboxSoundMuted();
+  const soundToggleNode = (
+    <TooltipGlass
+      label={soundMuted ? "Ativar aviso sonoro" : "Silenciar aviso sonoro"}
+      side="bottom"
+    >
+      <button
+        type="button"
+        onClick={() => setSoundMuted(!soundMuted)}
+        aria-pressed={!soundMuted}
+        className={cn(
+          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
+          soundMuted
+            ? "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]"
+            : "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+        )}
+      >
+        {soundMuted ? <IconBellOff size={17} stroke={2} /> : <IconBell size={17} stroke={2} />}
+      </button>
+    </TooltipGlass>
+  );
+
   // Botão que entra/sai do modo de seleção — vive ao lado do filtro, na
   // mesma linha do dropdown de status.
   const selectionToggleNode = (
@@ -732,6 +759,7 @@ export default function InboxV2ClientPage({
       // mais relacionado a ele (tabs de status).
       filterSlot={
         <>
+          {soundToggleNode}
           {selectionToggleNode}
           <InboxFilterButton value={filters} onChange={setFilters} />
         </>
@@ -1040,6 +1068,7 @@ export default function InboxV2ClientPage({
             requireTabulationOnClose={
               activeRow.department?.requireTabulationOnClose ?? false
             }
+            onReopenNewConversation={(newId) => setActiveId(newId)}
           />
         }
         notesSlot={notesSlot}

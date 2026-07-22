@@ -54,6 +54,16 @@ import {
 import { cn } from "@/lib/utils";
 import { AvatarCropDialog } from "@/components/profile/avatar-crop-dialog";
 import { UserAvatar } from "@/components/crm/user-avatar";
+
+/**
+ * Avatares preset (estilo Kommo) — assets estáticos em
+ * `public/avatars/presets/`. Selecionar um preset só troca o `avatarUrl`
+ * (preview); a persistência acontece no "Salvar", igual ao upload de foto.
+ */
+const PRESET_AVATARS = Array.from(
+  { length: 25 },
+  (_, i) => `/avatars/presets/preset-${String(i + 1).padStart(2, "0")}.png`,
+);
 import { isNativePlatform } from "@/lib/native/capacitor";
 import {
   isBiometricAvailable,
@@ -529,6 +539,7 @@ function ProfileCard({
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = React.useState(false);
+  const [showPresets, setShowPresets] = React.useState(false);
 
   // Arquivo aguardando crop. Quando o operador seleciona uma imagem,
   // ela vai pra esse estado em vez de subir direto — o
@@ -659,9 +670,53 @@ function ProfileCard({
           </p>
           <p className="text-xs text-[var(--text-muted)]">Português (Brasil)</p>
           <p className="mt-1.5 text-[11px] leading-snug text-[var(--color-ink-muted)]">
-            Gerencie seus dados de acesso, idioma e assinatura pessoal do agente.
+            Use a câmera para enviar sua foto ou escolha um avatar pronto abaixo.
           </p>
         </div>
+      </div>
+
+      {/*
+        Galeria de avatares preset (estilo Kommo). Clicar aplica só no
+        preview (`avatarUrl`); persiste ao Salvar — mesma regra do upload.
+      */}
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => setShowPresets((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--text-primary)]"
+        >
+          <Sparkles className="size-3.5" />
+          {showPresets ? "Ocultar avatares" : "Escolher um avatar"}
+        </button>
+
+        {showPresets && (
+          <div className="mt-3 grid grid-cols-6 gap-2 sm:grid-cols-8">
+            {PRESET_AVATARS.map((url) => {
+              const selected = avatarUrl === url;
+              return (
+                <button
+                  key={url}
+                  type="button"
+                  aria-label="Selecionar avatar"
+                  aria-pressed={selected}
+                  onClick={() => {
+                    setAvatarUrl(url);
+                    toast.success("Avatar selecionado — clique em Salvar para aplicar.");
+                  }}
+                  className={cn(
+                    "relative aspect-square overflow-hidden rounded-full ring-2 transition-all hover:scale-105",
+                    selected
+                      ? "ring-[var(--brand-primary)]"
+                      : "ring-transparent hover:ring-[var(--glass-border)]",
+                  )}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="size-full object-cover" />
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Formulário ── */}

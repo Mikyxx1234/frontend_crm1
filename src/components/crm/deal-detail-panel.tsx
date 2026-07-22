@@ -1843,9 +1843,9 @@ function FieldCard({
         {title && (
           <span className="flex items-center gap-2 text-slate-600">
             {title === "Informações do Contato" ? (
-              <IconUser size={16} className="shrink-0" />
+              <IconUser size={16} className="shrink-0 text-orange-500" />
             ) : (
-              <IconBriefcase size={16} className="shrink-0" />
+              <IconBriefcase size={16} className="shrink-0 text-[var(--brand-primary)]" />
             )}
             <span className="flex items-baseline gap-1.5 text-sm font-bold">
               {title}

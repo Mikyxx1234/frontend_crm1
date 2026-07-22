@@ -517,7 +517,7 @@ function DealInline({
       {fields.length > 0 && (
         <div className="mt-2 mb-2">
           <div className="mb-1 flex items-center gap-1.5 font-display text-[12px] font-bold text-[var(--text-primary)]">
-            <IconBriefcase size={12} />
+            <IconBriefcase size={12} className="text-[var(--brand-primary)]" />
             <span className="flex items-baseline gap-1.5">
               Informações do Negócio
               {deal.number != null && (
@@ -867,7 +867,7 @@ export function ContactAside({
                             <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-2">
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
-                                icon={<IconUser size={16} />}
+                                icon={<IconUser size={16} className="text-orange-500" />}
                                 open={contactSectionOpen}
                                 onToggle={() => setContactSectionOpen((v) => !v)}
                                 meta={
@@ -1088,7 +1088,7 @@ export function ContactAside({
                               <div className="px-3 pb-3">
                                 <SectionHeader
                                   dragHandleProps={provided.dragHandleProps ?? undefined}
-                                  icon={<IconBriefcase size={16} />}
+                                  icon={<IconBriefcase size={16} className="text-[var(--brand-primary)]" />}
                                   open={dealFieldsSectionOpen}
                                   onToggle={() => setDealFieldsSectionOpen((v) => !v)}
                                   meta={

@@ -43,6 +43,8 @@ export type LastMessageType =
 
 export interface Conversation {
   id: string
+  /** Número sequencial do "ticket" (ex.: #1234) — organização/controle estilo Kommo. */
+  number?: number | null
   name: string
   initials: string
   avatarColor: ConversationAvatarColor | "blue" | "teal" | "orange" | "purple" | "pink" | "coral"
@@ -261,6 +263,14 @@ export function ConversationCard({
             <span className="truncate font-display text-sm font-bold text-[var(--text-primary)]">
               {conversation.name}
             </span>
+            {conversation.number != null && (
+              <span
+                className="shrink-0 rounded-md bg-[var(--color-bg-subtle)] px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-[var(--text-muted)]"
+                title={`Conversa #${conversation.number}`}
+              >
+                #{conversation.number}
+              </span>
+            )}
             <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
               {conversation.time}
               {conversation.urgent && (

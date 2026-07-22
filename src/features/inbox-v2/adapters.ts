@@ -257,6 +257,7 @@ export function toConversationCard(
 
   return {
     id: row.id,
+    number: row.number ?? null,
     name,
     initials: avatarInitials(name),
     avatarColor: colorFromName(name),

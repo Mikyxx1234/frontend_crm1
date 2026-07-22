@@ -191,6 +191,7 @@ export function ChatArea({
   inputDisabled,
   composerSlot,
   headerActionsSlot,
+  conversationNumber,
   onUseTemplate,
   notesSlot,
   activitiesSlot,
@@ -383,10 +384,18 @@ export function ChatArea({
             />
           </TooltipGlass>
 
-          {/* Header enxuto (pedido 16/jul/26): sem badge de tipo (CLIENTE/
-              LEAD), sem #N e sem chip "Encerrada". O status resolvido passou
-              a ser sinalizado pela faixa verde sutil abaixo do header — o
-              #N continua acessivel no separador de ticket da timeline. */}
+          {/* Header enxuto: sem badge de tipo (CLIENTE/LEAD) nem chip
+              "Encerrada" (status resolvido vira faixa verde abaixo). O #N
+              da conversa (ticket) volta como chip discreto — pedido de
+              organização/controle estilo Kommo: identificador visual fixo. */}
+          {conversationNumber != null && (
+            <span
+              className="shrink-0 rounded-md bg-[var(--color-bg-subtle)] px-2 py-0.5 font-mono text-[12px] font-semibold tabular-nums text-[var(--text-muted)]"
+              title={`Conversa #${conversationNumber}`}
+            >
+              #{conversationNumber}
+            </span>
+          )}
 
           {tabsEnabled && (
             <div className="min-w-0 flex-1">

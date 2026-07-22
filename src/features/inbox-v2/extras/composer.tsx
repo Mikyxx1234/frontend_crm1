@@ -254,6 +254,16 @@ export function Composer({
     }
   }, [replyTo?.id]);
 
+  // Auto-resize centralizado: recalcula a altura sempre que `value` muda.
+  // Cobre digitação, colar texto grande (capa em 120px + scroll) e o reset
+  // após enviar (value → "" volta pra altura mínima, sem ficar "gigante").
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  }, [value]);
+
   // Insere o texto de um modelo interno no campo (editável) e foca o cursor.
   function insertTemplateText(text: string) {
     const base = value;
@@ -609,7 +619,7 @@ export function Composer({
                     : placeholder ?? "Escreva uma mensagem ou / para modelos..."
               }
               disabled={inputDisabled || sending}
-              className="w-full resize-none overflow-hidden border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full resize-none overflow-y-auto border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
               style={{ minHeight: "24px", maxHeight: "120px", lineHeight: "1.5" }}
             />
           </div>

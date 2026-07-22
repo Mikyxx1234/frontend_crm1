@@ -696,8 +696,10 @@ function ChatTabsBar({
   hiddenTabs?: Partial<Record<ChatTabId, boolean>>
 }) {
   return (
-    <div className="toolbar-hscroll min-w-0 max-w-full">
-      <div className="inline-flex w-max flex-nowrap items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+    // Borda/radius no container do scroll — evita corte reto ao H-scroll
+    // (overflow retangular sobre a pílula interna).
+    <div className="toolbar-hscroll min-w-0 max-w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+      <div className="inline-flex w-max flex-nowrap items-center gap-1">
         {CHAT_TABS.filter((t) => t.id === "conversa" || !hiddenTabs?.[t.id]).map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id

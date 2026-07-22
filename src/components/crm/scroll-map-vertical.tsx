@@ -122,37 +122,52 @@ export function ScrollMapVertical({
     [getCols],
   );
 
-  const onTrackClick = useCallback(
-    (e: React.MouseEvent) => {
+  const jumpToClientY = useCallback(
+    (clientY: number) => {
       const wrapper = wrapperRef.current;
       if (!wrapper) return;
       const rect = wrapper.getBoundingClientRect();
-      // Centraliza o thumb no ponto clicado (mais previsível que
-      // colar o topo do thumb no cursor).
+      // Centraliza o thumb no ponto tocado/clicado.
       const thumbFrac = indicator.height / 100;
-      const localY = e.clientY - rect.top;
-      const pct = (localY / rect.height - thumbFrac / 2) / (1 - thumbFrac);
+      const localY = clientY - rect.top;
+      const denom = 1 - thumbFrac;
+      const pct = denom > 0 ? (localY / rect.height - thumbFrac / 2) / denom : 0;
       scrollAllToPct(pct);
     },
     [indicator.height, scrollAllToPct],
   );
 
-  const onIndicatorMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+  const onTrackPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      // Só o trilho vazio — o thumb chama stopPropagation no próprio handler.
+      if (e.target !== e.currentTarget) return;
+      e.preventDefault();
+      jumpToClientY(e.clientY);
+    },
+    [jumpToClientY],
+  );
+
+  // Pointer events cobrem mouse + toque (mobile). Só mousemove falhava no APK.
+  const onIndicatorPointerDown = useCallback(
+    (e: React.PointerEvent) => {
       e.preventDefault();
       e.stopPropagation();
       const wrapper = wrapperRef.current;
       if (!wrapper) return;
+
       isDragging.current = true;
+      const trackSpan = Math.max(1, 100 - indicator.height);
       dragStart.current = {
         y: e.clientY,
-        startPct: indicator.top / (100 - indicator.height || 1),
+        startPct: indicator.top / trackSpan,
       };
 
       const trackH = wrapper.clientHeight;
       const usableH = trackH * (1 - indicator.height / 100);
+      const target = e.currentTarget as HTMLElement;
+      target.setPointerCapture?.(e.pointerId);
 
-      const onMove = (ev: MouseEvent) => {
+      const onMove = (ev: PointerEvent) => {
         if (!isDragging.current) return;
         const dy = ev.clientY - dragStart.current.y;
         const delta = usableH > 0 ? dy / usableH : 0;
@@ -160,10 +175,13 @@ export function ScrollMapVertical({
       };
       const onUp = () => {
         isDragging.current = false;
-        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
       };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp, { once: true });
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
     },
     [indicator.top, indicator.height, scrollAllToPct],
   );
@@ -178,20 +196,20 @@ export function ScrollMapVertical({
         className,
       )}
     >
-      {/* Trilho curto, mesmo peso visual da barra horizontal */}
+      {/* Trilho curto — no mobile fica sempre legível (sem depender de hover). */}
       <div
         ref={wrapperRef}
-        onClick={onTrackClick}
+        data-track="1"
+        onPointerDown={onTrackPointerDown}
         className={cn(
-          "group/scrollmap-v pointer-events-auto relative w-[44px] cursor-pointer select-none rounded-md",
-          "opacity-35 transition-opacity duration-200 ease-out hover:opacity-100",
+          "group/scrollmap-v pointer-events-auto relative w-[44px] cursor-pointer select-none touch-none rounded-md",
+          "opacity-55 transition-opacity duration-200 ease-out hover:opacity-100 md:opacity-35",
         )}
         style={{ height: "min(160px, 45vh)", background: "rgba(91,111,245,0.12)" }}
       >
         <div
-          onMouseDown={onIndicatorMouseDown}
-          onClick={(e) => e.stopPropagation()}
-          className="absolute inset-x-0 cursor-grab rounded-md transition-[top,height] duration-75 ease-linear active:cursor-grabbing"
+          onPointerDown={onIndicatorPointerDown}
+          className="absolute inset-x-0 cursor-grab touch-none rounded-md transition-[top,height] duration-75 ease-linear active:cursor-grabbing"
           style={{
             top: `${indicator.top}%`,
             height: `max(28px, ${indicator.height}%)`,

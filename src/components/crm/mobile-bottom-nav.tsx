@@ -153,14 +153,24 @@ export function MobileBottomNav() {
 
   // Hide on scroll down / show on scroll up — capture porque o scroll
   // acontece em containers internos (overflow-y-auto), nao no window.
+  // No Pipeline, o board horizontal e as colunas `.kanban-scroll` disparam
+  // scroll intercalado; um único lastY/lastTarget resetava o delta e a
+  // barra nunca escondia. Por isso o scrollTop é rastreado por elemento,
+  // e só delta vertical conta.
   useEffect(() => {
     if (!mounted) return;
     const mq = window.matchMedia("(max-width: 767px)");
     if (!mq.matches) return;
 
-    let lastY = 0;
-    let lastTarget: EventTarget | null = null;
+    const lastScrollTop = new WeakMap<Element, number>();
     const THRESHOLD = 6;
+
+    function readScrollTop(t: Element): number {
+      if (t === document.documentElement || t === document.body) {
+        return window.scrollY || document.documentElement.scrollTop;
+      }
+      return (t as HTMLElement).scrollTop;
+    }
 
     function onScroll(e: Event) {
       if (!mq.matches) return;
@@ -168,20 +178,14 @@ export function MobileBottomNav() {
       if (!(t instanceof Element)) return;
       if (t.closest?.("[data-mobile-bottom-nav]")) return;
 
-      const y =
-        t === document.documentElement || t === document.body
-          ? window.scrollY || document.documentElement.scrollTop
-          : (t as HTMLElement).scrollTop;
+      // Scroll só horizontal (board do kanban): scrollTop não muda — ignora.
+      const y = readScrollTop(t);
+      const prev = lastScrollTop.get(t);
+      lastScrollTop.set(t, y);
+      if (prev === undefined) return;
 
-      if (t !== lastTarget) {
-        lastTarget = t;
-        lastY = y;
-        return;
-      }
-
-      const delta = y - lastY;
+      const delta = y - prev;
       if (Math.abs(delta) < THRESHOLD) return;
-      lastY = y;
 
       if (delta > 0 && y > 24) {
         setVisible(false);

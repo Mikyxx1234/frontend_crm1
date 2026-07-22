@@ -1561,8 +1561,9 @@ function TabsBar({
       <header className="flex items-center gap-2 px-4 py-3">
         {/* Tabs pill group — oculta enquanto busca está aberta */}
         {!(searchOpen && activeTab === "conversa") && (
-          <div className="toolbar-hscroll min-w-0 max-w-full flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="inline-flex w-max flex-nowrap items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+          // Borda/radius no scroller — H-scroll não corta a pílula em reta.
+          <div className="toolbar-hscroll min-w-0 max-w-full flex-1 overflow-x-auto overscroll-x-contain rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="inline-flex w-max flex-nowrap items-center gap-1">
               {TABS.map((tab) => {
                 const Icon = tab.icon
                 const isActive = activeTab === tab.id

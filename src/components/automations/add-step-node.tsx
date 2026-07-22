@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconRobotFace as BotMessageSquare, IconBriefcase as Briefcase, IconCalendarPlus as CalendarPlus, IconCircleCheck as CheckCircle2, IconClock as Clock, IconCornerDownRight as CornerDownRight, IconFileText as FileText, IconGitBranch as GitBranch, IconGlobe as Globe, IconPhoto as Image, IconMail as Mail, IconMessageQuestion as MessageCircleQuestion, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPackageOff as PackageMinus, IconPlayerPause as Pause, IconPencil as Pencil, IconPlus as Plus, IconRepeat as Repeat, IconRoute as Route, IconShoppingBag as ShoppingBag, IconSquare as Square, IconPlayerStop as StopCircle, IconTag as Tag, IconClock as Timer, IconTrendingUp as TrendingUp, IconUserPlus as UserPlus, IconVariable as Variable } from "@tabler/icons-react";
+import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconRobotFace as BotMessageSquare, IconBriefcase as Briefcase, IconCalendarPlus as CalendarPlus, IconCircleCheck as CheckCircle2, IconClock as Clock, IconCornerDownRight as CornerDownRight, IconFileText as FileText, IconGitBranch as GitBranch, IconGlobe as Globe, IconPhoto as Image, IconMail as Mail, IconMessageQuestion as MessageCircleQuestion, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPackageOff as PackageMinus, IconPlayerPause as Pause, IconPencil as Pencil, IconPlus as Plus, IconRepeat as Repeat, IconRoute as Route, IconShoppingBag as ShoppingBag, IconSquare as Square, IconPlayerStop as StopCircle, IconTag as Tag, IconClock as Timer, IconTrendingUp as TrendingUp, IconUserPlus as UserPlus, IconUsersGroup as UsersGroup, IconVariable as Variable } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ export const stepIcon: Record<string, ComponentType<{ className?: string; stroke
   send_email: Mail,
   move_stage: ArrowRightLeft,
   assign_owner: UserPlus,
+  transfer_department: UsersGroup,
   add_tag: Tag,
   remove_tag: Tag,
   update_field: Pencil,
@@ -49,6 +50,7 @@ export const stepDescription: Record<string, string> = {
   send_email: "Envia um e-mail para o contato.",
   move_stage: "Move o negocio para outra etapa do funil.",
   assign_owner: "Atribui um responsavel ao contato/negocio.",
+  transfer_department: "Transfere a conversa para um departamento.",
   add_tag: "Adiciona uma tag ao contato.",
   remove_tag: "Remove uma tag do contato.",
   update_field: "Atualiza um campo personalizado.",
@@ -85,6 +87,7 @@ export const stepColor: Record<string, string> = {
   send_email: "text-[var(--color-info)]",
   move_stage: "text-[var(--brand-primary)]",
   assign_owner: "text-[var(--color-success)]",
+  transfer_department: "text-[var(--color-success)]",
   add_tag: "text-[var(--color-success)]",
   remove_tag: "text-[var(--color-danger)]",
   update_field: "text-[var(--color-warn)]",
@@ -137,6 +140,7 @@ export const STEP_GROUPS: StepGroup[] = [
     items: [
       "move_stage",
       "assign_owner",
+      "transfer_department",
       "add_tag",
       "remove_tag",
       "update_field",

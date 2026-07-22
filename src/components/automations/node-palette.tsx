@@ -122,7 +122,7 @@ export function NodePalette({ className }: { className?: string }) {
                     >
                       <Icon className="size-4" />
                     </span>
-                    <span className="truncate text-[13px] font-bold tracking-tight text-foreground">
+                    <span className="min-w-0 flex-1 text-[13px] font-bold leading-tight tracking-tight text-foreground">
                       {stepTypeLabel(type)}
                     </span>
                   </button>

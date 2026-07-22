@@ -753,6 +753,10 @@
   0% { opacity: 0; transform: translateX(56px); }
   100% { opacity: 1; transform: translateX(0); }
 }
+/* Classe reutilizável + alvo automático do conteúdo nas rotas da NavRail.
+   Usada também no painel de settings (SettingsSlide) para manter rail e
+   sidebar de settings estáticas, animando só o painel direito. */
+.v2-content-slide-in,
 .v2-route-transition > .v2-screen > *:not(:first-child) {
   animation: v2-content-slide-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards;
 }

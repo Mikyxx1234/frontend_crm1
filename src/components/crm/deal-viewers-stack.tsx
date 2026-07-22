@@ -3,21 +3,28 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import type { EntityViewer } from "@/features/pipeline-v2/hooks";
 
 /**
- * Pilha de avatares "Vendo agora" (presença estilo Kommo) — mostra os OUTROS
- * usuários com o mesmo deal aberto. Até 5 avatares sobrepostos + "+N".
- * Não renderiza nada quando ninguém mais está vendo.
+ * Presença "quem está vendo" (estilo Kommo) — os OUTROS usuários com o mesmo
+ * deal aberto. Não renderiza nada quando ninguém mais está vendo.
  *
- * `compact`: só os avatares (sem o rótulo "Vendo agora"), para caber em
- * linhas de controle apertadas (ex.: header do slide-over do kanban).
+ * Variantes:
+ *  - "stack"  → pilha de avatares sobrepostos (até 5 + "+N"), p/ headers.
+ *      `compact` remove o rótulo "Vendo agora".
+ *  - "banner" → aviso em linha "Fulano também está nesse negócio", alinhado à
+ *      direita — usado no rodapé (abaixo do composer).
  */
 export function DealViewersStack({
   viewers,
   compact = false,
+  variant = "stack",
 }: {
   viewers: EntityViewer[];
   compact?: boolean;
+  variant?: "stack" | "banner";
 }) {
   if (viewers.length === 0) return null;
+
+  if (variant === "banner") return <ViewersBanner viewers={viewers} />;
+
   const MAX = 5;
   const shown = viewers.slice(0, MAX);
   const overflow = viewers.length - shown.length;
@@ -55,6 +62,51 @@ export function DealViewersStack({
         Vendo agora
       </span>
       {stack}
+    </div>
+  );
+}
+
+/**
+ * Aviso em linha no rodapé: avatares pequenos + "Fulano também está nesse
+ * negócio" (plural quando 2+). Alinhado à direita, tom discreto.
+ */
+function ViewersBanner({ viewers }: { viewers: EntityViewer[] }) {
+  const MAX = 3;
+  const shown = viewers.slice(0, MAX);
+  const overflow = viewers.length - shown.length;
+  const names = viewers.map((v) => v.name);
+
+  const nameLabel =
+    names.length === 1
+      ? names[0]
+      : `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+  const verb = names.length === 1 ? "está" : "estão";
+
+  return (
+    <div className="flex items-center justify-end gap-2 px-4 pb-1 pt-0.5 text-[11px] text-[var(--text-muted)]">
+      <div className="flex items-center">
+        {shown.map((v, i) => (
+          <div
+            key={v.userId}
+            className="rounded-full ring-2 ring-[var(--glass-bg-panel)]"
+            style={{ marginLeft: i === 0 ? 0 : -6, zIndex: shown.length - i }}
+          >
+            <UserAvatar name={v.name} imageUrl={v.avatarUrl} size={20} status="online" />
+          </div>
+        ))}
+        {overflow > 0 && (
+          <div
+            className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] text-[10px] font-bold text-[var(--text-secondary)] ring-2 ring-[var(--glass-bg-panel)]"
+            style={{ marginLeft: -6 }}
+          >
+            +{overflow}
+          </div>
+        )}
+      </div>
+      <span className="truncate">
+        <strong className="font-semibold text-[var(--text-secondary)]">{nameLabel}</strong>{" "}
+        também {verb} nesse negócio
+      </span>
     </div>
   );
 }

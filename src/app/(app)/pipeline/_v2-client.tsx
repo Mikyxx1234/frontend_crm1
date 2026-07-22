@@ -976,7 +976,7 @@ export default function KanbanV2ClientPage({
         isOpen={!!activeDealId}
         onClose={() => setActiveDeal(null)}
         deal={dealDetailVm ?? undefined}
-        viewersSlot={<DealViewersStack viewers={dealViewers} compact />}
+        viewersSlot={<DealViewersStack viewers={dealViewers} variant="banner" />}
         stageRibbonSlot={
           activeDealId && activeDealStageId ? (
             <div className="flex items-center gap-1">

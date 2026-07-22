@@ -162,6 +162,8 @@ interface DealDetailPanelProps {
   deal?: DealDetail | null
   // Slots opcionais — quando ausentes, mantém o visual default do v0.
   stageRibbonSlot?: React.ReactNode
+  /** Presença "quem está vendo" — pilha de avatares no header (estilo Kommo). */
+  viewersSlot?: React.ReactNode
   winButtonSlot?: React.ReactNode
   /** Botão "Ligar" do softphone — posicionado no header, antes do moreActions. */
   callButtonSlot?: React.ReactNode
@@ -308,6 +310,7 @@ export function DealDetailPanel({
   isOpen,
   onClose,
   deal,
+  viewersSlot,
   callButtonSlot,
   contactTagsSlot,
   moreActionsSlot,
@@ -761,6 +764,7 @@ export function DealDetailPanel({
                     <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
                   </button>
                   <div className="flex-1" />
+                  {viewersSlot}
                   {stageDropdownSlot ? (
                     <div className="relative z-30 shrink-0 inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white [&_button]:!text-xs [&_button]:!text-white [&_button]:hover:!opacity-100 [&_svg]:!size-3">
                       {stageDropdownSlot}

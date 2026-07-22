@@ -60,11 +60,13 @@ import {
   useBoard,
   useBoardFiltered,
   useDealDetail,
+  useEntityViewers,
   useMoveDeal,
   usePipelines,
   useTeamUsers,
   type MoveVars,
 } from "@/features/pipeline-v2/hooks";
+import { DealViewersStack } from "@/components/crm/deal-viewers-stack";
 import { dealDetailKey } from "@/features/pipeline-v2/hooks/use-deal-detail";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -619,6 +621,10 @@ export default function KanbanV2ClientPage({
   const { data: dealDetail } = useDealDetail(activeDealId);
   const queryClient = useQueryClient();
 
+  // Presença "quem está vendo" (estilo Kommo) — chaveada pelo CUID real do
+  // deal (não pelo ?deal=<número>), pra ambas as janelas baterem na mesma sala.
+  const dealViewers = useEntityViewers("deal", dealDetail?.id ?? null);
+
   // Quando dealDetail carrega via lookup por número sequencial (?deal=102),
   // troca activeDealId para o CUID real (mutations usam CUID).
   useEffect(() => {
@@ -970,6 +976,7 @@ export default function KanbanV2ClientPage({
         isOpen={!!activeDealId}
         onClose={() => setActiveDeal(null)}
         deal={dealDetailVm ?? undefined}
+        viewersSlot={<DealViewersStack viewers={dealViewers} compact />}
         stageRibbonSlot={
           activeDealId && activeDealStageId ? (
             <div className="flex items-center gap-1">

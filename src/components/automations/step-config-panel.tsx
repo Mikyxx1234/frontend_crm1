@@ -688,6 +688,17 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
         target: String(config.target ?? "deal") === "contact" ? "contact" : "deal",
       };
     }
+    if (step.type === "transfer_department") {
+      const departmentId = String(config.departmentId ?? "");
+      if (!departmentId) {
+        toast.error("Selecione um departamento.");
+        return;
+      }
+      config = {
+        departmentId,
+        departmentName: String(config.departmentName ?? ""),
+      };
+    }
     if (step.type === "webhook") {
       // O construtor visual mantém `__webhookBodyEntries` em paralelo
       // ao `body` no draft. Validamos as entries antes de salvar — se
@@ -801,6 +812,10 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
 
           {step.type === "assign_owner" && (
             <AssignOwnerStepConfig draft={draft} setDraft={setDraft} />
+          )}
+
+          {step.type === "transfer_department" && (
+            <TransferDepartmentStepConfig draft={draft} setDraft={setDraft} />
           )}
 
           {step.type === "transfer_to_ai_agent" && (
@@ -1848,6 +1863,11 @@ const CONDITION_FIELD_GROUPS: FieldGroup[] = [
       },
       { value: "conversation.channel", label: "Canal", hint: "whatsapp, email…" },
       {
+        value: "conversation.departmentId",
+        label: "Departamento",
+        hint: "é / não é",
+      },
+      {
         value: "conversation.hasError",
         label: "Tem erro de envio?",
         hint: "sim / não",
@@ -2049,6 +2069,9 @@ function ConditionValueInput({
   }
   if (field === "contact.assignedToId") {
     return <OwnerPickerValue value={str} onChange={onChange} />;
+  }
+  if (field === "conversation.departmentId") {
+    return <DepartmentPickerValue value={str} onChange={onChange} />;
   }
   if (field === "conversation.status") {
     return (
@@ -2454,6 +2477,42 @@ function CompanyPickerValue({
   );
 }
 
+function DepartmentPickerValue({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const { data: departments = [], isLoading } = useQuery({
+    queryKey: ["automation-departments"],
+    queryFn: async (): Promise<Array<{ id: string; name: string; icon?: string }>> => {
+      const res = await fetch(apiUrl("/api/settings/departments"), {
+        credentials: "include",
+      });
+      if (!res.ok) return [];
+      return (await res.json()) as Array<{ id: string; name: string; icon?: string }>;
+    },
+    staleTime: 120_000,
+  });
+
+  return (
+    <DropdownGlass
+      triggerClassName="h-9 text-[12px] w-full"
+      placeholder={isLoading ? "Carregando…" : "Selecione o departamento…"}
+      value={value}
+      options={[
+        { value: "", label: "Selecione…" },
+        ...departments.map((d) => ({
+          value: d.id,
+          label: d.icon ? `${d.icon} ${d.name}` : d.name,
+        })),
+      ]}
+      onValueChange={onChange}
+    />
+  );
+}
+
 function OwnerPickerValue({
   value,
   onChange,
@@ -2788,6 +2847,57 @@ const ARCHETYPE_LABEL: Record<string, string> = {
   VENDEDOR: "Vendedor",
   SUPORTE: "Suporte",
 };
+
+function TransferDepartmentStepConfig({
+  draft,
+  setDraft,
+}: {
+  draft: Record<string, unknown>;
+  setDraft: Dispatch<SetStateAction<Record<string, unknown>>>;
+}) {
+  const { data: departments = [], isLoading } = useQuery({
+    queryKey: ["automation-departments"],
+    queryFn: async (): Promise<Array<{ id: string; name: string; icon?: string }>> => {
+      const res = await fetch(apiUrl("/api/settings/departments"), {
+        credentials: "include",
+      });
+      if (!res.ok) return [];
+      return (await res.json()) as Array<{ id: string; name: string; icon?: string }>;
+    },
+    staleTime: 120_000,
+  });
+
+  const value = String(draft.departmentId ?? "");
+
+  return (
+    <div className="space-y-2">
+      <Label>Departamento de destino</Label>
+      <DropdownGlass
+        triggerClassName="w-full"
+        placeholder={isLoading ? "Carregando…" : "Selecione o departamento…"}
+        value={value}
+        options={[
+          { value: "", label: "Selecione…" },
+          ...departments.map((d) => ({
+            value: d.id,
+            label: d.icon ? `${d.icon} ${d.name}` : d.name,
+          })),
+        ]}
+        onValueChange={(next) => {
+          const dep = departments.find((d) => d.id === next);
+          setDraft((prev) => ({
+            ...prev,
+            departmentId: next,
+            departmentName: dep?.name ?? "",
+          }));
+        }}
+      />
+      <p className="text-[11px] text-muted-foreground">
+        A conversa é transferida para este departamento quando o passo executa.
+      </p>
+    </div>
+  );
+}
 
 function AssignOwnerStepConfig({
   draft,

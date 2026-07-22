@@ -28,6 +28,7 @@ const GROUPS: { title: string; items: PaletteItem[] }[] = [
       { type: "send_email" },
       { type: "move_stage" },
       { type: "assign_owner" },
+      { type: "transfer_department" },
       { type: "add_tag" },
       { type: "remove_tag" },
       { type: "update_field" },

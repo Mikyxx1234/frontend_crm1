@@ -1391,10 +1391,10 @@ export function MessageBubble({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className="flex h-8 w-8 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
+                    className="flex h-9 w-9 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
                     style={{ background: AUTOMATION_ACCENT }}
                   >
-                    <IconRobot size={16} />
+                    <IconRobot size={19} />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="font-medium text-[11px]">
@@ -1403,7 +1403,7 @@ export function MessageBubble({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="absolute -bottom-1 -right-1 flex h-[18px] min-w-[18px] cursor-default items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] px-0.5 font-display text-[9px] font-bold leading-none text-white shadow-[0_1px_3px_rgba(15,20,40,0.28)]">
+                  <span className="absolute -bottom-1 -right-1 flex h-[21px] min-w-[21px] cursor-default items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] px-0.5 font-display text-[10px] font-bold leading-none text-white shadow-[0_1px_3px_rgba(15,20,40,0.28)]">
                     {message.automationAgentInitials}
                   </span>
                 </TooltipTrigger>
@@ -1417,7 +1417,7 @@ export function MessageBubble({
               <TooltipTrigger asChild>
                 <div
                   className={cn(
-                    "flex h-7 w-7 shrink-0 cursor-default items-center justify-center overflow-hidden rounded-full font-display text-[10px] font-bold text-white",
+                    "flex h-9 w-9 shrink-0 cursor-default items-center justify-center overflow-hidden rounded-full font-display text-[11px] font-bold text-white",
                     !isBot && "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
                   )}
                   style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
@@ -1432,7 +1432,7 @@ export function MessageBubble({
                         ? agentImageUrl
                         : null
                     const photo = message.senderImageUrl || selfPhoto
-                    if (isBot) return <IconRobot size={14} />
+                    if (isBot) return <IconRobot size={18} />
                     if (photo) {
                       return (
                         // eslint-disable-next-line @next/next/no-img-element

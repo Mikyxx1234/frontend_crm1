@@ -1422,7 +1422,13 @@ export function MessageBubble({
                 >
                   {isBot ? (
                     <IconRobot size={14} />
-                  ) : !message.senderInitials && agentImageUrl ? (
+                  ) : agentImageUrl &&
+                    (!message.senderInitials ||
+                      message.senderInitials === agentInitials) ? (
+                    // Foto do perfil do usuário logado — vale para mensagens
+                    // enviadas por ele (iniciais batem) ou sem autoria explícita.
+                    // Outros agentes continuam nas iniciais (não temos a foto
+                    // deles por mensagem no DTO atual).
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={agentImageUrl}

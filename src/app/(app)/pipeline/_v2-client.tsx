@@ -1812,7 +1812,7 @@ function DroppableColumn({
                                 <UserAvatar
                                   name={raw.owner.name}
                                   imageUrl={raw.owner.avatarUrl ?? null}
-                                  size={16}
+                                  size={22}
                                 />
                                 <span className="min-w-0 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
                                   {raw.owner.name}

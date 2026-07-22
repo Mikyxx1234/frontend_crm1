@@ -9,6 +9,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 
 import { Chip } from "@/components/crm/chip";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import {
   useAssignConversation,
   useTeamUsers,
@@ -76,9 +77,17 @@ export function AssigneePopover({
         aria-expanded={open}
       >
         {currentAssigneeName ? (
-          <Chip variant="brand" className="max-w-full truncate whitespace-nowrap">
-            {currentAssigneeName}
-          </Chip>
+          // Responsável (agente): mesmo padrão do owner no kanban — UserAvatar
+          // (gradiente do brand + foto do perfil; iniciais como fallback) + nome.
+          <span
+            className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-px pl-px pr-2 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]"
+            title={currentAssigneeName}
+          >
+            <UserAvatar name={currentAssigneeName} size={20} />
+            <span className="min-w-0 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
+              {currentAssigneeName}
+            </span>
+          </span>
         ) : (
           <Chip variant="ghost" className="whitespace-nowrap">+Responsável</Chip>
         )}

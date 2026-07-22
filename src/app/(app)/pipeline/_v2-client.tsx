@@ -1126,8 +1126,20 @@ export default function KanbanV2ClientPage({
               statusFilter={status}
               trigger={
                 dealDetail?.owner?.name ? (
-                  <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[11px] font-semibold transition-opacity hover:opacity-75">
-                    {dealDetail.owner.name}
+                  // Responsável (agente) no header do aside: mesmo padrão do
+                  // card do kanban — UserAvatar (gradiente/foto/iniciais) + nome.
+                  <span
+                    className="inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-px pl-px pr-2 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]"
+                    title={dealDetail.owner.name}
+                  >
+                    <UserAvatar
+                      name={dealDetail.owner.name}
+                      imageUrl={dealDetail.owner.avatarUrl ?? null}
+                      size={22}
+                    />
+                    <span className="min-w-0 truncate font-display text-[11px] font-semibold text-[var(--text-secondary)]">
+                      {dealDetail.owner.name}
+                    </span>
                   </span>
                 ) : (
                   <span className="inline-flex cursor-pointer items-center rounded-full px-2.5 py-1 font-display text-[11px] font-semibold transition-opacity hover:opacity-75">

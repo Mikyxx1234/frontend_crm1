@@ -82,6 +82,15 @@ export function resolveFlowPresentation(
     }
     case "send_whatsapp_template": {
       const tpl = String(config.templateName ?? "").trim()
+      const buttons = Array.isArray(config.buttons) ? (config.buttons as Btn[]) : []
+      // Só vira nó ramificado quando o template tem botões de resposta rápida
+      // (roteamento). Sem botões, mantém a saída única padrão (d.source).
+      if (buttons.length > 0) {
+        return {
+          outputs: interactiveOutputs(config, true),
+          subtitle: tpl ? clampSubtitle(tpl) : data.subtitle,
+        }
+      }
       return { subtitle: tpl ? clampSubtitle(tpl) : data.subtitle }
     }
     case "add_tag":

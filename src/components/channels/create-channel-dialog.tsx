@@ -98,6 +98,7 @@ export function CreateChannelDialog({
   const [businessAccountId, setBusinessAccountId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signupWarning, setSignupWarning] = useState<string | null>(null);
   const [showManualConfig, setShowManualConfig] = useState(false);
   // Webhook opcional para clientes que preferem usar o proprio App Meta:
   // "Webhook" gera Callback URL + Verify Token e persiste o token no
@@ -136,6 +137,7 @@ export function CreateChannelDialog({
     setPhoneNumberId("");
     setBusinessAccountId("");
     setError(null);
+    setSignupWarning(null);
     setSubmitting(false);
     setShowManualConfig(false);
     setWebhookInfo(null);
@@ -222,6 +224,7 @@ export function CreateChannelDialog({
       return;
     }
     setError(null);
+    setSignupWarning(null);
     setSubmitting(true);
     try {
       const result = await embeddedSignup.launchSignup();
@@ -235,11 +238,25 @@ export function CreateChannelDialog({
           name: name.trim(),
         }),
       });
-      const data = (await res.json()) as { message?: string };
+      const data = (await res.json()) as {
+        message?: string;
+        webhookSubscribed?: boolean;
+        phoneRegistered?: boolean;
+      };
       if (!res.ok) {
         throw new Error(data.message ?? "Erro no Embedded Signup.");
       }
+      // Canal criado. Se o numero ainda nao foi registrado no WhatsApp
+      // Business Platform, avisamos (envio pode falhar ate o registro/PIN)
+      // e mantemos o dialog aberto para o usuario ler.
       onCreated?.();
+      if (data.phoneRegistered === false) {
+        setSignupWarning(
+          "Canal criado, mas o número ainda não foi registrado no WhatsApp Business Platform. " +
+            "O recebimento de mensagens funciona; para enviar, registre o número (definir PIN de verificação em duas etapas) no painel Meta.",
+        );
+        return;
+      }
       handleOpenChange(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Erro no Embedded Signup.");
@@ -764,6 +781,11 @@ export function CreateChannelDialog({
                             )}
                             Conectar com Facebook
                           </Button>
+                          {signupWarning ? (
+                            <p className="mt-3 rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-2 text-xs text-[var(--color-warning)]">
+                              {signupWarning}
+                            </p>
+                          ) : null}
                         </div>
 
                         <button

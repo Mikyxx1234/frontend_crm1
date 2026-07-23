@@ -617,7 +617,7 @@ export function DealDetailPanel({
               )}
             >
               <div className="shrink-0 px-3 pt-2">
-                <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+                <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-none bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
                   <div className="relative flex items-center gap-1.5">
                     <button
                       type="button"
@@ -751,7 +751,7 @@ export function DealDetailPanel({
               {/* ── Hero header (ref. Stitch): card escuro #2e3b6e, edge-to-edge
                   no topo do container via margens negativas, cantos inferiores
                   grandes (rounded-b-3xl) e sombra. ── */}
-              <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+              <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-none bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
                 {/* Linha de controles: Voltar (esq) + spacer + etapa + kebab. */}
                 <div className="relative flex items-center gap-1.5">
                   <button

@@ -119,7 +119,7 @@ export function DealDetailsPanel({
       )}
     >
       {/* ── Header card escuro (ref. Stitch) ── */}
-      <header className="shrink-0 rounded-b-3xl bg-[#2e3b6e] p-5 text-white shadow-lg">
+      <header className="shrink-0 rounded-b-none bg-[#2e3b6e] p-5 text-white shadow-lg">
         <div className="mb-4 flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-start gap-1">
             {onBack && (

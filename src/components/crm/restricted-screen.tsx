@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { IconLock } from "@tabler/icons-react";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 
 /**
  * Tela exibida quando um usuário sem papel de gestão tenta acessar uma
@@ -20,7 +20,7 @@ export function RestrictedScreen({
 }) {
   return (
     <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
-      <NavRailV2 />
+      <NavRailSpacer />
       <main className="flex min-w-0 items-center justify-center overflow-hidden">
         <div className="flex max-w-sm flex-col items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-8 py-10 text-center shadow-[var(--glass-shadow)] backdrop-blur-[16px]">
           <div className="flex size-14 items-center justify-center rounded-2xl bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">

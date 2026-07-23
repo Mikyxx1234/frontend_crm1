@@ -1,6 +1,6 @@
 "use client";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import OldAutomationEditor from "@/features/legacy-v1/automations-editor";
 
 /**
@@ -14,7 +14,7 @@ import OldAutomationEditor from "@/features/legacy-v1/automations-editor";
 export default function V2AutomationDetailClientPage() {
   return (
     <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
-      <NavRailV2 />
+      <NavRailSpacer />
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
         <OldAutomationEditor />
       </main>

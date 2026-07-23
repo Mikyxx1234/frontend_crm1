@@ -12,7 +12,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { GlassCard } from "@/components/crm/glass-card";
 import { ButtonGlass } from "@/components/crm/button-glass";
@@ -111,7 +111,7 @@ export default function CompanyDetailClientPage({ id }: { id: string }) {
 
   return (
     <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
-      <NavRailV2 />
+      <NavRailSpacer />
 
       <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
         <PageHeader

@@ -7,9 +7,10 @@
  * permissão via `filterSettingsNav`. Itens são achatados numa única lista
  * ordenada alfabeticamente — sem cabeçalhos de grupo, mais limpo.
  *
- * A sidebar é retrátil: o botão do header dispara `onClose`, e o layout
- * cuida da animação de largura via grid-template-columns. Este componente
- * também aplica translate/opacity próprios para casar com o movimento.
+ * A sidebar é retrátil: a abinha (chevron) na costura, renderizada pelo
+ * layout, alterna `open`; o layout cuida da animação de largura via
+ * grid-template-columns. Este componente também aplica translate/opacity
+ * próprios para casar com o movimento.
  */
 
 import Link from "next/link";
@@ -24,11 +25,9 @@ import {
 import {
   IconAdjustments as Settings2,
   IconGripVertical,
-  IconLayoutSidebarLeftCollapse,
 } from "@tabler/icons-react";
 
 import { PageSearchBar } from "@/components/crm/page-toolbar";
-import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { useUserRole } from "@/hooks/use-user-role";
 import { cn } from "@/lib/utils";
@@ -45,15 +44,10 @@ const ORDER_KEY = "settings-sidebar-order-v1";
 
 interface SettingsSidebarProps {
   open: boolean;
-  onClose: () => void;
-  /** Oculta o botão de recolher (ex.: no hub mobile, onde não há o que recolher). */
-  hideCollapse?: boolean;
 }
 
 export function SettingsSidebar({
   open,
-  onClose,
-  hideCollapse,
 }: SettingsSidebarProps) {
   const pathname = usePathname();
   const { role, isSuperAdmin } = useUserRole();
@@ -173,18 +167,6 @@ export function SettingsSidebar({
         >
           Configurações
         </h2>
-        {!hideCollapse && (
-          <TooltipGlass label="Recolher menu" side="bottom">
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Recolher menu de configurações"
-              className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-            >
-              <IconLayoutSidebarLeftCollapse size={16} />
-            </button>
-          </TooltipGlass>
-        )}
       </div>
 
       {/* Busca */}

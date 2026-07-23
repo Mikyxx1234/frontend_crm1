@@ -5,10 +5,10 @@
  */
 
 import DistributionClientPage from "./client-page";
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 
 export const dynamic = "force-dynamic";
 
 export default function DistributionPage() {
-  return <DistributionClientPage navRail={<NavRailV2 />} />;
+  return <DistributionClientPage navRail={<NavRailSpacer />} />;
 }

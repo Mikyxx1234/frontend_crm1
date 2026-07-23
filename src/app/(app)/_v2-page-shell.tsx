@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { ButtonGlass } from "@/components/crm/button-glass";
 
@@ -46,7 +46,7 @@ export function AppV2PageShell({
 
   return (
     <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
-      <NavRailV2 />
+      <NavRailSpacer />
 
       <main className="flex min-h-0 min-w-0 flex-col gap-3.5 overflow-hidden">
         <PageHeader

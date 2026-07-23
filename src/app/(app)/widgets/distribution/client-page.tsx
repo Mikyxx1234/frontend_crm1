@@ -23,7 +23,7 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
@@ -206,7 +206,7 @@ export default function DistributionClientPage({
 
   return (
     <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
-      {navRail ?? <NavRailV2 />}
+      {navRail ?? <NavRailSpacer />}
 
       <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden pb-3 sm:gap-4 sm:pb-4">
         <PageHeader

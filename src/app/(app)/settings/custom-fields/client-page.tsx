@@ -1306,6 +1306,10 @@ function FieldFormDialog({
   });
 
   const showOptions = type === "SELECT" || type === "MULTI_SELECT";
+  // IDs únicos: create e edit ficam montados ao mesmo tempo; `form="…"` no
+  // footer apontava para o primeiro `#field-form` (sempre o de create) e o
+  // Salvar da edição acabava em POST /api/custom-fields → 400.
+  const formId = mode === "create" ? "field-form-create" : "field-form-edit";
   const entityOptions = [
     { value: "contact", label: "Contato" },
     { value: "deal", label: "Negócio" },
@@ -1339,7 +1343,7 @@ function FieldFormDialog({
           </button>
           <ButtonGlass
             type="submit"
-            form="field-form"
+            form={formId}
             variant="primary"
             disabled={mutation.isPending || !label.trim()}
           >
@@ -1353,7 +1357,7 @@ function FieldFormDialog({
       }
     >
       <form
-        id="field-form"
+        id={formId}
         onSubmit={(e) => {
           e.preventDefault();
           if (showOptions && options.length === 0) {

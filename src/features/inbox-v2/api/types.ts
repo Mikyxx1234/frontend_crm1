@@ -10,6 +10,7 @@
 
 export type InboxTab =
   | "todos"
+  | "abertas"
   | "entrada"
   | "esperando"
   | "respondidas"
@@ -124,6 +125,7 @@ export interface ConversationListResponse {
 
 export interface TabCounts {
   todos: number;
+  abertas: number;
   entrada: number;
   esperando: number;
   respondidas: number;

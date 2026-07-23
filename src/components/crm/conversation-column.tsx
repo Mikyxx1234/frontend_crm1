@@ -93,6 +93,12 @@ interface ConversationColumnProps {
   onToggleSelectOne?: (id: string) => void
   /** Disparado pelo checkbox "selecionar todas" com a lista final de ids marcados (vazia = limpar). */
   onSelectAllChange?: (ids: string[]) => void
+  /** Total de conversas do filtro atual (todas as páginas) — habilita "selecionar todas do filtro". */
+  totalCount?: number
+  /** true = modo "todas do filtro" ativo (encerra tudo, não só as carregadas). */
+  selectAllFilter?: boolean
+  /** Alterna o modo "todas do filtro". */
+  onSelectAllFilterChange?: (value: boolean) => void
   /** Ações renderizadas ao lado do contador, na barra de seleção (ex.: Encerrar, Reabrir, Cancelar). */
   bulkActionsSlot?: React.ReactNode
 }
@@ -171,6 +177,9 @@ export function ConversationColumn({
   isLoadingMore = false,
   selectionMode = false,
   selectedIds,
+  totalCount,
+  selectAllFilter = false,
+  onSelectAllFilterChange,
   onToggleSelectOne,
   onSelectAllChange,
   bulkActionsSlot,
@@ -404,31 +413,56 @@ export function ConversationColumn({
         )}
 
       {/* Barra de seleção em massa — "selecionar todas" + ações (Encerrar/Reabrir/Cancelar). */}
-      {selectionMode && (
-        <div className="mb-2.5 flex items-center justify-between gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2">
-          <label className="flex min-w-0 items-center gap-2 cursor-pointer">
-            <CheckboxGlass
-              checked={displayed.length > 0 && displayed.every((c) => selectedIds?.has(c.id))}
-              indeterminate={
-                !!selectedIds?.size &&
-                selectedIds.size < displayed.length &&
-                displayed.some((c) => selectedIds?.has(c.id))
-              }
-              onChange={() => {
-                const allSelected = displayed.length > 0 && displayed.every((c) => selectedIds?.has(c.id))
-                onSelectAllChange?.(allSelected ? [] : displayed.map((c) => c.id))
-              }}
-              aria-label="Selecionar todas as conversas"
-            />
-            <span className="truncate font-display text-[12px] font-semibold text-[var(--text-secondary)]">
-              {selectedIds?.size
-                ? `${selectedIds.size} de ${displayed.length} selecionada${selectedIds.size > 1 ? "s" : ""}`
-                : `Selecionar todas (${displayed.length})`}
-            </span>
-          </label>
-          {bulkActionsSlot}
+      {selectionMode && (() => {
+        const allDisplayedSelected =
+          displayed.length > 0 && displayed.every((c) => selectedIds?.has(c.id))
+        const hasMoreThanLoaded =
+          typeof totalCount === "number" && totalCount > displayed.length
+        // Oferece "todas do filtro" quando a página está toda marcada e há
+        // mais conversas além das carregadas (ou o modo já está ativo).
+        const showFilterSelect =
+          !!onSelectAllFilterChange && (selectAllFilter || (allDisplayedSelected && hasMoreThanLoaded))
+        return (
+        <div className="mb-2.5 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <label className="flex min-w-0 items-center gap-2 cursor-pointer">
+              <CheckboxGlass
+                checked={selectAllFilter || allDisplayedSelected}
+                indeterminate={
+                  !selectAllFilter &&
+                  !!selectedIds?.size &&
+                  selectedIds.size < displayed.length &&
+                  displayed.some((c) => selectedIds?.has(c.id))
+                }
+                onChange={() => {
+                  onSelectAllChange?.(allDisplayedSelected ? [] : displayed.map((c) => c.id))
+                }}
+                aria-label="Selecionar todas as conversas"
+              />
+              <span className="truncate font-display text-[12px] font-semibold text-[var(--text-secondary)]">
+                {selectAllFilter && typeof totalCount === "number"
+                  ? `${totalCount.toLocaleString("pt-BR")} selecionada${totalCount > 1 ? "s" : ""} (todo o filtro)`
+                  : selectedIds?.size
+                    ? `${selectedIds.size} de ${displayed.length} selecionada${selectedIds.size > 1 ? "s" : ""}`
+                    : `Selecionar todas (${displayed.length})`}
+              </span>
+            </label>
+            {bulkActionsSlot}
+          </div>
+          {showFilterSelect && (
+            <button
+              type="button"
+              onClick={() => onSelectAllFilterChange?.(!selectAllFilter)}
+              className="self-start rounded px-1 text-left font-display text-[12px] font-semibold text-[var(--brand-primary)] hover:underline"
+            >
+              {selectAllFilter
+                ? "Limpar seleção do filtro"
+                : `Selecionar todas as ${(totalCount ?? 0).toLocaleString("pt-BR")} conversas do filtro`}
+            </button>
+          )}
         </div>
-      )}
+        )
+      })()}
 
       {/* Lista */}
       <div className="flex flex-1 min-h-0 flex-col gap-2.5 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">

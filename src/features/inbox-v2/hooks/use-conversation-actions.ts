@@ -118,9 +118,29 @@ export function useBulkConversationAction() {
   return useMutation<
     Awaited<ReturnType<typeof postBulkAction>>,
     Error,
-    { ids: string[]; action: BulkAction }
+    {
+      ids: string[];
+      action: BulkAction;
+      /** true = encerrar TODAS as conversas do filtro atual (todas as páginas). */
+      allInFilter?: boolean;
+      tab?: string;
+      search?: string;
+      filters?: Record<string, unknown>;
+    }
   >({
-    mutationFn: (vars) => postBulkAction(vars.ids, vars.action),
+    mutationFn: (vars) =>
+      postBulkAction(
+        vars.ids,
+        vars.action,
+        vars.allInFilter
+          ? {
+              allInFilter: true,
+              tab: vars.tab,
+              search: vars.search,
+              filters: vars.filters,
+            }
+          : undefined,
+      ),
     onSuccess: (result, vars) => {
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
       qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });

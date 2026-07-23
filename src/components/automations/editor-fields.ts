@@ -56,7 +56,6 @@ const MEDIA_TYPES: Opt[] = [
   { value: "audio", label: "Áudio" },
   { value: "document", label: "Documento" },
 ]
-const HTTP_METHODS: Opt[] = ["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => ({ value: m, label: m }))
 const TARGET_OPTS: Opt[] = [
   { value: "deal", label: "Negócio" },
   { value: "contact", label: "Contato" },

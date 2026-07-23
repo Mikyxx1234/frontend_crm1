@@ -8,7 +8,7 @@
  * Toda a UI vive em `.n-config` com as classes `nodrag nopan nowheel` para
  * que digitar/rolar não arraste nem dê pan/zoom no React Flow.
  */
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react"
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "sonner"
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass"
 import { InputGlass } from "@/components/crm/input-glass"
@@ -29,6 +29,7 @@ import {
 import {
   useAiAgentOptions,
   useAutomationOptions,
+  useCustomFieldTokens,
   useDepartmentOptions,
   useFieldOptions,
   usePipelineOptions,
@@ -131,12 +132,10 @@ function Field({
     case "textarea":
       return (
         <Labeled label={field.label} optional={field.optional} hint={field.hint}>
-          <textarea
-            className="cfg-textarea nodrag"
-            rows={3}
+          <VariableTextarea
             value={str(config[field.key])}
             placeholder={field.placeholder}
-            onChange={(e) => set(field.key, e.target.value)}
+            onChange={(v) => set(field.key, v)}
           />
         </Labeled>
       )
@@ -280,6 +279,144 @@ function Labeled({
       {children}
       {hint && <span className="cfg-hint">{hint}</span>}
     </label>
+  )
+}
+
+// ─────────────────── Textarea com atalho de variáveis ({ ou [) ───────────────────
+
+type VarOpt = { token: string; label: string; hint?: string }
+
+/** Monta a lista de variáveis: nativas + custom fields (contato/negócio). */
+function useMessageVariables(): VarOpt[] {
+  const { contact, deal } = useCustomFieldTokens()
+  return useMemo(() => {
+    const out: VarOpt[] = [
+      { token: "{{contact.name}}", label: "Nome do contato" },
+      { token: "{{contact.name|first_name}}", label: "Primeiro nome do contato" },
+      { token: "{{contact.phone}}", label: "Telefone do contato" },
+      { token: "{{contact.email}}", label: "E-mail do contato" },
+      { token: "{{deal.title}}", label: "Título do negócio" },
+      { token: "{{deal.value}}", label: "Valor do negócio" },
+      { token: "{{lastResponse}}", label: "Mensagem do cliente (passo anterior)" },
+    ]
+    for (const c of contact) {
+      if (!c.name) continue
+      out.push({ token: `{{contactCustomFields.${c.name}}}`, label: `Contato: ${c.label || c.name}`, hint: "Campo personalizado" })
+    }
+    for (const d of deal) {
+      if (!d.name) continue
+      out.push({ token: `{{dealCustomFields.${d.name}}}`, label: `Negócio: ${d.label || d.name}`, hint: "Campo personalizado" })
+    }
+    return out
+  }, [contact, deal])
+}
+
+function VariableTextarea({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string
+  placeholder?: string
+  onChange: (v: string) => void
+}) {
+  const options = useMessageVariables()
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const [startPos, setStartPos] = useState<number | null>(null)
+  const ref = useRef<HTMLTextAreaElement | null>(null)
+  const closeT = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const base = q
+      ? options.filter((o) => o.label.toLowerCase().includes(q) || o.token.toLowerCase().includes(q))
+      : options
+    return base.slice(0, 30)
+  }, [options, query])
+
+  const close = () => {
+    setOpen(false)
+    setQuery("")
+    setStartPos(null)
+  }
+
+  const refresh = (el: HTMLTextAreaElement) => {
+    const caret = el.selectionStart ?? el.value.length
+    const left = el.value.slice(0, caret)
+    // Gatilho: "{" (tokens são {{...}}) ou "[" — usa o mais próximo do cursor.
+    const trigger = Math.max(left.lastIndexOf("["), left.lastIndexOf("{"))
+    if (trigger < 0) return close()
+    let start = trigger
+    const typed = left.slice(trigger + 1)
+    if (typed.includes("\n")) return close()
+    if (left[trigger] === "{") {
+      while (start > 0 && left[start - 1] === "{") start -= 1
+      if (typed.includes("}")) return close()
+    } else if (typed.includes("]")) {
+      return close()
+    }
+    setStartPos(start)
+    setQuery(typed)
+    setOpen(true)
+  }
+
+  const apply = (token: string) => {
+    const el = ref.current
+    if (!el || startPos == null) return
+    const caret = el.selectionStart ?? value.length
+    const next = `${value.slice(0, startPos)}${token}${value.slice(caret)}`
+    onChange(next)
+    close()
+    requestAnimationFrame(() => {
+      const pos = startPos + token.length
+      el.focus()
+      el.setSelectionRange(pos, pos)
+    })
+  }
+
+  return (
+    <div className="cfg-combo">
+      <textarea
+        ref={ref}
+        className="cfg-textarea nodrag nowheel"
+        rows={3}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => {
+          onChange(e.target.value)
+          refresh(e.target)
+        }}
+        onKeyUp={(e) => refresh(e.currentTarget)}
+        onClick={(e) => refresh(e.currentTarget)}
+        onFocus={(e) => {
+          if (closeT.current) clearTimeout(closeT.current)
+          refresh(e.currentTarget)
+        }}
+        onBlur={() => {
+          closeT.current = setTimeout(() => setOpen(false), 160)
+        }}
+      />
+      {open && filtered.length > 0 && (
+        <div className="cfg-pop nowheel nopan">
+          {filtered.map((o) => (
+            <button
+              key={o.token}
+              type="button"
+              className="cfg-pop-item nodrag"
+              title={o.token}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                apply(o.token)
+              }}
+            >
+              <span className="cfg-pop-dot" />
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

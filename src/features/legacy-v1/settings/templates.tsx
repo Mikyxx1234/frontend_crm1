@@ -78,7 +78,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
     });
   }, [router, searchParams]);
 
-  const { data: templates = [], isLoading } = useQuery({
+  const { data: templates = [], isLoading, isError } = useQuery({
     queryKey: ["templates"],
     queryFn: fetchTemplates,
   });
@@ -262,6 +262,15 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
             </div>
           ))}
         </div>
+      ) : isError ? (
+        <HubPanel className="flex flex-col items-center gap-2.5 px-5 py-14 text-center">
+          <FileText className="size-10 text-[var(--color-danger)]" />
+          <div className="font-bold text-[var(--color-danger-text)]">Erro ao carregar os modelos internos</div>
+          <div className="text-[13px] text-[var(--text-muted)]">
+            O servidor retornou erro (não é lista vazia). Se acabou de sair um deploy,
+            pode haver migração de banco pendente. Recarregue em instantes.
+          </div>
+        </HubPanel>
       ) : grouped.length === 0 ? (
         <HubPanel className="flex flex-col items-center gap-2.5 px-5 py-14 text-center">
           <FileText className="size-10 text-[var(--glass-border)]" />

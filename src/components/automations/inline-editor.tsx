@@ -182,6 +182,20 @@ function Field({
       )
 
     case "source":
+      // Departamento: grava também `departmentName` pra o summary do card
+      // (summarizeStepConfig) e o executor exibirem o nome legível.
+      if (field.source === "department") {
+        return (
+          <Labeled label={field.label} optional={field.optional} hint={field.hint}>
+            <DepartmentSelect
+              value={str(config[field.key])}
+              onPick={(id, name) =>
+                onChange({ ...config, departmentId: id, departmentName: name })
+              }
+            />
+          </Labeled>
+        )
+      }
       return (
         <Labeled label={field.label} optional={field.optional} hint={field.hint}>
           <SourceSelect
@@ -412,6 +426,8 @@ function SourceSelect({ source, value, onChange }: { source: SourceKey; value: s
   switch (source) {
     case "stage":
       return <HookSelect hook={useStageOptions} value={value} onChange={onChange} placeholder="Selecione um estágio…" />
+    case "department":
+      return <HookSelect hook={useDepartmentOptions} value={value} onChange={onChange} placeholder="Selecione um departamento…" />
     case "template":
       return <HookSelect hook={useTemplateOptions} value={value} onChange={onChange} placeholder="Selecione um template…" />
     case "automation":
@@ -423,6 +439,43 @@ function SourceSelect({ source, value, onChange }: { source: SourceKey; value: s
     case "owner":
       return <OwnerSelect value={value} onChange={onChange} />
   }
+}
+
+function DepartmentSelect({
+  value,
+  onPick,
+}: {
+  value: string
+  onPick: (id: string, name: string) => void
+}) {
+  const { options, isLoading, isError } = useDepartmentOptions()
+  if (isError) {
+    return (
+      <p className="cfg-info">
+        Não foi possível carregar os departamentos. Verifique permissão (Admin/Manager)
+        ou se a API `/api/settings/departments` está respondendo.
+      </p>
+    )
+  }
+  if (!isLoading && options.length === 0) {
+    return (
+      <p className="cfg-info">
+        Nenhum departamento cadastrado. Crie em Configurações → Conversas → Departamentos.
+      </p>
+    )
+  }
+  return (
+    <ConfigSelect
+      value={value}
+      options={options}
+      loading={isLoading}
+      placeholder="Selecione um departamento…"
+      onChange={(id) => {
+        const opt = options.find((o) => o.value === id)
+        onPick(id, opt?.label ?? "")
+      }}
+    />
+  )
 }
 
 function HookSelect({

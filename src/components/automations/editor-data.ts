@@ -61,19 +61,27 @@ export function usePipelineOptions() {
   return { options: q.data ?? [], isLoading: q.isLoading }
 }
 
-type RawDepartment = { id: string; name: string }
+type RawDepartment = { id: string; name: string; icon?: string }
 
-/** Departamentos da org → value: departmentId. Para `conversation.departmentId`. */
+/** Departamentos da org → value: departmentId. Para `conversation.departmentId`
+ *  e o passo `transfer_department` das automações. */
 export function useDepartmentOptions() {
   const q = useQuery({
     queryKey: ["editor-departments"],
     staleTime: STALE,
     queryFn: async (): Promise<Opt[]> => {
+      // getJson lança em !ok — não engolir 403/500 como lista vazia
+      // (mascarava schema drift / permissão como "sem departamentos").
       const list = asArray(await getJson("/api/settings/departments")) as RawDepartment[]
-      return list.map((d) => ({ value: d.id, label: d.name }))
+      return list.map((d) => ({
+        value: d.id,
+        // Nome puro: o summary do card (`departmentName`) e o executor
+        // usam este label — ícone fica só na tela de Configurações.
+        label: d.name,
+      }))
     },
   })
-  return { options: q.data ?? [], isLoading: q.isLoading }
+  return { options: q.data ?? [], isLoading: q.isLoading, isError: q.isError }
 }
 
 type RawUser = { id: string; name?: string; email?: string }

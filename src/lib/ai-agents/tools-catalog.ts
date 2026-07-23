@@ -69,6 +69,22 @@ export const TOOLS_CATALOG: ToolDescriptor[] = [
     defaultForArchetypes: ["VENDEDOR"],
   },
   {
+    id: "transfer_to_department",
+    label: "Rotear para departamento",
+    description:
+      "Classifica o caso e roteia a conversa para um departamento (ex.: Acolhimento, Retenção, Atendimento). Define o departamento responsável usado pela Distribuição Inteligente — sem tirar a conversa do agente.",
+    category: "handoff",
+    defaultForArchetypes: ["ATENDIMENTO", "SUPORTE"],
+  },
+  {
+    id: "execute_distribution",
+    label: "Executar distribuição",
+    description:
+      "Aciona a Distribuição Inteligente para atribuir a conversa ao consultor certo (menor fila, dentro do departamento, respeitando horário/disponibilidade). O motor escolhe a pessoa — o agente não escolhe. Sem ninguém disponível, o lead entra na fila.",
+    category: "handoff",
+    defaultForArchetypes: ["ATENDIMENTO", "SUPORTE"],
+  },
+  {
     id: "transfer_to_human",
     label: "Transferir para humano",
     description:

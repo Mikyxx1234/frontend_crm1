@@ -124,11 +124,13 @@ export default function MessageModelsHubPage() {
     [router, pathname, searchParams],
   );
 
-  const { data: internals = [], isLoading: loadingInt } = useQuery({
+  const { data: internals = [], isLoading: loadingInt, isError: errorInt } = useQuery({
     queryKey: ["templates"],
     queryFn: async () => {
       const r = await fetch(apiUrl("/api/templates"));
-      if (!r.ok) return [] as InternalRow[];
+      // NÃO engolir erro como lista vazia: um 500 (ex.: migração de banco
+      // pendente) aparecia como "Internos = 0", mascarando o incidente.
+      if (!r.ok) throw new Error(`Falha ao carregar modelos internos (HTTP ${r.status}).`);
       return r.json() as Promise<InternalRow[]>;
     },
   });
@@ -506,6 +508,19 @@ export default function MessageModelsHubPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           {searchNode ? <div className="min-w-0 flex-1">{searchNode}</div> : <div />}
           {actionsNode}
+        </div>
+      ) : null}
+
+      {errorInt ? (
+        <div className="flex items-start gap-2.5 rounded-[var(--radius-lg)] border border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)] px-3.5 py-3 text-[var(--color-danger-text)]">
+          <Info className="mt-0.5 size-[18px] shrink-0" />
+          <div className="min-w-0 text-[12.5px]">
+            <p className="font-bold">Não foi possível carregar os modelos internos.</p>
+            <p className="mt-0.5 opacity-90">
+              O servidor retornou erro — os contadores acima podem estar zerados por engano.
+              Se isso persistir após um deploy, verifique se há migração de banco pendente.
+            </p>
+          </div>
         </div>
       ) : null}
 

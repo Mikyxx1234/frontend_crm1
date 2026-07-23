@@ -469,6 +469,92 @@ export function StatusSection({ draft, setDraftField, toggleArray }: SectionProp
   );
 }
 
+/** Grupo de pílulas single-select (clicar na ativa limpa). */
+function PillGroup<T extends string>({
+  value,
+  options,
+  onSelect,
+}: {
+  value: T | undefined;
+  options: { value: T; label: string }[];
+  onSelect: (v: T) => void;
+}) {
+  return (
+    <div className="flex gap-1.5">
+      {options.map((o) => {
+        const active = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onSelect(o.value)}
+            className={cn(
+              "flex-1 rounded-lg px-3 py-1.5 font-display text-[12.5px] font-semibold transition-colors",
+              active
+                ? "bg-[var(--brand-primary)] text-white"
+                : "bg-[var(--glass-bg-strong)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)]",
+            )}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const CONVERSATION_STATUS_OPTIONS: { value: "open" | "closed"; label: string }[] = [
+  { value: "open", label: "Aberta" },
+  { value: "closed", label: "Fechada" },
+];
+const LAST_DIRECTION_OPTIONS: { value: "in" | "out"; label: string }[] = [
+  { value: "out", label: "Nossa" },
+  { value: "in", label: "Do cliente" },
+];
+
+/** Filtra negócios pela conversa do contato: status + direção da última mensagem. */
+export function ConversationSection({ draft, setDraftField }: SectionProps) {
+  const status = draft.conversationStatus;
+  const dir = draft.lastMessageDirection;
+  return (
+    <FieldCard
+      label="Conversa"
+      active={!!status || !!dir}
+      onClear={() => {
+        setDraftField("conversationStatus", undefined);
+        setDraftField("lastMessageDirection", undefined);
+      }}
+    >
+      <div className="space-y-2.5">
+        <div>
+          <span className="mb-1.5 block text-[11px] font-medium text-[var(--text-muted)]">
+            Status
+          </span>
+          <PillGroup
+            value={status}
+            options={CONVERSATION_STATUS_OPTIONS}
+            onSelect={(v) =>
+              setDraftField("conversationStatus", status === v ? undefined : v)
+            }
+          />
+        </div>
+        <div>
+          <span className="mb-1.5 block text-[11px] font-medium text-[var(--text-muted)]">
+            Última mensagem
+          </span>
+          <PillGroup
+            value={dir}
+            options={LAST_DIRECTION_OPTIONS}
+            onSelect={(v) =>
+              setDraftField("lastMessageDirection", dir === v ? undefined : v)
+            }
+          />
+        </div>
+      </div>
+    </FieldCard>
+  );
+}
+
 export function StagesSection({ draft, options, optionsLoading, setDraftField, toggleArray }: SectionProps) {
   const stages = options?.pipelines.flatMap((p) => p.stages) ?? [];
   const selected = draft.stageIds ?? [];

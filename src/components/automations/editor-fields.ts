@@ -8,6 +8,7 @@ import type { Opt } from "./editor-data"
 export type SourceKey =
   | "stage"
   | "owner"
+  | "department"
   | "aiAgentId"
   | "aiAgentUserId"
   | "template"
@@ -75,6 +76,11 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   assign_owner: [
     { kind: "source", source: "owner", key: "userId", label: "Responsável" },
     { kind: "select", key: "target", label: "Aplicar em", options: TARGET_OPTS },
+  ],
+  // Sem esta entrada o canvas não monta o seletor — o bloco ficava só com
+  // "Selecionar departamento" (StepConfigPanel existe mas não é mais usado).
+  transfer_department: [
+    { kind: "source", source: "department", key: "departmentId", label: "Departamento de destino" },
   ],
   add_tag: [{ kind: "tag", key: "tagName", label: "Nome da tag" }],
   remove_tag: [{ kind: "tag", key: "tagName", label: "Nome da tag" }],

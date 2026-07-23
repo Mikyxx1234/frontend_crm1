@@ -840,6 +840,25 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
     )
   }
 
+  // ── Unsupported (Meta Cloud API) ───────────────────────────────
+  // Webhook type=unsupported: conteúdo nunca chega. Mensagens antigas
+  // ficaram com "[unsupported]"; as novas já vêm com rótulo em PT.
+  const unsupportedText =
+    message.messageType === "unsupported" || /^\s*\[unsupported\]\s*$/i.test(content)
+      ? content.replace(/^\s*\[unsupported\]\s*$/i, "Tipo de mensagem não suportado pela API da Meta")
+      : null
+  if (unsupportedText) {
+    return (
+      <span className={cn("break-words italic", isOutgoing ? "text-white/80" : "text-[var(--text-muted)]")}>
+        {unsupportedText}
+        <span
+          aria-hidden
+          className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
+        />
+      </span>
+    )
+  }
+
   // ── Texto ──────────────────────────────────────────────────────
   return (
     <span className="break-words">
@@ -1234,6 +1253,14 @@ export function MessageBubble({
   const hasForm = !!(message.formFields && message.formFields.length > 0)
   const hasButtons = !!(message.buttons && message.buttons.length > 0)
   const senderName = message.senderName
+  // Imagem/vídeo sem legenda: o horário flutua sobre a mídia — precisa
+  // contraste próprio (texto muted some em fundo escuro da foto).
+  const mediaKind = detectMediaKind(message.messageType, message.mediaUrl)
+  const timeOverMedia =
+    !hasButtons &&
+    !!message.mediaUrl &&
+    (mediaKind === "image" || mediaKind === "video") &&
+    isPlaceholderContent(message.content ?? "")
 
   // Menu WhatsApp-like só entra nas RECEBIDAS. Nas outgoing/notas/forms
   // o layout já é usado por outras ações (avatar, badges, ações de nota).
@@ -1604,11 +1631,13 @@ export function MessageBubble({
               hasButtons
                 ? "mt-1.5 flex w-full justify-end"
                 : "absolute bottom-1.5 right-2.5 inline-flex",
-              isOutgoing && isBot && "text-white/70",
-              !isOutgoing && "text-[var(--text-muted)]",
+              timeOverMedia &&
+                "rounded px-1 py-0.5 text-white shadow-[0_1px_2px_rgba(0,0,0,0.55)] [text-shadow:0_1px_2px_rgba(0,0,0,0.75)] bg-black/35",
+              !timeOverMedia && isOutgoing && isBot && "text-white/70",
+              !timeOverMedia && !isOutgoing && "text-[var(--text-muted)]",
             )}
             style={
-              isOutgoing && !isBot
+              !timeOverMedia && isOutgoing && !isBot
                 ? { color: "var(--chat-bubble-sent-time)" }
                 : undefined
             }

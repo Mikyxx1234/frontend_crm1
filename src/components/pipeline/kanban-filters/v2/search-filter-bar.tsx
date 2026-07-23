@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import {
   ContactCustomFieldsSection,
   ContactSection,
+  ConversationSection,
   DatesPeriodSection,
   DealCustomFieldsSection,
   LossReasonsSection,
@@ -93,6 +94,8 @@ function tabCount(id: TabId, f: AdvancedDealFilters): number {
       if (f.stageIds?.length) n++;
       if (f.sources?.length || f.withoutSource) n++;
       if (f.valueFrom != null || f.valueTo != null) n++;
+      if (f.conversationStatus) n++;
+      if (f.lastMessageDirection) n++;
       return n;
     }
     case "pessoas": {
@@ -375,6 +378,7 @@ export function PipelineSearchFilterBar({
                 <LossReasonsSection {...section} />
                 <StagesSection {...section} />
                 <SourcesSection {...section} />
+                <ConversationSection {...section} />
                 <ValueSection {...section} />
               </>
             )}

@@ -246,6 +246,31 @@ const BUILTIN_FIELDS: Record<"contact" | "deal", Opt[]> = {
   ],
 }
 
+/**
+ * Custom fields crus (contato + negócio) para montar tokens de variável
+ * (`{{contactCustomFields.<name>}}` / `{{dealCustomFields.<name>}}`) no
+ * autocomplete do textarea de mensagem. Retorna o `name` (slug), não o id.
+ */
+export function useCustomFieldTokens() {
+  const contact = useQuery({
+    queryKey: ["editor-custom-fields-raw", "contact"],
+    staleTime: STALE,
+    queryFn: async (): Promise<RawCustomField[]> =>
+      asArray(await getJson("/api/custom-fields?entity=contact")) as RawCustomField[],
+  })
+  const deal = useQuery({
+    queryKey: ["editor-custom-fields-raw", "deal"],
+    staleTime: STALE,
+    queryFn: async (): Promise<RawCustomField[]> =>
+      asArray(await getJson("/api/custom-fields?entity=deal")) as RawCustomField[],
+  })
+  return {
+    contact: contact.data ?? [],
+    deal: deal.data ?? [],
+    isLoading: contact.isLoading || deal.isLoading,
+  }
+}
+
 /** Campos nativos + custom da entidade, para `update_field`. */
 export function useFieldOptions(entity: "contact" | "deal") {
   const q = useQuery({

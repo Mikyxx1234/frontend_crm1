@@ -2,11 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
 import { apiUrl } from "@/lib/api";
 import { AUTOMATION_TRIGGER_TYPES, triggerTypeLabel } from "@/lib/automation-workflow";
+
+import { useTagOptions } from "./editor-data";
 
 type Props = {
   triggerType: string;
@@ -104,28 +106,30 @@ function StageSelect({
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <SelectNative
-        id={id}
+      {/* DropdownGlass (não SelectNative): o <select> nativo ignora o tema
+          escuro na lista de options do SO/browser. */}
+      <DropdownGlass
+        triggerClassName="w-full"
+        placeholder="Qualquer estágio"
         value={value}
-        onChange={(e) => {
-          const sid = e.target.value;
+        searchable
+        options={[
+          { value: "", label: "Qualquer estágio" },
+          ...visiblePipelines.flatMap((p) =>
+            p.stages.map((s) => ({
+              value: s.id,
+              label: s.name,
+              description: p.name,
+            })),
+          ),
+        ]}
+        onValueChange={(sid) => {
           const owner = sid
             ? pipelines.find((p) => p.stages.some((s) => s.id === sid)) ?? null
             : null;
           onChange(sid, owner?.id ?? null);
         }}
-      >
-        <option value="">Qualquer estágio</option>
-        {visiblePipelines.map((p) => (
-          <optgroup key={p.id} label={p.name}>
-            {p.stages.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </SelectNative>
+      />
       {helper ? (
         <p className="text-xs text-muted-foreground">{helper}</p>
       ) : null}
@@ -172,18 +176,83 @@ function PipelineSelect({
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <SelectNative
-        id={id}
+      <DropdownGlass
+        triggerClassName="w-full"
+        placeholder="Qualquer pipeline"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">Qualquer pipeline</option>
-        {pipelines.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </SelectNative>
+        options={[
+          { value: "", label: "Qualquer pipeline" },
+          ...pipelines.map((p) => ({ value: p.id, label: p.name })),
+        ]}
+        onValueChange={onChange}
+      />
+    </div>
+  );
+}
+
+/**
+ * Dropdown de tags cadastradas na org (`GET /api/tags`). Salva o NOME
+ * da tag (não o id) — o backend do gatilho `tag_added` dispara por nome.
+ * Sem tags cadastradas, cai num input livre (mesmo escape hatch do
+ * PipelineSelect). Se o valor atual não estiver mais na lista (tag
+ * renomeada/apagada), inclui uma option extra pra não perder a seleção.
+ */
+function TagSelect({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (tagName: string) => void;
+}) {
+  const { options: tags, isLoading } = useTagOptions();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={id}>{label}</Label>
+        <p className="text-xs text-muted-foreground">Carregando tags…</p>
+      </div>
+    );
+  }
+
+  if (tags.length === 0) {
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={id}>{label}</Label>
+        <Input
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Nome da tag"
+        />
+      </div>
+    );
+  }
+
+  const hasCurrent = value.length > 0 && tags.some((t) => t.value === value);
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      {/* DropdownGlass (não SelectNative): o <select> nativo ignora o tema
+          escuro na lista de options do SO/browser. */}
+      <DropdownGlass
+        triggerClassName="w-full"
+        placeholder="Selecione uma tag…"
+        value={value}
+        options={[
+          { value: "", label: "Selecione uma tag…" },
+          ...(!hasCurrent && value
+            ? [{ value, label: `${value} (valor personalizado)` }]
+            : []),
+          ...tags.map((t) => ({ value: t.value, label: t.label })),
+        ]}
+        onValueChange={onChange}
+      />
     </div>
   );
 }
@@ -216,14 +285,12 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
       // (stage_changed não usa pipelineId no config — só estágios.)
     case "tag_added":
       return (
-        <div className="space-y-2">
-          <Label htmlFor="tc-tag">Nome da tag</Label>
-          <Input
-            id="tc-tag"
-            value={String(value.tagName ?? "")}
-            onChange={(e) => set("tagName", e.target.value)}
-          />
-        </div>
+        <TagSelect
+          id="tc-tag"
+          label="Nome da tag"
+          value={String(value.tagName ?? "")}
+          onChange={(tagName) => set("tagName", tagName)}
+        />
       );
     case "lead_score_reached":
       return (
@@ -306,15 +373,17 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
       return (
         <div className="space-y-2">
           <Label htmlFor="tc-ch">Canal (opcional)</Label>
-          <SelectNative
-            id="tc-ch"
+          <DropdownGlass
+            triggerClassName="w-full"
+            placeholder="Todos os canais"
             value={String(value.channel ?? "")}
-            onChange={(e) => set("channel", e.target.value)}
-          >
-            <option value="">Todos os canais</option>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="email">E-mail</option>
-          </SelectNative>
+            options={[
+              { value: "", label: "Todos os canais" },
+              { value: "whatsapp", label: "WhatsApp" },
+              { value: "email", label: "E-mail" },
+            ]}
+            onValueChange={(v) => set("channel", v)}
+          />
         </div>
       );
     case "message_received":
@@ -323,15 +392,17 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
         <div className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="tc-ch">Canal (opcional)</Label>
-            <SelectNative
-              id="tc-ch"
+            <DropdownGlass
+              triggerClassName="w-full"
+              placeholder="Todos os canais"
               value={String(value.channel ?? "")}
-              onChange={(e) => set("channel", e.target.value)}
-            >
-              <option value="">Todos os canais</option>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="email">E-mail</option>
-            </SelectNative>
+              options={[
+                { value: "", label: "Todos os canais" },
+                { value: "whatsapp", label: "WhatsApp" },
+                { value: "email", label: "E-mail" },
+              ]}
+              onValueChange={(v) => set("channel", v)}
+            />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <PipelineSelect
@@ -370,17 +441,19 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
           */}
           <div className="space-y-2">
             <Label htmlFor="tc-msg-status">Status do negócio (opcional)</Label>
-            <SelectNative
-              id="tc-msg-status"
+            <DropdownGlass
+              triggerClassName="w-full"
+              placeholder="Qualquer status"
               value={String(value.dealStatus ?? "")}
-              onChange={(e) => set("dealStatus", e.target.value)}
-            >
-              <option value="">Qualquer status</option>
-              <option value="OPEN">Em aberto</option>
-              <option value="WON">Ganho</option>
-              <option value="LOST">Perdido</option>
-              <option value="WON,LOST">Ganho ou Perdido</option>
-            </SelectNative>
+              options={[
+                { value: "", label: "Qualquer status" },
+                { value: "OPEN", label: "Em aberto" },
+                { value: "WON", label: "Ganho" },
+                { value: "LOST", label: "Perdido" },
+                { value: "WON,LOST", label: "Ganho ou Perdido" },
+              ]}
+              onValueChange={(v) => set("dealStatus", v)}
+            />
             <p className="text-xs text-muted-foreground">
               {triggerType === "message_received"
                 ? "Dispara só quando o contato que enviou a mensagem tem negócio neste status. Use \"Ganho ou Perdido\" para pós-venda e reengajamento."
@@ -400,15 +473,17 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
           </p>
           <div className="space-y-2">
             <Label htmlFor="tc-call-status">Resultado da ligação (opcional)</Label>
-            <SelectNative
-              id="tc-call-status"
+            <DropdownGlass
+              triggerClassName="w-full"
+              placeholder="Qualquer ligação"
               value={String(value.status ?? "")}
-              onChange={(e) => set("status", e.target.value)}
-            >
-              <option value="">Qualquer ligação</option>
-              <option value="answered">Apenas atendidas</option>
-              <option value="missed">Apenas não atendidas</option>
-            </SelectNative>
+              options={[
+                { value: "", label: "Qualquer ligação" },
+                { value: "answered", label: "Apenas atendidas" },
+                { value: "missed", label: "Apenas não atendidas" },
+              ]}
+              onValueChange={(v) => set("status", v)}
+            />
           </div>
         </div>
       );
@@ -523,49 +598,47 @@ function ConversationTabulatedFields({
 
       <div className="space-y-2">
         <Label htmlFor="tc-tab-dept">Departamento (opcional)</Label>
-        <SelectNative
-          id="tc-tab-dept"
+        <DropdownGlass
+          triggerClassName="w-full"
+          placeholder="Qualquer departamento"
           value={departmentId}
-          onChange={(e) =>
+          options={[
+            { value: "", label: "Qualquer departamento" },
+            ...(departmentsQuery.data ?? []).map((d) => ({
+              value: d.id,
+              label: d.icon ? `${d.icon} ${d.name}` : d.name,
+            })),
+          ]}
+          onValueChange={(v) =>
             patch({
-              departmentId: e.target.value,
+              departmentId: v,
               tabulationId: "",
               tabulationLabel: "",
             })
           }
-        >
-          <option value="">Qualquer departamento</option>
-          {(departmentsQuery.data ?? []).map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.icon ? `${d.icon} ` : ""}
-              {d.name}
-            </option>
-          ))}
-        </SelectNative>
+        />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="tc-tab-node">Tabulação (opcional)</Label>
-        <SelectNative
-          id="tc-tab-node"
+        <DropdownGlass
+          triggerClassName="w-full"
+          placeholder="Qualquer tabulação do departamento"
           value={tabulationId}
           disabled={!departmentId}
-          onChange={(e) => {
-            const id = e.target.value;
+          searchable
+          options={[
+            { value: "", label: "Qualquer tabulação do departamento" },
+            ...flat.map((f) => ({ value: f.id, label: f.label })),
+          ]}
+          onValueChange={(id) => {
             const found = flat.find((f) => f.id === id);
             patch({
               tabulationId: id,
               tabulationLabel: found?.label ?? "",
             });
           }}
-        >
-          <option value="">Qualquer tabulação do departamento</option>
-          {flat.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.label}
-            </option>
-          ))}
-        </SelectNative>
+        />
         {!departmentId ? (
           <p className="text-xs text-muted-foreground">
             Escolha um departamento para listar as tabulações.
@@ -605,13 +678,16 @@ export function TriggerTypeSelect({
   return (
     <div className="space-y-2">
       <Label htmlFor="tc-type">Tipo de gatilho</Label>
-      <SelectNative id="tc-type" value={value} onChange={(e) => onChange(e.target.value)}>
-        {AUTOMATION_TRIGGER_TYPES.map((t) => (
-          <option key={t} value={t}>
-            {triggerTypeLabel(t)}
-          </option>
-        ))}
-      </SelectNative>
+      <DropdownGlass
+        triggerClassName="w-full"
+        value={value}
+        searchable
+        options={AUTOMATION_TRIGGER_TYPES.map((t) => ({
+          value: t,
+          label: triggerTypeLabel(t),
+        }))}
+        onValueChange={onChange}
+      />
     </div>
   );
 }

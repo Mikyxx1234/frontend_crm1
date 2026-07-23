@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
+import { useBulkOperation, isBulkOperationFinished } from "@/hooks/use-bulk-operation";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { toast } from "sonner";
 import {
@@ -76,6 +78,7 @@ import {
 } from "@/features/inbox-v2/extras";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
 import { hasInboxServerFilters } from "@/features/inbox-v2/api/types";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   useBoard,
   useDealDetail,
@@ -335,13 +338,24 @@ export default function InboxV2ClientPage({
   // conversa errada por engano ao marcar várias.
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // "Selecionar todas do filtro" — encerra TODAS as conversas do filtro atual
+  // (todas as páginas, não só as carregadas). O backend resolve os ids pelo
+  // mesmo `where` da lista e processa no leads-worker.
+  const [selectAllFilter, setSelectAllFilter] = useState(false);
+  const { confirm: confirmDialog, dialog: confirmDialogNode } = useConfirm();
+  // Encerramento em massa roda no leads-worker (async). Guardamos o id da
+  // BulkOperation pra pollar progresso e dar feedback ao terminar.
+  const [bulkOpId, setBulkOpId] = useState<string | null>(null);
 
   function exitSelectionMode() {
     setSelectionMode(false);
     setSelectedIds(new Set());
+    setSelectAllFilter(false);
   }
 
   function toggleSelectOne(id: string) {
+    // Qualquer toggle manual sai do modo "todas do filtro".
+    setSelectAllFilter(false);
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -354,6 +368,7 @@ export default function InboxV2ClientPage({
   // pra não arrastar ids que já não aparecem na lista atual.
   useEffect(() => {
     setSelectedIds(new Set());
+    setSelectAllFilter(false);
   }, [tab]);
 
   // Ao abrir uma nova conversa no mobile, volta sempre para o painel Chat.
@@ -397,9 +412,11 @@ export default function InboxV2ClientPage({
   const rows = useMemo(() => {
     let list = rawRows;
     if (windowState === "open") {
-      list = list.filter((r) => !isSessionExpired(r.lastInboundAt));
+      // "Aberta" = conversa não resolvida (OPEN/PENDING/SNOOZED).
+      list = list.filter((r) => r.status !== "RESOLVED");
     } else if (windowState === "closed") {
-      list = list.filter((r) => isSessionExpired(r.lastInboundAt));
+      // "Fechada" = conversa resolvida.
+      list = list.filter((r) => r.status === "RESOLVED");
     }
     const by = sortBy ?? "lastInboundAt";
     const sign = (sortOrder ?? "desc") === "asc" ? 1 : -1;
@@ -552,24 +569,85 @@ export default function InboxV2ClientPage({
   }
   const { features: convFeatures } = useConversationFeatures();
 
-  function handleBulkAction(action: "resolve" | "reopen") {
+  async function handleBulkAction(action: "resolve" | "reopen") {
     const ids = [...selectedIds];
-    if (ids.length === 0) return;
-    const count = ids.length;
+    // "Todas do filtro" só se aplica a Encerrar (reabrir em massa é bloqueado).
+    const useAllInFilter = selectAllFilter && action === "resolve";
+    if (!useAllInFilter && ids.length === 0) return;
+
+    const filterTotal = listData?.total ?? ids.length;
+
+    if (useAllInFilter) {
+      const ok = await confirmDialog({
+        title: `Encerrar ${filterTotal.toLocaleString("pt-BR")} conversa${filterTotal > 1 ? "s" : ""}?`,
+        description:
+          "Todas as conversas do filtro atual (todas as páginas) serão encerradas em segundo plano pelo worker. Esta ação não pode ser desfeita em massa.",
+        confirmLabel: "Encerrar todas",
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+
+    const count = useAllInFilter ? filterTotal : ids.length;
     bulkAction.mutate(
-      { ids, action },
+      useAllInFilter
+        ? {
+            ids: [],
+            action,
+            allInFilter: true,
+            tab,
+            search: debouncedSearch,
+            filters: serverFilters as Record<string, unknown>,
+          }
+        : { ids, action },
       {
-        onSuccess: () => {
-          toast.success(
-            action === "resolve"
-              ? `${count} conversa${count > 1 ? "s" : ""} encerrada${count > 1 ? "s" : ""}`
-              : `${count} conversa${count > 1 ? "s" : ""} reaberta${count > 1 ? "s" : ""}`,
-          );
+        onSuccess: (result) => {
+          // Encerrar roda no worker (async): guarda o operationId pra pollar
+          // e mostra feedback de "em segundo plano". O toast final (sucesso/
+          // parcial/falha) vem do efeito de polling abaixo.
+          if (result?.operationId) {
+            setBulkOpId(result.operationId);
+            const total = result.total ?? count;
+            toast.info(
+              `Encerrando ${total} conversa${total > 1 ? "s" : ""} em segundo plano…`,
+            );
+            exitSelectionMode();
+            return;
+          }
+          // Sem operationId → nada a processar (já encerradas / exigem tabulação).
+          if (action === "resolve") {
+            toast.info("Nenhuma conversa para encerrar.");
+          } else {
+            toast.success(
+              `${count} conversa${count > 1 ? "s" : ""} reaberta${count > 1 ? "s" : ""}`,
+            );
+          }
           exitSelectionMode();
         },
       },
     );
   }
+
+  // ── Polling do encerramento em massa (leads-worker) ─────────────
+  const qc = useQueryClient();
+  const bulkOp = useBulkOperation(bulkOpId);
+  const bulkOpStatus = bulkOp.data?.status;
+  useEffect(() => {
+    if (!bulkOpId || !isBulkOperationFinished(bulkOpStatus)) return;
+    const d = bulkOp.data;
+    if (d) {
+      if (bulkOpStatus === "COMPLETED") {
+        toast.success(`${d.succeeded} conversa${d.succeeded > 1 ? "s" : ""} encerrada${d.succeeded > 1 ? "s" : ""}`);
+      } else if (bulkOpStatus === "PARTIAL") {
+        toast.warning(`${d.succeeded} encerrada(s), ${d.failed} falharam`);
+      } else if (bulkOpStatus === "FAILED") {
+        toast.error("Falha ao encerrar as conversas em massa.");
+      }
+    }
+    qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+    qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
+    setBulkOpId(null);
+  }, [bulkOpId, bulkOpStatus, bulkOp.data, qc]);
 
   // Seletor de canal: lista de WhatsApps CONNECTED da org + estado
   // persistido por conversa. Quando a org tem 1 só canal, o widget não
@@ -796,12 +874,23 @@ export default function InboxV2ClientPage({
           {soundToggleNode}
           {selectionToggleNode}
           <InboxFilterButton value={filters} onChange={setFilters} />
+          {confirmDialogNode}
         </>
       }
       selectionMode={selectionMode}
       selectedIds={selectedIds}
       onToggleSelectOne={toggleSelectOne}
-      onSelectAllChange={(ids) => setSelectedIds(new Set(ids))}
+      onSelectAllChange={(ids) => {
+        setSelectAllFilter(false);
+        setSelectedIds(new Set(ids));
+      }}
+      totalCount={listData?.total}
+      selectAllFilter={selectAllFilter}
+      onSelectAllFilterChange={(v) => {
+        setSelectAllFilter(v);
+        // Ao ativar, marca todas as carregadas (mantém o master check ✓).
+        if (v) setSelectedIds(new Set(conversationCards.map((c) => c.id)));
+      }}
       bulkActionsSlot={bulkActionsNode}
       tabsOverride={TABS.map((t) => ({
         label: t.label,

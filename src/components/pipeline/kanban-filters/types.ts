@@ -68,6 +68,10 @@ export type AdvancedDealFilters = {
   contactCustomFields?: CustomFieldFilter[];
   valueFrom?: number | null;
   valueTo?: number | null;
+  /** Conversa do contato: "open" = aberta (não resolvida) / "closed" = resolvida. */
+  conversationStatus?: "open" | "closed";
+  /** Direção da última mensagem: "out" = nossa / "in" = do cliente. */
+  lastMessageDirection?: "in" | "out";
 };
 
 export type FilterOptionsResponse = {
@@ -145,6 +149,8 @@ export function countActiveFilters(f: AdvancedDealFilters | null | undefined): n
   if (f.dealCustomFields?.length) n += f.dealCustomFields.length;
   if (f.contactCustomFields?.length) n += f.contactCustomFields.length;
   if (f.valueFrom != null || f.valueTo != null) n++;
+  if (f.conversationStatus) n++;
+  if (f.lastMessageDirection) n++;
   return n;
 }
 

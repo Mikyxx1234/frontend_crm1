@@ -111,7 +111,8 @@ function uiDelayToMs(duration: number, unit: string): number {
 function VariableShortcutHint() {
   return (
     <p className="text-[11px] text-muted-foreground">
-      Atalho: digite <span className="font-mono">[</span> para abrir campos e variáveis.
+      Atalho: digite <span className="font-mono">{"{"}</span> ou{" "}
+      <span className="font-mono">[</span> para abrir campos e variáveis.
     </p>
   );
 }
@@ -241,23 +242,30 @@ function VariableShortcutTextarea({
   }, [options, query]);
 
   const refreshShortcutState = (el: HTMLTextAreaElement) => {
+    const close = () => {
+      setOpen(false);
+      setQuery("");
+      setStartPos(null);
+    };
     const caret = el.selectionStart ?? el.value.length;
     const left = el.value.slice(0, caret);
-    const bracketStart = left.lastIndexOf("[");
-    if (bracketStart < 0) {
-      setOpen(false);
-      setQuery("");
-      setStartPos(null);
-      return;
+    // Gatilho: "[" (legado) ou "{" — como os tokens são {{...}}, digitar "{"
+    // é o mais intuitivo. Usa o marcador mais próximo do cursor.
+    const triggerStart = Math.max(left.lastIndexOf("["), left.lastIndexOf("{"));
+    if (triggerStart < 0) return close();
+
+    let start = triggerStart;
+    const typed = left.slice(triggerStart + 1);
+    if (typed.includes("\n")) return close();
+    if (left[triggerStart] === "{") {
+      // Absorve a sequência de "{" já digitada (ex.: "{{") para o token
+      // inserido não duplicar as chaves de abertura.
+      while (start > 0 && left[start - 1] === "{") start -= 1;
+      if (typed.includes("}")) return close();
+    } else if (typed.includes("]")) {
+      return close();
     }
-    const typed = left.slice(bracketStart + 1);
-    if (typed.includes("]") || typed.includes("\n")) {
-      setOpen(false);
-      setQuery("");
-      setStartPos(null);
-      return;
-    }
-    setStartPos(bracketStart);
+    setStartPos(start);
     setQuery(typed);
     setOpen(true);
   };

@@ -63,6 +63,7 @@ export async function fetchTabCounts(): Promise<TabCounts> {
   if (!res.ok) {
     return {
       todos: 0,
+      abertas: 0,
       entrada: 0,
       esperando: 0,
       respondidas: 0,

@@ -36,6 +36,7 @@ import { apiUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import {
   WEBHOOK_VARIABLE_GROUPS,
@@ -55,6 +56,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export type WebhookHeaderEntry = { key: string; value: string };
+export type WebhookQueryParamEntry = { key: string; value: string };
 
 type Draft = Record<string, unknown>;
 
@@ -93,12 +95,42 @@ function readHeadersFromDraft(draft: Draft): WebhookHeaderEntry[] {
   return [];
 }
 
+// Aceita `queryParams` como array `[{key,value}]` (formato canônico da UI)
+// ou como Record<string,string> (compat com configs escritas à mão). Configs
+// legadas sem `queryParams` retornam array vazio.
+function readQueryParamsFromDraft(draft: Draft): WebhookQueryParamEntry[] {
+  const raw = draft.queryParams;
+  if (Array.isArray(raw)) {
+    return raw
+      .filter(
+        (p): p is WebhookQueryParamEntry =>
+          p !== null &&
+          typeof p === "object" &&
+          "key" in p &&
+          "value" in p &&
+          typeof (p as { key: unknown }).key === "string" &&
+          typeof (p as { value: unknown }).value === "string",
+      )
+      .map((p) => ({ key: p.key, value: p.value }));
+  }
+  if (raw && typeof raw === "object") {
+    return Object.entries(raw as Record<string, unknown>)
+      .filter(([, v]) => typeof v === "string")
+      .map(([k, v]) => ({ key: k, value: String(v) }));
+  }
+  return [];
+}
+
 export function WebhookStepConfig({ draft, setDraft }: Props) {
   const url = String(draft.url ?? "");
   const method = String(draft.method ?? "POST");
   const bodyFromDraft = String(draft.body ?? "");
   const headers = React.useMemo<WebhookHeaderEntry[]>(
     () => readHeadersFromDraft(draft),
+    [draft],
+  );
+  const queryParams = React.useMemo<WebhookQueryParamEntry[]>(
+    () => readQueryParamsFromDraft(draft),
     [draft],
   );
 
@@ -209,10 +241,12 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
   // ─── Headers/URL state ───────────────────────────────────
   const urlRef = React.useRef<HTMLInputElement | null>(null);
   const headerValueRefs = React.useRef<Record<number, HTMLInputElement | null>>({});
+  const queryParamValueRefs = React.useRef<Record<number, HTMLInputElement | null>>({});
 
   type FocusTarget =
     | { type: "url" }
-    | { type: "header-value"; index: number };
+    | { type: "header-value"; index: number }
+    | { type: "query-param-value"; index: number };
   const [focusTarget, setFocusTarget] = React.useState<FocusTarget>({ type: "url" });
 
   const setHeaders = (next: WebhookHeaderEntry[]) => {
@@ -229,6 +263,20 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
 
   const removeHeader = (index: number) => {
     setHeaders(headers.filter((_, i) => i !== index));
+  };
+
+  // ─── Query params (mesma mecânica dos headers) ──────────
+  const setQueryParams = (next: WebhookQueryParamEntry[]) => {
+    setDraft((d) => ({ ...d, queryParams: next }));
+  };
+  const updateQueryParam = (index: number, patch: Partial<WebhookQueryParamEntry>) => {
+    setQueryParams(queryParams.map((p, i) => (i === index ? { ...p, ...patch } : p)));
+  };
+  const addQueryParam = () => {
+    setQueryParams([...queryParams, { key: "", value: "" }]);
+  };
+  const removeQueryParam = (index: number) => {
+    setQueryParams(queryParams.filter((_, i) => i !== index));
   };
 
   const insertTokenAt = (target: FocusTarget, token: string) => {
@@ -258,11 +306,30 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
         const pos = start + token.length;
         el?.setSelectionRange(pos, pos);
       });
+      return;
+    }
+    if (target.type === "query-param-value") {
+      const i = target.index;
+      const el = queryParamValueRefs.current[i];
+      const current = queryParams[i]?.value ?? "";
+      const start = el?.selectionStart ?? current.length;
+      const end = el?.selectionEnd ?? current.length;
+      const next = current.slice(0, start) + token + current.slice(end);
+      updateQueryParam(i, { value: next });
+      requestAnimationFrame(() => {
+        el?.focus();
+        const pos = start + token.length;
+        el?.setSelectionRange(pos, pos);
+      });
     }
   };
 
   const focusLabel: string =
-    focusTarget.type === "url" ? "URL" : `Header #${focusTarget.index + 1}`;
+    focusTarget.type === "url"
+      ? "URL"
+      : focusTarget.type === "header-value"
+        ? `Header #${focusTarget.index + 1}`
+        : `Parâmetro #${focusTarget.index + 1}`;
 
   // ─── Body builder handlers ───────────────────────────────
   const addEntry = (preset?: Partial<WebhookBodyEntry>) => {
@@ -408,67 +475,150 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
         />
       </div>
 
-      {/* Headers */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Headers</Label>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1 px-2 text-xs"
-            onClick={addHeader}
-          >
-            <Plus className="size-3.5" />
-            Adicionar
-          </Button>
+      {/* Configurações avançadas — abas Cabeçalho / Parâmetros / Corpo
+          (layout inspirado no editor de webhook do Digisac). O picker de
+          variáveis lá embaixo continua servindo URL + qualquer value focado
+          dentro das abas de Cabeçalho e Parâmetros. */}
+      <Tabs defaultValue="headers" className="space-y-3">
+        <div className="space-y-2">
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Configurações avançadas
+          </Label>
+          <TabsList>
+            <TabsTrigger value="headers">Cabeçalho</TabsTrigger>
+            <TabsTrigger value="params">Parâmetros</TabsTrigger>
+            <TabsTrigger value="body">Corpo</TabsTrigger>
+          </TabsList>
         </div>
-        {headers.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
-            Nenhum header customizado.{" "}
-            <code className="rounded bg-muted px-1">Content-Type: application/json</code> é
-            setado automaticamente quando há body.
-          </p>
-        ) : (
-          <div className="space-y-1.5">
-            {headers.map((h, i) => (
-              <div key={i} className="flex items-start gap-1.5">
-                <Input
-                  value={h.key}
-                  onChange={(e) => updateHeader(i, { key: e.target.value })}
-                  placeholder="Authorization"
-                  className="font-mono text-xs"
-                  autoComplete="off"
-                />
-                <Input
-                  ref={(el) => {
-                    headerValueRefs.current[i] = el;
-                  }}
-                  value={h.value}
-                  onChange={(e) => updateHeader(i, { value: e.target.value })}
-                  onFocus={() => setFocusTarget({ type: "header-value", index: i })}
-                  placeholder="Bearer ..."
-                  className="font-mono text-xs"
-                  autoComplete="off"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => removeHeader(i)}
-                  aria-label={`Remover header ${h.key || i + 1}`}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Body builder */}
-      <div className="space-y-3">
+        {/* ─── Cabeçalho ─────────────────────────────────── */}
+        <TabsContent value="headers" className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Headers</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              onClick={addHeader}
+            >
+              <Plus className="size-3.5" />
+              Adicionar
+            </Button>
+          </div>
+          {headers.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+              Nenhum header customizado.{" "}
+              <code className="rounded bg-muted px-1">Content-Type: application/json</code> é
+              setado automaticamente quando há body.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {headers.map((h, i) => (
+                <div key={i} className="flex items-start gap-1.5">
+                  <Input
+                    value={h.key}
+                    onChange={(e) => updateHeader(i, { key: e.target.value })}
+                    placeholder="Authorization"
+                    className="font-mono text-xs"
+                    autoComplete="off"
+                  />
+                  <Input
+                    ref={(el) => {
+                      headerValueRefs.current[i] = el;
+                    }}
+                    value={h.value}
+                    onChange={(e) => updateHeader(i, { value: e.target.value })}
+                    onFocus={() => setFocusTarget({ type: "header-value", index: i })}
+                    placeholder="Bearer ..."
+                    className="font-mono text-xs"
+                    autoComplete="off"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeHeader(i)}
+                    aria-label={`Remover header ${h.key || i + 1}`}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ─── Parâmetros de query ────────────────────────
+            Persistidos em `draft.queryParams` (array). O executor
+            interpola os values com `interpolateWebhookString` e anexa
+            à URL via `URLSearchParams` antes do fetch. */}
+        <TabsContent value="params" className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Parâmetros (query string)</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              onClick={addQueryParam}
+            >
+              <Plus className="size-3.5" />
+              Adicionar
+            </Button>
+          </div>
+          {queryParams.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+              Nenhum parâmetro. Se a URL já tiver query (ex.:{" "}
+              <code className="rounded bg-muted px-1">?tenant=abc</code>), os parâmetros
+              adicionados aqui são anexados sem sobrescrever.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {queryParams.map((p, i) => (
+                <div key={i} className="flex items-start gap-1.5">
+                  <Input
+                    value={p.key}
+                    onChange={(e) => updateQueryParam(i, { key: e.target.value })}
+                    placeholder="tenant"
+                    className="font-mono text-xs"
+                    autoComplete="off"
+                  />
+                  <Input
+                    ref={(el) => {
+                      queryParamValueRefs.current[i] = el;
+                    }}
+                    value={p.value}
+                    onChange={(e) => updateQueryParam(i, { value: e.target.value })}
+                    onFocus={() => setFocusTarget({ type: "query-param-value", index: i })}
+                    placeholder="{{contact.id}}"
+                    className="font-mono text-xs"
+                    autoComplete="off"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeQueryParam(i)}
+                    aria-label={`Remover parâmetro ${p.key || i + 1}`}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            Use tokens como <code className="rounded bg-muted px-1">{"{{contact.id}}"}</code>
+            {" "}ou <code className="rounded bg-muted px-1">{"{{deal.id}}"}</code> no valor —
+            eles são interpolados em runtime.
+          </p>
+        </TabsContent>
+
+        {/* ─── Corpo (construtor visual) ─────────────────── */}
+        <TabsContent value="body" className="space-y-3">
         <div className="space-y-1">
           <Label>Body do Webhook</Label>
           <p className="text-[11px] text-muted-foreground">
@@ -618,9 +768,11 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
             {previewJson}
           </pre>
         </div>
-      </div>
+        </TabsContent>
+      </Tabs>
 
-      {/* Picker — agora só pra URL e Headers (Body é construído visualmente) */}
+      {/* Picker — atalha tokens pra URL, Cabeçalho ou Parâmetros
+          (Body usa o construtor visual acima). */}
       <VariablePickerForUrlAndHeaders
         focusLabel={focusLabel}
         options={allOptions}

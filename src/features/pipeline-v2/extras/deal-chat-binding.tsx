@@ -20,7 +20,7 @@ import { apiUrl } from "@/lib/api";
 import { avatarInitials } from "@/lib/avatar";
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
-import { DaySeparator, ConnectionDivider, ConversationClosedMarker, MessageBubble, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { DaySeparator, ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, type Message as BubbleMessage } from "@/components/crm/message-bubble";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
 import { formatConnectionLabel, type ConnectionRef } from "@/lib/connection-label";
@@ -546,7 +546,24 @@ export function useDealChatBinding(params: {
     );
     const showConnSwitches = distinctChannels.size >= 2;
     let lastChannelId: string | null = null;
-    const bubbleNodes = bubbles.map((b) => {
+    const bubbleNodes = bubbles.map((b, index) => {
+      // Separador de ticket sintético (?history=1) — mesma lógica do ChatArea
+      // do inbox. Sem isto o item vira uma BOLHA VAZIA no chat do deal.
+      if (b.messageType === "ticket-separator" && b.ticketInfo) {
+        return (
+          <TicketDivider
+            key={b.id || `sep-${index}`}
+            number={b.ticketInfo.number}
+            closedAt={b.ticketInfo.closedAt}
+            isCurrent={b.ticketInfo.isCurrent}
+          />
+        );
+      }
+      // Só renderiza bolhas reais (incoming/outgoing). Descarta itens
+      // sintéticos/desconhecidos que, sem conteúdo, apareciam em branco.
+      if (b.type !== "incoming" && b.type !== "outgoing") {
+        return null;
+      }
       const dayLabel = formatDayLabel(b.createdAt);
       const showSeparator = dayLabel && dayLabel !== lastDayLabel;
       if (showSeparator) lastDayLabel = dayLabel;

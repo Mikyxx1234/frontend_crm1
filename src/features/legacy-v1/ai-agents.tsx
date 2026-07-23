@@ -32,6 +32,7 @@ import {
   type PilotingValue,
 } from "@/components/ai-agents/piloting-panel";
 import { ProductPolicyPanel } from "@/components/ai-agents/product-policy-panel";
+import { StudentDataPanel } from "@/components/ai-agents/student-data-panel";
 import { UsagePanel } from "@/components/ai-agents/usage-panel";
 import {
   normalizeBusinessHours,
@@ -211,6 +212,8 @@ export default function AIAgentsPage({
           </div>
         </div>
       )}
+
+      <StudentDataPanel />
 
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

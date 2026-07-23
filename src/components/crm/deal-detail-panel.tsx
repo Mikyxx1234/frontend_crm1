@@ -273,8 +273,8 @@ interface DealDetailPanelProps {
 }
 
 const TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: number }>; count?: number }[] = [
-  { id: "conversa", label: "Conversa", icon: IconMessageCircle, count: 1 },
-  { id: "atividades", label: "Tarefas", icon: IconChecklist, count: 3 },
+  { id: "conversa", label: "Conversa", icon: IconMessageCircle },
+  { id: "atividades", label: "Tarefas", icon: IconChecklist },
   { id: "notas", label: "Notas", icon: IconNote },
   { id: "timeline", label: "Timeline", icon: IconClock },
   { id: "chamadas", label: "Chamadas", icon: IconPhone },

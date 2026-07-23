@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
+import { useBulkOperation, isBulkOperationFinished } from "@/hooks/use-bulk-operation";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { toast } from "sonner";
 import {
@@ -335,6 +337,9 @@ export default function InboxV2ClientPage({
   // conversa errada por engano ao marcar várias.
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Encerramento em massa roda no leads-worker (async). Guardamos o id da
+  // BulkOperation pra pollar progresso e dar feedback ao terminar.
+  const [bulkOpId, setBulkOpId] = useState<string | null>(null);
 
   function exitSelectionMode() {
     setSelectionMode(false);
@@ -559,17 +564,53 @@ export default function InboxV2ClientPage({
     bulkAction.mutate(
       { ids, action },
       {
-        onSuccess: () => {
-          toast.success(
-            action === "resolve"
-              ? `${count} conversa${count > 1 ? "s" : ""} encerrada${count > 1 ? "s" : ""}`
-              : `${count} conversa${count > 1 ? "s" : ""} reaberta${count > 1 ? "s" : ""}`,
-          );
+        onSuccess: (result) => {
+          // Encerrar roda no worker (async): guarda o operationId pra pollar
+          // e mostra feedback de "em segundo plano". O toast final (sucesso/
+          // parcial/falha) vem do efeito de polling abaixo.
+          if (result?.operationId) {
+            setBulkOpId(result.operationId);
+            const total = result.total ?? count;
+            toast.info(
+              `Encerrando ${total} conversa${total > 1 ? "s" : ""} em segundo plano…`,
+            );
+            exitSelectionMode();
+            return;
+          }
+          // Sem operationId → nada a processar (já encerradas / exigem tabulação).
+          if (action === "resolve") {
+            toast.info("Nenhuma conversa para encerrar.");
+          } else {
+            toast.success(
+              `${count} conversa${count > 1 ? "s" : ""} reaberta${count > 1 ? "s" : ""}`,
+            );
+          }
           exitSelectionMode();
         },
       },
     );
   }
+
+  // ── Polling do encerramento em massa (leads-worker) ─────────────
+  const qc = useQueryClient();
+  const bulkOp = useBulkOperation(bulkOpId);
+  const bulkOpStatus = bulkOp.data?.status;
+  useEffect(() => {
+    if (!bulkOpId || !isBulkOperationFinished(bulkOpStatus)) return;
+    const d = bulkOp.data;
+    if (d) {
+      if (bulkOpStatus === "COMPLETED") {
+        toast.success(`${d.succeeded} conversa${d.succeeded > 1 ? "s" : ""} encerrada${d.succeeded > 1 ? "s" : ""}`);
+      } else if (bulkOpStatus === "PARTIAL") {
+        toast.warning(`${d.succeeded} encerrada(s), ${d.failed} falharam`);
+      } else if (bulkOpStatus === "FAILED") {
+        toast.error("Falha ao encerrar as conversas em massa.");
+      }
+    }
+    qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+    qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
+    setBulkOpId(null);
+  }, [bulkOpId, bulkOpStatus, bulkOp.data, qc]);
 
   // Seletor de canal: lista de WhatsApps CONNECTED da org + estado
   // persistido por conversa. Quando a org tem 1 só canal, o widget não

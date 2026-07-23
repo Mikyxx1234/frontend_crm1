@@ -422,8 +422,8 @@ export function ConversationColumn({
             />
             <span className="truncate font-display text-[12px] font-semibold text-[var(--text-secondary)]">
               {selectedIds?.size
-                ? `${selectedIds.size} selecionada${selectedIds.size > 1 ? "s" : ""}`
-                : "Selecionar todas"}
+                ? `${selectedIds.size} de ${displayed.length} selecionada${selectedIds.size > 1 ? "s" : ""}`
+                : `Selecionar todas (${displayed.length})`}
             </span>
           </label>
           {bulkActionsSlot}

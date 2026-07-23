@@ -9,8 +9,10 @@
  * que digitar/rolar não arraste nem dê pan/zoom no React Flow.
  */
 import { useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass"
 import { InputGlass } from "@/components/crm/input-glass"
+import { apiUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import {
   BOOL_OPTS,
@@ -118,6 +120,9 @@ function Field({
           />
         </Labeled>
       )
+
+    case "media":
+      return <MediaField label={field.label} config={config} onChange={onChange} />
 
     case "tag":
       return <TagInput label={field.label} optional={field.optional} value={str(config[field.key])} onChange={(v) => set(field.key, v)} />
@@ -611,6 +616,116 @@ function TemplatePreview({
           Os botões aparecem no card — arraste cada um para o próximo passo.
         </p>
       )}
+    </div>
+  )
+}
+
+// ───────────────────────────── Mídia (upload + URL) ─────────────────────────────
+
+const MEDIA_ACCEPT: Record<string, string> = {
+  image: "image/jpeg,image/png,image/webp,image/gif",
+  video: "video/mp4,video/webm",
+  audio: "audio/ogg,audio/mpeg,audio/mp4,audio/mp3",
+  document:
+    "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain",
+}
+
+/**
+ * Campo de mídia da automação: anexar arquivo direto (upload p/
+ * `/api/uploads/automation-media`) OU colar uma URL. Grava em
+ * `config.mediaUrl` e guarda `config.uploadedFileName` p/ mostrar o nome.
+ */
+function MediaField({ label, config, onChange }: { label: string; config: Cfg; onChange: (next: Cfg) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const mediaType = str(config.mediaType) || "image"
+  const mediaUrl = str(config.mediaUrl)
+  const uploadedFileName = str(config.uploadedFileName)
+  const hasFile = mediaUrl.startsWith("/uploads/")
+
+  const patch = (p: Cfg) => onChange({ ...config, ...p })
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 16 * 1024 * 1024) {
+      toast.warning("Arquivo excede o limite de 16 MB.")
+      return
+    }
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      const res = await fetch(apiUrl("/api/uploads/automation-media"), { method: "POST", body: form })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.message ?? "Erro ao enviar arquivo.")
+        return
+      }
+      patch({ mediaUrl: data.url, uploadedFileName: data.fileName })
+    } catch {
+      toast.error("Erro de rede ao enviar arquivo.")
+    } finally {
+      setUploading(false)
+      if (inputRef.current) inputRef.current.value = ""
+    }
+  }
+
+  return (
+    <div className="cfg-field">
+      <span className="cfg-label">{label}</span>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept={MEDIA_ACCEPT[mediaType] ?? "*/*"}
+        onChange={onFile}
+        style={{ display: "none" }}
+      />
+
+      <button
+        type="button"
+        className="cfg-add nodrag"
+        disabled={uploading}
+        onClick={() => inputRef.current?.click()}
+      >
+        {uploading ? "Enviando…" : "📎 Anexar arquivo do computador"}
+      </button>
+
+      {hasFile && (
+        <div className="cfg-row" style={{ alignItems: "center", marginTop: 6 }}>
+          <span className="cfg-hint" style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            ✓ {uploadedFileName || "arquivo anexado"}
+          </span>
+          <button
+            type="button"
+            className="cfg-x nodrag"
+            title="Remover"
+            onClick={() => patch({ mediaUrl: "", uploadedFileName: "" })}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {mediaType === "image" && hasFile && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={mediaUrl}
+          alt="Prévia"
+          style={{ maxHeight: 120, width: "100%", objectFit: "contain", marginTop: 6, borderRadius: 6 }}
+        />
+      )}
+
+      <span className="cfg-hint" style={{ marginTop: 6 }}>ou cole uma URL:</span>
+      <InputGlass
+        className="nodrag"
+        value={hasFile ? "" : mediaUrl}
+        placeholder="https://…"
+        disabled={hasFile}
+        onChange={(e) => patch({ mediaUrl: e.target.value, uploadedFileName: "" })}
+      />
     </div>
   )
 }

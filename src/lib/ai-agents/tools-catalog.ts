@@ -61,6 +61,14 @@ export const TOOLS_CATALOG: ToolDescriptor[] = [
     defaultForArchetypes: ["SDR", "VENDEDOR"],
   },
   {
+    id: "consultar_matricula",
+    label: "Consultar matrícula do aluno",
+    description:
+      "Consulta os dados acadêmicos do aluno em conversa (curso, polo, série, situação da matrícula, ciclo) a partir do relatório de matriculados subido em 'Dados dos alunos'. Casa por telefone/e-mail do contato. Essencial para atendimento acadêmico personalizado.",
+    category: "crm",
+    defaultForArchetypes: ["ATENDIMENTO", "SUPORTE"],
+  },
+  {
     id: "send_whatsapp_template",
     label: "Enviar template WhatsApp",
     description:

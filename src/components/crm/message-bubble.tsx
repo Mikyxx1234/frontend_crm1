@@ -352,6 +352,11 @@ export interface MessageBubbleProps {
   /** Foto do agente logado (User.avatarUrl). Sobrepõe as iniciais no token
    *  outgoing quando a bolha representa o próprio agente. */
   agentImageUrl?: string | null
+  /** Mapa fresco `nome (lowercase) → avatarUrl` (GET /api/users). Fallback
+   *  confiável quando `senderImageUrl` (match server-side) vem nulo ou a
+   *  sessão está com a foto defasada — garante paridade com o avatar do
+   *  kanban (que lê `avatarUrl` fresco por usuário). */
+  senderPhotoByName?: Map<string, string | null> | null
   className?: string
   /** Esta nota está fixada na conversa? Exibe indicador âmbar. */
   isPinned?: boolean
@@ -1208,6 +1213,7 @@ export function MessageBubble({
   message,
   agentInitials,
   agentImageUrl,
+  senderPhotoByName,
   className,
   isPinned,
   onPinNote,
@@ -1431,7 +1437,16 @@ export function MessageBubble({
                       message.senderInitials === agentInitials
                         ? agentImageUrl
                         : null
-                    const photo = message.senderImageUrl || selfPhoto
+                    // Foto fresca por nome (mesma fonte do avatar do kanban):
+                    // cobre casos em que o match server-side (`senderImageUrl`)
+                    // falha ou a sessão está com a foto defasada.
+                    const byName =
+                      senderPhotoByName && message.senderName
+                        ? senderPhotoByName.get(
+                            message.senderName.trim().toLowerCase(),
+                          ) ?? null
+                        : null
+                    const photo = message.senderImageUrl || byName || selfPhoto
                     if (isBot) return <IconRobot size={18} />
                     if (photo) {
                       return (

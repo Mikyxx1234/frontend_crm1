@@ -120,6 +120,8 @@ export interface TeamUser {
   id: string;
   name: string;
   email: string;
+  /** Foto de perfil (User.avatarUrl) — o backend já retorna em GET /api/users. */
+  avatarUrl?: string | null;
 }
 
 /** GET /api/users */

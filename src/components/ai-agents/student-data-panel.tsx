@@ -132,9 +132,11 @@ export function StudentDataPanel() {
             <h3 className="text-sm font-semibold">Dados dos alunos (matriculados)</h3>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
               Suba o relatório de matriculados (Excel/CSV). O agente usa esses
-              dados na tool <b>Consultar matrícula do aluno</b> para responder de
-              forma personalizada (curso, polo, situação), casando por
-              telefone/e-mail do contato. Cada upload substitui a base anterior.
+              dados como <b>contexto interno</b> (curso, polo, situação) para
+              atender e rotear melhor, casando por telefone/e-mail/CPF do
+              contato. Por segurança, o agente <b>não divulga</b> dados pessoais
+              ao aluno — se ele pedir informação específica, é transferido para
+              um consultor. Cada upload substitui a base anterior.
             </p>
             {isLoading ? (
               <p className="mt-2 text-[12px] text-muted-foreground">Carregando…</p>

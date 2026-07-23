@@ -620,14 +620,6 @@ export function ChatArea({
         data-chat-composer-footer
         className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1.5 backdrop-blur-md"
       >
-      {/* Nº da conversa (ticket) no canto inferior esquerdo, em verde —
-          estilo Kommo. Identificador fixo pra referência/controle. */}
-      {conversationNumber != null && (
-        <div className="px-6 pb-1 font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400 max-md:px-3">
-          Conversa Nº {conversationNumber}
-        </div>
-      )}
-
       {showSessionAlert && <SessionAlert onUseTemplate={onUseTemplate} />}
 
       {composerSlot ?? (
@@ -683,6 +675,14 @@ export function ChatArea({
             </button>
           </TooltipGlass>
         </form>
+      )}
+
+      {/* Nº da conversa (ticket) ABAIXO do composer, canto inferior esquerdo,
+          em verde — estilo Kommo. Identificador fixo pra referência/controle. */}
+      {conversationNumber != null && (
+        <div className="px-6 pt-1 font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400 max-md:px-3">
+          Conversa Nº {conversationNumber}
+        </div>
       )}
       </div>
         </>

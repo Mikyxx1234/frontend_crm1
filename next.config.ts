@@ -81,13 +81,9 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
-    // 20mb: uploads de mídia até 16MB + overhead do multipart/form-data +
-    // margem de segurança pro buffer do middleware (evita truncar o body
-    // silenciosamente antes de chegar na rota de upload).
     serverActions: {
-      bodySizeLimit: "20mb",
+      bodySizeLimit: "2mb",
     },
-    middlewareClientMaxBodySize: "20mb",
   },
   /**
    * REWRITES — Frontend separado.

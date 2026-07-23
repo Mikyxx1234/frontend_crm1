@@ -192,6 +192,13 @@ export interface BulkActionResult {
   updated?: number;
   /** IDs pulados por regra do backend (ex.: dept exige tabulacao). */
   skipped?: string[];
+  /**
+   * Presente quando a acao roda de forma ASSINCRONA no leads-worker
+   * (encerramento em massa). O frontend pollar `/api/bulk-operations/[id]`.
+   */
+  operationId?: string;
+  /** Total de conversas que serao processadas pelo worker (modo async). */
+  total?: number;
 }
 
 /** POST /api/conversations/bulk */

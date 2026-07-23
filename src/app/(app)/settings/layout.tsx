@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { IconLayoutSidebarLeftExpand } from "@tabler/icons-react";
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
@@ -38,7 +38,7 @@ export default function SettingsLayout({
   if (isMobile && isHub) {
     return (
       <div className="v2-screen flex min-w-0 flex-col overflow-hidden p-3 sm:p-4">
-        <SettingsSidebar open onClose={() => {}} hideCollapse />
+        <SettingsSidebar open />
       </div>
     );
   }
@@ -68,25 +68,28 @@ export default function SettingsLayout({
           coluna colapsa a 0. Dentro, a própria sidebar aplica translate-x e
           fade pra transição parecer com o grid. */}
       <div className="relative min-w-0 overflow-hidden">
-        <SettingsSidebar open={open} onClose={() => setOpen(false)} />
+        <SettingsSidebar open={open} />
       </div>
 
       <div className="relative flex min-w-0 flex-col overflow-hidden">
-        {/* Botão flutuante para reabrir a sidebar */}
-        {!open && (
-          <div className="pointer-events-none absolute left-0 top-1/2 z-10 -translate-y-1/2 pl-1">
-            <TooltipGlass label="Mostrar menu" side="right">
-              <button
-                type="button"
-                onClick={() => setOpen(true)}
-                aria-label="Expandir menu de configurações"
-                className="pointer-events-auto flex h-9 w-6 items-center justify-center rounded-r-[var(--radius-md)] border border-l-0 border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-colors hover:text-[var(--brand-primary)]"
-              >
-                <IconLayoutSidebarLeftExpand size={16} />
-              </button>
-            </TooltipGlass>
-          </div>
-        )}
+        {/* Abinha recolher/expandir — MESMO botão do aside (chevron):
+            fica na costura entre a lista e o painel. `<` recolhe, `>` reabre. */}
+        <div className="pointer-events-none absolute left-0 top-1/2 z-10 -translate-y-1/2">
+          <TooltipGlass label={open ? "Recolher menu" : "Mostrar menu"} side="right">
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? "Recolher menu de configurações" : "Expandir menu de configurações"}
+              className="pointer-events-auto flex h-14 w-6 items-center justify-center rounded-r-[var(--radius-md)] border border-l-0 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow)] backdrop-blur-md transition-all hover:bg-[var(--brand-primary)] hover:text-white"
+            >
+              {open ? (
+                <IconChevronLeft size={14} strokeWidth={3} />
+              ) : (
+                <IconChevronRight size={14} strokeWidth={3} />
+              )}
+            </button>
+          </TooltipGlass>
+        </div>
 
         <SettingsSlide>{children}</SettingsSlide>
       </div>

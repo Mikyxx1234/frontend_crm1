@@ -23,6 +23,7 @@ type Common = {
 
 export type EditorField =
   | (Common & { kind: "text" })
+  | (Common & { kind: "media" })
   | (Common & { kind: "tag" })
   | (Common & { kind: "textarea" })
   | (Common & { kind: "number"; min?: number; step?: number; suffix?: string })
@@ -94,7 +95,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   ],
   send_whatsapp_media: [
     { kind: "select", key: "mediaType", label: "Tipo de mídia", options: MEDIA_TYPES },
-    { kind: "text", key: "mediaUrl", label: "Arquivo / URL", placeholder: "https://…" },
+    { kind: "media", key: "mediaUrl", label: "Arquivo" },
     { kind: "text", key: "caption", label: "Legenda", optional: true },
   ],
   send_whatsapp_interactive: [

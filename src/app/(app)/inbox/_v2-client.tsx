@@ -224,7 +224,6 @@ function writeStoredInboxFilters(filters: InboxFilters) {
 // RUNNING (fila de automação). "erro" volta depois se houver demanda.
 const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "todos", label: "Todas" },
-  { id: "abertas", label: "Abertas" },
   { id: "esperando", label: "Aguardando" },
   { id: "entrada", label: "Entrada" },
   { id: "respondidas", label: "Respondidas" },

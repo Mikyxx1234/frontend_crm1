@@ -1403,13 +1403,15 @@ function ToggleField({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={cn(
-          "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors",
-          checked ? "bg-[var(--brand-primary)]" : "bg-[var(--glass-border)]",
+          "relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors",
+          checked
+            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
+            : "border-[var(--text-muted)]/40 bg-[var(--text-muted)]/25",
         )}
       >
         <span
           className={cn(
-            "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-sm transition-all",
+            "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border border-black/10 bg-white shadow-sm transition-all",
             checked ? "right-0.5" : "left-0.5",
           )}
         />
@@ -1473,15 +1475,15 @@ function DepartmentsDistributionPanel() {
               disabled={updateMut.isPending}
               onClick={() => toggle(d.id, !d.distributionEnabled)}
               className={cn(
-                "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors disabled:opacity-50",
+                "relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors disabled:opacity-50",
                 d.distributionEnabled
-                  ? "bg-[var(--brand-primary)]"
-                  : "bg-[var(--glass-border)]",
+                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
+                  : "border-[var(--text-muted)]/40 bg-[var(--text-muted)]/25",
               )}
             >
               <span
                 className={cn(
-                  "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-sm transition-all",
+                  "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border border-black/10 bg-white shadow-sm transition-all",
                   d.distributionEnabled ? "right-0.5" : "left-0.5",
                 )}
               />

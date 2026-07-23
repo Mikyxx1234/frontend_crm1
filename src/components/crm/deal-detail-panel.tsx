@@ -1199,7 +1199,7 @@ export function DealDetailPanel({
                                                 ) : canEdit ? (
                                                   <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                                 ) : (
-                                                  <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
+                                                  <span className="block min-w-0 break-words [overflow-wrap:anywhere] font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
                                                 )}
                                               </div>
                                             </div>
@@ -1259,7 +1259,7 @@ export function DealDetailPanel({
                                                     placeholder="+ Adicionar"
                                                   />
                                                 ) : (
-                                                  <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                  <span className="block min-w-0 break-words [overflow-wrap:anywhere] font-display text-[13px] font-bold text-[var(--text-primary)]">
                                                     {currentValue || "—"}
                                                   </span>
                                                 )}

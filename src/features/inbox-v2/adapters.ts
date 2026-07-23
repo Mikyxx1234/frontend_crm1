@@ -280,6 +280,7 @@ export function toConversationCard(
       .filter((t) => (t.name ?? "").trim().length > 0)
       .map((t) => ({ id: t.id, name: t.name, color: t.color ?? null })),
     assigneeId: row.assignedTo?.id ?? null,
+    assigneeAvatarUrl: row.assignedTo?.avatarUrl ?? null,
     sessionExpiresIn: sess.label,
     sessionExpired: sess.expired,
     lastMessageType,

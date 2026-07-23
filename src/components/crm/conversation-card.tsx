@@ -64,6 +64,8 @@ export interface Conversation {
   tags?: Array<{ id: string; name: string; color?: string | null }>
   /** Id do responsável atual — usado pelo AssigneePopover. */
   assigneeId?: string | null
+  /** Foto (User.avatarUrl) do responsável — usada no UserAvatar do slot. */
+  assigneeAvatarUrl?: string | null
   /**
    * Canal de origem da conversa. Quando presente, substitui o status
    * dot pelo logo do canal no canto inferior direito do avatar.

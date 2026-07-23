@@ -24,6 +24,7 @@ interface AssigneePopoverProps {
   conversationId: string | null;
   currentAssigneeName?: string;
   currentAssigneeId?: string | null;
+  currentAssigneeImageUrl?: string | null;
   disabled?: boolean;
 }
 
@@ -31,6 +32,7 @@ export function AssigneePopover({
   conversationId,
   currentAssigneeName,
   currentAssigneeId,
+  currentAssigneeImageUrl,
   disabled,
 }: AssigneePopoverProps) {
   const { open, rect, triggerRef, popoverRef, toggle, close } =
@@ -83,7 +85,11 @@ export function AssigneePopover({
             className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-px pl-px pr-2 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]"
             title={currentAssigneeName}
           >
-            <UserAvatar name={currentAssigneeName} size={20} />
+            <UserAvatar
+              name={currentAssigneeName}
+              imageUrl={currentAssigneeImageUrl ?? null}
+              size={20}
+            />
             <span className="min-w-0 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
               {currentAssigneeName}
             </span>

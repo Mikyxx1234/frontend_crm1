@@ -402,8 +402,9 @@ function DealInline({
   return (
     <div className="px-3 pt-2 pb-0">
       {/* ── Hero header (ref. Stitch): card escuro #2e3b6e, edge-to-edge no
-          topo do container, cantos inferiores grandes (rounded-b-3xl). ── */}
-      <header className="relative isolate -mx-3 -mt-2 mb-3 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+          topo do container. Cantos superiores arredondados; rodapé reto
+          (encosta no conteúdo abaixo). ── */}
+      <header className="relative isolate -mx-3 -mt-2 mb-3 rounded-t-[var(--radius-xl)] rounded-b-none bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
         {/* Linha topo: título (até 2 linhas, sem truncar o nome) + pill de etapa */}
         <div className="relative mb-2.5 flex items-start justify-between gap-2">
           <h1 className="min-w-0 text-[15px] font-bold leading-snug text-white">

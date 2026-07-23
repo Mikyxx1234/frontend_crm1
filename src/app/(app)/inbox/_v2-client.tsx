@@ -806,6 +806,7 @@ export default function InboxV2ClientPage({
                 conversationId={c.id}
                 currentAssigneeName={c.assignee}
                 currentAssigneeId={c.assigneeId ?? null}
+                currentAssigneeImageUrl={c.assigneeAvatarUrl ?? null}
                 disabled
               />
             }
@@ -814,6 +815,7 @@ export default function InboxV2ClientPage({
               conversationId={c.id}
               currentAssigneeName={c.assignee}
               currentAssigneeId={c.assigneeId ?? null}
+              currentAssigneeImageUrl={c.assigneeAvatarUrl ?? null}
             />
           </RequirePermission>
         ),
@@ -935,6 +937,7 @@ export default function InboxV2ClientPage({
               conversationId={activeId}
               currentAssigneeName={activeRow.assignedTo?.name}
               currentAssigneeId={activeRow.assignedTo?.id ?? null}
+              currentAssigneeImageUrl={activeRow.assignedTo?.avatarUrl ?? null}
               disabled
             />
           }
@@ -943,6 +946,7 @@ export default function InboxV2ClientPage({
             conversationId={activeId}
             currentAssigneeName={activeRow.assignedTo?.name}
             currentAssigneeId={activeRow.assignedTo?.id ?? null}
+            currentAssigneeImageUrl={activeRow.assignedTo?.avatarUrl ?? null}
           />
         </RequirePermission>
       ) : undefined,

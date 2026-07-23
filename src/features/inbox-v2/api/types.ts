@@ -69,7 +69,12 @@ export interface ConversationListRow {
     avatarUrl?: string | null;
   };
   assignedToId: string | null;
-  assignedTo: { id: string; name: string; email: string } | null;
+  assignedTo: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl?: string | null;
+  } | null;
   lastInboundAt: string | null;
   lastMessageAt?: string | null;
   lastMessage?: {

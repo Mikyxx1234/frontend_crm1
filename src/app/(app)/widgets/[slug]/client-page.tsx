@@ -22,6 +22,7 @@ import type { WidgetDto } from "@/features/widgets/types";
  *  em "widget interno sem rota dedicada" (mostra placeholder). */
 const INTERNAL_ROUTES: Record<string, string> = {
   smart_distribution: "/widgets/distribution",
+  ai_agents: "/ai-agents",
 };
 
 /** Tempo maximo aguardando o iframe disparar `load`. Acima disso assumimos

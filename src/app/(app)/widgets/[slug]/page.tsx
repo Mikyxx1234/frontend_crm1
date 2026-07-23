@@ -7,7 +7,7 @@
  */
 
 import WidgetRunnerClientPage from "./client-page";
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 
 export const dynamic = "force-dynamic";
 
@@ -17,5 +17,5 @@ export default async function WidgetRunnerPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  return <WidgetRunnerClientPage slug={slug} navRail={<NavRailV2 />} />;
+  return <WidgetRunnerClientPage slug={slug} navRail={<NavRailSpacer />} />;
 }

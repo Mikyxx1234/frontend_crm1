@@ -22,7 +22,7 @@ import {
   IconSpeakerphone,
 } from "@tabler/icons-react";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { EmptyState } from "@/components/crm/empty-state";
 import { PageActionsMenu, PagePrimaryButton, PageSegmentedControl } from "@/components/crm/page-toolbar";
@@ -111,7 +111,7 @@ export default function CampaignsClientPage() {
 
   return (
     <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
-      <NavRailV2 />
+      <NavRailSpacer />
 
       <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden sm:gap-4">
         <PageHeader

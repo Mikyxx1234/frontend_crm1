@@ -4,7 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
@@ -62,7 +62,7 @@ export default function SettingsLayout({
           : "grid-cols-[var(--nav-rail-w,72px)_0px_minmax(0,1fr)]",
       )}
     >
-      <NavRailV2 />
+      <NavRailSpacer />
 
       {/* Coluna da sidebar — sempre montada; o overflow-hidden clipa quando a
           coluna colapsa a 0. Dentro, a própria sidebar aplica translate-x e

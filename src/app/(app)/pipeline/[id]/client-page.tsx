@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { IconArrowLeft, IconMessageCircle } from "@tabler/icons-react";
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import {
   DealDetailsPanel,
   type DealField,
@@ -267,7 +267,7 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
 
   return (
     <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
-      <NavRailV2 />
+      <NavRailSpacer />
 
       <div className="grid min-h-0 grid-cols-[380px_1fr] gap-4 overflow-hidden">
         {dealQuery.isLoading && !record ? (

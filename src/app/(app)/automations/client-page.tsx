@@ -19,7 +19,7 @@ import {
   IconUpload,
 } from "@tabler/icons-react"
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2"
+import { NavRailSpacer } from "@/components/crm/nav-rail-spacer"
 import { RestrictedScreen } from "@/components/crm/restricted-screen"
 import { useRequireManager } from "@/hooks/use-user-role"
 import { PageHeader } from "@/components/crm/page-header"
@@ -295,7 +295,7 @@ export default function V2AutomationsClientPage() {
 
   return (
     <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_1fr] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
-      <NavRailV2 />
+      <NavRailSpacer />
 
       <main className="flex min-w-0 flex-col gap-3 overflow-hidden sm:gap-4">
         <input

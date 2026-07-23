@@ -401,10 +401,10 @@ function DealInline({
 
   return (
     <div className="px-3 pt-2 pb-0">
-      {/* ── Hero header (ref. Stitch): card escuro #2e3b6e, edge-to-edge no
-          topo do container. Cantos superiores arredondados; rodapé reto
-          (encosta no conteúdo abaixo). ── */}
-      <header className="relative isolate -mx-3 -mt-2 mb-3 rounded-t-[var(--radius-xl)] rounded-b-none bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+      {/* ── Hero header (ref. Stitch): card escuro #2e3b6e como CARD interno,
+          dentro do padding do container (não mais edge-to-edge). Mesma forma
+          dos cards de contato/negócio: rounded-xl + borda sutil + shadow. ── */}
+      <header className="relative isolate mb-3 rounded-xl border border-white/10 bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-[var(--glass-shadow-sm)]">
         {/* Linha topo: título (até 2 linhas, sem truncar o nome) + pill de etapa */}
         <div className="relative mb-2.5 flex items-start justify-between gap-2">
           <h1 className="min-w-0 text-[15px] font-bold leading-snug text-white">
@@ -775,19 +775,18 @@ export function ContactAside({
       aria-label="Detalhes do contato"
       className={cn("relative flex h-full flex-col pr-0.5 overflow-visible", className)}
     >
-      {/* Botao recolher — chevron minimalista tipo '>' na faixa entre aside
-          e chat. Fica FORA do container interno (que tem overflow) para nao
-          ser cortado; posicionado no outer aside com left:0 e translate-x
-          negativo pra ficar centrado sobre a borda esquerda. */}
+      {/* Botao recolher — MESMA abinha do botao de abrir (estado recolhido),
+          apenas espelhada: colada na borda esquerda do painel (border-l-0),
+          chevron apontando para a direita (fecha empurrando pro lado). */}
       {onToggleCollapse && (
         <TooltipGlass label="Recolher painel de contato" side="left">
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="group absolute left-0 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 flex h-10 w-5 items-center justify-center rounded-full border border-[var(--glass-border)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-all hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_14px_rgba(91,111,245,0.40)] hover:scale-110"
+            className="group absolute left-0 top-1/2 z-30 -translate-x-full -translate-y-1/2 flex h-14 w-6 items-center justify-center rounded-l-[var(--radius-md)] border border-r-0 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow)] backdrop-blur-md transition-all hover:bg-[var(--brand-primary)] hover:text-white"
             aria-label="Recolher painel de contato"
           >
-            <IconChevronRight size={13} strokeWidth={3} />
+            <IconChevronRight size={14} strokeWidth={3} />
           </button>
         </TooltipGlass>
       )}

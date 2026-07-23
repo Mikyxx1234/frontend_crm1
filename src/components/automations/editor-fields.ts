@@ -37,6 +37,8 @@ export type EditorField =
   | { kind: "info"; text: string }
   | { kind: "updateField" }
   | { kind: "templatePreview" }
+  /** Construtor visual completo do step webhook (URL, método, headers, body). */
+  | { kind: "webhookConfig" }
   | { kind: "builder"; key: string; builder: "buttons" | "buttonsTitle" | "condition" | "schedule" | "headers" }
 
 const ACTIVITY_TYPES: Opt[] = [
@@ -112,12 +114,10 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "step", key: "elseGotoStepId", label: "Se resposta não bater → ir para", optional: true },
     { kind: "text", key: "saveToVariable", label: "Salvar resposta em variável", optional: true },
   ],
-  webhook: [
-    { kind: "text", key: "url", label: "URL", placeholder: "https://…" },
-    { kind: "select", key: "method", label: "Método", options: HTTP_METHODS },
-    { kind: "builder", builder: "headers", key: "headers", label: "Headers" },
-    { kind: "textarea", key: "body", label: "Body (JSON)", optional: true },
-  ],
+  // Construtor visual (WebhookStepConfig) — parâmetros + catálogo de
+  // variáveis. O STEP_FIELDS antigo só tinha textarea JSON e escondeu
+  // o builder quando o canvas migrou pra edição inline.
+  webhook: [{ kind: "webhookConfig" }],
   delay: [{ kind: "delay", key: "ms", label: "Duração" }],
   condition: [{ kind: "builder", builder: "condition", key: "branches", label: "Condições" }],
   update_lead_score: [{ kind: "info", text: "Recalcula o Lead Score do contato no contexto. Sem configuração." }],

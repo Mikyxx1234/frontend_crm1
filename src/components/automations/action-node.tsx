@@ -81,7 +81,13 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
     <div
       className={cn(
         "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
-        selected ? "min-w-[340px] max-w-[400px]" : "min-w-[230px] max-w-[290px]",
+        // Webhook abre o construtor visual (parâmetros + catálogo) —
+        // precisa de card mais largo que os demais passos.
+        selected
+          ? data.stepType === "webhook"
+            ? "min-w-[480px] max-w-[560px]"
+            : "min-w-[340px] max-w-[400px]"
+          : "min-w-[230px] max-w-[290px]",
         selected
           ? "border-primary/50 shadow-[var(--shadow-indigo-glow)] ring-2 ring-primary/25"
           : data.incomplete

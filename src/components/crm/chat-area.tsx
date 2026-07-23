@@ -385,18 +385,9 @@ export function ChatArea({
           </TooltipGlass>
 
           {/* Header enxuto: sem badge de tipo (CLIENTE/LEAD) nem chip
-              "Encerrada" (status resolvido vira faixa verde abaixo). O #N
-              da conversa (ticket) volta como chip discreto — pedido de
-              organização/controle estilo Kommo: identificador visual fixo. */}
-          {conversationNumber != null && (
-            <span
-              className="shrink-0 rounded-md bg-[var(--color-bg-subtle)] px-2 py-0.5 font-mono text-[12px] font-semibold tabular-nums text-[var(--text-muted)]"
-              title={`Conversa #${conversationNumber}`}
-            >
-              #{conversationNumber}
-            </span>
-          )}
-
+              "Encerrada" (status resolvido vira faixa verde abaixo). O nº da
+              conversa (ticket) foi movido pro canto inferior esquerdo, junto
+              ao composer — estilo Kommo. */}
           {tabsEnabled && (
             <div className="min-w-0 flex-1">
               <ChatTabsBar
@@ -629,6 +620,14 @@ export function ChatArea({
         data-chat-composer-footer
         className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1.5 backdrop-blur-md"
       >
+      {/* Nº da conversa (ticket) no canto inferior esquerdo, em verde —
+          estilo Kommo. Identificador fixo pra referência/controle. */}
+      {conversationNumber != null && (
+        <div className="px-6 pb-1 font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400 max-md:px-3">
+          Conversa Nº {conversationNumber}
+        </div>
+      )}
+
       {showSessionAlert && <SessionAlert onUseTemplate={onUseTemplate} />}
 
       {composerSlot ?? (

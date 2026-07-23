@@ -265,14 +265,6 @@ export function ConversationCard({
             <span className="truncate font-display text-sm font-bold text-[var(--text-primary)]">
               {conversation.name}
             </span>
-            {conversation.number != null && (
-              <span
-                className="shrink-0 rounded-md bg-[var(--color-bg-subtle)] px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-[var(--text-muted)]"
-                title={`Conversa #${conversation.number}`}
-              >
-                #{conversation.number}
-              </span>
-            )}
             <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
               {conversation.time}
               {conversation.urgent && (
@@ -403,6 +395,14 @@ export function ConversationCard({
           )
         )}
       </div>
+
+      {/* Rodapé: nº da conversa (ticket) no canto inferior esquerdo, em verde
+          — estilo Kommo. Identificador fixo pra referência/controle. */}
+      {conversation.number != null && (
+        <div className="mt-2 font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400">
+          Conversa Nº {conversation.number}
+        </div>
+      )}
     </article>
   )
 }

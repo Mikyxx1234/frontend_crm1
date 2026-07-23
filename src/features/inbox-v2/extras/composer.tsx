@@ -397,7 +397,7 @@ export function Composer({
   }
 
   return (
-    <div ref={rootRef} className="relative mx-5.5 mb-5.5 max-md:mx-3 max-md:mb-2">
+    <div ref={rootRef} className="relative mx-5.5 mb-2 max-md:mx-3 max-md:mb-2">
       {/* Painel de validação do template do WhatsApp — flutua acima do composer */}
       {pendingTemplate && conversationId ? (
         <TemplateComposePanel

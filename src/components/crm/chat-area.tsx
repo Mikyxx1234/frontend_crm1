@@ -1,7 +1,8 @@
 "use client"
 
-import { Fragment, useRef, useState, useEffect, useCallback, type FormEvent } from "react"
+import { Fragment, useRef, useState, useEffect, useCallback, useMemo, type FormEvent } from "react"
 import { useSession } from "next-auth/react"
+import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions"
 import { cn } from "@/lib/utils"
 import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
@@ -269,6 +270,27 @@ export function ChatArea({
       sessionName || (isPreviewMode() ? PREVIEW_USER.name : "Agente")
     setAgentInitials(getInitials(name) || "?")
   }, [session])
+
+  // Mapa fresco `nome (lowercase) → avatarUrl` da equipe (GET /api/users) —
+  // mesma fonte do avatar do kanban. Usado para resolver a foto de QUALQUER
+  // agente nas bolhas outgoing, mesmo quando o match server-side falha ou a
+  // sessão está com a foto defasada (JWT antigo).
+  const { data: teamUsers } = useTeamUsers()
+  const senderPhotoByName = useMemo(() => {
+    const map = new Map<string, string | null>()
+    for (const u of teamUsers ?? []) {
+      if (u.name) map.set(u.name.trim().toLowerCase(), u.avatarUrl ?? null)
+    }
+    return map
+  }, [teamUsers])
+
+  // Foto do agente logado: prioriza o avatar fresco da equipe (por nome) e cai
+  // na foto da sessão. Corrige o caso do JWT com `picture` defasado.
+  const selfAgentImage = useMemo(() => {
+    const sessionName = session?.user?.name?.trim()?.toLowerCase()
+    const fresh = sessionName ? senderPhotoByName.get(sessionName) : null
+    return fresh ?? session?.user?.image ?? null
+  }, [session, senderPhotoByName])
   // Rola suave (ou instantâneo) até a última mensagem e zera o estado do
   // botão "descer".
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
@@ -569,7 +591,8 @@ export function ChatArea({
                   <MessageBubble
                     message={message}
                     agentInitials={agentInitials}
-                    agentImageUrl={session?.user?.image ?? null}
+                    agentImageUrl={selfAgentImage}
+                    senderPhotoByName={senderPhotoByName}
                     onReplyMessage={onReplyMessage}
                     onForwardMessage={onForwardMessage}
                     onReactMessage={onReactMessage}
@@ -680,7 +703,7 @@ export function ChatArea({
       {/* Nº da conversa (ticket) ABAIXO do composer, canto inferior esquerdo,
           em verde — estilo Kommo. Identificador fixo pra referência/controle. */}
       {conversationNumber != null && (
-        <div className="px-6 pt-1 font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400 max-md:px-3">
+        <div className="px-6 pb-0.5 font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400 max-md:px-3">
           Conversa Nº {conversationNumber}
         </div>
       )}

@@ -83,7 +83,7 @@ function ViewersBanner({ viewers }: { viewers: EntityViewer[] }) {
   const verb = names.length === 1 ? "está" : "estão";
 
   return (
-    <div className="flex items-center justify-end gap-2 px-4 pb-1 pt-0.5 text-[11px] text-[var(--text-muted)]">
+    <div className="flex min-w-0 items-center justify-end gap-2 text-[11px] text-[var(--text-muted)]">
       <div className="flex items-center">
         {shown.map((v, i) => (
           <div

@@ -1466,9 +1466,19 @@ export function DealDetailPanel({
               >
                 {sessionAlertSlot}
                 {composerSlot ? composerSlot : <FallbackComposer />}
-                {/* Presença "quem está vendo" — aviso discreto abaixo do
-                    composer, canto inferior direito (estilo Kommo). */}
-                {viewersSlot}
+                {/* Linha compacta abaixo do composer: Nº da conversa (verde,
+                    esquerda — estilo Kommo, faltava no deal) + presença "quem
+                    está vendo" (direita). Juntos numa linha só pra ganhar tela. */}
+                <div className="flex items-center justify-between gap-2 px-4 pt-0.5">
+                  {conversationNumber != null ? (
+                    <span className="font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400">
+                      Conversa Nº {conversationNumber}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  {viewersSlot}
+                </div>
               </div>
             </main>
           ) : (

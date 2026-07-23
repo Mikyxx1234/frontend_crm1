@@ -1844,9 +1844,11 @@ function FieldCard({
   children: React.ReactNode
 }) {
   return (
-    <section>
-      {/* Header com título + alça de arraste */}
-      <div className="mb-2 flex items-center gap-1">
+    <section className="overflow-hidden rounded-[var(--radius-xl)] border border-slate-100 bg-white shadow-sm">
+      {/* Header com título + alça — agora DENTRO do card branco, para que
+          título e conteúdo fiquem no MESMO container (igual ao hero e ao
+          aside do inbox). Antes o título flutuava acima do card. */}
+      <div className="flex items-center gap-1 px-3 pt-3 pb-2">
         {dragHandleProps && (
           <span
             {...dragHandleProps}
@@ -1875,15 +1877,10 @@ function FieldCard({
           </div>
         )}
       </div>
-      {/* Card branco (ref. Stitch) — rows/cards internos controlam o padding.
-          `plain` pula o card (grid de pills do modo foco, paridade inbox). */}
-      {plain ? (
-        children
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-sm">
-          {children}
-        </div>
-      )}
+      {/* Conteúdo dentro do mesmo card. `plain` (grid de pills do modo foco)
+          não traz padding próprio, então recebe aqui para não colar nas
+          bordas; conteúdo não-plain já controla o próprio padding. */}
+      {plain ? <div className="px-3 pb-3">{children}</div> : children}
     </section>
   )
 }

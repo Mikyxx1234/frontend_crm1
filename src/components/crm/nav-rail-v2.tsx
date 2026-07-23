@@ -451,7 +451,7 @@ export function NavRailV2({ className }: { className?: string }) {
               <>
                 <DropdownMenuItem
                   className={ACCOUNT_MENU_ITEM}
-                  onSelect={(e) => {
+                  onClick={(e) => {
                     e.preventDefault();
                     logoInputRef.current?.click();
                   }}
@@ -470,10 +470,7 @@ export function NavRailV2({ className }: { className?: string }) {
                 {companyLogo && (
                   <DropdownMenuItem
                     className={ACCOUNT_MENU_ITEM}
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      onRemoveLogo();
-                    }}
+                    onClick={() => onRemoveLogo()}
                     disabled={removeLogo.isPending}
                   >
                     <IconTrash size={16} className="shrink-0" />

@@ -10,8 +10,8 @@ import { apiUrl } from "@/lib/api";
  *
  *  - ESQUERDA "Dados do seu perfil": avatar editável (upload), nome,
  *    assinatura, telefone, toggle de mensagem de finalização + textarea.
- *  - DIREITA "Tokens de Acesso": lista/empty state + dialog de criação
- *    com exposição one-time da chave gerada.
+ *  - DIREITA "Trocar senha": senha atual + nova + confirmação. (Os Tokens
+ *    de Acesso foram movidos para Segurança › API — fonte única.)
  *
  * O upload de avatar faz POST em `/api/profile/avatar` e apenas atualiza
  * o estado local com a URL retornada — a persistência efetiva em
@@ -26,25 +26,16 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { IconAlertTriangle as AlertTriangle, IconCamera as Camera, IconCheck as Check, IconCopy as Copy, IconFingerprint as Fingerprint, IconInfoCircle as Info, IconKey as Key, IconLoader2 as Loader2, IconPlus as Plus, IconRefresh as RefreshCw, IconSparkles as Sparkles, IconTrash as Trash2 } from "@tabler/icons-react";
+import { IconAlertTriangle as AlertTriangle, IconCamera as Camera, IconCheck as Check, IconFingerprint as Fingerprint, IconInfoCircle as Info, IconKey as Key, IconLoader2 as Loader2, IconRefresh as RefreshCw, IconSparkles as Sparkles } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
-import { useConfirm } from "@/hooks/use-confirm";
 import type { ChatThemeKey } from "@/lib/chat-theme";
 import {
   CHAT_THEME_OPTIONS,
@@ -54,6 +45,16 @@ import {
 import { cn } from "@/lib/utils";
 import { AvatarCropDialog } from "@/components/profile/avatar-crop-dialog";
 import { UserAvatar } from "@/components/crm/user-avatar";
+
+/**
+ * Avatares preset (estilo Kommo) — assets estáticos em
+ * `public/avatars/presets/`. Selecionar um preset só troca o `avatarUrl`
+ * (preview); a persistência acontece no "Salvar", igual ao upload de foto.
+ */
+const PRESET_AVATARS = Array.from(
+  { length: 25 },
+  (_, i) => `/avatars/presets/preset-${String(i + 1).padStart(2, "0")}.png`,
+);
 import { isNativePlatform } from "@/lib/native/capacitor";
 import {
   isBiometricAvailable,
@@ -73,15 +74,6 @@ type Profile = {
   closingMessage: string | null;
   /** Ausente em builds antigos sem migration `add_user_chat_theme`. */
   chatTheme?: string | null;
-};
-
-type ApiToken = {
-  id: string;
-  name: string;
-  tokenPrefix: string;
-  lastUsedAt: string | null;
-  expiresAt: string | null;
-  createdAt: string;
 };
 
 /**
@@ -368,7 +360,8 @@ export default function ProfilePage() {
     <div className="w-full min-w-0 space-y-6">
       <div className="grid min-w-0 gap-4 sm:gap-6 lg:grid-cols-2">
         <ProfileCard profile={profile} queryClient={queryClient} update={update} />
-        <TokensCard />
+        {/* Tokens de Acesso foram movidos para Segurança › API (fonte única).
+            Aqui, no lugar, fica a troca de senha. */}
         <PasswordCard />
       </div>
     </div>
@@ -529,6 +522,7 @@ function ProfileCard({
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = React.useState(false);
+  const [showPresets, setShowPresets] = React.useState(false);
 
   // Arquivo aguardando crop. Quando o operador seleciona uma imagem,
   // ela vai pra esse estado em vez de subir direto — o
@@ -621,6 +615,7 @@ function ProfileCard({
           >
             <ButtonGlass
               variant="icon"
+              size="icon"
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
@@ -659,9 +654,53 @@ function ProfileCard({
           </p>
           <p className="text-xs text-[var(--text-muted)]">Português (Brasil)</p>
           <p className="mt-1.5 text-[11px] leading-snug text-[var(--color-ink-muted)]">
-            Gerencie seus dados de acesso, idioma e assinatura pessoal do agente.
+            Use a câmera para enviar sua foto ou escolha um avatar pronto abaixo.
           </p>
         </div>
+      </div>
+
+      {/*
+        Galeria de avatares preset (estilo Kommo). Clicar aplica só no
+        preview (`avatarUrl`); persiste ao Salvar — mesma regra do upload.
+      */}
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => setShowPresets((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--text-primary)]"
+        >
+          <Sparkles className="size-3.5" />
+          {showPresets ? "Ocultar avatares" : "Escolher um avatar"}
+        </button>
+
+        {showPresets && (
+          <div className="mt-3 grid grid-cols-6 gap-2 sm:grid-cols-8">
+            {PRESET_AVATARS.map((url) => {
+              const selected = avatarUrl === url;
+              return (
+                <button
+                  key={url}
+                  type="button"
+                  aria-label="Selecionar avatar"
+                  aria-pressed={selected}
+                  onClick={() => {
+                    setAvatarUrl(url);
+                    toast.success("Avatar selecionado — clique em Salvar para aplicar.");
+                  }}
+                  className={cn(
+                    "relative aspect-square overflow-hidden rounded-full ring-2 transition-all hover:scale-105",
+                    selected
+                      ? "ring-[var(--brand-primary)]"
+                      : "ring-transparent hover:ring-[var(--glass-border)]",
+                  )}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="size-full object-cover" />
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Formulário ── */}
@@ -815,319 +854,3 @@ function Field({
     </div>
   );
 }
-
-/* ────────────────────────────────────────────────────────────────
-   CARD DIREITO — Tokens de Acesso
-   ──────────────────────────────────────────────────────────── */
-
-function TokensCard() {
-  const confirm = useConfirm();
-  const queryClient = useQueryClient();
-  const [createOpen, setCreateOpen] = React.useState(false);
-  const [newTokenName, setNewTokenName] = React.useState("");
-  const [newTokenExpires, setNewTokenExpires] = React.useState("");
-  const [justCreated, setJustCreated] = React.useState<{
-    token: string;
-    prefix: string;
-  } | null>(null);
-
-  const { data: tokens = [], isLoading } = useQuery({
-    queryKey: ["api-tokens"],
-    queryFn: async () => {
-      const r = await fetch(apiUrl("/api/settings/api-tokens"));
-      if (!r.ok) throw new Error("Erro ao carregar tokens");
-      return r.json() as Promise<ApiToken[]>;
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const r = await fetch(apiUrl("/api/settings/api-tokens"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newTokenName.trim(),
-          expiresAt: newTokenExpires || undefined,
-        }),
-      });
-      const j = (await r.json().catch(() => ({}))) as {
-        id?: string;
-        token?: string;
-        prefix?: string;
-        message?: string;
-      };
-      if (!r.ok || !j.token || !j.prefix) {
-        throw new Error(j.message ?? "Erro ao criar token");
-      }
-      return { token: j.token, prefix: j.prefix };
-    },
-    onSuccess: (data) => {
-      setJustCreated(data);
-      setNewTokenName("");
-      setNewTokenExpires("");
-      queryClient.invalidateQueries({ queryKey: ["api-tokens"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const revokeMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const r = await fetch(apiUrl(`/api/settings/api-tokens/${id}`), {
-        method: "DELETE",
-      });
-      if (!r.ok) throw new Error("Erro ao revogar token");
-      return r.json();
-    },
-    onSuccess: () => {
-      toast.success("Token revogado");
-      queryClient.invalidateQueries({ queryKey: ["api-tokens"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const handleRevoke = async (token: ApiToken) => {
-    const ok = await confirm({
-      title: "Revogar token",
-      description: `Remover "${token.name}"? Aplicações usando este token perderão acesso imediatamente.`,
-      confirmLabel: "Revogar",
-      variant: "destructive",
-    });
-    if (ok) revokeMutation.mutate(token.id);
-  };
-
-  const copyToken = async (value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      toast.success("Token copiado");
-    } catch {
-      toast.error("Copie manualmente — navegador bloqueou o clipboard.");
-    }
-  };
-
-  const hasTokens = tokens.length > 0;
-
-  return (
-    <GlassCard variant="overlay" className="min-w-0 p-5 sm:p-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
-            Tokens de Acesso
-          </h2>
-          <p className="mt-1 max-w-md text-sm leading-snug text-[var(--text-muted)]">
-            Token é uma chave temporária usada para conectar apps ou APIs com
-            segurança, sem precisar de senha.
-          </p>
-        </div>
-        {hasTokens && (
-          <ButtonGlass
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              setJustCreated(null);
-              setCreateOpen(true);
-            }}
-            className="shrink-0 self-start sm:self-auto"
-          >
-            <Plus className="size-3.5" />
-            Novo token
-          </ButtonGlass>
-        )}
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-14">
-          <Loader2 className="size-6 animate-spin text-[var(--color-ink-muted)]" />
-        </div>
-      ) : hasTokens ? (
-        <ul className="mt-6 space-y-2">
-          {tokens.map((t) => (
-            <li
-              key={t.id}
-              className="flex min-w-0 items-center gap-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 px-4 py-3"
-            >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-primary">
-                <Key className="size-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                  {t.name}
-                </p>
-                <p className="mt-0.5 font-mono text-[11px] text-[var(--color-ink-muted)]">
-                  {t.tokenPrefix}… ·{" "}
-                  {t.expiresAt
-                    ? `expira em ${new Date(t.expiresAt).toLocaleDateString()}`
-                    : "sem expiração"}
-                </p>
-              </div>
-              <TooltipHost label="Revogar" side="left">
-                <ButtonGlass
-                  variant="icon"
-                  type="button"
-                  onClick={() => handleRevoke(t)}
-                  disabled={revokeMutation.isPending}
-                  tooltipSide="left"
-                  className="size-8 rounded-lg text-[var(--color-ink-muted)] hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)] disabled:opacity-50"
-                  aria-label={`Revogar token ${t.name}`}
-                >
-                  <Trash2 className="size-4" />
-                </ButtonGlass>
-              </TooltipHost>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <TokensEmptyState onCreate={() => setCreateOpen(true)} />
-      )}
-
-      {/* ── Dialog de criação ── */}
-      <Dialog
-        open={createOpen}
-        onOpenChange={(v) => {
-          setCreateOpen(v);
-          if (!v) {
-            setJustCreated(null);
-            setNewTokenName("");
-            setNewTokenExpires("");
-          }
-        }}
-      >
-        <DialogContent className="max-w-md">
-          {justCreated ? (
-            <>
-              <DialogHeader>
-                <DialogTitle className="font-display">Token criado</DialogTitle>
-                <DialogDescription>
-                  Copie agora — por segurança esta chave não será exibida novamente.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-2.5">
-                  <code className="flex-1 truncate font-mono text-xs text-[var(--text-secondary)]">
-                    {justCreated.token}
-                  </code>
-                  <ButtonGlass
-                    variant="icon"
-                    type="button"
-                    onClick={() => copyToken(justCreated.token)}
-                    className="size-8 rounded-lg text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-                    aria-label="Copiar token"
-                  >
-                    <Copy className="size-4" />
-                  </ButtonGlass>
-                </div>
-                <div className="flex items-start gap-2 rounded-xl bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3 py-2 text-[12px] leading-snug text-[var(--color-warning)]">
-                  <Info className="mt-0.5 size-3.5 shrink-0" />
-                  <span>
-                    Guarde em um gerenciador de segredos. Ao fechar esta janela
-                    o token não ficará mais acessível na íntegra — apenas o
-                    prefixo (<code>{justCreated.prefix}…</code>) aparecerá na lista.
-                  </span>
-                </div>
-              </div>
-              <DialogFooter>
-                <ButtonGlass variant="primary" onClick={() => setCreateOpen(false)}>Concluído</ButtonGlass>
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle className="font-display">Novo token</DialogTitle>
-                <DialogDescription>
-                  Dê um nome descritivo para identificar a integração que usará este token.
-                </DialogDescription>
-              </DialogHeader>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!newTokenName.trim()) return;
-                  createMutation.mutate();
-                }}
-                className="space-y-4"
-              >
-                <div className="space-y-1.5">
-                  <Label htmlFor="token-name" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                    Nome
-                  </Label>
-                  <InputGlass
-                    id="token-name"
-                    value={newTokenName}
-                    onChange={(e) => setNewTokenName(e.target.value)}
-                    placeholder="Ex.: Integração N8N"
-                    required
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="token-expires" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                    Expira em (opcional)
-                  </Label>
-                  <InputGlass
-                    id="token-expires"
-                    type="date"
-                    value={newTokenExpires}
-                    onChange={(e) => setNewTokenExpires(e.target.value)}
-                  />
-                </div>
-                <DialogFooter>
-                  <ButtonGlass
-                    type="button"
-                    variant="glass"
-                    onClick={() => setCreateOpen(false)}
-                  >
-                    Cancelar
-                  </ButtonGlass>
-                  <ButtonGlass type="submit" variant="primary" disabled={createMutation.isPending || !newTokenName.trim()}>
-                    {createMutation.isPending ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <Plus className="size-4" />
-                    )}
-                    Gerar token
-                  </ButtonGlass>
-                </DialogFooter>
-              </form>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-    </GlassCard>
-  );
-}
-
-function TokensEmptyState({ onCreate }: { onCreate: () => void }) {
-  return (
-    <div className="mt-4 flex flex-col items-center justify-center gap-4 py-10 text-center">
-      <div className="relative">
-        {/*
-          Ilustração minimalista: dois cards sobrepostos + sparkles. Evita
-          importar SVG externo, usando apenas Tailwind + ícones lucide.
-        */}
-        <div className="absolute -left-3 -top-2 size-14 -rotate-12 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-sm" />
-        <div className="absolute -right-3 -top-1 size-14 rotate-12 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-sm" />
-          <div className="relative flex size-16 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)]">
-          <button
-            type="button"
-            onClick={onCreate}
-            className="inline-flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-[var(--shadow-indigo-glow)] transition-transform hover:scale-105"
-            aria-label="Criar primeiro token"
-          >
-            <Plus className="size-5" />
-          </button>
-        </div>
-        <Sparkles
-          className="absolute -right-6 top-0 size-3 text-[var(--color-text-muted)]"
-          aria-hidden
-        />
-        <Sparkles
-          className="absolute -left-5 bottom-0 size-4 text-[var(--color-text-muted)]"
-          aria-hidden
-        />
-      </div>
-      <p className="font-display text-sm font-bold text-[var(--text-primary)]">
-        Crie seu primeiro token!
-      </p>
-    </div>
-  );
-}
-

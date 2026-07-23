@@ -1,14 +1,14 @@
 "use client"
 
-import { Fragment, useRef, useState, useEffect, useCallback, type FormEvent } from "react"
+import { Fragment, useRef, useState, useEffect, useCallback, useMemo, type FormEvent } from "react"
 import { useSession } from "next-auth/react"
+import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions"
 import { cn } from "@/lib/utils"
 import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
-import { getInitials } from "@/lib/utils"
 import { ChatAvatar } from "@/components/inbox/chat-avatar"
-import { AVATAR_SIZE } from "@/lib/avatar"
+import { AVATAR_SIZE, avatarInitials } from "@/lib/avatar"
 import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
 import {
@@ -191,6 +191,7 @@ export function ChatArea({
   inputDisabled,
   composerSlot,
   headerActionsSlot,
+  conversationNumber,
   onUseTemplate,
   notesSlot,
   activitiesSlot,
@@ -262,12 +263,40 @@ export function ChatArea({
   // Iniciais do agente nas bolhas outgoing. Prioridade: usuário
   // autenticado (NextAuth) > usuário de preview > genérico.
   const [agentInitials, setAgentInitials] = useState("·")
+  // Nome do agente logado — passado ao balão pra detectar "mensagem minha"
+  // por nome (robusto). Iniciais usam `avatarInitials` (mesma função do
+  // adapter/UserAvatar) pra não divergir do `senderInitials` das bolhas.
+  const agentName = useMemo(
+    () =>
+      session?.user?.name?.trim() ||
+      (isPreviewMode() ? PREVIEW_USER.name : ""),
+    [session],
+  )
   useEffect(() => {
-    const sessionName = session?.user?.name?.trim()
-    const name =
-      sessionName || (isPreviewMode() ? PREVIEW_USER.name : "Agente")
-    setAgentInitials(getInitials(name) || "?")
-  }, [session])
+    const name = agentName || "Agente"
+    setAgentInitials(avatarInitials(name) || "?")
+  }, [agentName])
+
+  // Mapa fresco `nome (lowercase) → avatarUrl` da equipe (GET /api/users) —
+  // mesma fonte do avatar do kanban. Usado para resolver a foto de QUALQUER
+  // agente nas bolhas outgoing, mesmo quando o match server-side falha ou a
+  // sessão está com a foto defasada (JWT antigo).
+  const { data: teamUsers } = useTeamUsers()
+  const senderPhotoByName = useMemo(() => {
+    const map = new Map<string, string | null>()
+    for (const u of teamUsers ?? []) {
+      if (u.name) map.set(u.name.trim().toLowerCase(), u.avatarUrl ?? null)
+    }
+    return map
+  }, [teamUsers])
+
+  // Foto do agente logado: prioriza o avatar fresco da equipe (por nome) e cai
+  // na foto da sessão. Corrige o caso do JWT com `picture` defasado.
+  const selfAgentImage = useMemo(() => {
+    const sessionName = session?.user?.name?.trim()?.toLowerCase()
+    const fresh = sessionName ? senderPhotoByName.get(sessionName) : null
+    return fresh ?? session?.user?.image ?? null
+  }, [session, senderPhotoByName])
   // Rola suave (ou instantâneo) até a última mensagem e zera o estado do
   // botão "descer".
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
@@ -379,15 +408,14 @@ export function ChatArea({
               }}
               phone={contact.phone}
               channel={contact.channel ?? connection?.type ?? null}
-              size={AVATAR_SIZE.md}
+              size={AVATAR_SIZE.lg}
             />
           </TooltipGlass>
 
-          {/* Header enxuto (pedido 16/jul/26): sem badge de tipo (CLIENTE/
-              LEAD), sem #N e sem chip "Encerrada". O status resolvido passou
-              a ser sinalizado pela faixa verde sutil abaixo do header — o
-              #N continua acessivel no separador de ticket da timeline. */}
-
+          {/* Header enxuto: sem badge de tipo (CLIENTE/LEAD) nem chip
+              "Encerrada" (status resolvido vira faixa verde abaixo). O nº da
+              conversa (ticket) foi movido pro canto inferior esquerdo, junto
+              ao composer — estilo Kommo. */}
           {tabsEnabled && (
             <div className="min-w-0 flex-1">
               <ChatTabsBar
@@ -569,7 +597,9 @@ export function ChatArea({
                   <MessageBubble
                     message={message}
                     agentInitials={agentInitials}
-                    agentImageUrl={session?.user?.image ?? null}
+                    agentName={agentName}
+                    agentImageUrl={selfAgentImage}
+                    senderPhotoByName={senderPhotoByName}
                     onReplyMessage={onReplyMessage}
                     onForwardMessage={onForwardMessage}
                     onReactMessage={onReactMessage}
@@ -675,6 +705,21 @@ export function ChatArea({
             </button>
           </TooltipGlass>
         </form>
+      )}
+
+      {/* Nº da conversa (ticket) ABAIXO do composer, canto inferior esquerdo,
+          em verde — estilo Kommo. Quando encerrada, fica cinza. */}
+      {conversationNumber != null && (
+        <div
+          className={cn(
+            "px-6 pb-0.5 font-display text-[11px] font-semibold tabular-nums max-md:px-3",
+            conversationResolved
+              ? "text-[var(--text-muted)]"
+              : "text-emerald-600 v2-dark:text-emerald-400",
+          )}
+        >
+          Conversa Nº {conversationNumber}
+        </div>
       )}
       </div>
         </>

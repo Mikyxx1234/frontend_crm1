@@ -257,6 +257,7 @@ export function toConversationCard(
 
   return {
     id: row.id,
+    number: row.number ?? null,
     name,
     initials: avatarInitials(name),
     avatarColor: colorFromName(name),
@@ -279,6 +280,7 @@ export function toConversationCard(
       .filter((t) => (t.name ?? "").trim().length > 0)
       .map((t) => ({ id: t.id, name: t.name, color: t.color ?? null })),
     assigneeId: row.assignedTo?.id ?? null,
+    assigneeAvatarUrl: row.assignedTo?.avatarUrl ?? null,
     sessionExpiresIn: sess.label,
     sessionExpired: sess.expired,
     lastMessageType,
@@ -461,6 +463,8 @@ export function toMessageBubble(
     // Nome completo do remetente — exibido como tooltip no avatar e rótulo
     // abaixo da bolha outgoing para identificar agente ou automação.
     senderName: !isInbound && dto.senderName ? dto.senderName : undefined,
+    // Foto do agente remetente (resolvida no backend). Só outbound humano.
+    senderImageUrl: !isInbound && !isBot ? (dto.senderImageUrl ?? undefined) : undefined,
     isBot: isBot || isAutomationRun || undefined,
     isAutomationRun: isAutomationRun || undefined,
     automationAgentName: manualAutomationAgent ?? undefined,

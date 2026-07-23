@@ -162,6 +162,8 @@ interface DealDetailPanelProps {
   deal?: DealDetail | null
   // Slots opcionais — quando ausentes, mantém o visual default do v0.
   stageRibbonSlot?: React.ReactNode
+  /** Presença "quem está vendo" — pilha de avatares no header (estilo Kommo). */
+  viewersSlot?: React.ReactNode
   winButtonSlot?: React.ReactNode
   /** Botão "Ligar" do softphone — posicionado no header, antes do moreActions. */
   callButtonSlot?: React.ReactNode
@@ -308,6 +310,7 @@ export function DealDetailPanel({
   isOpen,
   onClose,
   deal,
+  viewersSlot,
   callButtonSlot,
   contactTagsSlot,
   moreActionsSlot,
@@ -1463,6 +1466,19 @@ export function DealDetailPanel({
               >
                 {sessionAlertSlot}
                 {composerSlot ? composerSlot : <FallbackComposer />}
+                {/* Linha compacta abaixo do composer: Nº da conversa (verde,
+                    esquerda — estilo Kommo, faltava no deal) + presença "quem
+                    está vendo" (direita). Juntos numa linha só pra ganhar tela. */}
+                <div className="flex items-center justify-between gap-2 px-4 pt-0.5">
+                  {conversationNumber != null ? (
+                    <span className="font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400">
+                      Conversa Nº {conversationNumber}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  {viewersSlot}
+                </div>
               </div>
             </main>
           ) : (
@@ -1843,9 +1859,9 @@ function FieldCard({
         {title && (
           <span className="flex items-center gap-2 text-slate-600">
             {title === "Informações do Contato" ? (
-              <IconUser size={16} className="shrink-0" />
+              <IconUser size={16} className="shrink-0 text-orange-500" />
             ) : (
-              <IconBriefcase size={16} className="shrink-0" />
+              <IconBriefcase size={16} className="shrink-0 text-[var(--brand-primary)]" />
             )}
             <span className="flex items-baseline gap-1.5 text-sm font-bold">
               {title}

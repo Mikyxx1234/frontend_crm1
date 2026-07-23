@@ -14,9 +14,10 @@ import {
   type DealRecord,
   type FunnelSegment,
 } from "@/components/crm/deal-details-panel";
+import { DealViewersStack } from "@/components/crm/deal-viewers-stack";
 import { ChatWindow } from "@/components/inbox/chat-window";
 
-import { useBoard, useDealDetail } from "@/features/pipeline-v2/hooks";
+import { useBoard, useDealDetail, useEntityViewers } from "@/features/pipeline-v2/hooks";
 import type {
   DealContactConversation,
   DealPanelField,
@@ -122,6 +123,9 @@ interface DealDetailExtra {
 export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPageProps) {
   const router = useRouter();
   const dealQuery = useDealDetail(dealId);
+  // Presença "quem está vendo" (estilo Kommo) — outros usuários com este
+  // deal aberto agora. Lista já vem sem você mesmo.
+  const viewers = useEntityViewers("deal", dealId);
   const deal = dealQuery.data as (typeof dealQuery.data & DealDetailExtra) | undefined;
 
   const conversations = deal?.contact?.conversations ?? [];
@@ -281,6 +285,7 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
             record={record}
             productCount={0}
             onBack={() => router.push("/pipeline")}
+            viewersSlot={<DealViewersStack viewers={viewers} />}
           />
         ) : (
           <DealErrorPanel message="Negócio não encontrado." />

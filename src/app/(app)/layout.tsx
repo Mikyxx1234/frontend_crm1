@@ -21,6 +21,7 @@ import { UpdateAvailableBanner } from "@/components/layout/update-banner";
 import { SoftphoneWidget } from "@/features/softphone/components";
 import { ChatThemeApplier } from "@/components/providers/chat-theme-applier";
 import { MobileBottomNav } from "@/components/crm/mobile-bottom-nav";
+import { RouteTransition } from "@/components/crm/route-transition";
 
 // O TooltipProvider (Radix) é provido uma única vez na raiz (app/providers.tsx),
 // cobrindo tanto os TooltipGlass quanto os TooltipContent/TooltipHost. Não é
@@ -34,7 +35,7 @@ export default function AppLayout({
     <>
       <ChatThemeApplier />
       <div className="v2-root v2-min-screen">
-        {children}
+        <RouteTransition>{children}</RouteTransition>
         <UpdateAvailableBanner />
         <MobileAppUpdateDialog />
         <NativeApkUpdateDialog />

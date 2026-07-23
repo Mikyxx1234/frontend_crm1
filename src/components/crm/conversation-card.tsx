@@ -43,6 +43,8 @@ export type LastMessageType =
 
 export interface Conversation {
   id: string
+  /** Número sequencial do "ticket" (ex.: #1234) — organização/controle estilo Kommo. */
+  number?: number | null
   name: string
   initials: string
   avatarColor: ConversationAvatarColor | "blue" | "teal" | "orange" | "purple" | "pink" | "coral"
@@ -62,6 +64,8 @@ export interface Conversation {
   tags?: Array<{ id: string; name: string; color?: string | null }>
   /** Id do responsável atual — usado pelo AssigneePopover. */
   assigneeId?: string | null
+  /** Foto (User.avatarUrl) do responsável — usada no UserAvatar do slot. */
+  assigneeAvatarUrl?: string | null
   /**
    * Canal de origem da conversa. Quando presente, substitui o status
    * dot pelo logo do canal no canto inferior direito do avatar.
@@ -391,6 +395,21 @@ export function ConversationCard({
           )
         )}
       </div>
+
+      {/* Rodapé: nº da conversa (ticket) no canto inferior esquerdo, em verde
+          — estilo Kommo. Quando encerrada, fica cinza. */}
+      {conversation.number != null && (
+        <div
+          className={cn(
+            "mt-2 font-display text-[11px] font-semibold tabular-nums",
+            conversation.resolved
+              ? "text-[var(--text-muted)]"
+              : "text-emerald-600 v2-dark:text-emerald-400",
+          )}
+        >
+          Conversa Nº {conversation.number}
+        </div>
+      )}
     </article>
   )
 }

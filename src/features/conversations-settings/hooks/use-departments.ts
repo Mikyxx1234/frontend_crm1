@@ -11,6 +11,7 @@ export interface Department {
   createdAt: string;
   requireTabulationOnClose?: boolean;
   isSupport?: boolean;
+  distributionEnabled?: boolean;
   _count?: { conversations?: number; members?: number };
 }
 
@@ -57,7 +58,7 @@ export function useCreateDepartment() {
 export function useUpdateDepartment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; name?: string; color?: string; icon?: string; requireTabulationOnClose?: boolean; isSupport?: boolean }) => {
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; color?: string; icon?: string; requireTabulationOnClose?: boolean; isSupport?: boolean; distributionEnabled?: boolean }) => {
       const res = await fetch(`/api/settings/departments/${id}`, {
         method: "PUT",
         credentials: "include",

@@ -34,6 +34,7 @@ export type EditorField =
   | (Common & { kind: "hours" })
   | { kind: "info"; text: string }
   | { kind: "updateField" }
+  | { kind: "templatePreview" }
   | { kind: "builder"; key: string; builder: "buttons" | "buttonsTitle" | "condition" | "schedule" | "headers" }
 
 const ACTIVITY_TYPES: Opt[] = [
@@ -89,6 +90,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   send_whatsapp_template: [
     { kind: "source", source: "template", key: "templateName", label: "Template" },
     { kind: "text", key: "languageCode", label: "Idioma", placeholder: "pt_BR" },
+    { kind: "templatePreview" },
   ],
   send_whatsapp_media: [
     { kind: "select", key: "mediaType", label: "Tipo de mídia", options: MEDIA_TYPES },
@@ -162,6 +164,65 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "text", key: "distributionType", label: "Tipo / segmento", optional: true },
   ],
 }
+
+/**
+ * Catálogo de campos disponíveis nas CONDIÇÕES de automação. Cada `value`
+ * é um caminho pontilhado que o avaliador do backend resolve via
+ * `getByPath` sobre `{ contact, deal, conversation, variables }`
+ * (ver `automation-executor.ts`). Só expomos caminhos realmente resolvíveis.
+ */
+export const CONDITION_FIELDS: Opt[] = [
+  // Contato
+  { value: "contact.name", label: "Nome do contato", group: "Contato" },
+  { value: "contact.email", label: "E-mail", group: "Contato" },
+  { value: "contact.phone", label: "Telefone", group: "Contato" },
+  { value: "contact.source", label: "Origem", group: "Contato" },
+  { value: "contact.lifecycleStage", label: "Ciclo de vida", group: "Contato" },
+  { value: "contact.assignedToId", label: "Responsável (contato)", group: "Contato" },
+  { value: "contact.tags", label: "Tags do contato", group: "Contato" },
+  // Negócio
+  { value: "deal.title", label: "Título do negócio", group: "Negócio" },
+  { value: "deal.value", label: "Valor", group: "Negócio" },
+  { value: "deal.status", label: "Status do negócio", group: "Negócio" },
+  { value: "deal.stageId", label: "Etapa", group: "Negócio" },
+  { value: "deal.pipelineId", label: "Funil", group: "Negócio" },
+  { value: "deal.ownerId", label: "Responsável (negócio)", group: "Negócio" },
+  { value: "deal.tags", label: "Tags do negócio", group: "Negócio" },
+  // Conversa
+  { value: "conversation.channel", label: "Canal", group: "Conversa" },
+  { value: "conversation.assignedToId", label: "Atendente", group: "Conversa" },
+  { value: "conversation.departmentId", label: "Departamento", group: "Conversa" },
+  { value: "conversation.isClosed", label: "Conversa encerrada", group: "Conversa" },
+  { value: "conversation.hasAgentReply", label: "Teve resposta do agente", group: "Conversa" },
+  { value: "conversation.hasError", label: "Conversa com erro", group: "Conversa" },
+]
+
+/** Campos booleanos → valor vira select Sim/Não. */
+export const CONDITION_BOOL_FIELDS = new Set<string>([
+  "conversation.isClosed",
+  "conversation.hasAgentReply",
+  "conversation.hasError",
+])
+
+export const BOOL_OPTS: Opt[] = [
+  { value: "true", label: "Sim" },
+  { value: "false", label: "Não" },
+]
+
+export const DEAL_STATUS_OPTS: Opt[] = [
+  { value: "OPEN", label: "Aberto" },
+  { value: "WON", label: "Ganho" },
+  { value: "LOST", label: "Perdido" },
+]
+
+/** Tipos de canal (valor de `conversation.channel`). */
+export const CHANNEL_KIND_OPTS: Opt[] = [
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "instagram", label: "Instagram" },
+  { value: "messenger", label: "Messenger" },
+  { value: "telegram", label: "Telegram" },
+  { value: "webchat", label: "Webchat" },
+]
 
 export const CONDITION_OPS: Opt[] = [
   { value: "eq", label: "Igual a" },

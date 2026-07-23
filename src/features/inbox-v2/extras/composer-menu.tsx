@@ -58,8 +58,12 @@ export function ComposerMenu({
   isResolved?: boolean;
   contactId?: string | null;
   templateContext?: InternalTemplateContext;
-  /** Insere o texto do modelo interno (interpolado) no composer para edição. */
-  onPickInternal?: (text: string) => void;
+  /** Insere o texto do modelo interno (interpolado) no composer para edição.
+   *  Se o modelo tiver anexo, `media` é repassado pro composer enviar junto. */
+  onPickInternal?: (
+    text: string,
+    media?: { url: string; name: string | null } | null,
+  ) => void;
   /** Abre o painel de validação do template do WhatsApp no composer. */
   onPickTemplate?: (tpl: WhatsappTemplate) => void;
   /** Callback quando "Reabrir" cria novo ticket (modelo de ticket). Ver

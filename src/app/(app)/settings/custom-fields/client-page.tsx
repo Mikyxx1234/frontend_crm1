@@ -46,10 +46,7 @@ import { KpiCard } from "@/components/crm/kpi-card";
 import { KpiStrip } from "@/components/crm/kpi-strip";
 import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
 import { SwitchGlass } from "@/components/crm/switch-glass";
-import {
-  EntityGroupsSection,
-  type FieldConfigEntity,
-} from "@/components/crm/fields/field-config-panel";
+import { type FieldConfigEntity } from "@/components/crm/fields/field-config-panel";
 import {
   PageActionsMenu,
   PageSegmentedControl,
@@ -699,6 +696,9 @@ function pickGroups(sections: SectionConfig[], entity: FieldConfigEntity) {
   );
 }
 
+const genGroupId = (entity: string) =>
+  `cfg_${entity}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+
 /**
  * Editor unificado de grupos: o gestor organiza os campos personalizados em
  * grupos e o resultado vale para os dois painéis laterais (Inbox e Negócio).
@@ -708,6 +708,11 @@ function CustomFieldGroupsManager({ entity }: { entity: FieldConfigEntity }) {
   const deal = useFieldLayout("deal_panel_v2");
   const inbox = useFieldLayout("inbox_lead_v2");
 
+  const { data: allFields = [] } = useQuery({
+    queryKey: ["custom-fields", entity],
+    queryFn: () => fetchFields(entity),
+  });
+
   // Base canônica: prioriza o que já existe no painel do Negócio; se vazio,
   // usa o da Inbox. A partir do primeiro salvamento os dois ficam idênticos.
   const initialGroups = React.useMemo(() => {
@@ -716,22 +721,76 @@ function CustomFieldGroupsManager({ entity }: { entity: FieldConfigEntity }) {
   }, [deal.adminSections, inbox.adminSections, entity]);
 
   const [draft, setDraft] = React.useState<SectionConfig[] | null>(null);
+  const [newName, setNewName] = React.useState("");
   const working = draft ?? initialGroups;
   const dirty = draft !== null;
 
   // Ao trocar de entidade, descarta rascunho não salvo.
   React.useEffect(() => {
     setDraft(null);
+    setNewName("");
   }, [entity]);
 
+  const fieldsById = React.useMemo(
+    () => new Map(allFields.map((f) => [f.id, f] as const)),
+    [allFields],
+  );
+  const assigned = React.useMemo(
+    () => new Set(working.flatMap((g) => g.fields.map((f) => f.id))),
+    [working],
+  );
+  const orphans = React.useMemo(
+    () => allFields.filter((f) => !assigned.has(f.id)),
+    [allFields, assigned],
+  );
+
+  const addGroup = () => {
+    const label = newName.trim();
+    if (!label) return;
+    setDraft([
+      ...working,
+      {
+        id: genGroupId(entity),
+        label,
+        kind: "custom_fields_group",
+        entity,
+        fields: [],
+        collapsedDefault: false,
+      },
+    ]);
+    setNewName("");
+  };
+  const renameGroup = (id: string, label: string) =>
+    setDraft(working.map((g) => (g.id === id ? { ...g, label } : g)));
+  const deleteGroup = (id: string) =>
+    setDraft(working.filter((g) => g.id !== id));
+  const assignField = (groupId: string, field: CustomFieldItem) =>
+    setDraft(
+      working.map((g) => {
+        if (g.id === groupId) {
+          if (g.fields.some((f) => f.id === field.id)) return g;
+          return { ...g, fields: [...g.fields, { id: field.id, label: field.label }] };
+        }
+        // 1 campo por grupo (mesma entidade): remove dos demais.
+        return { ...g, fields: g.fields.filter((f) => f.id !== field.id) };
+      }),
+    );
+  const removeField = (groupId: string, fieldId: string) =>
+    setDraft(
+      working.map((g) =>
+        g.id === groupId
+          ? { ...g, fields: g.fields.filter((f) => f.id !== fieldId) }
+          : g,
+      ),
+    );
+
   const save = () => {
-    const groups = working;
     for (const ctx of [deal, inbox] as const) {
       const merged = [
         ...ctx.adminSections.filter(
           (s) => !(s.kind === "custom_fields_group" && s.entity === entity),
         ),
-        ...groups,
+        ...working,
       ];
       ctx.saveAdmin(merged);
     }
@@ -743,29 +802,106 @@ function CustomFieldGroupsManager({ entity }: { entity: FieldConfigEntity }) {
   const entityLabel = entity === "deal" ? "Negócio" : "Contato";
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
-      <div className="max-w-2xl">
-        <p className="font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">
-          Organize os campos de{" "}
-          <span className="font-semibold text-[var(--text-secondary)]">
-            {entityLabel}
-          </span>{" "}
-          em grupos. Os grupos aparecem nos painéis laterais da Inbox e do Negócio
-          para todos os agentes. Cada campo pode estar em apenas um grupo; os
-          campos sem grupo continuam listados normalmente.
-        </p>
-      </div>
-
-      <div className="max-w-2xl rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-        <EntityGroupsSection
-          entity={entity}
-          sections={working}
-          onSectionsChange={setDraft}
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
+      {/* Mini-dash KPI */}
+      <section
+        className="grid shrink-0 grid-cols-3 gap-2.5 sm:gap-3.5"
+        aria-label="Indicadores de grupos"
+      >
+        <KpiCard
+          label="Grupos"
+          value={working.length.toLocaleString("pt-BR")}
+          icon={<IconStack2 size={20} stroke={2.2} />}
+          tone="brand"
         />
+        <KpiCard
+          label="Campos agrupados"
+          value={assigned.size.toLocaleString("pt-BR")}
+          icon={<IconForms size={20} stroke={2.2} />}
+          tone="success"
+        />
+        <KpiCard
+          label="Sem grupo"
+          value={orphans.length.toLocaleString("pt-BR")}
+          icon={<IconLayoutList size={20} stroke={2.2} />}
+          tone="neutral"
+        />
+      </section>
+
+      <p className="font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">
+        Organize os campos de{" "}
+        <span className="font-semibold text-[var(--text-secondary)]">
+          {entityLabel}
+        </span>{" "}
+        em grupos. Os grupos aparecem nos painéis laterais da Inbox e do Negócio
+        para todos os agentes. Cada campo pode estar em apenas um grupo; os campos
+        sem grupo continuam listados normalmente.
+      </p>
+
+      <div className="flex flex-col gap-2.5">
+        {working.map((g) => (
+          <GroupCardRow
+            key={g.id}
+            group={g}
+            fieldsById={fieldsById}
+            orphans={orphans}
+            onRename={(label) => renameGroup(g.id, label)}
+            onDelete={() => deleteGroup(g.id)}
+            onAssign={(field) => assignField(g.id, field)}
+            onRemoveField={(fieldId) => removeField(g.id, fieldId)}
+          />
+        ))}
+
+        {/* Campos sem grupo */}
+        {orphans.length > 0 && (
+          <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3.5">
+            <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]">
+              Sem grupo ({orphans.length})
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {orphans.map((f) => (
+                <span
+                  key={f.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-1 font-display text-[12px] text-[var(--text-secondary)]"
+                >
+                  <span className="text-[var(--brand-primary)]">
+                    {TYPE_ICONS[f.type] ?? <IconLetterT size={12} strokeWidth={2.5} />}
+                  </span>
+                  {f.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Novo grupo */}
+        <div className="flex items-center gap-2 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3">
+          <InputGlass
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addGroup();
+              }
+            }}
+            placeholder="Nome do novo grupo (ex.: Documentos)"
+            className="flex-1"
+          />
+          <ButtonGlass
+            variant="primary"
+            size="sm"
+            onClick={addGroup}
+            disabled={!newName.trim()}
+            className="shrink-0 gap-1.5"
+          >
+            <IconPlus size={14} /> Grupo
+          </ButtonGlass>
+        </div>
       </div>
 
       {dirty && (
-        <div className="sticky bottom-3 flex max-w-2xl items-center justify-end gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2 shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <div className="sticky bottom-3 flex items-center justify-end gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2 shadow-[var(--glass-shadow)] backdrop-blur-md">
           <span className="mr-auto font-body text-[11.5px] text-[var(--text-muted)]">
             Alterações não salvas
           </span>
@@ -793,6 +929,181 @@ function CustomFieldGroupsManager({ entity }: { entity: FieldConfigEntity }) {
           </ButtonGlass>
         </div>
       )}
+    </div>
+  );
+}
+
+function GroupCardRow({
+  group,
+  fieldsById,
+  orphans,
+  onRename,
+  onDelete,
+  onAssign,
+  onRemoveField,
+}: {
+  group: SectionConfig;
+  fieldsById: Map<string, CustomFieldItem>;
+  orphans: CustomFieldItem[];
+  onRename: (label: string) => void;
+  onDelete: () => void;
+  onAssign: (field: CustomFieldItem) => void;
+  onRemoveField: (fieldId: string) => void;
+}) {
+  const [editing, setEditing] = React.useState(false);
+  const [draftName, setDraftName] = React.useState(group.label);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+  const pickerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!pickerOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node))
+        setPickerOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [pickerOpen]);
+
+  const commitName = () => {
+    const v = draftName.trim();
+    if (v && v !== group.label) onRename(v);
+    setEditing(false);
+  };
+
+  return (
+    <div className="group rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:shadow-[var(--glass-shadow)]">
+      {/* Cabeçalho do grupo */}
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
+          <IconStack2 size={16} strokeWidth={2.2} />
+        </div>
+        {editing ? (
+          <input
+            autoFocus
+            type="text"
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitName();
+              } else if (e.key === "Escape") {
+                setDraftName(group.label);
+                setEditing(false);
+              }
+            }}
+            className="h-8 min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--brand-primary)] bg-[var(--glass-bg-strong)] px-2.5 font-display text-[14px] font-semibold text-[var(--text-primary)] outline-none"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setDraftName(group.label);
+              setEditing(true);
+            }}
+            className="flex min-w-0 items-center gap-1.5 text-left"
+            title="Renomear grupo"
+          >
+            <span className="truncate font-display text-[14px] font-semibold text-[var(--text-primary)]">
+              {group.label}
+            </span>
+            <IconPencil
+              size={13}
+              className="shrink-0 text-[var(--text-muted)] opacity-0 transition-opacity group-hover:opacity-100"
+            />
+          </button>
+        )}
+        <span className="ml-1 shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)]">
+          {group.fields.length} campo{group.fields.length !== 1 ? "s" : ""}
+        </span>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label="Excluir grupo"
+          className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500"
+        >
+          <IconTrash size={14} />
+        </button>
+      </div>
+
+      {/* Campos do grupo */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {group.fields.length === 0 && (
+          <span className="font-body text-[12px] italic text-[var(--text-muted)]">
+            Nenhum campo neste grupo.
+          </span>
+        )}
+        {group.fields.map((f) => {
+          const def = fieldsById.get(f.id);
+          const label = def?.label ?? f.label;
+          const missing = !def;
+          return (
+            <span
+              key={f.id}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-display text-[12px]",
+                missing
+                  ? "border-dashed border-amber-300 text-amber-600"
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-secondary)]",
+              )}
+              title={missing ? "Campo excluído (será ignorado)" : undefined}
+            >
+              {def && (
+                <span className="text-[var(--brand-primary)]">
+                  {TYPE_ICONS[def.type] ?? <IconLetterT size={12} strokeWidth={2.5} />}
+                </span>
+              )}
+              {label}
+              <button
+                type="button"
+                onClick={() => onRemoveField(f.id)}
+                aria-label={`Remover ${label} do grupo`}
+                className="text-[var(--text-muted)] transition-colors hover:text-red-500"
+              >
+                <IconX size={12} />
+              </button>
+            </span>
+          );
+        })}
+
+        {/* Picker de campos órfãos */}
+        <div ref={pickerRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setPickerOpen((v) => !v)}
+            disabled={orphans.length === 0}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)] disabled:opacity-50"
+          >
+            <IconPlus size={12} />
+            {orphans.length === 0 ? "Sem campos disponíveis" : "Adicionar campo"}
+          </button>
+          {pickerOpen && orphans.length > 0 && (
+            <div className="absolute left-0 top-[calc(100%+6px)] z-20 max-h-64 w-64 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] p-1 shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
+              {orphans.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => {
+                    onAssign(f);
+                    setPickerOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left font-display text-[12.5px] text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+                >
+                  <span className="text-[var(--brand-primary)]">
+                    {TYPE_ICONS[f.type] ?? <IconLetterT size={12} strokeWidth={2.5} />}
+                  </span>
+                  <span className="truncate">{f.label}</span>
+                  <span className="ml-auto shrink-0 font-body text-[10.5px] text-[var(--text-muted)]">
+                    {TYPES.find((t) => t.value === f.type)?.label ?? f.type}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   IconCheck,
   IconX,
   IconCornerUpLeft,
+  IconPaperclip,
 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
@@ -23,6 +24,8 @@ import {
   SlashCommandMenu,
 } from "@/components/inbox/slash-command-menu";
 import { getContact } from "@/features/inbox-v2/api/misc";
+import { sendAttachment } from "@/features/inbox-v2/api";
+import { apiUrl } from "@/lib/api";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
 import { ActiveBotsButton } from "./active-bots-button";
@@ -75,6 +78,7 @@ export function Composer({
   onCancelReply,
   departmentId,
   requireTabulationOnClose,
+  onReopenNewConversation,
 }: {
   conversationId: string | null;
   value: string;
@@ -128,10 +132,20 @@ export function Composer({
    *  modal de tabulacao ao encerrar quando o dept exige. */
   departmentId?: string | null;
   requireTabulationOnClose?: boolean;
+  /** Reabrir pelo menu "+" cria um NOVO ticket (modelo de ticket); troca o
+   *  chat ativo pro id novo. Sem isto o reopen acontece no backend mas a UI
+   *  fica presa no ticket resolvido (que some do colapso) — parece "não reabriu". */
+  onReopenNewConversation?: (newConversationId: string) => void;
 }) {
   const [noteMode, setNoteMode] = useState(false);
   const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
   const isAudioActive = audioRecState !== "idle";
+
+  // Anexo "encostado" por um modelo interno / mensagem rápida escolhido no
+  // "/" ou no menu "+". Vai junto com o texto quando o operador enviar.
+  const [pendingMedia, setPendingMedia] = useState<{ url: string; name: string | null } | null>(
+    null,
+  );
 
   // ── Contexto para interpolação de templates internos ─────────────
   // Busca dados do contato quando contactId está disponível, para
@@ -265,7 +279,12 @@ export function Composer({
   }, [value]);
 
   // Insere o texto de um modelo interno no campo (editável) e foca o cursor.
-  function insertTemplateText(text: string) {
+  // Se `media` vier junto, encosta o anexo pra ser enviado com a mensagem.
+  function insertTemplateText(
+    text: string,
+    media?: { url: string; name: string | null } | null,
+  ) {
+    if (media) setPendingMedia(media);
     const base = value;
     const next = base.trim()
       ? `${base}${base.endsWith("\n") ? "" : "\n"}${text}`
@@ -291,6 +310,8 @@ export function Composer({
     templateContext,
     // Desabilita o atalho em modo nota (não faz sentido inserir templates ali)
     disabled: disabled || noteMode,
+    // Modelo/mensagem rápida com anexo → encosta a mídia pra ir junto no envio.
+    onInsertMedia: (media) => setPendingMedia(media),
     onPickMetaTemplate: (item) =>
       setPendingTemplate({
         name: item.name,
@@ -329,15 +350,38 @@ export function Composer({
   // `onSendNote=undefined`.
   const inputDisabled = noteMode ? false : !!disabled;
 
+  // Envia o anexo encostado (mídia de modelo/mensagem rápida) logo após o
+  // texto. Silencioso em erro — o texto já saiu.
+  async function flushPendingMedia() {
+    if (!pendingMedia || !conversationId) return;
+    const media = pendingMedia;
+    setPendingMedia(null);
+    try {
+      const res = await fetch(apiUrl(media.url));
+      if (!res.ok) return;
+      const blob = await res.blob();
+      await sendAttachment(conversationId, blob, { fileName: media.name ?? undefined });
+    } catch {
+      /* texto já foi enviado; anexo falhou silenciosamente */
+    }
+  }
+
+  function performSend() {
+    const trimmed = value.trim();
+    // Permite enviar quando há texto OU um anexo encostado.
+    if ((!trimmed && !pendingMedia) || sending || inputDisabled) return;
+    if (noteMode && onSendNote) {
+      // Nota interna não carrega anexo de modelo.
+      if (trimmed) onSendNote(trimmed);
+      return;
+    }
+    if (trimmed) onSend(applySignature(trimmed));
+    void flushPendingMedia();
+  }
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const trimmed = value.trim();
-    if (!trimmed || sending || inputDisabled) return;
-    if (noteMode && onSendNote) {
-      onSendNote(trimmed);
-    } else {
-      onSend(applySignature(trimmed));
-    }
+    performSend();
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -348,18 +392,12 @@ export function Composer({
     // Enter sem Shift = envio
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      const trimmed = value.trim();
-      if (!trimmed || sending || inputDisabled) return;
-      if (noteMode && onSendNote) {
-        onSendNote(trimmed);
-      } else {
-        onSend(applySignature(trimmed));
-      }
+      performSend();
     }
   }
 
   return (
-    <div ref={rootRef} className="relative mx-5.5 mb-5.5 max-md:mx-3 max-md:mb-2">
+    <div ref={rootRef} className="relative mx-5.5 mb-2 max-md:mx-3 max-md:mb-2">
       {/* Painel de validação do template do WhatsApp — flutua acima do composer */}
       {pendingTemplate && conversationId ? (
         <TemplateComposePanel
@@ -396,6 +434,26 @@ export function Composer({
               <IconX size={14} />
             </button>
           )}
+        </div>
+      )}
+
+      {/* Anexo encostado por um modelo/mensagem rápida — vai junto no envio. */}
+      {pendingMedia && (
+        <div className="mb-2 flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2 shadow-[var(--glass-shadow-sm)]">
+          <div className="flex shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12 p-1.5 text-[var(--brand-primary)]">
+            <IconPaperclip size={14} />
+          </div>
+          <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-secondary)]">
+            {pendingMedia.name?.trim() || "Anexo do modelo"} · será enviado junto
+          </span>
+          <button
+            type="button"
+            onClick={() => setPendingMedia(null)}
+            aria-label="Remover anexo"
+            className="shrink-0 rounded-full p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+          >
+            <IconX size={14} />
+          </button>
         </div>
       )}
 
@@ -584,6 +642,7 @@ export function Composer({
               onPickTemplate={(tpl) => setPendingTemplate(whatsappTemplateToPending(tpl))}
               departmentId={departmentId ?? null}
               requireTabulationOnClose={requireTabulationOnClose}
+              onReopenNewConversation={onReopenNewConversation}
             />
             <ButtonGlass
               type="button"

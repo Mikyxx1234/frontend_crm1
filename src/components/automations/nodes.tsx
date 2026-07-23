@@ -1,9 +1,12 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useEffect } from "react"
 import { Handle, Position, useReactFlow, type NodeProps } from "@xyflow/react"
 import { NodeConfigEditor } from "./inline-editor"
 import { resolveFlowPresentation } from "./node-presentation"
+import { useTemplateDetailsMap } from "./editor-data"
+
+type TemplateBtn = { id?: string; title?: string; text?: string; gotoStepId?: string }
 
 type Accent = "violet" | "green" | "blue" | "amber" | "red"
 
@@ -311,6 +314,38 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
   const title = derived.title ?? d.title
   const rf = useReactFlow()
   const editing = !!selected && !!d.stepType
+
+  // ── Template WhatsApp: sincroniza botões (quick-reply) + preview do corpo
+  // a partir da definição do template selecionado. Roda independente de qual
+  // editor (inline ou diálogo) escolheu o template — garante que os ramos de
+  // roteamento e o preview apareçam no card. Preserva gotoStepId por título.
+  const isTemplate = d.stepType === "send_whatsapp_template"
+  const { detailsMap } = useTemplateDetailsMap()
+  const templateName = isTemplate ? String((d.config ?? {}).templateName ?? "") : ""
+  const tplDetail = isTemplate && templateName ? detailsMap.get(templateName) : undefined
+  useEffect(() => {
+    if (!isTemplate || !tplDetail) return
+    const cfg = d.config ?? {}
+    const prev = Array.isArray(cfg.buttons) ? (cfg.buttons as TemplateBtn[]) : []
+    const desired = tplDetail.quickReplies.map((title, i) => {
+      const match = prev.find(
+        (p) => (p.title ?? p.text ?? "").trim().toLowerCase() === title.toLowerCase(),
+      )
+      return { id: `btn_${i}`, title, gotoStepId: match?.gotoStepId ?? "" }
+    })
+    const buttonsSame =
+      desired.length === prev.length &&
+      desired.every(
+        (b, i) =>
+          b.title === (prev[i]?.title ?? "") && (b.gotoStepId ?? "") === (prev[i]?.gotoStepId ?? ""),
+      )
+    const bodySame = String(cfg.bodyPreview ?? "") === tplDetail.bodyPreview
+    if (buttonsSame && bodySame) return
+    rf.updateNodeData(id, {
+      config: { ...cfg, buttons: desired, bodyPreview: tplDetail.bodyPreview },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTemplate, templateName, tplDetail, id])
 
   const steps = editing
     ? rf

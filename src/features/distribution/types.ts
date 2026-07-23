@@ -9,7 +9,8 @@ export type DistributionBlockReason =
   | "ON_PAUSE"
   | "OUTSIDE_WORKING_HOURS"
   | "QUEUE_LIMIT_REACHED"
-  | "TYPE_INCOMPATIBLE";
+  | "TYPE_INCOMPATIBLE"
+  | "DEPARTMENT_MISMATCH";
 
 export interface DistributionResponsibleDto {
   userId: string;
@@ -92,4 +93,5 @@ export const BLOCK_REASON_LABELS: Record<DistributionBlockReason, string> = {
   OUTSIDE_WORKING_HOURS: "Fora do expediente",
   QUEUE_LIMIT_REACHED: "Fila cheia",
   TYPE_INCOMPATIBLE: "Tipo incompatível",
+  DEPARTMENT_MISMATCH: "Fora do departamento",
 };

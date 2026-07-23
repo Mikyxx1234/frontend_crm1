@@ -69,7 +69,12 @@ export interface ConversationListRow {
     avatarUrl?: string | null;
   };
   assignedToId: string | null;
-  assignedTo: { id: string; name: string; email: string } | null;
+  assignedTo: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl?: string | null;
+  } | null;
   lastInboundAt: string | null;
   lastMessageAt?: string | null;
   lastMessage?: {
@@ -214,6 +219,12 @@ export interface InboxMessageDto {
    * automation-executor: bot grava `senderName === "Automação"`.
    */
   senderName?: string | null;
+  /**
+   * Foto de perfil do agente que assinou a mensagem out (resolvida no
+   * backend via match `senderName` → `User.avatarUrl`). NULL quando não
+   * há match ou é inbound/bot. Preferida sobre a foto do usuário logado.
+   */
+  senderImageUrl?: string | null;
   /**
    * Autoria explícita da mensagem (`human` | `bot` | `system`). Setado
    * pelos serviços que criam mensagens outbound (automation-executor, AI

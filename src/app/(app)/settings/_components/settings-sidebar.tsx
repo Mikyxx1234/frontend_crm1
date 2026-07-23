@@ -151,8 +151,9 @@ export function SettingsSidebar({
       aria-hidden={!open}
       className={cn(
         "flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm",
-        "transition-[transform,opacity] duration-300 ease-out",
-        open ? "translate-x-0 opacity-100" : "-translate-x-3 opacity-0",
+        open
+          ? "settings-sidebar-slide-in"
+          : "-translate-x-3 opacity-0 transition-[transform,opacity] duration-300 ease-out",
       )}
     >
       {/* Header do card */}

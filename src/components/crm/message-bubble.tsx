@@ -157,6 +157,8 @@ export interface Message {
   createdAt?: string
   type: "incoming" | "outgoing"
   senderInitials?: string
+  /** Foto de perfil do agente remetente (resolvida no backend). */
+  senderImageUrl?: string | null
   /** Nome completo do agente ou automação que enviou a mensagem. */
   senderName?: string
   /** Mensagem enviada por bot/automação — exibe badge "AUTOMAÇÃO" */
@@ -347,9 +349,17 @@ export interface MessageBubbleProps {
   message: Message
   /** Iniciais do agente logado — exibidas no avatar das mensagens outgoing. */
   agentInitials?: string
+  /** Nome do agente logado — usado para detectar "mensagem minha" por NOME
+   *  (robusto: independe de iniciais, que divergem entre funções). */
+  agentName?: string | null
   /** Foto do agente logado (User.avatarUrl). Sobrepõe as iniciais no token
    *  outgoing quando a bolha representa o próprio agente. */
   agentImageUrl?: string | null
+  /** Mapa fresco `nome (lowercase) → avatarUrl` (GET /api/users). Fallback
+   *  confiável quando `senderImageUrl` (match server-side) vem nulo ou a
+   *  sessão está com a foto defasada — garante paridade com o avatar do
+   *  kanban (que lê `avatarUrl` fresco por usuário). */
+  senderPhotoByName?: Map<string, string | null> | null
   className?: string
   /** Esta nota está fixada na conversa? Exibe indicador âmbar. */
   isPinned?: boolean
@@ -1205,7 +1215,9 @@ function MenuItem({
 export function MessageBubble({
   message,
   agentInitials,
+  agentName,
   agentImageUrl,
+  senderPhotoByName,
   className,
   isPinned,
   onPinNote,
@@ -1389,10 +1401,10 @@ export function MessageBubble({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className="flex h-8 w-8 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
+                    className="flex h-9 w-9 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
                     style={{ background: AUTOMATION_ACCENT }}
                   >
-                    <IconRobot size={16} />
+                    <IconRobot size={19} />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="font-medium text-[11px]">
@@ -1401,7 +1413,7 @@ export function MessageBubble({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="absolute -bottom-1 -right-1 flex h-[18px] min-w-[18px] cursor-default items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] px-0.5 font-display text-[9px] font-bold leading-none text-white shadow-[0_1px_3px_rgba(15,20,40,0.28)]">
+                  <span className="absolute -bottom-1 -right-1 flex h-[21px] min-w-[21px] cursor-default items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] px-0.5 font-display text-[10px] font-bold leading-none text-white shadow-[0_1px_3px_rgba(15,20,40,0.28)]">
                     {message.automationAgentInitials}
                   </span>
                 </TooltipTrigger>
@@ -1415,24 +1427,52 @@ export function MessageBubble({
               <TooltipTrigger asChild>
                 <div
                   className={cn(
-                    "flex h-7 w-7 shrink-0 cursor-default items-center justify-center overflow-hidden rounded-full font-display text-[10px] font-bold text-white",
+                    "flex h-9 w-9 shrink-0 cursor-default items-center justify-center overflow-hidden rounded-full font-display text-[11px] font-bold text-white",
                     !isBot && "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
                   )}
                   style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
                 >
-                  {isBot ? (
-                    <IconRobot size={14} />
-                  ) : !message.senderInitials && agentImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={agentImageUrl}
-                      alt={agentInitials ?? "Você"}
-                      className="size-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    message.senderInitials || agentInitials || "?"
-                  )}
+                  {(() => {
+                    // Prioridade: foto do remetente resolvida no backend
+                    // (`senderImageUrl`, por agente) → foto do usuário logado
+                    // quando a mensagem é dele (iniciais batem ou sem autoria).
+                    // "É minha mensagem?" — detecta por NOME (robusto) ou por
+                    // iniciais/ausência de autoria. O match por nome corrige o
+                    // caso das iniciais divergirem entre funções (ex.: "Marcelo
+                    // Pinha Dev" → getInitials "MP" ≠ avatarInitials "MD").
+                    const norm = (s?: string | null) =>
+                      (s ?? "").trim().toLowerCase()
+                    const isSelf =
+                      !message.senderInitials ||
+                      message.senderInitials === agentInitials ||
+                      (!!agentName &&
+                        !!message.senderName &&
+                        norm(message.senderName) === norm(agentName))
+                    const selfPhoto = isSelf ? agentImageUrl : null
+                    // Foto fresca por nome (mesma fonte do avatar do kanban):
+                    // cobre casos em que o match server-side (`senderImageUrl`)
+                    // falha ou a sessão está com a foto defasada.
+                    const byName =
+                      senderPhotoByName && message.senderName
+                        ? senderPhotoByName.get(
+                            message.senderName.trim().toLowerCase(),
+                          ) ?? null
+                        : null
+                    const photo = message.senderImageUrl || byName || selfPhoto
+                    if (isBot) return <IconRobot size={18} />
+                    if (photo) {
+                      return (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={photo}
+                          alt={agentInitials ?? "Você"}
+                          className="size-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      )
+                    }
+                    return message.senderInitials || agentInitials || "?"
+                  })()}
                 </div>
               </TooltipTrigger>
               {senderName && (

@@ -71,7 +71,11 @@ function readNextStepId(config: unknown): string | null {
 }
 
 function isInteractiveStep(type: string): boolean {
-  return type === "question" || type === "send_whatsapp_interactive"
+  return (
+    type === "question" ||
+    type === "send_whatsapp_interactive" ||
+    type === "send_whatsapp_template"
+  )
 }
 
 function edge(

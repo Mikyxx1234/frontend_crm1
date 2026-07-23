@@ -984,7 +984,11 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
           )}
 
           {step.type === "send_whatsapp_template" && (
-            <TemplateStepConfig draft={draft} setDraft={setDraft} />
+            <TemplateStepConfig
+              draft={draft}
+              setDraft={setDraft}
+              otherSteps={allSteps.filter((s) => s.id !== step.id)}
+            />
           )}
 
           {step.type === "send_whatsapp_media" && (
@@ -3285,6 +3289,7 @@ type TemplateOption = {
   hasButtons?: boolean;
   hasVariables?: boolean;
   buttonTypes?: string[];
+  buttons?: { type: string; text: string; url?: string | null }[];
   flowAction?: string | null;
   flowId?: string | null;
 };
@@ -3295,12 +3300,32 @@ const CAT_LABEL: Record<string, string> = {
   AUTHENTICATION: "Autenticação",
 };
 
+const BTN_TYPE_LABEL: Record<string, string> = {
+  QUICK_REPLY: "Resposta rápida",
+  URL: "Link",
+  PHONE_NUMBER: "Telefone",
+  COPY_CODE: "Copiar código",
+  FLOW: "Flow",
+};
+
+type TemplateRouteButton = { id?: string; title?: string; text?: string; gotoStepId?: string };
+
+/** Botões QUICK_REPLY do template — únicos que geram resposta inbound roteável. */
+function quickReplyButtons(tpl: TemplateOption | undefined): { title: string }[] {
+  if (!tpl?.buttons) return [];
+  return tpl.buttons
+    .filter((b) => String(b.type).toUpperCase() === "QUICK_REPLY" && (b.text ?? "").trim() !== "")
+    .map((b) => ({ title: b.text.trim() }));
+}
+
 function TemplateStepConfig({
   draft,
   setDraft,
+  otherSteps,
 }: {
   draft: Record<string, unknown>;
   setDraft: Dispatch<SetStateAction<Record<string, unknown>>>;
+  otherSteps: AutomationStep[];
 }) {
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["automation-whatsapp-templates"],
@@ -3316,6 +3341,32 @@ function TemplateStepConfig({
 
   const selectedName = String(draft.templateName ?? "");
   const selected = templates.find((t) => t.metaTemplateName === selectedName);
+  const routeButtons: TemplateRouteButton[] = Array.isArray(draft.buttons)
+    ? (draft.buttons as TemplateRouteButton[])
+    : [];
+
+  // Sincroniza `draft.buttons` com os QUICK_REPLY do template selecionado
+  // (preservando gotoStepId já escolhido por título). Roda quando os
+  // templates carregam / o template muda. Só grava se houve mudança real.
+  useEffect(() => {
+    if (!selected) return;
+    const qr = quickReplyButtons(selected);
+    const prev = Array.isArray(draft.buttons) ? (draft.buttons as TemplateRouteButton[]) : [];
+    const merged = qr.map((b, i) => {
+      const prevMatch = prev.find(
+        (p) => (p.title ?? p.text ?? "").trim().toLowerCase() === b.title.toLowerCase(),
+      );
+      return { id: `btn_${i}`, title: b.title, gotoStepId: prevMatch?.gotoStepId ?? "" };
+    });
+    const same =
+      merged.length === prev.length &&
+      merged.every(
+        (m, i) =>
+          m.title === (prev[i]?.title ?? "") && (m.gotoStepId ?? "") === (prev[i]?.gotoStepId ?? ""),
+      );
+    if (!same) setDraft((d) => ({ ...d, buttons: merged }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedName, templates.length]);
 
   return (
     <>
@@ -3332,10 +3383,14 @@ function TemplateStepConfig({
           <DropdownGlass
             triggerClassName="w-full"
             placeholder="Selecione um template…"
+            searchable
+            searchPlaceholder="Buscar template pelo nome…"
             value={selectedName}
             options={templates.map((t) => ({
               value: t.metaTemplateName,
               label: `${t.label || t.metaTemplateName}${t.category ? ` (${CAT_LABEL[t.category] ?? t.category})` : ""}`,
+              description: t.label ? t.metaTemplateName : undefined,
+              searchText: `${t.label ?? ""} ${t.metaTemplateName}`,
             }))}
             onValueChange={(v) => {
               const tpl = templates.find((t) => t.metaTemplateName === v);
@@ -3373,6 +3428,79 @@ function TemplateStepConfig({
               {selected.bodyPreview}
             </p>
           )}
+          {selected.buttons && selected.buttons.length > 0 && (
+            <div className="space-y-1 border-t border-border/50 pt-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Botões ({selected.buttons.length})
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {selected.buttons.map((btn, i) => (
+                  <span
+                    key={`${btn.text}-${i}`}
+                    className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-background px-2 py-1 text-[11px] font-medium text-foreground/90"
+                    title={btn.url ?? BTN_TYPE_LABEL[btn.type] ?? btn.type}
+                  >
+                    <span className="text-primary">•</span>
+                    {btn.text || BTN_TYPE_LABEL[btn.type] || btn.type}
+                    <span className="text-[9px] text-muted-foreground">
+                      {BTN_TYPE_LABEL[btn.type] ?? btn.type}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {routeButtons.length > 0 && (
+        <div className="space-y-2">
+          <Label>Roteamento por botão — cada opção leva a um passo</Label>
+          <p className="text-[11px] text-muted-foreground">
+            Quando o contato tocar num botão de <strong>resposta rápida</strong>, o fluxo
+            segue para o passo escolhido. Deixe em “linear” para seguir na ordem.
+          </p>
+          <div className="flex flex-col gap-2">
+            {routeButtons.map((btn, idx) => (
+              <div key={btn.id || idx} className="rounded-md border border-border p-2 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
+                  <span className="text-primary">•</span>
+                  {btn.title || btn.text || `Botão ${idx + 1}`}
+                </div>
+                <DropdownGlass
+                  triggerClassName="w-full"
+                  value={btn.gotoStepId ?? ""}
+                  options={[
+                    { value: "", label: "→ Próximo passo (linear)" },
+                    ...otherSteps.map((s) => ({
+                      value: s.id,
+                      label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                    })),
+                  ]}
+                  onValueChange={(v) => {
+                    const next = [...routeButtons];
+                    next[idx] = { ...next[idx], gotoStepId: v };
+                    setDraft((d) => ({ ...d, buttons: next }));
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-1.5 pt-1">
+            <Label>Se a resposta não bater com nenhum botão</Label>
+            <DropdownGlass
+              triggerClassName="w-full"
+              value={String(draft.elseGotoStepId ?? "")}
+              options={[
+                { value: "", label: "→ Próximo passo (linear)" },
+                ...otherSteps.map((s) => ({
+                  value: s.id,
+                  label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                })),
+              ]}
+              onValueChange={(v) => setDraft((d) => ({ ...d, elseGotoStepId: v }))}
+            />
+          </div>
         </div>
       )}
 

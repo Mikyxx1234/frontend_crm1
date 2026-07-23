@@ -7,6 +7,8 @@ import { RequirePermission } from "@/components/auth/require-permission";
 import { toast } from "sonner";
 import {
   IconArrowLeft,
+  IconBell,
+  IconBellOff,
   IconBriefcase,
   IconChevronDown,
   IconCircleCheck,
@@ -58,6 +60,7 @@ import {
   useSendMessage,
   useTabCounts,
   useWhatsappChannels,
+  useInboxSoundMuted,
   CONVERSATION_REOPENED_EVENT,
 } from "@/features/inbox-v2/hooks";
 import {
@@ -663,6 +666,30 @@ export default function InboxV2ClientPage({
   const useFilteredTabCount =
     hasInboxServerFilters(filters) || debouncedSearch.trim().length > 0;
 
+  // Aviso sonoro por mensagem recebida — o botão só (des)liga a preferência
+  // (persistida no localStorage). O ping em si toca no useInboxRealtime.
+  const [soundMuted, setSoundMuted] = useInboxSoundMuted();
+  const soundToggleNode = (
+    <TooltipGlass
+      label={soundMuted ? "Ativar aviso sonoro" : "Silenciar aviso sonoro"}
+      side="bottom"
+    >
+      <button
+        type="button"
+        onClick={() => setSoundMuted(!soundMuted)}
+        aria-pressed={!soundMuted}
+        className={cn(
+          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
+          soundMuted
+            ? "border-[var(--color-warn)]/40 bg-[var(--color-warn-bg)] text-[var(--color-warn)] hover:text-[var(--color-warn)]"
+            : "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+        )}
+      >
+        {soundMuted ? <IconBellOff size={17} stroke={2} /> : <IconBell size={17} stroke={2} />}
+      </button>
+    </TooltipGlass>
+  );
+
   // Botão que entra/sai do modo de seleção — vive ao lado do filtro, na
   // mesma linha do dropdown de status.
   const selectionToggleNode = (
@@ -732,6 +759,7 @@ export default function InboxV2ClientPage({
       // mais relacionado a ele (tabs de status).
       filterSlot={
         <>
+          {soundToggleNode}
           {selectionToggleNode}
           <InboxFilterButton value={filters} onChange={setFilters} />
         </>
@@ -778,6 +806,7 @@ export default function InboxV2ClientPage({
                 conversationId={c.id}
                 currentAssigneeName={c.assignee}
                 currentAssigneeId={c.assigneeId ?? null}
+                currentAssigneeImageUrl={c.assigneeAvatarUrl ?? null}
                 disabled
               />
             }
@@ -786,6 +815,7 @@ export default function InboxV2ClientPage({
               conversationId={c.id}
               currentAssigneeName={c.assignee}
               currentAssigneeId={c.assigneeId ?? null}
+              currentAssigneeImageUrl={c.assigneeAvatarUrl ?? null}
             />
           </RequirePermission>
         ),
@@ -907,6 +937,7 @@ export default function InboxV2ClientPage({
               conversationId={activeId}
               currentAssigneeName={activeRow.assignedTo?.name}
               currentAssigneeId={activeRow.assignedTo?.id ?? null}
+              currentAssigneeImageUrl={activeRow.assignedTo?.avatarUrl ?? null}
               disabled
             />
           }
@@ -915,6 +946,7 @@ export default function InboxV2ClientPage({
             conversationId={activeId}
             currentAssigneeName={activeRow.assignedTo?.name}
             currentAssigneeId={activeRow.assignedTo?.id ?? null}
+            currentAssigneeImageUrl={activeRow.assignedTo?.avatarUrl ?? null}
           />
         </RequirePermission>
       ) : undefined,
@@ -1040,6 +1072,7 @@ export default function InboxV2ClientPage({
             requireTabulationOnClose={
               activeRow.department?.requireTabulationOnClose ?? false
             }
+            onReopenNewConversation={(newId) => setActiveId(newId)}
           />
         }
         notesSlot={notesSlot}
@@ -1234,18 +1267,20 @@ export default function InboxV2ClientPage({
           />
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
-            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "28px" : `${asideWidth}px`}` }}
+            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}` }}
           >
             {conversationColumnNode}
             {chatNode}
             <div className="relative min-h-0 overflow-visible">
-              <ColumnResizer
-                direction="left"
-                value={asideWidth}
-                onChange={setAsideWidth}
-                min={280}
-                max={440}
-              />
+              {!asideCollapsed && (
+                <ColumnResizer
+                  direction="left"
+                  value={asideWidth}
+                  onChange={setAsideWidth}
+                  min={280}
+                  max={440}
+                />
+              )}
               {asideNode}
             </div>
           </div>
@@ -1327,20 +1362,22 @@ export default function InboxV2ClientPage({
       className="v2-screen grid gap-4 p-4"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
-        gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${asideCollapsed ? "28px" : `${asideWidth}px`}`,
+        gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}`,
       }}
     >
       {navRailNode}
       {conversationColumnNode}
       {chatNode}
       <div className="relative min-h-0 overflow-visible">
-        <ColumnResizer
-          direction="left"
-          value={asideWidth}
-          onChange={setAsideWidth}
-          min={280}
-          max={440}
-        />
+        {!asideCollapsed && (
+          <ColumnResizer
+            direction="left"
+            value={asideWidth}
+            onChange={setAsideWidth}
+            min={280}
+            max={440}
+          />
+        )}
         {asideNode}
       </div>
       {templateModalNode}

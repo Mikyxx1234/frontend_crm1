@@ -151,7 +151,11 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
       <div className="flex items-center gap-2">
         <ChatAvatar
           user={{
-            id: deal.contactId ?? deal.id,
+            // Cor do avatar = hash do contato (mesmo contato = mesma cor do
+            // Inbox, que usa `contact.id`). Sem contato vinculado, cai no
+            // nome (deal.name = nome do contato) — nunca no id do negócio,
+            // que daria uma cor divergente pra mesma pessoa.
+            id: deal.contactId ?? undefined,
             name: deal.name,
             imageUrl: deal.avatarUrl ?? null,
           }}

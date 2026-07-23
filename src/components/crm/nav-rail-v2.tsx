@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DockButton, DockProvider } from "@/components/crm/floating-dock";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import {
   AGENT_STATUS_META,
   AgentStatusPopup,
@@ -174,7 +175,6 @@ export function NavRailV2({ className }: { className?: string }) {
   // Iniciais resolvidas apenas no client para evitar hydration mismatch —
   // isPreviewMode() depende de NEXT_PUBLIC_PREVIEW_MODE que pode diferir entre SSR e client.
   // Prioridade: usuário autenticado (NextAuth) > usuário de preview > genérico.
-  const [initials, setInitials] = useState("··");
   const [displayName, setDisplayName] = useState("Usuário");
   const [email, setEmail] = useState<string | null>(null);
   // `mounted` evita hydration mismatch do DropdownMenu (Radix). Quando este
@@ -296,7 +296,6 @@ export function NavRailV2({ className }: { className?: string }) {
       sessUser?.email ?? (preview ? (PREVIEW_USER.email ?? null) : null);
     setDisplayName(name);
     setEmail(mail);
-    setInitials(computeInitials(name));
   }, [session]);
 
   const isProfileActive = pathname.startsWith("/settings/profile");
@@ -514,7 +513,7 @@ export function NavRailV2({ className }: { className?: string }) {
       {/* Configurações */}
       {expanded ? (
         <Link
-          href="/settings"
+          href="/settings/profile"
           aria-label="Configurações"
           className={cn(
             expandedItemBase,
@@ -526,7 +525,7 @@ export function NavRailV2({ className }: { className?: string }) {
         </Link>
       ) : (
         <DockButton
-          href="/settings"
+          href="/settings/profile"
           title="Configurações"
           active={pathname.startsWith("/settings") && !isProfileActive}
           disablePop
@@ -548,26 +547,19 @@ export function NavRailV2({ className }: { className?: string }) {
             expanded ? "flex w-full items-center gap-3 rounded-[var(--radius-md)] px-2 py-1 hover:bg-[var(--nav-text-hover-bg)]" : "block",
           )}
         >
-          <div
+          <UserAvatar
+            name={displayName}
+            imageUrl={userImage}
+            size={40}
+            statusColor={statusMeta.color}
             className={cn(
-              "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
+              "border-2 transition-all",
               !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
             )}
-          >
-            {userImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={userImage} alt={displayName} className="size-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              initials
-            )}
-            <span
-              className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-[var(--glass-bg-strong)]"
-              style={{ backgroundColor: statusMeta.color }}
-            />
-          </div>
+          />
           {expanded && (
             <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[var(--nav-text-hover)]">
               {displayName}
@@ -584,26 +576,19 @@ export function NavRailV2({ className }: { className?: string }) {
             expanded ? "flex w-full items-center gap-3 rounded-[var(--radius-md)] px-2 py-1 text-left hover:bg-[var(--nav-text-hover-bg)]" : "block",
           )}
         >
-          <div
+          <UserAvatar
+            name={displayName}
+            imageUrl={userImage}
+            size={40}
+            statusColor={statusMeta.color}
             className={cn(
-              "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
+              "border-2 transition-all",
               !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
             )}
-          >
-            {userImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={userImage} alt={displayName} className="size-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              initials
-            )}
-            <span
-              className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-[var(--glass-bg-strong)]"
-              style={{ backgroundColor: statusMeta.color }}
-            />
-          </div>
+          />
           {expanded && (
             <div className="min-w-0 flex-1 overflow-hidden">
               <p className="truncate text-[13px] font-semibold text-[var(--nav-text-hover)]">{displayName}</p>
@@ -616,14 +601,7 @@ export function NavRailV2({ className }: { className?: string }) {
 
         <DropdownMenuContent align="start" className={ACCOUNT_MENU_CONTENT}>
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[11px] font-bold text-white">
-              {userImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={userImage} alt={displayName} className="size-full object-cover" referrerPolicy="no-referrer" />
-              ) : (
-                initials
-              )}
-            </div>
+            <UserAvatar name={displayName} imageUrl={userImage} size={36} />
             <div className="min-w-0">
               <p className="truncate font-display text-[13px] font-bold text-[var(--color-popover-foreground)]">
                 {displayName}

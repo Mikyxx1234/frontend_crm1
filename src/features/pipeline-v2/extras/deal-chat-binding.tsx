@@ -17,7 +17,8 @@ import { toast } from "sonner";
 import { IconChevronDown, IconLoader2, IconMessageCirclePlus, IconPinFilled, IconX } from "@tabler/icons-react";
 
 import { apiUrl } from "@/lib/api";
-import { getInitials } from "@/lib/utils";
+import { avatarInitials } from "@/lib/avatar";
+import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
 import { DaySeparator, ConnectionDivider, ConversationClosedMarker, MessageBubble, type Message as BubbleMessage } from "@/components/crm/message-bubble";
 import { SessionAlert } from "@/components/crm/session-alert";
@@ -86,9 +87,23 @@ export function useDealChatBinding(params: {
   const { conversationId, contactName, contactId, dealId, sessionExpired: sessionExpiredOverride, isResolved, closedAt } = params;
 
   const { data: session } = useSession();
-  // Fallback para o avatar das bolhas outgoing quando a mensagem não traz
-  // `senderName` (ex.: histórico antigo). Mesma lógica do ChatArea do inbox.
-  const agentInitials = getInitials(session?.user?.name?.trim() || "") || "·";
+  // Avatar das bolhas outgoing — mesma lógica do ChatArea do inbox: iniciais
+  // via `avatarInitials` (não divergir do `senderInitials`), nome pra detectar
+  // "mensagem minha", e foto fresca por nome (GET /api/users) + foto da sessão.
+  const agentName = session?.user?.name?.trim() || "";
+  const agentInitials = avatarInitials(agentName) || "·";
+  const { data: teamUsers } = useTeamUsers();
+  const senderPhotoByName = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const u of teamUsers ?? []) {
+      if (u.name) map.set(u.name.trim().toLowerCase(), u.avatarUrl ?? null);
+    }
+    return map;
+  }, [teamUsers]);
+  const selfAgentImage = useMemo(() => {
+    const key = agentName.toLowerCase();
+    return (key ? senderPhotoByName.get(key) : null) ?? session?.user?.image ?? null;
+  }, [agentName, senderPhotoByName, session]);
 
   const { features: convFeatures } = useConversationFeatures();
 
@@ -557,6 +572,9 @@ export function useDealChatBinding(params: {
           <MessageBubble
             message={b}
             agentInitials={agentInitials}
+            agentName={agentName}
+            agentImageUrl={selfAgentImage}
+            senderPhotoByName={senderPhotoByName}
             isPinned={isNoteBubble && b.id === pinnedNoteId}
             onPinNote={
               isNoteBubble && effectiveConversationId

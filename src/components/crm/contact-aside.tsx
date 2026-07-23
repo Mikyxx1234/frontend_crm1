@@ -178,6 +178,12 @@ const ASIDE_DEFAULT_ORDER: AsideSection[] = [
 // a nova secao nunca apareceria (`useSectionOrder` mantem o valor salvo).
 const ASIDE_STORAGE_KEY = "crm:contact-aside:section-order-v4"
 
+/** Container branco unificado de cada seção do aside — o título
+ *  (SectionHeader) e o conteúdo ficam DENTRO do mesmo card. Antes o
+ *  título flutuava sobre o fundo do painel, acima do card. */
+const SECTION_CARD_CLASS =
+  "mx-3 mb-3 rounded-[var(--radius-xl)] border border-slate-100 bg-white p-3 shadow-sm"
+
 // ── Abas Perfil / Produto ─────────────────────────────────────────
 // O hero do negócio (secao `negocios`) fica FIXO no topo. As demais
 // secoes sao distribuidas em duas abas: "Perfil" (dados de contato +
@@ -396,8 +402,9 @@ function DealInline({
   return (
     <div className="px-3 pt-2 pb-0">
       {/* ── Hero header (ref. Stitch): card escuro #2e3b6e, edge-to-edge no
-          topo do container, cantos inferiores grandes (rounded-b-3xl). ── */}
-      <header className="relative isolate -mx-3 -mt-2 mb-3 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+          topo do container. Cantos superiores arredondados; rodapé reto
+          (encosta no conteúdo abaixo). ── */}
+      <header className="relative isolate -mx-3 -mt-2 mb-3 rounded-t-[var(--radius-xl)] rounded-b-none bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
         {/* Linha topo: título (até 2 linhas, sem truncar o nome) + pill de etapa */}
         <div className="relative mb-2.5 flex items-start justify-between gap-2">
           <h1 className="min-w-0 text-[15px] font-bold leading-snug text-white">
@@ -517,7 +524,7 @@ function DealInline({
       {fields.length > 0 && (
         <div className="mt-2 mb-2">
           <div className="mb-1 flex items-center gap-1.5 font-display text-[12px] font-bold text-[var(--text-primary)]">
-            <IconBriefcase size={12} />
+            <IconBriefcase size={12} className="text-[var(--brand-primary)]" />
             <span className="flex items-baseline gap-1.5">
               Informações do Negócio
               {deal.number != null && (
@@ -744,30 +751,22 @@ export function ContactAside({
     reorder(sectionOrder.indexOf(from), sectionOrder.indexOf(to))
   }
 
-  /* ── Estado recolhido ── */
+  /* ── Estado recolhido ──
+     Kommo-style: o painel some por completo (a coluna vira 0px no grid do
+     inbox) e deixamos só uma abinha flutuante grudada na borda direita para
+     reabrir. Sem card, sem avatar, sem largura própria. */
   if (collapsed) {
     return (
-      <aside
-        aria-label="Detalhes do contato (recolhido)"
-        className={cn(
-          "relative flex h-full flex-col items-center justify-start rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pt-3 backdrop-blur-md shadow-[var(--glass-shadow)]",
-          className,
-        )}
-      >
-        {/* Mesma pill do estado expandido, só com o chevron invertido
-            (`<`) — padroniza o elemento de recolher/expandir. Fica na
-            faixa entre o chat e o aside recolhido. */}
-        <TooltipGlass label="Expandir painel de contato" side="left">
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            className="group absolute left-0 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 flex h-10 w-5 items-center justify-center rounded-full border border-[var(--glass-border)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-all hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_14px_rgba(91,111,245,0.40)] hover:scale-110"
-            aria-label="Expandir painel de contato"
-          >
-            <IconChevronLeft size={13} strokeWidth={3} />
-          </button>
-        </TooltipGlass>
-      </aside>
+      <TooltipGlass label={`Abrir painel · ${contact.name}`} side="left">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          aria-label={`Abrir painel de ${contact.name}`}
+          className="group absolute right-0 top-1/2 z-30 flex h-14 w-6 -translate-y-1/2 items-center justify-center rounded-l-[var(--radius-md)] border border-r-0 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow)] backdrop-blur-md transition-all hover:bg-[var(--brand-primary)] hover:text-white"
+        >
+          <IconChevronLeft size={14} strokeWidth={3} />
+        </button>
+      </TooltipGlass>
     )
   }
 
@@ -864,10 +863,10 @@ export function ContactAside({
                         >
                           {/* ── Detalhes de Contato (campos nativos + personalizados) ── */}
                           {sectionId === "contato" && (
-                            <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-2">
+                            <div className={SECTION_CARD_CLASS}>
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
-                                icon={<IconUser size={16} />}
+                                icon={<IconUser size={16} className="text-orange-500" />}
                                 open={contactSectionOpen}
                                 onToggle={() => setContactSectionOpen((v) => !v)}
                                 meta={
@@ -910,7 +909,7 @@ export function ContactAside({
                               )}
 
                               {/* Campos nativos */}
-                              <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+                              <div className="pt-1">
                                 <Row label="Nome" isFirst icon={<IconUser size={12} />} compact={viewMode === "compact"}>
                                   <InlineNativeEditor
                                     value={native("name", contact.name)}
@@ -1028,7 +1027,7 @@ export function ContactAside({
                                   )
                                 }
                                 return (
-                                  <div className="mt-3 rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+                                  <div className="mt-1 border-t border-slate-100 pt-2">
                                     {contactFieldGroups.map((g) => {
                                       const rows = g.fields.map((f, i) => renderRow(f, i))
                                       if (!g.title) return <div key={g.id}>{rows}</div>
@@ -1061,7 +1060,7 @@ export function ContactAside({
                               como target — cenario dominante no inbox e um
                               contato com um deal ativo por vez. */}
                           {sectionId === "produtos" && deals[0] && (
-                            <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-2">
+                            <div className={SECTION_CARD_CLASS}>
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
                                 icon={<IconPackage size={16} />}
@@ -1071,7 +1070,7 @@ export function ContactAside({
                                 Produtos
                               </SectionHeader>
                               {productsSectionOpen && (
-                                <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+                                <div className="pt-1">
                                   {/* `hideTitle` evita duplicar o rotulo "Produtos"
                                       — quem provee o cabecalho e o SectionHeader
                                       acima; DealProductsSection so renderiza os
@@ -1085,10 +1084,10 @@ export function ContactAside({
                           {/* ── Campos de Negócio (personalizados) ── */}
                           {sectionId === "campos-negocio" &&
                             (resolvedDealPanelFields.length > 0 || resolvedDealConfig) && (
-                              <div className="px-3 pb-3">
+                              <div className={SECTION_CARD_CLASS}>
                                 <SectionHeader
                                   dragHandleProps={provided.dragHandleProps ?? undefined}
-                                  icon={<IconBriefcase size={16} />}
+                                  icon={<IconBriefcase size={16} className="text-[var(--brand-primary)]" />}
                                   open={dealFieldsSectionOpen}
                                   onToggle={() => setDealFieldsSectionOpen((v) => !v)}
                                   meta={
@@ -1159,7 +1158,7 @@ export function ContactAside({
                                     )
                                   }
                                   return viewMode === "compact" ? (
-                                    <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+                                    <div className="pt-1">
                                       {dealFieldGroups.map((g) => {
                                         const rows = g.fields.map((f, i) => renderCompactRow(f, i))
                                         if (!g.title) return <div key={g.id}>{rows}</div>

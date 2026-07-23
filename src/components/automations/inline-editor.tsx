@@ -8,7 +8,7 @@
  * Toda a UI vive em `.n-config` com as classes `nodrag nopan nowheel` para
  * que digitar/rolar não arraste nem dê pan/zoom no React Flow.
  */
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "sonner"
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass"
 import { InputGlass } from "@/components/crm/input-glass"
@@ -39,6 +39,7 @@ import {
   useUserOptions,
   type Opt,
 } from "./editor-data"
+import { WebhookStepConfig } from "./webhook-step-config"
 
 const CONDITION_FIELD_SET = new Set(CONDITION_FIELDS.map((f) => f.value))
 const CUSTOM_FIELD_SENTINEL = "__custom__"
@@ -234,6 +235,8 @@ function Field({
     case "templatePreview":
       return <TemplatePreview config={config} onChange={onChange} />
 
+    case "webhookConfig":
+      return <InlineWebhookConfig config={config} onChange={onChange} />
 
     case "builder":
       switch (field.builder) {
@@ -420,6 +423,32 @@ function ConfigSelect({
       />
     </div>
   )
+}
+
+/** Adapta WebhookStepConfig (setDraft) ao onChange do editor inline. */
+function InlineWebhookConfig({
+  config,
+  onChange,
+}: {
+  config: Cfg
+  onChange: (next: Cfg) => void
+}) {
+  // Ref espelha o draft mais recente pra updates funcionais em sequência
+  // (URL + body no mesmo tick) não sobrescreverem uns aos outros.
+  const draftRef = useRef(config)
+  draftRef.current = config
+
+  const setDraft: Dispatch<SetStateAction<Cfg>> = (updater) => {
+    const base = draftRef.current
+    const next = typeof updater === "function" ? updater(base) : updater
+    // `__webhookBodyEntries` é estado de UI — backend só consome `body`.
+    const { __webhookBodyEntries: _drop, ...rest } = next
+    void _drop
+    draftRef.current = rest
+    onChange(rest)
+  }
+
+  return <WebhookStepConfig draft={config} setDraft={setDraft} />
 }
 
 function SourceSelect({ source, value, onChange }: { source: SourceKey; value: string; onChange: (v: string) => void }) {

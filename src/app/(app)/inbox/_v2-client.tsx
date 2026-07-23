@@ -228,6 +228,31 @@ const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "finalizados", label: "Resolvidas" },
 ];
 
+// Tab selecionada persiste em localStorage — sobrevive F5/navegação.
+// Default "esperando" (Aguardando): ao abrir sem escolha salva, evita cair
+// em "Todas". Se o usuário escolher "Todas" (ou outra), a escolha é mantida.
+const INBOX_TAB_STORAGE_KEY = "inbox-v2:tab";
+const DEFAULT_INBOX_TAB: InboxTab = "esperando";
+
+function readStoredInboxTab(): InboxTab {
+  if (typeof window === "undefined") return DEFAULT_INBOX_TAB;
+  try {
+    const raw = window.localStorage.getItem(INBOX_TAB_STORAGE_KEY);
+    if (raw && TABS.some((t) => t.id === raw)) return raw as InboxTab;
+    return DEFAULT_INBOX_TAB;
+  } catch {
+    return DEFAULT_INBOX_TAB;
+  }
+}
+
+function writeStoredInboxTab(tab: InboxTab) {
+  try {
+    window.localStorage.setItem(INBOX_TAB_STORAGE_KEY, tab);
+  } catch {
+    /* localStorage indisponível */
+  }
+}
+
 /**
  * Props opcionais — usadas para reaproveitar o chat dentro de um shell
  * diferente (ex.: segmento real `/v2/inbox` que injeta o `<NavRailV2 />`
@@ -270,9 +295,18 @@ export default function InboxV2ClientPage({
   );
 
   // ── Estado de UI local ─────────────────────────────────────────
-  // Default "todos": ao abrir/atualizar a página, todas as conversas
-  // ficam selecionadas (pedido do usuário).
-  const [tab, setTab] = useState<InboxTab>("todos");
+  // Default "esperando" (Aguardando). A escolha do usuário é salva em
+  // localStorage e restaurada no F5 (lê no effect, SSR-safe).
+  const [tab, setTab] = useState<InboxTab>(DEFAULT_INBOX_TAB);
+  const [tabHydrated, setTabHydrated] = useState(false);
+  useEffect(() => {
+    setTab(readStoredInboxTab());
+    setTabHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!tabHydrated) return;
+    writeStoredInboxTab(tab);
+  }, [tab, tabHydrated]);
   // Filtros do painel persistem em localStorage — sobrevive navegação
   // para outras páginas do CRM e refresh. Lê no effect (SSR-safe).
   const [filters, setFilters] = useState<InboxFilters>(DEFAULT_FILTERS);

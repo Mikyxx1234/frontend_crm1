@@ -266,22 +266,28 @@ export function buildCustomFieldOptions(
   for (const f of fields) {
     const name = (f.name || "").trim();
     if (!name) continue;
+    // Antes esses campos ficavam em categorias próprias ("Campos
+    // customizados do negócio/contato"). Na prática o operador escolhia
+    // "Negócio" no dropdown e não achava os customs — trocamos pra
+    // mesclar dentro da própria entidade, marcando com "★" pra
+    // distinguir visualmente dos campos padrão. A `key`/`token`
+    // continuam idênticas, então bodies salvos continuam parseáveis.
     if (f.entity === "deal") {
       out.push({
-        group: "Campos customizados do negócio",
+        group: "Negócio",
         key: `${DEAL_CUSTOM_FIELD_KEY_PREFIX}${name}`,
         token: `{{${DEAL_CUSTOM_FIELD_KEY_PREFIX}${name}}}`,
-        label: f.label || name,
-        hint: name,
+        label: `★ ${f.label || name}`,
+        hint: `Campo customizado do negócio (${name})`,
         defaultKeyPath: name,
       });
     } else if (f.entity === "contact") {
       out.push({
-        group: "Campos customizados do contato",
+        group: "Contato",
         key: `${CONTACT_CUSTOM_FIELD_KEY_PREFIX}${name}`,
         token: `{{${CONTACT_CUSTOM_FIELD_KEY_PREFIX}${name}}}`,
-        label: f.label || name,
-        hint: name,
+        label: `★ ${f.label || name}`,
+        hint: `Campo customizado do contato (${name})`,
         defaultKeyPath: name,
       });
     }

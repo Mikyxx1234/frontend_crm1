@@ -397,9 +397,16 @@ export function ConversationCard({
       </div>
 
       {/* Rodapé: nº da conversa (ticket) no canto inferior esquerdo, em verde
-          — estilo Kommo. Identificador fixo pra referência/controle. */}
+          — estilo Kommo. Quando encerrada, fica cinza. */}
       {conversation.number != null && (
-        <div className="mt-2 font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400">
+        <div
+          className={cn(
+            "mt-2 font-display text-[11px] font-semibold tabular-nums",
+            conversation.resolved
+              ? "text-[var(--text-muted)]"
+              : "text-emerald-600 v2-dark:text-emerald-400",
+          )}
+        >
           Conversa Nº {conversation.number}
         </div>
       )}

@@ -701,9 +701,16 @@ export function ChatArea({
       )}
 
       {/* Nº da conversa (ticket) ABAIXO do composer, canto inferior esquerdo,
-          em verde — estilo Kommo. Identificador fixo pra referência/controle. */}
+          em verde — estilo Kommo. Quando encerrada, fica cinza. */}
       {conversationNumber != null && (
-        <div className="px-6 pb-0.5 font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400 max-md:px-3">
+        <div
+          className={cn(
+            "px-6 pb-0.5 font-display text-[11px] font-semibold tabular-nums max-md:px-3",
+            conversationResolved
+              ? "text-[var(--text-muted)]"
+              : "text-emerald-600 v2-dark:text-emerald-400",
+          )}
+        >
           Conversa Nº {conversationNumber}
         </div>
       )}

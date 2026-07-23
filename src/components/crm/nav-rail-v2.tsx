@@ -387,7 +387,10 @@ export function NavRailV2({ className }: { className?: string }) {
           href="/dashboard"
           aria-label="Início"
           className={cn(
-            "mb-2 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]",
+            "mb-2 flex shrink-0 items-center justify-center overflow-hidden font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]",
+            companyLogo
+              ? "h-12 w-12 rounded-full"
+              : "h-11 w-11 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
             expanded ? "mx-auto" : "",
           )}
         >
@@ -404,7 +407,10 @@ export function NavRailV2({ className }: { className?: string }) {
             title={companyName || "Conta da empresa"}
             aria-label="Conta da empresa"
             className={cn(
-              "mb-2 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)] outline-none transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25 focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25",
+              "mb-2 flex shrink-0 items-center justify-center overflow-hidden font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)] outline-none transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25 focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25",
+              companyLogo
+                ? "h-12 w-12 rounded-full"
+                : "h-11 w-11 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
               expanded ? "mx-auto" : "",
             )}
           >
@@ -418,7 +424,14 @@ export function NavRailV2({ className }: { className?: string }) {
 
           <DropdownMenuContent align="start" className={ACCOUNT_MENU_CONTENT}>
             <div className="flex items-center gap-3 px-2 py-2">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[13px] font-bold text-white">
+              <div
+                className={cn(
+                  "flex shrink-0 items-center justify-center overflow-hidden font-display text-[13px] font-bold text-white",
+                  companyLogo
+                    ? "h-10 w-10 rounded-full"
+                    : "h-9 w-9 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
+                )}
+              >
                 {companyLogo ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={companyLogo} alt={companyName || "Empresa"} className="size-full object-cover" />

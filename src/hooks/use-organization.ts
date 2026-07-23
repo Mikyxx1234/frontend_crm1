@@ -9,10 +9,10 @@
  */
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
-import { apiUrl } from "@/lib/api";
+import { apiUrl, parseApiResponse } from "@/lib/api";
 
 export type OrganizationData = {
   id: string;
@@ -38,5 +38,59 @@ export function useOrganization() {
     },
     enabled: !!orgId,
     staleTime: 5 * 60_000, // 5 min — identidade da org quase não muda na sessão
+  });
+}
+
+/**
+ * Hook de identidade da org (id) usado como chave de cache nas mutations
+ * abaixo — mantém a invalidação alinhada com `useOrganization`.
+ */
+function useOrgQueryKey() {
+  const { data: session } = useSession();
+  const orgId = (session?.user as { organizationId?: string } | undefined)
+    ?.organizationId;
+  return ["organization", orgId] as const;
+}
+
+/**
+ * Faz upload do ícone/logo da empresa (`POST /api/organization/logo`) e
+ * invalida o cache da org para a navrail refletir a troca na hora.
+ */
+export function useUpdateOrganizationLogo() {
+  const queryClient = useQueryClient();
+  const key = useOrgQueryKey();
+  return useMutation({
+    mutationFn: async (file: File): Promise<{ url: string }> => {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch(apiUrl("/api/organization/logo"), {
+        method: "POST",
+        body,
+      });
+      return parseApiResponse<{ url: string }>(res, "Erro ao enviar o ícone.");
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+/**
+ * Remove o ícone da empresa (`DELETE /api/organization/logo`) e invalida
+ * o cache da org.
+ */
+export function useRemoveOrganizationLogo() {
+  const queryClient = useQueryClient();
+  const key = useOrgQueryKey();
+  return useMutation({
+    mutationFn: async (): Promise<{ ok: true }> => {
+      const res = await fetch(apiUrl("/api/organization/logo"), {
+        method: "DELETE",
+      });
+      return parseApiResponse<{ ok: true }>(res, "Erro ao remover o ícone.");
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: key });
+    },
   });
 }

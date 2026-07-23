@@ -349,6 +349,9 @@ export interface MessageBubbleProps {
   message: Message
   /** Iniciais do agente logado — exibidas no avatar das mensagens outgoing. */
   agentInitials?: string
+  /** Nome do agente logado — usado para detectar "mensagem minha" por NOME
+   *  (robusto: independe de iniciais, que divergem entre funções). */
+  agentName?: string | null
   /** Foto do agente logado (User.avatarUrl). Sobrepõe as iniciais no token
    *  outgoing quando a bolha representa o próprio agente. */
   agentImageUrl?: string | null
@@ -1212,6 +1215,7 @@ function MenuItem({
 export function MessageBubble({
   message,
   agentInitials,
+  agentName,
   agentImageUrl,
   senderPhotoByName,
   className,
@@ -1432,11 +1436,19 @@ export function MessageBubble({
                     // Prioridade: foto do remetente resolvida no backend
                     // (`senderImageUrl`, por agente) → foto do usuário logado
                     // quando a mensagem é dele (iniciais batem ou sem autoria).
-                    const selfPhoto =
+                    // "É minha mensagem?" — detecta por NOME (robusto) ou por
+                    // iniciais/ausência de autoria. O match por nome corrige o
+                    // caso das iniciais divergirem entre funções (ex.: "Marcelo
+                    // Pinha Dev" → getInitials "MP" ≠ avatarInitials "MD").
+                    const norm = (s?: string | null) =>
+                      (s ?? "").trim().toLowerCase()
+                    const isSelf =
                       !message.senderInitials ||
-                      message.senderInitials === agentInitials
-                        ? agentImageUrl
-                        : null
+                      message.senderInitials === agentInitials ||
+                      (!!agentName &&
+                        !!message.senderName &&
+                        norm(message.senderName) === norm(agentName))
+                    const selfPhoto = isSelf ? agentImageUrl : null
                     // Foto fresca por nome (mesma fonte do avatar do kanban):
                     // cobre casos em que o match server-side (`senderImageUrl`)
                     // falha ou a sessão está com a foto defasada.

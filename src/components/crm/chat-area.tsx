@@ -7,9 +7,8 @@ import { cn } from "@/lib/utils"
 import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
-import { getInitials } from "@/lib/utils"
 import { ChatAvatar } from "@/components/inbox/chat-avatar"
-import { AVATAR_SIZE } from "@/lib/avatar"
+import { AVATAR_SIZE, avatarInitials } from "@/lib/avatar"
 import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
 import {
@@ -264,12 +263,19 @@ export function ChatArea({
   // Iniciais do agente nas bolhas outgoing. Prioridade: usuário
   // autenticado (NextAuth) > usuário de preview > genérico.
   const [agentInitials, setAgentInitials] = useState("·")
+  // Nome do agente logado — passado ao balão pra detectar "mensagem minha"
+  // por nome (robusto). Iniciais usam `avatarInitials` (mesma função do
+  // adapter/UserAvatar) pra não divergir do `senderInitials` das bolhas.
+  const agentName = useMemo(
+    () =>
+      session?.user?.name?.trim() ||
+      (isPreviewMode() ? PREVIEW_USER.name : ""),
+    [session],
+  )
   useEffect(() => {
-    const sessionName = session?.user?.name?.trim()
-    const name =
-      sessionName || (isPreviewMode() ? PREVIEW_USER.name : "Agente")
-    setAgentInitials(getInitials(name) || "?")
-  }, [session])
+    const name = agentName || "Agente"
+    setAgentInitials(avatarInitials(name) || "?")
+  }, [agentName])
 
   // Mapa fresco `nome (lowercase) → avatarUrl` da equipe (GET /api/users) —
   // mesma fonte do avatar do kanban. Usado para resolver a foto de QUALQUER
@@ -591,6 +597,7 @@ export function ChatArea({
                   <MessageBubble
                     message={message}
                     agentInitials={agentInitials}
+                    agentName={agentName}
                     agentImageUrl={selfAgentImage}
                     senderPhotoByName={senderPhotoByName}
                     onReplyMessage={onReplyMessage}

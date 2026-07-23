@@ -48,6 +48,10 @@ import {
   type PendingDistributionDto,
 } from "@/features/distribution/types";
 import {
+  useDepartments,
+  useUpdateDepartment,
+} from "@/features/conversations-settings/hooks/use-departments";
+import {
   MOCK_DISTRIBUTION_PENDING,
   MOCK_DISTRIBUTION_RESPONSIBLES,
 } from "@/features/distribution/mock";
@@ -292,6 +296,10 @@ export default function DistributionClientPage({
                 <SimulationPanel result={simResult} onClose={() => setSimResult(null)} />
               )}
 
+              {view === "team" && canManage && !useDemo && (
+                <DepartmentsDistributionPanel />
+              )}
+
               {view === "team" ? (
                 <ResponsiblesCardList
                   responsibles={filteredResponsibles}
@@ -407,7 +415,7 @@ function DistributionMiniDash({
     },
     {
       key: "inService",
-      label: "Em atendimento",
+      label: "Aguardando resposta",
       value: stats.inService,
       accent: "var(--brand-primary)",
       icon: <IconUsers size={16} />,
@@ -607,6 +615,22 @@ function ResponsibleCard({
             {r.email ?? "—"}{" "}
             <span className="font-mono text-[10px] text-[var(--text-secondary)]">· {r.role}</span>
           </p>
+          {r.departments && r.departments.length > 0 ? (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {r.departments.map((d) => (
+                <span
+                  key={d.id}
+                  className="inline-flex items-center rounded-full bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--text-secondary)]"
+                >
+                  {d.name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1 font-body text-[10px] italic text-[var(--text-muted)]">
+              Sem departamento
+            </p>
+          )}
         </div>
       </div>
 
@@ -1172,10 +1196,19 @@ function EditResponsibleDialog({
   onClose: () => void;
 }) {
   const updateMut = useUpdateResponsible();
+  const deptsQuery = useDepartments();
   const [participates, setParticipates] = useState(responsible.participates);
   const [paused, setPaused] = useState(responsible.paused);
   const [volume, setVolume] = useState(String(responsible.queueLimit));
   const [type, setType] = useState(responsible.type ?? "");
+  const [deptIds, setDeptIds] = useState<string[]>(
+    responsible.departments?.map((d) => d.id) ?? [],
+  );
+
+  const toggleDept = (id: string) =>
+    setDeptIds((cur) =>
+      cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
+    );
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -1198,6 +1231,7 @@ function EditResponsibleDialog({
           paused,
           queueLimit: limit,
           type: type.trim() || null,
+          departmentIds: deptIds,
         },
       },
       {
@@ -1255,7 +1289,7 @@ function EditResponsibleDialog({
 
           <label className="flex flex-col gap-1">
             <span className="font-body text-[12px] font-semibold text-[var(--text-secondary)]">
-              Volume (limite de leads)
+              Limite de fila (conversas aguardando resposta)
             </span>
             <input
               type="number"
@@ -1265,7 +1299,9 @@ function EditResponsibleDialog({
               className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
             />
             <span className="text-[11px] text-[var(--text-muted)]">
-              Máximo de leads que o responsável pode acumular. 0 = sem limite.
+              Máximo de conversas aguardando a resposta do consultor (fila de não
+              iniciados). Ao atingir, ele para de receber novos até responder. 0 =
+              sem limite.
             </span>
           </label>
 
@@ -1281,6 +1317,44 @@ function EditResponsibleDialog({
               className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
             />
           </label>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="font-body text-[12px] font-semibold text-[var(--text-secondary)]">
+              Departamentos (o que este consultor recebe)
+            </span>
+            <span className="text-[11px] text-[var(--text-muted)]">
+              O consultor só recebe leads roteados para os departamentos marcados.
+            </span>
+            {deptsQuery.isLoading ? (
+              <p className="py-1 text-[12px] text-[var(--text-muted)]">Carregando…</p>
+            ) : (deptsQuery.data?.length ?? 0) === 0 ? (
+              <p className="py-1 text-[12px] text-[var(--text-muted)]">
+                Nenhum departamento cadastrado.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {deptsQuery.data?.map((d) => {
+                  const on = deptIds.includes(d.id);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => toggleDept(d.id)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                        on
+                          ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                      )}
+                    >
+                      {on && <IconCheck size={12} stroke={2.4} />}
+                      {d.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
@@ -1329,17 +1403,94 @@ function ToggleField({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={cn(
-          "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors",
-          checked ? "bg-[var(--brand-primary)]" : "bg-[var(--glass-border)]",
+          "relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors",
+          checked
+            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
+            : "border-[var(--text-muted)]/40 bg-[var(--text-muted)]/25",
         )}
       >
         <span
           className={cn(
-            "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-sm transition-all",
+            "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border border-black/10 bg-white shadow-sm transition-all",
             checked ? "right-0.5" : "left-0.5",
           )}
         />
       </button>
+    </div>
+  );
+}
+
+// ── Painel: distribuição automática por departamento ─────────────────────
+
+function DepartmentsDistributionPanel() {
+  const deptsQuery = useDepartments();
+  const updateMut = useUpdateDepartment();
+  const depts = deptsQuery.data ?? [];
+
+  if (deptsQuery.isLoading || depts.length === 0) return null;
+
+  const toggle = (id: string, next: boolean) => {
+    updateMut.mutate(
+      { id, distributionEnabled: next },
+      {
+        onError: (e) =>
+          toast.error(
+            e instanceof Error ? e.message : "Erro ao atualizar departamento.",
+          ),
+      },
+    );
+  };
+
+  return (
+    <div className="shrink-0 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      <div className="mb-1 flex items-center gap-2">
+        <IconUsers size={16} className="text-[var(--brand-primary)]" />
+        <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
+          Departamentos · distribuição automática
+        </p>
+      </div>
+      <p className="mb-3 font-body text-[12px] text-[var(--text-muted)]">
+        Ligue para o departamento distribuir automaticamente entre seus membros os
+        leads roteados a ele. Desligado = leads desse departamento ficam na fila de
+        espera.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {depts.map((d) => (
+          <div
+            key={d.id}
+            className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5"
+          >
+            <div className="min-w-0">
+              <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+                {d.name}
+              </p>
+              <p className="font-body text-[11px] text-[var(--text-muted)]">
+                {d._count?.members ?? 0} membro(s)
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!d.distributionEnabled}
+              disabled={updateMut.isPending}
+              onClick={() => toggle(d.id, !d.distributionEnabled)}
+              className={cn(
+                "relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors disabled:opacity-50",
+                d.distributionEnabled
+                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
+                  : "border-[var(--text-muted)]/40 bg-[var(--text-muted)]/25",
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border border-black/10 bg-white shadow-sm transition-all",
+                  d.distributionEnabled ? "right-0.5" : "left-0.5",
+                )}
+              />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

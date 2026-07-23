@@ -12,6 +12,11 @@ export type DistributionBlockReason =
   | "TYPE_INCOMPATIBLE"
   | "DEPARTMENT_MISMATCH";
 
+export interface ResponsibleDepartmentRef {
+  id: string;
+  name: string;
+}
+
 export interface DistributionResponsibleDto {
   userId: string;
   name: string | null;
@@ -23,6 +28,8 @@ export interface DistributionResponsibleDto {
   type: string | null;
   paused: boolean;
   lastExecutionAt: string | null;
+  /** Departamentos dos quais é membro (roteamento por departamento). */
+  departments?: ResponsibleDepartmentRef[];
   status: AgentOnlineStatus | null;
   hasSchedule: boolean;
   queueCount: number;
@@ -83,6 +90,8 @@ export interface UpdateResponsibleInput {
   queueLimit?: number;
   volume?: number;
   type?: string | null;
+  /** Substitui o conjunto de departamentos do responsável. */
+  departmentIds?: string[];
 }
 
 /** Rótulos PT-BR dos motivos de bloqueio (para tooltips/badges). */

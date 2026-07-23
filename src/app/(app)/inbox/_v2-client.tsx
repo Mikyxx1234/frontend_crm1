@@ -412,9 +412,11 @@ export default function InboxV2ClientPage({
   const rows = useMemo(() => {
     let list = rawRows;
     if (windowState === "open") {
-      list = list.filter((r) => !isSessionExpired(r.lastInboundAt));
+      // "Aberta" = conversa não resolvida (OPEN/PENDING/SNOOZED).
+      list = list.filter((r) => r.status !== "RESOLVED");
     } else if (windowState === "closed") {
-      list = list.filter((r) => isSessionExpired(r.lastInboundAt));
+      // "Fechada" = conversa resolvida.
+      list = list.filter((r) => r.status === "RESOLVED");
     }
     const by = sortBy ?? "lastInboundAt";
     const sign = (sortOrder ?? "desc") === "asc" ? 1 : -1;

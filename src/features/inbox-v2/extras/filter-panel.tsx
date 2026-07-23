@@ -67,7 +67,7 @@ const CHANNEL_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "webchat", label: "Webchat / Formulário" },
 ];
 
-/** Conversa aberta/fechada (janela 24h Meta/WhatsApp) — client-side. */
+/** Status da conversa (aberta = não resolvida / fechada = resolvida) — client-side. */
 const WINDOW_OPTIONS: ReadonlyArray<{ value: "open" | "closed"; label: string }> = [
   { value: "open", label: "Aberta" },
   { value: "closed", label: "Fechada" },

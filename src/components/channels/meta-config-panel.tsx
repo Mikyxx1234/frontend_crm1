@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { SwitchGlass } from "@/components/crm/switch-glass";
 import { cn } from "@/lib/utils";
 import { useEmbeddedSignup } from "@/hooks/use-embedded-signup";
 
@@ -83,6 +84,8 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
     typeof cfg.appSecret === "string" ? cfg.appSecret : "";
   const initialVerifyToken =
     typeof cfg.verifyToken === "string" ? cfg.verifyToken : "";
+  // Confirmação de leitura (visto azul) — default LIGADO (ausente = envia).
+  const initialSendReadReceipts = cfg.sendReadReceipts !== false;
   const wasEmbeddedSignup = cfg.embeddedSignup === true;
   // Canal do "App Meta global do CRM" (conexao manual token-based ou embedded
   // signup): a Meta entrega o webhook usando o App Secret / Verify Token
@@ -101,6 +104,9 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
   const [phoneNumberId, setPhoneNumberId] = useState(initialPnId);
   const [businessAccountId, setBusinessAccountId] = useState(initialWaba);
   const [appName, setAppName] = useState(initialAppName);
+  const [sendReadReceipts, setSendReadReceipts] = useState(
+    initialSendReadReceipts,
+  );
   const [showTokenHint, setShowTokenHint] = useState(!!initialToken);
   const [revealAccessToken, setRevealAccessToken] = useState(false);
   const [revealAppSecret, setRevealAppSecret] = useState(false);
@@ -124,11 +130,12 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
     setPhoneNumberId(initialPnId);
     setBusinessAccountId(initialWaba);
     setAppName(initialAppName);
+    setSendReadReceipts(initialSendReadReceipts);
     setAccessToken("");
     setAppSecret("");
     setVerifyToken(initialVerifyToken);
     setShowTokenHint(!!initialToken);
-  }, [channel.id, channel.name, channel.defaultPipelineId, initialPnId, initialWaba, initialAppName, initialToken, initialAppSecret, initialVerifyToken]);
+  }, [channel.id, channel.name, channel.defaultPipelineId, initialPnId, initialWaba, initialAppName, initialToken, initialAppSecret, initialVerifyToken, initialSendReadReceipts]);
 
   // A URL do webhook PRECISA apontar para o backend (não para o frontend).
   // A Meta entrega o callback HTTP direto no backend — o frontend não tem
@@ -169,6 +176,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
         phoneNumberId: phoneNumberId.trim(),
         businessAccountId: businessAccountId.trim(),
         appName: appName.trim() || undefined,
+        sendReadReceipts,
         ...(accessToken.trim() ? { accessToken: accessToken.trim() } : {}),
         ...(appSecret.trim() ? { appSecret: appSecret.trim() } : {}),
         ...(verifyToken.trim() ? { verifyToken: verifyToken.trim() } : {}),
@@ -436,6 +444,32 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           value={defaultPipelineId}
           onChange={setDefaultPipelineId}
         />
+      </section>
+
+      <Separator />
+
+      {/* Comportamento do canal — flags não-credenciais gravadas no config. */}
+      <section className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          Comportamento
+        </p>
+        <label className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <span className="text-sm font-medium text-[var(--text-primary)]">
+              Confirmação de leitura
+            </span>
+            <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+              Envia o &quot;visto azul&quot; ao contato quando o operador abre a
+              conversa. Desligado, as mensagens não são marcadas como lidas para
+              o cliente (o &quot;digitando…&quot; também deixa de ser enviado).
+            </p>
+          </div>
+          <SwitchGlass
+            checked={sendReadReceipts}
+            onChange={setSendReadReceipts}
+            aria-label="Enviar confirmação de leitura"
+          />
+        </label>
       </section>
 
       <Separator />

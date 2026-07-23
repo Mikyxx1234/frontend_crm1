@@ -617,7 +617,7 @@ export function DealDetailPanel({
               )}
             >
               <div className="shrink-0 px-3 pt-2">
-                <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+                <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-none bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
                   <div className="relative flex items-center gap-1.5">
                     <button
                       type="button"
@@ -751,7 +751,7 @@ export function DealDetailPanel({
               {/* ── Hero header (ref. Stitch): card escuro #2e3b6e, edge-to-edge
                   no topo do container via margens negativas, cantos inferiores
                   grandes (rounded-b-3xl) e sombra. ── */}
-              <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-3xl bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
+              <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] rounded-b-none bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-lg">
                 {/* Linha de controles: Voltar (esq) + spacer + etapa + kebab. */}
                 <div className="relative flex items-center gap-1.5">
                   <button
@@ -1199,7 +1199,7 @@ export function DealDetailPanel({
                                                 ) : canEdit ? (
                                                   <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                                 ) : (
-                                                  <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
+                                                  <span className="block min-w-0 break-words [overflow-wrap:anywhere] font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
                                                 )}
                                               </div>
                                             </div>
@@ -1259,7 +1259,7 @@ export function DealDetailPanel({
                                                     placeholder="+ Adicionar"
                                                   />
                                                 ) : (
-                                                  <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                  <span className="block min-w-0 break-words [overflow-wrap:anywhere] font-display text-[13px] font-bold text-[var(--text-primary)]">
                                                     {currentValue || "—"}
                                                   </span>
                                                 )}

@@ -1622,7 +1622,7 @@ export default function PipelineSettingsClientPage() {
       const realIdsSeen = new Set<string>();
 
       type AutomationOp =
-        | { kind: "create"; stageRealId: string; baseId: string; label: string; conditions?: TriggerCondition[] }
+        | { kind: "link"; id: string; stageRealId: string; label: string; conditions?: TriggerCondition[] }
         | { kind: "update"; id: string; stageRealId: string; label: string; conditions?: TriggerCondition[] }
         | { kind: "unbind"; id: string };
 
@@ -1634,7 +1634,12 @@ export default function PipelineSettingsClientPage() {
           if (auto.id.startsWith("local-auto-")) {
             const baseId = auto.baseAutomationId;
             if (!baseId) continue; // defensivo — não deveria acontecer
-            ops.push({ kind: "create", stageRealId, baseId, label: auto.stageTrigger, conditions: auto.conditions });
+            // VINCULAR (não clonar): aponta o gatilho para a própria automação
+            // existente (PUT triggerType/triggerConfig + active) — evita
+            // duplicatas em /automations. Marca como "seen" pra não cair no
+            // unbind abaixo (caso já estivesse no baseline, ligada a outra etapa).
+            ops.push({ kind: "link", id: baseId, stageRealId, label: auto.stageTrigger, conditions: auto.conditions });
+            realIdsSeen.add(baseId);
             continue;
           }
           realIdsSeen.add(auto.id);
@@ -1658,48 +1663,28 @@ export default function PipelineSettingsClientPage() {
       }
 
       for (const op of ops) {
-        if (op.kind === "create") {
-          // Busca o detalhe da automação base (inclui steps) — necessário
-          // para clonar fielmente o fluxo no novo registro.
-          const detailRes = await fetch(apiUrl(`/api/automations/${op.baseId}`), {
-            credentials: "include",
-          });
-          if (!detailRes.ok) {
-            const body = await detailRes.json().catch(() => ({}));
-            throw new Error(body?.message ?? "Falha ao carregar automação base para clonar.");
-          }
-          const detail = (await detailRes.json()) as {
-            name: string;
-            description: string | null;
-            steps?: { type: string; config: unknown }[];
-          };
-
+        if (op.kind === "link") {
+          // Vincula a automação EXISTENTE a esta etapa/gatilho (sem clonar):
+          // atualiza triggerType/triggerConfig e garante `active: true` (o
+          // filtro de leitura da etapa exige ativa). Assim não acumulam
+          // duplicatas em /automations e o vínculo persiste na releitura.
           const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId, op.conditions);
           if (!tr) {
             throw new Error(`Gatilho desconhecido: "${op.label}".`);
           }
-
-          // Steps são clonados SEM `id` — o backend gera novos cuids. Quem
-          // depende de referências internas entre steps (`nextStepId`,
-          // `gotoStepId` etc.) precisa reabrir o canvas para revalidar — fora
-          // do escopo deste fix; aqui só replicamos o snapshot tal qual.
-          const cloneBody = {
-            name: detail.name,
-            description: detail.description ?? undefined,
-            triggerType: tr.triggerType,
-            triggerConfig: tr.triggerConfig,
-            steps: (detail.steps ?? []).map((s) => ({ type: s.type, config: s.config })),
-          };
-
-          const createRes = await fetch(apiUrl(`/api/automations`), {
-            method: "POST",
+          const res = await fetch(apiUrl(`/api/automations/${op.id}`), {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify(cloneBody),
+            body: JSON.stringify({
+              triggerType: tr.triggerType,
+              triggerConfig: tr.triggerConfig,
+              active: true,
+            }),
           });
-          if (!createRes.ok) {
-            const body = await createRes.json().catch(() => ({}));
-            throw new Error(body?.message ?? "Falha ao criar automação no estágio.");
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body?.message ?? "Falha ao vincular automação à etapa.");
           }
         } else if (op.kind === "update") {
           const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId, op.conditions);

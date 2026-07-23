@@ -152,7 +152,7 @@ export function InlineFieldEditor({
         )}
         aria-label={`Editar ${fieldId}`}
       >
-        <span className="min-w-0 break-words">
+        <span className="min-w-0 break-words [overflow-wrap:anywhere]">
           {isEmpty ? placeholder : formatDisplayValue(value!, fieldType)}
         </span>
         <IconPencil

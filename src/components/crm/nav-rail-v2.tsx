@@ -11,14 +11,16 @@ import {
   IconHome,
   IconLogout,
   IconMoon,
+  IconPhoto,
   IconSettings,
   IconSun,
+  IconTrash,
   IconUserCircle,
 } from "@tabler/icons-react";
 import { signOut, useSession } from "next-auth/react";
 import { toast } from "sonner";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import {
   DropdownMenu,
@@ -47,7 +49,11 @@ import {
 } from "@/lib/sidebar-catalog";
 import { useSidebarPreferences } from "@/features/sidebar/hooks";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
-import { useOrganization } from "@/hooks/use-organization";
+import {
+  useOrganization,
+  useRemoveOrganizationLogo,
+  useUpdateOrganizationLogo,
+} from "@/hooks/use-organization";
 import { SoftphoneNavIcon } from "@/features/softphone/components/softphone-nav-icon";
 
 /**
@@ -134,7 +140,7 @@ export function NavRailV2({ className }: { className?: string }) {
   const router = useRouter();
   const { theme, toggle } = useThemeV2();
   const { data: session } = useSession();
-  const { role, isSuperAdmin } = useUserRole();
+  const { role, isSuperAdmin, isManagerUp } = useUserRole();
   const { data: prefs } = useSidebarPreferences();
   const { data: myPerms } = useMyPermissions();
   const { data: organization } = useOrganization();
@@ -144,6 +150,7 @@ export function NavRailV2({ className }: { className?: string }) {
   // não carrega, mostra "··" — mesmo placeholder do avatar do usuário.
   const companyName = organization?.name?.trim() ?? "";
   const companyInitials = companyName ? computeInitials(companyName) : "··";
+  const companyLogo = organization?.logoUrl ?? null;
   const accountId =
     organization?.id ??
     (session?.user as { organizationId?: string | null } | undefined)
@@ -157,6 +164,29 @@ export function NavRailV2({ className }: { className?: string }) {
     } catch {
       toast.error("Não foi possível copiar o ID");
     }
+  }
+
+  // Ícone da empresa: upload/remoção da logo da org. Só ADMIN/MANAGER
+  // veem os itens no popover; o backend também valida (requireManager).
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const updateLogo = useUpdateOrganizationLogo();
+  const removeLogo = useRemoveOrganizationLogo();
+  function onPickLogo(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permite re-selecionar o mesmo arquivo
+    if (!file) return;
+    updateLogo.mutate(file, {
+      onSuccess: () => toast.success("Ícone da empresa atualizado"),
+      onError: (err) =>
+        toast.error(err instanceof Error ? err.message : "Erro ao enviar o ícone"),
+    });
+  }
+  function onRemoveLogo() {
+    removeLogo.mutate(undefined, {
+      onSuccess: () => toast.success("Ícone da empresa removido"),
+      onError: (err) =>
+        toast.error(err instanceof Error ? err.message : "Erro ao remover o ícone"),
+    });
   }
 
   const agentStatus = useAgentStatus();
@@ -357,11 +387,19 @@ export function NavRailV2({ className }: { className?: string }) {
           href="/dashboard"
           aria-label="Início"
           className={cn(
-            "mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]",
+            "mb-2 flex shrink-0 items-center justify-center overflow-hidden font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]",
+            companyLogo
+              ? "h-12 w-12 rounded-full"
+              : "h-11 w-11 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
             expanded ? "mx-auto" : "",
           )}
         >
-          {companyInitials}
+          {companyLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={companyLogo} alt={companyName || "Empresa"} className="size-full object-cover" />
+          ) : (
+            companyInitials
+          )}
         </Link>
       ) : (
         <DropdownMenu>
@@ -369,17 +407,37 @@ export function NavRailV2({ className }: { className?: string }) {
             title={companyName || "Conta da empresa"}
             aria-label="Conta da empresa"
             className={cn(
-              "mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)] outline-none transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25 focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25",
+              "mb-2 flex shrink-0 items-center justify-center overflow-hidden font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)] outline-none transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25 focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25",
+              companyLogo
+                ? "h-12 w-12 rounded-full"
+                : "h-11 w-11 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
               expanded ? "mx-auto" : "",
             )}
           >
-            {companyInitials}
+            {companyLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={companyLogo} alt={companyName || "Empresa"} className="size-full object-cover" />
+            ) : (
+              companyInitials
+            )}
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="start" className={ACCOUNT_MENU_CONTENT}>
             <div className="flex items-center gap-3 px-2 py-2">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[13px] font-bold text-white">
-                {companyInitials}
+              <div
+                className={cn(
+                  "flex shrink-0 items-center justify-center overflow-hidden font-display text-[13px] font-bold text-white",
+                  companyLogo
+                    ? "h-10 w-10 rounded-full"
+                    : "h-9 w-9 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
+                )}
+              >
+                {companyLogo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={companyLogo} alt={companyName || "Empresa"} className="size-full object-cover" />
+                ) : (
+                  companyInitials
+                )}
               </div>
               <div className="min-w-0">
                 <p className="truncate font-display text-[13px] font-bold text-[var(--color-popover-foreground)]">
@@ -402,6 +460,41 @@ export function NavRailV2({ className }: { className?: string }) {
               <span className="font-medium">Copiar ID da conta</span>
             </DropdownMenuItem>
 
+            {isManagerUp && (
+              <>
+                <DropdownMenuItem
+                  className={ACCOUNT_MENU_ITEM}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    logoInputRef.current?.click();
+                  }}
+                  disabled={updateLogo.isPending}
+                >
+                  <IconPhoto size={16} className="shrink-0" />
+                  <span className="font-medium">
+                    {updateLogo.isPending
+                      ? "Enviando…"
+                      : companyLogo
+                        ? "Alterar ícone"
+                        : "Adicionar ícone"}
+                  </span>
+                </DropdownMenuItem>
+
+                {companyLogo && (
+                  <DropdownMenuItem
+                    className={ACCOUNT_MENU_ITEM}
+                    onClick={() => onRemoveLogo()}
+                    disabled={removeLogo.isPending}
+                  >
+                    <IconTrash size={16} className="shrink-0" />
+                    <span className="font-medium">
+                      {removeLogo.isPending ? "Removendo…" : "Remover ícone"}
+                    </span>
+                  </DropdownMenuItem>
+                )}
+              </>
+            )}
+
             <DropdownMenuItem
               className={ACCOUNT_MENU_ITEM}
               onClick={() => router.push("/dashboard")}
@@ -410,6 +503,15 @@ export function NavRailV2({ className }: { className?: string }) {
               <span className="font-medium">Início</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
+
+          {/* input escondido acionado pelo item "Alterar/Adicionar ícone" */}
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            onChange={onPickLogo}
+          />
         </DropdownMenu>
       )}
 

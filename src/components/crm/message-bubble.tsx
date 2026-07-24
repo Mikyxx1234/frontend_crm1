@@ -1318,14 +1318,14 @@ export function MessageBubble({
         className={cn(
           "group relative flex w-full items-center gap-2.5 rounded-[var(--radius-lg)] border px-3.5 py-2 text-sm leading-[1.45] transition-colors",
           isPinned
-            ? "border-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,white)]"
-            : "border-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] bg-[color-mix(in_srgb,var(--text-muted)_7%,white)]",
+            ? "border-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,var(--glass-bg-base))]"
+            : "border-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] bg-[color-mix(in_srgb,var(--text-muted)_7%,var(--glass-bg-base))]",
           className,
         )}
       >
         {/* Indicador de nota fixada */}
         {isPinned && (
-          <span className="absolute -top-1.5 right-8 flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_15%,white)] px-1.5 py-0.5">
+          <span className="absolute -top-1.5 right-8 flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_15%,var(--glass-bg-base))] px-1.5 py-0.5">
             <IconPinFilled size={9} className="text-[var(--brand-primary)]" />
             <span className="font-display text-[8px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
               fixada

@@ -29,12 +29,14 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const contentType =
-    req.headers.get("content-type") ?? "application/octet-stream";
-
-  let body: ArrayBuffer;
+  // Re-parseia o multipart e reenvia como FormData: assim o `fetch`
+  // (undici) recodifica o corpo com um boundary novo e um Content-Type
+  // consistente. Encaminhar o ArrayBuffer cru com o boundary original
+  // quebrava o `request.formData()` do backend ("Erro ao processar
+  // upload.").
+  let form: FormData;
   try {
-    body = await req.arrayBuffer();
+    form = await req.formData();
   } catch {
     return NextResponse.json(
       { message: "Erro ao ler o arquivo enviado." },
@@ -45,8 +47,7 @@ export async function POST(req: Request) {
   try {
     const res = await apiServerFetch("/api/uploads/automation-media", {
       method: "POST",
-      body,
-      headers: { "content-type": contentType },
+      body: form,
     });
 
     const payload = await res.text();

@@ -14,6 +14,7 @@ export { TaskDialog } from "./task-dialog";
 export { AssigneePopover } from "./assignee-popover";
 export { TagsPopover } from "./tags-popover";
 export { ConversationActionsMenu } from "./conversation-actions-menu";
+export { TransferPopover } from "./transfer-popover";
 export { ConversationTimelineTab } from "./conversation-timeline-tab";
 export { InboxFilterButton } from "./filter-panel";
 export { ActiveBotsButton } from "./active-bots-button";

@@ -107,7 +107,20 @@ export async function listConversationsForForwardPicker(): Promise<ConversationL
 export type ConversationActionPayload =
   | { action: "resolve"; tabulationId?: string | null }
   | { action: "reopen" }
-  | { action: "assign"; assignedToId: string | null };
+  | { action: "assign"; assignedToId: string | null }
+  | {
+      action: "transfer";
+      assignedToId?: string | null;
+      departmentId?: string | null;
+    };
+
+/** Resultado da Distribuição Inteligente acionada por uma transferência para departamento. */
+export interface TransferDistributionResult {
+  success: boolean;
+  reason: string;
+  selectedUserId: string | null;
+  selectedUserName: string | null;
+}
 
 export type TabulationNode = {
   id: string;
@@ -153,6 +166,8 @@ export interface ConversationActionResponse {
   conversation: ConversationListRow;
   /** Presente apenas em `reopen` (modelo de ticket). */
   previousConversationId?: string;
+  /** Presente em `transfer` quando um departamento foi definido (distribuição). */
+  distribution?: TransferDistributionResult | null;
 }
 
 /** POST /api/conversations/:id/actions */

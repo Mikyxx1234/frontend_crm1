@@ -31,6 +31,60 @@ export function useAssignConversation() {
 }
 
 /**
+ * Transferir conversa para um AGENTE e/ou um DEPARTAMENTO.
+ *
+ * Ao informar `departmentId`, o backend define `conversation.departmentId` e
+ * aciona a Distribuição Inteligente escopada a esse departamento (um agente
+ * elegível recebe a conversa). Ao informar `assignedToId`, atribui direto.
+ */
+export function useTransferConversation() {
+  const qc = useQueryClient();
+  return useMutation<
+    Awaited<ReturnType<typeof postConversationAction>>,
+    Error,
+    {
+      conversationId: string;
+      assignedToId?: string | null;
+      departmentId?: string | null;
+    }
+  >({
+    mutationFn: (vars) =>
+      postConversationAction(vars.conversationId, {
+        action: "transfer",
+        ...(vars.assignedToId !== undefined
+          ? { assignedToId: vars.assignedToId }
+          : {}),
+        ...(vars.departmentId !== undefined
+          ? { departmentId: vars.departmentId }
+          : {}),
+      }),
+    onSuccess: (data, vars) => {
+      const dist = data.distribution;
+      if (vars.departmentId != null) {
+        toast.success(
+          dist?.success && dist.selectedUserName
+            ? `Transferida ao departamento — atribuída a ${dist.selectedUserName}`
+            : "Conversa transferida para o departamento",
+        );
+      } else {
+        toast.success("Conversa transferida");
+      }
+
+      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({
+        queryKey: ["conversation-timeline", vars.conversationId],
+      });
+      qc.invalidateQueries({ queryKey: ["deal-detail-v2"] });
+      qc.invalidateQueries({ queryKey: ["deal-timeline-v2"] });
+      qc.invalidateQueries({ queryKey: ["activity-feed"] });
+      qc.invalidateQueries({ queryKey: ["distribution"] });
+    },
+    onError: (err) => toast.error(err.message || "Falha ao transferir"),
+  });
+}
+
+/**
  * Resolver / reabrir conversa.
  *
  * Modelo de ticket (15/jul/26): `reopen` NAO reabre o mesmo registro —

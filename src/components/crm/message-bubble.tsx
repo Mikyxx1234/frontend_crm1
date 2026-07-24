@@ -557,6 +557,24 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
   const [duration, setDuration] = useState(0)
   const [transcript, setTranscript] = useState<TranscriptState>({ status: "idle" })
   const [transcriptExpanded, setTranscriptExpanded] = useState(false)
+  const [rate, setRate] = useState(1)
+
+  const SPEEDS = [0.5, 1, 1.5, 2] as const
+  const cycleSpeed = useCallback(() => {
+    setRate((prev) => {
+      const idx = SPEEDS.indexOf(prev as (typeof SPEEDS)[number])
+      const next = SPEEDS[(idx + 1) % SPEEDS.length]
+      const el = audioRef.current
+      if (el) el.playbackRate = next
+      return next
+    })
+  }, [])
+
+  // Reaplica a velocidade sempre que a fonte carrega (mantém a taxa ao tocar).
+  useEffect(() => {
+    const el = audioRef.current
+    if (el) el.playbackRate = rate
+  }, [rate])
 
   const toggle = useCallback(() => {
     const el = audioRef.current
@@ -638,7 +656,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
   return (
     <div
       className={cn(
-        "flex w-[220px] flex-col gap-1 py-0.5",
+        "flex w-[min(340px,74vw)] flex-col gap-1 py-0.5",
         // Folga inferior só quando há transcrição (evita o horário sobrepor o
         // texto). No estado padrão, o horário divide a linha com "Transcrever".
         transcript.status === "done" ? "pb-4" : "pb-1.5",
@@ -698,6 +716,23 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
             {timeLabel}
           </span>
         </div>
+
+        {/* Controle de velocidade — cicla 0.5x → 1x → 1.5x → 2x */}
+        <button
+          type="button"
+          onClick={cycleSpeed}
+          disabled={!url}
+          aria-label="Velocidade de reprodução"
+          className={cn(
+            "flex h-7 shrink-0 items-center justify-center rounded-full px-2 font-display text-[10px] font-semibold tabular-nums transition-colors",
+            isOutgoing
+              ? "bg-[var(--glass-bg-subtle)] text-white hover:bg-[var(--glass-bg-panel)]"
+              : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20",
+            !url && "opacity-40 cursor-not-allowed",
+          )}
+        >
+          {rate}x
+        </button>
       </div>
 
       {/* Botão Transcrever — pill compacta com fundo próprio para contraste */}

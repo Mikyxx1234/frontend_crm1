@@ -236,7 +236,10 @@ export function Composer({
   // vier assinado em qualquer um dos formatos usados historicamente).
   function applySignature(text: string): string {
     const sig = effectiveSignature;
-    if (!sigEnabled || !sig) return text;
+    // Respeita a permissão org-level "Permitir assinatura": quando desligada,
+    // a assinatura nunca é aplicada, mesmo que o agente a tenha habilitado
+    // localmente antes (estado persistido em localStorage).
+    if (!signatureAllowed || !sigEnabled || !sig) return text;
     const s = sig.toLowerCase();
     const lower = text.toLowerCase();
     const already =

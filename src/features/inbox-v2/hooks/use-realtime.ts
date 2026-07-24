@@ -144,6 +144,25 @@ export function useInboxRealtime(options: {
         scheduleInboxRefresh();
       });
 
+      // Timeline (chatter) da conversa — encerramento/reabertura empurrados
+      // pelo backend. Invalida ["conversation-timeline", id] p/ o
+      // ConversationTimelineTab exibir o evento na hora, mesmo quando a
+      // acao veio de outro agente/automacao (sem mutation local).
+      es.addEventListener("conversation_timeline_updated", (e) => {
+        try {
+          const data = JSON.parse((e as MessageEvent).data) as {
+            conversationId?: string;
+          };
+          if (data.conversationId) {
+            qc.invalidateQueries({
+              queryKey: ["conversation-timeline", data.conversationId],
+            });
+          }
+        } catch {
+          /* ignore */
+        }
+      });
+
       es.addEventListener("contact_updated", (e) => {
         try {
           const data = JSON.parse((e as MessageEvent).data) as {

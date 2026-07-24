@@ -72,6 +72,7 @@ import {
   ConversationTimelineTab,
   InboxFilterButton,
   TagsPopover,
+  TransferPopover,
   TemplatePickerList,
   whatsappTemplateToPending,
   type PendingTemplate,
@@ -1156,6 +1157,13 @@ export default function InboxV2ClientPage({
               dealId={firstDealId}
               phone={chatContact?.phone || null}
               contactId={activeContactId ?? undefined}
+            />
+            <TransferPopover
+              conversationId={activeId}
+              currentAssigneeId={activeRow.assignedTo?.id ?? null}
+              currentDepartmentId={
+                activeRow.departmentId ?? activeRow.department?.id ?? null
+              }
             />
             <ConversationActionsMenu
               conversationId={activeId}

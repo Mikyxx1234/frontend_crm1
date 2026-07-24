@@ -34,7 +34,6 @@ import {
 } from "@/components/inbox/slash-command-menu";
 import { getContact } from "@/features/inbox-v2/api/misc";
 import { sendAttachment } from "@/features/inbox-v2/api";
-import { useSendAttachment } from "@/features/inbox-v2/hooks";
 import { apiUrl } from "@/lib/api";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
@@ -158,6 +157,24 @@ export function Composer({
     null,
   );
 
+  // Imagens coladas (Ctrl+V) → ficam "encostadas" como anexos pendentes e só
+  // são enviadas quando o operador clica em enviar / pressiona Enter (mesma
+  // ideia do pendingMedia, mas guardando o File binário + URL de preview).
+  const [pendingFiles, setPendingFiles] = useState<
+    { id: string; file: File; previewUrl: string; name: string }[]
+  >([]);
+  const pendingFilesRef = useRef(pendingFiles);
+  useEffect(() => {
+    pendingFilesRef.current = pendingFiles;
+  }, [pendingFiles]);
+  // Revoga as URLs de preview ainda pendentes ao desmontar (evita vazamento).
+  useEffect(
+    () => () => {
+      pendingFilesRef.current.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+    },
+    [],
+  );
+
   // ── Contexto para interpolação de templates internos ─────────────
   // Busca dados do contato quando contactId está disponível, para
   // substituir tokens {{contato.nome}}, {{negocio.valor}} etc.
@@ -172,9 +189,6 @@ export function Composer({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Container do composer — usado para detectar clique-fora do slash menu.
   const rootRef = useRef<HTMLDivElement>(null);
-
-  // Upload de anexo (mesmo fluxo do FilePickerButton) — usado ao colar imagem.
-  const pasteAttachment = useSendAttachment(conversationId);
 
   // ── Assinatura do agente (estilo WhatsApp) ───────────────────────
   // Toggle + nome personalizado, persistidos em localStorage (mesmas
@@ -386,17 +400,44 @@ export function Composer({
     }
   }
 
+  // Remove uma imagem colada da fila de pendentes (revoga a URL de preview).
+  function removePendingFile(id: string) {
+    setPendingFiles((prev) => {
+      const target = prev.find((f) => f.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((f) => f.id !== id);
+    });
+  }
+
+  // Envia as imagens coladas encostadas (uma a uma) após o texto. Limpa o
+  // estado e revoga as URLs de preview ao final. Silencioso em erro.
+  async function flushPendingFiles() {
+    if (pendingFiles.length === 0 || !conversationId) return;
+    const files = pendingFiles;
+    setPendingFiles([]);
+    await Promise.allSettled(
+      files.map((f) => sendAttachment(conversationId, f.file, { fileName: f.name })),
+    );
+    files.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+  }
+
   function performSend() {
     const trimmed = value.trim();
-    // Permite enviar quando há texto OU um anexo encostado.
-    if ((!trimmed && !pendingMedia) || sending || inputDisabled) return;
+    // Permite enviar quando há texto OU um anexo encostado (modelo ou imagem colada).
+    if (
+      (!trimmed && !pendingMedia && pendingFiles.length === 0) ||
+      sending ||
+      inputDisabled
+    )
+      return;
     if (noteMode && onSendNote) {
-      // Nota interna não carrega anexo de modelo.
+      // Nota interna não carrega anexo de modelo/imagem.
       if (trimmed) onSendNote(trimmed);
       return;
     }
     if (trimmed) onSend(applySignature(trimmed));
     void flushPendingMedia();
+    void flushPendingFiles();
   }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -418,25 +459,23 @@ export function Composer({
     return map[mime] ?? "png";
   }
 
-  // Ctrl+V de uma imagem (print/copiar imagem) → envia como anexo pelo
-  // mesmo fluxo do FilePickerButton. Paste de texto normal segue intacto.
+  // Ctrl+V de imagem (print / copiar imagem) → encosta como anexo PENDENTE
+  // no composer (com preview). NÃO envia: só vai no próximo clique em enviar
+  // / Enter, junto com o texto. Paste de texto normal segue intacto.
   function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>) {
     if (inputDisabled || sending) return;
     const items = e.clipboardData?.items;
     if (!items) return;
 
-    let imageFile: File | null = null;
+    const images: File[] = [];
     for (const item of Array.from(items)) {
       if (item.kind === "file" && item.type.startsWith("image/")) {
         const f = item.getAsFile();
-        if (f) {
-          imageFile = f;
-          break;
-        }
+        if (f) images.push(f);
       }
     }
     // Sem imagem no clipboard → deixa o paste de texto acontecer normalmente.
-    if (!imageFile) return;
+    if (images.length === 0) return;
 
     // Impede que o binário caia como texto no campo.
     e.preventDefault();
@@ -446,15 +485,19 @@ export function Composer({
       return;
     }
 
-    const ext = imageExtFromMime(imageFile.type);
-    const fileName = imageFile.name?.trim() || `imagem-colada-${Date.now()}.${ext}`;
-    pasteAttachment.mutate(
-      { file: imageFile, fileName },
-      {
-        onSuccess: () => toast.success("Imagem colada enviada"),
-        onError: (err) => toast.error(err.message || "Falha ao enviar imagem"),
-      },
-    );
+    // Encosta cada imagem como anexo pendente (com preview). O envio ocorre
+    // no fluxo normal (botão / Enter) via flushPendingFiles().
+    const now = Date.now();
+    const staged = images.map((file, i) => {
+      const ext = imageExtFromMime(file.type);
+      return {
+        id: `${now}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+        name: file.name?.trim() || `imagem-colada-${now}-${i}.${ext}`,
+      };
+    });
+    setPendingFiles((prev) => [...prev, ...staged]);
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -527,6 +570,36 @@ export function Composer({
           >
             <IconX size={14} />
           </button>
+        </div>
+      )}
+
+      {/* Imagens coladas (Ctrl+V) — encostadas; enviadas junto no próximo envio. */}
+      {pendingFiles.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {pendingFiles.map((f) => (
+            <div
+              key={f.id}
+              className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 py-1.5 shadow-[var(--glass-shadow-sm)]"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={f.previewUrl}
+                alt={f.name}
+                className="h-9 w-9 shrink-0 rounded-[var(--radius-sm)] object-cover"
+              />
+              <span className="max-w-[140px] truncate font-body text-[12px] text-[var(--text-secondary)]">
+                {f.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => removePendingFile(f.id)}
+                aria-label="Remover imagem"
+                className="shrink-0 rounded-full p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+              >
+                <IconX size={14} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -796,7 +869,11 @@ export function Composer({
             size="icon"
             title={noteMode ? "Salvar nota" : "Enviar"}
             className="h-9 w-9 shrink-0"
-            disabled={!value.trim() || sending || inputDisabled}
+            disabled={
+              (!value.trim() && pendingFiles.length === 0 && !pendingMedia) ||
+              sending ||
+              inputDisabled
+            }
           >
             <IconSend size={18} />
           </ButtonGlass>

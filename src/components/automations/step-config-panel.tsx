@@ -1961,14 +1961,59 @@ function ConditionFieldPicker({
   declaredVariables: FieldOption[];
 }) {
   const CUSTOM = "__custom__";
+
+  const customFieldsQuery = useQuery({
+    queryKey: ["custom-fields-for-condition"],
+    staleTime: 2 * 60_000,
+    queryFn: async () => {
+      const [contactRes, dealRes] = await Promise.all([
+        fetch(apiUrl("/api/custom-fields?entity=contact")),
+        fetch(apiUrl("/api/custom-fields?entity=deal")),
+      ]);
+      const contacts: CustomFieldOption[] = contactRes.ok ? await contactRes.json() : [];
+      const deals: CustomFieldOption[] = dealRes.ok ? await dealRes.json() : [];
+      return { contacts, deals };
+    },
+  });
+
+  const customFieldGroups = useMemo<FieldGroup[]>(() => {
+    const contacts = (customFieldsQuery.data?.contacts ?? [])
+      .filter((f) => (f.name || "").trim())
+      .map((f) => ({
+        value: `contactCustomFields.${f.name}`,
+        label: f.label || f.name,
+        hint: f.name,
+      }));
+    const deals = (customFieldsQuery.data?.deals ?? [])
+      .filter((f) => (f.name || "").trim())
+      .map((f) => ({
+        value: `dealCustomFields.${f.name}`,
+        label: f.label || f.name,
+        hint: f.name,
+      }));
+    const groups: FieldGroup[] = [];
+    if (contacts.length > 0) {
+      groups.push({ label: "Campos personalizados (contato)", options: contacts });
+    }
+    if (deals.length > 0) {
+      groups.push({ label: "Campos personalizados (negócio)", options: deals });
+    }
+    return groups;
+  }, [customFieldsQuery.data]);
+
+  const allGroups = useMemo(
+    () => [...CONDITION_FIELD_GROUPS, ...customFieldGroups],
+    [customFieldGroups],
+  );
+
   const knownValues = useMemo(() => {
     const set = new Set<string>();
-    for (const g of CONDITION_FIELD_GROUPS) {
+    for (const g of allGroups) {
       for (const o of g.options) set.add(o.value);
     }
     for (const o of declaredVariables) set.add(o.value);
     return set;
-  }, [declaredVariables]);
+  }, [allGroups, declaredVariables]);
 
   // Valor que não está na lista (e não vazio) → entra no modo customizado,
   // preservando o que o usuário tinha digitado antes.
@@ -1983,7 +2028,7 @@ function ConditionFieldPicker({
     return (
       <div className="flex gap-1">
         <Input
-          placeholder="ex.: contact.customFields.cidade"
+          placeholder="ex.: contactCustomFields.cidade"
           className="h-9 flex-1 text-[12px]"
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -2011,12 +2056,12 @@ function ConditionFieldPicker({
       placeholder="Selecione um campo…"
       value={value}
       options={[
-        ...CONDITION_FIELD_GROUPS.flatMap((group) =>
+        ...allGroups.flatMap((group) =>
           group.options.map((opt) => ({
             value: opt.value,
             label: opt.hint ? `${opt.label} (${opt.hint})` : opt.label,
             description: group.label,
-          }))
+          })),
         ),
         ...declaredVariables.map((opt) => ({
           value: opt.value,
@@ -3548,7 +3593,8 @@ function MediaStepConfig({
 
   const mediaType = String(draft.mediaType ?? "image");
   const mediaUrl = String(draft.mediaUrl ?? "");
-  const hasFile = mediaUrl.startsWith("/uploads/");
+  const hasFile =
+    mediaUrl.startsWith("/uploads/") || mediaUrl.startsWith("/api/storage/");
   const uploadedFileName = String(draft.uploadedFileName ?? "");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

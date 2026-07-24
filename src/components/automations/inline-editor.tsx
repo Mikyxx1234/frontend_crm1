@@ -29,6 +29,7 @@ import {
 import {
   useAiAgentOptions,
   useAutomationOptions,
+  useConditionFieldOptions,
   useCustomFieldTokens,
   useDepartmentOptions,
   useFieldOptions,
@@ -42,7 +43,6 @@ import {
 } from "./editor-data"
 import { WebhookStepConfig } from "./webhook-step-config"
 
-const CONDITION_FIELD_SET = new Set(CONDITION_FIELDS.map((f) => f.value))
 const CUSTOM_FIELD_SENTINEL = "__custom__"
 
 type Cfg = Record<string, unknown>
@@ -861,7 +861,8 @@ function MediaField({ label, config, onChange }: { label: string; config: Cfg; o
   const mediaType = str(config.mediaType) || "image"
   const mediaUrl = str(config.mediaUrl)
   const uploadedFileName = str(config.uploadedFileName)
-  const hasFile = mediaUrl.startsWith("/uploads/")
+  const hasFile =
+    mediaUrl.startsWith("/uploads/") || mediaUrl.startsWith("/api/storage/")
 
   const patch = (p: Cfg) => onChange({ ...config, ...p })
 
@@ -1124,6 +1125,9 @@ function ConditionValue({
 
 function ConditionBuilder({ config, steps, onChange }: { config: Cfg; steps: StepOpt[]; onChange: (next: Cfg) => void }) {
   const branches = asArr<Branch>(config.branches)
+  const { options: customFieldOptions, isLoading: fieldsLoading } = useConditionFieldOptions()
+  const fieldOptions = [...CONDITION_FIELDS, ...customFieldOptions]
+  const knownFields = new Set(fieldOptions.map((f) => f.value))
   const setBranches = (b: Branch[]) => onChange({ ...config, branches: b })
   const updateBranch = (bi: number, patch: Partial<Branch>) => setBranches(branches.map((b, i) => (i === bi ? { ...b, ...patch } : b)))
   const updateRule = (bi: number, ri: number, patch: Partial<Rule>) => {
@@ -1152,15 +1156,16 @@ function ConditionBuilder({ config, steps, onChange }: { config: Cfg; steps: Ste
             {(b.rules ?? []).map((r, ri) => {
               const noVal = NO_VALUE_OPS.has(str(r.op))
               const field = str(r.field)
-              const isCustom = !!field && !CONDITION_FIELD_SET.has(field)
+              const isCustom = !!field && !knownFields.has(field)
               return (
                 <div className="cfg-rule" key={ri}>
                   <ConfigSelect
                     value={isCustom ? CUSTOM_FIELD_SENTINEL : field}
                     options={[
-                      ...CONDITION_FIELDS,
+                      ...fieldOptions,
                       { value: CUSTOM_FIELD_SENTINEL, label: "Outro (caminho livre)…" },
                     ]}
+                    loading={fieldsLoading}
                     placeholder="campo"
                     onChange={(v) => {
                       // Trocar de campo zera o valor (o widget muda de tipo).

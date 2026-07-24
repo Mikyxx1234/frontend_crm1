@@ -278,13 +278,49 @@ export function useFieldOptions(entity: "contact" | "deal") {
     staleTime: STALE,
     queryFn: async (): Promise<Opt[]> => {
       const list = asArray(await getJson(`/api/custom-fields?entity=${entity}`)) as RawCustomField[]
-      return list.map((c) => ({
-        value: c.id,
-        label: c.label || c.name || c.id,
-        group: "Campos personalizados",
-      }))
+      return list
+        .filter((c) => c.name || c.id)
+        .map((c) => ({
+          value: c.name || c.id, // slug — o que o executor espera
+          label: c.label && c.name ? `${c.label} (${c.name})` : (c.label || c.name || c.id),
+          group: "Campos personalizados",
+        }))
     },
   })
   const builtins = BUILTIN_FIELDS[entity].map((o) => ({ ...o, group: "Campos nativos" }))
   return { options: [...builtins, ...(q.data ?? [])], isLoading: q.isLoading }
+}
+
+/**
+ * Campos personalizados da org para o seletor de `condition`
+ * (`contactCustomFields.<name>` / `dealCustomFields.<name>`).
+ * Combine com `CONDITION_FIELDS` no consumidor.
+ */
+export function useConditionFieldOptions() {
+  const q = useQuery({
+    queryKey: ["editor-condition-custom-fields"],
+    staleTime: STALE,
+    queryFn: async (): Promise<Opt[]> => {
+      const [contacts, deals] = await Promise.all([
+        asArray(await getJson("/api/custom-fields?entity=contact")) as RawCustomField[],
+        asArray(await getJson("/api/custom-fields?entity=deal")) as RawCustomField[],
+      ])
+      const contactOpts = contacts
+        .filter((c) => (c.name || "").trim())
+        .map((c) => ({
+          value: `contactCustomFields.${c.name}`,
+          label: c.label || c.name || c.id,
+          group: "Campos personalizados (contato)",
+        }))
+      const dealOpts = deals
+        .filter((c) => (c.name || "").trim())
+        .map((c) => ({
+          value: `dealCustomFields.${c.name}`,
+          label: c.label || c.name || c.id,
+          group: "Campos personalizados (negócio)",
+        }))
+      return [...contactOpts, ...dealOpts]
+    },
+  })
+  return { options: q.data ?? [], isLoading: q.isLoading }
 }

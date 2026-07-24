@@ -30,6 +30,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   IconBolt as Bolt,
   IconFileText as FileText,
@@ -47,12 +48,17 @@ import {
   type InternalTemplateContext,
 } from "@/lib/internal-template-variables";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
+import { fetchAgentAutomations } from "@/features/automations-v2/api";
 
 // ─────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────
 
-export type SlashItemKind = "internal-template" | "quick-reply" | "meta-template";
+export type SlashItemKind =
+  | "internal-template"
+  | "quick-reply"
+  | "meta-template"
+  | "automation";
 
 export type SlashItem =
   | {
@@ -87,6 +93,16 @@ export type SlashItem =
       flowAction: string | null;
       flowId: string | null;
       operatorVariables: OperatorVariableMeta[] | null;
+    }
+  | {
+      kind: "automation";
+      id: string;
+      name: string;
+      description: string | null;
+      messagePreview: string | null;
+      stepCount: number;
+      category: string;
+      categoryLabel: string;
     };
 
 export type SlashSelectionResult =
@@ -198,6 +214,34 @@ async function fetchQuickReplies(): Promise<QuickReplyRow[]> {
   return list as QuickReplyRow[];
 }
 
+/**
+ * Dispara uma automação manual na conversa atual — mesmo mecanismo do
+ * `AgentAutomationPickerModal` (POST /api/automations/:id/run com
+ * contactId + conversationId). Usado quando o operador escolhe um item
+ * da seção "Automações" no menu "/".
+ */
+async function runAutomationRequest(
+  automationId: string,
+  payload: { contactId: string; conversationId?: string | null },
+): Promise<{ automationName?: string }> {
+  const res = await fetch(apiUrl(`/api/automations/${automationId}/run`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contactId: payload.contactId,
+      conversationId: payload.conversationId ?? undefined,
+    }),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    automationName?: string;
+    message?: string;
+  };
+  if (!res.ok) {
+    throw new Error(typeof json?.message === "string" ? json.message : "Falha ao executar");
+  }
+  return { automationName: json.automationName };
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Hook de estado
 // ─────────────────────────────────────────────────────────────────
@@ -209,6 +253,13 @@ export type SlashMenuState = {
   items: SlashItem[];
   activeIndex: number;
   isLoading: boolean;
+  /** Estado isolado da seção "Automações" (degradação graciosa). */
+  automations: {
+    /** Seção só aparece quando há conversa + contato. */
+    visible: boolean;
+    isLoading: boolean;
+    isError: boolean;
+  };
 };
 
 export type UseSlashMenuOptions = {
@@ -234,6 +285,13 @@ export type UseSlashMenuOptions = {
    * está definido (esse caminho cuida do envio por conta própria).
    */
   onInsertMedia?: (media: { url: string; name: string | null }) => void;
+  /**
+   * Conversa/contato atuais — necessários para a seção "Automações".
+   * Quando ausentes, a seção fica oculta (não dá pra disparar automação
+   * sem saber em qual contato/conversa aplicar).
+   */
+  conversationId?: string | null;
+  contactId?: string | null;
   /** Desliga totalmente o atalho (ex.: modo nota, anexo pendente). */
   disabled?: boolean;
 };
@@ -246,6 +304,8 @@ export function useSlashMenu({
   onPickMetaTemplate,
   onSelectOverride,
   onInsertMedia,
+  conversationId,
+  contactId,
   disabled = false,
 }: UseSlashMenuOptions) {
   const [open, setOpen] = React.useState(false);
@@ -273,6 +333,18 @@ export function useSlashMenu({
     queryFn: fetchQuickReplies,
     enabled: queriesEnabled,
     staleTime: 60_000,
+  });
+
+  // Automações só fazem sentido com conversa + contato definidos (o run
+  // precisa dos dois). Sem eles a seção fica oculta.
+  const automationsVisible = !!conversationId && !!contactId;
+  const automationsEnabled = queriesEnabled && automationsVisible;
+  const automationsQ = useQuery({
+    queryKey: ["slash-agent-automations"],
+    queryFn: fetchAgentAutomations,
+    enabled: automationsEnabled,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const isLoading =
@@ -336,8 +408,29 @@ export function useSlashMenu({
       }
     }
 
+    if (automationsEnabled) {
+      for (const a of automationsQ.data?.items ?? []) {
+        if (
+          matches(a.name) ||
+          matches(a.description ?? "") ||
+          matches(a.messagePreview ?? "")
+        ) {
+          out.push({
+            kind: "automation",
+            id: a.id,
+            name: a.name,
+            description: a.description,
+            messagePreview: a.messagePreview,
+            stepCount: a.stepCount,
+            category: a.category,
+            categoryLabel: a.categoryLabel,
+          });
+        }
+      }
+    }
+
     return out;
-  }, [internalsQ.data, metasQ.data, quickRepliesQ.data, token]);
+  }, [internalsQ.data, metasQ.data, quickRepliesQ.data, automationsQ.data, automationsEnabled, token]);
 
   // Reset activeIndex sempre que a query muda — sem isso o índice
   // pode cair fora do range da nova lista.
@@ -379,6 +472,29 @@ export function useSlashMenu({
   const applyItem = React.useCallback(
     (item: SlashItem) => {
       if (!token) return;
+
+      // Automação: NÃO insere texto — dispara o run na conversa atual
+      // (mesmo mecanismo do AgentAutomationPickerModal) e fecha o menu.
+      if (item.kind === "automation") {
+        const before = draft.slice(0, token.start);
+        const after = draft.slice(token.end);
+        setDraft(before + after);
+        close();
+        if (!contactId) {
+          toast.error("Sem contato associado a esta conversa.");
+          return;
+        }
+        void runAutomationRequest(item.id, { contactId, conversationId })
+          .then((res) =>
+            toast.success(`Automação disparada: ${res.automationName ?? item.name}`),
+          )
+          .catch((err) =>
+            toast.error(
+              err instanceof Error ? err.message : "Erro ao executar automação",
+            ),
+          );
+        return;
+      }
 
       // Override (composer v2): remove o "/token" e delega o envio ao pai.
       if (onSelectOverride) {
@@ -429,7 +545,7 @@ export function useSlashMenu({
         el.setSelectionRange(pos, pos);
       });
     },
-    [draft, setDraft, token, close, onPickMetaTemplate, onSelectOverride, onInsertMedia, templateContext, textareaRef],
+    [draft, setDraft, token, close, onPickMetaTemplate, onSelectOverride, onInsertMedia, templateContext, textareaRef, contactId, conversationId],
   );
 
   const applyActive = React.useCallback(() => {
@@ -488,6 +604,11 @@ export function useSlashMenu({
     items,
     activeIndex,
     isLoading: !!isLoading,
+    automations: {
+      visible: automationsVisible,
+      isLoading: automationsEnabled && automationsQ.isLoading,
+      isError: automationsEnabled && automationsQ.isError,
+    },
   };
 
   return {
@@ -515,24 +636,32 @@ export function useSlashMenu({
 // o campo de busca do header é apenas um reflexo de `state.query` e todos os
 // cliques usam `onMouseDown preventDefault` para manter o foco no textarea.
 
-const KIND_ORDER: SlashItemKind[] = ["internal-template", "quick-reply", "meta-template"];
+const KIND_ORDER: SlashItemKind[] = [
+  "internal-template",
+  "quick-reply",
+  "meta-template",
+  "automation",
+];
 
 const KIND_GROUP_LABEL: Record<SlashItemKind, string> = {
   "internal-template": "Modelos internos do CRM",
   "quick-reply": "Mensagens rápidas",
   "meta-template": "Templates WhatsApp (Meta)",
+  automation: "Automações",
 };
 
 const KIND_GROUP_HINT: Record<SlashItemKind, string> = {
   "internal-template": "Mensagem do CRM com variáveis preenchidas no envio",
   "quick-reply": "Resposta pronta — envia o texto (e o anexo, se houver)",
   "meta-template": "Modelo aprovado na Meta — abre painel para confirmar envio",
+  automation: "Dispara a automação permitida nesta conversa",
 };
 
 const KIND_ICON: Record<SlashItemKind, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   "internal-template": FileText,
   "quick-reply": Bolt,
   "meta-template": MessageSquareQuote,
+  automation: Bolt,
 };
 
 /** Visual (fg/bg) por tipo — mesmos tokens glass da modal de automação. */
@@ -548,6 +677,10 @@ const KIND_VISUAL: Record<SlashItemKind, { fg: string; bg: string }> = {
   "meta-template": {
     fg: "text-[var(--color-success)]",
     bg: "bg-[var(--color-success-soft,rgba(16,185,129,0.1))]",
+  },
+  automation: {
+    fg: "text-[var(--color-lavender)]",
+    bg: "bg-[var(--color-lavender-soft)]",
   },
 };
 
@@ -596,10 +729,22 @@ export function SlashCommandMenu({
     "internal-template": [],
     "quick-reply": [],
     "meta-template": [],
+    automation: [],
   };
   state.items.forEach((item, i) => {
     byKind[item.kind].push({ item, globalIndex: i });
   });
+
+  // Estado isolado da seção "Automações": mostrada mesmo com 0 itens quando
+  // está carregando ou deu erro (degradação graciosa — não quebra o resto).
+  const auto = state.automations;
+  const autoStateOnly =
+    auto.visible && byKind.automation.length === 0 && (auto.isLoading || auto.isError);
+  const hasContent = state.items.length > 0 || autoStateOnly;
+  const anyAboveAutomation =
+    byKind["internal-template"].length > 0 ||
+    byKind["quick-reply"].length > 0 ||
+    byKind["meta-template"].length > 0;
 
   if (!portalTarget) return null;
 
@@ -673,64 +818,63 @@ export function SlashCommandMenu({
 
             {/* Body */}
             <div className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
-              {state.isLoading && state.items.length === 0 ? (
+              {state.isLoading && !hasContent ? (
                 <div className="flex items-center justify-center py-14">
                   <Loader2 className="size-6 animate-spin text-[var(--text-muted)]" />
                 </div>
-              ) : state.items.length === 0 ? (
+              ) : !hasContent ? (
                 <div className="py-12 text-center text-[13px] tracking-tight text-[var(--text-muted)]">
                   {state.query
                     ? `Nenhuma mensagem pronta encontrada para "${state.query}".`
                     : "Nenhuma mensagem pronta disponível."}
                 </div>
               ) : (
-                KIND_ORDER.map((kind, idx) => {
-                  const group = byKind[kind];
-                  if (group.length === 0) return null;
-                  const Icon = KIND_ICON[kind];
-                  const visual = KIND_VISUAL[kind];
-                  return (
-                    <section key={kind} aria-label={KIND_GROUP_LABEL[kind]} className={cn(idx > 0 && "mt-6")}>
-                      <div className="mb-3 flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "inline-flex size-5 shrink-0 items-center justify-center rounded-md",
-                            visual.bg,
-                            visual.fg,
-                          )}
-                        >
-                          <Icon className="size-3" strokeWidth={2.6} />
-                        </span>
-                        <span
-                          className={cn(
-                            "text-[10px] font-semibold uppercase tracking-widest",
-                            visual.fg,
-                          )}
-                        >
-                          {KIND_GROUP_LABEL[kind]}
-                        </span>
-                        <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 text-[9px] tabular-nums text-[var(--text-muted)]">
-                          {group.length}
-                        </span>
-                        <span className="ml-auto hidden truncate text-[10px] tracking-tight text-[var(--text-muted)] sm:inline">
-                          {KIND_GROUP_HINT[kind]}
-                        </span>
-                      </div>
+                <>
+                  {KIND_ORDER.map((kind, idx) => {
+                    const group = byKind[kind];
+                    if (group.length === 0) return null;
+                    const Icon = KIND_ICON[kind];
+                    const visual = KIND_VISUAL[kind];
+                    return (
+                      <section key={kind} aria-label={KIND_GROUP_LABEL[kind]} className={cn(idx > 0 && "mt-6")}>
+                        <SlashSectionHeader kind={kind} count={group.length} />
 
-                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                        {group.map(({ item, globalIndex }) => (
-                          <SlashItemCard
-                            key={`${item.kind}-${item.id}`}
-                            item={item}
-                            active={globalIndex === state.activeIndex}
-                            onHover={() => onHover?.(globalIndex)}
-                            onSelect={() => onSelectItem(item)}
-                          />
-                        ))}
-                      </div>
+                        {/* 1 mensagem por linha — coluna única (otimiza espaço). */}
+                        <div className="flex flex-col gap-2">
+                          {group.map(({ item, globalIndex }) => (
+                            <SlashItemCard
+                              key={`${item.kind}-${item.id}`}
+                              item={item}
+                              active={globalIndex === state.activeIndex}
+                              onHover={() => onHover?.(globalIndex)}
+                              onSelect={() => onSelectItem(item)}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
+
+                  {/* Automações: loading/erro inline (sem itens) — não quebra o resto. */}
+                  {autoStateOnly ? (
+                    <section
+                      aria-label={KIND_GROUP_LABEL.automation}
+                      className={cn(anyAboveAutomation && "mt-6")}
+                    >
+                      <SlashSectionHeader kind="automation" />
+                      {auto.isLoading ? (
+                        <div className="flex items-center gap-2 px-1 py-3 text-[12px] tracking-tight text-[var(--text-muted)]">
+                          <Loader2 className="size-4 animate-spin" />
+                          Carregando automações…
+                        </div>
+                      ) : (
+                        <div className="px-1 py-3 text-[12px] tracking-tight text-[var(--color-danger)]">
+                          Não foi possível carregar as automações.
+                        </div>
+                      )}
                     </section>
-                  );
-                })
+                  ) : null}
+                </>
               )}
             </div>
 
@@ -753,6 +897,40 @@ export function SlashCommandMenu({
   );
 }
 
+function SlashSectionHeader({ kind, count }: { kind: SlashItemKind; count?: number }) {
+  const Icon = KIND_ICON[kind];
+  const visual = KIND_VISUAL[kind];
+  return (
+    <div className="mb-2.5 flex items-center gap-2">
+      <span
+        className={cn(
+          "inline-flex size-5 shrink-0 items-center justify-center rounded-md",
+          visual.bg,
+          visual.fg,
+        )}
+      >
+        <Icon className="size-3" strokeWidth={2.6} />
+      </span>
+      <span
+        className={cn(
+          "text-[10px] font-semibold uppercase tracking-widest",
+          visual.fg,
+        )}
+      >
+        {KIND_GROUP_LABEL[kind]}
+      </span>
+      {typeof count === "number" ? (
+        <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 text-[9px] tabular-nums text-[var(--text-muted)]">
+          {count}
+        </span>
+      ) : null}
+      <span className="ml-auto hidden truncate text-[10px] tracking-tight text-[var(--text-muted)] sm:inline">
+        {KIND_GROUP_HINT[kind]}
+      </span>
+    </div>
+  );
+}
+
 function SlashItemCard({
   item,
   active,
@@ -767,8 +945,14 @@ function SlashItemCard({
   const Icon = KIND_ICON[item.kind];
   const visual = KIND_VISUAL[item.kind];
   const title = item.kind === "meta-template" ? item.label || item.name : item.name;
-  const preview = item.kind === "meta-template" ? item.bodyPreview : item.content;
-  const tag = item.category ?? null;
+  const preview =
+    item.kind === "meta-template"
+      ? item.bodyPreview
+      : item.kind === "automation"
+        ? item.messagePreview || item.description || ""
+        : item.content;
+  const tag =
+    item.kind === "automation" ? item.categoryLabel || null : item.category ?? null;
   const hasMedia =
     (item.kind === "internal-template" && !!item.mediaUrl) ||
     (item.kind === "quick-reply" && !!item.attachmentUrl);
@@ -784,7 +968,7 @@ function SlashItemCard({
       onClick={onSelect}
       className={cn(
         "group/card flex w-full items-start gap-3 rounded-2xl border bg-[var(--glass-bg-overlay)]",
-        "px-3.5 py-3 text-left transition-all duration-150",
+        "px-3.5 py-2.5 text-left transition-all duration-150",
         active
           ? "border-[var(--brand-primary)]/40 shadow-[var(--glass-shadow)] ring-1 ring-[var(--brand-primary)]/30"
           : "border-[var(--glass-border-subtle)] hover:border-[var(--brand-primary)]/30 hover:shadow-[var(--glass-shadow)]",

@@ -325,6 +325,9 @@ export function Composer({
     setDraft: onChange,
     textareaRef,
     templateContext,
+    // Conversa/contato atuais — habilitam a seção "Automações" no menu "/".
+    conversationId,
+    contactId,
     // Desabilita o atalho em modo nota (não faz sentido inserir templates ali)
     disabled: disabled || noteMode,
     // Modelo/mensagem rápida com anexo → encosta a mídia pra ir junto no envio.

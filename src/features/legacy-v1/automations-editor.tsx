@@ -79,6 +79,7 @@ type AutomationDetail = {
   triggerType: string;
   triggerConfig: unknown;
   active: boolean;
+  allowManualRun?: boolean;
   updatedAt: string;
   steps: {
     id: string;
@@ -705,6 +706,7 @@ export default function AutomationDetailPage() {
   );
   const [steps, setSteps] = useState<AutomationStep[]>([]);
   const [active, setActive] = useState(false);
+  const [allowManualRun, setAllowManualRun] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [dirty, setDirty] = useState(false);
 
@@ -791,6 +793,7 @@ export default function AutomationDetailPage() {
     setTriggerConfig(tc);
     setSteps(apiStepsToWorkflow(d.steps));
     setActive(d.active);
+    setAllowManualRun(d.allowManualRun ?? false);
     setHydrated(true);
     setDirty(false);
   }, [detailQuery.data]);
@@ -819,6 +822,7 @@ export default function AutomationDetailPage() {
           description: description.trim() || null,
           triggerType,
           triggerConfig,
+          allowManualRun,
           steps: workflowStepsToPayload(steps),
         }),
       });
@@ -1154,6 +1158,26 @@ export default function AutomationDetailPage() {
                 setDirty(true);
               }}
             />
+
+            <div className="space-y-2 rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Habilitar para o agente enviar</p>
+                  <p className="text-xs text-muted-foreground">
+                    Deixa esta automação disponível para o agente disparar
+                    manualmente pela conversa (menu “+” do composer), além do
+                    gatilho automático.
+                  </p>
+                </div>
+                <ActiveSwitch
+                  active={allowManualRun}
+                  onToggle={() => {
+                    setAllowManualRun((v) => !v);
+                    setDirty(true);
+                  }}
+                />
+              </div>
+            </div>
 
             <div className="space-y-3 rounded-lg border border-border p-4">
               <p className="text-sm font-medium">Simular comportamento humano</p>

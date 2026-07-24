@@ -45,6 +45,8 @@ export interface AutomationListItemDto {
   triggerType: string;
   triggerConfig: unknown;
   active: boolean;
+  /** Habilita disparo manual pelo agente (picker do composer). */
+  allowManualRun?: boolean;
   createdAt: string;
   updatedAt: string;
   stepCount: number;
@@ -112,6 +114,27 @@ export function fetchAutomation(id: string): Promise<AutomationDetailDto> {
   );
 }
 
+// ── Picker do agente (composer) ──────────────────────────────────
+export interface AgentAutomationItem {
+  id: string;
+  name: string;
+  description: string | null;
+  stepCount: number;
+  category: string;
+  categoryLabel: string;
+  messagePreview: string | null;
+}
+
+export function fetchAgentAutomations(): Promise<{
+  items: AgentAutomationItem[];
+  total: number;
+}> {
+  return getJson<{ items: AgentAutomationItem[]; total: number }>(
+    "/api/automations/agent-runnable",
+    "Erro ao carregar automações.",
+  );
+}
+
 async function sendJson<T>(
   path: string,
   method: "POST" | "PUT" | "PATCH" | "DELETE",
@@ -173,6 +196,7 @@ export interface AutomationWriteBody {
   triggerType?: string;
   triggerConfig?: unknown;
   active?: boolean;
+  allowManualRun?: boolean;
   /**
    * Steps como sub-objeto do payload do PUT (rota legacy). Usado por
    * `replaceAutomation` / `useReplaceAutomation`. O `createAutomation`

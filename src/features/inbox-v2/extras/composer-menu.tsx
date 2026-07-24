@@ -24,7 +24,7 @@ import { FilePickerButton } from "./file-picker-button";
 import { TemplatePickerList, InternalTemplatePickerList } from "./template-picker-popover";
 import { ScheduleDialog } from "./schedule-dialog";
 import { TaskDialog } from "./task-dialog";
-import { AutomationPickerList } from "./automation-picker-list";
+import { AgentAutomationPickerModal } from "./agent-automation-picker-modal";
 import { TabulationDialog } from "./tabulation-dialog";
 
 /**
@@ -74,9 +74,10 @@ export function ComposerMenu({
   requireTabulationOnClose?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"root" | "template" | "internal" | "automation">("root");
+  const [view, setView] = useState<"root" | "template" | "internal">("root");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
+  const [automationOpen, setAutomationOpen] = useState(false);
   const [tabulationOpen, setTabulationOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const toggleResolve = useToggleConversationResolve({
@@ -202,7 +203,10 @@ export function ComposerMenu({
 
               <button
                 type="button"
-                onClick={() => setView("automation")}
+                onClick={() => {
+                  setAutomationOpen(true);
+                  closeMenu();
+                }}
                 className={itemClass}
               >
                 <IconBolt size={15} /> Executar automação
@@ -261,12 +265,6 @@ export function ComposerMenu({
               onClose={closeMenu}
               onPick={onPickInternal}
             />
-          ) : view === "automation" ? (
-            <AutomationPickerList
-              conversationId={conversationId}
-              contactId={contactId}
-              onClose={closeMenu}
-            />
           ) : (
             <TemplatePickerList
               conversationId={conversationId}
@@ -294,6 +292,12 @@ export function ComposerMenu({
         departmentId={departmentId ?? null}
         submitting={toggleResolve.isPending}
         onConfirm={handleConfirmTabulation}
+      />
+      <AgentAutomationPickerModal
+        open={automationOpen}
+        onClose={() => setAutomationOpen(false)}
+        conversationId={conversationId}
+        contactId={contactId}
       />
     </div>
   );

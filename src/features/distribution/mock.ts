@@ -1,8 +1,4 @@
-import type {
-  PendingDistributionDto,
-  PendingResponse,
-  ResponsiblesResponse,
-} from "./types";
+import type { PendingResponse, ResponsiblesResponse } from "./types";
 
 function ago(minutes: number): string {
   return new Date(Date.now() - minutes * 60_000).toISOString();
@@ -98,29 +94,36 @@ export const MOCK_DISTRIBUTION_RESPONSIBLES: ResponsiblesResponse = {
   ],
 };
 
+const MOCK_PENDING_SEED: {
+  phone: string;
+  channel: string;
+  waitMinutes: number;
+}[] = [
+  { phone: "+555494316336", channel: "WHATSAPP", waitMinutes: 18 * 60 },
+  { phone: "+5511974895736", channel: "INSTAGRAM", waitMinutes: 14 * 60 },
+  { phone: "+5511952266566", channel: "WEBCHAT", waitMinutes: 13 * 60 },
+  { phone: "+5511976387964", channel: "WHATSAPP", waitMinutes: 12 * 60 },
+  { phone: "+5511951259983", channel: "INSTAGRAM", waitMinutes: 11 * 60 },
+  { phone: "+5511991172389", channel: "WEBCHAT", waitMinutes: 11 * 60 },
+  { phone: "+5511960306481", channel: "WHATSAPP", waitMinutes: 11 * 60 },
+  { phone: "+5512997048019", channel: "INSTAGRAM", waitMinutes: 11 * 60 },
+  { phone: "+5511979512788", channel: "FACEBOOK", waitMinutes: 11 * 60 },
+  { phone: "+5511952165719", channel: "WHATSAPP", waitMinutes: 10 * 60 },
+  { phone: "+5514991451558", channel: "EMAIL", waitMinutes: 9 * 60 },
+  { phone: "+5511954662195", channel: "WHATSAPP", waitMinutes: 8 * 60 },
+];
+
 export const MOCK_DISTRIBUTION_PENDING: PendingResponse = {
-  pending: [
-    {
-      id: "mock-pend-1",
-      dealId: "mock-deal-10",
-      contactId: "mock-ct-10",
-      label: "Lead site — Lumina Energia",
-      distributionType: "inbound",
-      triggerSource: "WEB_FORM",
-      attempts: 2,
-      lastAttemptAt: ago(18),
-      createdAt: ago(42),
-    },
-    {
-      id: "mock-pend-2",
-      dealId: null,
-      contactId: "mock-ct-11",
-      label: "WhatsApp — interesse plano Pro",
-      distributionType: "whatsapp",
-      triggerSource: "CONVERSATION",
-      attempts: 1,
-      lastAttemptAt: ago(8),
-      createdAt: ago(15),
-    },
-  ],
+  pending: MOCK_PENDING_SEED.map((s, i) => ({
+    id: `mock-pend-${i + 1}`,
+    dealId: null,
+    contactId: `mock-ct-${i + 1}`,
+    label: s.phone,
+    channel: s.channel,
+    distributionType: null,
+    triggerSource: "INBOUND",
+    attempts: 0,
+    lastAttemptAt: ago(s.waitMinutes),
+    createdAt: ago(s.waitMinutes),
+  })),
 };

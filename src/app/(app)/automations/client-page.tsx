@@ -27,6 +27,7 @@ import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-too
 import { PageDemoBanner } from "@/components/crm/page-demo-banner"
 import { AutomationsGallery } from "@/components/crm/automations-gallery"
 import { EmptyState } from "@/components/crm/empty-state"
+import { PaginationGlass } from "@/components/crm/pagination-glass"
 import { cn } from "@/lib/utils"
 import {
   useAutomations,
@@ -48,6 +49,8 @@ export default function V2AutomationsClientPage() {
   const { ready, isManagerUp } = useRequireManager()
   const [query, setQuery] = useState("")
   const [filter, setFilter] = useState(0)
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
   const [isImporting, setIsImporting] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
 
@@ -95,6 +98,20 @@ export default function V2AutomationsClientPage() {
       return matchQuery && matchFilter
     })
   }, [items, query, filter])
+
+  // Paginação client-side (a query já traz até 200 itens numa tacada).
+  const lastPage = Math.max(1, Math.ceil(filtered.length / perPage))
+  const safePage = Math.min(page, lastPage)
+  const paged = useMemo(
+    () => filtered.slice((safePage - 1) * perPage, safePage * perPage),
+    [filtered, safePage, perPage],
+  )
+
+  // Volta pra página 1 quando muda busca/filtro/tamanho — evita ficar numa
+  // página vazia após reduzir o conjunto.
+  useEffect(() => {
+    setPage(1)
+  }, [query, filter, perPage])
 
   const handleToggle = (id: string) => {
     if (isDemo) {
@@ -397,11 +414,29 @@ export default function V2AutomationsClientPage() {
         )}
 
         {!isLoading && !isError && filtered.length > 0 && (
-          <AutomationsGallery
-            automations={filtered}
-            onToggle={handleToggle}
-            onDelete={handleDelete}
-          />
+          <>
+            <AutomationsGallery
+              automations={paged}
+              onToggle={handleToggle}
+              onDelete={handleDelete}
+            />
+            {filtered.length > 10 && (
+              <PaginationGlass
+                className="shrink-0 pt-1"
+                total={filtered.length}
+                entityLabel="automações"
+                page={safePage}
+                lastPage={lastPage}
+                canPrev={safePage > 1}
+                canNext={safePage < lastPage}
+                onPrev={() => setPage((p) => Math.max(1, p - 1))}
+                onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+                perPage={perPage}
+                onPerPageChange={setPerPage}
+                perPageOptions={[10, 25, 50]}
+              />
+            )}
+          </>
         )}
 
         {!isLoading && !isError && filtered.length === 0 && items.length > 0 && (

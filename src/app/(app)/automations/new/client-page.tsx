@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/crm/page-header";
 import { PagePrimaryButton } from "@/components/crm/page-toolbar";
 import { GlassCard } from "@/components/crm/glass-card";
 import { InputGlass } from "@/components/crm/input-glass";
+import { SwitchGlass } from "@/components/crm/switch-glass";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateAutomation } from "@/features/automations-v2/hooks";
 import {
@@ -41,6 +42,7 @@ export default function NewAutomationClientPage() {
   const [triggerType, setTriggerType] = useState<string>(
     AUTOMATION_TRIGGER_TYPES[0],
   );
+  const [allowManualRun, setAllowManualRun] = useState(false);
 
   async function handleCreate() {
     if (!name.trim()) {
@@ -54,6 +56,7 @@ export default function NewAutomationClientPage() {
         triggerType,
         triggerConfig: {},
         active: false,
+        allowManualRun,
       });
       toast.success("Automação criada");
       router.push(`/automations/${created.id}`);
@@ -152,6 +155,24 @@ export default function NewAutomationClientPage() {
               A configuração detalhada do gatilho (parâmetros, filtros) e as etapas
               são montadas no builder após a criação.
             </p>
+
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-3">
+              <SwitchGlass
+                checked={allowManualRun}
+                onChange={setAllowManualRun}
+                aria-label="Habilitar para o agente enviar"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block font-display text-[13px] font-bold text-[var(--text-primary)]">
+                  Habilitar para o agente enviar
+                </span>
+                <span className="mt-0.5 block font-body text-[12px] leading-snug text-[var(--text-muted)]">
+                  Deixa esta automação disponível para o agente disparar
+                  manualmente pela conversa (menu “+” do composer), além do
+                  gatilho automático.
+                </span>
+              </span>
+            </label>
           </GlassCard>
         </div>
       </main>

@@ -1,11 +1,22 @@
 "use client";
 
+import * as React from "react";
+import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
+import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 
-import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import {
+  DropdownGlass,
+  FILTER_FIELD_INPUT_CLASS,
+  FILTER_FIELD_ITEM_CLASS,
+  FILTER_FIELD_MENU_CLASS,
+  FILTER_FIELD_TRIGGER_CLASS,
+} from "@/components/crm/dropdown-glass";
+import { useModalPortalContainer } from "@/components/ui/modal-portal-context";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiUrl } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { AUTOMATION_TRIGGER_TYPES, triggerTypeLabel } from "@/lib/automation-workflow";
 
 import { useTagOptions } from "./editor-data";
@@ -53,22 +64,31 @@ function usePipelines() {
  * primeiro (`stageId`) — visualmente o select voltava pra "Qualquer
  * estágio" logo após o clique.
  */
-function StageSelect({
+/**
+ * Multi-seleção de estágios. Permite escolher 1..N estágios (ou "Qualquer
+ * estágio" = nenhum). Emite o array de ids + o `ownerPipelineId` quando há
+ * exatamente 1 selecionado (pra o pai auto-preencher o pipeline). Sem
+ * estágios cadastrados, cai num input livre (IDs separados por vírgula).
+ */
+function StageMultiSelect({
   id,
   label,
   helper,
-  value,
+  values,
   onChange,
   pipelinesFromValue,
 }: {
   id: string;
   label: string;
   helper?: string;
-  value: string;
-  onChange: (stageId: string, ownerPipelineId: string | null) => void;
+  values: string[];
+  onChange: (stageIds: string[], ownerPipelineId: string | null) => void;
   pipelinesFromValue?: string;
 }) {
   const { data: pipelines = [], isLoading } = usePipelines();
+  const portalContainer = useModalPortalContainer();
+  const [q, setQ] = React.useState("");
+
   // Se o operador filtrou por pipeline antes do estágio, mostramos só os
   // estágios desse pipeline. Sem pipeline filtrado, mostramos todos
   // agrupados.
@@ -76,6 +96,18 @@ function StageSelect({
     ? pipelines.filter((p) => p.id === pipelinesFromValue)
     : pipelines;
   const allStages = visiblePipelines.flatMap((p) => p.stages);
+
+  const ownerOf = (ids: string[]): string | null =>
+    ids.length === 1
+      ? pipelines.find((p) => p.stages.some((s) => s.id === ids[0]))?.id ?? null
+      : null;
+
+  const toggle = (sid: string) => {
+    const next = values.includes(sid)
+      ? values.filter((v) => v !== sid)
+      : [...values, sid];
+    onChange(next, ownerOf(next));
+  };
 
   if (isLoading) {
     return (
@@ -92,9 +124,17 @@ function StageSelect({
         <Label htmlFor={id}>{label}</Label>
         <Input
           id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value, null)}
-          placeholder="ID do estágio"
+          value={values.join(", ")}
+          onChange={(e) =>
+            onChange(
+              e.target.value
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean),
+              null,
+            )
+          }
+          placeholder="IDs dos estágios (separados por vírgula)"
         />
         {helper ? (
           <p className="text-xs text-muted-foreground">{helper}</p>
@@ -103,33 +143,120 @@ function StageSelect({
     );
   }
 
+  const triggerLabel =
+    values.length === 0
+      ? "Qualquer estágio"
+      : values.length === 1
+        ? allStages.find((s) => s.id === values[0])?.name ?? "1 estágio"
+        : `${values.length} estágios selecionados`;
+
+  const matchesQuery = (name: string) =>
+    !q.trim() || name.toLowerCase().includes(q.trim().toLowerCase());
+
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      {/* DropdownGlass (não SelectNative): o <select> nativo ignora o tema
-          escuro na lista de options do SO/browser. */}
-      <DropdownGlass
-        triggerClassName="w-full"
-        placeholder="Qualquer estágio"
-        value={value}
-        searchable
-        options={[
-          { value: "", label: "Qualquer estágio" },
-          ...visiblePipelines.flatMap((p) =>
-            p.stages.map((s) => ({
-              value: s.id,
-              label: s.name,
-              description: p.name,
-            })),
-          ),
-        ]}
-        onValueChange={(sid) => {
-          const owner = sid
-            ? pipelines.find((p) => p.stages.some((s) => s.id === sid)) ?? null
-            : null;
-          onChange(sid, owner?.id ?? null);
+      <DropdownPrimitive.Root
+        modal={false}
+        onOpenChange={(o) => {
+          if (!o) setQ("");
         }}
-      />
+      >
+        <DropdownPrimitive.Trigger asChild suppressHydrationWarning>
+          <button
+            type="button"
+            className={cn(
+              FILTER_FIELD_TRIGGER_CLASS,
+              "group",
+              values.length > 0 && "text-[var(--text-primary)]",
+            )}
+          >
+            <span className="min-w-0 flex-1 truncate text-left">
+              {triggerLabel}
+            </span>
+            <IconChevronDown
+              size={15}
+              className="ml-auto shrink-0 text-current opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180"
+            />
+          </button>
+        </DropdownPrimitive.Trigger>
+
+        <DropdownPrimitive.Portal container={portalContainer ?? undefined}>
+          <DropdownPrimitive.Content
+            align="start"
+            sideOffset={6}
+            className={cn(
+              FILTER_FIELD_MENU_CLASS,
+              "min-w-[var(--radix-dropdown-menu-trigger-width)]",
+            )}
+          >
+            <div className="p-1 pb-1.5">
+              <input
+                autoFocus
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                // Deixa Radix cuidar de navegação (setas/enter/esc); as demais
+                // teclas ficam no input (senão o typeahead do menu rouba).
+                onKeyDown={(e) => {
+                  if (!["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(e.key))
+                    e.stopPropagation();
+                }}
+                placeholder="Buscar estágio…"
+                className={FILTER_FIELD_INPUT_CLASS}
+              />
+            </div>
+            {values.length > 0 ? (
+              <DropdownPrimitive.Item
+                onSelect={(e) => {
+                  e.preventDefault();
+                  onChange([], null);
+                }}
+                className={cn(
+                  FILTER_FIELD_ITEM_CLASS,
+                  "text-[var(--text-muted)]",
+                )}
+              >
+                Limpar seleção
+              </DropdownPrimitive.Item>
+            ) : null}
+            {visiblePipelines.map((p) => {
+              const stages = p.stages.filter((s) => matchesQuery(s.name));
+              if (stages.length === 0) return null;
+              return (
+                <DropdownPrimitive.Group key={p.id}>
+                  <DropdownPrimitive.Label className="px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                    {p.name}
+                  </DropdownPrimitive.Label>
+                  {stages.map((s) => {
+                    const checked = values.includes(s.id);
+                    return (
+                      <DropdownPrimitive.CheckboxItem
+                        key={s.id}
+                        checked={checked}
+                        onSelect={(e) => e.preventDefault()}
+                        onCheckedChange={() => toggle(s.id)}
+                        className={FILTER_FIELD_ITEM_CLASS}
+                      >
+                        <span
+                          className={cn(
+                            "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                            checked
+                              ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                              : "border-[var(--glass-border)]",
+                          )}
+                        >
+                          {checked ? <IconCheck size={12} /> : null}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                      </DropdownPrimitive.CheckboxItem>
+                    );
+                  })}
+                </DropdownPrimitive.Group>
+              );
+            })}
+          </DropdownPrimitive.Content>
+        </DropdownPrimitive.Portal>
+      </DropdownPrimitive.Root>
       {helper ? (
         <p className="text-xs text-muted-foreground">{helper}</p>
       ) : null}
@@ -257,6 +384,23 @@ function TagSelect({
   );
 }
 
+/**
+ * Lê os estágios selecionados de um campo do config, aceitando o formato
+ * novo (array `<key>Ids`) e o legado (string `<key>Id`). Ex.: key="stage"
+ * → lê `stageIds` (array) ou `stageId` (legado).
+ */
+function readStageIdsFromConfig(
+  value: Record<string, unknown>,
+  key: string,
+): string[] {
+  const arr = value[`${key}Ids`];
+  if (Array.isArray(arr)) {
+    return arr.filter((x): x is string => typeof x === "string" && x !== "");
+  }
+  const single = value[`${key}Id`];
+  return typeof single === "string" && single ? [single] : [];
+}
+
 export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
   const set = (k: string, v: unknown) => onChange({ ...value, [k]: v });
   // Patch parcial — usado quando uma mesma interação muda mais de um
@@ -267,18 +411,18 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
     case "stage_changed":
       return (
         <div className="grid gap-4 sm:grid-cols-2">
-          <StageSelect
+          <StageMultiSelect
             id="tc-from"
-            label="Estágio de origem (opcional)"
-            value={String(value.fromStageId ?? "")}
-            onChange={(sid) => set("fromStageId", sid)}
+            label="Estágio(s) de origem (opcional)"
+            values={readStageIdsFromConfig(value, "fromStage")}
+            onChange={(sids) => patch({ fromStageIds: sids, fromStageId: "" })}
           />
-          <StageSelect
+          <StageMultiSelect
             id="tc-to"
-            label="Estágio de destino"
-            value={String(value.toStageId ?? "")}
-            onChange={(sid) => set("toStageId", sid)}
-            helper="Deixe em branco para qualquer destino."
+            label="Estágio(s) de destino"
+            values={readStageIdsFromConfig(value, "toStage")}
+            onChange={(sids) => patch({ toStageIds: sids, toStageId: "" })}
+            helper="Deixe vazio para qualquer destino. Pode escolher mais de um."
           />
         </div>
       );
@@ -314,26 +458,26 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
             label="Pipeline (opcional)"
             value={String(value.pipelineId ?? "")}
             onChange={(pid) => {
-              // Trocou de pipeline: limpa stageId se o atual não pertencer
-              // ao novo pipeline. Evita filtro inconsistente do tipo
-              // "pipeline A, estágio do B".
-              patch({ pipelineId: pid, stageId: pid ? String(value.stageId ?? "") : "" });
+              // Trocou de pipeline: limpa estágios (evita filtro
+              // inconsistente do tipo "pipeline A, estágio do B").
+              patch({ pipelineId: pid, stageIds: [], stageId: "" });
             }}
           />
-          <StageSelect
+          <StageMultiSelect
             id="tc-stage"
-            label="Estágio (opcional)"
-            value={String(value.stageId ?? "")}
-            onChange={(sid, ownerPid) =>
+            label="Estágio(s) (opcional)"
+            values={readStageIdsFromConfig(value, "stage")}
+            onChange={(sids, ownerPid) =>
               patch({
-                stageId: sid,
+                stageIds: sids,
+                stageId: "",
                 // Só preenche pipelineId quando o usuário ainda não tinha
                 // setado um (senão respeita a escolha explícita do operador).
                 ...(ownerPid && !value.pipelineId ? { pipelineId: ownerPid } : {}),
               })
             }
             pipelinesFromValue={String(value.pipelineId ?? "")}
-            helper="Dispara só quando o negócio entra neste estágio."
+            helper="Dispara quando o negócio entra em algum destes estágios."
           />
         </div>
       );
@@ -351,16 +495,17 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
               label="Pipeline (opcional)"
               value={String(value.pipelineId ?? "")}
               onChange={(pid) =>
-                patch({ pipelineId: pid, stageId: pid ? String(value.stageId ?? "") : "" })
+                patch({ pipelineId: pid, stageIds: [], stageId: "" })
               }
             />
-            <StageSelect
+            <StageMultiSelect
               id="tc-cc-stage"
-              label="Estágio (opcional)"
-              value={String(value.stageId ?? "")}
-              onChange={(sid, ownerPid) =>
+              label="Estágio(s) (opcional)"
+              values={readStageIdsFromConfig(value, "stage")}
+              onChange={(sids, ownerPid) =>
                 patch({
-                  stageId: sid,
+                  stageIds: sids,
+                  stageId: "",
                   ...(ownerPid && !value.pipelineId ? { pipelineId: ownerPid } : {}),
                 })
               }
@@ -410,24 +555,25 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
               label="Pipeline (opcional)"
               value={String(value.pipelineId ?? "")}
               onChange={(pid) =>
-                patch({ pipelineId: pid, stageId: pid ? String(value.stageId ?? "") : "" })
+                patch({ pipelineId: pid, stageIds: [], stageId: "" })
               }
             />
-            <StageSelect
+            <StageMultiSelect
               id="tc-msg-stage"
-              label="Estágio (opcional)"
-              value={String(value.stageId ?? "")}
-              onChange={(sid, ownerPid) =>
+              label="Estágio(s) (opcional)"
+              values={readStageIdsFromConfig(value, "stage")}
+              onChange={(sids, ownerPid) =>
                 patch({
-                  stageId: sid,
+                  stageIds: sids,
+                  stageId: "",
                   ...(ownerPid && !value.pipelineId ? { pipelineId: ownerPid } : {}),
                 })
               }
               pipelinesFromValue={String(value.pipelineId ?? "")}
               helper={
                 triggerType === "message_received"
-                  ? "Dispara só quando o lead que enviou a mensagem está neste estágio."
-                  : "Dispara só quando a mensagem é enviada para um lead neste estágio."
+                  ? "Dispara quando o lead que enviou a mensagem está em algum destes estágios."
+                  : "Dispara quando a mensagem é enviada para um lead em algum destes estágios."
               }
             />
           </div>

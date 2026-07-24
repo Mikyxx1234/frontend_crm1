@@ -37,9 +37,10 @@ export async function POST(req: Request) {
   let form: FormData;
   try {
     form = await req.formData();
-  } catch {
+  } catch (err) {
+    console.error("[automation-media proxy] formData falhou:", err);
     return NextResponse.json(
-      { message: "Erro ao ler o arquivo enviado." },
+      { message: "Erro ao ler o arquivo enviado. Verifique o tamanho (máx. 16 MB) e tente novamente." },
       { status: 400 },
     );
   }

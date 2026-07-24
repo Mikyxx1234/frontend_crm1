@@ -35,8 +35,10 @@ import {
   IconTrophy,
   IconUserPlus,
   IconUserOff,
+  IconMessageCircle,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
@@ -93,6 +95,7 @@ import {
 import {
   addContactTag,
   removeContactTag,
+  fetchContact,
   type ContactFieldDefDto,
   type ContactListItemDto,
   type ContactStatsDto,
@@ -100,6 +103,7 @@ import {
   type DuplicateGroup,
   type TagWithCountDto,
 } from "@/features/directory-v2/api";
+import { usePipelines, useCreateDeal } from "@/features/pipeline-v2/hooks";
 
 const DEFAULT_PER_PAGE = 25;
 type ViewMode = "cards" | "tabela";
@@ -258,6 +262,43 @@ const VIEW_ITEMS = [
 export default function V2ContactsClientPage() {
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
+  const router = useRouter();
+
+  // "Abrir lead": leva ao negócio do contato; se não existir, cria um
+  // no funil padrão (primeiro estágio) vinculado ao contato e abre.
+  const { data: pipelines = [] } = usePipelines(isAuthenticated);
+  const leadPipeline = pipelines.find((p) => p.isDefault) ?? pipelines[0] ?? null;
+  const leadStages = leadPipeline?.stages ?? [];
+  const createLead = useCreateDeal(leadPipeline?.id ?? null);
+  const [openingLeadId, setOpeningLeadId] = useState<string | null>(null);
+
+  async function openLead(contact: ContactListItemDto) {
+    if (openingLeadId) return;
+    setOpeningLeadId(contact.id);
+    try {
+      const detail = await fetchContact(contact.id);
+      if (detail.deals.length > 0) {
+        router.push(`/pipeline/${detail.deals[0].id}`);
+        return;
+      }
+      const firstStageId = leadStages[0]?.id;
+      if (!leadPipeline || !firstStageId) {
+        toast.error("Nenhum funil disponível para criar o lead.");
+        return;
+      }
+      const { deal } = await createLead.mutateAsync({
+        stageId: firstStageId,
+        contactId: contact.id,
+      });
+      if (deal?.id) {
+        router.push(`/pipeline/${deal.id}`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao abrir o lead.");
+    } finally {
+      setOpeningLeadId(null);
+    }
+  }
 
   const [view, setView] = useState<ViewMode>("cards");
   const [search, setSearch] = useState("");
@@ -602,6 +643,8 @@ export default function V2ContactsClientPage() {
             sortOrder={sortOrder}
             onSort={toggleSort}
             onEdit={setEditing}
+            onOpenLead={openLead}
+            openingLeadId={openingLeadId}
           />
         )}
 
@@ -1489,7 +1532,7 @@ function TabelaView({
 // ── Cards (colunas dinâmicas do configurador — Tags no header) ───────────────
 
 function CardsView({
-  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, getWidth, setWidth, sortBy, sortOrder, onSort, onEdit,
+  items, selected, allChecked, someChecked, onToggleAll, onToggleOne, columns, getWidth, setWidth, sortBy, sortOrder, onSort, onEdit, onOpenLead, openingLeadId,
 }: {
   items: ContactListItemDto[];
   selected: Set<string>;
@@ -1504,6 +1547,8 @@ function CardsView({
   sortOrder: "asc" | "desc";
   onSort: (field: SortField) => void;
   onEdit: (c: ContactListItemDto) => void;
+  onOpenLead: (c: ContactListItemDto) => void;
+  openingLeadId: string | null;
 }) {
   const dirFor = (f: SortField): SortDir => (sortBy === f ? sortOrder : null);
   const nameW = getWidth(NAME_COL_KEY, 240);
@@ -1594,6 +1639,16 @@ function CardsView({
             ))}
 
             <div className="flex items-center justify-end gap-1">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onOpenLead(c); }}
+                disabled={openingLeadId === c.id}
+                aria-label={`Abrir lead de ${c.name}`}
+                title="Abrir lead (cria se não existir)"
+                className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+              >
+                {openingLeadId === c.id ? <IconLoader2 size={16} className="animate-spin" /> : <IconMessageCircle size={16} />}
+              </button>
               <a href={c.phone ? `tel:${c.phone}` : undefined} onClick={(e) => e.stopPropagation()} aria-label="Ligar" aria-disabled={!c.phone} className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]">
                 <IconPhone size={16} />
               </a>

@@ -35,10 +35,12 @@ import { cn } from "@/lib/utils";
 import { useWidgets } from "@/features/widgets/hooks";
 import {
   useDistributionResponsibles,
+  useDistributionSettings,
   usePendingDistributions,
   useRetryPending,
   useSetAgentStatus,
   useSimulateDistribution,
+  useUpdateDistributionSettings,
   useUpdateResponsible,
 } from "@/features/distribution/hooks";
 import {
@@ -1415,10 +1417,47 @@ function ToggleField({
 
 // ── Painel: distribuição automática por departamento ─────────────────────
 
+/** Switch reutilizável no mesmo visual dos toggles de departamento. */
+function GlassSwitch({
+  checked,
+  disabled,
+  onClick,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors disabled:opacity-50",
+        checked
+          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
+          : "border-[var(--text-muted)]/40 bg-[var(--text-muted)]/25",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border border-black/10 bg-white shadow-sm transition-all",
+          checked ? "right-0.5" : "left-0.5",
+        )}
+      />
+    </button>
+  );
+}
+
 function DepartmentsDistributionPanel() {
   const deptsQuery = useDepartments();
   const updateMut = useUpdateDepartment();
+  const settingsQuery = useDistributionSettings();
+  const updateSettings = useUpdateDistributionSettings();
   const depts = deptsQuery.data ?? [];
+  const respectDepartment = settingsQuery.data?.respectDepartment ?? false;
 
   if (deptsQuery.isLoading || depts.length === 0) return null;
 
@@ -1434,6 +1473,18 @@ function DepartmentsDistributionPanel() {
     );
   };
 
+  const toggleRespect = () => {
+    updateSettings.mutate(
+      { respectDepartment: !respectDepartment },
+      {
+        onError: (e) =>
+          toast.error(
+            e instanceof Error ? e.message : "Erro ao salvar configuração.",
+          ),
+      },
+    );
+  };
+
   return (
     <div className="shrink-0 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
       <div className="mb-1 flex items-center gap-2">
@@ -1442,12 +1493,37 @@ function DepartmentsDistributionPanel() {
           Departamentos · distribuição automática
         </p>
       </div>
+
+      {/* Toggle mestre: respeitar o departamento da conversa quando houver. */}
+      <div className="mb-3 flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+        <div className="min-w-0">
+          <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+            Respeitar departamento da conversa
+          </p>
+          <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+            {respectDepartment
+              ? "Ligado: conversas com departamento vão só para os membros dele. Sem departamento → distribui para todos os elegíveis."
+              : "Desligado: distribuição clássica — todos os atendimentos vão para todos os elegíveis, ignorando departamento."}
+          </p>
+        </div>
+        <GlassSwitch
+          checked={respectDepartment}
+          disabled={updateSettings.isPending || settingsQuery.isLoading}
+          onClick={toggleRespect}
+        />
+      </div>
+
       <p className="mb-3 font-body text-[12px] text-[var(--text-muted)]">
         Ligue para o departamento distribuir automaticamente entre seus membros os
         leads roteados a ele. Desligado = leads desse departamento ficam na fila de
         espera.
       </p>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        className={cn(
+          "grid gap-2 sm:grid-cols-2 lg:grid-cols-3 transition-opacity",
+          respectDepartment ? "" : "pointer-events-none opacity-50",
+        )}
+      >
         {depts.map((d) => (
           <div
             key={d.id}

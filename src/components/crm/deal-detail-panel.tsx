@@ -364,7 +364,7 @@ export function DealDetailPanel({
   useEffect(() => {
     setFieldValues({})
     setDealNative({})
-  }, [deal.id])
+  }, [deal?.id])
   const [sectionOrder, reorderSections] = useSectionOrder<SidebarSection>(
     SIDEBAR_STORAGE_KEY,
     SIDEBAR_DEFAULT_ORDER,

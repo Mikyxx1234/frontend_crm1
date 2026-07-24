@@ -575,20 +575,57 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
     const onPause = () => setPlaying(false)
     const onEnded = () => { setPlaying(false); setCurrent(0) }
     const onTimeUpdate = () => setCurrent(el.currentTime)
-    const onLoaded = () => setDuration(el.duration)
+
+    // [jul/26] Correção do progresso/duração de áudios de voz.
+    // Áudios gravados em streaming (WhatsApp Voice / MediaRecorder) chegam
+    // em OGG/WebM sem o campo "Duration" no header, então o browser retorna
+    // `el.duration === Infinity` no `loadedmetadata`. Isso zerava o cálculo
+    // de progresso (`currentTime / Infinity = 0` → barra nunca andava) e
+    // fazia a duração aparecer como "0:00".
+    // Truque conhecido: forçar o seek pro fim (`currentTime` gigante) faz o
+    // browser baixar o arquivo e calcular a duração real; no `timeupdate`
+    // seguinte lemos o valor correto e resetamos `currentTime` pra 0.
+    let durationFixed = false
+    const applyDuration = () => {
+      if (Number.isFinite(el.duration) && el.duration > 0) {
+        setDuration(el.duration)
+        return true
+      }
+      return false
+    }
+    const onLoaded = () => {
+      if (applyDuration()) return
+      if (durationFixed) return
+      durationFixed = true
+      const onSeekTime = () => {
+        el.removeEventListener("timeupdate", onSeekTime)
+        el.currentTime = 0
+        setCurrent(0)
+      }
+      el.addEventListener("timeupdate", onSeekTime)
+      el.currentTime = 1e101
+    }
+    const onDurationChange = () => { applyDuration() }
+
     el.addEventListener("play", onPlay)
     el.addEventListener("pause", onPause)
     el.addEventListener("ended", onEnded)
     el.addEventListener("timeupdate", onTimeUpdate)
     el.addEventListener("loadedmetadata", onLoaded)
+    el.addEventListener("durationchange", onDurationChange)
+    // Metadata pode já ter carregado antes do effect (remount na mesma URL):
+    // `loadedmetadata` não dispara de novo, então chamamos o handler à mão.
+    if (el.readyState >= 1) onLoaded()
+
     return () => {
       el.removeEventListener("play", onPlay)
       el.removeEventListener("pause", onPause)
       el.removeEventListener("ended", onEnded)
       el.removeEventListener("timeupdate", onTimeUpdate)
       el.removeEventListener("loadedmetadata", onLoaded)
+      el.removeEventListener("durationchange", onDurationChange)
     }
-  }, [])
+  }, [url])
 
   const handleTranscribe = useCallback(async () => {
     if (!url || transcript.status === "loading") return

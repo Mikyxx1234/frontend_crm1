@@ -537,6 +537,9 @@ export function Composer({
         onSelectItem={slash.onSelectItem}
         onHover={slash.setActiveIndex}
         onClose={slash.close}
+        onSearchChange={slash.setSearch}
+        onSearchKeyDown={slash.onKeyDown}
+        onToggleFavorite={slash.toggleFavorite}
       />
 
       {/* ── Row: tabs (esq.) + seletor de canal + slot direito (assinatura ou badge nota) + Encerrar ── */}

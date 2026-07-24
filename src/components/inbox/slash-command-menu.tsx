@@ -29,7 +29,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   IconBolt as Bolt,
@@ -38,6 +38,9 @@ import {
   IconMessageQuestion as MessageSquareQuote,
   IconMessage2,
   IconSearch,
+  IconSparkles,
+  IconStar,
+  IconStarFilled,
   IconX,
 } from "@tabler/icons-react";
 
@@ -60,8 +63,16 @@ export type SlashItemKind =
   | "meta-template"
   | "automation";
 
-export type SlashItem =
-  | {
+/** Metadados de destaque (favorito / uso) anexados a qualquer item. */
+type SlashItemHighlight = {
+  /** Marcado como favorito pelo agente (persistido por-usuário). */
+  favorite?: boolean;
+  /** Quantas vezes ESTE agente já usou o item (ordena os "mais usados"). */
+  useCount?: number;
+};
+
+export type SlashItem = SlashItemHighlight &
+  ( | {
       kind: "internal-template";
       id: string;
       name: string;
@@ -103,7 +114,7 @@ export type SlashItem =
       stepCount: number;
       category: string;
       categoryLabel: string;
-    };
+    } );
 
 export type SlashSelectionResult =
   | { kind: "insert-text"; text: string }
@@ -243,12 +254,78 @@ async function runAutomationRequest(
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Busca (accent-insensitive) e preferências do agente (favoritos + uso)
+// ─────────────────────────────────────────────────────────────────
+
+/** Normaliza para busca accent-insensitive (igual ao resto do app). */
+function normalizeSearch(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Título exibido/pesquisável de um item (meta usa label, senão o name). */
+function slashItemTitle(item: SlashItem): string {
+  return item.kind === "meta-template" ? item.label || item.name : item.name;
+}
+
+/** Tipos de item que suportam favorito/uso (automação fica de fora). */
+type ShortcutKind = "internal-template" | "quick-reply" | "meta-template";
+
+const SHORTCUT_KINDS: ReadonlySet<SlashItemKind> = new Set<SlashItemKind>([
+  "internal-template",
+  "quick-reply",
+  "meta-template",
+]);
+
+type ShortcutRow = {
+  itemKind: string;
+  itemId: string;
+  favorite: boolean;
+  useCount: number;
+};
+
+type ShortcutPref = { favorite: boolean; useCount: number };
+
+/** Chave estável no mapa de preferências. */
+function shortcutKey(kind: SlashItemKind, id: string): string {
+  return `${kind}:${id}`;
+}
+
+async function fetchAgentShortcuts(): Promise<ShortcutRow[]> {
+  const r = await fetch(apiUrl("/api/slash-shortcuts"));
+  if (!r.ok) return [];
+  const data = await r.json().catch(() => ({}));
+  const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+  return list as ShortcutRow[];
+}
+
+async function postAgentShortcut(payload: {
+  action: "favorite" | "use";
+  itemKind: ShortcutKind;
+  itemId: string;
+  favorite?: boolean;
+}): Promise<ShortcutRow | null> {
+  const r = await fetch(apiUrl("/api/slash-shortcuts"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) return null;
+  return (await r.json().catch(() => null)) as ShortcutRow | null;
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Hook de estado
 // ─────────────────────────────────────────────────────────────────
 
 export type SlashMenuState = {
   open: boolean;
+  /** Query EFETIVA aplicada ao filtro (campo da modal ou token "/..."). */
   query: string;
+  /** Texto cru digitado no campo de busca da modal (controlado). */
+  search: string;
   /** Lista plana já filtrada/ordenada que o componente renderiza. */
   items: SlashItem[];
   activeIndex: number;
@@ -313,6 +390,11 @@ export function useSlashMenu({
     null,
   );
   const [activeIndex, setActiveIndex] = React.useState(0);
+  // Texto digitado NO campo de busca da modal. Fonte de verdade da busca
+  // quando preenchido; senão cai no token "/..." do composer (os dois
+  // caminhos filtram a mesma lista — ver `effectiveQuery`).
+  const [search, setSearch] = React.useState("");
+  const queryClient = useQueryClient();
 
   const queriesEnabled = open && !disabled;
 
@@ -335,6 +417,25 @@ export function useSlashMenu({
     staleTime: 60_000,
   });
 
+  // Preferências do agente (favoritos + contador de uso) para destacar/ordenar.
+  const shortcutsQ = useQuery({
+    queryKey: ["slash-shortcuts"],
+    queryFn: fetchAgentShortcuts,
+    enabled: queriesEnabled,
+    staleTime: 30_000,
+  });
+  const shortcutMap = React.useMemo(() => {
+    const m = new Map<string, ShortcutPref>();
+    for (const s of shortcutsQ.data ?? []) {
+      if (!SHORTCUT_KINDS.has(s.itemKind as SlashItemKind)) continue;
+      m.set(shortcutKey(s.itemKind as SlashItemKind, s.itemId), {
+        favorite: !!s.favorite,
+        useCount: Number(s.useCount) || 0,
+      });
+    }
+    return m;
+  }, [shortcutsQ.data]);
+
   // Automações só fazem sentido com conversa + contato definidos (o run
   // precisa dos dois). Sem eles a seção fica oculta.
   const automationsVisible = !!conversationId && !!contactId;
@@ -351,14 +452,24 @@ export function useSlashMenu({
     queriesEnabled &&
     (internalsQ.isLoading || metasQ.isLoading || quickRepliesQ.isLoading);
 
+  // Busca unificada: o campo da modal tem prioridade; sem ele, usa o
+  // token "/..." do composer. Accent-insensitive, prioriza TÍTULO.
+  const effectiveQuery = (search.trim() || token?.query || "").trim();
+
   const items = React.useMemo<SlashItem[]>(() => {
-    const q = (token?.query ?? "").trim().toLowerCase();
-    const matches = (s: string) => (q === "" ? true : s.toLowerCase().includes(q));
+    const q = normalizeSearch(effectiveQuery);
+    // `title` = casa no título (peso alto); `sec` = descrição/preview/categoria.
+    const hitTitle = (s: string) => q === "" ? false : normalizeSearch(s).includes(q);
+    const hitSec = (s: string) => q === "" ? false : normalizeSearch(s).includes(q);
+    const pref = (kind: SlashItemKind, id: string): ShortcutPref =>
+      shortcutMap.get(shortcutKey(kind, id)) ?? { favorite: false, useCount: 0 };
 
     const out: SlashItem[] = [];
 
     for (const t of internalsQ.data ?? []) {
-      if (matches(t.name) || matches(t.content) || matches(t.category ?? "")) {
+      const title = t.name;
+      if (q === "" || hitTitle(title) || hitSec(t.content) || hitSec(t.category ?? "")) {
+        const p = pref("internal-template", t.id);
         out.push({
           kind: "internal-template",
           id: t.id,
@@ -368,12 +479,16 @@ export function useSlashMenu({
           channelType: t.channelType,
           mediaUrl: t.mediaUrl ?? null,
           mediaName: t.mediaName ?? null,
+          favorite: p.favorite,
+          useCount: p.useCount,
         });
       }
     }
 
     for (const q2 of quickRepliesQ.data ?? []) {
-      if (matches(q2.title) || matches(q2.content) || matches(q2.group?.name ?? "")) {
+      const title = q2.title;
+      if (q === "" || hitTitle(title) || hitSec(q2.content) || hitSec(q2.group?.name ?? "")) {
+        const p = pref("quick-reply", q2.id);
         out.push({
           kind: "quick-reply",
           id: q2.id,
@@ -381,13 +496,16 @@ export function useSlashMenu({
           content: q2.content,
           category: q2.group?.name ?? null,
           attachmentUrl: q2.attachmentUrl ?? null,
+          favorite: p.favorite,
+          useCount: p.useCount,
         });
       }
     }
 
     for (const m of metasQ.data ?? []) {
       const name = m.label || m.metaTemplateName;
-      if (matches(name) || matches(m.bodyPreview ?? "") || matches(m.category ?? "")) {
+      if (q === "" || hitTitle(name) || hitSec(m.bodyPreview ?? "") || hitSec(m.category ?? "")) {
+        const p = pref("meta-template", m.metaTemplateId);
         out.push({
           kind: "meta-template",
           id: m.metaTemplateId,
@@ -404,6 +522,8 @@ export function useSlashMenu({
           flowAction: m.flowAction ?? null,
           flowId: m.flowId ?? null,
           operatorVariables: Array.isArray(m.operatorVariables) ? m.operatorVariables : null,
+          favorite: p.favorite,
+          useCount: p.useCount,
         });
       }
     }
@@ -411,9 +531,10 @@ export function useSlashMenu({
     if (automationsEnabled) {
       for (const a of automationsQ.data?.items ?? []) {
         if (
-          matches(a.name) ||
-          matches(a.description ?? "") ||
-          matches(a.messagePreview ?? "")
+          q === "" ||
+          hitTitle(a.name) ||
+          hitSec(a.description ?? "") ||
+          hitSec(a.messagePreview ?? "")
         ) {
           out.push({
             kind: "automation",
@@ -429,14 +550,55 @@ export function useSlashMenu({
       }
     }
 
-    return out;
-  }, [internalsQ.data, metasQ.data, quickRepliesQ.data, automationsQ.data, automationsEnabled, token]);
+    // Ordenação/destaque. `Destaques` (favoritos + mais usados) vão para o
+    // topo; o resto mantém o agrupamento por tipo (KIND_ORDER). Dentro de
+    // cada bucket, quem casa no TÍTULO vem antes de quem só casou em
+    // descrição/preview (busca "primariamente por título").
+    const titleRank = (it: SlashItem): number => {
+      if (q === "") return 0;
+      return hitTitle(slashItemTitle(it)) ? 0 : 1;
+    };
+    const isDestaque = (it: SlashItem): boolean =>
+      SHORTCUT_KINDS.has(it.kind) && (!!it.favorite || (it.useCount ?? 0) > 0);
+
+    const destaque: SlashItem[] = [];
+    const rest: SlashItem[] = [];
+    for (const it of out) (isDestaque(it) ? destaque : rest).push(it);
+
+    destaque.sort(
+      (a, b) =>
+        (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) ||
+        (b.useCount ?? 0) - (a.useCount ?? 0) ||
+        titleRank(a) - titleRank(b),
+    );
+    rest.sort(
+      (a, b) =>
+        KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) ||
+        titleRank(a) - titleRank(b),
+    );
+
+    return [...destaque, ...rest];
+  }, [
+    internalsQ.data,
+    metasQ.data,
+    quickRepliesQ.data,
+    automationsQ.data,
+    automationsEnabled,
+    effectiveQuery,
+    shortcutMap,
+  ]);
 
   // Reset activeIndex sempre que a query muda — sem isso o índice
   // pode cair fora do range da nova lista.
   React.useEffect(() => {
     setActiveIndex(0);
-  }, [token?.query, items.length]);
+  }, [effectiveQuery, items.length]);
+
+  // Ao fechar a modal, limpa a busca digitada no campo — senão ela
+  // persistiria e filtraria a próxima abertura de forma inesperada.
+  React.useEffect(() => {
+    if (!open) setSearch("");
+  }, [open]);
 
   // Recalcula token sempre que `draft` muda. Isso roda também quando o
   // componente monta com texto pré-existente (paste, restore de draft, etc.).
@@ -467,7 +629,55 @@ export function useSlashMenu({
   const close = React.useCallback(() => {
     setOpen(false);
     setToken(null);
+    setSearch("");
   }, []);
+
+  // Incrementa o contador de uso do item (favoritos/mais usados). Otimista
+  // no cache do react-query + POST; o servidor é a fonte final via refetch.
+  const recordUsage = React.useCallback(
+    (kind: SlashItemKind, id: string) => {
+      if (!SHORTCUT_KINDS.has(kind)) return;
+      queryClient.setQueryData<ShortcutRow[]>(["slash-shortcuts"], (old) => {
+        const list = Array.isArray(old) ? [...old] : [];
+        const idx = list.findIndex((s) => s.itemKind === kind && s.itemId === id);
+        if (idx >= 0) list[idx] = { ...list[idx], useCount: (list[idx].useCount ?? 0) + 1 };
+        else list.push({ itemKind: kind, itemId: id, favorite: false, useCount: 1 });
+        return list;
+      });
+      void postAgentShortcut({ action: "use", itemKind: kind as ShortcutKind, itemId: id })
+        .then(() => queryClient.invalidateQueries({ queryKey: ["slash-shortcuts"] }))
+        .catch(() => queryClient.invalidateQueries({ queryKey: ["slash-shortcuts"] }));
+    },
+    [queryClient],
+  );
+
+  // Marca/desmarca favorito (otimista + POST). Ignora automações.
+  const toggleFavorite = React.useCallback(
+    (item: SlashItem) => {
+      if (!SHORTCUT_KINDS.has(item.kind)) return;
+      const kind = item.kind;
+      const id = item.id;
+      const nextFav = !item.favorite;
+      queryClient.setQueryData<ShortcutRow[]>(["slash-shortcuts"], (old) => {
+        const list = Array.isArray(old) ? [...old] : [];
+        const idx = list.findIndex((s) => s.itemKind === kind && s.itemId === id);
+        if (idx >= 0) list[idx] = { ...list[idx], favorite: nextFav };
+        else list.push({ itemKind: kind, itemId: id, favorite: nextFav, useCount: 0 });
+        return list;
+      });
+      void postAgentShortcut({
+        action: "favorite",
+        itemKind: kind as ShortcutKind,
+        itemId: id,
+        favorite: nextFav,
+      })
+        .then((row) => {
+          if (!row) queryClient.invalidateQueries({ queryKey: ["slash-shortcuts"] });
+        })
+        .catch(() => queryClient.invalidateQueries({ queryKey: ["slash-shortcuts"] }));
+    },
+    [queryClient],
+  );
 
   const applyItem = React.useCallback(
     (item: SlashItem) => {
@@ -495,6 +705,10 @@ export function useSlashMenu({
           );
         return;
       }
+
+      // Contabiliza uso (favoritos/mais usados) — todos os caminhos abaixo
+      // efetivamente "usam" o item (insert, abrir flow Meta ou override v2).
+      recordUsage(item.kind, item.id);
 
       // Override (composer v2): remove o "/token" e delega o envio ao pai.
       if (onSelectOverride) {
@@ -545,7 +759,7 @@ export function useSlashMenu({
         el.setSelectionRange(pos, pos);
       });
     },
-    [draft, setDraft, token, close, onPickMetaTemplate, onSelectOverride, onInsertMedia, templateContext, textareaRef, contactId, conversationId],
+    [draft, setDraft, token, close, onPickMetaTemplate, onSelectOverride, onInsertMedia, templateContext, textareaRef, contactId, conversationId, recordUsage],
   );
 
   const applyActive = React.useCallback(() => {
@@ -559,7 +773,7 @@ export function useSlashMenu({
    * envio/etc dele.
    */
   const onKeyDown = React.useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>): boolean => {
+    (e: React.KeyboardEvent<HTMLElement>): boolean => {
       if (!open || items.length === 0) {
         if (open && e.key === "Escape") {
           e.preventDefault();
@@ -600,7 +814,8 @@ export function useSlashMenu({
 
   const state: SlashMenuState = {
     open: open && !!token,
-    query: token?.query ?? "",
+    query: effectiveQuery,
+    search,
     items,
     activeIndex,
     isLoading: !!isLoading,
@@ -616,6 +831,8 @@ export function useSlashMenu({
     onKeyDown,
     onSelectItem: applyItem,
     setActiveIndex,
+    setSearch,
+    toggleFavorite,
     close,
   };
 }
@@ -690,6 +907,9 @@ export function SlashCommandMenu({
   onSelectItem,
   onHover,
   onClose,
+  onSearchChange,
+  onSearchKeyDown,
+  onToggleFavorite,
 }: {
   /** Controla a exibição da modal (com animação de entrada/saída). */
   open: boolean;
@@ -699,6 +919,12 @@ export function SlashCommandMenu({
   onHover?: (index: number) => void;
   /** Fecha a modal (backdrop / botão / ESC). */
   onClose: () => void;
+  /** Atualiza o texto de busca digitado no campo da modal. */
+  onSearchChange?: (value: string) => void;
+  /** Navegação por teclado quando o campo de busca está focado (↑/↓/Enter/Esc/Tab). */
+  onSearchKeyDown?: (e: React.KeyboardEvent<HTMLElement>) => boolean;
+  /** Marca/desmarca favorito de um item (star toggle). */
+  onToggleFavorite?: (item: SlashItem) => void;
 }) {
   const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
 
@@ -731,8 +957,16 @@ export function SlashCommandMenu({
     "meta-template": [],
     automation: [],
   };
+  // "Destaques" = favoritos + mais usados do agente (topo). Esses itens saem
+  // das seções por tipo para não duplicar; o `globalIndex` (ordem em
+  // state.items) já vem com os destaques primeiro, então ↑/↓ navega na mesma
+  // ordem visual (Destaques → seções por tipo).
+  const destaque: IndexedItem[] = [];
   state.items.forEach((item, i) => {
-    byKind[item.kind].push({ item, globalIndex: i });
+    const highlighted =
+      item.kind !== "automation" && (!!item.favorite || (item.useCount ?? 0) > 0);
+    if (highlighted) destaque.push({ item, globalIndex: i });
+    else byKind[item.kind].push({ item, globalIndex: i });
   });
 
   // Estado isolado da seção "Automações": mostrada mesmo com 0 itens quando
@@ -742,6 +976,7 @@ export function SlashCommandMenu({
     auto.visible && byKind.automation.length === 0 && (auto.isLoading || auto.isError);
   const hasContent = state.items.length > 0 || autoStateOnly;
   const anyAboveAutomation =
+    destaque.length > 0 ||
     byKind["internal-template"].length > 0 ||
     byKind["quick-reply"].length > 0 ||
     byKind["meta-template"].length > 0;
@@ -803,7 +1038,13 @@ export function SlashCommandMenu({
                 </div>
 
                 <div className="hidden items-center gap-2 sm:flex">
-                  <SlashSearchDisplay query={state.query} count={state.items.length} />
+                  <SlashSearchBox
+                    value={state.search}
+                    query={state.query}
+                    count={state.items.length}
+                    onChange={onSearchChange}
+                    onKeyDown={onSearchKeyDown}
+                  />
                   <SlashCloseButton onClose={onClose} />
                 </div>
                 <div className="sm:hidden">
@@ -812,7 +1053,13 @@ export function SlashCommandMenu({
               </div>
 
               <div className="mt-3 sm:hidden">
-                <SlashSearchDisplay query={state.query} count={state.items.length} />
+                <SlashSearchBox
+                  value={state.search}
+                  query={state.query}
+                  count={state.items.length}
+                  onChange={onSearchChange}
+                  onKeyDown={onSearchKeyDown}
+                />
               </div>
             </div>
 
@@ -830,13 +1077,34 @@ export function SlashCommandMenu({
                 </div>
               ) : (
                 <>
+                  {/* Destaques — favoritos + mais usados do agente (topo). */}
+                  {destaque.length > 0 ? (
+                    <section aria-label="Destaques" className="mb-1">
+                      <SlashDestaqueHeader count={destaque.length} />
+                      <div className="flex flex-col gap-2">
+                        {destaque.map(({ item, globalIndex }) => (
+                          <SlashItemCard
+                            key={`destaque-${item.kind}-${item.id}`}
+                            item={item}
+                            active={globalIndex === state.activeIndex}
+                            onHover={() => onHover?.(globalIndex)}
+                            onSelect={() => onSelectItem(item)}
+                            onToggleFavorite={onToggleFavorite}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+
                   {KIND_ORDER.map((kind, idx) => {
                     const group = byKind[kind];
                     if (group.length === 0) return null;
-                    const Icon = KIND_ICON[kind];
-                    const visual = KIND_VISUAL[kind];
                     return (
-                      <section key={kind} aria-label={KIND_GROUP_LABEL[kind]} className={cn(idx > 0 && "mt-6")}>
+                      <section
+                        key={kind}
+                        aria-label={KIND_GROUP_LABEL[kind]}
+                        className={cn((idx > 0 || destaque.length > 0) && "mt-6")}
+                      >
                         <SlashSectionHeader kind={kind} count={group.length} />
 
                         {/* 1 mensagem por linha — coluna única (otimiza espaço). */}
@@ -848,6 +1116,7 @@ export function SlashCommandMenu({
                               active={globalIndex === state.activeIndex}
                               onHover={() => onHover?.(globalIndex)}
                               onSelect={() => onSelectItem(item)}
+                              onToggleFavorite={onToggleFavorite}
                             />
                           ))}
                         </div>
@@ -936,15 +1205,20 @@ function SlashItemCard({
   active,
   onHover,
   onSelect,
+  onToggleFavorite,
 }: {
   item: SlashItem;
   active: boolean;
   onHover: () => void;
   onSelect: () => void;
+  onToggleFavorite?: (item: SlashItem) => void;
 }) {
   const Icon = KIND_ICON[item.kind];
   const visual = KIND_VISUAL[item.kind];
   const title = item.kind === "meta-template" ? item.label || item.name : item.name;
+  // Favorito/uso só se aplicam a modelos/mensagens/templates (não automações).
+  const canFavorite = item.kind !== "automation" && !!onToggleFavorite;
+  const isFav = !!item.favorite;
   const preview =
     item.kind === "meta-template"
       ? item.bodyPreview
@@ -999,6 +1273,37 @@ function SlashItemCard({
               {tag}
             </span>
           ) : null}
+          {canFavorite ? (
+            <span
+              role="button"
+              tabIndex={-1}
+              aria-label={isFav ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+              aria-pressed={isFav}
+              title={isFav ? "Remover dos favoritos" : "Favoritar"}
+              // Não seleciona o item nem tira o foco do textarea ao clicar.
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleFavorite?.(item);
+              }}
+              className={cn(
+                "shrink-0 cursor-pointer rounded-full p-0.5 transition-colors",
+                isFav
+                  ? "text-[var(--color-warn,#f59e0b)]"
+                  : "text-[var(--text-muted)] opacity-0 hover:text-[var(--color-warn,#f59e0b)] group-hover/card:opacity-100",
+              )}
+            >
+              {isFav ? (
+                <IconStarFilled className="size-3.5" />
+              ) : (
+                <IconStar className="size-3.5" strokeWidth={2.2} />
+              )}
+            </span>
+          ) : null}
         </div>
         <p className="mt-0.5 line-clamp-2 text-[11.5px] font-medium leading-snug tracking-tight text-[var(--text-muted)]">
           {preview || "Sem preview."}
@@ -1009,30 +1314,67 @@ function SlashItemCard({
 }
 
 /**
- * Campo de busca do header — reflexo (read-only) do que o operador digita
- * após "/" no textarea. Mantém o foco no textarea via `onMouseDown`
- * preventDefault, preservando a detecção do token e a navegação por teclado.
+ * Cabeçalho da seção "Destaques" (favoritas + mais usadas do agente).
  */
-function SlashSearchDisplay({ query, count }: { query: string; count: number }) {
+function SlashDestaqueHeader({ count }: { count: number }) {
+  return (
+    <div className="mb-2.5 flex items-center gap-2">
+      <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-[var(--color-warn-bg,rgba(245,158,11,0.12))] text-[var(--color-warn,#f59e0b)]">
+        <IconSparkles className="size-3" strokeWidth={2.6} />
+      </span>
+      <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-warn,#f59e0b)]">
+        Destaques
+      </span>
+      <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 text-[9px] tabular-nums text-[var(--text-muted)]">
+        {count}
+      </span>
+      <span className="ml-auto hidden truncate text-[10px] tracking-tight text-[var(--text-muted)] sm:inline">
+        Favoritas e mais usadas por você
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Campo de busca do header — EDITÁVEL. Filtra a lista por título (e, como
+ * fallback, descrição/preview). Unificado com o token "/..." do composer:
+ * quando vazio, mostra/filtra pelo que foi digitado após "/"; ao digitar
+ * aqui, a busca da modal assume o controle. Navegação por teclado (↑/↓/
+ * Enter/Esc/Tab) funciona com o campo focado via `onKeyDown`.
+ */
+function SlashSearchBox({
+  value,
+  query,
+  count,
+  onChange,
+  onKeyDown,
+}: {
+  value: string;
+  query: string;
+  count: number;
+  onChange?: (value: string) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLElement>) => boolean;
+}) {
   return (
     <div
-      onMouseDown={(e) => e.preventDefault()}
       className={cn(
         "relative flex h-9 items-center gap-1.5 rounded-full border border-[var(--glass-border)]",
-        "bg-[var(--input-bg)] pl-3 pr-3 transition-colors",
+        "bg-[var(--input-bg)] pl-3 pr-3 transition-colors focus-within:border-[var(--brand-primary)]/50",
         query && "border-[var(--brand-primary)]/50",
       )}
     >
       <IconSearch className="size-3.5 shrink-0 text-[var(--text-muted)]" strokeWidth={2.2} />
       <input
         type="text"
-        value={query}
-        readOnly
-        tabIndex={-1}
-        aria-label="Filtro (digite após / no campo de mensagem)"
-        placeholder="Digite após / para filtrar…"
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        onKeyDown={(e) => {
+          onKeyDown?.(e);
+        }}
+        aria-label="Buscar mensagens prontas por título"
+        placeholder={query && !value ? query : "Buscar por título…"}
         className={cn(
-          "h-full w-[200px] min-w-0 flex-1 cursor-default border-0 bg-transparent text-[13px]",
+          "h-full w-[200px] min-w-0 flex-1 border-0 bg-transparent text-[13px]",
           "tracking-tight text-[var(--text-primary)] outline-none",
           "placeholder:font-medium placeholder:text-[var(--text-muted)]",
         )}

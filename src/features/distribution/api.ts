@@ -139,3 +139,25 @@ export function retryPending(): Promise<RetryResult> {
     "Erro ao reprocessar a fila de espera.",
   );
 }
+
+export interface DistributionSettings {
+  respectDepartment: boolean;
+}
+
+export function fetchDistributionSettings(): Promise<DistributionSettings> {
+  return getJson<DistributionSettings>(
+    "/api/distribution/settings",
+    "Erro ao carregar configurações de distribuição.",
+  );
+}
+
+export function updateDistributionSettings(
+  input: DistributionSettings,
+): Promise<DistributionSettings> {
+  return sendJson<DistributionSettings>(
+    "/api/distribution/settings",
+    "PUT",
+    input,
+    "Erro ao salvar configurações de distribuição.",
+  );
+}

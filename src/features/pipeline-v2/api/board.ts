@@ -116,10 +116,13 @@ export async function getBoardFiltered(
     filters?: AdvancedDealFilters;
     sort?: BoardSortParam;
     perStage?: number;
+    signal?: AbortSignal;
   },
 ): Promise<BoardStageDto[]> {
   const body: Record<string, unknown> = {};
-  body.status = opts.status && opts.status !== "OPEN" ? opts.status : "ALL";
+  // Espelha o GET /board: default OPEN. Nunca promover OPEN → ALL
+  // (bug 24/jul/26: isso varria WON+LOST e explodia CPU/DB no POST).
+  body.status = opts.status ?? "OPEN";
   if (opts.filters) body.filters = opts.filters;
   if (opts.sort) {
     body.sort = opts.sort.field;
@@ -131,6 +134,7 @@ export async function getBoardFiltered(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: opts.signal,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

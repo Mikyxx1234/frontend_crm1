@@ -13,7 +13,7 @@ import {
 } from "../api";
 
 import type { AdvancedDealFilters } from "@/components/pipeline/kanban-filters/types";
-import { isEmptyFilters, hasServerSideFilters } from "@/components/pipeline/kanban-filters/types";
+import { hasServerSideFilters } from "@/components/pipeline/kanban-filters/types";
 
 import { isPreviewMode } from "@/lib/preview-mode";
 
@@ -99,16 +99,20 @@ export function useBoardSearch(params: {
       sortKey,
       perStage,
     ],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       getBoardFiltered(params.pipelineId ?? "pl-1", {
         status: params.status,
         filters: { search: term },
         sort: params.sort,
         perStage,
+        signal,
       }),
     enabled:
       (params.enabled ?? true) && !!params.pipelineId && term.length >= 2,
     staleTime: 10_000,
+    // Evita fan-out: troca rápida de termo cancela o POST anterior.
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 }
 
@@ -132,23 +136,29 @@ export function useBoardFiltered(params: {
     : "default";
   const perStage = params.perStage ?? 200;
   const active = hasServerSideFilters(params.filters);
+  // Key estável (string) — objeto `filters` novo a cada render NÃO deve
+  // criar query nova nem disparar outro POST caro (~10–15s em prod).
+  const filtersKey = JSON.stringify(params.filters ?? {});
   return useQuery<BoardStageDto[]>({
     queryKey: [
       "pipeline-board-filtered",
       params.pipelineId ?? "__none__",
       params.status,
-      params.filters,
+      filtersKey,
       sortKey,
       perStage,
     ],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       getBoardFiltered(params.pipelineId ?? "pl-1", {
         status: params.status,
         filters: params.filters,
         sort: params.sort,
         perStage,
+        signal,
       }),
     enabled: (params.enabled ?? true) && !!params.pipelineId && active,
-    staleTime: 10_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 }

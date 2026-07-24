@@ -433,20 +433,25 @@ function DealInline({
           )}
         </div>
 
-        {/* Linha base: anel de progresso (cor da etapa atual) + pipeline + responsável */}
+        {/* Linha base: ETAPA em destaque + funil (secundário) + responsável.
+            Anel de progresso removido (jul/26) — a posição no funil agora é
+            comunicada apenas pela barra segmentada logo abaixo. Etapa e funil
+            trocaram de lugar: a etapa atual passou a ser o dado em destaque. */}
         <div className="relative mb-2.5 flex items-center gap-3">
-          <div
-            className="relative flex size-10 shrink-0 items-center justify-center rounded-full border-2 bg-white/10"
-            style={{ borderColor: currentStageColor }}
-          >
-            <span className="text-[11px] font-bold">
-              {totalStages > 0 ? `${currentStage}/${totalStages}` : "—"}
-            </span>
-          </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
+            <div className="flex items-center gap-1.5">
+              <span
+                className="size-2 shrink-0 rounded-full"
+                style={{ backgroundColor: currentStageColor }}
+                aria-hidden
+              />
+              <p className="truncate text-[17px] font-bold uppercase leading-tight tracking-tight text-white">
+                {stageLabel}
+              </p>
+            </div>
             <p className="truncate text-xs text-slate-300">
-              {totalStages > 0 ? `Etapa ${currentStage} de ${totalStages}` : stageLabel}
+              {deal.pipelineName ?? "Funil de vendas"}
+              {totalStages > 0 ? ` · Etapa ${currentStage} de ${totalStages}` : ""}
             </p>
           </div>
           {deal.assigneeSlot && (

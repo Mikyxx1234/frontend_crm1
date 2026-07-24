@@ -461,17 +461,14 @@ export function Composer({
         </div>
       )}
 
-      {/* Slash command menu — flutua acima do composer */}
-      {!pendingTemplate && slash.state.open && (
-        <div className="absolute bottom-full left-0 mb-2 w-full">
-          <SlashCommandMenu
-            state={slash.state}
-            onSelectItem={slash.onSelectItem}
-            onHover={slash.setActiveIndex}
-            className="w-full"
-          />
-        </div>
-      )}
+      {/* Slash command menu — modal central (renderizada via portal) */}
+      <SlashCommandMenu
+        open={!pendingTemplate && slash.state.open}
+        state={slash.state}
+        onSelectItem={slash.onSelectItem}
+        onHover={slash.setActiveIndex}
+        onClose={slash.close}
+      />
 
       {/* ── Row: tabs (esq.) + seletor de canal + slot direito (assinatura ou badge nota) + Encerrar ── */}
       {(onSendNote ||

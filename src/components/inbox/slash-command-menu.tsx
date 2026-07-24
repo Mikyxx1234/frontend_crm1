@@ -27,8 +27,18 @@
  */
 
 import * as React from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { IconBolt as Bolt, IconFileText as FileText, IconLoader2 as Loader2, IconMessageQuestion as MessageSquareQuote } from "@tabler/icons-react";
+import {
+  IconBolt as Bolt,
+  IconFileText as FileText,
+  IconLoader2 as Loader2,
+  IconMessageQuestion as MessageSquareQuote,
+  IconMessage2,
+  IconSearch,
+  IconX,
+} from "@tabler/icons-react";
 
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -490,8 +500,20 @@ export function useSlashMenu({
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Componente visual
+// Componente visual — modal central (padrão AgentAutomationPickerModal)
 // ─────────────────────────────────────────────────────────────────
+//
+// Refatorado do popover pequeno para uma modal central grande, espelhando
+// o visual da AgentAutomationPickerModal (card glass centralizado, header
+// com ícone gradiente + título + subtítulo + busca + fechar, corpo com
+// <section>s agrupadas por eyebrow header e grid de cards).
+//
+// IMPORTANTE — o comportamento é 100% preservado: a busca continua sendo o
+// que o operador digita APÓS "/" no textarea, e a navegação por teclado
+// (↑/↓/Enter/Esc/Tab) continua sendo tratada pelo `useSlashMenu.onKeyDown`
+// que o composer chama no textarea. Por isso o foco NUNCA sai do textarea:
+// o campo de busca do header é apenas um reflexo de `state.query` e todos os
+// cliques usam `onMouseDown preventDefault` para manter o foco no textarea.
 
 const KIND_ORDER: SlashItemKind[] = ["internal-template", "quick-reply", "meta-template"];
 
@@ -507,31 +529,63 @@ const KIND_GROUP_HINT: Record<SlashItemKind, string> = {
   "meta-template": "Modelo aprovado na Meta — abre painel para confirmar envio",
 };
 
-const KIND_ICON: Record<SlashItemKind, React.ComponentType<{ className?: string }>> = {
+const KIND_ICON: Record<SlashItemKind, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   "internal-template": FileText,
   "quick-reply": Bolt,
   "meta-template": MessageSquareQuote,
 };
 
-const KIND_ICON_COLOR: Record<SlashItemKind, string> = {
-  "internal-template": "text-primary",
-  "quick-reply": "text-[var(--color-warning-text,#b45309)]",
-  "meta-template": "text-[var(--color-success-text)]",
+/** Visual (fg/bg) por tipo — mesmos tokens glass da modal de automação. */
+const KIND_VISUAL: Record<SlashItemKind, { fg: string; bg: string }> = {
+  "internal-template": {
+    fg: "text-[var(--color-info)]",
+    bg: "bg-[var(--color-primary)]/8",
+  },
+  "quick-reply": {
+    fg: "text-[var(--color-warn)]",
+    bg: "bg-[var(--color-warn-bg)]",
+  },
+  "meta-template": {
+    fg: "text-[var(--color-success)]",
+    bg: "bg-[var(--color-success-soft,rgba(16,185,129,0.1))]",
+  },
 };
 
 export function SlashCommandMenu({
+  open,
   state,
   onSelectItem,
   onHover,
-  className,
+  onClose,
 }: {
+  /** Controla a exibição da modal (com animação de entrada/saída). */
+  open: boolean;
   state: SlashMenuState;
   onSelectItem: (item: SlashItem) => void;
   /** Atualiza activeIndex quando o mouse passa por um item. */
   onHover?: (index: number) => void;
-  className?: string;
+  /** Fecha a modal (backdrop / botão / ESC). */
+  onClose: () => void;
 }) {
-  if (!state.open) return null;
+  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    setPortalTarget(document.body);
+  }, []);
+
+  // ESC fecha (paridade com a modal de automação). O composer também escuta
+  // ESC/onKeyDown — chamadas duplicadas de onClose são idempotentes.
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   // Agrupa os itens por tipo na ordem fixa KIND_ORDER, mantendo o
   // índice GLOBAL de cada item (essencial pra que ↑/↓ continuem
@@ -547,144 +601,279 @@ export function SlashCommandMenu({
     byKind[item.kind].push({ item, globalIndex: i });
   });
 
-  return (
-    <div
-      role="listbox"
-      aria-label="Mensagens prontas"
-      // Bug 29/mai/26: `bg-card` aqui ficava translúcido (40% opaco) porque
-      // este design system define card como "glass" via
-      // `--color-card: rgba(255,255,255,0.40)`. As mensagens do chat
-      // atrás vazavam pelo menu. O sistema já tem token sólido
-      // `--dropdown-solid-bg` (white em light, navy em dark) com esse
-      // exato propósito — documentado em globals.css linhas 81–85.
-      style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
-      className={cn(
-        "z-50 max-h-[360px] w-[min(440px,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-border p-1.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10",
-        className,
-      )}
-    >
-      <div className="flex items-center justify-between px-2 pb-1 pt-0.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Mensagens prontas{state.query ? ` · "${state.query}"` : ""}
-        </span>
-        {state.items.length > 0 ? (
-          <span className="text-[10px] tabular-nums text-muted-foreground">
-            {state.items.length} {state.items.length === 1 ? "resultado" : "resultados"}
-          </span>
-        ) : null}
-      </div>
+  if (!portalTarget) return null;
 
-      {state.isLoading && state.items.length === 0 ? (
-        <div className="flex items-center gap-2 px-3 py-3 text-[12px] text-muted-foreground">
-          <Loader2 className="size-3.5 animate-spin" /> Carregando…
-        </div>
-      ) : state.items.length === 0 ? (
-        <div className="px-3 py-3 text-[12px] text-muted-foreground">
-          Nenhuma mensagem pronta encontrada.
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {KIND_ORDER.map((kind) => {
-            const group = byKind[kind];
-            if (group.length === 0) return null;
-            const Icon = KIND_ICON[kind];
-            return (
-              <section
-                key={kind}
-                aria-label={KIND_GROUP_LABEL[kind]}
-                className="space-y-0.5"
-              >
-                <header className="flex items-baseline gap-2 border-b border-border/40 px-2 pb-1 pt-1">
-                  <Icon className={cn("size-3.5 shrink-0", KIND_ICON_COLOR[kind])} />
-                  <span className="text-[10.5px] font-bold uppercase tracking-wider text-foreground">
-                    {KIND_GROUP_LABEL[kind]}
-                  </span>
-                  <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[9px] tabular-nums text-muted-foreground">
-                    {group.length}
-                  </span>
-                  <span className="ml-auto truncate text-[10px] text-muted-foreground">
-                    {KIND_GROUP_HINT[kind]}
-                  </span>
-                </header>
-                <ul className="space-y-0.5">
-                  {group.map(({ item, globalIndex }) => {
-                    const active = globalIndex === state.activeIndex;
-                    const title =
-                      item.kind === "meta-template"
-                        ? item.label || item.name
-                        : item.name;
-                    const preview =
-                      item.kind === "meta-template"
-                        ? item.bodyPreview
-                        : item.content;
-                    const tag = item.category ?? null;
-                    const hasMedia =
-                      (item.kind === "internal-template" && !!item.mediaUrl) ||
-                      (item.kind === "quick-reply" && !!item.attachmentUrl);
-                    return (
-                      <li key={`${item.kind}-${item.id}`}>
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={active}
-                          // Evita perder foco do textarea (o input de envio).
-                          onMouseDown={(e) => e.preventDefault()}
-                          onMouseEnter={() => onHover?.(globalIndex)}
-                          onClick={() => onSelectItem(item)}
+  return createPortal(
+    <AnimatePresence>
+      {open ? (
+        <>
+          <motion.div
+            key="slash-bg"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onMouseDown={onClose}
+            className="fixed inset-0 z-70 bg-black/30 backdrop-blur-sm"
+            aria-hidden
+          />
+
+          <motion.div
+            key="slash-modal"
+            role="listbox"
+            aria-label="Mensagens prontas"
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            className={cn(
+              "fixed left-1/2 top-1/2 z-71 -translate-x-1/2 -translate-y-1/2",
+              "w-[min(720px,calc(100vw-32px))] max-h-[min(80vh,720px)]",
+              "flex flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--glass-border)]",
+              "bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl",
+            )}
+            // Mantém o foco no textarea (o input real de envio/busca).
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-6 pt-6 pb-5 backdrop-blur-md sm:px-7">
+              <div className="flex items-start gap-4">
+                <span
+                  className={cn(
+                    "flex size-11 shrink-0 items-center justify-center rounded-2xl",
+                    "bg-linear-to-br from-[var(--brand-primary)] to-[var(--brand-primary-dark)] text-white",
+                    "shadow-[var(--glass-shadow)] ring-1 ring-white/40",
+                  )}
+                >
+                  <IconMessage2 className="size-5" strokeWidth={2.4} />
+                </span>
+
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-[20px] font-bold leading-tight tracking-tighter text-[var(--text-primary)] sm:text-[22px]">
+                    Mensagens prontas
+                  </h2>
+                  <p className="mt-0.5 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
+                    Escolha um modelo ou template para inserir na conversa.
+                  </p>
+                </div>
+
+                <div className="hidden items-center gap-2 sm:flex">
+                  <SlashSearchDisplay query={state.query} count={state.items.length} />
+                  <SlashCloseButton onClose={onClose} />
+                </div>
+                <div className="sm:hidden">
+                  <SlashCloseButton onClose={onClose} />
+                </div>
+              </div>
+
+              <div className="mt-3 sm:hidden">
+                <SlashSearchDisplay query={state.query} count={state.items.length} />
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
+              {state.isLoading && state.items.length === 0 ? (
+                <div className="flex items-center justify-center py-14">
+                  <Loader2 className="size-6 animate-spin text-[var(--text-muted)]" />
+                </div>
+              ) : state.items.length === 0 ? (
+                <div className="py-12 text-center text-[13px] tracking-tight text-[var(--text-muted)]">
+                  {state.query
+                    ? `Nenhuma mensagem pronta encontrada para "${state.query}".`
+                    : "Nenhuma mensagem pronta disponível."}
+                </div>
+              ) : (
+                KIND_ORDER.map((kind, idx) => {
+                  const group = byKind[kind];
+                  if (group.length === 0) return null;
+                  const Icon = KIND_ICON[kind];
+                  const visual = KIND_VISUAL[kind];
+                  return (
+                    <section key={kind} aria-label={KIND_GROUP_LABEL[kind]} className={cn(idx > 0 && "mt-6")}>
+                      <div className="mb-3 flex items-center gap-2">
+                        <span
                           className={cn(
-                            "flex w-full items-start gap-2 rounded-xl px-2.5 py-2 text-left transition-colors",
-                            active
-                              ? "bg-primary/10 text-foreground ring-1 ring-primary/30"
-                              : "text-foreground hover:bg-muted/70",
+                            "inline-flex size-5 shrink-0 items-center justify-center rounded-md",
+                            visual.bg,
+                            visual.fg,
                           )}
                         >
-                          <Icon
-                            className={cn("mt-0.5 size-4 shrink-0", KIND_ICON_COLOR[item.kind])}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline gap-2">
-                              <span className="truncate text-[13px] font-semibold">
-                                {title}
-                              </span>
-                              {hasMedia ? (
-                                <span className="shrink-0 text-[11px]" title="Inclui anexo">
-                                  📎
-                                </span>
-                              ) : null}
-                              {tag ? (
-                                <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground">
-                                  {tag}
-                                </span>
-                              ) : null}
-                            </div>
-                            {preview ? (
-                              <p className="mt-0.5 line-clamp-2 text-[11.5px] text-muted-foreground">
-                                {preview}
-                              </p>
-                            ) : null}
-                          </div>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            );
-          })}
-        </div>
-      )}
+                          <Icon className="size-3" strokeWidth={2.6} />
+                        </span>
+                        <span
+                          className={cn(
+                            "text-[10px] font-semibold uppercase tracking-widest",
+                            visual.fg,
+                          )}
+                        >
+                          {KIND_GROUP_LABEL[kind]}
+                        </span>
+                        <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 text-[9px] tabular-nums text-[var(--text-muted)]">
+                          {group.length}
+                        </span>
+                        <span className="ml-auto hidden truncate text-[10px] tracking-tight text-[var(--text-muted)] sm:inline">
+                          {KIND_GROUP_HINT[kind]}
+                        </span>
+                      </div>
 
-      <div className="mt-1.5 flex items-center justify-between border-t border-border/40 px-2 pb-0.5 pt-1.5 text-[10px] text-muted-foreground">
-        <span>
-          <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">↑</kbd>{" "}
-          <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">↓</kbd> navegar ·{" "}
-          <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">Enter</kbd>{" "}
-          inserir
-        </span>
-        <span>
-          <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">Esc</kbd> fechar
-        </span>
+                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                        {group.map(({ item, globalIndex }) => (
+                          <SlashItemCard
+                            key={`${item.kind}-${item.id}`}
+                            item={item}
+                            active={globalIndex === state.activeIndex}
+                            onHover={() => onHover?.(globalIndex)}
+                            onSelect={() => onSelectItem(item)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer — dicas de teclado */}
+            <div className="flex shrink-0 items-center justify-between border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-6 py-3 text-[10.5px] tracking-tight text-[var(--text-muted)] sm:px-7">
+              <span>
+                <kbd className="rounded bg-[var(--glass-bg-strong)] px-1 py-0.5 font-mono text-[10px]">↑</kbd>{" "}
+                <kbd className="rounded bg-[var(--glass-bg-strong)] px-1 py-0.5 font-mono text-[10px]">↓</kbd> navegar ·{" "}
+                <kbd className="rounded bg-[var(--glass-bg-strong)] px-1 py-0.5 font-mono text-[10px]">Enter</kbd> inserir
+              </span>
+              <span>
+                <kbd className="rounded bg-[var(--glass-bg-strong)] px-1 py-0.5 font-mono text-[10px]">Esc</kbd> fechar
+              </span>
+            </div>
+          </motion.div>
+        </>
+      ) : null}
+    </AnimatePresence>,
+    portalTarget,
+  );
+}
+
+function SlashItemCard({
+  item,
+  active,
+  onHover,
+  onSelect,
+}: {
+  item: SlashItem;
+  active: boolean;
+  onHover: () => void;
+  onSelect: () => void;
+}) {
+  const Icon = KIND_ICON[item.kind];
+  const visual = KIND_VISUAL[item.kind];
+  const title = item.kind === "meta-template" ? item.label || item.name : item.name;
+  const preview = item.kind === "meta-template" ? item.bodyPreview : item.content;
+  const tag = item.category ?? null;
+  const hasMedia =
+    (item.kind === "internal-template" && !!item.mediaUrl) ||
+    (item.kind === "quick-reply" && !!item.attachmentUrl);
+
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={active}
+      // Evita perder o foco do textarea (o input real de envio/busca).
+      onMouseDown={(e) => e.preventDefault()}
+      onMouseEnter={onHover}
+      onClick={onSelect}
+      className={cn(
+        "group/card flex w-full items-start gap-3 rounded-2xl border bg-[var(--glass-bg-overlay)]",
+        "px-3.5 py-3 text-left transition-all duration-150",
+        active
+          ? "border-[var(--brand-primary)]/40 shadow-[var(--glass-shadow)] ring-1 ring-[var(--brand-primary)]/30"
+          : "border-[var(--glass-border-subtle)] hover:border-[var(--brand-primary)]/30 hover:shadow-[var(--glass-shadow)]",
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-10 shrink-0 items-center justify-center rounded-xl",
+          "ring-1 ring-[var(--glass-border-subtle)] transition-all",
+          visual.bg,
+          visual.fg,
+        )}
+      >
+        <Icon className="size-[18px]" strokeWidth={2.2} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <p className="min-w-0 flex-1 truncate text-[13.5px] font-bold tracking-tight text-[var(--text-primary)]">
+            {title}
+          </p>
+          {hasMedia ? (
+            <span className="shrink-0 text-[11px]" title="Inclui anexo">
+              📎
+            </span>
+          ) : null}
+          {tag ? (
+            <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-px text-[9px] uppercase tracking-wide text-[var(--text-muted)]">
+              {tag}
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-0.5 line-clamp-2 text-[11.5px] font-medium leading-snug tracking-tight text-[var(--text-muted)]">
+          {preview || "Sem preview."}
+        </p>
       </div>
+    </button>
+  );
+}
+
+/**
+ * Campo de busca do header — reflexo (read-only) do que o operador digita
+ * após "/" no textarea. Mantém o foco no textarea via `onMouseDown`
+ * preventDefault, preservando a detecção do token e a navegação por teclado.
+ */
+function SlashSearchDisplay({ query, count }: { query: string; count: number }) {
+  return (
+    <div
+      onMouseDown={(e) => e.preventDefault()}
+      className={cn(
+        "relative flex h-9 items-center gap-1.5 rounded-full border border-[var(--glass-border)]",
+        "bg-[var(--input-bg)] pl-3 pr-3 transition-colors",
+        query && "border-[var(--brand-primary)]/50",
+      )}
+    >
+      <IconSearch className="size-3.5 shrink-0 text-[var(--text-muted)]" strokeWidth={2.2} />
+      <input
+        type="text"
+        value={query}
+        readOnly
+        tabIndex={-1}
+        aria-label="Filtro (digite após / no campo de mensagem)"
+        placeholder="Digite após / para filtrar…"
+        className={cn(
+          "h-full w-[200px] min-w-0 flex-1 cursor-default border-0 bg-transparent text-[13px]",
+          "tracking-tight text-[var(--text-primary)] outline-none",
+          "placeholder:font-medium placeholder:text-[var(--text-muted)]",
+        )}
+      />
+      <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 text-[10px] tabular-nums text-[var(--text-muted)]">
+        {count} {count === 1 ? "resultado" : "resultados"}
+      </span>
     </div>
+  );
+}
+
+function SlashCloseButton({ onClose }: { onClose: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      onMouseDown={(e) => e.preventDefault()}
+      aria-label="Fechar"
+      className={cn(
+        "inline-flex size-9 items-center justify-center rounded-full",
+        "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+        "transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)] active:scale-95",
+      )}
+    >
+      <IconX className="size-4" strokeWidth={2.2} />
+    </button>
   );
 }

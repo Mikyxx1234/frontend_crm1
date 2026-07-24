@@ -243,6 +243,12 @@ export const EVENT_CONFIG: Record<string, EventVisualConfig> = {
     bg: "bg-lavender-soft",
     label: "Responsável da conversa",
   },
+  CONVERSATION_DEPARTMENT_CHANGED: {
+    Icon: Workflow,
+    ring: "ring-accent/30 text-accent",
+    bg: "bg-lavender-soft",
+    label: "Departamento alterado",
+  },
   MESSAGE_SENT: {
     Icon: Send,
     ring: "ring-success/30 text-success",
@@ -530,6 +536,12 @@ export function eventDescription(ev: FeedEvent): string {
           ? ` (cód. ${String(m.errorCode)})`
           : "";
       return (err || "Falha no envio") + code;
+    }
+    case "CONVERSATION_DEPARTMENT_CHANGED": {
+      const from =
+        (m.fromDepartmentName as string) ?? ev.oldValue ?? "Nenhum";
+      const to = (m.toDepartmentName as string) ?? ev.newValue ?? "Nenhum";
+      return `${from} → ${to}`;
     }
     case "CONVERSATION_CREATED":
       return String(m.channel ?? "");

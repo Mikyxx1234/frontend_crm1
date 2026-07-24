@@ -1113,11 +1113,11 @@ function PendingQueueCards({
       <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
         <EmptyState
           icon={<IconCircleCheck size={28} />}
-          title="Nenhum lead aguardando"
+          title="Nenhum atendimento aguardando"
           description={
             loading
               ? "Carregando fila…"
-              : "Todos os leads recebidos foram distribuídos."
+              : "Todos os atendimentos recebidos foram distribuídos."
           }
         />
       </div>
@@ -1136,7 +1136,7 @@ function PendingQueueCards({
               Aguardando distribuição ({pending.length})
             </p>
             <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
-              Leads sem responsável elegível. São redistribuídos quando alguém fica online.
+              Atendimentos sem responsável elegível. São redistribuídos quando alguém fica online.
             </p>
           </div>
         </div>

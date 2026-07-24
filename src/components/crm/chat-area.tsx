@@ -648,7 +648,7 @@ export function ChatArea({
           bottom nav some via useMobileChatChrome — bloco fica na base. */}
       <div
         data-chat-composer-footer
-        className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1.5 backdrop-blur-md"
+        className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.375rem,env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md"
       >
       {showSessionAlert && <SessionAlert onUseTemplate={onUseTemplate} />}
 

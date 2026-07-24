@@ -810,26 +810,29 @@ export function DealDetailPanel({
 
                 {!heroCollapsed && (
                 <>
-                {/* Linha base: anel de progresso (cor da etapa atual) + pipeline + responsável */}
+                {/* Linha base: ETAPA em destaque + funil (secundário) + responsável.
+                    Anel de progresso removido (jul/26) — a posição no funil agora é
+                    comunicada apenas pela barra segmentada logo abaixo. Etapa e funil
+                    trocaram de lugar: a etapa atual passou a ser o dado em destaque. */}
                 <div className="relative mt-2.5 flex items-center gap-3">
-                  <div
-                    className="relative flex size-10 shrink-0 items-center justify-center rounded-full border-2 bg-white/10"
-                    style={{
-                      borderColor:
-                        (currentSegIdx >= 0 ? sortedFunnel?.[currentSegIdx]?.color : null) ||
-                        "#f59e0b",
-                    }}
-                  >
-                    <span className="text-[11px] font-bold">
-                      {funnelTotal > 0 ? `${funnelCurrent}/${funnelTotal}` : "—"}
-                    </span>
-                  </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor:
+                            (currentSegIdx >= 0 ? sortedFunnel?.[currentSegIdx]?.color : null) ||
+                            "#fb923c",
+                        }}
+                        aria-hidden
+                      />
+                      <p className="truncate text-[17px] font-bold uppercase leading-tight tracking-tight text-white">
+                        {deal.stage ?? "Em processo"}
+                      </p>
+                    </div>
                     <p className="truncate text-xs text-slate-300">
-                      {funnelTotal > 0
-                        ? `Etapa ${funnelCurrent} de ${funnelTotal}`
-                        : (deal.stage ?? "Em processo")}
+                      {deal.pipelineName ?? "Funil de vendas"}
+                      {funnelTotal > 0 ? ` · Etapa ${funnelCurrent} de ${funnelTotal}` : ""}
                     </p>
                   </div>
                   {ownerSlot && (

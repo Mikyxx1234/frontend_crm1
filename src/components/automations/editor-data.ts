@@ -278,11 +278,13 @@ export function useFieldOptions(entity: "contact" | "deal") {
     staleTime: STALE,
     queryFn: async (): Promise<Opt[]> => {
       const list = asArray(await getJson(`/api/custom-fields?entity=${entity}`)) as RawCustomField[]
-      return list.map((c) => ({
-        value: c.id,
-        label: c.label || c.name || c.id,
-        group: "Campos personalizados",
-      }))
+      return list
+        .filter((c) => c.name || c.id)
+        .map((c) => ({
+          value: c.name || c.id, // slug — o que o executor espera
+          label: c.label && c.name ? `${c.label} (${c.name})` : (c.label || c.name || c.id),
+          group: "Campos personalizados",
+        }))
     },
   })
   const builtins = BUILTIN_FIELDS[entity].map((o) => ({ ...o, group: "Campos nativos" }))

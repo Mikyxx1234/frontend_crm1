@@ -82,6 +82,8 @@ export function AudioRecorderButton({
   const audioUrlRef   = useRef<string | null>(null);
   const timerRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const discardingRef = useRef(false);
+  const finalizedRef  = useRef(false);
+  const mimeRef       = useRef<string>("audio/webm");
   const audioElRef    = useRef<HTMLAudioElement | null>(null);
 
   // ── State ─────────────────────────────────────────────────────────
@@ -115,6 +117,31 @@ export function AudioRecorderButton({
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   }, []);
 
+  // ── Finaliza gravação → preview (idempotente) ─────────────────────
+  // Não depende do evento `onstop` do MediaRecorder, que em alguns
+  // webviews (Capacitor/WebView Android) não dispara de forma confiável —
+  // era a causa do "stop não para" (timer/ondas continuavam). Chamado tanto
+  // pelo `onstop` quanto diretamente pelo botão de parar.
+  const finalizeToPreview = useCallback(() => {
+    if (finalizedRef.current) return;
+    if (discardingRef.current) return; // discard() cuida da própria limpeza
+    finalizedRef.current = true;
+
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    stopTimer();
+
+    const blob = new Blob(chunksRef.current, { type: mimeRef.current });
+    if (blob.size === 0) { setRecState("idle"); setSeconds(0); return; }
+
+    audioBlobRef.current = blob;
+    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+    const url = URL.createObjectURL(blob);
+    audioUrlRef.current = url;
+    setPreviewUrl(url);
+    setRecState("preview");
+  }, [stopTimer, setRecState]);
+
   // ── Start recording ───────────────────────────────────────────────
   async function start() {
     if (!conversationId) { toast.error("Selecione uma conversa antes de gravar"); return; }
@@ -131,34 +158,28 @@ export function AudioRecorderButton({
       streamRef.current = stream;
       chunksRef.current = [];
       discardingRef.current = false;
+      finalizedRef.current = false;
 
       const mime = bestMime();
+      mimeRef.current = mime;
       const rec = new MediaRecorder(stream, { mimeType: mime });
 
       rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       rec.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-        stopTimer();
-
         if (discardingRef.current) {
+          // discard() já parou stream/timer; aqui só limpamos os buffers.
           discardingRef.current = false;
+          finalizedRef.current = true;
+          stream.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+          stopTimer();
           chunksRef.current = [];
           audioBlobRef.current = null;
           setRecState("idle");
           setSeconds(0);
           return;
         }
-
-        const blob = new Blob(chunksRef.current, { type: mime });
-        if (blob.size === 0) { setRecState("idle"); return; }
-
-        audioBlobRef.current = blob;
-        if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
-        const url = URL.createObjectURL(blob);
-        audioUrlRef.current = url;
-        setPreviewUrl(url);
-        setRecState("preview");
+        finalizeToPreview();
       };
 
       recorderRef.current = rec;
@@ -172,14 +193,21 @@ export function AudioRecorderButton({
 
   // ── Stop → preview ────────────────────────────────────────────────
   function stopRecording() {
-    if (!recorderRef.current) return;
-    try { recorderRef.current.stop(); } catch { /* already stopped */ }
+    const rec = recorderRef.current;
+    if (!rec) return;
     recorderRef.current = null;
+    // Flush do último buffer e stop; o `onstop` chama finalizeToPreview.
+    try { rec.requestData?.(); } catch { /* noop */ }
+    try { rec.stop(); } catch { /* already stopped */ }
+    // Fallback: se `onstop` não disparar (webviews), finalizamos direto.
+    // finalizeToPreview é idempotente (finalizedRef), então não duplica.
+    window.setTimeout(() => finalizeToPreview(), 250);
   }
 
   // ── Discard ───────────────────────────────────────────────────────
   function discard() {
     discardingRef.current = true;
+    finalizedRef.current = true;
     if (audioElRef.current) { audioElRef.current.pause(); audioElRef.current.currentTime = 0; }
     setPlaying(false);
     if (recorderRef.current) {

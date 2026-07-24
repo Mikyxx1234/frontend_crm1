@@ -507,14 +507,20 @@ export default function InboxV2ClientPage({
 
   // Deep-link inválido (id inexistente ou sem permissão): avisa e limpa a
   // seleção/URL para o supervisor cair no estado vazio, sem chat "fantasma".
+  // IMPORTANTE (F5): só decide que é inválido DEPOIS que a lista carregou
+  // (`listData` definido). No reload, a busca por id pode falhar numa corrida
+  // (ex.: endpoint indisponível) ANTES da lista chegar — resetar aqui nesse
+  // instante derrubava a conversa que o F5 deveria manter aberta. Esperar a
+  // lista settlar garante que a conversa em `rows` (foundActiveRow) tenha
+  // chance de reidratar antes de qualquer reset.
   useEffect(() => {
-    if (needsDeepLinkFetch && deepLinkError) {
+    if (needsDeepLinkFetch && deepLinkError && listData !== undefined) {
       toast.error(
         deepLinkError.message || "Conversa não encontrada ou sem permissão.",
       );
       setActiveId(null);
     }
-  }, [needsDeepLinkFetch, deepLinkError]);
+  }, [needsDeepLinkFetch, deepLinkError, listData]);
 
   const activeRow = stickyRow;
   const activeContactId = activeRow?.contact?.id ?? null;

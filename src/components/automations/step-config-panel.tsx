@@ -30,6 +30,7 @@ import {
   type ConditionRule,
 } from "@/lib/automation-condition";
 import { WebhookStepConfig } from "@/components/automations/webhook-step-config";
+import { useCustomFieldConditionMeta } from "@/components/automations/editor-data";
 import {
   validateEntries as validateWebhookEntries,
   type WebhookBodyEntry,
@@ -2102,6 +2103,9 @@ function ConditionValueInput({
   onChange: (next: string) => void;
 }) {
   const str = value === null || value === undefined ? "" : String(value);
+  // Hook incondicional — o `if` abaixo decide qual JSX retorna, não se o
+  // hook roda (evita violar as regras de hooks).
+  const { byPath: customFieldMeta } = useCustomFieldConditionMeta();
 
   if (field === "contact.tags" || field === "deal.tags") {
     return <TagPickerValue value={str} onChange={onChange} />;
@@ -2216,6 +2220,40 @@ function ConditionValueInput({
           { value: "CUSTOMER", label: "Cliente" },
           { value: "EVANGELIST", label: "Evangelista" },
           { value: "OTHER", label: "Outro" },
+        ]}
+        onValueChange={onChange}
+      />
+    );
+  }
+
+  const customMeta = customFieldMeta.get(field);
+  if (customMeta?.type === "BOOLEAN") {
+    return (
+      <DropdownGlass
+        triggerClassName="h-9 text-[12px] w-full"
+        placeholder="Selecione…"
+        value={str}
+        options={[
+          { value: "", label: "Selecione…" },
+          { value: "true", label: "Sim" },
+          { value: "false", label: "Não" },
+        ]}
+        onValueChange={onChange}
+      />
+    );
+  }
+  if (
+    (customMeta?.type === "SELECT" || customMeta?.type === "MULTI_SELECT") &&
+    customMeta.options.length > 0
+  ) {
+    return (
+      <DropdownGlass
+        triggerClassName="h-9 text-[12px] w-full"
+        placeholder="Selecione…"
+        value={str}
+        options={[
+          { value: "", label: "Selecione…" },
+          ...customMeta.options.map((opt) => ({ value: opt, label: opt })),
         ]}
         onValueChange={onChange}
       />

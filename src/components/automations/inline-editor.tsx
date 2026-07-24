@@ -30,6 +30,7 @@ import {
   useAiAgentOptions,
   useAutomationOptions,
   useConditionFieldOptions,
+  useCustomFieldConditionMeta,
   useCustomFieldTokens,
   useDepartmentOptions,
   useFieldOptions,
@@ -1095,6 +1096,9 @@ function ConditionValue({
   value: string
   onChange: (v: string) => void
 }) {
+  // Hooks incondicionais — o `if` decide qual JSX retorna, não se o hook roda.
+  const { byPath: customFieldMeta } = useCustomFieldConditionMeta()
+
   const isTagField = field.endsWith(".tags") || field.endsWith(".tagIds")
   if (op === "has_tag" || op === "not_has_tag" || isTagField) {
     return <HookSelect hook={useTagOptions} value={value} onChange={onChange} placeholder="Selecione uma tag…" />
@@ -1119,6 +1123,20 @@ function ConditionValue({
   }
   if (field === "conversation.channel") {
     return <ConfigSelect value={value} options={CHANNEL_KIND_OPTS} onChange={onChange} placeholder="Canal…" />
+  }
+  const meta = customFieldMeta.get(field)
+  if (meta?.type === "BOOLEAN") {
+    return <ConfigSelect value={value} options={BOOL_OPTS} onChange={onChange} placeholder="Sim/Não" />
+  }
+  if ((meta?.type === "SELECT" || meta?.type === "MULTI_SELECT") && meta.options.length > 0) {
+    return (
+      <ConfigSelect
+        value={value}
+        options={meta.options.map((opt) => ({ value: opt, label: opt }))}
+        onChange={onChange}
+        placeholder="Selecione…"
+      />
+    )
   }
   return <InputGlass className="nodrag" placeholder="valor" value={value} onChange={(e) => onChange(e.target.value)} />
 }

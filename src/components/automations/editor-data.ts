@@ -227,7 +227,7 @@ export function useAutomationOptions() {
   return { options: q.data ?? [], isLoading: q.isLoading }
 }
 
-type RawCustomField = { id: string; name?: string; label?: string }
+type RawCustomField = { id: string; name?: string; label?: string; type?: string; options?: string[] }
 
 const BUILTIN_FIELDS: Record<"contact" | "deal", Opt[]> = {
   contact: [
@@ -323,4 +323,44 @@ export function useConditionFieldOptions() {
     },
   })
   return { options: q.data ?? [], isLoading: q.isLoading }
+}
+
+export type CustomFieldConditionMeta = { type: string; options: string[] }
+
+/**
+ * Metadados (type + options) dos campos personalizados, indexados pelo
+ * MESMO path usado em `field` da condição (`contactCustomFields.<name>` /
+ * `dealCustomFields.<name>`). Usado pelo widget de valor da condição para
+ * decidir se mostra dropdown (SELECT/MULTI_SELECT/BOOLEAN) ou texto livre.
+ * Reusa a query de `useCustomFieldTokens` (mesma queryKey).
+ */
+export function useCustomFieldConditionMeta() {
+  const contact = useQuery({
+    queryKey: ["editor-custom-fields-raw", "contact"],
+    staleTime: STALE,
+    queryFn: async (): Promise<RawCustomField[]> =>
+      asArray(await getJson("/api/custom-fields?entity=contact")) as RawCustomField[],
+  })
+  const deal = useQuery({
+    queryKey: ["editor-custom-fields-raw", "deal"],
+    staleTime: STALE,
+    queryFn: async (): Promise<RawCustomField[]> =>
+      asArray(await getJson("/api/custom-fields?entity=deal")) as RawCustomField[],
+  })
+  const byPath = new Map<string, CustomFieldConditionMeta>()
+  for (const c of contact.data ?? []) {
+    if (!(c.name || "").trim()) continue
+    byPath.set(`contactCustomFields.${c.name}`, {
+      type: (c.type || "").toUpperCase(),
+      options: c.options ?? [],
+    })
+  }
+  for (const c of deal.data ?? []) {
+    if (!(c.name || "").trim()) continue
+    byPath.set(`dealCustomFields.${c.name}`, {
+      type: (c.type || "").toUpperCase(),
+      options: c.options ?? [],
+    })
+  }
+  return { byPath, isLoading: contact.isLoading || deal.isLoading }
 }

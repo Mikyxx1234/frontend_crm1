@@ -1155,30 +1155,23 @@ function PendingQueueCards({
         </button>
       </div>
 
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
+      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
         {pending.map((p) => (
           <div
             key={p.id}
-            className="flex min-w-0 items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+            className="flex min-w-0 items-center gap-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-1.5 shadow-[var(--glass-shadow-sm)]"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-warn-bg,rgba(217,119,6,0.10))] text-[var(--color-warn,#d97706)]">
-              <IconClockExclamation size={16} />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-warn-bg,rgba(217,119,6,0.10))] text-[var(--color-warn,#d97706)]">
+              <IconClockExclamation size={12} />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">
-                {p.label}
-              </p>
-              <p className="truncate font-body text-[11.5px] text-[var(--text-muted)]">
-                {p.distributionType ? (
-                  <span className="font-semibold text-[var(--text-secondary)]">
-                    {p.distributionType}
-                  </span>
-                ) : null}
-                {p.distributionType ? " · " : ""}
-                {p.attempts > 1 ? `${p.attempts} tentativas · ` : ""}
-                {relativeTime(p.createdAt)}
-              </p>
-            </div>
+            <span className="min-w-0 flex-1 truncate font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
+              {p.label}
+            </span>
+            <span className="shrink-0 truncate font-body text-[11px] text-[var(--text-muted)]">
+              {p.distributionType ? `${p.distributionType} · ` : ""}
+              {p.attempts > 1 ? `${p.attempts}x · ` : ""}
+              {relativeTime(p.createdAt)}
+            </span>
           </div>
         ))}
       </div>

@@ -418,19 +418,8 @@ function DealInline({
             </span>
           </h1>
 
-          {deal.stageDropdownSlot ? (
-            <span className="relative z-30 flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs text-white [&_button]:!text-white [&_button]:hover:!opacity-100">
-              {deal.stageDropdownSlot}
-            </span>
-          ) : (
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs">
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: currentStageColor }}
-              />
-              {stageLabel}
-            </span>
-          )}
+          {/* Pill de etapa REMOVIDA do topo (jul/26): a fase virou o destaque
+              da linha base e é ela quem abre o dropdown de troca de estágio. */}
         </div>
 
         {/* Linha base: ETAPA em destaque + funil (secundário) + responsável.
@@ -439,16 +428,24 @@ function DealInline({
             trocaram de lugar: a etapa atual passou a ser o dado em destaque. */}
         <div className="relative mb-2.5 flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span
-                className="size-2 shrink-0 rounded-full"
-                style={{ backgroundColor: currentStageColor }}
-                aria-hidden
-              />
-              <p className="truncate text-[17px] font-bold uppercase leading-tight tracking-tight text-white">
-                {stageLabel}
-              </p>
-            </div>
+            {deal.stageDropdownSlot ? (
+              /* Fase em destaque = gatilho do dropdown. O slot já renderiza
+                 dot + nome + chevron; aqui só ampliamos pro tamanho do título. */
+              <div className="min-w-0 [&_button]:!max-w-full [&_button]:!gap-2 [&_button]:!text-[17px] [&_button]:!font-bold [&_button]:!uppercase [&_button]:!leading-tight [&_button]:!tracking-tight [&_button]:!text-white [&_button:hover]:!text-white [&_button:hover]:!opacity-90 [&_svg]:!size-4">
+                {deal.stageDropdownSlot}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: currentStageColor }}
+                  aria-hidden
+                />
+                <p className="truncate text-[17px] font-bold uppercase leading-tight tracking-tight text-white">
+                  {stageLabel}
+                </p>
+              </div>
+            )}
             <p className="truncate text-xs text-slate-300">
               {deal.pipelineName ?? "Funil de vendas"}
               {totalStages > 0 ? ` · Etapa ${currentStage} de ${totalStages}` : ""}

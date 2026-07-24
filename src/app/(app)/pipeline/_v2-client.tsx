@@ -1777,12 +1777,16 @@ function DroppableColumn({
                               // mostra o nome completo no hover. Padrão já
                               // usado no inbox v2 (`inbox/_v2-client.tsx`).
                               <TooltipGlass key={t.id} label={t.name} side="top">
+                                {/* [jul/26] Novo design do card: tags com
+                                    preenchimento SÓLIDO (cor cheia + texto
+                                    branco) e cantos mais quadrados
+                                    (rounded-full -> radius-sm). */}
                                 <span
-                                  className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide whitespace-nowrap"
+                                  className="font-display text-[9.5px] font-bold px-2 py-px rounded-[var(--radius-sm)] inline-flex items-center tracking-wide whitespace-nowrap"
                                   style={{
-                                    background: `${t.color || "#5b6ff5"}33`,
-                                    color: t.color || "var(--brand-primary)",
-                                    border: `1px solid ${t.color || "#5b6ff5"}66`,
+                                    background: t.color || "#5b6ff5",
+                                    color: "#fff",
+                                    border: `1px solid ${t.color || "#5b6ff5"}`,
                                   }}
                                 >
                                   {t.name}
@@ -1794,7 +1798,7 @@ function DroppableColumn({
                                 label={hiddenTags.map((t) => t.name).join(", ")}
                                 side="top"
                               >
-                                <span className="inline-flex cursor-default items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px font-display text-[9.5px] font-bold text-[var(--text-muted)]">
+                                <span className="inline-flex cursor-default items-center rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px font-display text-[9.5px] font-bold text-[var(--text-muted)]">
                                   +{hiddenTags.length}
                                 </span>
                               </TooltipGlass>
@@ -1805,7 +1809,7 @@ function DroppableColumn({
                               pipelineId={pipelineId}
                               statusFilter={statusFilter}
                               trigger={
-                                <span className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
+                                <span className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
                                   +
                                 </span>
                               }

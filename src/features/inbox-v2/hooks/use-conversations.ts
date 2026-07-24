@@ -196,11 +196,23 @@ export function useCancelAutomation(contactId: string | null) {
   });
 }
 
-/** Counts das abas (badges no header). */
-export function useTabCounts(enabled = true) {
+/** Counts das abas (badges no header). Recebe os filtros do funil para que os
+ *  badges reflitam o filtro ativo (refetch automático quando os filtros mudam,
+ *  via queryKey). */
+export function useTabCounts(enabled = true, filters?: InboxFilters | null) {
+  const filterKey = filters
+    ? {
+        ownerId: filters.ownerId ?? null,
+        withoutOwner: filters.withoutOwner ?? false,
+        channel: filters.channel ?? null,
+        stageId: filters.stageId ?? null,
+        tagIds: filters.tagIds ?? [],
+        sources: filters.sources ?? [],
+      }
+    : null;
   return useQuery<TabCounts>({
-    queryKey: ["conversations", "tab-counts"],
-    queryFn: fetchTabCounts,
+    queryKey: ["conversations", "tab-counts", filterKey],
+    queryFn: () => fetchTabCounts(filters),
     refetchInterval: 15_000,
     enabled: isPreviewMode() ? true : enabled,
   });

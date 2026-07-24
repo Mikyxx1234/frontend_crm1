@@ -315,6 +315,20 @@ export const EVENT_CONFIG: Record<string, EventVisualConfig> = {
     bg: "bg-pink-soft",
     label: "Ação do agente IA",
   },
+
+  // ── Distribuição Inteligente ─────────────────────────────────────
+  LEAD_DISTRIBUTED: {
+    Icon: UserCheck,
+    ring: "ring-success/30 text-success",
+    bg: "bg-success-soft",
+    label: "Lead distribuído",
+  },
+  LEAD_DISTRIBUTION_FAILED: {
+    Icon: Clock,
+    ring: "ring-ink-subtle/30 text-ink-muted",
+    bg: "bg-bg-subtle",
+    label: "Distribuição pendente",
+  },
 };
 
 export const FALLBACK_CONFIG: EventVisualConfig = {
@@ -531,6 +545,18 @@ export function eventDescription(ev: FeedEvent): string {
       const evt = m.event ? ` • ${m.event}` : "";
       const st = m.status === "COMPLETED_WITH_ERRORS" ? " (com erros)" : "";
       return `${name}${evt}${st}`;
+    }
+    case "LEAD_DISTRIBUTED": {
+      const who = String(ev.newValue ?? ev.entityLabel ?? "").trim();
+      return who ? `para ${who}` : "Distribuição Inteligente";
+    }
+    case "LEAD_DISTRIBUTION_FAILED": {
+      const reason = String(m.reason ?? "");
+      if (reason === "NO_ELIGIBLE_RESPONSIBLE")
+        return "Sem responsável disponível — na fila de espera";
+      if (reason === "NO_DEPARTMENT")
+        return "Sem departamento habilitado — na fila de espera";
+      return "Não distribuído — na fila de espera";
     }
     case "AI_AGENT_ACTION": {
       const actionMap: Record<string, string> = {

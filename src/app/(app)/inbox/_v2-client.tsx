@@ -827,7 +827,7 @@ export default function InboxV2ClientPage({
   const bulkActionsNode = (
     <div className="flex shrink-0 items-center gap-1.5">
       {selectedIds.size > 0 && (
-        <RequirePermission permission="conversation:close">
+        <RequirePermission permission="conversation:resolve">
           <ButtonGlass
             type="button"
             variant="glass"

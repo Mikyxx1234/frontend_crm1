@@ -1712,7 +1712,7 @@ function TabsBar({
 
                 {/* Encerrar / Reabrir conversa */}
                 {conversationId && (
-                  <RequirePermission permission="conversation:close">
+                  <RequirePermission permission="conversation:resolve">
                     <button
                       type="button"
                       disabled={toggleResolve.isPending}

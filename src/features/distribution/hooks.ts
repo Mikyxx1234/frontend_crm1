@@ -1,8 +1,14 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
+  fetchDistributionLogs,
   fetchDistributionSettings,
   fetchPending,
   fetchResponsibles,
@@ -11,6 +17,7 @@ import {
   simulateDistribution,
   updateDistributionSettings,
   updateResponsible,
+  type DistributionLogsPage,
   type DistributionSettings,
 } from "./api";
 import type {
@@ -25,6 +32,19 @@ import type {
 export const DISTRIBUTION_RESPONSIBLES_KEY = ["distribution-responsibles"] as const;
 export const DISTRIBUTION_PENDING_KEY = ["distribution-pending"] as const;
 export const DISTRIBUTION_SETTINGS_KEY = ["distribution-settings"] as const;
+export const DISTRIBUTION_LOGS_KEY = ["distribution-logs"] as const;
+
+export function useDistributionLogs(enabled = true) {
+  return useInfiniteQuery<DistributionLogsPage>({
+    queryKey: DISTRIBUTION_LOGS_KEY,
+    queryFn: ({ pageParam }) =>
+      fetchDistributionLogs((pageParam as string | null) ?? null),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.nextCursor,
+    enabled,
+    staleTime: 10_000,
+  });
+}
 
 export function useDistributionSettings(enabled = true) {
   return useQuery<DistributionSettings>({

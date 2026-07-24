@@ -11,6 +11,7 @@ import {
   IconClockExclamation,
   IconLoader2,
   IconPencil,
+  IconPhone,
   IconPlayerPlay,
   IconRefresh,
   IconRotateClockwise,
@@ -34,6 +35,7 @@ import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortabl
 import { cn } from "@/lib/utils";
 import { useWidgets } from "@/features/widgets/hooks";
 import {
+  useDistributionLogs,
   useDistributionResponsibles,
   useDistributionSettings,
   usePendingDistributions,
@@ -61,7 +63,7 @@ import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const SMART_DISTRIBUTION_SLUG = "smart_distribution";
 
-type DistributionView = "team" | "queue";
+type DistributionView = "team" | "queue" | "logs";
 
 /** Presença efetiva de um responsável (para badge + filtro). */
 type PresenceKey = "ONLINE" | "AWAY" | "OFFLINE" | "INACTIVE";
@@ -219,7 +221,7 @@ export default function DistributionClientPage({
           icon={<IconRoute size={22} />}
           title="Distribuição"
           center={
-            smartInstalled ? (
+            smartInstalled && view === "team" ? (
               <DistributionSearchFilterBar
                 search={search}
                 onSearch={setSearch}
@@ -256,6 +258,10 @@ export default function DistributionClientPage({
                           tone={pending.length > 0 ? "warn" : "muted"}
                         />
                       ),
+                    },
+                    {
+                      value: "logs",
+                      label: <span>Logs</span>,
                     },
                   ]}
                   value={view}
@@ -312,12 +318,16 @@ export default function DistributionClientPage({
                   canManage={canManage}
                   onEdit={(r) => setEditing(r)}
                 />
-              ) : (
+              ) : view === "queue" ? (
                 <PendingQueueCards
                   pending={pending}
                   onRetry={handleRetry}
                   retrying={retryMut.isPending}
                   loading={pendingQuery.isLoading}
+                />
+              ) : (
+                <DistributionLogsList
+                  enabled={isAuthenticated && (isPageMockMode() || smartInstalled)}
                 />
               )}
             </div>
@@ -1091,12 +1101,48 @@ function SimulationPanel({
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60_000);
-  if (min < 1) return "agora";
+  if (min < 1) return "há minutos";
   if (min < 60) return `há ${min} min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `há ${h} h`;
   const d = Math.floor(h / 24);
   return `há ${d} d`;
+}
+
+/** Rótulo + cor (CSS var) por canal de origem da conversa. */
+const CHANNEL_META: Record<string, { label: string; color: string }> = {
+  WHATSAPP: { label: "WhatsApp", color: "var(--color-success)" },
+  INSTAGRAM: { label: "Instagram", color: "var(--brand-primary)" },
+  FACEBOOK: { label: "Facebook", color: "var(--brand-secondary)" },
+  EMAIL: { label: "E-mail", color: "var(--color-warn)" },
+  WEBCHAT: { label: "Webchat", color: "var(--text-muted)" },
+};
+
+function channelMeta(channel: string): { label: string; color: string } | null {
+  if (!channel) return null;
+  const key = channel.toUpperCase();
+  return (
+    CHANNEL_META[key] ?? {
+      label: channel.charAt(0) + channel.slice(1).toLowerCase(),
+      color: "var(--text-muted)",
+    }
+  );
+}
+
+function ChannelBadge({ channel }: { channel: string }) {
+  const meta = channelMeta(channel);
+  if (!meta) return null;
+  return (
+    <span
+      className="hidden shrink-0 items-center rounded-full px-2 py-0.5 font-display text-[11px] font-semibold sm:inline-flex"
+      style={{
+        backgroundColor: `color-mix(in srgb, ${meta.color} 14%, transparent)`,
+        color: meta.color,
+      }}
+    >
+      {meta.label}
+    </span>
+  );
 }
 
 function PendingQueueCards({
@@ -1110,33 +1156,21 @@ function PendingQueueCards({
   retrying: boolean;
   loading?: boolean;
 }) {
-  if (pending.length === 0) {
-    return (
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
-        <EmptyState
-          icon={<IconCircleCheck size={28} />}
-          title="Nenhum atendimento aguardando"
-          description={
-            loading
-              ? "Carregando fila…"
-              : "Todos os atendimentos recebidos foram distribuídos."
-          }
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-      <div className="flex shrink-0 flex-col gap-2 rounded-[var(--radius-xl)] border border-[var(--color-warn)]/40 bg-[var(--color-warn-bg)]/80 p-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-4">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      {/* Header */}
+      <div className="flex shrink-0 flex-col gap-3 border-b border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-warn-bg)] text-[var(--color-warn)]">
-            <IconClockExclamation size={18} />
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-warn)_15%,transparent)] text-[var(--color-warn)]">
+            <IconClockExclamation size={20} />
           </div>
           <div className="min-w-0">
-            <p className="font-display text-[14.5px] font-extrabold text-[var(--text-primary)]">
-              Aguardando distribuição ({pending.length})
-            </p>
+            <h2 className="flex items-center gap-2 font-display text-[14px] font-bold text-[var(--text-primary)]">
+              Aguardando distribuição
+              <span className="rounded-full bg-[color-mix(in_srgb,var(--color-warn)_15%,transparent)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-warn)] tabular-nums">
+                {pending.length}
+              </span>
+            </h2>
             <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
               Atendimentos sem responsável elegível. São redistribuídos quando alguém fica online.
             </p>
@@ -1145,8 +1179,8 @@ function PendingQueueCards({
         <button
           type="button"
           onClick={onRetry}
-          disabled={retrying}
-          className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--color-warn)]/50 bg-[var(--color-warn-bg)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--color-warn)] transition-colors hover:brightness-95 disabled:opacity-50 sm:w-auto"
+          disabled={retrying || pending.length === 0}
+          className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 self-start rounded-full border border-[var(--color-warn)]/50 bg-[color-mix(in_srgb,var(--color-warn)_8%,transparent)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--color-warn)] transition-colors hover:brightness-95 disabled:opacity-50 sm:w-auto sm:self-auto"
         >
           {retrying ? (
             <IconLoader2 size={14} className="animate-spin" />
@@ -1157,27 +1191,171 @@ function PendingQueueCards({
         </button>
       </div>
 
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
-        {pending.map((p) => (
-          <div
-            key={p.id}
-            className="flex min-w-0 items-center gap-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-1.5 shadow-[var(--glass-shadow-sm)]"
-          >
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-warn-bg,rgba(217,119,6,0.10))] text-[var(--color-warn,#d97706)]">
-              <IconClockExclamation size={12} />
-            </div>
-            <span className="min-w-0 flex-1 truncate font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
-              {p.label}
-            </span>
-            <span className="shrink-0 truncate font-body text-[11px] text-[var(--text-muted)]">
-              {p.distributionType ? `${p.distributionType} · ` : ""}
-              {p.attempts > 1 ? `${p.attempts}x · ` : ""}
-              {relativeTime(p.createdAt)}
-            </span>
+      {/* Lista / vazio */}
+      {pending.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+          <div className="flex size-12 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] text-[var(--text-muted)]">
+            <IconPhone size={24} />
           </div>
-        ))}
+          <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
+            {loading ? "Carregando fila…" : "Nenhum atendimento na fila"}
+          </p>
+          <p className="font-body text-[12px] text-[var(--text-muted)]">
+            {loading
+              ? "Buscando atendimentos sem responsável."
+              : "Tudo distribuído. Novos contatos aparecerão aqui."}
+          </p>
+        </div>
+      ) : (
+        <ul className="scrollbar-thin flex min-h-0 flex-1 flex-col divide-y divide-[var(--glass-border)] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          {pending.map((p) => (
+            <li key={p.id}>
+              <div className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-warn)_10%,transparent)] text-[var(--color-warn)]">
+                  <IconClockExclamation size={16} />
+                </span>
+                <span className="min-w-0 flex-1 truncate font-mono text-[13px] font-semibold text-[var(--text-primary)]">
+                  {p.label}
+                </span>
+                <ChannelBadge channel={p.channel} />
+                <span className="ml-auto shrink-0 font-body text-[11px] tabular-nums text-[var(--text-muted)]">
+                  {p.attempts > 1 ? `${p.attempts}x · ` : ""}
+                  {relativeTime(p.createdAt)}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// ── Logs de distribuição ────────────────────────────────────────────────
+
+const DIST_REASON_LABELS: Record<string, string> = {
+  ASSIGNED: "Distribuído",
+  NO_ELIGIBLE_RESPONSIBLE: "Sem responsável disponível",
+  NO_DEPARTMENT: "Sem departamento habilitado",
+  SMART_DISTRIBUTION_NOT_ENABLED: "Módulo desabilitado",
+};
+
+function fmtDateTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function DistributionLogsList({ enabled }: { enabled: boolean }) {
+  const q = useDistributionLogs(enabled);
+  const items = q.data?.pages.flatMap((p) => p.items) ?? [];
+  const loading = q.isLoading;
+
+  return (
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      <div className="flex shrink-0 items-start gap-3 border-b border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-primary)_15%,transparent)] text-[var(--color-primary)]">
+          <IconRoute size={20} />
+        </div>
+        <div className="min-w-0">
+          <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">
+            Logs de distribuição
+          </h2>
+          <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
+            Histórico de todas as distribuições — para quem foi, resultado, dia e horário.
+          </p>
+        </div>
       </div>
-    </div>
+
+      {loading ? (
+        <div className="flex flex-1 items-center justify-center px-4 py-16 text-center">
+          <IconLoader2 size={22} className="animate-spin text-[var(--text-muted)]" />
+        </div>
+      ) : q.error ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+          <IconAlertTriangle size={24} className="text-[var(--color-warn)]" />
+          <p className="font-body text-[12px] text-[var(--text-muted)]">
+            {q.error instanceof Error ? q.error.message : "Erro ao carregar logs."}
+          </p>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+          <div className="flex size-12 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] text-[var(--text-muted)]">
+            <IconRoute size={24} />
+          </div>
+          <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
+            Nenhuma distribuição registrada
+          </p>
+          <p className="font-body text-[12px] text-[var(--text-muted)]">
+            Assim que a Distribuição Inteligente rodar, o histórico aparece aqui.
+          </p>
+        </div>
+      ) : (
+        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <ul className="flex flex-col divide-y divide-[var(--glass-border)]">
+            {items.map((log) => (
+              <li
+                key={log.id}
+                className="flex items-center gap-2.5 px-4 py-2 transition-colors hover:bg-[var(--glass-bg-overlay)]"
+              >
+                <span
+                  className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-full",
+                    log.success
+                      ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
+                      : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
+                  )}
+                >
+                  {log.success ? (
+                    <IconUserCheck size={14} />
+                  ) : (
+                    <IconClockExclamation size={14} />
+                  )}
+                </span>
+
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate font-mono text-[12.5px] font-semibold text-[var(--text-primary)]">
+                    {log.contactPhone || log.contactName || "Atendimento"}
+                  </span>
+                  <span className="truncate font-body text-[11px] text-[var(--text-muted)]">
+                    {log.success
+                      ? `→ ${log.selectedUserName ?? "responsável"}`
+                      : DIST_REASON_LABELS[log.reason] ?? log.reason}
+                  </span>
+                </div>
+
+                <span className="ml-auto shrink-0 whitespace-nowrap font-body text-[11px] tabular-nums text-[var(--text-muted)]">
+                  {fmtDateTime(log.createdAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          {q.hasNextPage && (
+            <div className="flex shrink-0 justify-center border-t border-[var(--glass-border)] p-3">
+              <button
+                type="button"
+                onClick={() => q.fetchNextPage()}
+                disabled={q.isFetchingNextPage}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
+              >
+                {q.isFetchingNextPage ? (
+                  <IconLoader2 size={14} className="animate-spin" />
+                ) : (
+                  <IconRefresh size={14} />
+                )}
+                Carregar mais
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

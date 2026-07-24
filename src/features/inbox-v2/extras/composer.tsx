@@ -32,6 +32,7 @@ import { ActiveBotsButton } from "./active-bots-button";
 import { AudioRecorderButton, type AudioRecordState } from "./audio-recorder-button";
 import { ChannelSelector } from "./channel-selector";
 import { ComposerMenu } from "./composer-menu";
+import { ConversationResolveButton } from "./conversation-resolve-button";
 import {
   TemplateComposePanel,
   whatsappTemplateToPending,
@@ -469,10 +470,11 @@ export function Composer({
         </div>
       )}
 
-      {/* ── Row: tabs (esq.) + seletor de canal + slot direito (assinatura ou badge nota) ── */}
+      {/* ── Row: tabs (esq.) + seletor de canal + slot direito (assinatura ou badge nota) + Encerrar ── */}
       {(onSendNote ||
         (signatureAllowed && !noteMode) ||
-        (!noteMode && (availableChannels?.length ?? 0) > 1)) && (
+        (!noteMode && (availableChannels?.length ?? 0) > 1) ||
+        conversationId) && (
         <div className="mb-2 flex items-center gap-1.5 px-0.5">
           {/* Tabs Mensagem / Nota interna */}
           {onSendNote && (
@@ -620,6 +622,21 @@ export function Composer({
               )}
             </div>
           ) : null}
+
+          {/* Encerrar / Reabrir — topo direito, acima do botão enviar */}
+          {conversationId && (
+            <>
+              <span className="mx-0.5 h-4 w-px shrink-0 bg-[var(--glass-border)]" />
+              <ConversationResolveButton
+                conversationId={conversationId}
+                isResolved={isResolved}
+                departmentId={departmentId}
+                requireTabulationOnClose={requireTabulationOnClose}
+                onReopenNewConversation={onReopenNewConversation}
+                disabled={sending}
+              />
+            </>
+          )}
         </div>
       )}
 

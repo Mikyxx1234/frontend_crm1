@@ -161,3 +161,35 @@ export function updateDistributionSettings(
     "Erro ao salvar configurações de distribuição.",
   );
 }
+
+export interface DistributionLog {
+  id: string;
+  createdAt: string;
+  success: boolean;
+  reason: string;
+  triggerSource: string;
+  selectedUserId: string | null;
+  selectedUserName: string | null;
+  contactId: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  conversationId: string | null;
+}
+
+export interface DistributionLogsPage {
+  items: DistributionLog[];
+  nextCursor: string | null;
+}
+
+export function fetchDistributionLogs(
+  cursor?: string | null,
+  limit = 40,
+): Promise<DistributionLogsPage> {
+  const sp = new URLSearchParams();
+  if (cursor) sp.set("cursor", cursor);
+  sp.set("limit", String(limit));
+  return getJson<DistributionLogsPage>(
+    `/api/distribution/logs?${sp.toString()}`,
+    "Erro ao carregar o histórico de distribuições.",
+  );
+}

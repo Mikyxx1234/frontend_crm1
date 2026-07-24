@@ -144,7 +144,7 @@ export function ConversationActionsMenu({
             </button>
           )}
 
-          <RequirePermission permission="conversation:close">
+          <RequirePermission permission="conversation:resolve">
             <button
               type="button"
               disabled={toggleResolve.isPending}

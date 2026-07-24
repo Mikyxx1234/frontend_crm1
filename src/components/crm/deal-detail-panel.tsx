@@ -356,6 +356,15 @@ export function DealDetailPanel({
   const [dealNative, setDealNative] = useState<Record<string, string>>({})
   // Modo edição para campos personalizados do negócio
   const [dealCustomEditMode, setDealCustomEditMode] = useState(false)
+
+  // Ao trocar de lead, limpa os overrides locais (fieldValues/dealNative).
+  // Esses estados são keyed pelo ID da DEFINIÇÃO do campo (o mesmo em todos
+  // os leads), então sem este reset o valor editado num lead "vazava" para
+  // o próximo até um F5 remontar o componente.
+  useEffect(() => {
+    setFieldValues({})
+    setDealNative({})
+  }, [deal.id])
   const [sectionOrder, reorderSections] = useSectionOrder<SidebarSection>(
     SIDEBAR_STORAGE_KEY,
     SIDEBAR_DEFAULT_ORDER,

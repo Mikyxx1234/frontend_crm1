@@ -3548,7 +3548,8 @@ function MediaStepConfig({
 
   const mediaType = String(draft.mediaType ?? "image");
   const mediaUrl = String(draft.mediaUrl ?? "");
-  const hasFile = mediaUrl.startsWith("/uploads/");
+  const hasFile =
+    mediaUrl.startsWith("/uploads/") || mediaUrl.startsWith("/api/storage/");
   const uploadedFileName = String(draft.uploadedFileName ?? "");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

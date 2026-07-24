@@ -861,7 +861,8 @@ function MediaField({ label, config, onChange }: { label: string; config: Cfg; o
   const mediaType = str(config.mediaType) || "image"
   const mediaUrl = str(config.mediaUrl)
   const uploadedFileName = str(config.uploadedFileName)
-  const hasFile = mediaUrl.startsWith("/uploads/")
+  const hasFile =
+    mediaUrl.startsWith("/uploads/") || mediaUrl.startsWith("/api/storage/")
 
   const patch = (p: Cfg) => onChange({ ...config, ...p })
 

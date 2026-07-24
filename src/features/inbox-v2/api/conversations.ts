@@ -24,18 +24,28 @@ export interface ListConversationsParams extends InboxFilters {
   page?: number;
 }
 
-function buildConversationsUrl(p: ListConversationsParams): string {
-  const q = new URLSearchParams({
-    perPage: String(p.perPage ?? 60),
-    tab: p.tab,
-  });
-  if (p.page && p.page > 1) q.set("page", String(p.page));
+/** Anexa os filtros do funil (responsável, canal, estágio, tags, origem) —
+ *  compartilhado entre a listagem e a contagem para que os badges reflitam
+ *  exatamente o mesmo recorte da lista. */
+function appendInboxServerFilters(
+  q: URLSearchParams,
+  p: Partial<InboxFilters>,
+): void {
   if (p.withoutOwner) q.set("withoutOwner", "1");
   else if (p.ownerId) q.set("ownerId", p.ownerId);
   if (p.channel) q.set("channel", p.channel);
   if (p.stageId) q.set("stageId", p.stageId);
   if (p.tagIds?.length) q.set("tagIds", p.tagIds.join(","));
   if (p.sources?.length) q.set("sources", p.sources.join(","));
+}
+
+function buildConversationsUrl(p: ListConversationsParams): string {
+  const q = new URLSearchParams({
+    perPage: String(p.perPage ?? 60),
+    tab: p.tab,
+  });
+  if (p.page && p.page > 1) q.set("page", String(p.page));
+  appendInboxServerFilters(q, p);
   if (p.sortBy) q.set("sortBy", p.sortBy);
   if (p.sortOrder) q.set("sortOrder", p.sortOrder);
   const s = p.search?.trim();
@@ -57,9 +67,14 @@ export async function listConversations(
   return data as ConversationListResponse;
 }
 
-/** GET /api/conversations?counts=1 */
-export async function fetchTabCounts(): Promise<TabCounts> {
-  const res = await fetch(apiUrl("/api/conversations?counts=1"));
+/** GET /api/conversations?counts=1 (com filtros do funil, para os badges
+ *  refletirem o filtro ativo). */
+export async function fetchTabCounts(
+  filters?: InboxFilters | null,
+): Promise<TabCounts> {
+  const q = new URLSearchParams({ counts: "1" });
+  if (filters) appendInboxServerFilters(q, filters);
+  const res = await fetch(apiUrl(`/api/conversations?${q.toString()}`));
   if (!res.ok) {
     return {
       todos: 0,

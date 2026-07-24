@@ -432,7 +432,7 @@ export default function InboxV2ClientPage({
     });
   }, [rawRows, windowState, sortBy, sortOrder]);
 
-  const { data: tabCounts } = useTabCounts(isAuthenticated);
+  const { data: tabCounts } = useTabCounts(isAuthenticated, filters);
 
   // ── Sticky activeRow ────────────────────────────────────────────
   // A `rows` reflete o filtro da aba atual (ex.: "entrada"). Se o

@@ -111,7 +111,7 @@ function DealTagsTray({
     return (
       <span
         key={t.id}
-        className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold whitespace-nowrap"
+        className="tag-chip inline-flex h-5 min-w-0 max-w-[7rem] shrink items-center overflow-hidden rounded-full px-2 text-[11px] font-semibold"
         style={{
           background: `color-mix(in srgb, ${color} 18%, white)`,
           color: `color-mix(in srgb, ${color} 75%, black)`,
@@ -119,22 +119,26 @@ function DealTagsTray({
         }}
         title={t.name}
       >
-        {t.name}
+        <span className="truncate">{t.name}</span>
       </span>
     );
   }
 
+  // Uma linha só (jul/26): nowrap + overflow-hidden. Chips truncam se faltar
+  // espaço; `+N` e o botão "+" ficam fixos (shrink-0) sempre visíveis.
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
       {visible.map(chip)}
       {overflow.length > 0 && (
         <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
-          <span className="inline-flex h-5 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
+          <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
             +{overflow.length}
           </span>
         </TooltipGlass>
       )}
-      <DealTagsPopover dealId={dealId} currentTags={currentTags} />
+      <span className="shrink-0">
+        <DealTagsPopover dealId={dealId} currentTags={currentTags} />
+      </span>
     </div>
   );
 }
@@ -156,7 +160,7 @@ function ContactTagsTray({
     return (
       <span
         key={t.id}
-        className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold whitespace-nowrap"
+        className="tag-chip inline-flex h-5 min-w-0 max-w-[7rem] shrink items-center overflow-hidden rounded-full px-2 text-[11px] font-semibold"
         style={{
           background: `color-mix(in srgb, ${color} 18%, white)`,
           color: `color-mix(in srgb, ${color} 75%, black)`,
@@ -164,22 +168,26 @@ function ContactTagsTray({
         }}
         title={t.name}
       >
-        {t.name}
+        <span className="truncate">{t.name}</span>
       </span>
     );
   }
 
+  // Uma linha só (jul/26): nowrap + overflow-hidden. Chips truncam se faltar
+  // espaço; `+N` e o botão "+" ficam fixos (shrink-0) sempre visíveis.
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
       {visible.map(chip)}
       {overflow.length > 0 && (
         <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
-          <span className="inline-flex h-5 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
+          <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
             +{overflow.length}
           </span>
         </TooltipGlass>
       )}
-      <ContactTagsPopover contactId={contactId} currentTags={currentTags} triggerVariant="icon" />
+      <span className="shrink-0">
+        <ContactTagsPopover contactId={contactId} currentTags={currentTags} triggerVariant="icon" />
+      </span>
     </div>
   );
 }

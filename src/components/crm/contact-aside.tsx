@@ -495,7 +495,10 @@ function DealInline({
             {deal.dealTagsNode !== undefined && (
               <>
                 <span className="text-slate-400">Tags</span>
-                <span className="flex flex-wrap items-center justify-end gap-1 [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white">
+                {/* Uma linha só (jul/26): nowrap + overflow-hidden. Os chips
+                    truncam quando falta espaço; `+N` e o botão "+" ficam
+                    fixados (shrink-0) dentro do próprio DealTagsTray. */}
+                <span className="flex min-w-0 flex-nowrap items-center justify-end gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white">
                   {deal.dealTagsNode}
                 </span>
               </>

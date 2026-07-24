@@ -90,6 +90,27 @@ export async function fetchTabCounts(
   return res.json() as Promise<TabCounts>;
 }
 
+/**
+ * GET /api/conversations/:id — busca UMA conversa pelo id.
+ * Usado pelo deep-link (?c=<id>): quando a conversa não está na lista/aba
+ * carregada (ex.: um supervisor abrindo o link de outra pessoa), buscamos
+ * a conversa direto para abri-la mesmo assim. 404 = não existe ou sem acesso.
+ */
+export async function getConversation(
+  conversationId: string,
+): Promise<ConversationListRow> {
+  const res = await fetch(apiUrl(`/api/conversations/${conversationId}`));
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string"
+        ? data.message
+        : "Conversa não encontrada ou sem permissão",
+    );
+  }
+  return data as ConversationListRow;
+}
+
 /** GET /api/conversations?perPage=80&sortBy=updatedAt&sortOrder=desc — picker do Forward */
 export async function listConversationsForForwardPicker(): Promise<ConversationListResponse> {
   const res = await fetch(

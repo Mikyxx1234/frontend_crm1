@@ -7,6 +7,7 @@ import {
   IconDotsVertical,
   IconSearch,
   IconCircleCheck,
+  IconLink,
   IconRotateClockwise,
   IconStarFilled,
 } from "@tabler/icons-react";
@@ -104,6 +105,20 @@ export function ConversationActionsMenu({
     }
   }
 
+  // Copia o link absoluto da conversa (?c=<id>) para compartilhar — ex.:
+  // enviar a um supervisor para ele abrir direto esta conversa.
+  async function handleCopyLink() {
+    setOpen(false);
+    if (!conversationId) return;
+    const url = `${window.location.origin}/inbox?c=${conversationId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link da conversa copiado.");
+    } catch {
+      toast.error("Não foi possível copiar o link.");
+    }
+  }
+
   return (
     <div ref={containerRef} className="relative inline-flex">
       <ButtonGlass
@@ -128,6 +143,16 @@ export function ConversationActionsMenu({
           >
             <IconSearch size={16} className="shrink-0 text-[var(--text-muted)]" stroke={2} />
             <span>Buscar na conversa</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            disabled={!conversationId}
+            className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left text-[13px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
+          >
+            <IconLink size={16} className="shrink-0 text-[var(--text-muted)]" stroke={2} />
+            <span>Copiar link da conversa</span>
           </button>
 
           {onOpenFavorites && (

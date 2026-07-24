@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import {
   IconSend,
   IconMoodSmile,
@@ -25,6 +34,7 @@ import {
 } from "@/components/inbox/slash-command-menu";
 import { getContact } from "@/features/inbox-v2/api/misc";
 import { sendAttachment } from "@/features/inbox-v2/api";
+import { useSendAttachment } from "@/features/inbox-v2/hooks";
 import { apiUrl } from "@/lib/api";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
@@ -162,6 +172,9 @@ export function Composer({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Container do composer — usado para detectar clique-fora do slash menu.
   const rootRef = useRef<HTMLDivElement>(null);
+
+  // Upload de anexo (mesmo fluxo do FilePickerButton) — usado ao colar imagem.
+  const pasteAttachment = useSendAttachment(conversationId);
 
   // ── Assinatura do agente (estilo WhatsApp) ───────────────────────
   // Toggle + nome personalizado, persistidos em localStorage (mesmas
@@ -386,6 +399,59 @@ export function Composer({
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     performSend();
+  }
+
+  // Extensão de arquivo a partir do mime da imagem colada.
+  function imageExtFromMime(mime: string): string {
+    const map: Record<string, string> = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/jpg": "jpg",
+      "image/gif": "gif",
+      "image/webp": "webp",
+      "image/bmp": "bmp",
+      "image/svg+xml": "svg",
+    };
+    return map[mime] ?? "png";
+  }
+
+  // Ctrl+V de uma imagem (print/copiar imagem) → envia como anexo pelo
+  // mesmo fluxo do FilePickerButton. Paste de texto normal segue intacto.
+  function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    if (inputDisabled || sending) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    let imageFile: File | null = null;
+    for (const item of Array.from(items)) {
+      if (item.kind === "file" && item.type.startsWith("image/")) {
+        const f = item.getAsFile();
+        if (f) {
+          imageFile = f;
+          break;
+        }
+      }
+    }
+    // Sem imagem no clipboard → deixa o paste de texto acontecer normalmente.
+    if (!imageFile) return;
+
+    // Impede que o binário caia como texto no campo.
+    e.preventDefault();
+
+    if (!conversationId) {
+      toast.error("Selecione uma conversa antes de colar uma imagem");
+      return;
+    }
+
+    const ext = imageExtFromMime(imageFile.type);
+    const fileName = imageFile.name?.trim() || `imagem-colada-${Date.now()}.${ext}`;
+    pasteAttachment.mutate(
+      { file: imageFile, fileName },
+      {
+        onSuccess: () => toast.success("Imagem colada enviada"),
+        onError: (err) => toast.error(err.message || "Falha ao enviar imagem"),
+      },
+    );
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -687,6 +753,7 @@ export function Composer({
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
               }}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               placeholder={
                 noteMode
                   ? "Nota interna (não enviada ao cliente)..."

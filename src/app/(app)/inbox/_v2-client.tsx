@@ -48,6 +48,7 @@ import {
 } from "@/features/inbox-v2/adapters";
 import {
   useBulkConversationAction,
+  useConversationById,
   useConversationFeatures,
   useConversations,
   useContactSidebar,
@@ -383,6 +384,33 @@ export default function InboxV2ClientPage({
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // ── Deep-link por URL (?c=<conversationId>) ─────────────────────
+  // Permite compartilhar o link de uma conversa específica (ex.: enviar a
+  // um supervisor). Na montagem, lê o `?c=` e seleciona a conversa. Depois,
+  // qualquer troca de `activeId` reflete no querystring (history.replaceState,
+  // sem navegação/scroll) — assim a URL da barra é sempre "copiável".
+  const [deepLinkHydrated, setDeepLinkHydrated] = useState(false);
+  useEffect(() => {
+    try {
+      const c = new URLSearchParams(window.location.search).get("c");
+      if (c) setActiveId(c);
+    } catch {
+      /* window indisponível */
+    }
+    setDeepLinkHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!deepLinkHydrated || typeof window === "undefined") return;
+    try {
+      const url = new URL(window.location.href);
+      if (activeId) url.searchParams.set("c", activeId);
+      else url.searchParams.delete("c");
+      window.history.replaceState(null, "", url.toString());
+    } catch {
+      /* URL indisponível */
+    }
+  }, [activeId, deepLinkHydrated]);
+
   // ── Dados ───────────────────────────────────────────────────────
   // Ordem e janela são CLIENT-SIDE — não vão ao servidor (evita refetch
   // ao mudar ordenação e a limitação do `sortBy` do backend).
@@ -444,16 +472,49 @@ export default function InboxV2ClientPage({
   // trocar de conversa explicitamente.
   const [stickyRow, setStickyRow] = useState<ConversationListRow | null>(null);
 
+  // Conversa ativa presente na lista carregada da aba/filtro atual?
+  const foundActiveRow = useMemo(
+    () => (activeId ? rows.find((r) => r.id === activeId) ?? null : null),
+    [rows, activeId],
+  );
+
+  // Deep-link: se o id da URL (ou de qualquer seleção) não estiver na lista
+  // carregada — supervisor abrindo o link de outra aba/filtro/página, ou
+  // conversa que saiu do filtro — busca a conversa direto pelo id para abri-la
+  // mesmo assim. Erro (404 sem acesso / inexistente) é tratado abaixo.
+  const needsDeepLinkFetch = Boolean(activeId) && !foundActiveRow;
+  const {
+    data: deepLinkRow,
+    error: deepLinkError,
+  } = useConversationById(needsDeepLinkFetch ? activeId : null);
+
   useEffect(() => {
     if (!activeId) {
       setStickyRow(null);
       return;
     }
-    const found = rows.find((r) => r.id === activeId);
-    if (found) setStickyRow(found);
-    // Se nao encontrou (saiu do filtro da aba), preserva o snapshot
-    // anterior — NAO sobrescreve com null.
-  }, [activeId, rows]);
+    if (foundActiveRow) {
+      setStickyRow(foundActiveRow);
+      return;
+    }
+    // Não está na lista: usa a conversa buscada pelo id (deep-link), desde
+    // que seja a mesma que está ativa. Enquanto carrega, preserva o snapshot
+    // anterior — NÃO sobrescreve com null.
+    if (deepLinkRow && deepLinkRow.id === activeId) {
+      setStickyRow(deepLinkRow);
+    }
+  }, [activeId, foundActiveRow, deepLinkRow]);
+
+  // Deep-link inválido (id inexistente ou sem permissão): avisa e limpa a
+  // seleção/URL para o supervisor cair no estado vazio, sem chat "fantasma".
+  useEffect(() => {
+    if (needsDeepLinkFetch && deepLinkError) {
+      toast.error(
+        deepLinkError.message || "Conversa não encontrada ou sem permissão.",
+      );
+      setActiveId(null);
+    }
+  }, [needsDeepLinkFetch, deepLinkError]);
 
   const activeRow = stickyRow;
   const activeContactId = activeRow?.contact?.id ?? null;

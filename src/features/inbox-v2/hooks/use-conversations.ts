@@ -11,6 +11,7 @@ import {
 import {
   cancelContactAutomation,
   fetchTabCounts,
+  getConversation,
   getActiveAutomations,
   getContactActiveAutomations,
   getContactAutomationHistory,
@@ -126,6 +127,22 @@ export function useConversations(params: {
     hasNextPage: query.hasNextPage ?? false,
     isFetchingNextPage: query.isFetchingNextPage,
   };
+}
+
+/**
+ * Busca UMA conversa pelo id (deep-link `?c=<id>`). Só habilita quando a
+ * conversa alvo NÃO está na lista carregada — assim o link abre a conversa
+ * mesmo fora da aba/filtro/página atual do usuário. `retry:false` para que
+ * um 404 (sem acesso / inexistente) propague rápido e o inbox trate o erro.
+ */
+export function useConversationById(conversationId: string | null) {
+  return useQuery<ConversationListRow>({
+    queryKey: ["inbox-conversation", conversationId],
+    queryFn: () => getConversation(conversationId as string),
+    enabled: Boolean(conversationId) && !isPreviewMode(),
+    staleTime: 10_000,
+    retry: false,
+  });
 }
 
 export const activeAutomationsKey = (conversationId: string | null) =>

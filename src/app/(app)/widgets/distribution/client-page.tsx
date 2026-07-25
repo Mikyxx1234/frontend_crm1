@@ -35,6 +35,7 @@ import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-too
 import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import { EmptyState } from "@/components/crm/empty-state";
 import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { cn } from "@/lib/utils";
 import { useWidgets } from "@/features/widgets/hooks";
 import {
@@ -107,6 +108,7 @@ export default function DistributionClientPage({
 
   const [editing, setEditing] = useState<DistributionResponsibleDto | null>(null);
   const [simResult, setSimResult] = useState<DistributionResult | null>(null);
+  const [deptConfigOpen, setDeptConfigOpen] = useState(false);
 
   // ── Estado de UI: aba, busca, filtros ──
   const [view, setView] = useState<DistributionView>("team");
@@ -278,6 +280,11 @@ export default function DistributionClientPage({
                   canRetry={pending.length > 0}
                   hasFilters={hasFilters}
                   onClearFilters={clearFilters}
+                  onDepartmentsConfig={
+                    canManage && !useDemo
+                      ? () => setDeptConfigOpen(true)
+                      : undefined
+                  }
                 />
               </div>
             ) : undefined
@@ -305,10 +312,6 @@ export default function DistributionClientPage({
 
               {simResult && (
                 <SimulationPanel result={simResult} onClose={() => setSimResult(null)} />
-              )}
-
-              {view === "team" && canManage && !useDemo && (
-                <DepartmentsDistributionPanel />
               )}
 
               {view === "team" ? (
@@ -344,6 +347,17 @@ export default function DistributionClientPage({
           onClose={() => setEditing(null)}
         />
       )}
+
+      <FormSheet
+        open={deptConfigOpen}
+        onOpenChange={setDeptConfigOpen}
+        title="Departamentos · distribuição automática"
+        description="Configure se a distribuição respeita o departamento da conversa e quais departamentos distribuem automaticamente."
+        icon={<IconUsers size={20} />}
+        size="lg"
+      >
+        <DepartmentsDistributionPanel />
+      </FormSheet>
     </div>
   );
 }
@@ -1007,6 +1021,7 @@ function DistributionActionsMenu({
   canRetry,
   hasFilters,
   onClearFilters,
+  onDepartmentsConfig,
 }: {
   onTest: () => void;
   testing: boolean;
@@ -1015,6 +1030,7 @@ function DistributionActionsMenu({
   canRetry: boolean;
   hasFilters: boolean;
   onClearFilters: () => void;
+  onDepartmentsConfig?: () => void;
 }) {
   return (
     <PageActionsMenu
@@ -1040,12 +1056,22 @@ function DistributionActionsMenu({
           onClick: onRetry,
           disabled: retrying || !canRetry,
         },
+        ...(onDepartmentsConfig
+          ? [
+              {
+                icon: <IconUsers size={13} />,
+                label: "Distribuição por departamento",
+                onClick: onDepartmentsConfig,
+                divider: true,
+              },
+            ]
+          : []),
         {
           icon: <IconX size={13} />,
           label: "Limpar filtros",
           onClick: onClearFilters,
           disabled: !hasFilters,
-          divider: true,
+          divider: !onDepartmentsConfig,
         },
       ]}
     />
@@ -1967,7 +1993,23 @@ function DepartmentsDistributionPanel() {
   const depts = deptsQuery.data ?? [];
   const respectDepartment = settingsQuery.data?.respectDepartment ?? false;
 
-  if (deptsQuery.isLoading || depts.length === 0) return null;
+  if (deptsQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-10 text-[var(--text-muted)]">
+        <IconLoader2 size={18} className="animate-spin" />
+        <span className="font-body text-[13px]">Carregando departamentos…</span>
+      </div>
+    );
+  }
+
+  if (depts.length === 0) {
+    return (
+      <p className="font-body text-[13px] text-[var(--text-muted)]">
+        Nenhum departamento cadastrado. Crie em Configurações → Equipe →
+        Departamentos.
+      </p>
+    );
+  }
 
   const toggle = (id: string, next: boolean) => {
     updateMut.mutate(
@@ -1994,16 +2036,9 @@ function DepartmentsDistributionPanel() {
   };
 
   return (
-    <div className="shrink-0 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <div className="mb-1 flex items-center gap-2">
-        <IconUsers size={16} className="text-[var(--brand-primary)]" />
-        <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
-          Departamentos · distribuição automática
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-3">
       {/* Toggle mestre: respeitar o departamento da conversa quando houver. */}
-      <div className="mb-3 flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
         <div className="min-w-0">
           <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
             Respeitar departamento da conversa
@@ -2021,14 +2056,14 @@ function DepartmentsDistributionPanel() {
         />
       </div>
 
-      <p className="mb-3 font-body text-[12px] text-[var(--text-muted)]">
+      <p className="font-body text-[12px] text-[var(--text-muted)]">
         Ligue para o departamento distribuir automaticamente entre seus membros os
         leads roteados a ele. Desligado = leads desse departamento ficam na fila de
         espera.
       </p>
       <div
         className={cn(
-          "grid gap-2 sm:grid-cols-2 lg:grid-cols-3 transition-opacity",
+          "grid gap-2 sm:grid-cols-2 transition-opacity",
           respectDepartment ? "" : "pointer-events-none opacity-50",
         )}
       >

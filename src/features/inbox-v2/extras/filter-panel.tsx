@@ -25,6 +25,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { TagChip } from "@/components/crm/tag-chip";
 import { ModalPortalContext } from "@/components/ui/modal-portal-context";
 import {
   FieldCard,
@@ -687,31 +688,15 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
       <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex flex-wrap content-start gap-1.5 pt-1">
           {filteredTags.map((tag) => {
-            const color = tag.color || "#6366f1";
             const selected = selectedTagIds.includes(tag.id);
             return (
-              <button
+              <TagChip
                 key={tag.id}
-                type="button"
+                name={tag.name}
+                color={tag.color}
+                selected={selected}
                 onClick={() => toggleTag(tag.id)}
-                aria-pressed={selected}
-                className={cn(
-                  "inline-flex max-w-full items-center gap-1 rounded-[7px] border px-2 py-1 font-display text-[11.5px] font-semibold transition-all",
-                  selected ? "text-white shadow-sm" : "hover:-translate-y-px",
-                )}
-                style={
-                  selected
-                    ? { background: color, borderColor: color }
-                    : {
-                        background: `color-mix(in srgb, ${color} 15%, white)`,
-                        borderColor: `color-mix(in srgb, ${color} 45%, #d9dfeb)`,
-                        color: "#35405b",
-                      }
-                }
-                title={tag.name}
-              >
-                <span className="truncate">{tag.name}</span>
-              </button>
+              />
             );
           })}
           {filteredTags.length === 0 && (

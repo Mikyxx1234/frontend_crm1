@@ -22,6 +22,7 @@ import { KpiCard } from "@/components/crm/kpi-card";
 import { KpiStrip } from "@/components/crm/kpi-strip";
 import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
+import { TagChip } from "@/components/crm/tag-chip";
 import {
   SettingsListFilterBar,
   type SettingsFilterGroup,
@@ -507,22 +508,19 @@ function TagsPage() {
                 </span>
 
                 {/* Nome */}
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span
-                    className="size-4 shrink-0 rounded-full"
-                    style={{ backgroundColor: tag.color }}
-                    aria-hidden
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <TagChip
+                    name={tag.name}
+                    color={tag.color}
+                    size="md"
+                    selected={isSelected}
+                    className="max-w-full"
                   />
-                  <div className="min-w-0 leading-tight">
-                    <span className="block max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
-                      {tag.name}
+                  {isUnused && (
+                    <span className="inline-flex items-center rounded-full bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10px] font-semibold text-[var(--text-muted)]">
+                      Sem uso
                     </span>
-                    {isUnused && (
-                      <span className="inline-flex items-center rounded-full bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10px] font-semibold text-[var(--text-muted)]">
-                        Sem uso
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </div>
 
                 {/* Deals */}
@@ -731,16 +729,7 @@ function TagFormDialog({
           {name.trim() && (
             <div className="flex items-center gap-2">
               <span className="font-display text-[12px] text-[var(--text-muted)]">Prévia:</span>
-              <span
-                className="rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
-                style={{
-                  background: `${color}22`,
-                  color,
-                  border: `1px solid ${color}44`,
-                }}
-              >
-                {name.trim()}
-              </span>
+              <TagChip name={name.trim()} color={color} size="md" />
             </div>
           )}
         </div>

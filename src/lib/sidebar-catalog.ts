@@ -6,11 +6,11 @@ import {
   IconLayoutDashboard,
   IconMail,
   IconMessageCircle,
+  IconRobot,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
 
-import { AutomationBotIcon } from "@/components/icons/automation-bot-icon";
 import { DistributionIcon } from "@/components/icons/distribution-icon";
 import { WidgetsIcon } from "@/components/icons/widgets-icon";
 import type { AppUserRole } from "@/lib/auth-types";
@@ -120,7 +120,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "automations",
     title: "Automações",
     href: "/automations",
-    icon: AutomationBotIcon,
+    icon: IconRobot,
     description: "Fluxos automáticos e gatilhos (inclui campanhas).",
     locked: false,
     allowedRoles: ["ADMIN", "MANAGER"],

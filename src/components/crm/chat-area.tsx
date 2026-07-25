@@ -648,7 +648,7 @@ export function ChatArea({
           bottom nav some via useMobileChatChrome — bloco fica na base. */}
       <div
         data-chat-composer-footer
-        className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.375rem,env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md"
+        className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pt-0.5 backdrop-blur-md"
       >
       {showSessionAlert && <SessionAlert onUseTemplate={onUseTemplate} />}
 
@@ -707,9 +707,9 @@ export function ChatArea({
         </form>
       )}
 
-      {/* Nº da conversa (ticket) ABAIXO do composer, canto inferior esquerdo,
-          em verde — estilo Kommo. Quando encerrada, fica cinza. */}
-      {conversationNumber != null && (
+      {/* Nº da conversa fica na barra do Composer (ao lado de Encerrar/Reabrir)
+          quando há composerSlot — evita duplicar e libera altura do chat. */}
+      {conversationNumber != null && !composerSlot && (
         <div
           className={cn(
             "px-6 pb-0.5 font-display text-[11px] font-semibold tabular-nums max-md:px-3",

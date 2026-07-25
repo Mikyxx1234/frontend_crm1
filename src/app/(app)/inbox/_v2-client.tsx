@@ -1265,13 +1265,6 @@ export default function InboxV2ClientPage({
               phone={chatContact?.phone || null}
               contactId={activeContactId ?? undefined}
             />
-            <TransferPopover
-              conversationId={activeId}
-              currentAssigneeId={activeRow.assignedTo?.id ?? null}
-              currentDepartmentId={
-                activeRow.departmentId ?? activeRow.department?.id ?? null
-              }
-            />
             <ConversationActionsMenu
               conversationId={activeId}
               isResolved={activeRow.status === "RESOLVED"}
@@ -1311,6 +1304,17 @@ export default function InboxV2ClientPage({
               activeRow.department?.requireTabulationOnClose ?? false
             }
             onReopenNewConversation={(newId) => setActiveId(newId)}
+            conversationNumber={activeRow?.number ?? null}
+            transferSlot={
+              <TransferPopover
+                variant="composer"
+                conversationId={activeId}
+                currentAssigneeId={activeRow.assignedTo?.id ?? null}
+                currentDepartmentId={
+                  activeRow.departmentId ?? activeRow.department?.id ?? null
+                }
+              />
+            }
           />
         }
         notesSlot={notesSlot}

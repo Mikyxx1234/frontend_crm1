@@ -3,20 +3,19 @@
 /*
  * TransferPopover (Inbox v2)
  *
- * Botão ao lado do kebab ("...") no header do chat que permite ao operador
- * TRANSFERIR a conversa para um AGENTE e/ou um DEPARTAMENTO. Ao escolher um
- * departamento, o backend define `conversation.departmentId` e aciona a
- * Distribuição Inteligente escopada a esse departamento (um agente elegível
- * recebe a conversa automaticamente).
+ * Permite ao operador TRANSFERIR a conversa para um AGENTE e/ou um
+ * DEPARTAMENTO. No composer usa `variant="composer"` (ícone colorido à
+ * esquerda das tabs); no header legado usa o botão glass.
  *
- * Estilo casa com o dropdown do ConversationActionsMenu (fundo sólido, sombra
- * suave). Usa dropdown relativo + click-outside, como o kebab.
+ * Ao escolher um departamento, o backend define `conversation.departmentId`
+ * e aciona a Distribuição Inteligente escopada a esse departamento.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { IconArrowsExchange, IconCheck } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useTeamUsers, useTransferConversation } from "@/features/inbox-v2/hooks";
 import { useDepartments } from "@/features/conversations-settings/hooks/use-departments";
 
@@ -25,6 +24,11 @@ interface TransferPopoverProps {
   currentAssigneeId?: string | null;
   currentDepartmentId?: string | null;
   disabled?: boolean;
+  /**
+   * `header` — botão glass do header (legado).
+   * `composer` — ícone colorido no padrão Encerrar/Reabrir (barra do composer).
+   */
+  variant?: "header" | "composer";
 }
 
 export function TransferPopover({
@@ -32,6 +36,7 @@ export function TransferPopover({
   currentAssigneeId,
   currentDepartmentId,
   disabled,
+  variant = "header",
 }: TransferPopoverProps) {
   const [open, setOpen] = useState(false);
   const [agentId, setAgentId] = useState<string | null>(null);
@@ -88,20 +93,45 @@ export function TransferPopover({
     );
   }
 
+  const isComposer = variant === "composer";
+
   return (
-    <div ref={containerRef} className="relative inline-flex">
-      <ButtonGlass
-        variant="glass"
-        size="icon"
-        title="Transferir conversa"
-        disabled={disabled || !conversationId}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <IconArrowsExchange size={18} />
-      </ButtonGlass>
+    <div ref={containerRef} className="relative inline-flex shrink-0">
+      {isComposer ? (
+        <TooltipGlass label="Transferir conversa" side="top">
+          <button
+            type="button"
+            aria-label="Transferir conversa"
+            disabled={disabled || !conversationId}
+            onClick={() => setOpen((v) => !v)}
+            className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)] transition-all hover:bg-[var(--brand-primary-dark)] disabled:opacity-50"
+          >
+            <IconArrowsExchange size={15} stroke={2.2} />
+          </button>
+        </TooltipGlass>
+      ) : (
+        <TooltipGlass label="Transferir conversa" side="top">
+          <span className="inline-flex">
+            <ButtonGlass
+              variant="glass"
+              size="icon"
+              disabled={disabled || !conversationId}
+              onClick={() => setOpen((v) => !v)}
+            >
+              <IconArrowsExchange size={18} />
+            </ButtonGlass>
+          </span>
+        </TooltipGlass>
+      )}
 
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-2 w-72 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white shadow-[0_12px_32px_rgba(15,23,42,0.12)] v2-dark:bg-[#1a1f2e]">
+        <div
+          className={
+            isComposer
+              ? "absolute left-0 bottom-full z-30 mb-2 w-72 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white shadow-[0_12px_32px_rgba(15,23,42,0.12)] v2-dark:bg-[#1a1f2e]"
+              : "absolute right-0 top-full z-30 mt-2 w-72 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white shadow-[0_12px_32px_rgba(15,23,42,0.12)] v2-dark:bg-[#1a1f2e]"
+          }
+        >
           <div className="border-b border-[var(--glass-border)] px-3 py-2.5">
             <p className="text-[13px] font-semibold text-[var(--text-primary)]">
               Transferir conversa

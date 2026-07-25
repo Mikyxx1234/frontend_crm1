@@ -8,6 +8,7 @@ import {
   type ClipboardEvent,
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -89,6 +90,8 @@ export function Composer({
   departmentId,
   requireTabulationOnClose,
   onReopenNewConversation,
+  conversationNumber,
+  transferSlot,
 }: {
   conversationId: string | null;
   value: string;
@@ -146,6 +149,10 @@ export function Composer({
    *  chat ativo pro id novo. Sem isto o reopen acontece no backend mas a UI
    *  fica presa no ticket resolvido (que some do colapso) — parece "não reabriu". */
   onReopenNewConversation?: (newConversationId: string) => void;
+  /** Nº do ticket — exibido ao lado de Encerrar/Reabrir. */
+  conversationNumber?: number | null;
+  /** Slot à esquerda das tabs (ex.: TransferPopover). */
+  transferSlot?: ReactNode;
 }) {
   const [noteMode, setNoteMode] = useState(false);
   const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
@@ -300,14 +307,18 @@ export function Composer({
   }, [replyTo?.id]);
 
   // Auto-resize centralizado: recalcula a altura sempre que `value` muda.
-  // Cobre digitação, colar texto grande (capa em 120px + scroll) e o reset
-  // após enviar (value → "" volta pra altura mínima, sem ficar "gigante").
+  // Vazio → altura fixa de 1 linha (senão o placeholder longo, ex. sessão
+  // encerrada, faz o scrollHeight “inchar” a caixa pra ~120px).
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
+    if (!value.trim()) {
+      el.style.height = "24px";
+      return;
+    }
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
-  }, [value]);
+  }, [value, disabled, noteMode]);
 
   // Insere o texto de um modelo interno no campo (editável) e foca o cursor.
   // Se `media` vier junto, encosta o anexo pra ser enviado com a mensagem.
@@ -513,7 +524,7 @@ export function Composer({
   }
 
   return (
-    <div ref={rootRef} className="relative mx-5.5 mb-2 max-md:mx-3 max-md:mb-2">
+    <div ref={rootRef} className="relative mx-3 mb-1 max-md:mx-2 max-md:mb-1 sm:mx-4">
       {/* Painel de validação do template do WhatsApp — flutua acima do composer */}
       {pendingTemplate && conversationId ? (
         <TemplateComposePanel
@@ -615,12 +626,16 @@ export function Composer({
         onToggleFavorite={slash.toggleFavorite}
       />
 
-      {/* ── Row: tabs (esq.) + seletor de canal + slot direito (assinatura ou badge nota) + Encerrar ── */}
-      {(onSendNote ||
+      {/* ── Row: Transferir + tabs (esq.) … Nº + Encerrar/Reabrir (dir.) ── */}
+      {(transferSlot ||
+        onSendNote ||
         (signatureAllowed && !noteMode) ||
         (!noteMode && (availableChannels?.length ?? 0) > 1) ||
-        conversationId) && (
-        <div className="mb-2 flex items-center gap-1.5 px-0.5">
+        conversationId ||
+        conversationNumber != null) && (
+        <div className="mb-1 flex items-center gap-1.5 px-0.5">
+          {transferSlot}
+
           {/* Tabs Mensagem / Nota interna */}
           {onSendNote && (
             <>
@@ -628,26 +643,26 @@ export function Composer({
                 type="button"
                 onClick={() => setNoteMode(false)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[11.5px] font-semibold transition-all",
                   !noteMode
                     ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
                     : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                 )}
               >
-                <IconMessage size={13} />
+                <IconMessage size={12} />
                 Mensagem
               </button>
               <button
                 type="button"
                 onClick={() => setNoteMode(true)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[11.5px] font-semibold transition-all",
                   noteMode
                     ? "border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
                     : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                 )}
               >
-                <IconLock size={13} />
+                <IconLock size={12} />
                 Nota interna
               </button>
             </>
@@ -768,26 +783,44 @@ export function Composer({
             </div>
           ) : null}
 
-          {/* Encerrar / Reabrir — topo direito, acima do botão enviar */}
-          {conversationId && (
-            <>
-              <span className="mx-0.5 h-4 w-px shrink-0 bg-[var(--glass-border)]" />
-              <ConversationResolveButton
-                conversationId={conversationId}
-                isResolved={isResolved}
-                departmentId={departmentId}
-                requireTabulationOnClose={requireTabulationOnClose}
-                onReopenNewConversation={onReopenNewConversation}
-                disabled={sending}
-              />
-            </>
+          {/* Nº da conversa + Encerrar/Reabrir */}
+          {(conversationNumber != null || conversationId) && (
+            <div className="flex shrink-0 items-center gap-1.5">
+              {conversationNumber != null && (
+                <TooltipGlass
+                  label={`Conversa Nº ${conversationNumber}`}
+                  side="top"
+                >
+                  <span
+                    className={cn(
+                      "cursor-default font-display text-[11px] font-semibold tabular-nums",
+                      isResolved
+                        ? "text-[var(--text-muted)]"
+                        : "text-emerald-600 v2-dark:text-emerald-400",
+                    )}
+                  >
+                    Nº {conversationNumber}
+                  </span>
+                </TooltipGlass>
+              )}
+              {conversationId && (
+                <ConversationResolveButton
+                  conversationId={conversationId}
+                  isResolved={isResolved}
+                  departmentId={departmentId}
+                  requireTabulationOnClose={requireTabulationOnClose}
+                  onReopenNewConversation={onReopenNewConversation}
+                  disabled={sending}
+                />
+              )}
+            </div>
           )}
         </div>
       )}
 
       <form
         onSubmit={handleSubmit}
-        className="flex min-h-11 items-center gap-2 rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4.5 py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)]"
+        className="flex min-h-10 items-end gap-1.5 rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-1 backdrop-blur-md shadow-[var(--glass-shadow-sm)] sm:gap-2 sm:px-3"
       >
         {/* Controles padrão — ocultos durante gravação de áudio */}
         {!isAudioActive && (
@@ -806,28 +839,36 @@ export function Composer({
               requireTabulationOnClose={requireTabulationOnClose}
               onReopenNewConversation={onReopenNewConversation}
             />
-            <ButtonGlass
-              type="button"
-              variant="icon"
-              size="icon"
-              title="Emoji"
-              className="h-9 w-9 shrink-0"
-              disabled
-            >
-              <IconMoodSmile size={20} />
-            </ButtonGlass>
+            <TooltipGlass label="Emoji" side="top">
+              <span className="inline-flex">
+                <ButtonGlass
+                  type="button"
+                  variant="icon"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  disabled
+                >
+                  <IconMoodSmile size={20} />
+                </ButtonGlass>
+              </span>
+            </TooltipGlass>
           </>
         )}
 
         {/* Área de texto — oculta durante gravação de áudio */}
         {!isAudioActive && (
-          <div className="flex flex-1 flex-col justify-center">
+          <div className="flex min-h-9 min-w-0 flex-1 flex-col justify-center py-1.5">
             <textarea
               ref={textareaRef}
               rows={1}
               value={value}
               onChange={(e) => {
-                onChange(e.target.value);
+                const next = e.target.value;
+                onChange(next);
+                if (!next.trim()) {
+                  e.target.style.height = "24px";
+                  return;
+                }
                 e.target.style.height = "auto";
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
               }}
@@ -837,12 +878,12 @@ export function Composer({
                 noteMode
                   ? "Nota interna (não enviada ao cliente)..."
                   : inputDisabled
-                    ? "Sessão encerrada — use um template ou Nota interna"
+                    ? "Sessão encerrada — use um template"
                     : placeholder ?? "Escreva uma mensagem ou / para modelos..."
               }
               disabled={inputDisabled || sending}
-              className="w-full resize-none overflow-y-auto border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ minHeight: "24px", maxHeight: "120px", lineHeight: "1.5" }}
+              className="w-full resize-none overflow-y-auto border-none bg-transparent font-body text-sm leading-snug text-[var(--text-primary)] outline-none placeholder:truncate placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ height: "24px", minHeight: "24px", maxHeight: "120px" }}
             />
           </div>
         )}
@@ -863,20 +904,23 @@ export function Composer({
 
         {/* Botão enviar — oculto durante gravação (AudioRecorderButton tem o seu próprio) */}
         {!isAudioActive && (
-          <ButtonGlass
-            type="submit"
-            variant="primary"
-            size="icon"
-            title={noteMode ? "Salvar nota" : "Enviar"}
-            className="h-9 w-9 shrink-0"
-            disabled={
-              (!value.trim() && pendingFiles.length === 0 && !pendingMedia) ||
-              sending ||
-              inputDisabled
-            }
-          >
-            <IconSend size={18} />
-          </ButtonGlass>
+          <TooltipGlass label={noteMode ? "Salvar nota" : "Enviar mensagem"} side="top">
+            <span className="inline-flex">
+              <ButtonGlass
+                type="submit"
+                variant="primary"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                disabled={
+                  (!value.trim() && pendingFiles.length === 0 && !pendingMedia) ||
+                  sending ||
+                  inputDisabled
+                }
+              >
+                <IconSend size={18} />
+              </ButtonGlass>
+            </span>
+          </TooltipGlass>
         )}
       </form>
     </div>

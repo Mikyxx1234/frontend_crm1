@@ -1468,21 +1468,13 @@ export function DealDetailPanel({
 
               <div
                 data-chat-composer-footer
-                className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1.5 backdrop-blur-md"
+                className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.375rem,env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md"
               >
                 {sessionAlertSlot}
                 {composerSlot ? composerSlot : <FallbackComposer />}
-                {/* Linha compacta abaixo do composer: Nº da conversa (verde,
-                    esquerda — estilo Kommo, faltava no deal) + presença "quem
-                    está vendo" (direita). Juntos numa linha só pra ganhar tela. */}
-                <div className="flex items-center justify-between gap-2 px-4 pt-0.5">
-                  {conversationNumber != null ? (
-                    <span className="font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400">
-                      Conversa Nº {conversationNumber}
-                    </span>
-                  ) : (
-                    <span />
-                  )}
+                {/* Nº da conversa sobe pro Composer quando há composerSlot.
+                    Aqui resta só a presença "quem está vendo" à direita. */}
+                <div className="flex items-center justify-end gap-2 px-4 pt-0.5">
                   {viewersSlot}
                 </div>
               </div>

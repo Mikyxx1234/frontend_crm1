@@ -768,7 +768,14 @@ export default function KanbanV2ClientPage({
   // vinculado ou nao ha conversa, o binding retorna nodes de "vazio".
   const dealConversation =
     (dealDetail?.contact as
-      | { conversations?: { id: string; status?: string | null; closedAt?: string | null }[] }
+      | {
+          conversations?: {
+            id: string;
+            status?: string | null;
+            closedAt?: string | null;
+            number?: number | null;
+          }[];
+        }
       | null
       | undefined
     )?.conversations?.[0] ?? null;
@@ -785,6 +792,7 @@ export default function KanbanV2ClientPage({
       dealId: activeDealId,
       isResolved: dealConversation?.status === "RESOLVED",
       closedAt: dealConversation?.closedAt ?? null,
+      conversationNumber: dealConversation?.number ?? null,
       // sessionExpired derivado dentro do hook a partir do session retornado
       // por useMessages (backend = source of truth) com fallback heurístico
       // em lastInboundAt. Não passar override manual aqui.

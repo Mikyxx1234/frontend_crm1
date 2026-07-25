@@ -60,9 +60,10 @@ export function EmojiPicker({
   return (
     <div
       className={cn(
-        "w-full rounded-xl border border-border/60 bg-card p-2 shadow-lg",
+        "w-full rounded-xl border border-border/60 p-2 shadow-2xl",
         className
       )}
+      style={{ backgroundColor: "var(--color-bg-elevated, var(--color-bg, #ffffff))" }}
     >
       <input
         ref={inputRef}
@@ -93,7 +94,7 @@ export function EmojiPicker({
         </div>
       )}
 
-      <div className="grid max-h-[200px] grid-cols-8 gap-0.5 overflow-y-auto">
+      <div className="grid max-h-[320px] grid-cols-9 gap-0.5 overflow-y-auto">
         {filtered.map((emoji, i) => (
           <button
             key={`${emoji}-${i}`}

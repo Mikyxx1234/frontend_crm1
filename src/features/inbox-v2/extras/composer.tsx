@@ -911,7 +911,7 @@ export function Composer({
               </TooltipGlass>
               {emojiOpen && (
                 <div
-                  className="absolute bottom-12 left-0 z-50 w-72"
+                  className="absolute bottom-12 left-0 z-50 w-[380px]"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   <EmojiPicker

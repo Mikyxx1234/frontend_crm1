@@ -1511,7 +1511,14 @@ export default function InboxV2ClientPage({
   const renderCollapsiblePageHeader = (headerNode: React.ReactNode) => (
     <div
       className={cn(
-        "grid shrink-0 overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out",
+        "grid shrink-0 overflow-hidden",
+        // Só ligamos a transição APÓS a hidratação. Sem isso, quando o
+        // usuário tinha `headerCollapsed=true` salvo, o SSR pintava o header
+        // aberto e o `useLayoutEffect` flipava pra `true` logo depois — o
+        // browser animava o fechamento em 300ms ("fantasma": header pisca
+        // visível → colapsa animado → pill aparece). Com o gate, o estado
+        // salvo é aplicado sem animação no primeiro paint pós-hidratação.
+        headerHydrated && "transition-[grid-template-rows,opacity] duration-300 ease-out",
         headerCollapsed
           ? "pointer-events-none grid-rows-[0fr] opacity-0"
           : "grid-rows-[1fr] opacity-100",
@@ -1545,7 +1552,13 @@ export default function InboxV2ClientPage({
   // SUPERIOR DIREITO do outer grid (fora do container com overflow-hidden,
   // senão é cortado). Alinhado verticalmente com o pill da NavRail
   // (`top-6` = mesmo offset dela).
-  const expandHeaderBtn = headerCollapsed ? (
+  // Gate em `headerHydrated`: o default é `headerCollapsed=false`, então
+  // sem gate o pill nunca aparecia indevidamente — MAS, se por qualquer
+  // razão o default virasse `true` ou o SSR divergisse do client, o pill
+  // "fantasma" apareceria por 1 frame. Manter o gate garante que a
+  // decisão de mostrar/esconder o pill nunca dependa de estado
+  // pré-hidratação.
+  const expandHeaderBtn = headerHydrated && headerCollapsed ? (
     <TooltipGlass label="Mostrar cabeçalho" side="left">
       <button
         type="button"

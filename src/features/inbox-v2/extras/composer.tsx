@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { EmojiPicker } from "@/components/inbox/emoji-picker";
 import {
   useSlashMenu,
   SlashCommandMenu,
@@ -160,6 +161,48 @@ export function Composer({
   const [noteMode, setNoteMode] = useState(false);
   const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
   const isAudioActive = audioRecState !== "idle";
+
+  // Painel de emoji — abre acima do botão smiley. Insere no cursor do textarea.
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const emojiWrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!emojiOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (emojiWrapRef.current && !emojiWrapRef.current.contains(e.target as Node)) {
+        setEmojiOpen(false);
+      }
+    }
+    function onEsc(e: globalThis.KeyboardEvent) {
+      if (e.key === "Escape") setEmojiOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [emojiOpen]);
+
+  function insertEmoji(emoji: string) {
+    const el = textareaRef.current;
+    if (!el) {
+      onChange(value + emoji);
+      return;
+    }
+    const start = el.selectionStart ?? value.length;
+    const end = el.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + emoji + value.slice(end);
+    onChange(next);
+    requestAnimationFrame(() => {
+      const node = textareaRef.current;
+      if (!node) return;
+      node.focus();
+      const pos = start + emoji.length;
+      node.setSelectionRange(pos, pos);
+      node.style.height = "auto";
+      node.style.height = `${Math.min(node.scrollHeight, 120)}px`;
+    });
+  }
 
   // Anexo "encostado" por um modelo interno / mensagem rápida escolhido no
   // "/" ou no menu "+". Vai junto com o texto quando o operador enviar.
@@ -844,19 +887,43 @@ export function Composer({
               onReopenNewConversation={onReopenNewConversation}
               onResolved={onResolved}
             />
-            <TooltipGlass label="Emoji" side="top">
-              <span className="inline-flex">
-                <ButtonGlass
-                  type="button"
-                  variant="icon"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  disabled
+            <div ref={emojiWrapRef} className="relative">
+              <TooltipGlass label="Emoji" side="top">
+                <span className="inline-flex">
+                  <ButtonGlass
+                    type="button"
+                    variant="icon"
+                    size="icon"
+                    className={cn(
+                      "h-9 w-9 shrink-0",
+                      emojiOpen && "text-[var(--brand-primary)]",
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEmojiOpen((v) => !v);
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    disabled={inputDisabled || sending}
+                  >
+                    <IconMoodSmile size={20} />
+                  </ButtonGlass>
+                </span>
+              </TooltipGlass>
+              {emojiOpen && (
+                <div
+                  className="absolute bottom-12 left-0 z-50 w-72"
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
-                  <IconMoodSmile size={20} />
-                </ButtonGlass>
-              </span>
-            </TooltipGlass>
+                  <EmojiPicker
+                    open={emojiOpen}
+                    onPick={(emoji) => {
+                      insertEmoji(emoji);
+                      setEmojiOpen(false);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           </>
         )}
 

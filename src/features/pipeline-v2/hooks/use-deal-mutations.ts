@@ -268,10 +268,21 @@ export function useDealTags() {
 }
 
 /**
- * Patcha tags de um deal em TODOS os boards em cache que começam com
- * `["pipeline-board", ...]` — cobre variações de sort/status/pipeline
- * sem depender de matching exato de chave. Usado por add/remove tag
- * pra ganhar update otimista instantâneo.
+ * Chaves de cache que carregam `BoardStageDto[]` — precisamos cobrir
+ * todas porque o board visível pode vir de qualquer uma dependendo do
+ * modo (normal, busca, filtros avançados). Patchar/invalidar só a
+ * regular deixava o clique do popover de tags "invertendo" (add↔remove)
+ * porque `currentIds` derivava de cache stale.
+ */
+const BOARD_CACHE_KEYS = [
+  ["pipeline-board"],
+  ["pipeline-board-search"],
+  ["pipeline-board-filtered"],
+] as const;
+
+/**
+ * Patcha tags de um deal em TODOS os caches de board (regular, busca,
+ * filtrado). Usado por add/remove tag pra update otimista instantâneo.
  */
 function patchDealTagsInBoards(
   qc: ReturnType<typeof useQueryClient>,
@@ -280,27 +291,33 @@ function patchDealTagsInBoards(
     tags: { id: string; name: string; color: string }[],
   ) => { id: string; name: string; color: string }[],
 ) {
-  const boards = qc.getQueriesData<BoardStageDto[]>({
-    queryKey: ["pipeline-board"],
-  });
-  for (const [key, data] of boards) {
-    if (!Array.isArray(data)) continue;
-    let touched = false;
-    const next = data.map((stage) => {
-      const nextDeals = stage.deals.map((d) => {
-        if (d.id !== dealId) return d;
-        touched = true;
-        return { ...d, tags: patch(d.tags ?? []) };
+  for (const rootKey of BOARD_CACHE_KEYS) {
+    const boards = qc.getQueriesData<BoardStageDto[]>({ queryKey: rootKey });
+    for (const [key, data] of boards) {
+      if (!Array.isArray(data)) continue;
+      let touched = false;
+      const next = data.map((stage) => {
+        const nextDeals = stage.deals.map((d) => {
+          if (d.id !== dealId) return d;
+          touched = true;
+          return { ...d, tags: patch(d.tags ?? []) };
+        });
+        return { ...stage, deals: nextDeals };
       });
-      return { ...stage, deals: nextDeals };
-    });
-    if (touched) qc.setQueryData(key, next);
+      if (touched) qc.setQueryData(key, next);
+    }
   }
 }
 
-export function useAddDealTag(pipelineId: string | null, status: StatusFilter = "OPEN") {
+/** Invalida todos os caches de board (regular, busca, filtrado). */
+function invalidateAllBoards(qc: ReturnType<typeof useQueryClient>) {
+  for (const rootKey of BOARD_CACHE_KEYS) {
+    qc.invalidateQueries({ queryKey: rootKey });
+  }
+}
+
+export function useAddDealTag(_pipelineId: string | null, _status: StatusFilter = "OPEN") {
   const qc = useQueryClient();
-  const boardK = boardKey(pipelineId, status);
 
   return useMutation<
     { ok: true },
@@ -335,20 +352,19 @@ export function useAddDealTag(pipelineId: string | null, status: StatusFilter = 
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["deal-tags-v2"] });
       qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
-      qc.invalidateQueries({ queryKey: boardK });
+      invalidateAllBoards(qc);
     },
     onError: (err, vars) => {
       // Rollback: refaz o board para desfazer o otimista.
-      qc.invalidateQueries({ queryKey: boardK });
+      invalidateAllBoards(qc);
       qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
       toast.error(err.message || "Falha ao adicionar tag");
     },
   });
 }
 
-export function useRemoveDealTag(pipelineId: string | null, status: StatusFilter = "OPEN") {
+export function useRemoveDealTag(_pipelineId: string | null, _status: StatusFilter = "OPEN") {
   const qc = useQueryClient();
-  const boardK = boardKey(pipelineId, status);
 
   return useMutation<{ ok: true }, Error, { dealId: string; tagId: string }>({
     mutationFn: ({ dealId, tagId }) => removeDealTag(dealId, tagId),
@@ -359,10 +375,10 @@ export function useRemoveDealTag(pipelineId: string | null, status: StatusFilter
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
-      qc.invalidateQueries({ queryKey: boardK });
+      invalidateAllBoards(qc);
     },
     onError: (err, vars) => {
-      qc.invalidateQueries({ queryKey: boardK });
+      invalidateAllBoards(qc);
       qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
       toast.error(err.message || "Falha ao remover tag");
     },

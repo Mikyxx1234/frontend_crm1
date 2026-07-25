@@ -14,7 +14,7 @@ import { IconLoader2, IconPlus, IconTrash } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiUrl } from "@/lib/api";
@@ -249,7 +249,7 @@ export function CategoryDialog({
   }, [allocs, units]);
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       size="md"
@@ -503,6 +503,6 @@ export function CategoryDialog({
           )}
         </div>
       </div>
-    </FormSheet>
+    </FormDialog>
   );
 }

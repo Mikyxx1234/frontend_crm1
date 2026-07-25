@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Switch } from "@/components/ui/switch";
 import type { ApiChannel } from "@/components/channels/types";
 import type { ChannelType } from "@/lib/prisma-enum-types";
@@ -150,10 +150,11 @@ export function PipelineChannelsModal({
   const showList = !isLoading && !isError && channels.length > 0;
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={(o) => { if (!o) onClose(); }}
       busy={mutation.isPending}
+      size="lg"
       icon={<IconFilter size={20} className="text-[var(--brand-primary)]" />}
       title={<>Canais do funil{pipelineName ? <> · <span className="text-[var(--brand-primary-dark)]">{pipelineName}</span></> : null}</>}
       description="Selecione os canais cujos novos leads devem entrar neste funil. Conversas que já existem no CRM não são movidas."
@@ -272,6 +273,6 @@ export function PipelineChannelsModal({
             </ul>
           ) : null}
       </div>
-    </FormSheet>
+    </FormDialog>
   );
 }

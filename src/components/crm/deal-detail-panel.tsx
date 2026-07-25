@@ -1192,12 +1192,12 @@ export function DealDetailPanel({
                                             <div
                                               key={field.fieldId}
                                               className={cn(
-                                                "flex items-center justify-between gap-2 py-2 text-sm",
+                                                "flex min-w-0 max-w-full items-center justify-between gap-2 py-2 text-sm",
                                                 fieldIdx > 0 && "border-t border-slate-50",
                                               )}
                                             >
                                               <span className="w-[38%] shrink-0 text-[12px] font-medium leading-tight text-slate-500">{field.label}</span>
-                                              <div className="min-w-0 flex-1">
+                                              <div className="min-w-0 max-w-full flex-1">
                                                 {dealCustomEditMode && canEdit ? (
                                                   <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                                 ) : hl ? (
@@ -1205,7 +1205,7 @@ export function DealDetailPanel({
                                                 ) : canEdit ? (
                                                   <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                                 ) : (
-                                                  <span className="block min-w-0 break-words [overflow-wrap:anywhere] font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
+                                                  <span className="block min-w-0 max-w-full break-words [overflow-wrap:anywhere] font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
                                                 )}
                                               </div>
                                             </div>
@@ -1223,14 +1223,14 @@ export function DealDetailPanel({
                                             <div
                                               key={field.fieldId}
                                               className={cn(
-                                                "flex flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
+                                                "flex min-w-0 max-w-full flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
                                                 isLong && "col-span-2",
                                               )}
                                             >
                                               <span className="text-[11px] font-medium text-slate-500">
                                                 {field.label}
                                               </span>
-                                              <div className="min-w-0 w-full">
+                                              <div className="min-w-0 w-full max-w-full">
                                                 {dealCustomEditMode && canEdit ? (
                                                   <InlineFieldEditor
                                                     fieldId={field.fieldId}
@@ -1265,7 +1265,7 @@ export function DealDetailPanel({
                                                     placeholder="+ Adicionar"
                                                   />
                                                 ) : (
-                                                  <span className="block min-w-0 break-words [overflow-wrap:anywhere] font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                  <span className="block min-w-0 max-w-full break-words [overflow-wrap:anywhere] font-display text-[13px] font-bold text-[var(--text-primary)]">
                                                     {currentValue || "—"}
                                                   </span>
                                                 )}
@@ -1294,7 +1294,7 @@ export function DealDetailPanel({
                                           <div className="flex flex-col gap-3">
                                             {customFieldGroups.map((g) => {
                                               const grid = (
-                                                <div className="grid grid-cols-2 gap-2">
+                                                <div className="grid min-w-0 grid-cols-2 gap-2">
                                                   {g.fields.map(renderGridCard)}
                                                 </div>
                                               )
@@ -1468,21 +1468,13 @@ export function DealDetailPanel({
 
               <div
                 data-chat-composer-footer
-                className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1.5 backdrop-blur-md"
+                className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.375rem,env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md"
               >
                 {sessionAlertSlot}
                 {composerSlot ? composerSlot : <FallbackComposer />}
-                {/* Linha compacta abaixo do composer: Nº da conversa (verde,
-                    esquerda — estilo Kommo, faltava no deal) + presença "quem
-                    está vendo" (direita). Juntos numa linha só pra ganhar tela. */}
-                <div className="flex items-center justify-between gap-2 px-4 pt-0.5">
-                  {conversationNumber != null ? (
-                    <span className="font-display text-[11px] font-semibold tabular-nums text-emerald-600 v2-dark:text-emerald-400">
-                      Conversa Nº {conversationNumber}
-                    </span>
-                  ) : (
-                    <span />
-                  )}
+                {/* Nº da conversa sobe pro Composer quando há composerSlot.
+                    Aqui resta só a presença "quem está vendo" à direita. */}
+                <div className="flex items-center justify-end gap-2 px-4 pt-0.5">
                   {viewersSlot}
                 </div>
               </div>

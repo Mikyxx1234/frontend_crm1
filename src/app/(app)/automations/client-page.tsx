@@ -28,6 +28,7 @@ import { PageDemoBanner } from "@/components/crm/page-demo-banner"
 import { AutomationsGallery } from "@/components/crm/automations-gallery"
 import { EmptyState } from "@/components/crm/empty-state"
 import { PaginationGlass } from "@/components/crm/pagination-glass"
+import { KpiCard, type KpiTone } from "@/components/crm/kpi-card"
 import { cn } from "@/lib/utils"
 import {
   useAutomations,
@@ -37,81 +38,94 @@ import {
   useToggleAutomation,
 } from "@/features/automations-v2/hooks"
 import { dtoToAutomation } from "@/features/automations-v2/automation-adapter"
-import { MOCK_AUTOMATIONS_PAGE } from "@/features/automations-v2/mock-automations"
 import { isPageMockMode } from "@/lib/page-mock-mode"
 import { AUTOMATION_TRIGGER_TYPES } from "@/lib/automation-workflow"
 import { useConfirm } from "@/components/ui/confirm-dialog"
 
+const DEFAULT_PER_PAGE = 25
 const FILTERS = ["Todas", "Ativas", "Pausadas"] as const
+
+type StatusFilter = 0 | 1 | 2
 
 export default function V2AutomationsClientPage() {
   const router = useRouter()
   const { ready, isManagerUp } = useRequireManager()
   const [query, setQuery] = useState("")
-  const [filter, setFilter] = useState(0)
+  const [debounced, setDebounced] = useState("")
+  const [filter, setFilter] = useState<StatusFilter>(0)
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
+  const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE)
   const [isImporting, setIsImporting] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
 
-  const automationsQuery = useAutomations({ perPage: 200 })
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query.trim()), 250)
+    return () => clearTimeout(t)
+  }, [query])
+
+  useEffect(() => {
+    setPage(1)
+  }, [debounced, filter, perPage])
+
+  const activeParam =
+    filter === 1 ? true : filter === 2 ? false : undefined
+
+  // Lista paginada de verdade (API: page/perPage/total; mock respeita os mesmos params).
+  const listQuery = useAutomations({
+    page,
+    perPage,
+    search: debounced || undefined,
+    active: activeParam,
+  })
+
+  // Métricas/KPIs e contagens do popover — lote amplo, sem filtros da lista.
+  const metricsQuery = useAutomations({ page: 1, perPage: 200 })
+
   const toggleMutation = useToggleAutomation()
   const createMutation = useCreateAutomation()
   const replaceMutation = useReplaceAutomation()
   const deleteMutation = useDeleteAutomation()
   const { confirm, dialog: confirmDialog } = useConfirm()
 
-  const realDtos = automationsQuery.data?.items ?? []
-  const hasFilters = query.trim().length > 0 || filter !== 0
+  const hasFilters = debounced.length > 0 || filter !== 0
   // Automacoes: nao mostra mocks pra org nova (realCount=0). Isso confundia
   // usuarios reais em prod, que viam automacoes "fantasma" sem conseguir
   // desligar/apagar. Modo demo agora exige ativacao explicita (URL
   // ?mock=1, env NEXT_PUBLIC_MOCK_PAGES=1 ou preview v0).
   const isDemo = isPageMockMode() && !hasFilters
 
-  const items = useMemo(
-    () => (isDemo ? MOCK_AUTOMATIONS_PAGE.items : realDtos).map(dtoToAutomation),
-    [isDemo, realDtos],
+  const listItems = useMemo(
+    () => (listQuery.data?.items ?? []).map(dtoToAutomation),
+    [listQuery.data?.items],
+  )
+
+  const metricsItems = useMemo(
+    () => (metricsQuery.data?.items ?? []).map(dtoToAutomation),
+    [metricsQuery.data?.items],
   )
 
   const summary = useMemo(() => {
-    const active = items.filter((a) => a.active)
-    const runsToday = items.reduce((sum, a) => sum + a.runsToday, 0)
+    const active = metricsItems.filter((a) => a.active)
+    const runsToday = metricsItems.reduce((sum, a) => sum + a.runsToday, 0)
     const avgSuccess =
-      items.length === 0
+      metricsItems.length === 0
         ? 0
-        : Math.round(items.reduce((sum, a) => sum + a.successRate, 0) / items.length)
+        : Math.round(
+            metricsItems.reduce((sum, a) => sum + a.successRate, 0) /
+              metricsItems.length,
+          )
     return {
+      total: metricsQuery.data?.total ?? metricsItems.length,
       active: active.length,
-      paused: items.length - active.length,
+      paused: metricsItems.length - active.length,
       runsToday,
       avgSuccess,
     }
-  }, [items])
+  }, [metricsItems, metricsQuery.data?.total])
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return items.filter((a) => {
-      const matchQuery =
-        !q || a.name.toLowerCase().includes(q) || a.trigger.toLowerCase().includes(q)
-      const matchFilter = filter === 0 || (filter === 1 ? a.active : !a.active)
-      return matchQuery && matchFilter
-    })
-  }, [items, query, filter])
-
-  // Paginação client-side (a query já traz até 200 itens numa tacada).
-  const lastPage = Math.max(1, Math.ceil(filtered.length / perPage))
+  const total = listQuery.data?.total ?? 0
+  const lastPage = Math.max(1, Math.ceil(total / perPage))
   const safePage = Math.min(page, lastPage)
-  const paged = useMemo(
-    () => filtered.slice((safePage - 1) * perPage, safePage * perPage),
-    [filtered, safePage, perPage],
-  )
-
-  // Volta pra página 1 quando muda busca/filtro/tamanho — evita ficar numa
-  // página vazia após reduzir o conjunto.
-  useEffect(() => {
-    setPage(1)
-  }, [query, filter, perPage])
 
   const handleToggle = (id: string) => {
     if (isDemo) {
@@ -129,7 +143,9 @@ export default function V2AutomationsClientPage() {
       toast.info("Modo demonstração — exclusão indisponível.")
       return
     }
-    const target = items.find((a) => a.id === id)
+    const target =
+      listItems.find((a) => a.id === id) ??
+      metricsItems.find((a) => a.id === id)
     const name = target?.name ?? "esta automação"
 
     const ok = await confirm({
@@ -304,17 +320,20 @@ export default function V2AutomationsClientPage() {
     }
   }
 
-  const isLoading = automationsQuery.isLoading
-  const isError = automationsQuery.isError && !isDemo
-  const isEmpty = !isLoading && !isError && !isDemo && items.length === 0
+  const isLoading = listQuery.isLoading && listItems.length === 0
+  const isError = listQuery.isError && !isDemo
+  const isEmpty =
+    !isLoading && !isError && total === 0 && !hasFilters
+  const isEmptyFiltered =
+    !isLoading && !isError && total === 0 && hasFilters
 
   if (ready && !isManagerUp) return <RestrictedScreen />
 
   return (
-    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_1fr] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailSpacer />
 
-      <main className="flex min-w-0 flex-col gap-3 overflow-hidden sm:gap-4">
+      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <input
           ref={importInputRef}
           type="file"
@@ -327,17 +346,23 @@ export default function V2AutomationsClientPage() {
           icon={<IconRobot size={22} stroke={2.2} />}
           title="Automações"
           center={
-            <AutomationsSearchFilterBar
-              search={query}
-              onSearch={setQuery}
-              filter={filter}
-              onFilterChange={setFilter}
-              counts={{ all: items.length, active: summary.active, paused: summary.paused }}
-              onClearAll={() => {
-                setQuery("")
-                setFilter(0)
-              }}
-            />
+            <div className="flex w-full justify-start">
+              <AutomationsSearchFilterBar
+                search={query}
+                onSearch={setQuery}
+                filter={filter}
+                onFilterChange={(v) => setFilter(v as StatusFilter)}
+                counts={{
+                  all: summary.total,
+                  active: summary.active,
+                  paused: summary.paused,
+                }}
+                onClearAll={() => {
+                  setQuery("")
+                  setFilter(0)
+                }}
+              />
+            </div>
           }
           actions={
             <div className="flex items-center gap-2">
@@ -362,12 +387,10 @@ export default function V2AutomationsClientPage() {
           }
         />
 
-        <AutomationsMiniDash
-          active={summary.active}
-          total={items.length}
-          runsToday={summary.runsToday}
-          avgSuccess={summary.avgSuccess}
-          paused={summary.paused}
+        <AutomationsKpis
+          summary={summary}
+          filter={filter}
+          onFilterChange={(v) => setFilter(v)}
         />
 
         {isDemo && (
@@ -376,76 +399,66 @@ export default function V2AutomationsClientPage() {
           </PageDemoBanner>
         )}
 
-        {isLoading && (
-          <div className="flex flex-col gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-[72px] animate-pulse rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)]"
-              />
-            ))}
+        {isLoading ? (
+          <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
+        ) : isError ? (
+          <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
+            {listQuery.error instanceof Error
+              ? listQuery.error.message
+              : "Erro ao carregar automações."}
           </div>
-        )}
-
-        {isError && (
-          <EmptyState
-            icon={<IconBolt size={28} />}
-            title="Erro ao carregar automações"
-            description={
-              automationsQuery.error?.message ?? "Tente recarregar a página."
-            }
-          />
-        )}
-
-        {isEmpty && (
-          <EmptyState
-            icon={<IconBolt size={28} />}
-            title="Nenhuma automação ainda"
-            description="Crie sua primeira automação ou importe um fluxo em .json."
-            action={
-              <Link
-                href="/automations/new"
-                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white transition-colors hover:bg-[var(--brand-primary-dark)]"
-              >
-                <IconPlus size={16} /> Nova automação
-              </Link>
-            }
-          />
-        )}
-
-        {!isLoading && !isError && filtered.length > 0 && (
-          <>
-            <AutomationsGallery
-              automations={paged}
-              onToggle={handleToggle}
-              onDelete={handleDelete}
+        ) : isEmpty ? (
+          <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+            <EmptyState
+              icon={<IconRobot size={28} />}
+              title="Nenhuma automação ainda"
+              description="Crie sua primeira automação ou importe um fluxo em .json."
+              action={
+                <Link
+                  href="/automations/new"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white transition-colors hover:bg-[var(--brand-primary-dark)]"
+                >
+                  <IconPlus size={16} /> Nova automação
+                </Link>
+              }
             />
-            {filtered.length > 10 && (
-              <PaginationGlass
-                className="shrink-0 pt-1"
-                total={filtered.length}
-                entityLabel="automações"
-                page={safePage}
-                lastPage={lastPage}
-                canPrev={safePage > 1}
-                canNext={safePage < lastPage}
-                onPrev={() => setPage((p) => Math.max(1, p - 1))}
-                onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
-                perPage={perPage}
-                onPerPageChange={setPerPage}
-                perPageOptions={[10, 25, 50]}
-              />
-            )}
-          </>
-        )}
-
-        {!isLoading && !isError && filtered.length === 0 && items.length > 0 && (
-          <EmptyState
-            icon={<IconBolt size={28} />}
-            title="Nenhum resultado"
-            description="Nenhuma automação corresponde à busca ou ao filtro selecionado."
+          </div>
+        ) : isEmptyFiltered ? (
+          <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+            <EmptyState
+              icon={<IconRobot size={28} />}
+              title="Nenhum resultado"
+              description={
+                debounced
+                  ? `Sem resultados para "${debounced}".`
+                  : "Nenhuma automação corresponde ao filtro selecionado."
+              }
+            />
+          </div>
+        ) : (
+          <AutomationsGallery
+            automations={listItems}
+            onToggle={handleToggle}
+            onDelete={handleDelete}
           />
         )}
+
+        <PaginationGlass
+          className="shrink-0"
+          total={total}
+          entityLabel="automações"
+          page={safePage}
+          lastPage={lastPage}
+          canPrev={safePage > 1}
+          canNext={safePage < lastPage}
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+          perPage={perPage}
+          onPerPageChange={(value) => {
+            setPerPage(value)
+            setPage(1)
+          }}
+        />
       </main>
 
       {confirmDialog}
@@ -453,99 +466,86 @@ export default function V2AutomationsClientPage() {
   )
 }
 
-// ── Mini-dash ────────────────────────────────────────────────────────────
+// ── KPIs (mesmo KpiCard de Contatos/Empresas) ────────────────────────────
 
-function AutomationsMiniDash({
-  active,
-  total,
-  runsToday,
-  avgSuccess,
-  paused,
+function AutomationsKpis({
+  summary,
+  filter,
+  onFilterChange,
 }: {
-  active: number
-  total: number
-  runsToday: number
-  avgSuccess: number
-  paused: number
+  summary: {
+    total: number
+    active: number
+    paused: number
+    runsToday: number
+    avgSuccess: number
+  }
+  filter: StatusFilter
+  onFilterChange: (v: StatusFilter) => void
 }) {
-  const coverage = total > 0 ? Math.round((active / total) * 100) : 0
   const cards: {
     key: string
     label: string
     value: string
-    percent?: number
-    accent: string
+    hint?: string
+    tone: KpiTone
     icon: React.ReactNode
+    segment?: StatusFilter
   }[] = [
     {
       key: "active",
-      label: `Ativas · de ${total}`,
-      value: active.toLocaleString("pt-BR"),
-      percent: coverage,
-      accent: "var(--brand-primary)",
-      icon: <IconBolt size={16} stroke={2.2} />,
+      label: "Ativas",
+      value: summary.active.toLocaleString("pt-BR"),
+      hint: `de ${summary.total.toLocaleString("pt-BR")}`,
+      tone: "violet",
+      icon: <IconBolt size={20} stroke={2.2} />,
+      segment: 1,
     },
     {
       key: "runs",
       label: "Execuções hoje",
-      value: runsToday.toLocaleString("pt-BR"),
-      accent: "var(--brand-secondary, #a78bfa)",
-      icon: <IconActivity size={16} />,
+      value: summary.runsToday.toLocaleString("pt-BR"),
+      tone: "brand",
+      icon: <IconActivity size={20} stroke={2.2} />,
     },
     {
       key: "success",
       label: "Taxa média de sucesso",
-      value: `${avgSuccess}%`,
-      accent: "var(--color-success)",
-      icon: <IconCircleCheck size={16} />,
+      value: `${summary.avgSuccess}%`,
+      tone: "success",
+      icon: <IconCircleCheck size={20} stroke={2.2} />,
     },
     {
       key: "paused",
       label: "Pausadas",
-      value: paused.toLocaleString("pt-BR"),
-      accent: "var(--text-muted)",
-      icon: <IconClock size={16} />,
+      value: summary.paused.toLocaleString("pt-BR"),
+      tone: "neutral",
+      icon: <IconClock size={20} stroke={2.2} />,
+      segment: 2,
     },
   ]
 
   return (
     <section
-      className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
       aria-label="Indicadores"
     >
       {cards.map((c) => (
-        <div
+        <KpiCard
           key={c.key}
-          className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-        >
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={{
-              background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
-              color: c.accent,
-            }}
-          >
-            {c.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-display text-[11.5px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
-              {c.label}
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
-                {c.value}
-              </span>
-              {c.percent !== undefined && (
-                <span
-                  className="font-display text-[12px] font-bold tabular-nums"
-                  style={{ color: c.accent }}
-                >
-                  {c.percent}%
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+          label={c.label}
+          value={c.value}
+          hint={c.hint}
+          icon={c.icon}
+          tone={c.tone}
+          active={c.segment !== undefined && filter === c.segment}
+          onClick={
+            c.segment !== undefined
+              ? () =>
+                  onFilterChange(filter === c.segment ? 0 : (c.segment as StatusFilter))
+              : undefined
+          }
+        />
       ))}
     </section>
   )
@@ -603,7 +603,7 @@ function AutomationsSearchFilterBar({
         value={search}
         onChange={(e) => onSearch(e.target.value)}
         onFocus={() => setOpen(true)}
-        placeholder="Pesquisar e filtrar automações..."
+        placeholder="Pesquisar e filtrar..."
         aria-label="Buscar e filtrar automações"
         className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-11 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
       />

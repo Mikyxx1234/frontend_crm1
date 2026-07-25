@@ -25,6 +25,7 @@ import {
   FILTER_FIELD_MENU_CLASS,
   FILTER_FIELD_TRIGGER_CLASS,
 } from "@/components/crm/dropdown-glass";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import { SelectNative } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -417,7 +418,7 @@ function UsersMultiPick({
   withoutOwner,
   onChange,
 }: {
-  users: { id: string; name: string }[];
+  users: { id: string; name: string; avatarUrl?: string | null }[];
   selected: string[];
   withoutOwner?: boolean;
   onChange: (ids: string[], withoutOwner: boolean) => void;
@@ -470,12 +471,7 @@ function UsersMultiPick({
                   : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
               )}
             >
-              <span
-                className="flex size-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                style={{ background: `hsl(${(u.name.charCodeAt(0) * 47) % 360} 60% 50%)` }}
-              >
-                {u.name[0]?.toUpperCase()}
-              </span>
+              <UserAvatar name={u.name} imageUrl={u.avatarUrl ?? null} size={16} />
               <span className="flex-1 truncate text-left">{u.name}</span>
               {active && <Check className="size-3 shrink-0" />}
             </button>

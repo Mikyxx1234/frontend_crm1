@@ -8,6 +8,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
 import {
   useAddDealTag,
   useDealTags,
@@ -114,57 +115,16 @@ export function TagsPopover({
               placeholder="Buscar ou criar tag…"
               className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             />
-            <ul role="listbox" className="max-h-56 overflow-y-auto">
-              {tagsQuery.isLoading && (
-                <li className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                  Carregando…
-                </li>
-              )}
-              {!tagsQuery.isLoading && filtered.length === 0 && !canCreate && (
-                <li className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                  Nenhuma tag.
-                </li>
-              )}
-              {filtered.map((t) => {
-                const isActive = currentIds.has(t.id);
-                return (
-                  <li key={t.id}>
-                    <button
-                      type="button"
-                      disabled={addMutation.isPending || removeMutation.isPending}
-                      onClick={() => handleToggle(t.id)}
-                      className={`flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] hover:bg-[var(--glass-bg-strong)] ${
-                        isActive
-                          ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                          : "text-[var(--text-primary)]"
-                      }`}
-                    >
-                      <span className="flex items-center gap-1.5 truncate">
-                        <span
-                          className="inline-block h-2.5 w-2.5 rounded-full"
-                          style={{ background: t.color || "rgba(91,111,245,0.5)" }}
-                          aria-hidden
-                        />
-                        <span className="truncate">{t.name}</span>
-                      </span>
-                      {isActive && <span aria-hidden>✓</span>}
-                    </button>
-                  </li>
-                );
-              })}
-              {canCreate && (
-                <li>
-                  <button
-                    type="button"
-                    disabled={addMutation.isPending}
-                    onClick={handleCreate}
-                    className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--brand-primary)] hover:bg-[var(--glass-bg-strong)]"
-                  >
-                    + Criar “{filter.trim()}”
-                  </button>
-                </li>
-              )}
-            </ul>
+            <TagChipOptionsList
+              tags={filtered}
+              selectedIds={currentIds}
+              onToggle={handleToggle}
+              disabled={addMutation.isPending || removeMutation.isPending}
+              isLoading={tagsQuery.isLoading}
+              createLabel={canCreate ? `+ Criar “${filter.trim()}”` : null}
+              onCreate={handleCreate}
+              createDisabled={addMutation.isPending}
+            />
           </div>,
           document.body,
         )}

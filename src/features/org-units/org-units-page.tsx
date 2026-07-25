@@ -17,7 +17,7 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ButtonGlass } from "@/components/crm/button-glass";
@@ -307,7 +307,7 @@ function OrgUnitDialog({
   });
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       size="sm"
@@ -378,6 +378,6 @@ function OrgUnitDialog({
           />
         </div>
       </div>
-    </FormSheet>
+    </FormDialog>
   );
 }

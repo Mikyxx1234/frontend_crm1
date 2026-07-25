@@ -14,7 +14,6 @@ import {
 
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
 
 export type AgentOnlineStatus = "ONLINE" | "OFFLINE" | "AWAY";
 
@@ -111,10 +110,7 @@ export interface AgentStatusController {
 export function useAgentStatus(): AgentStatusController {
   const { data: session, status: sessionStatus } = useSession();
   const myUserId = (session?.user as { id?: string } | undefined)?.id;
-  const authenticated = sessionStatus === "authenticated";
   const queryClient = useQueryClient();
-
-  usePresenceHeartbeat({ enabled: authenticated });
 
   const { data, isSuccess } = useQuery<{ status: AgentOnlineStatus }>({
     queryKey: ["my-agent-status", myUserId],

@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { InputGlass } from "@/components/crm/input-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { Label } from "@/components/ui/label";
@@ -275,7 +275,7 @@ export default function DistributionSettingsPage() {
         </div>
       )}
 
-      <FormSheet
+      <FormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
         busy={createMutation.isPending}
@@ -375,7 +375,7 @@ export default function DistributionSettingsPage() {
               ) : null}
           </form>
         )}
-      </FormSheet>
+      </FormDialog>
     </div>
   );
 }

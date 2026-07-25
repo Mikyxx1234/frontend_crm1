@@ -122,6 +122,13 @@ export interface TeamUser {
   email: string;
   /** Foto de perfil (User.avatarUrl) — o backend já retorna em GET /api/users. */
   avatarUrl?: string | null;
+  /**
+   * Presença de USO do CRM ("aba aberta"). Distinta da disponibilidade
+   * da Distribuição (que fica em outro DTO). Usada nos seletores e
+   * filtros para indicar quem está com o CRM aberto agora.
+   */
+  systemOnline?: boolean;
+  lastSeenAt?: string | null;
 }
 
 /** GET /api/users */

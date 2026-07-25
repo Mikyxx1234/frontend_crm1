@@ -1,4 +1,14 @@
 import type { Metadata, Viewport } from "next";
+// O modelo filled oficial usa estes glifos Lucide; manter paridade 1:1 com o ZIP.
+// eslint-disable-next-line no-restricted-imports
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  LoaderCircle,
+  X,
+  XCircle,
+} from "lucide-react";
 import { DM_Sans, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 
@@ -117,17 +127,21 @@ export default async function RootLayout({
         <PreviewMocksInstaller />
         <Providers session={session}>{children}</Providers>
         <Toaster
+          className="crm-toaster"
           position="bottom-right"
-          richColors
+          theme="light"
+          richColors={false}
+          closeButton
+          icons={{
+            success: <CheckCircle2 aria-hidden="true" />,
+            error: <XCircle aria-hidden="true" />,
+            warning: <AlertTriangle aria-hidden="true" />,
+            info: <Info aria-hidden="true" />,
+            loading: <LoaderCircle aria-hidden="true" className="animate-spin" />,
+            close: <X aria-hidden="true" />,
+          }}
           toastOptions={{
-            style: {
-              borderRadius: "22px",
-              fontFamily: "var(--font-sans)",
-              background: "var(--glass-bg-overlay)",
-              backdropFilter: "var(--glass-blur)",
-              border: "1px solid var(--glass-border)",
-              boxShadow: "var(--glass-shadow)",
-            },
+            closeButtonAriaLabel: "Fechar notificação",
           }}
         />
       </body>

@@ -238,6 +238,122 @@
 
   /* Mesh gradient base — usado em <body> */
   --bg-gradient: #dde8f5;
+
+  /* Toast filled oficial: classes Tailwind v4 exatas do ZIP de referência. */
+  --toast-success-bg: oklch(69.6% 0.17 162.48);  /* emerald-500 / #00bc7d */
+  --toast-error-bg: oklch(63.7% 0.237 25.331);   /* red-500     / #fb2c36 */
+  --toast-warning-bg: oklch(76.9% 0.188 70.08);  /* amber-500   / #f0b100 */
+  --toast-info-bg: oklch(68.5% 0.169 237.323);   /* sky-500     / #00a6f4 */
+  --toast-neutral-bg: oklch(20.5% 0 0);          /* bg-primary  / #171717 */
+  --toast-on-solid: oklch(98.5% 0 0);            /* primary-foreground / #fafafa */
+  --toast-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* Sonner global — traduz o modelo "filled" da referência sem alterar
+   chamadas toast.success/error/info/warning existentes. */
+.crm-toaster {
+  font-family: var(--font-sans);
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 40px 16px 16px;
+  color: var(--toast-on-solid);
+  background: var(--toast-neutral-bg);
+  border: 0;
+  border-radius: 10px;
+  box-shadow: var(--toast-shadow);
+}
+
+.crm-toaster [data-sonner-toast][data-type="success"] {
+  background: var(--toast-success-bg);
+}
+
+.crm-toaster [data-sonner-toast][data-type="error"] {
+  background: var(--toast-error-bg);
+}
+
+.crm-toaster [data-sonner-toast][data-type="warning"] {
+  background: var(--toast-warning-bg);
+}
+
+.crm-toaster [data-sonner-toast][data-type="info"] {
+  background: var(--toast-info-bg);
+}
+
+.crm-toaster [data-sonner-toast][data-type="loading"] {
+  background: var(--toast-neutral-bg);
+}
+
+.crm-toaster [data-sonner-toast][data-type="loading"] .sonner-loading-bar {
+  background: currentColor;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-icon] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  color: inherit;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-icon] svg {
+  width: 20px;
+  height: 20px;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-title] {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-description] {
+  color: inherit;
+  font-size: 14px;
+  line-height: 1.625;
+  opacity: 0.9;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-content] {
+  gap: 4px;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-close-button] {
+  top: 8px;
+  right: 8px;
+  left: auto;
+  width: 24px;
+  height: 24px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  transform: none;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-close-button]:hover {
+  color: inherit;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: transparent !important;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-close-button]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-button] {
+  color: inherit;
+  height: auto;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-button]:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* ══════════════════════════════════════════════════════════════════

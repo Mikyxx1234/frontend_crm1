@@ -135,14 +135,22 @@ export interface TabCounts {
 }
 
 export interface InboxFilters {
+  /** @deprecated Preferir `ownerIds`. Mantido para localStorage antigo. */
   ownerId?: string;
+  /** Multi-seleção de responsáveis. */
+  ownerIds?: string[];
   /** true = só conversas sem responsável (`assignedToId` null). */
   withoutOwner?: boolean;
   channel?: string;
+  /** @deprecated Preferir `stageIds`. Mantido para localStorage antigo. */
   stageId?: string;
+  /** Multi-seleção de etapas do negócio. */
+  stageIds?: string[];
   tagIds?: string[];
   /** Origens do contato (Contact.source). Pode incluir `__none__` para "Sem origem". */
   sources?: string[];
+  /** Sessões Meta ainda abertas que expiram entre agora e agora + X horas. */
+  sessionExpiresWithinHours?: number;
   /**
    * Ordenação e janela são aplicadas CLIENT-SIDE no /inbox-v2 (não vão
    * para o backend). `sortBy` aceita "lastInboundAt" (padrão) ou
@@ -151,21 +159,53 @@ export interface InboxFilters {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   windowState?: "open" | "closed";
+  /** Direção da última mensagem, aplicada client-side na lista do Inbox. */
+  lastMessageDirection?: "in" | "out";
 }
 
-/** Filtros enviados ao GET /api/conversations (exclui ordenação e janela). */
+/** Normaliza filtros legados (`ownerId`/`stageId`) para arrays multi. */
+export function normalizeInboxFilters(raw: InboxFilters): InboxFilters {
+  const ownerIds = Array.from(
+    new Set([...(raw.ownerIds ?? []), ...(raw.ownerId ? [raw.ownerId] : [])].filter(Boolean)),
+  );
+  const stageIds = Array.from(
+    new Set([...(raw.stageIds ?? []), ...(raw.stageId ? [raw.stageId] : [])].filter(Boolean)),
+  );
+  const sessionHours = Number(raw.sessionExpiresWithinHours);
+  const sessionExpiresWithinHours =
+    Number.isFinite(sessionHours) && sessionHours > 0 && sessionHours < 24
+      ? sessionHours
+      : undefined;
+  const { ownerId: _o, stageId: _s, ...rest } = raw;
+  return {
+    ...rest,
+    ownerIds: ownerIds.length ? ownerIds : undefined,
+    stageIds: stageIds.length ? stageIds : undefined,
+    sessionExpiresWithinHours,
+  };
+}
+
+/** Filtros enviados ao GET /api/conversations (exclui ordenação/status local). */
 export function hasInboxServerFilters(
   f: InboxFilters | null | undefined,
 ): boolean {
   if (!f) return false;
-  const { sortBy: _sb, sortOrder: _so, windowState: _ws, ...server } = f;
+  const n = normalizeInboxFilters(f);
+  const {
+    sortBy: _sb,
+    sortOrder: _so,
+    windowState: _ws,
+    lastMessageDirection: _lmd,
+    ...server
+  } = n;
   return (
-    Boolean(server.ownerId) ||
+    (server.ownerIds?.length ?? 0) > 0 ||
     Boolean(server.withoutOwner) ||
     Boolean(server.channel) ||
-    Boolean(server.stageId) ||
+    (server.stageIds?.length ?? 0) > 0 ||
     (server.tagIds?.length ?? 0) > 0 ||
-    (server.sources?.length ?? 0) > 0
+    (server.sources?.length ?? 0) > 0 ||
+    server.sessionExpiresWithinHours != null
   );
 }
 

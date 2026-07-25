@@ -121,6 +121,8 @@ export function useConversations(params: {
   return {
     data,
     isLoading: query.isLoading,
+    isPending: query.isPending,
+    isFetched: query.isFetched,
     isError: query.isError,
     error: query.error,
     fetchNextPage: query.fetchNextPage,
@@ -219,12 +221,13 @@ export function useCancelAutomation(contactId: string | null) {
 export function useTabCounts(enabled = true, filters?: InboxFilters | null) {
   const filterKey = filters
     ? {
-        ownerId: filters.ownerId ?? null,
+        ownerIds: filters.ownerIds ?? (filters.ownerId ? [filters.ownerId] : []),
         withoutOwner: filters.withoutOwner ?? false,
         channel: filters.channel ?? null,
-        stageId: filters.stageId ?? null,
+        stageIds: filters.stageIds ?? (filters.stageId ? [filters.stageId] : []),
         tagIds: filters.tagIds ?? [],
         sources: filters.sources ?? [],
+        sessionExpiresWithinHours: filters.sessionExpiresWithinHours ?? null,
       }
     : null;
   return useQuery<TabCounts>({

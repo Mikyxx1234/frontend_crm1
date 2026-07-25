@@ -18,14 +18,7 @@ import { cn } from "@/lib/utils";
 import { GlassCard } from "@/components/crm/glass-card";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import {
   useQuickReplies,
   useQuickReplyGroups,
@@ -181,10 +174,11 @@ function CreateQuickReplyModal({
   const canSubmit = title.trim().length > 0 && content.trim().length > 0;
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={(v) => !v && handleClose()}
       busy={createMutation.isPending}
+      size="md"
       icon={<IconBolt size={18} className="text-[var(--brand-primary)]" />}
       title="Nova mensagem rápida"
       footer={
@@ -312,7 +306,7 @@ function CreateQuickReplyModal({
           </div>
 
       </form>
-    </FormSheet>
+    </FormDialog>
   );
 }
 

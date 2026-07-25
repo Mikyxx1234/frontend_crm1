@@ -1,0 +1,24 @@
+"use client";
+
+import { useSession } from "next-auth/react";
+
+import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
+import { useSystemPresenceSync } from "@/hooks/use-system-presence-sync";
+
+/**
+ * Monta o heartbeat de PRESENÇA DE USO uma única vez no shell autenticado.
+ *
+ * "Sistema aberto" = existe uma aba do CRM autenticada com heartbeat
+ * recente. Independe da disponibilidade da Distribuição (Online/Ausente
+ * /Offline), que segue sendo controlada pelo AgentStatusPopup.
+ *
+ * Também escuta o SSE `system_presence_update` para manter em dia as
+ * caches de listagem de agentes (transferências, filtros, Distribuição).
+ */
+export function SystemPresenceHeartbeat() {
+  const { status } = useSession();
+  const authenticated = status === "authenticated";
+  usePresenceHeartbeat({ enabled: authenticated });
+  useSystemPresenceSync(authenticated);
+  return null;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -13,6 +13,9 @@ import {
   IconBellOff,
   IconBriefcase,
   IconChevronDown,
+  IconChevronsDown,
+  IconChevronsUp,
+  IconChevronUp,
   IconCircleCheck,
   IconMessageCircle,
   IconRotateClockwise,
@@ -22,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { TagChip } from "@/components/crm/tag-chip";
 
 import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
@@ -32,7 +36,6 @@ import { FavoritesPanel } from "@/components/crm/favorites-panel";
 import { ContactAside } from "@/components/crm/contact-aside";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { PageHeader } from "@/components/crm/page-header";
-import { PageSearchBar } from "@/components/crm/page-toolbar";
 import {
   ColumnResizer,
   usePersistentWidth,
@@ -68,6 +71,7 @@ import {
 } from "@/features/inbox-v2/hooks";
 import {
   AssigneePopover,
+  BulkReassignPopover,
   Composer,
   ConversationActionsMenu,
   ConversationTimelineTab,
@@ -78,8 +82,9 @@ import {
   whatsappTemplateToPending,
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
+import { InboxSearchFilterBar } from "@/features/inbox-v2/extras/filter-panel";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
-import { hasInboxServerFilters } from "@/features/inbox-v2/api/types";
+import { hasInboxServerFilters, normalizeInboxFilters } from "@/features/inbox-v2/api/types";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   useBoard,
@@ -109,20 +114,13 @@ function DealTagsTray({
   const overflow = currentTags.slice(MAX_VISIBLE);
 
   function chip(t: { id: string; name: string; color: string | null }) {
-    const color = t.color ?? "#5b6ff5";
     return (
-      <span
+      <TagChip
         key={t.id}
-        className="tag-chip inline-flex h-5 min-w-0 max-w-[7rem] shrink items-center overflow-hidden rounded-full px-2 text-[11px] font-semibold"
-        style={{
-          background: `color-mix(in srgb, ${color} 18%, white)`,
-          color: `color-mix(in srgb, ${color} 75%, black)`,
-          border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
-        }}
-        title={t.name}
-      >
-        <span className="truncate">{t.name}</span>
-      </span>
+        name={t.name}
+        color={t.color}
+        className="h-5 min-w-0 max-w-[7rem] shrink"
+      />
     );
   }
 
@@ -133,7 +131,7 @@ function DealTagsTray({
       {visible.map(chip)}
       {overflow.length > 0 && (
         <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
-          <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
+          <span className="inline-flex h-5 shrink-0 items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
             +{overflow.length}
           </span>
         </TooltipGlass>
@@ -158,20 +156,13 @@ function ContactTagsTray({
   const overflow = currentTags.slice(MAX_VISIBLE);
 
   function chip(t: { id: string; name: string; color: string | null }) {
-    const color = t.color ?? "#5b6ff5";
     return (
-      <span
+      <TagChip
         key={t.id}
-        className="tag-chip inline-flex h-5 min-w-0 max-w-[7rem] shrink items-center overflow-hidden rounded-full px-2 text-[11px] font-semibold"
-        style={{
-          background: `color-mix(in srgb, ${color} 18%, white)`,
-          color: `color-mix(in srgb, ${color} 75%, black)`,
-          border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
-        }}
-        title={t.name}
-      >
-        <span className="truncate">{t.name}</span>
-      </span>
+        name={t.name}
+        color={t.color}
+        className="h-5 min-w-0 max-w-[7rem] shrink"
+      />
     );
   }
 
@@ -182,7 +173,7 @@ function ContactTagsTray({
       {visible.map(chip)}
       {overflow.length > 0 && (
         <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
-          <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
+          <span className="inline-flex h-5 shrink-0 items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
             +{overflow.length}
           </span>
         </TooltipGlass>
@@ -206,7 +197,7 @@ function readStoredInboxFilters(): InboxFilters {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return DEFAULT_FILTERS;
     }
-    return parsed as InboxFilters;
+    return normalizeInboxFilters(parsed as InboxFilters);
   } catch {
     return DEFAULT_FILTERS;
   }
@@ -214,16 +205,21 @@ function readStoredInboxFilters(): InboxFilters {
 
 function writeStoredInboxFilters(filters: InboxFilters) {
   try {
+    const normalized = normalizeInboxFilters(filters);
     const empty =
-      !hasInboxServerFilters(filters) &&
-      !filters.sortBy &&
-      !filters.sortOrder &&
-      !filters.windowState;
+      !hasInboxServerFilters(normalized) &&
+      !normalized.sortBy &&
+      !normalized.sortOrder &&
+      !normalized.windowState &&
+      !normalized.lastMessageDirection;
     if (empty) {
       window.localStorage.removeItem(INBOX_FILTERS_STORAGE_KEY);
       return;
     }
-    window.localStorage.setItem(INBOX_FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    window.localStorage.setItem(
+      INBOX_FILTERS_STORAGE_KEY,
+      JSON.stringify(normalized),
+    );
   } catch {
     /* localStorage indisponível */
   }
@@ -238,7 +234,7 @@ const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "esperando", label: "Aguardando" },
   { id: "respondidas", label: "Respondidas" },
   { id: "automacao", label: "Automação" },
-  { id: "finalizados", label: "Resolvidas" },
+  { id: "finalizados", label: "Encerradas" },
 ];
 
 // Tab selecionada persiste em localStorage — sobrevive F5/navegação.
@@ -312,7 +308,9 @@ export default function InboxV2ClientPage({
   // localStorage e restaurada no F5 (lê no effect, SSR-safe).
   const [tab, setTab] = useState<InboxTab>(DEFAULT_INBOX_TAB);
   const [tabHydrated, setTabHydrated] = useState(false);
-  useEffect(() => {
+  // useLayoutEffect: restaura aba ANTES do paint (useEffect deixava
+  // 1 frame com default "Aguardando" + empty no F5).
+  useLayoutEffect(() => {
     setTab(readStoredInboxTab());
     setTabHydrated(true);
   }, []);
@@ -324,7 +322,7 @@ export default function InboxV2ClientPage({
   // para outras páginas do CRM e refresh. Lê no effect (SSR-safe).
   const [filters, setFilters] = useState<InboxFilters>(DEFAULT_FILTERS);
   const [filtersHydrated, setFiltersHydrated] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     setFilters(readStoredInboxFilters());
     setFiltersHydrated(true);
   }, []);
@@ -341,6 +339,33 @@ export default function InboxV2ClientPage({
   const [externalTemplate, setExternalTemplate] = useState<PendingTemplate | null>(null);
   const [asideCollapsed, setAsideCollapsed] = useState(false);
   const [mobilePaneTab, setMobilePaneTab] = useState<"chat" | "negocio">("chat");
+
+  // Colapso do cabeçalho de página (ícone + título + busca) — ganha altura
+  // pra o chat e para o painel de contato. Persistido em localStorage;
+  // hidratado com `useLayoutEffect` pra evitar flash no F5.
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const [headerHydrated, setHeaderHydrated] = useState(false);
+  useLayoutEffect(() => {
+    try {
+      setHeaderCollapsed(
+        window.localStorage.getItem("inbox:header-collapsed") === "1",
+      );
+    } catch {
+      /* ignore */
+    }
+    setHeaderHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!headerHydrated) return;
+    try {
+      window.localStorage.setItem(
+        "inbox:header-collapsed",
+        headerCollapsed ? "1" : "0",
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [headerCollapsed, headerHydrated]);
 
   // ── Seleção múltipla + ações em massa (encerrar/reabrir) ────────
   // Modo explícito (como o legado): entrar em "seleção" desativa o clique
@@ -422,20 +447,39 @@ export default function InboxV2ClientPage({
   // ── Dados ───────────────────────────────────────────────────────
   // Ordem e janela são CLIENT-SIDE — não vão ao servidor (evita refetch
   // ao mudar ordenação e a limitação do `sortBy` do backend).
-  const { sortBy, sortOrder, windowState, ...serverFilters } = filters;
+  const {
+    sortBy,
+    sortOrder,
+    windowState,
+    lastMessageDirection,
+    ...serverFilters
+  } = filters;
 
   const {
     data: listData,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isError: isListError,
   } = useConversations({
     tab,
     filters: serverFilters,
     search: debouncedSearch,
-    enabled: isAuthenticated,
+    // Só busca depois da sessão + prefs (tab/filtros do localStorage).
+    // Sem isso: (1) query disabled → isLoading=false → empty flash;
+    // (2) fetch com tab default "esperando" antes de hidratar a aba salva.
+    enabled: isAuthenticated && tabHydrated && filtersHydrated,
   });
   const rawRows = (listData?.items ?? []).filter(Boolean);
+
+  // Skeleton até a 1ª resposta da lista (mesmo se items=[]).
+  // NÃO usar só isLoading: no RQ v5 há frame com enabled=true,
+  // isPending + fetchStatus=idle → isLoading=false + data=undefined → empty flash.
+  const listBootstrapping =
+    sessionStatus === "loading" ||
+    !tabHydrated ||
+    !filtersHydrated ||
+    (isAuthenticated && !listData && !isListError);
 
   // Ordena (default: última atividade primeiro) e filtra a janela de 24h.
   // Usa `lastMessageAt` (com fallback p/ `lastInboundAt`) para casar a ordem
@@ -455,6 +499,16 @@ export default function InboxV2ClientPage({
       // "Fechada" = conversa resolvida.
       list = list.filter((r) => r.status === "RESOLVED");
     }
+    if (lastMessageDirection) {
+      list = list.filter((r) => {
+        const direction = String(
+          r.lastMessage?.direction ?? r.lastMessagePreview?.direction ?? "",
+        ).toLowerCase();
+        return lastMessageDirection === "out"
+          ? direction === "out" || direction === "outbound"
+          : direction === "in" || direction === "inbound";
+      });
+    }
     const by = sortBy ?? "lastInboundAt";
     const sign = (sortOrder ?? "desc") === "asc" ? 1 : -1;
     const ts = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
@@ -467,9 +521,12 @@ export default function InboxV2ClientPage({
       }
       return sign * (lastActivityTs(a) - lastActivityTs(b));
     });
-  }, [rawRows, windowState, sortBy, sortOrder]);
+  }, [rawRows, windowState, lastMessageDirection, sortBy, sortOrder]);
 
-  const { data: tabCounts } = useTabCounts(isAuthenticated, filters);
+  const { data: tabCounts } = useTabCounts(
+    isAuthenticated && filtersHydrated,
+    filters,
+  );
 
   // ── Sticky activeRow ────────────────────────────────────────────
   // A `rows` reflete o filtro da aba atual (ex.: "entrada"). Se o
@@ -490,7 +547,14 @@ export default function InboxV2ClientPage({
   // carregada — supervisor abrindo o link de outra aba/filtro/página, ou
   // conversa que saiu do filtro — busca a conversa direto pelo id para abri-la
   // mesmo assim. Erro (404 sem acesso / inexistente) é tratado abaixo.
-  const needsDeepLinkFetch = Boolean(activeId) && !foundActiveRow;
+  //
+  // Se já temos sticky do mesmo id (ex.: acabou de Encerrar e a conversa
+  // saiu da aba "abertas"/"entrada"), NÃO refetch — evita corrida que
+  // dispara toast "Erro ao carregar conversa" no caminho feliz.
+  const needsDeepLinkFetch =
+    Boolean(activeId) &&
+    !foundActiveRow &&
+    stickyRow?.id !== activeId;
   const {
     data: deepLinkRow,
     error: deepLinkError,
@@ -510,7 +574,10 @@ export default function InboxV2ClientPage({
     // anterior — NÃO sobrescreve com null.
     if (deepLinkRow && deepLinkRow.id === activeId) {
       setStickyRow(deepLinkRow);
+      return;
     }
+    // Reabrir (novo ticket) / troca de id: não manter header do ticket antigo.
+    setStickyRow((prev) => (prev?.id === activeId ? prev : null));
   }, [activeId, foundActiveRow, deepLinkRow]);
 
   // Deep-link inválido (id inexistente ou sem permissão): avisa e limpa a
@@ -521,14 +588,18 @@ export default function InboxV2ClientPage({
   // instante derrubava a conversa que o F5 deveria manter aberta. Esperar a
   // lista settlar garante que a conversa em `rows` (foundActiveRow) tenha
   // chance de reidratar antes de qualquer reset.
+  //
+  // Também ignora erro se ainda há sticky do activeId — conversa só saiu
+  // do filtro da aba (Encerrar), não é deep-link inválido.
   useEffect(() => {
     if (needsDeepLinkFetch && deepLinkError && listData !== undefined) {
+      if (stickyRow?.id === activeId) return;
       toast.error(
         deepLinkError.message || "Conversa não encontrada ou sem permissão.",
       );
       setActiveId(null);
     }
-  }, [needsDeepLinkFetch, deepLinkError, listData]);
+  }, [needsDeepLinkFetch, deepLinkError, listData, stickyRow, activeId]);
 
   const activeRow = stickyRow;
   const activeContactId = activeRow?.contact?.id ?? null;
@@ -542,13 +613,26 @@ export default function InboxV2ClientPage({
   // ── Realtime ────────────────────────────────────────────────────
   useInboxRealtime({ activeConversationId: activeId, enabled: isAuthenticated });
 
+  /**
+   * Após reopen (modelo de ticket): seleciona o id novo e, se o operador
+   * estiver na aba Encerradas (`finalizados`), troca para Todas — o ticket
+   * OPEN não aparece em Encerradas; sem a troca, a lista some, o sticky do
+   * id antigo é limpo e o deep-link pode disparar toast de erro.
+   */
+  function handleReopenNewConversation(newId: string) {
+    setActiveId(newId);
+    setTab((current) => (current === "finalizados" ? "todos" : current));
+  }
+
   // Envio (texto/anexo/áudio) numa conversa encerrada reabre como NOVO
   // ticket — os botões de anexo disparam este evento global (estão fundos
   // demais na árvore pra prop-drilling). Troca o chat ativo pro id novo.
   useEffect(() => {
     function onReopened(e: Event) {
       const newId = (e as CustomEvent<{ newId: string }>).detail?.newId;
-      if (newId) setActiveId(newId);
+      if (!newId) return;
+      setActiveId(newId);
+      setTab((current) => (current === "finalizados" ? "todos" : current));
     }
     window.addEventListener(CONVERSATION_REOPENED_EVENT, onReopened);
     return () => window.removeEventListener(CONVERSATION_REOPENED_EVENT, onReopened);
@@ -697,6 +781,8 @@ export default function InboxV2ClientPage({
             toast.success(
               `${count} conversa${count > 1 ? "s" : ""} reaberta${count > 1 ? "s" : ""}`,
             );
+            // Tickets novos são OPEN — somem da aba Encerradas.
+            setTab((current) => (current === "finalizados" ? "todos" : current));
           }
           exitSelectionMode();
         },
@@ -765,7 +851,7 @@ export default function InboxV2ClientPage({
           // Conversa estava encerrada e o envio reabriu como NOVO ticket:
           // troca o chat ativo para o id novo (regra "reabrir = novo id").
           if (data.reopenedConversationId) {
-            setActiveId(data.reopenedConversationId);
+            handleReopenNewConversation(data.reopenedConversationId);
           }
         },
         onError: (err) => toast.error(err.message || "Falha ao enviar"),
@@ -854,6 +940,15 @@ export default function InboxV2ClientPage({
   const useFilteredTabCount =
     hasInboxServerFilters(filters) || debouncedSearch.trim().length > 0;
 
+  const inboxSearchFilterNode = (
+    <InboxSearchFilterBar
+      search={searchInput}
+      onSearch={setSearchInput}
+      filters={filters}
+      onChangeFilters={setFilters}
+    />
+  );
+
   // Aviso sonoro por mensagem recebida — o botão só (des)liga a preferência
   // (persistida no localStorage). O ping em si toca no useInboxRealtime.
   const [soundMuted, setSoundMuted] = useInboxSoundMuted();
@@ -898,33 +993,48 @@ export default function InboxV2ClientPage({
     </TooltipGlass>
   );
 
-  // Ações da barra de seleção — Encerrar/Reabrir (protegidas por permissão,
-  // mesma regra do menu de ações de uma conversa) + Cancelar (sempre visível).
+  // Ações da barra de seleção — Encerrar/Reabrir/Reatribuir (protegidas por
+  // permissão) + Cancelar (sempre visível). Reatribuir usa assign individual
+  // (bulk API não cobre assign) e não se aplica a "todas do filtro".
   const bulkActionsNode = (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex shrink-0 items-center gap-1.5 @max-[520px]:grid @max-[520px]:w-full @max-[520px]:grid-cols-2">
       {selectedIds.size > 0 && (
-        <RequirePermission permission="conversation:resolve">
-          <ButtonGlass
-            type="button"
-            variant="glass"
-            size="sm"
-            disabled={bulkAction.isPending}
-            onClick={() => handleBulkAction("resolve")}
-          >
-            <IconCircleCheck size={14} />
-            <span className="ml-1.5">Encerrar</span>
-          </ButtonGlass>
-          <ButtonGlass
-            type="button"
-            variant="glass"
-            size="sm"
-            disabled={bulkAction.isPending}
-            onClick={() => handleBulkAction("reopen")}
-          >
-            <IconRotateClockwise size={14} />
-            <span className="ml-1.5">Reabrir</span>
-          </ButtonGlass>
-        </RequirePermission>
+        <>
+          <RequirePermission permission="conversation:resolve">
+            <ButtonGlass
+              type="button"
+              variant="glass"
+              size="sm"
+              disabled={bulkAction.isPending}
+              onClick={() => handleBulkAction("resolve")}
+            >
+              <IconCircleCheck size={14} />
+              <span className="ml-1.5">Encerrar</span>
+            </ButtonGlass>
+            <ButtonGlass
+              type="button"
+              variant="glass"
+              size="sm"
+              disabled={bulkAction.isPending}
+              onClick={() => handleBulkAction("reopen")}
+            >
+              <IconRotateClockwise size={14} />
+              <span className="ml-1.5">Reabrir</span>
+            </ButtonGlass>
+          </RequirePermission>
+          <RequirePermission permission="conversation:reassign_others">
+            <BulkReassignPopover
+              conversationIds={[...selectedIds]}
+              disabled={bulkAction.isPending || selectAllFilter}
+              disabledReason={
+                selectAllFilter
+                  ? "Reatribuir não se aplica a “todas do filtro”. Selecione conversas nesta página."
+                  : undefined
+              }
+              onDone={exitSelectionMode}
+            />
+          </RequirePermission>
+        </>
       )}
       <ButtonGlass type="button" variant="glass" size="sm" onClick={exitSelectionMode}>
         Cancelar
@@ -940,16 +1050,15 @@ export default function InboxV2ClientPage({
       searchValue={searchInput}
       onSearchChange={setSearchInput}
       hideSearch={searchInHeader}
-      // Filtro sempre na ColumnConversa (ao lado do dropdown
-      // "Todas/Aguardando/Entrada/..."). Quando `pageHeader` está ativo, a
-      // busca sobe pro topo mas o filtro **fica** aqui — antes ele migrava
-      // pro canto direito superior junto da busca, distante do controle
-      // mais relacionado a ele (tabs de status).
+      // Sem PageHeader, o filtro permanece ao lado do status. No Inbox ele
+      // sobe junto da busca, como botão irmão (fora do input).
       filterSlot={
         <>
           {soundToggleNode}
           {selectionToggleNode}
-          <InboxFilterButton value={filters} onChange={setFilters} />
+          {!searchInHeader && (
+            <InboxFilterButton value={filters} onChange={setFilters} />
+          )}
           {confirmDialogNode}
         </>
       }
@@ -970,8 +1079,10 @@ export default function InboxV2ClientPage({
       bulkActionsSlot={bulkActionsNode}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
-        count:
-          useFilteredTabCount && t.id === tab
+        // Sem count no bootstrap → pulse no badge (evita "0" prematuro).
+        count: listBootstrapping
+          ? undefined
+          : useFilteredTabCount && t.id === tab
             ? listData?.total
             : tabCounts?.[t.id] ?? undefined,
       }))}
@@ -995,6 +1106,7 @@ export default function InboxV2ClientPage({
       }}
       hasMore={hasNextPage}
       isLoadingMore={isFetchingNextPage}
+      isLoading={listBootstrapping}
       className="h-full min-h-0"
       renderCardSlots={(c) => ({
         assigneeSlot: (
@@ -1233,18 +1345,22 @@ export default function InboxV2ClientPage({
               phone={chatContact?.phone || null}
               contactId={activeContactId ?? undefined}
             />
-            <TransferPopover
-              conversationId={activeId}
-              currentAssigneeId={activeRow.assignedTo?.id ?? null}
-              currentDepartmentId={
-                activeRow.departmentId ?? activeRow.department?.id ?? null
-              }
-            />
             <ConversationActionsMenu
               conversationId={activeId}
               isResolved={activeRow.status === "RESOLVED"}
               onOpenFavorites={() => setFavoritesOpen(true)}
-              onReopenNewConversation={(newId) => setActiveId(newId)}
+              onReopenNewConversation={handleReopenNewConversation}
+              onResolved={(id) => {
+                setStickyRow((prev) =>
+                  prev?.id === id
+                    ? {
+                        ...prev,
+                        status: "RESOLVED",
+                        closedAt: new Date().toISOString(),
+                      }
+                    : prev,
+                );
+              }}
               departmentId={activeRow.departmentId ?? activeRow.department?.id ?? null}
               requireTabulationOnClose={
                 activeRow.department?.requireTabulationOnClose ?? false
@@ -1278,7 +1394,29 @@ export default function InboxV2ClientPage({
             requireTabulationOnClose={
               activeRow.department?.requireTabulationOnClose ?? false
             }
-            onReopenNewConversation={(newId) => setActiveId(newId)}
+            onReopenNewConversation={handleReopenNewConversation}
+            onResolved={(id) => {
+              setStickyRow((prev) =>
+                prev?.id === id
+                  ? {
+                      ...prev,
+                      status: "RESOLVED",
+                      closedAt: new Date().toISOString(),
+                    }
+                  : prev,
+              );
+            }}
+            conversationNumber={activeRow?.number ?? null}
+            transferSlot={
+              <TransferPopover
+                variant="composer"
+                conversationId={activeId}
+                currentAssigneeId={activeRow.assignedTo?.id ?? null}
+                currentDepartmentId={
+                  activeRow.departmentId ?? activeRow.department?.id ?? null
+                }
+              />
+            }
           />
         }
         notesSlot={notesSlot}
@@ -1366,6 +1504,60 @@ export default function InboxV2ClientPage({
     </>
   );
 
+  // Cabeçalho da página com colapso animado (slide up/down) — dá mais
+  // altura ao chat/asides. Não renderiza toggle inline; o controle
+  // fica integrado ao PageHeader (actions) ou flutua no canto sup.
+  // direito quando colapsado.
+  const renderCollapsiblePageHeader = (headerNode: React.ReactNode) => (
+    <div
+      className={cn(
+        "grid shrink-0 overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out",
+        headerCollapsed
+          ? "pointer-events-none grid-rows-[0fr] opacity-0"
+          : "grid-rows-[1fr] opacity-100",
+      )}
+      aria-hidden={headerCollapsed}
+    >
+      <div className="min-h-0 overflow-hidden">{headerNode}</div>
+    </div>
+  );
+
+  // Botão "ocultar cabeçalho" — vai dentro do slot `actions` do
+  // PageHeader (extremo direito, ao lado dos demais controles).
+  const collapseHeaderBtn = (
+    <TooltipGlass label="Ocultar cabeçalho" side="bottom">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.currentTarget.blur();
+          setHeaderCollapsed(true);
+        }}
+        aria-label="Ocultar cabeçalho"
+        className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+      >
+        <IconChevronsUp size={18} stroke={2.2} />
+      </button>
+    </TooltipGlass>
+  );
+
+  // Botão "mostrar cabeçalho" — pill circular no padrão da NavRailV2
+  // (border-brand + bg branco + shadow + hover fills). Fica no CANTO
+  // SUPERIOR DIREITO do outer grid (fora do container com overflow-hidden,
+  // senão é cortado). Alinhado verticalmente com o pill da NavRail
+  // (`top-6` = mesmo offset dela).
+  const expandHeaderBtn = headerCollapsed ? (
+    <TooltipGlass label="Mostrar cabeçalho" side="left">
+      <button
+        type="button"
+        onClick={() => setHeaderCollapsed(false)}
+        aria-label="Mostrar cabeçalho"
+        className="fixed right-6 top-6 z-50 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.25)] transition-all hover:scale-110 hover:bg-[var(--brand-primary)] hover:text-white"
+      >
+        <IconChevronsDown size={14} stroke={2.5} />
+      </button>
+    </TooltipGlass>
+  ) : null;
+
   // Layout COM cabeçalho de página (estilo "Caixa de entrada" da
   // referência): NavRail fixo à esquerda; à direita o header no topo e
   // as 3 colunas (lista/chat/contato) numa grade abaixo.
@@ -1373,23 +1565,22 @@ export default function InboxV2ClientPage({
     // ── Mobile: layout de painel único (lista → chat/negócio) ──────
     if (!isDesktop) {
       return (
-        <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
+        <div className="v2-screen relative grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
           {navRailNode}
-          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
-            <PageHeader
-              icon={pageHeader.icon}
-              title={pageHeader.title}
-              center={
-                <PageSearchBar
-                  variant="compact"
-                  value={searchInput}
-                  onChange={setSearchInput}
-                  placeholder="Buscar conversa, contato, telefone..."
-                  aria-label="Buscar conversas"
-                />
-              }
-              actions={null}
-            />
+          <div
+            className={cn(
+              "relative flex min-h-0 min-w-0 flex-col overflow-hidden",
+              headerCollapsed ? "gap-0" : "gap-3",
+            )}
+          >
+            {renderCollapsiblePageHeader(
+              <PageHeader
+                icon={pageHeader.icon}
+                title={pageHeader.title}
+                center={inboxSearchFilterNode}
+                actions={collapseHeaderBtn}
+              />,
+            )}
             {!activeId ? (
               <div className="min-h-0 flex-1 overflow-hidden">
                 {conversationColumnNode}
@@ -1441,6 +1632,7 @@ export default function InboxV2ClientPage({
               </div>
             )}
           </div>
+          {expandHeaderBtn}
           {templateModalNode}
           {extraDialogsNode}
         </div>
@@ -1450,27 +1642,24 @@ export default function InboxV2ClientPage({
     // ── Desktop: layout original de 3 colunas ─────────────────────
     return (
       <div
-        className="v2-screen grid gap-4 p-4"
+        className="v2-screen relative grid gap-4 p-4"
         style={{ gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)" }}
       >
         {navRailNode}
-        <div className="flex min-w-0 flex-col gap-4 overflow-hidden">
-          <PageHeader
-            icon={pageHeader.icon}
-            title={pageHeader.title}
-            center={
-              <PageSearchBar
-                variant="compact"
-                value={searchInput}
-                onChange={setSearchInput}
-                placeholder="Buscar conversa, contato, telefone..."
-                aria-label="Buscar conversas"
-              />
-            }
-            // PageHeader sem botão de filtro: ele agora vive ao lado dos
-            // tabs de status na coluna de conversas (ver `filterSlot` acima).
-            actions={null}
-          />
+        <div
+          className={cn(
+            "relative flex min-w-0 flex-col overflow-hidden",
+            headerCollapsed ? "gap-0" : "gap-4",
+          )}
+        >
+          {renderCollapsiblePageHeader(
+            <PageHeader
+              icon={pageHeader.icon}
+              title={pageHeader.title}
+              center={inboxSearchFilterNode}
+              actions={collapseHeaderBtn}
+            />,
+          )}
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
             style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}` }}
@@ -1491,6 +1680,7 @@ export default function InboxV2ClientPage({
             </div>
           </div>
         </div>
+        {expandHeaderBtn}
         {templateModalNode}
         {extraDialogsNode}
       </div>

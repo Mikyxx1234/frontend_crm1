@@ -1,8 +1,9 @@
 "use client"
 
-import { IconBolt } from "@tabler/icons-react"
+import { IconRobot } from "@tabler/icons-react"
 import { AutomationCard } from "./automation-card"
 import { EmptyState } from "./empty-state"
+import { ListColumnLabel } from "./sortable-header"
 import type { Automation } from "@/lib/automations-data"
 
 interface AutomationsGalleryProps {
@@ -11,12 +12,19 @@ interface AutomationsGalleryProps {
   onDelete?: (id: string) => void
 }
 
-export function AutomationsGallery({ automations, onToggle, onDelete }: AutomationsGalleryProps) {
+const GRID_TEMPLATE =
+  "minmax(200px,1.55fr) minmax(132px,1fr) 72px 88px 112px 96px"
+
+export function AutomationsGallery({
+  automations,
+  onToggle,
+  onDelete,
+}: AutomationsGalleryProps) {
   if (automations.length === 0) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md">
+      <div className="flex min-h-0 flex-1 items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
         <EmptyState
-          icon={<IconBolt size={28} />}
+          icon={<IconRobot size={28} />}
           title="Nenhuma automação encontrada."
           description="Ajuste a busca ou o filtro para ver outros fluxos."
         />
@@ -25,15 +33,48 @@ export function AutomationsGallery({ automations, onToggle, onDelete }: Automati
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto px-0.5 pb-2">
-      {automations.map((a) => (
-        <AutomationCard
-          key={a.id}
-          automation={a}
-          onToggle={onToggle}
-          onDelete={onDelete}
-        />
-      ))}
+    <div
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+      role="table"
+      aria-label="Lista de automações"
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-1">
+        <div
+          className="sticky top-0 z-[1] hidden shrink-0 items-center gap-4 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,transparent)] px-4 py-2.5 lg:grid"
+          style={{ gridTemplateColumns: GRID_TEMPLATE }}
+          role="row"
+        >
+          <span role="columnheader">
+            <ListColumnLabel>Automação / gatilho</ListColumnLabel>
+          </span>
+          <span role="columnheader">
+            <ListColumnLabel>Fluxo</ListColumnLabel>
+          </span>
+          <span role="columnheader">
+            <ListColumnLabel>Sucesso</ListColumnLabel>
+          </span>
+          <span role="columnheader">
+            <ListColumnLabel>Execuções</ListColumnLabel>
+          </span>
+          <span role="columnheader">
+            <ListColumnLabel>Última execução</ListColumnLabel>
+          </span>
+          <span role="columnheader">
+            <ListColumnLabel align="right">Status / ações</ListColumnLabel>
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-2" role="rowgroup">
+          {automations.map((a) => (
+            <AutomationCard
+              key={a.id}
+              automation={a}
+              onToggle={onToggle}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

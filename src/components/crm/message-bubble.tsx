@@ -4,6 +4,8 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog"
 import { ImageLightbox } from "@/components/crm/image-lightbox"
+import { AudioWaveform } from "@/components/inbox/audio-waveform"
+import { AutomationBotIcon } from "@/components/icons/automation-bot-icon"
 import {
   Tooltip,
   TooltipContent,
@@ -12,7 +14,6 @@ import {
 import {
   IconRobot,
   IconClipboardList,
-  IconMicrophone,
   IconChevronDown,
   IconFile,
   IconDownload,
@@ -673,113 +674,88 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
     }
   }, [url, transcript.status])
 
-  const pct = duration > 0 ? (current / duration) * 100 : 0
-  const timeLabel = playing || current > 0 ? fmtTime(current) : fmtTime(duration)
-
-  // Cores derivadas de isOutgoing
-  const trackBg      = isOutgoing ? "rgba(255,255,255,0.25)" : "rgba(91,111,245,0.15)"
-  const fillBg       = isOutgoing ? "rgba(255,255,255,0.85)" : "var(--brand-primary)"
-  const iconColor    = isOutgoing ? "text-white"             : "text-[var(--brand-primary)]"
-  const timeColor    = isOutgoing ? "text-white/70"          : "text-[var(--text-muted)]"
-  const micColor     = isOutgoing ? "text-white/50"          : "text-[var(--text-muted)]"
+  const timeColor = isOutgoing
+    ? "text-[color:var(--chat-bubble-sent-time)]"
+    : "text-[var(--text-muted)]"
   const transcriptBg = isOutgoing
-    ? "bg-[var(--glass-bg-subtle)] text-white/90 border-[var(--glass-border-subtle)]"
+    ? "border-current/15 bg-current/10"
     : "bg-[var(--brand-primary)]/5 text-[var(--text-secondary)] border-[var(--glass-border-subtle)]"
-  // Botão "Transcrever": pill com fundo sólido para garantir contraste em qualquer cor de bolha.
   const btnBase = isOutgoing
-    ? "bg-[var(--glass-bg-subtle)] text-white hover:bg-[var(--glass-bg-panel)]"
+    ? "bg-current/10 hover:bg-current/15"
     : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20"
 
   return (
     <div
       className={cn(
-        "flex w-[min(340px,74vw)] flex-col gap-1 py-0.5",
-        // Folga inferior só quando há transcrição (evita o horário sobrepor o
-        // texto). No estado padrão, o horário divide a linha com "Transcrever".
-        transcript.status === "done" ? "pb-4" : "pb-1.5",
+        "flex w-[min(320px,74vw)] flex-col gap-1 py-0.5",
+        transcript.status === "done" ? "pb-2" : "pb-1",
       )}
     >
-      {/* Linha do player */}
-      <div className="flex items-center gap-2.5">
-        {/* Elemento audio oculto */}
-        {url && (
-          <audio ref={audioRef} src={url} preload="metadata" aria-hidden="true" />
-        )}
+      {url && <audio ref={audioRef} src={url} preload="metadata" aria-hidden="true" />}
 
-        {/* Ícone mic (decorativo) */}
-        <IconMicrophone size={13} className={cn("shrink-0", micColor)} />
-
-        {/* Botão play/pause */}
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={toggle}
           disabled={!url}
           aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
           className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-opacity",
-            isOutgoing ? "bg-[var(--glass-bg-subtle)] hover:bg-[var(--glass-bg-panel)]" : "bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20",
-            !url && "opacity-40 cursor-not-allowed",
+            "flex size-8 shrink-0 items-center justify-center rounded-full shadow-sm transition-all active:scale-95",
+            isOutgoing
+              ? "bg-current/15 hover:bg-current/20"
+              : "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-dark)]",
+            !url && "cursor-not-allowed opacity-40",
           )}
         >
           {playing
-            ? <IconPlayerPause size={13} className={iconColor} />
-            : <IconPlayerPlay  size={13} className={iconColor} />
+            ? <IconPlayerPause size={14} fill="currentColor" />
+            : <IconPlayerPlay size={14} className="translate-x-px" fill="currentColor" />
           }
         </button>
 
-        {/* Barra de progresso */}
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div
-            role="progressbar"
-            aria-valuenow={Math.round(pct)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            className="relative h-[3px] w-full cursor-pointer overflow-hidden rounded-full"
-            style={{ background: trackBg }}
-            onClick={(e) => {
+        <div className="min-w-0 flex-1">
+          <AudioWaveform
+            currentTime={current}
+            duration={duration}
+            outgoing={isOutgoing}
+            disabled={!url || duration <= 0}
+            onSeek={(nextTime) => {
               const el = audioRef.current
-              if (!el || !duration) return
-              const rect = e.currentTarget.getBoundingClientRect()
-              const ratio = (e.clientX - rect.left) / rect.width
-              el.currentTime = ratio * duration
+              if (!el) return
+              el.currentTime = nextTime
+              setCurrent(nextTime)
             }}
-          >
-            <div
-              className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-100"
-              style={{ width: `${pct}%`, background: fillBg }}
-            />
+          />
+          <div className={cn("-mt-px flex items-center justify-between text-[9px] leading-none tabular-nums", timeColor)}>
+            <span>{fmtTime(current)}</span>
+            <span>{duration > 0 ? fmtTime(duration) : "--:--"}</span>
           </div>
-          <span className={cn("font-body text-[10px] leading-none tabular-nums", timeColor)}>
-            {timeLabel}
-          </span>
         </div>
 
-        {/* Controle de velocidade — cicla 0.5x → 1x → 1.5x → 2x */}
         <button
           type="button"
           onClick={cycleSpeed}
           disabled={!url}
           aria-label="Velocidade de reprodução"
           className={cn(
-            "flex h-7 shrink-0 items-center justify-center rounded-full px-2 font-display text-[10px] font-semibold tabular-nums transition-colors",
+            "flex h-6 shrink-0 items-center justify-center rounded-full px-1.5 font-display text-[9px] font-bold tabular-nums transition-colors",
             isOutgoing
-              ? "bg-[var(--glass-bg-subtle)] text-white hover:bg-[var(--glass-bg-panel)]"
+              ? "bg-current/10 hover:bg-current/15"
               : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20",
-            !url && "opacity-40 cursor-not-allowed",
+            !url && "cursor-not-allowed opacity-40",
           )}
         >
           {rate}x
         </button>
       </div>
 
-      {/* Botão Transcrever — pill compacta com fundo próprio para contraste */}
       {url && transcript.status !== "done" && (
         <button
           type="button"
           disabled={transcript.status === "loading"}
           onClick={handleTranscribe}
           className={cn(
-            "ml-6 flex items-center gap-1 self-start rounded-full px-2 py-0.5 transition-colors",
+            "flex h-4 items-center gap-1 self-start rounded-full px-1.5 transition-colors",
             btnBase,
             transcript.status === "loading" && "cursor-wait",
           )}
@@ -788,7 +764,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
             ? <IconLoader2 size={10} className="animate-spin" />
             : <IconTextCaption size={10} />
           }
-          <span className="font-display text-[10px] font-semibold">
+          <span className="font-display text-[9px] font-semibold leading-none">
             {transcript.status === "loading" ? "Transcrevendo…" : "Transcrever"}
           </span>
         </button>
@@ -809,7 +785,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
               onClick={() => setTranscriptExpanded((v) => !v)}
               className={cn(
                 "mt-0.5 font-display text-[9px] font-semibold opacity-60 hover:opacity-100",
-                isOutgoing ? "text-white" : "text-[var(--brand-primary)]",
+                isOutgoing ? "text-current" : "text-[var(--brand-primary)]",
               )}
             >
               {transcriptExpanded ? "Ver menos" : "Ver mais"}
@@ -823,7 +799,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
         </p>
       )}
       {transcript.status === "error" && (
-        <p className={cn("text-[10px]", isOutgoing ? "text-white/60" : "text-[var(--color-danger)]")}>
+        <p className={cn("text-[10px]", isOutgoing ? "text-[color:var(--chat-bubble-sent-time)]" : "text-[var(--color-danger)]")}>
           {transcript.message}
         </p>
       )}
@@ -1503,7 +1479,7 @@ export function MessageBubble({
                     className="flex h-9 w-9 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
                     style={{ background: AUTOMATION_ACCENT }}
                   >
-                    <IconRobot size={19} />
+                    <IconRobot size={20} aria-label="Automação" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="font-medium text-[11px]">
@@ -1558,7 +1534,9 @@ export function MessageBubble({
                           ) ?? null
                         : null
                     const photo = message.senderImageUrl || byName || selfPhoto
-                    if (isBot) return <IconRobot size={18} />
+                    if (isBot) {
+                      return <IconRobot size={19} aria-label="Automação" />
+                    }
                     if (photo) {
                       return (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -1636,7 +1614,7 @@ export function MessageBubble({
                     : senderName || "Automação"
                 }
               >
-                <IconRobot size={10} />
+                <AutomationBotIcon size={11} />
                 {message.isAutomationRun ? "Manual" : senderName || "Automação"}
               </span>
             </div>

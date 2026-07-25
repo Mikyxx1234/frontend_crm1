@@ -12,7 +12,6 @@ import {
   IconPlus as Plus,
   IconPuzzle as Puzzle,
   IconRobot as Bot,
-  IconRoute as Route,
   IconCalendar as Calendar,
   IconSettings as SettingsIcon,
   IconTrash as Trash2,
@@ -20,6 +19,7 @@ import {
 } from "@tabler/icons-react";
 import type { Icon as LucideIcon } from "@tabler/icons-react";
 
+import { DistributionIcon } from "@/components/icons/distribution-icon";
 import { cn } from "@/lib/utils";
 
 import type { WidgetDto } from "@/features/widgets/types";
@@ -27,7 +27,7 @@ import type { WidgetDto } from "@/features/widgets/types";
 /** Mapeia chave de icone (widgets INTERNAL) para componente lucide.
  *  Widgets PARTNER usam `icon` como URL de imagem — vide `WidgetIcon`. */
 const ICON_BY_KEY: Record<string, LucideIcon> = {
-  route: Route,
+  route: DistributionIcon,
   bot: Bot,
   phone: Phone,
   calendar: Calendar,

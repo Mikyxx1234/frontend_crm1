@@ -14,7 +14,7 @@ import { InputGlass } from "@/components/crm/input-glass";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import { analyzeTemplateComponents } from "@/lib/meta-whatsapp/analyze-template-components";
@@ -822,11 +822,11 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
         )}
       </HubPanel>
 
-      <FormSheet
+      <FormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
         busy={createMutation.isPending}
-        size="xl"
+        size="2xl"
         icon={<MessageCircle className="size-5 text-[var(--brand-primary)]" />}
         title="Novo template na Meta"
         description={<>O template segue para análise automática da Meta. Campos variáveis: <code className="font-mono text-xs text-[var(--text-secondary)]">{"{{1}}"}</code> (POSITIONAL) ou nomes em NAMED, conforme a doc.</>}
@@ -1127,7 +1127,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
             </div>
           )}
 
-      </FormSheet>
+      </FormDialog>
 
       <Dialog open={!!previewRow} onOpenChange={(open) => { if (!open) setPreviewRow(null); }}>
         <DialogContent size="xl" panelClassName="max-h-[min(88vh,640px)]">

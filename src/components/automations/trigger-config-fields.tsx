@@ -531,6 +531,49 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
           />
         </div>
       );
+    case "whatsapp_session_expiring": {
+      const hours = Number(value.hoursBeforeExpiry ?? 1);
+      return (
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="tc-session-hours">Horas antes do encerramento</Label>
+            <div className="grid grid-cols-5 gap-2">
+              {[1, 2, 4, 6, 12].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => set("hoursBeforeExpiry", preset)}
+                  className={cn(
+                    "h-9 rounded-[var(--radius-md)] border font-display text-xs font-semibold transition-colors",
+                    hours === preset
+                      ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                      : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)]",
+                  )}
+                >
+                  {preset}h
+                </button>
+              ))}
+            </div>
+            <Input
+              id="tc-session-hours"
+              type="number"
+              min={0.1}
+              max={23.9}
+              step={0.5}
+              value={Number.isFinite(hours) ? hours : ""}
+              onChange={(event) =>
+                set("hoursBeforeExpiry", Number(event.target.value))
+              }
+              placeholder="Valor entre 0 e 24 horas"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Dispara uma vez por janela Meta aberta. Uma nova mensagem do cliente
+            inicia outra janela e permite um novo disparo.
+          </p>
+        </div>
+      );
+    }
     case "message_received":
     case "message_sent":
       return (
@@ -670,9 +713,7 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
         </div>
       );
     case "conversation_tabulated":
-      return (
-        <ConversationTabulatedFields value={value} patch={patch} set={set} />
-      );
+      return <ConversationTabulatedFields value={value} patch={patch} />;
     default:
       return (
         <p className="text-sm text-muted-foreground">Selecione um tipo de gatilho.</p>
@@ -697,11 +738,9 @@ type TabulationNodeApi = {
 function ConversationTabulatedFields({
   value,
   patch,
-  set,
 }: {
   value: Record<string, unknown>;
   patch: (n: Record<string, unknown>) => void;
-  set: (k: string, v: unknown) => void;
 }) {
   const departmentId = String(value.departmentId ?? "");
   const tabulationId = String(value.tabulationId ?? "");
@@ -791,8 +830,6 @@ function ConversationTabulatedFields({
           </p>
         ) : null}
       </div>
-      {/* eslint-disable-next-line @typescript-eslint/no-unused-expressions */}
-      {set && null}
     </div>
   );
 }

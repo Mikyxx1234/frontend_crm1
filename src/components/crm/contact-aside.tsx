@@ -182,7 +182,7 @@ const ASIDE_STORAGE_KEY = "crm:contact-aside:section-order-v4"
  *  (SectionHeader) e o conteúdo ficam DENTRO do mesmo card. Antes o
  *  título flutuava sobre o fundo do painel, acima do card. */
 const SECTION_CARD_CLASS =
-  "mx-3 mb-3 rounded-[var(--radius-xl)] border border-slate-100 bg-white p-3 shadow-sm"
+  "mx-3 mb-3 min-w-0 max-w-full overflow-x-hidden rounded-[var(--radius-xl)] border border-slate-100 bg-white p-3 shadow-sm"
 
 // ── Abas Perfil / Produto ─────────────────────────────────────────
 // O hero do negócio (secao `negocios`) fica FIXO no topo. As demais
@@ -540,7 +540,7 @@ function DealInline({
           {/* Layout responsivo: grid 2-col; valores muito longos (>18 chars ou com espaco)
               ganham col-span-2 (ocupam linha inteira sozinhos) — layout compacto sem
               truncar e sem espaco vazio esquisito. */}
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid min-w-0 grid-cols-2 gap-1.5">
             {fields.map((f) => {
               const isEmpty = !f.value || f.value === PLACEHOLDER
               const isLong = !isEmpty && (f.value!.length > 18 || f.value!.includes("@"))
@@ -548,7 +548,7 @@ function DealInline({
                 <div
                   key={f.fieldId}
                   className={cn(
-                    "flex flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2",
+                    "flex min-w-0 max-w-full flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2",
                     isLong && "col-span-2",
                   )}
                 >
@@ -560,7 +560,7 @@ function DealInline({
                       + Adicionar
                     </span>
                   ) : (
-                    <span className="min-w-0 break-words font-display text-[12px] font-bold text-[var(--text-primary)]">
+                    <span className="min-w-0 max-w-full break-words [overflow-wrap:anywhere] font-display text-[12px] font-bold text-[var(--text-primary)]">
                       {f.value}
                     </span>
                   )}
@@ -795,7 +795,7 @@ export function ContactAside({
           </button>
         </TooltipGlass>
       )}
-      <div className="aside-scrollbar relative flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <div className="aside-scrollbar relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
 
         {/* Header de acoes do contato (IB4 do questionario):
             DealCallButton entra aqui via `headerActionsNode`. Antes ficava
@@ -1005,7 +1005,7 @@ export function ContactAside({
                                     <div
                                       key={f.fieldId}
                                       className={cn(
-                                        "flex items-center justify-between gap-2 text-sm",
+                                        "flex min-w-0 max-w-full items-center justify-between gap-2 text-sm",
                                         isCompact ? "py-1.5" : "py-2",
                                         i > 0 && "border-t border-slate-50",
                                       )}
@@ -1016,7 +1016,7 @@ export function ContactAside({
                                       )}>
                                         {f.label}
                                       </span>
-                                      <div className="min-w-0 flex-1">
+                                      <div className="min-w-0 max-w-full flex-1">
                                         {contactEditMode && canEdit ? (
                                           <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={contactEditMode} invalidateKeys={contactInvalidateKeys} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")} placeholder="+ Adicionar" />
                                         ) : hl && colors ? (
@@ -1024,7 +1024,7 @@ export function ContactAside({
                                         ) : canEdit ? (
                                           <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={contactEditMode} invalidateKeys={contactInvalidateKeys} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")} placeholder="+ Adicionar" />
                                         ) : (
-                                          <span className={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")}>{f.value || PLACEHOLDER}</span>
+                                          <span className={cn("block min-w-0 max-w-full break-words [overflow-wrap:anywhere] font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")}>{f.value || PLACEHOLDER}</span>
                                         )}
                                       </div>
                                     </div>
@@ -1142,12 +1142,12 @@ export function ContactAside({
                                       <div
                                         key={f.fieldId}
                                         className={cn(
-                                          "flex items-center justify-between gap-2 py-2 text-sm",
+                                          "flex min-w-0 max-w-full items-center justify-between gap-2 py-2 text-sm",
                                           idx > 0 && "border-t border-slate-50",
                                         )}
                                       >
                                         <span className="w-[38%] shrink-0 text-[12px] font-medium leading-tight text-slate-500">{f.label}</span>
-                                        <div className="min-w-0 flex-1">
+                                        <div className="min-w-0 max-w-full flex-1">
                                           {dealFieldsEditMode && canEdit ? (
                                             <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                           ) : hl && colors ? (
@@ -1155,7 +1155,7 @@ export function ContactAside({
                                           ) : canEdit ? (
                                             <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                           ) : (
-                                            <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{f.value || PLACEHOLDER}</span>
+                                            <span className="block min-w-0 max-w-full break-words [overflow-wrap:anywhere] font-display text-[12px] font-semibold text-[var(--text-primary)]">{f.value || PLACEHOLDER}</span>
                                           )}
                                         </div>
                                       </div>
@@ -1192,14 +1192,14 @@ export function ContactAside({
                                         <div
                                           key={f.fieldId}
                                           className={cn(
-                                            "flex flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
+                                            "flex min-w-0 max-w-full flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
                                             isLongDeal && "col-span-2",
                                           )}
                                         >
                                           <span className="text-[11px] font-medium text-slate-500">
                                             {f.label}
                                           </span>
-                                          <div className="min-w-0 w-full">
+                                          <div className="min-w-0 w-full max-w-full">
                                             {dealFieldsEditMode && canEdit ? (
                                               <InlineFieldEditor
                                                 fieldId={f.fieldId}
@@ -1244,7 +1244,7 @@ export function ContactAside({
                                                 placeholder="+ Adicionar"
                                               />
                                             ) : (
-                                              <span className="font-display font-bold text-[var(--text-primary)]">
+                                              <span className="block min-w-0 max-w-full break-words [overflow-wrap:anywhere] font-display font-bold text-[var(--text-primary)]">
                                                 {f.value || PLACEHOLDER}
                                               </span>
                                             )}
@@ -1254,7 +1254,7 @@ export function ContactAside({
                                     }
                                     return dealFieldGroups.map((g) => {
                                       const grid = (
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <div className="grid min-w-0 grid-cols-2 gap-2">
                                           {g.fields.map(_renderCard)}
                                         </div>
                                       )

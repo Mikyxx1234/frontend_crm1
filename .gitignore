@@ -64,6 +64,7 @@ next-env.d.ts
 .vscode/
 .idea/
 .uix/
+.worktrees/
 
 # diagnostico local (saida de tsc/lint)
 tsc-out.txt
@@ -98,3 +99,4 @@ arquivos_modificados/
 import-teste-*.csv
 
 certificates
+.superpowers/

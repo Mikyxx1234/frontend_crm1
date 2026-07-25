@@ -97,6 +97,8 @@ export function useTransferConversation() {
 export function useToggleConversationResolve(
   callbacks?: {
     onNewConversation?: (newConversationId: string, previousConversationId: string) => void;
+    /** Encerrar: caller pode atualizar sticky/status local antes do refetch da lista. */
+    onResolved?: (conversationId: string) => void;
   },
 ) {
   const qc = useQueryClient();
@@ -129,6 +131,32 @@ export function useToggleConversationResolve(
           : "Conversa finalizada",
       );
 
+      // Reabrir: troca o activeId ANTES das invalidates. Se invalidar primeiro,
+      // a conversa resolvida some da aba ativa e o deep-link tenta carregar o
+      // id antigo → toast "Erro ao carregar conversa".
+      // Também semeia o cache do id novo: na aba Encerradas o ticket OPEN não
+      // está na lista, e o deep-link precisa achar o row imediatamente.
+      if (newId && data.previousConversationId) {
+        if (data.conversation) {
+          qc.setQueryData(["inbox-conversation", newId], data.conversation);
+        }
+        callbacks?.onNewConversation?.(newId, data.previousConversationId);
+      } else if (!isReopen) {
+        callbacks?.onResolved?.(vars.conversationId);
+        // Mantém snapshot local coerente se a conversa sair do filtro da aba.
+        qc.setQueryData(
+          ["inbox-conversation", vars.conversationId],
+          (old: { status?: string; closedAt?: string | null } | undefined) =>
+            old
+              ? {
+                  ...old,
+                  status: "RESOLVED",
+                  closedAt: old.closedAt ?? new Date().toISOString(),
+                }
+              : old,
+        );
+      }
+
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
       qc.invalidateQueries({ queryKey: ["conversations"] });
       // Atualiza timeline e activity-feed do deal vinculado à conversa.
@@ -143,10 +171,6 @@ export function useToggleConversationResolve(
       // que alimentam o chip "Encerrada" + marcador de fim de chat no
       // pipeline. Sem esta invalidacao a UI ficava travada ate refresh manual.
       qc.invalidateQueries({ queryKey: ["deal-detail-v2"] });
-
-      if (newId && data.previousConversationId) {
-        callbacks?.onNewConversation?.(newId, data.previousConversationId);
-      }
     },
     onError: (err) => toast.error(err.message),
   });
@@ -209,5 +233,79 @@ export function useBulkConversationAction() {
       }
     },
     onError: (err) => toast.error(err.message),
+  });
+}
+
+/**
+ * Reatribuir em massa — o POST /api/conversations/bulk NÃO implementa `assign`.
+ * Usa o endpoint individual (`POST /api/conversations/:id/actions` action=assign)
+ * com Promise.allSettled e reporta êxitos/falhas.
+ */
+export function useBulkAssignConversations() {
+  const qc = useQueryClient();
+  return useMutation<
+    { succeeded: number; failed: number; total: number; errors: string[] },
+    Error,
+    { ids: string[]; assignedToId: string | null }
+  >({
+    mutationFn: async (vars) => {
+      const results = await Promise.allSettled(
+        vars.ids.map((id) =>
+          postConversationAction(id, {
+            action: "assign",
+            assignedToId: vars.assignedToId,
+          }),
+        ),
+      );
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.length - succeeded;
+      const errors = results.flatMap((result) =>
+        result.status === "rejected"
+          ? [
+              result.reason instanceof Error
+                ? result.reason.message
+                : "Erro de rede ao reatribuir conversa",
+            ]
+          : [],
+      );
+      if (succeeded === 0 && failed > 0) {
+        throw new Error(errors[0] ?? "Falha ao reatribuir conversas");
+      }
+      return { succeeded, failed, total: results.length, errors };
+    },
+    onSuccess: (result, vars) => {
+      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
+      qc.invalidateQueries({ queryKey: ["deal-detail-v2"] });
+      qc.invalidateQueries({ queryKey: ["activity-feed"] });
+      for (const id of vars.ids) {
+        qc.invalidateQueries({ queryKey: ["conversation-timeline", id] });
+      }
+
+      const verb =
+        vars.assignedToId === null ? "desatribuída" : "reatribuída";
+      const verbPlural =
+        vars.assignedToId === null ? "desatribuídas" : "reatribuídas";
+
+      if (result.failed === 0) {
+        toast.success(
+          `${result.succeeded} conversa${result.succeeded > 1 ? "s" : ""} ${
+            result.succeeded > 1 ? verbPlural : verb
+          }`,
+        );
+      } else if (result.succeeded === 0) {
+        toast.error(
+          `Falha ao reatribuir ${result.failed} conversa${result.failed > 1 ? "s" : ""}.`,
+        );
+      } else {
+        toast.warning(
+          `${result.succeeded} reatribuída(s), ${result.failed} falharam: ${
+            result.errors[0] ?? "erro desconhecido"
+          }`,
+        );
+      }
+    },
+    onError: (err) => toast.error(err.message || "Falha ao reatribuir"),
   });
 }

@@ -1,18 +1,18 @@
 import {
   IconBuilding,
-  IconBuildingStore,
   IconChecklist,
   IconClipboardList,
-  IconFilter,
+  IconLayoutKanban,
   IconLayoutDashboard,
   IconMail,
   IconMessageCircle,
   IconRobot,
-  IconRoute,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
 
+import { DistributionIcon } from "@/components/icons/distribution-icon";
+import { WidgetsIcon } from "@/components/icons/widgets-icon";
 import type { AppUserRole } from "@/lib/auth-types";
 
 /**
@@ -75,7 +75,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "pipeline",
     title: "Pipeline",
     href: "/pipeline",
-    icon: IconFilter,
+    icon: IconLayoutKanban,
     description: "Funil de vendas e oportunidades.",
     locked: false,
     requiredPermission: "nav:pipeline",
@@ -130,7 +130,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "distribution",
     title: "Distribuição",
     href: "/widgets/distribution",
-    icon: IconRoute,
+    icon: DistributionIcon,
     description: "Distribuição inteligente de leads entre consultores.",
     locked: false,
     allowedRoles: ["ADMIN", "MANAGER"],
@@ -150,7 +150,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "widgets",
     title: "Widgets",
     href: "/widgets",
-    icon: IconBuildingStore,
+    icon: WidgetsIcon,
     description: "Central de extensões da organização.",
     locked: false,
     requiredPermission: "nav:widgets",

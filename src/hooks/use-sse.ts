@@ -41,6 +41,10 @@ export function useSSE(url: string, handler: SSEHandler, enabled = true) {
         try { handlerRef.current("presence_update", JSON.parse(e.data)); } catch { /* ignore */ }
       });
 
+      es.addEventListener("system_presence_update", (e) => {
+        try { handlerRef.current("system_presence_update", JSON.parse(e.data)); } catch { /* ignore */ }
+      });
+
       es.onerror = () => {
         es?.close();
         retryTimeout = setTimeout(connect, 5_000);

@@ -8,15 +8,17 @@
  * o botão "Configurar" no card.
  *
  * Contrato:
- *  - `Component` é renderizado dentro do corpo rolável do FormSheet, sem
- *    header próprio (o header vem do drawer).
+ *  - `Component` é renderizado dentro do corpo rolável do FormDialog, sem
+ *    header próprio (o header vem do modal).
  *  - `requiredPermission` é a permission key canônica (`resource:action`).
  *    Falta dela (ou de "*") esconde o botão "Configurar" no card.
  */
 
-import { IconArrowsShuffle, IconPhone } from "@tabler/icons-react";
+import { IconPhone } from "@tabler/icons-react";
 import type { ComponentType, ReactNode } from "react";
 import dynamic from "next/dynamic";
+
+import { DistributionIcon } from "@/components/icons/distribution-icon";
 
 export type WidgetConfigSize = "sm" | "md" | "lg" | "xl";
 
@@ -48,7 +50,7 @@ export const WIDGET_CONFIG_REGISTRY: Record<string, WidgetConfigEntry> = {
   smart_distribution: {
     title: "Distribuição",
     description: "Round-robin, priorização e regras de atribuição",
-    icon: <IconArrowsShuffle size={20} />,
+    icon: <DistributionIcon size={20} />,
     size: "xl",
     requiredPermission: "distribution:manage",
     Component: DistributionConfig,

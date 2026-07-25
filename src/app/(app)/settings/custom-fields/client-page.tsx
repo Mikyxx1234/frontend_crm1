@@ -56,7 +56,7 @@ import {
   type SettingsFilterGroup,
 } from "@/components/crm/settings-filter-bar";
 import { listTableHeadRowClass } from "@/components/crm/sortable-header";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 
 import {
   SETTINGS_HUB_BACK,
@@ -1317,10 +1317,11 @@ function FieldFormDialog({
   ];
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       busy={mutation.isPending}
+      size="lg"
       icon={
         <span className="text-[var(--brand-primary)]">
           {TYPE_ICONS[type] ?? <IconLetterT size={16} strokeWidth={2.5} />}
@@ -1510,6 +1511,6 @@ function FieldFormDialog({
           )}
         </div>
       </form>
-    </FormSheet>
+    </FormDialog>
   );
 }

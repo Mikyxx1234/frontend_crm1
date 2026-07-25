@@ -388,7 +388,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 const CONV_STATUS_LABEL: Record<string, string> = {
   OPEN: "Aberta",
-  RESOLVED: "Resolvida",
+  RESOLVED: "Encerrada",
   PENDING: "Pendente",
   SNOOZED: "Adiada",
 };

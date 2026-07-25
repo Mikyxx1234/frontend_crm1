@@ -11,7 +11,7 @@ import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Chip } from "@/components/crm/chip";
+import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
 import { addDealTag, removeDealTag, listTags, type DealTag } from "@/features/pipeline-v2/api/deal-tags";
 import {
   computePopoverPosition,
@@ -131,49 +131,14 @@ export function DealTagsPopover({
                 }}
                 className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]/40"
               />
-              <ul className="max-h-56 overflow-y-auto">
-                {tagsQuery.isLoading && (
-                  <li className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                    Carregando…
-                  </li>
-                )}
-                {!tagsQuery.isLoading && filtered.length === 0 && (
-                  <li className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                    Nenhuma tag encontrada.
-                  </li>
-                )}
-                {filtered.map((t) => {
-                  const checked = selectedIds.has(t.id);
-                  return (
-                    <li key={t.id}>
-                      <button
-                        type="button"
-                        disabled={setTagsMutation.isPending}
-                        onClick={() => toggleTag(t.id)}
-                        className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] transition-colors hover:bg-[var(--glass-bg-strong)] ${
-                          checked
-                            ? "bg-[var(--color-enterprise-bg)] font-semibold text-[var(--brand-primary)]"
-                            : "text-[var(--text-primary)]"
-                        }`}
-                      >
-                        <span className="flex items-center gap-2 truncate">
-                          <span
-                            aria-hidden
-                            className="inline-block h-2 w-2 shrink-0 rounded-full"
-                            style={{ background: t.color ?? "var(--brand-primary)" }}
-                          />
-                          {t.name}
-                        </span>
-                        {checked && (
-                          <span aria-hidden className="text-[var(--brand-primary)]">
-                            ✓
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <TagChipOptionsList
+                tags={filtered}
+                selectedIds={selectedIds}
+                onToggle={toggleTag}
+                disabled={setTagsMutation.isPending}
+                isLoading={tagsQuery.isLoading}
+                emptyLabel="Nenhuma tag encontrada."
+              />
             </div>,
             document.body,
           )

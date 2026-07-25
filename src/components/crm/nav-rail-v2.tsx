@@ -649,19 +649,25 @@ export function NavRailV2({ className }: { className?: string }) {
             expanded ? "flex w-full items-center gap-3 rounded-[var(--radius-md)] px-2 py-1 hover:bg-[var(--nav-text-hover-bg)]" : "block",
           )}
         >
-          <UserAvatar
-            name={displayName}
-            imageUrl={userImage}
-            size={40}
-            statusColor={statusMeta.color}
-            className={cn(
-              "border-2 transition-all",
-              !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
-              isProfileActive
-                ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
-                : "border-[var(--glass-bg-strong)]",
-            )}
-          />
+          <span className="relative isolate shrink-0">
+            <UserAvatar
+              name={displayName}
+              imageUrl={userImage}
+              size={44}
+              className={cn(
+                "border-2 transition-all",
+                !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
+                isProfileActive
+                  ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
+                  : "border-[var(--glass-bg-strong)]",
+              )}
+            />
+            <span
+              className="absolute -bottom-0.5 -right-0.5 z-30 h-3.5 w-3.5 rounded-full border-[3px] border-[var(--nav-bg)] shadow-[0_1px_5px_rgba(0,0,0,0.35)]"
+              style={{ backgroundColor: statusMeta.color }}
+              aria-label={`Status: ${statusMeta.label}`}
+            />
+          </span>
           {expanded && (
             <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[var(--nav-text-hover)]">
               {displayName}
@@ -678,19 +684,25 @@ export function NavRailV2({ className }: { className?: string }) {
             expanded ? "flex w-full items-center gap-3 rounded-[var(--radius-md)] px-2 py-1 text-left hover:bg-[var(--nav-text-hover-bg)]" : "block",
           )}
         >
-          <UserAvatar
-            name={displayName}
-            imageUrl={userImage}
-            size={40}
-            statusColor={statusMeta.color}
-            className={cn(
-              "border-2 transition-all",
-              !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
-              isProfileActive
-                ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
-                : "border-[var(--glass-bg-strong)]",
-            )}
-          />
+          <span className="relative isolate shrink-0">
+            <UserAvatar
+              name={displayName}
+              imageUrl={userImage}
+              size={44}
+              className={cn(
+                "border-2 transition-all",
+                !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
+                isProfileActive
+                  ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
+                  : "border-[var(--glass-bg-strong)]",
+              )}
+            />
+            <span
+              className="absolute -bottom-0.5 -right-0.5 z-30 h-3.5 w-3.5 rounded-full border-[3px] border-[var(--nav-bg)] shadow-[0_1px_5px_rgba(0,0,0,0.35)]"
+              style={{ backgroundColor: statusMeta.color }}
+              aria-label={`Status: ${statusMeta.label}`}
+            />
+          </span>
           {expanded && (
             <div className="min-w-0 flex-1 overflow-hidden">
               <p className="truncate text-[13px] font-semibold text-[var(--nav-text-hover)]">{displayName}</p>

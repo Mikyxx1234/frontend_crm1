@@ -6,7 +6,7 @@ import { IconLoader2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiUrl } from "@/lib/api";
@@ -172,7 +172,7 @@ export function QuotaDialog({
   const canSave = name.trim().length > 0 && Number(discountValue) > 0;
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       size="md"
@@ -351,6 +351,6 @@ export function QuotaDialog({
           </div>
         </div>
       </div>
-    </FormSheet>
+    </FormDialog>
   );
 }

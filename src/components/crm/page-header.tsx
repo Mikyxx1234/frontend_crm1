@@ -111,7 +111,7 @@ export function PageHeader({
           <Identity icon={icon} title={title} back={back} titleAccessory={titleAccessory} />
         </div>
         {center ? (
-          <div className={cn(SEARCH_COL, "[&_.relative]:!w-full [&_.relative]:!max-w-none")}>
+          <div className={cn(SEARCH_COL, "[&>.relative]:!w-full [&>.relative]:!max-w-none")}>
             {center}
           </div>
         ) : null}
@@ -127,7 +127,7 @@ export function PageHeader({
         {hasControls ? (
           <div className="flex min-w-0 max-w-full flex-col gap-2">
             {center ? (
-              <div className="min-w-0 w-full [&_.relative]:!w-full [&_.relative]:!max-w-none">
+              <div className="min-w-0 w-full [&>.relative]:!w-full [&>.relative]:!max-w-none">
                 {center}
               </div>
             ) : null}

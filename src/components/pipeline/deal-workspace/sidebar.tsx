@@ -11,6 +11,7 @@ import { useFieldLayout } from "@/hooks/use-field-layout";
 import { CustomFieldsSection } from "@/components/contacts/custom-fields-section";
 import { DealCustomFieldsSection } from "@/components/pipeline/deal-custom-fields-section";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
 import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
 import { SortableSidebar } from "@/components/ui/sortable-sidebar";
 import { Button } from "@/components/ui/button";
@@ -1378,18 +1379,16 @@ function TagComposer({
         </Button>
       </div>
       {draft && suggestions.length > 0 ? (
-        <div className="mt-1.5 max-h-28 overflow-y-auto rounded-md border border-border bg-white">
-          {suggestions.slice(0, 8).map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => onSelectExisting(t)}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-subtle)]"
-            >
-              <span className="size-2 rounded-full" style={{ backgroundColor: t.color || "#6b7280" }} />
-              {t.name}
-            </button>
-          ))}
+        <div className="mt-1.5 rounded-md border border-border bg-white p-1.5">
+          <TagChipOptionsList
+            tags={suggestions.slice(0, 8)}
+            selectedIds={[]}
+            onToggle={(tagId) => {
+              const tag = suggestions.find((t) => t.id === tagId);
+              if (tag) onSelectExisting(tag);
+            }}
+            className="max-h-28"
+          />
         </div>
       ) : null}
       {canCreateTag ? (

@@ -16,7 +16,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass";
@@ -254,10 +254,10 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
   }, [catalogs, catalogId]);
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      size="md"
+      size="xl"
       title={isEdit ? "Editar produto" : "Novo produto"}
       description="Escolha Produto ou Serviço. As especializações (vaga, curso…) vêm das capacidades do catálogo."
       footer={
@@ -691,6 +691,6 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
             </div>
           )}
         </div>
-    </FormSheet>
+    </FormDialog>
   );
 }

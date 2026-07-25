@@ -64,7 +64,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 
 import {
   useCompanies,
@@ -1243,10 +1243,11 @@ function CreateCompanyDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   }
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       title="Nova empresa"
+      size="lg"
       footer={
         <>
           <ButtonGlass variant="glass" size="sm" type="button" onClick={() => onOpenChange(false)}>Cancelar</ButtonGlass>
@@ -1271,7 +1272,7 @@ function CreateCompanyDialog({ open, onOpenChange }: { open: boolean; onOpenChan
           <p className="text-[12px] text-[var(--color-danger-text)]">{createMut.error instanceof Error ? createMut.error.message : "Erro ao criar empresa."}</p>
         )}
       </form>
-    </FormSheet>
+    </FormDialog>
   );
 }
 
@@ -1324,10 +1325,11 @@ function EditCompanyDialog({ company, onClose }: { company: CompanyListItemDto |
   }
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={(next) => !next && onClose()}
       title="Editar empresa"
+      size="lg"
       footer={
         <>
           <ButtonGlass variant="glass" size="sm" type="button" onClick={onClose}>Cancelar</ButtonGlass>
@@ -1352,7 +1354,7 @@ function EditCompanyDialog({ company, onClose }: { company: CompanyListItemDto |
           <p className="text-[12px] text-[var(--color-danger-text)]">{updateMut.error instanceof Error ? updateMut.error.message : "Erro ao atualizar empresa."}</p>
         )}
       </form>
-    </FormSheet>
+    </FormDialog>
   );
 }
 

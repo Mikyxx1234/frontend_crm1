@@ -60,7 +60,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { RequirePermission } from "@/components/auth/require-permission";
 
 import {
@@ -748,7 +748,7 @@ function DealDuplicatesSheet({
   );
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       title="Localizar duplicados"
@@ -810,7 +810,7 @@ function DealDuplicatesSheet({
           </div>
         )}
       </div>
-    </FormSheet>
+    </FormDialog>
   );
 }
 

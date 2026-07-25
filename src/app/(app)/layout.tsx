@@ -23,6 +23,7 @@ import { ChatThemeApplier } from "@/components/providers/chat-theme-applier";
 import { MobileBottomNav } from "@/components/crm/mobile-bottom-nav";
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RouteTransition } from "@/components/crm/route-transition";
+import { SystemPresenceHeartbeat } from "@/components/layout/system-presence-heartbeat";
 
 // O TooltipProvider (Radix) é provido uma única vez na raiz (app/providers.tsx),
 // cobrindo tanto os TooltipGlass quanto os TooltipContent/TooltipHost. Não é
@@ -35,6 +36,7 @@ export default function AppLayout({
   return (
     <>
       <ChatThemeApplier />
+      <SystemPresenceHeartbeat />
       <div className="v2-root v2-min-screen">
         {/* Trilho de navegação ÚNICO e PERSISTENTE. Vive aqui (fora do
             RouteTransition) para NÃO remontar ao navegar — antes cada página
@@ -44,7 +46,7 @@ export default function AppLayout({
             (que as páginas reservam via `--nav-rail-w` + <NavRailSpacer/>),
             mantendo o mesmo recuo (p-3/p-4) das shells. */}
         <div
-          className="fixed left-3 top-3 bottom-3 z-40 max-md:hidden sm:left-4 sm:top-4 sm:bottom-4"
+          className="v2-nav-rail-fixed fixed left-3 top-3 z-40 max-md:hidden sm:left-4 sm:top-4"
           style={{ width: "var(--nav-rail-w, 72px)" }}
         >
           <NavRailV2 />

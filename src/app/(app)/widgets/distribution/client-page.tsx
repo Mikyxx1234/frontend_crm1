@@ -2,21 +2,24 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
   IconAdjustmentsHorizontal,
   IconAlertTriangle,
   IconCheck,
+  IconChevronDown,
   IconCircleCheck,
   IconClockExclamation,
+  IconExternalLink,
   IconLoader2,
   IconPencil,
   IconPhone,
   IconPlayerPlay,
   IconRefresh,
   IconRotateClockwise,
-  IconRoute,
   IconSearch,
+  IconSettings,
   IconTag,
   IconUserCheck,
   IconUsers,
@@ -25,6 +28,12 @@ import {
 import { toast } from "sonner";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
+import { UserAvatar } from "@/components/crm/user-avatar";
+import {
+  SystemPresenceIndicator,
+  sortByPresence,
+} from "@/components/crm/system-presence-indicator";
+import { DistributionIcon } from "@/components/icons/distribution-icon";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
@@ -32,6 +41,7 @@ import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-too
 import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import { EmptyState } from "@/components/crm/empty-state";
 import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { cn } from "@/lib/utils";
 import { useWidgets } from "@/features/widgets/hooks";
 import {
@@ -84,6 +94,7 @@ export default function DistributionClientPage({
   const { ready: roleReady, isManagerUp } = useRequireManager();
   const isAuthenticated = sessionStatus === "authenticated";
   const currentUserId = session?.user?.id ?? null;
+  const currentUserImage = session?.user?.image ?? null;
   const role = session?.user?.role;
   const canManage = role === "ADMIN" || role === "MANAGER";
 
@@ -104,6 +115,7 @@ export default function DistributionClientPage({
 
   const [editing, setEditing] = useState<DistributionResponsibleDto | null>(null);
   const [simResult, setSimResult] = useState<DistributionResult | null>(null);
+  const [deptConfigOpen, setDeptConfigOpen] = useState(false);
 
   // ── Estado de UI: aba, busca, filtros ──
   const [view, setView] = useState<DistributionView>("team");
@@ -149,7 +161,7 @@ export default function DistributionClientPage({
 
   const filteredResponsibles = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return responsibles.filter((r) => {
+    const filtered = responsibles.filter((r) => {
       if (q) {
         const hay = `${r.name ?? ""} ${r.email ?? ""} ${r.type ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -162,6 +174,9 @@ export default function DistributionClientPage({
       if (types.length > 0 && (!r.type || !types.includes(r.type))) return false;
       return true;
     });
+    // Ordena por presença de USO (CRM aberto) — quem está no sistema agora sobe.
+    // Não interfere na elegibilidade da Distribuição — é só ordem de exibição.
+    return sortByPresence(filtered);
   }, [responsibles, search, presence, eligibility, types]);
 
   const clearFilters = () => {
@@ -218,7 +233,7 @@ export default function DistributionClientPage({
 
       <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden pb-3 sm:gap-4 sm:pb-4">
         <PageHeader
-          icon={<IconRoute size={22} />}
+          icon={<DistributionIcon size={22} />}
           title="Distribuição"
           center={
             smartInstalled && view === "team" ? (
@@ -275,6 +290,11 @@ export default function DistributionClientPage({
                   canRetry={pending.length > 0}
                   hasFilters={hasFilters}
                   onClearFilters={clearFilters}
+                  onDepartmentsConfig={
+                    canManage && !useDemo
+                      ? () => setDeptConfigOpen(true)
+                      : undefined
+                  }
                 />
               </div>
             ) : undefined
@@ -304,10 +324,6 @@ export default function DistributionClientPage({
                 <SimulationPanel result={simResult} onClose={() => setSimResult(null)} />
               )}
 
-              {view === "team" && canManage && !useDemo && (
-                <DepartmentsDistributionPanel />
-              )}
-
               {view === "team" ? (
                 <ResponsiblesCardList
                   responsibles={filteredResponsibles}
@@ -315,6 +331,7 @@ export default function DistributionClientPage({
                   hasFilters={hasFilters}
                   onClearFilters={clearFilters}
                   currentUserId={currentUserId}
+                  currentUserImage={currentUserImage}
                   canManage={canManage}
                   onEdit={(r) => setEditing(r)}
                 />
@@ -341,6 +358,17 @@ export default function DistributionClientPage({
           onClose={() => setEditing(null)}
         />
       )}
+
+      <FormDialog
+        open={deptConfigOpen}
+        onOpenChange={setDeptConfigOpen}
+        title="Departamentos · distribuição automática"
+        description="Configure se a distribuição respeita o departamento da conversa e quais departamentos distribuem automaticamente."
+        icon={<IconUsers size={20} />}
+        size="lg"
+      >
+        <DepartmentsDistributionPanel />
+      </FormDialog>
     </div>
   );
 }
@@ -484,17 +512,9 @@ function DistributionMiniDash({
 
 // ── Lista de responsáveis em cards ───────────────────────────────────────
 
-// 6 colunas com mínimos legíveis — H-scroll no container quando < ~960px.
+// 6 colunas com mínimos legíveis — H-scroll preserva o conteúdo em telas estreitas.
 const RESP_GRID =
-  "grid-cols-[minmax(200px,2.4fr)_minmax(160px,1.4fr)_minmax(64px,0.7fr)_minmax(72px,0.8fr)_minmax(150px,1.2fr)_minmax(100px,0.9fr)]";
-
-/* Paleta de avatares: rotaciona pelo índice do responsável */
-const AVATAR_PALETTES = [
-  "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
-  "bg-[var(--color-success-bg)] text-[var(--color-success-dark,#0f7a5a)]",
-  "bg-[var(--color-warn-bg,rgba(217,119,6,0.10))] text-[var(--color-warn,#d97706)]",
-  "bg-[color-mix(in_srgb,var(--brand-secondary)_16%,transparent)] text-[var(--brand-secondary)]",
-] as const;
+  "grid-cols-[minmax(300px,3fr)_minmax(155px,1.25fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(190px,1.55fr)_minmax(82px,0.75fr)]";
 
 function ResponsiblesCardList({
   responsibles,
@@ -502,6 +522,7 @@ function ResponsiblesCardList({
   hasFilters,
   onClearFilters,
   currentUserId,
+  currentUserImage,
   canManage,
   onEdit,
 }: {
@@ -510,6 +531,7 @@ function ResponsiblesCardList({
   hasFilters: boolean;
   onClearFilters: () => void;
   currentUserId: string | null;
+  currentUserImage: string | null;
   canManage: boolean;
   onEdit: (r: DistributionResponsibleDto) => void;
 }) {
@@ -517,7 +539,7 @@ function ResponsiblesCardList({
     return (
       <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
         <EmptyState
-          icon={<IconRoute size={28} />}
+          icon={<DistributionIcon size={28} />}
           title="Nenhum responsável disponível"
           description="Adicione consultores à organização para distribuir leads."
         />
@@ -550,8 +572,8 @@ function ResponsiblesCardList({
 
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-      <div className="flex min-w-[960px] flex-col gap-2">
-        <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-3.5 border border-transparent px-4 py-2"))}>
+      <div className="flex min-w-[1040px] flex-col gap-1.5">
+        <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-2.5 border border-transparent px-3 py-1.5"))}>
           <ListColumnLabel>Responsável</ListColumnLabel>
           <ListColumnLabel>Presença</ListColumnLabel>
           <ListColumnLabel className="text-center">Fila</ListColumnLabel>
@@ -559,12 +581,12 @@ function ResponsiblesCardList({
           <ListColumnLabel>Elegibilidade</ListColumnLabel>
           <ListColumnLabel align="right">Ações</ListColumnLabel>
         </div>
-        {responsibles.map((r, idx) => (
+        {responsibles.map((r) => (
           <ResponsibleCard
             key={r.userId}
             r={r}
-            idx={idx}
             isCurrentUser={r.userId === currentUserId}
+            currentUserImage={currentUserImage}
             canManage={canManage}
             onEdit={onEdit}
           />
@@ -576,27 +598,19 @@ function ResponsiblesCardList({
 
 function ResponsibleCard({
   r,
-  idx,
   isCurrentUser,
+  currentUserImage,
   canManage,
   onEdit,
 }: {
   r: DistributionResponsibleDto;
-  idx: number;
   isCurrentUser: boolean;
+  currentUserImage: string | null;
   canManage: boolean;
   onEdit: (r: DistributionResponsibleDto) => void;
 }) {
   const statusMut = useSetAgentStatus();
-  const initials = (r.name ?? r.email ?? "?")
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
   const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
-  const avatarClass = AVATAR_PALETTES[idx % AVATAR_PALETTES.length];
 
   const toggleOwnStatus = () => {
     statusMut.mutate(
@@ -608,53 +622,67 @@ function ResponsibleCard({
   return (
     <div
       className={cn(
-        "grid items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+        "grid items-center gap-2.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-px hover:shadow-[var(--glass-shadow)]",
         RESP_GRID,
       )}
     >
       {/* Responsável */}
-      <div className="flex min-w-0 items-center gap-3">
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-extrabold ${avatarClass}`}
-        >
-          {initials}
-        </div>
+      <div className="flex min-w-0 items-center gap-2.5">
+        <UserAvatar
+          name={r.name ?? r.email}
+          imageUrl={r.avatarUrl ?? (isCurrentUser ? currentUserImage : null)}
+          size={36}
+          status={
+            !r.participates
+              ? "offline"
+              : r.paused || r.status === "AWAY"
+                ? "away"
+                : isOnline
+                  ? "online"
+                  : "offline"
+          }
+        />
         <div className="min-w-0">
-          <p className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">
-            {r.name ?? "Sem nome"}
+          <p className="flex items-center gap-1.5 truncate font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
+            <span className="truncate">{r.name ?? "Sem nome"}</span>
+            {/* Presença de USO ("CRM aberto") — distinta do status da Distribuição. */}
+            <SystemPresenceIndicator
+              systemOnline={r.systemOnline}
+              lastSeenAt={r.lastSeenAt}
+            />
           </p>
-          <p className="truncate font-body text-[11.5px] text-[var(--text-muted)]">
-            {r.email ?? "—"}{" "}
-            <span className="font-mono text-[10px] text-[var(--text-secondary)]">· {r.role}</span>
-          </p>
-          {r.departments && r.departments.length > 0 ? (
-            <div className="mt-1 flex flex-wrap gap-1">
-              {r.departments.map((d) => (
-                <span
-                  key={d.id}
-                  className="inline-flex items-center rounded-full bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--text-secondary)]"
-                >
-                  {d.name}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-1 font-body text-[10px] italic text-[var(--text-muted)]">
-              Sem departamento
-            </p>
-          )}
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[10.5px] leading-tight">
+            <span className="min-w-0 truncate font-body text-[var(--text-muted)]">
+              {r.email ?? "—"}
+            </span>
+            <span className="shrink-0 font-mono text-[9.5px] text-[var(--text-secondary)]">
+              · {r.role}
+            </span>
+            <span
+              className="min-w-0 truncate border-l border-[var(--glass-border)] pl-1.5 font-display font-semibold text-[var(--text-secondary)]"
+              title={
+                r.departments && r.departments.length > 0
+                  ? r.departments.map((d) => d.name).join(", ")
+                  : "Sem departamento"
+              }
+            >
+              {r.departments && r.departments.length > 0
+                ? r.departments.map((d) => d.name).join(", ")
+                : "Sem departamento"}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Presença */}
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
         <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
         {isCurrentUser && (
           <button
             type="button"
             onClick={toggleOwnStatus}
             disabled={statusMut.isPending}
-            className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+            className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10.5px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
           >
             {statusMut.isPending ? "…" : isOnline ? "Ficar offline" : "Ficar online"}
           </button>
@@ -678,18 +706,21 @@ function ResponsibleCard({
       </div>
 
       {/* Elegibilidade */}
-      <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-0.5">
         {r.eligible ? (
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-success-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-success-dark,#0f7a5a)]">
+          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-success-dark,#0f7a5a)]">
             <IconCircleCheck size={13} /> Elegível
           </span>
         ) : (
           <>
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-danger-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-danger-text)]">
+            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
               <IconAlertTriangle size={13} /> Indisponível
             </span>
             {r.blockedReasons.length > 0 && (
-              <span className="min-w-0 break-words pl-0.5 font-body text-[11px] text-[var(--text-muted)]">
+              <span
+                className="min-w-0 truncate pl-0.5 font-body text-[10.5px] leading-tight text-[var(--text-muted)]"
+                title={r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
+              >
                 {r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
               </span>
             )}
@@ -703,7 +734,7 @@ function ResponsibleCard({
           <button
             type="button"
             onClick={() => onEdit(r)}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+            className="inline-flex cursor-pointer items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
           >
             <IconPencil size={13} /> Editar
           </button>
@@ -724,7 +755,7 @@ function PresenceBadge({
 }) {
   if (!participates) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-muted)]/12 px-2.5 py-1 text-[12px] font-semibold text-[var(--text-muted)]">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-muted)]/12 px-2 py-0.5 text-[11.5px] font-semibold text-[var(--text-muted)]">
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)]" /> Inativo
       </span>
     );
@@ -738,7 +769,7 @@ function PresenceBadge({
   const cfg = map[effective];
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+      className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-semibold"
       style={{ backgroundColor: `${cfg.color}1f`, color: cfg.color }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: cfg.color }} />
@@ -1004,6 +1035,7 @@ function DistributionActionsMenu({
   canRetry,
   hasFilters,
   onClearFilters,
+  onDepartmentsConfig,
 }: {
   onTest: () => void;
   testing: boolean;
@@ -1012,21 +1044,21 @@ function DistributionActionsMenu({
   canRetry: boolean;
   hasFilters: boolean;
   onClearFilters: () => void;
+  onDepartmentsConfig?: () => void;
 }) {
   return (
     <PageActionsMenu
       items={[
-        {
-          icon: testing ? (
-            <IconLoader2 size={13} className="animate-spin" />
-          ) : (
-            <IconPlayerPlay size={13} />
-          ),
-          label: testing ? "Testando…" : "Testar distribuição",
-          onClick: onTest,
-          disabled: testing,
-          primary: true,
-        },
+        ...(onDepartmentsConfig
+          ? [
+              {
+                icon: <IconSettings size={13} />,
+                label: "Configurações",
+                onClick: onDepartmentsConfig,
+                primary: true as const,
+              },
+            ]
+          : []),
         {
           icon: retrying ? (
             <IconLoader2 size={13} className="animate-spin" />
@@ -1036,6 +1068,7 @@ function DistributionActionsMenu({
           label: retrying ? "Reprocessando…" : "Reprocessar fila",
           onClick: onRetry,
           disabled: retrying || !canRetry,
+          primary: !onDepartmentsConfig,
         },
         {
           icon: <IconX size={13} />,
@@ -1043,6 +1076,16 @@ function DistributionActionsMenu({
           onClick: onClearFilters,
           disabled: !hasFilters,
           divider: true,
+        },
+        {
+          icon: testing ? (
+            <IconLoader2 size={13} className="animate-spin" />
+          ) : (
+            <IconPlayerPlay size={13} />
+          ),
+          label: testing ? "Testando…" : "Testar distribuição",
+          onClick: onTest,
+          disabled: testing,
         },
       ]}
     />
@@ -1251,25 +1294,152 @@ function fmtDateTime(iso: string): string {
   });
 }
 
+type LogResultFilter = "all" | "success" | "failure";
+type LogPeriodFilter = "all" | "today" | "7d";
+
 function DistributionLogsList({ enabled }: { enabled: boolean }) {
   const q = useDistributionLogs(enabled);
-  const items = q.data?.pages.flatMap((p) => p.items) ?? [];
+  const items = useMemo(
+    () => q.data?.pages.flatMap((p) => p.items) ?? [],
+    [q.data],
+  );
   const loading = q.isLoading;
+  const [logSearch, setLogSearch] = useState("");
+  const [result, setResult] = useState<LogResultFilter>("all");
+  const [period, setPeriod] = useState<LogPeriodFilter>("all");
+  const [origin, setOrigin] = useState("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const origins = useMemo(
+    () =>
+      Array.from(
+        new Set(items.map((log) => log.triggerSource).filter(Boolean)),
+      ).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [items],
+  );
+
+  const filteredItems = useMemo(() => {
+    const query = logSearch.trim().toLocaleLowerCase("pt-BR");
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    ).getTime();
+    const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+
+    return items.filter((log) => {
+      const searchable = [
+        log.contactPhone,
+        log.contactName,
+        log.selectedUserName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("pt-BR");
+      if (query && !searchable.includes(query)) return false;
+      if (result === "success" && !log.success) return false;
+      if (result === "failure" && log.success) return false;
+      if (origin !== "all" && log.triggerSource !== origin) return false;
+
+      const createdAt = new Date(log.createdAt).getTime();
+      if (period === "today" && createdAt < startOfToday) return false;
+      if (period === "7d" && createdAt < sevenDaysAgo) return false;
+      return true;
+    });
+  }, [items, logSearch, origin, period, result]);
+
+  const hasActiveFilters =
+    Boolean(logSearch) ||
+    result !== "all" ||
+    period !== "all" ||
+    origin !== "all";
+
+  const clearFilters = () => {
+    setLogSearch("");
+    setResult("all");
+    setPeriod("all");
+    setOrigin("all");
+  };
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <div className="flex shrink-0 items-start gap-3 border-b border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-primary)_15%,transparent)] text-[var(--color-primary)]">
-          <IconRoute size={20} />
+      <div className="flex shrink-0 flex-col gap-3 border-b border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-primary)_15%,transparent)] text-[var(--color-primary)]">
+            <DistributionIcon size={20} />
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">
+              Logs de distribuição
+            </h2>
+            <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
+              Histórico operacional com resultado, responsável, origem e horário.
+            </p>
+          </div>
+          {!loading && items.length > 0 && (
+            <span className="ml-auto shrink-0 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-1 font-body text-[10.5px] font-semibold tabular-nums text-[var(--text-muted)]">
+              {filteredItems.length} de {items.length}
+            </span>
+          )}
         </div>
-        <div className="min-w-0">
-          <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">
-            Logs de distribuição
-          </h2>
-          <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
-            Histórico de todas as distribuições — para quem foi, resultado, dia e horário.
-          </p>
-        </div>
+
+        {!loading && items.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-[minmax(220px,1fr)_160px_150px_170px_auto]">
+            <label className="relative col-span-2 lg:col-span-1">
+              <span className="sr-only">Buscar nos logs</span>
+              <IconSearch
+                size={14}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+              />
+              <input
+                type="search"
+                value={logSearch}
+                onChange={(event) => setLogSearch(event.target.value)}
+                placeholder="Telefone, contato ou responsável"
+                className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] pl-9 pr-3 font-body text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+              />
+            </label>
+            <LogFilterSelect
+              label="Resultado"
+              value={result}
+              onChange={(value) => setResult(value as LogResultFilter)}
+              options={[
+                { value: "all", label: "Todos os resultados" },
+                { value: "success", label: "Sucesso" },
+                { value: "failure", label: "Falha" },
+              ]}
+            />
+            <LogFilterSelect
+              label="Período"
+              value={period}
+              onChange={(value) => setPeriod(value as LogPeriodFilter)}
+              options={[
+                { value: "all", label: "Todo o período" },
+                { value: "today", label: "Hoje" },
+                { value: "7d", label: "Últimos 7 dias" },
+              ]}
+            />
+            <LogFilterSelect
+              label="Origem"
+              value={origin}
+              onChange={setOrigin}
+              options={[
+                { value: "all", label: "Todas as origens" },
+                ...origins.map((value) => ({ value, label: value })),
+              ]}
+            />
+            <button
+              type="button"
+              onClick={clearFilters}
+              disabled={!hasActiveFilters}
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-3 font-display text-[11.5px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)] disabled:pointer-events-none disabled:opacity-35"
+            >
+              <IconRotateClockwise size={13} />
+              Limpar
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -1286,7 +1456,7 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
       ) : items.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] text-[var(--text-muted)]">
-            <IconRoute size={24} />
+            <DistributionIcon size={24} />
           </div>
           <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
             Nenhuma distribuição registrada
@@ -1295,46 +1465,59 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
             Assim que a Distribuição Inteligente rodar, o histórico aparece aqui.
           </p>
         </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+          <IconSearch size={24} className="text-[var(--text-muted)]" />
+          <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
+            Nenhum log encontrado
+          </p>
+          <p className="font-body text-[12px] text-[var(--text-muted)]">
+            Ajuste os filtros ou limpe a busca para ver outros registros.
+          </p>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="mt-1 font-display text-[12px] font-bold text-[var(--brand-primary)] hover:underline"
+          >
+            Limpar filtros
+          </button>
+        </div>
       ) : (
-        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-          <ul className="flex flex-col divide-y divide-[var(--glass-border)]">
-            {items.map((log) => (
-              <li
-                key={log.id}
-                className="flex items-center gap-2.5 px-4 py-2 transition-colors hover:bg-[var(--glass-bg-overlay)]"
-              >
-                <span
-                  className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-full",
-                    log.success
-                      ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
-                      : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
-                  )}
-                >
-                  {log.success ? (
-                    <IconUserCheck size={14} />
-                  ) : (
-                    <IconClockExclamation size={14} />
-                  )}
-                </span>
-
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate font-mono text-[12.5px] font-semibold text-[var(--text-primary)]">
-                    {log.contactPhone || log.contactName || "Atendimento"}
-                  </span>
-                  <span className="truncate font-body text-[11px] text-[var(--text-muted)]">
-                    {log.success
-                      ? `→ ${log.selectedUserName ?? "responsável"}`
-                      : DIST_REASON_LABELS[log.reason] ?? log.reason}
-                  </span>
-                </div>
-
-                <span className="ml-auto shrink-0 whitespace-nowrap font-body text-[11px] tabular-nums text-[var(--text-muted)]">
-                  {fmtDateTime(log.createdAt)}
-                </span>
-              </li>
-            ))}
-          </ul>
+        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <table className="w-full min-w-[820px] border-collapse">
+            <thead className="sticky top-0 z-10 bg-[var(--glass-bg-modal,#fff)] shadow-[0_1px_0_var(--glass-border)]">
+              <tr>
+                {["Contato", "Resultado", "Responsável / motivo", "Origem", "Quando"].map(
+                  (label) => (
+                    <th
+                      key={label}
+                      scope="col"
+                      className="px-4 py-2.5 text-left font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]"
+                    >
+                      {label}
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.map((log) => {
+                const expanded = expandedId === log.id;
+                const resultLabel =
+                  DIST_REASON_LABELS[log.reason] ??
+                  (log.success ? "Distribuído" : log.reason);
+                return (
+                  <LogTableRows
+                    key={log.id}
+                    log={log}
+                    expanded={expanded}
+                    resultLabel={resultLabel}
+                    onToggle={() => setExpandedId(expanded ? null : log.id)}
+                  />
+                );
+              })}
+            </tbody>
+          </table>
 
           {q.hasNextPage && (
             <div className="flex shrink-0 justify-center border-t border-[var(--glass-border)] p-3">
@@ -1356,6 +1539,193 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
         </div>
       )}
     </section>
+  );
+}
+
+function LogFilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="relative">
+      <span className="sr-only">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 pr-8 font-body text-[12px] text-[var(--text-secondary)] outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <IconChevronDown
+        size={13}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+      />
+    </label>
+  );
+}
+
+function LogTableRows({
+  log,
+  expanded,
+  resultLabel,
+  onToggle,
+}: {
+  log: {
+    id: string;
+    createdAt: string;
+    success: boolean;
+    reason: string;
+    triggerSource: string;
+    selectedUserName: string | null;
+    contactName: string | null;
+    contactPhone: string | null;
+    conversationId: string | null;
+  };
+  expanded: boolean;
+  resultLabel: string;
+  onToggle: () => void;
+}) {
+  return (
+    <>
+      <tr
+        className={cn(
+          "cursor-pointer border-b border-[var(--glass-border)] transition-colors hover:bg-[var(--glass-bg-overlay)]",
+          expanded && "bg-[var(--glass-bg-overlay)]",
+        )}
+        onClick={onToggle}
+        aria-expanded={expanded}
+      >
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span
+              className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-full",
+                log.success
+                  ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
+                  : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
+              )}
+            >
+              {log.success ? (
+                <IconUserCheck size={14} />
+              ) : (
+                <IconClockExclamation size={14} />
+              )}
+            </span>
+            <div className="min-w-0">
+              <p className="max-w-[230px] truncate font-mono text-[12px] font-semibold text-[var(--text-primary)]">
+                {log.contactPhone || log.contactName || "Atendimento"}
+              </p>
+              {log.contactPhone && log.contactName && (
+                <p className="max-w-[230px] truncate font-body text-[10.5px] text-[var(--text-muted)]">
+                  {log.contactName}
+                </p>
+              )}
+            </div>
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-display text-[10.5px] font-bold",
+              log.success
+                ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
+                : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
+            )}
+          >
+            <span className="size-1.5 rounded-full bg-current" />
+            {resultLabel}
+          </span>
+        </td>
+        <td className="max-w-[260px] px-4 py-3 font-body text-[11.5px] text-[var(--text-secondary)]">
+          <span className="block truncate">
+            {log.success
+              ? log.selectedUserName ?? "Responsável"
+              : resultLabel}
+          </span>
+        </td>
+        <td className="max-w-[180px] px-4 py-3">
+          <span className="block truncate font-body text-[11px] text-[var(--text-muted)]">
+            {log.triggerSource || "—"}
+          </span>
+        </td>
+        <td className="whitespace-nowrap px-4 py-3">
+          <span className="inline-flex items-center gap-2 font-body text-[11px] tabular-nums text-[var(--text-muted)]">
+            {fmtDateTime(log.createdAt)}
+            <IconChevronDown
+              size={13}
+              className={cn(
+                "transition-transform duration-200",
+                expanded && "rotate-180",
+              )}
+            />
+          </span>
+        </td>
+      </tr>
+      {expanded && (
+        <tr className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
+          <td colSpan={5} className="px-4 py-3">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1.2fr_auto]">
+              <LogDetail label="Motivo técnico" value={log.reason} mono />
+              <LogDetail
+                label="Origem / trigger"
+                value={log.triggerSource || "—"}
+              />
+              <LogDetail label="ID do log" value={log.id} mono />
+              {log.conversationId ? (
+                <Link
+                  href={`/inbox?c=${encodeURIComponent(log.conversationId)}`}
+                  onClick={(event) => event.stopPropagation()}
+                  className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 font-display text-[11.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+                >
+                  Abrir conversa
+                  <IconExternalLink size={13} />
+                </Link>
+              ) : (
+                <LogDetail label="Conversa" value="Não vinculada" />
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function LogDetail({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2">
+      <p className="font-display text-[9.5px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-1 truncate text-[11.5px] font-semibold text-[var(--text-primary)]",
+          mono ? "font-mono" : "font-body",
+        )}
+        title={value}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
 
@@ -1637,7 +2007,23 @@ function DepartmentsDistributionPanel() {
   const depts = deptsQuery.data ?? [];
   const respectDepartment = settingsQuery.data?.respectDepartment ?? false;
 
-  if (deptsQuery.isLoading || depts.length === 0) return null;
+  if (deptsQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-10 text-[var(--text-muted)]">
+        <IconLoader2 size={18} className="animate-spin" />
+        <span className="font-body text-[13px]">Carregando departamentos…</span>
+      </div>
+    );
+  }
+
+  if (depts.length === 0) {
+    return (
+      <p className="font-body text-[13px] text-[var(--text-muted)]">
+        Nenhum departamento cadastrado. Crie em Configurações → Equipe →
+        Departamentos.
+      </p>
+    );
+  }
 
   const toggle = (id: string, next: boolean) => {
     updateMut.mutate(
@@ -1664,16 +2050,9 @@ function DepartmentsDistributionPanel() {
   };
 
   return (
-    <div className="shrink-0 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <div className="mb-1 flex items-center gap-2">
-        <IconUsers size={16} className="text-[var(--brand-primary)]" />
-        <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
-          Departamentos · distribuição automática
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-3">
       {/* Toggle mestre: respeitar o departamento da conversa quando houver. */}
-      <div className="mb-3 flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
         <div className="min-w-0">
           <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
             Respeitar departamento da conversa
@@ -1691,14 +2070,14 @@ function DepartmentsDistributionPanel() {
         />
       </div>
 
-      <p className="mb-3 font-body text-[12px] text-[var(--text-muted)]">
+      <p className="font-body text-[12px] text-[var(--text-muted)]">
         Ligue para o departamento distribuir automaticamente entre seus membros os
         leads roteados a ele. Desligado = leads desse departamento ficam na fila de
         espera.
       </p>
       <div
         className={cn(
-          "grid gap-2 sm:grid-cols-2 lg:grid-cols-3 transition-opacity",
+          "grid gap-2 sm:grid-cols-2 transition-opacity",
           respectDepartment ? "" : "pointer-events-none opacity-50",
         )}
       >
@@ -1747,7 +2126,7 @@ function DepartmentsDistributionPanel() {
 function NotEnabledState() {
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-12 text-center shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <IconRoute size={36} className="text-[var(--text-muted)]" />
+      <DistributionIcon size={36} className="text-[var(--text-muted)]" />
       <p className="font-display text-[16px] font-bold text-[var(--text-primary)]">
         Módulo de Distribuição não habilitado
       </p>
@@ -1755,12 +2134,12 @@ function NotEnabledState() {
         A Distribuição Inteligente é um módulo instalável. Ative-o na Central de
         Widgets para liberar esta área.
       </p>
-      <a
+      <Link
         href="/widgets"
         className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white transition-all hover:-translate-y-px"
       >
         Ir para a Central de Widgets
-      </a>
+      </Link>
     </div>
   );
 }

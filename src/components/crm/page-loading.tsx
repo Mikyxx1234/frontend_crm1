@@ -3,9 +3,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 /**
  * Skeletons de carregamento de rota (Suspense do App Router — `loading.tsx`).
  *
- * - `PageLoading`: página top-level completa (placeholder da NavRail à
- *   esquerda + skeleton de header/conteúdo). Usado no `(app)/loading.tsx`,
- *   fallback para todas as seções cujas páginas renderizam a própria rail.
+ * - `PageLoading`: página top-level completa (spacer da coluna NavRail +
+ *   skeleton de header/conteúdo). A rail real é fixed/persistente no
+ *   layout `(app)` — não duplicamos o visual aqui. Usado no `(app)/loading.tsx`.
  * - `PanelLoading`: só o painel de conteúdo — para seções cujo `layout.tsx`
  *   já provê rail/sidebar persistentes (ex.: `/settings`).
  */
@@ -40,11 +40,8 @@ export function PageLoading() {
       style={{ gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)" }}
       aria-busy="true"
     >
-      {/* Placeholder da NavRail — mesma cor/forma pra transição sem "salto". */}
-      <div
-        className="hidden h-full rounded-[var(--radius-xl)] border border-[var(--nav-border)] bg-[var(--nav-bg)] md:block"
-        aria-hidden
-      />
+      {/* Reserva a coluna da NavRail (rail real é fixed no layout). */}
+      <div aria-hidden className="max-md:hidden" />
       <ContentSkeleton />
     </div>
   );

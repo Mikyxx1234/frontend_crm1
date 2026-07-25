@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsDesktop } from "@/hooks/use-media-query";
 import { ModalPortalContext } from "@/components/ui/modal-portal-context";
+import { TagChip } from "@/components/crm/tag-chip";
 
 import {
   ContactCustomFieldsSection,
@@ -184,35 +185,16 @@ function TagsChipColumn({
             Sem tags
           </button>
           {filtered.map((tag) => {
-            const color = tag.color || "#6366f1";
             const on = selected.has(tag.id);
             return (
-              <button
+              <TagChip
                 key={tag.id}
-                type="button"
+                name={tag.name}
+                color={tag.color}
+                count={tag.dealCount}
+                selected={on}
                 onClick={() => toggle(tag.id)}
-                className={cn(
-                  "inline-flex max-w-full items-center gap-1 rounded-[7px] border px-2 py-1 font-display text-[11.5px] font-semibold transition-all",
-                  on ? "text-white shadow-sm" : "hover:-translate-y-px",
-                )}
-                style={
-                  on
-                    ? { background: color, borderColor: color }
-                    : {
-                        background: `color-mix(in srgb, ${color} 15%, white)`,
-                        borderColor: `color-mix(in srgb, ${color} 45%, #d9dfeb)`,
-                        color: "#35405b",
-                      }
-                }
-                title={tag.name}
-              >
-                <span className="truncate">{tag.name}</span>
-                {tag.dealCount != null && (
-                  <small className={cn("tabular-nums", on ? "opacity-80" : "opacity-65")}>
-                    {tag.dealCount.toLocaleString("pt-BR")}
-                  </small>
-                )}
-              </button>
+              />
             );
           })}
           {filtered.length === 0 && (

@@ -20,6 +20,7 @@ export type AutomationTriggerType =
   | "call_received"
   | "call_made"
   | "conversation_tabulated"
+  | "whatsapp_session_expiring"
   | "manual";
 
 export type AutomationStep = {
@@ -44,6 +45,7 @@ export const AUTOMATION_TRIGGER_TYPES: AutomationTriggerType[] = [
   "call_received",
   "call_made",
   "conversation_tabulated",
+  "whatsapp_session_expiring",
   "manual",
 ];
 
@@ -100,6 +102,7 @@ export function triggerTypeLabel(t: string): string {
     call_received: "Ligação recebida",
     call_made: "Ligação realizada",
     conversation_tabulated: "Conversa tabulada (encerramento)",
+    whatsapp_session_expiring: "Sessão do WhatsApp prestes a encerrar",
     manual: "Manual (executar pela conversa)",
   };
   return map[t] ?? t;
@@ -202,6 +205,8 @@ export function summarizeTriggerConfig(
     }
     case "conversation_created":
       return c.channel ? `Canal: ${String(c.channel)}` : "Qualquer canal";
+    case "whatsapp_session_expiring":
+      return `${String(c.hoursBeforeExpiry ?? 1)}h antes do encerramento`;
     case "lifecycle_changed": {
       const to = c.toLifecycle ?? c.lifecycleStage;
       const from = c.fromLifecycle ?? c.from;
@@ -547,7 +552,8 @@ export type ApiAutomationStep = {
   id: string;
   type: string;
   config: unknown;
-  position: number;
+  /** APIs antigas/exportações podem omitir; a conversão usa a ordem do array. */
+  position?: number;
 };
 
 function normalizeLegacyStepConfig(
@@ -685,6 +691,8 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
       return {};
     case "conversation_tabulated":
       return { departmentId: "", tabulationId: "", tabulationLabel: "" };
+    case "whatsapp_session_expiring":
+      return { hoursBeforeExpiry: 1 };
     default:
       return {};
   }

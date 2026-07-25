@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -547,11 +547,11 @@ export function CreateChannelDialog({
 
   return (
     <>
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={handleOpenChange}
       busy={submitting}
-      size="lg"
+      size="xl"
       icon={<Sparkles className="size-5 text-[var(--brand-primary)]" />}
       title="Novo canal"
       description={stepDescription}
@@ -913,7 +913,7 @@ export function CreateChannelDialog({
               </p>
             ) : null}
         </div>
-    </FormSheet>
+    </FormDialog>
 
       <Dialog open={webhookModalOpen} onOpenChange={setWebhookModalOpen}>
         <DialogContent size="md" panelClassName="max-h-[90vh]">

@@ -56,7 +56,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -236,7 +236,7 @@ function JsonNode({
   if (typeof value === "number")
     return <span className="text-blue-600">{value}</span>;
   if (typeof value === "string")
-    return <span className="text-amber-700">"{value}"</span>;
+    return <span className="text-amber-700">&quot;{value}&quot;</span>;
   if (Array.isArray(value)) {
     if (value.length === 0)
       return <span className="text-slate-400">[]</span>;
@@ -1312,7 +1312,7 @@ export default function AutomationDetailPage() {
       <LogInspectModal row={inspectRow} onClose={() => setInspectRow(null)} />
 
       {/* ═══ Name edit ═══ */}
-      <FormSheet
+      <FormDialog
         open={nameDialogOpen}
         onOpenChange={setNameDialogOpen}
         title="Editar nome"
@@ -1329,7 +1329,7 @@ export default function AutomationDetailPage() {
           onChange={(e) => setNameDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") saveName(); }}
         />
-      </FormSheet>
+      </FormDialog>
 
       {/* ═══ Delete confirm ═══ */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

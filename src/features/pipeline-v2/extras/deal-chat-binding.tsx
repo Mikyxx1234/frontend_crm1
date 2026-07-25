@@ -83,8 +83,19 @@ export function useDealChatBinding(params: {
   isResolved?: boolean;
   /** ISO do encerramento — quando presente, o marcador exibe data/hora. */
   closedAt?: string | null;
+  /** Nº do ticket — exibido na barra do Composer. */
+  conversationNumber?: number | null;
 }): DealChatBindingResult {
-  const { conversationId, contactName, contactId, dealId, sessionExpired: sessionExpiredOverride, isResolved, closedAt } = params;
+  const {
+    conversationId,
+    contactName,
+    contactId,
+    dealId,
+    sessionExpired: sessionExpiredOverride,
+    isResolved,
+    closedAt,
+    conversationNumber,
+  } = params;
 
   const { data: session } = useSession();
   // Avatar das bolhas outgoing — mesma lógica do ChatArea do inbox: iniciais
@@ -672,6 +683,8 @@ export function useDealChatBinding(params: {
       onSelectChannel={setSelectedChannelId}
       replyTo={replyTo}
       onCancelReply={() => setReplyTo(null)}
+      isResolved={isResolved}
+      conversationNumber={conversationNumber ?? null}
     />
   ) : null;
 

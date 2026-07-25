@@ -9,6 +9,7 @@ import {
   IconBrandWhatsapp,
   IconForms,
   IconMail,
+  IconRobot,
 } from "@tabler/icons-react";
 
 import {
@@ -89,32 +90,6 @@ function resolveChannelBadge(
   return null;
 }
 
-function RobotIcon() {
-  return (
-    <svg
-      viewBox="0 0 64 64"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      className="relative z-10 h-[72%] w-[72%] text-white"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="32" y1="6" x2="32" y2="14" />
-      <circle cx="32" cy="5" r="2" fill="currentColor" />
-      <rect x="12" y="14" width="40" height="34" rx="8" />
-      <circle cx="24" cy="30" r="3.5" fill="currentColor" stroke="none" />
-      <circle cx="40" cy="30" r="3.5" fill="currentColor" stroke="none" />
-      <line x1="26" y1="40" x2="38" y2="40" />
-      <line x1="10" y1="26" x2="10" y2="34" />
-      <line x1="54" y1="26" x2="54" y2="34" />
-      <line x1="32" y1="48" x2="32" y2="54" />
-    </svg>
-  );
-}
-
 export function ChatAvatar({
   user,
   name,
@@ -193,7 +168,12 @@ export function ChatAvatar({
           />
         ) : isBotResolved ? (
           <div className="relative flex size-full items-center justify-center">
-            <RobotIcon />
+            <IconRobot
+              size="72%"
+              stroke={1.8}
+              className="relative z-10 text-white"
+              aria-label="Automação"
+            />
           </div>
         ) : (
           <div className="relative flex size-full items-center justify-center">

@@ -15,6 +15,7 @@ import {
   IconRobot,
   type Icon as TablerIcon,
 } from "@tabler/icons-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { InputGlass } from "./input-glass"
 import { type TabItem } from "./tabs-glass"
 import { TooltipGlass } from "./tooltip-glass"
@@ -84,6 +85,12 @@ interface ConversationColumnProps {
   hasMore?: boolean
   isLoadingMore?: boolean
   /**
+   * Carga inicial da lista (sessão/prefs/query). Enquanto true, mostra
+   * skeleton de cards — NÃO o empty "Nenhuma conversa encontrada".
+   * Evita flash no F5 antes dos dados chegarem.
+   */
+  isLoading?: boolean
+  /**
    * Modo de seleção múltipla (ações em massa). Quando ativo, exibe uma
    * barra "Selecionar todas" + `bulkActionsSlot` acima da lista e um
    * checkbox em cada `ConversationCard`.
@@ -142,11 +149,12 @@ function statusVisual(label: string | undefined): {
     }
   if (l.includes("automa"))
     return {
+      // Mesmo IconRobot da NavRail / página Automações (sidebar-catalog).
       Icon: IconRobot,
       bg: "rgba(139,92,246,0.14)",
       fg: "rgb(124,58,237)",
     }
-  if (l.includes("resolv") || l.includes("finaliz"))
+  if (l.includes("resolv") || l.includes("finaliz") || l.includes("encerr"))
     return {
       Icon: IconCircleCheck,
       bg: "var(--color-success-bg)",
@@ -175,6 +183,7 @@ export function ConversationColumn({
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
+  isLoading = false,
   selectionMode = false,
   selectedIds,
   totalCount,
@@ -235,7 +244,11 @@ export function ConversationColumn({
   const urgency = urgencyCount ?? conversations.filter((c) => c.urgent).length
 
   const currentTabLabel = tabs[activeTab]?.label ?? "Todas"
-  const currentTabCount = tabs[activeTab]?.count ?? conversations.length
+  // Em loading, não cair em `conversations.length` (0) — isso pintava o
+  // badge "0" no F5 antes da query/sessão/prefs terminarem.
+  const currentTabCount = isLoading
+    ? (tabs[activeTab]?.count ?? null)
+    : (tabs[activeTab]?.count ?? conversations.length)
   const currentVisual = statusVisual(currentTabLabel)
 
   // ── Dropdown de status ──────────────────────────────────────────
@@ -330,9 +343,16 @@ export function ConversationColumn({
         <span className="flex-1 truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
           {currentTabLabel}
         </span>
-        <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 font-display text-[11px] font-bold text-white tabular-nums">
-          {currentTabCount}
-        </span>
+        {currentTabCount == null ? (
+          <span
+            aria-hidden="true"
+            className="inline-block h-5 w-8 animate-pulse rounded-full bg-[var(--brand-primary)]/35"
+          />
+        ) : (
+          <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 font-display text-[11px] font-bold text-white tabular-nums">
+            {currentTabCount}
+          </span>
+        )}
         <IconChevronDown
           size={15}
           className={cn(
@@ -423,8 +443,8 @@ export function ConversationColumn({
         const showFilterSelect =
           !!onSelectAllFilterChange && (selectAllFilter || (allDisplayedSelected && hasMoreThanLoaded))
         return (
-        <div className="mb-2.5 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2">
-          <div className="flex items-center justify-between gap-2">
+        <div className="@container mb-2.5 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2">
+          <div className="flex items-center justify-between gap-2 @max-[520px]:flex-col @max-[520px]:items-stretch">
             <label className="flex min-w-0 items-center gap-2 cursor-pointer">
               <CheckboxGlass
                 checked={selectAllFilter || allDisplayedSelected}
@@ -466,45 +486,62 @@ export function ConversationColumn({
 
       {/* Lista */}
       <div className="flex flex-1 min-h-0 flex-col gap-2.5 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
-        {displayed.map((conversation) => {
-          const slots = renderCardSlots?.(conversation)
-          return (
-            <ConversationCard
-              key={conversation.id}
-              conversation={{
-                ...conversation,
-                active: conversation.id === activeConversationId,
-              }}
-              onClick={() => onSelectConversation?.(conversation.id)}
-              assigneeSlot={slots?.assigneeSlot}
-              selectionMode={selectionMode}
-              selected={selectedIds?.has(conversation.id) ?? false}
-              onToggleSelect={() => onToggleSelectOne?.(conversation.id)}
-            />
-          )
-        })}
-        {displayed.length === 0 && !isLoadingMore && (
-          <div className="px-2 py-6 text-center text-xs text-[var(--text-muted)]">
-            Nenhuma conversa encontrada.
-          </div>
-        )}
+        {isLoading ? (
+          Array.from({ length: 6 }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-3"
+            >
+              <Skeleton className="size-10 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-3.5 w-2/3 rounded" />
+                <Skeleton className="h-3 w-full rounded" />
+              </div>
+            </div>
+          ))
+        ) : (
+          <>
+            {displayed.map((conversation) => {
+              const slots = renderCardSlots?.(conversation)
+              return (
+                <ConversationCard
+                  key={conversation.id}
+                  conversation={{
+                    ...conversation,
+                    active: conversation.id === activeConversationId,
+                  }}
+                  onClick={() => onSelectConversation?.(conversation.id)}
+                  assigneeSlot={slots?.assigneeSlot}
+                  selectionMode={selectionMode}
+                  selected={selectedIds?.has(conversation.id) ?? false}
+                  onToggleSelect={() => onToggleSelectOne?.(conversation.id)}
+                />
+              )
+            })}
+            {displayed.length === 0 && !isLoadingMore && (
+              <div className="px-2 py-6 text-center text-xs text-[var(--text-muted)]">
+                Nenhuma conversa encontrada.
+              </div>
+            )}
 
-        {/* Sentinela do infinite scroll. Fica vazia mas é observada pelo
-            IntersectionObserver acima. Quando aparece no viewport, pede
-            a próxima página. */}
-        {hasMore && (
-          <div
-            ref={sentinelRef}
-            aria-hidden="true"
-            className="h-1 w-full shrink-0"
-          />
-        )}
+            {/* Sentinela do infinite scroll. Fica vazia mas é observada pelo
+                IntersectionObserver acima. Quando aparece no viewport, pede
+                a próxima página. */}
+            {hasMore && (
+              <div
+                ref={sentinelRef}
+                aria-hidden="true"
+                className="h-1 w-full shrink-0"
+              />
+            )}
 
-        {isLoadingMore && (
-          <div className="flex items-center justify-center py-3 text-[11.5px] text-[var(--text-muted)]">
-            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-transparent" />
-            <span className="ml-2">Carregando mais...</span>
-          </div>
+            {isLoadingMore && (
+              <div className="flex items-center justify-center py-3 text-[11.5px] text-[var(--text-muted)]">
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-transparent" />
+                <span className="ml-2">Carregando mais...</span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>

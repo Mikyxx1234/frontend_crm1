@@ -34,6 +34,7 @@ import {
   FILTER_FIELD_MENU_CLASS,
   FILTER_FIELD_TRIGGER_CLASS,
 } from "@/components/crm/dropdown-glass";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import { useModalPortalContainer } from "@/components/ui/modal-portal-context";
 import { DatePicker } from "@/components/ui/date-picker";
 import { SelectNative } from "@/components/ui/select";
@@ -695,12 +696,7 @@ export function OwnersSection({ draft, options, setDraftField }: SectionProps) {
             searchText: u.name,
             label: (
               <span className="inline-flex items-center gap-2">
-                <span
-                  className="flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white"
-                  style={{ background: `hsl(${(u.name.charCodeAt(0) * 47) % 360} 55% 50%)` }}
-                >
-                  {u.name[0]?.toUpperCase()}
-                </span>
+                <UserAvatar name={u.name} imageUrl={u.avatarUrl ?? null} size={20} />
                 {u.name}
               </span>
             ),

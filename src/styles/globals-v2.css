@@ -411,6 +411,18 @@ html[data-nav-expanded="true"] {
   zoom: var(--v2-scale);
 }
 
+/* NavRail persistente no layout `(app)`: altura por dvh (não top+bottom),
+   para não depender da altura do parent quando o conteúdo some na troca
+   de rota. Insets batem com o padding das shells (p-3 / sm:p-4). */
+.v2-nav-rail-fixed {
+  height: calc(100dvh / var(--v2-scale, 1) - 1.5rem); /* 2 × top-3 */
+}
+@media (min-width: 640px) {
+  .v2-nav-rail-fixed {
+    height: calc(100dvh / var(--v2-scale, 1) - 2rem); /* 2 × top-4 */
+  }
+}
+
 /* Utility para alturas que devem ocupar 100% da viewport REAL apesar
    do zoom. Sem isso, `h-dvh` (que e' 100% da viewport REAL) e' encolhido
    pelo zoom e o conteudo cobre apenas 88% da tela, sobrando faixa
@@ -477,6 +489,11 @@ html[data-nav-expanded="true"] {
   min-height: 0;
 }
 .v2-min-screen {
+  /* height (não só min-height): durante soft-nav o .v2-screen some
+     por 1 frame (loading/Suspense). Sem height fixa o .v2-root colapsa
+     — e a NavRail `fixed` (filha do zoom) herda essa altura menor,
+     “encolhendo” e voltando. */
+  height: calc(100dvh / var(--v2-scale, 1));
   min-height: calc(100dvh / var(--v2-scale, 1));
 }
 

@@ -32,7 +32,7 @@ export function Row({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-2 text-sm",
+        "flex min-w-0 max-w-full items-center justify-between gap-2 text-sm",
         compact ? "py-1.5" : "py-2",
         !isFirst && "border-t border-slate-50",
         className,
@@ -42,10 +42,10 @@ export function Row({
         {icon}
         {label}
       </span>
-      <div className="flex min-w-0 flex-1 justify-end">
+      <div className="flex min-w-0 max-w-full flex-1 justify-end">
         {children ?? (
           <span
-            className="min-w-0 truncate text-right font-display font-semibold text-[var(--text-primary)]"
+            className="min-w-0 max-w-full truncate text-right font-display font-semibold text-[var(--text-primary)]"
             style={valueStyle}
             title={value}
           >

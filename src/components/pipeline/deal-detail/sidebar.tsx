@@ -3,6 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { IconCheck as Check, IconChevronDown as ChevronDown, IconPackage as Package, IconPencil as Pencil, IconPlus as Plus, IconX as X } from "@tabler/icons-react";
@@ -986,18 +987,16 @@ function TagComposerInline({
             </Button>
           </div>
           {draft && suggestions.length > 0 && (
-            <div className="mt-1.5 max-h-28 overflow-y-auto rounded-md border border-border bg-white">
-              {suggestions.slice(0, 8).map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => onSelectExisting(t)}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-subtle)]"
-                >
-                  <span className="size-2 rounded-full" style={{ backgroundColor: t.color || "#6b7280" }} />
-                  {t.name}
-                </button>
-              ))}
+            <div className="mt-1.5 rounded-md border border-border bg-white p-1.5">
+              <TagChipOptionsList
+                tags={suggestions.slice(0, 8)}
+                selectedIds={[]}
+                onToggle={(tagId) => {
+                  const tag = suggestions.find((t) => t.id === tagId);
+                  if (tag) onSelectExisting(tag);
+                }}
+                className="max-h-28"
+              />
             </div>
           )}
           {canCreateTag && (

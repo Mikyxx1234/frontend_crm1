@@ -27,6 +27,7 @@ import {
 import { ds } from "@/lib/design-system";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
 import { TagChip } from "@/components/crm/tag-chip";
+import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
 import { UserAvatar } from "@/components/crm/user-avatar";
 import { TooltipHost } from "@/components/ui/tooltip";
 
@@ -509,18 +510,16 @@ export function KanbanCard({
                         </button>
                       </div>
                       {tagInput && tagSuggestions.length > 0 && (
-                        <div className="mt-1.5 max-h-24 overflow-y-auto rounded-lg bg-[var(--color-popover)] backdrop-blur-md">
-                          {tagSuggestions.slice(0, 6).map((t: { id: string; name: string; color: string }) => (
-                            <button
-                              key={t.id}
-                              type="button"
-                              onClick={() => { tagMutation.mutate({ tagId: t.id }); setTagInput(""); }}
-                              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-[12px] text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-hover)]"
-                            >
-                              <span className="size-2 rounded-full" style={{ backgroundColor: t.color }} />
-                              {t.name}
-                            </button>
-                          ))}
+                        <div className="mt-1.5 rounded-lg bg-[var(--color-popover)] p-1.5 backdrop-blur-md">
+                          <TagChipOptionsList
+                            tags={tagSuggestions.slice(0, 6)}
+                            selectedIds={[]}
+                            onToggle={(tagId) => {
+                              tagMutation.mutate({ tagId });
+                              setTagInput("");
+                            }}
+                            className="max-h-24"
+                          />
                         </div>
                       )}
                       {canCreateTag && (

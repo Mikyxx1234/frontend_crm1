@@ -285,7 +285,7 @@ export function toConversationCard(
     sessionExpired: sess.expired,
     lastMessageType,
     lastMessageDirection,
-    // Conversas encerradas/finalizadas — badge visual "Resolvida" no card.
+    // Conversas encerradas/finalizadas — badge visual "Encerrada" no card.
     resolved: row.status === "RESOLVED",
     // Canal de origem — substitui o status dot pelo logo da plataforma
     // no canto inferior direito do avatar.

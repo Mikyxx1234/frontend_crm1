@@ -231,7 +231,7 @@ const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "esperando", label: "Aguardando" },
   { id: "respondidas", label: "Respondidas" },
   { id: "automacao", label: "Automação" },
-  { id: "finalizados", label: "Resolvidas" },
+  { id: "finalizados", label: "Encerradas" },
 ];
 
 // Tab selecionada persiste em localStorage — sobrevive F5/navegação.
@@ -565,13 +565,26 @@ export default function InboxV2ClientPage({
   // ── Realtime ────────────────────────────────────────────────────
   useInboxRealtime({ activeConversationId: activeId, enabled: isAuthenticated });
 
+  /**
+   * Após reopen (modelo de ticket): seleciona o id novo e, se o operador
+   * estiver na aba Encerradas (`finalizados`), troca para Todas — o ticket
+   * OPEN não aparece em Encerradas; sem a troca, a lista some, o sticky do
+   * id antigo é limpo e o deep-link pode disparar toast de erro.
+   */
+  function handleReopenNewConversation(newId: string) {
+    setActiveId(newId);
+    setTab((current) => (current === "finalizados" ? "todos" : current));
+  }
+
   // Envio (texto/anexo/áudio) numa conversa encerrada reabre como NOVO
   // ticket — os botões de anexo disparam este evento global (estão fundos
   // demais na árvore pra prop-drilling). Troca o chat ativo pro id novo.
   useEffect(() => {
     function onReopened(e: Event) {
       const newId = (e as CustomEvent<{ newId: string }>).detail?.newId;
-      if (newId) setActiveId(newId);
+      if (!newId) return;
+      setActiveId(newId);
+      setTab((current) => (current === "finalizados" ? "todos" : current));
     }
     window.addEventListener(CONVERSATION_REOPENED_EVENT, onReopened);
     return () => window.removeEventListener(CONVERSATION_REOPENED_EVENT, onReopened);
@@ -720,6 +733,8 @@ export default function InboxV2ClientPage({
             toast.success(
               `${count} conversa${count > 1 ? "s" : ""} reaberta${count > 1 ? "s" : ""}`,
             );
+            // Tickets novos são OPEN — somem da aba Encerradas.
+            setTab((current) => (current === "finalizados" ? "todos" : current));
           }
           exitSelectionMode();
         },
@@ -788,7 +803,7 @@ export default function InboxV2ClientPage({
           // Conversa estava encerrada e o envio reabriu como NOVO ticket:
           // troca o chat ativo para o id novo (regra "reabrir = novo id").
           if (data.reopenedConversationId) {
-            setActiveId(data.reopenedConversationId);
+            handleReopenNewConversation(data.reopenedConversationId);
           }
         },
         onError: (err) => toast.error(err.message || "Falha ao enviar"),
@@ -1283,7 +1298,7 @@ export default function InboxV2ClientPage({
               conversationId={activeId}
               isResolved={activeRow.status === "RESOLVED"}
               onOpenFavorites={() => setFavoritesOpen(true)}
-              onReopenNewConversation={(newId) => setActiveId(newId)}
+              onReopenNewConversation={handleReopenNewConversation}
               onResolved={(id) => {
                 setStickyRow((prev) =>
                   prev?.id === id
@@ -1328,7 +1343,7 @@ export default function InboxV2ClientPage({
             requireTabulationOnClose={
               activeRow.department?.requireTabulationOnClose ?? false
             }
-            onReopenNewConversation={(newId) => setActiveId(newId)}
+            onReopenNewConversation={handleReopenNewConversation}
             onResolved={(id) => {
               setStickyRow((prev) =>
                 prev?.id === id

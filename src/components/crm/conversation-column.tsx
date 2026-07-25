@@ -12,9 +12,9 @@ import {
   IconInbox,
   IconCornerUpLeft,
   IconCircleCheck,
+  IconRobot,
   type Icon as TablerIcon,
 } from "@tabler/icons-react"
-import { AutomationBotIcon } from "@/components/icons/automation-bot-icon"
 import { InputGlass } from "./input-glass"
 import { type TabItem } from "./tabs-glass"
 import { TooltipGlass } from "./tooltip-glass"
@@ -142,11 +142,12 @@ function statusVisual(label: string | undefined): {
     }
   if (l.includes("automa"))
     return {
-      Icon: AutomationBotIcon,
+      // Mesmo IconRobot da NavRail / página Automações (sidebar-catalog).
+      Icon: IconRobot,
       bg: "rgba(139,92,246,0.14)",
       fg: "rgb(124,58,237)",
     }
-  if (l.includes("resolv") || l.includes("finaliz"))
+  if (l.includes("resolv") || l.includes("finaliz") || l.includes("encerr"))
     return {
       Icon: IconCircleCheck,
       bg: "var(--color-success-bg)",

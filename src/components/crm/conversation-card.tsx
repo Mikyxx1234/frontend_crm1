@@ -358,7 +358,7 @@ export function ConversationCard({
           <TooltipGlass label="Conversa encerrada" side="top">
             <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-px font-display text-[10px] font-bold text-emerald-700 v2-dark:text-emerald-300">
               <IconCheck size={10} stroke={3} />
-              Resolvida
+              Encerrada
             </span>
           </TooltipGlass>
         ) : (

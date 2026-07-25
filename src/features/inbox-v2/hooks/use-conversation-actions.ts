@@ -134,7 +134,12 @@ export function useToggleConversationResolve(
       // Reabrir: troca o activeId ANTES das invalidates. Se invalidar primeiro,
       // a conversa resolvida some da aba ativa e o deep-link tenta carregar o
       // id antigo → toast "Erro ao carregar conversa".
+      // Também semeia o cache do id novo: na aba Encerradas o ticket OPEN não
+      // está na lista, e o deep-link precisa achar o row imediatamente.
       if (newId && data.previousConversationId) {
+        if (data.conversation) {
+          qc.setQueryData(["inbox-conversation", newId], data.conversation);
+        }
         callbacks?.onNewConversation?.(newId, data.previousConversationId);
       } else if (!isReopen) {
         callbacks?.onResolved?.(vars.conversationId);

@@ -180,10 +180,10 @@ export function FieldCard({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-[var(--glass-bg-overlay)] p-3 transition-colors",
+        "rounded-xl border p-3 transition-[border-color,background-color,box-shadow]",
         active
-          ? "border-[var(--brand-primary)]/20 bg-[var(--color-enterprise-bg)]"
-          : "border-[var(--glass-border)] hover:border-[var(--glass-border)]",
+          ? "border-[var(--brand-primary)]/30 bg-[var(--color-enterprise-bg)] shadow-[0_1px_3px_rgba(91,111,245,0.08)]"
+          : "border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-[var(--brand-primary)]/20 hover:bg-[var(--glass-bg-overlay)]",
         className,
       )}
     >

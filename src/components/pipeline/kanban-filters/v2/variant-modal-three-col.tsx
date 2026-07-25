@@ -75,7 +75,7 @@ function TagsChipColumn({
   setDraftField,
 }: Pick<SectionProps, "draft" | "options" | "setDraftField">) {
   const [q, setQ] = React.useState("");
-  const allTags = options?.tags ?? [];
+  const allTags = React.useMemo(() => options?.tags ?? [], [options?.tags]);
   const selectedIds = draft.tagIds ?? [];
   const selected = new Set(selectedIds);
 
@@ -183,6 +183,14 @@ function TagsChipColumn({
         </div>
       </div>
     </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+      {children}
+    </h3>
   );
 }
 
@@ -448,30 +456,69 @@ export function FilterModalThreeCol({
         </aside>
 
         {/* Col 2 — propriedades (multi-selects fechados) */}
-        <main className="min-h-0 space-y-3 overflow-y-auto p-4">
-          <span className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
-            Propriedades do negócio
-          </span>
-          <p className="-mt-1 font-body text-[11px] text-[var(--text-muted)]">
-            Listas longas abrem sob demanda — multi-seleção com busca e rolagem.
-          </p>
-          <SearchSection {...section} />
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-            <div className="space-y-3">
-              <OwnersSection {...section} />
-              <StagesSection {...section} />
-              <SourcesSection {...section} />
-              <StatusSection {...section} />
-            </div>
-            <div className="space-y-3">
-              <LossReasonsSection {...section} />
-              <ContactSection {...section} />
-              <ConversationSection {...section} />
-              <ValueSection {...section} />
+        <main className="min-h-0 overflow-y-auto bg-[var(--glass-bg-base)] p-4 [scrollbar-width:thin]">
+          <div className="mb-4">
+            <span className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+              Propriedades do negócio
+            </span>
+            <p className="mt-1 font-body text-[11px] text-[var(--text-muted)]">
+              Listas longas abrem sob demanda — multi-seleção com busca e rolagem.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            {/* Busca isolada: ponto de entrada visual do miolo. */}
+            <section className="space-y-2">
+              <SectionLabel>Busca</SectionLabel>
+              <SearchSection {...section} />
+            </section>
+
+            {/* Linhas previsíveis substituem o masonry de duas colunas:
+                cards do mesmo assunto ficam alinhados e com mesma altura. */}
+            <section className="space-y-2">
+              <SectionLabel>Distribuição e etapa</SectionLabel>
+              <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                <OwnersSection {...section} />
+                <StagesSection {...section} />
+              </div>
+            </section>
+
+            <section className="space-y-2">
+              <SectionLabel>Classificação</SectionLabel>
+              <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                <SourcesSection {...section} />
+                <StatusSection {...section} />
+              </div>
+            </section>
+
+            <section className="space-y-2">
+              <SectionLabel>Contato e conversa</SectionLabel>
+              <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                <ContactSection {...section} />
+                <ConversationSection {...section} />
+              </div>
+            </section>
+
+            <section className="space-y-2">
+              <SectionLabel>Qualificação</SectionLabel>
+              <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                <LossReasonsSection {...section} />
+                <ValueSection {...section} />
+              </div>
+            </section>
+
+            <section className="space-y-2">
+              <SectionLabel>Período</SectionLabel>
               <DatesPeriodSection {...section} />
-              <DealCustomFieldsSection {...section} />
-              <ContactCustomFieldsSection {...section} />
-            </div>
+            </section>
+
+            <section className="space-y-2 pb-1">
+              <SectionLabel>Campos personalizados</SectionLabel>
+              <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                <DealCustomFieldsSection {...section} />
+                <ContactCustomFieldsSection {...section} />
+              </div>
+            </section>
           </div>
         </main>
 

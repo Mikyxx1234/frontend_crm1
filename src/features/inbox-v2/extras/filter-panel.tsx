@@ -60,11 +60,6 @@ const CHANNEL_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "webchat", label: "Webchat / Formulário" },
 ];
 
-const WINDOW_OPTIONS: ReadonlyArray<{ value: "open" | "closed"; label: string }> = [
-  { value: "open", label: "Aberta" },
-  { value: "closed", label: "Fechada" },
-];
-
 const SORT_OPTIONS: ReadonlyArray<{
   id: string;
   label: string;
@@ -101,6 +96,7 @@ function countActive(f: InboxFilters): number {
   if (f.tagIds && f.tagIds.length > 0) n += 1;
   if (f.sources && f.sources.length > 0) n += 1;
   if (f.windowState) n += 1;
+  if (f.lastMessageDirection) n += 1;
   if (sortIdFromFilters(f) !== DEFAULT_SORT_ID) n += 1;
   return n;
 }
@@ -109,8 +105,7 @@ function middleTabCount(id: MiddleTab, f: InboxFilters): number {
   if (id === "conversa") {
     return (
       (f.ownerId || f.withoutOwner ? 1 : 0) +
-      (f.channel ? 1 : 0) +
-      (f.windowState ? 1 : 0)
+      (f.channel ? 1 : 0)
     );
   }
   return (f.stageId ? 1 : 0) + (f.sources && f.sources.length > 0 ? 1 : 0);
@@ -142,6 +137,114 @@ function OptionRow({
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {active && <IconCheck size={14} stroke={2.6} className="shrink-0" />}
     </button>
+  );
+}
+
+function ConversationSegmentation({
+  draft,
+  setDraft,
+}: {
+  draft: InboxFilters;
+  setDraft: React.Dispatch<React.SetStateAction<InboxFilters>>;
+}) {
+  const activeCount =
+    (draft.windowState ? 1 : 0) + (draft.lastMessageDirection ? 1 : 0);
+  const statusOptions = [
+    { value: "open" as const, label: "Aberta" },
+    { value: "closed" as const, label: "Fechada" },
+  ];
+  const directionOptions = [
+    { value: "out" as const, label: "Agente" },
+    { value: "in" as const, label: "Cliente" },
+  ];
+
+  return (
+    <div className="mb-4 border-b border-[var(--glass-border-subtle)] pb-4">
+      <div className="mb-2.5 flex items-center justify-between px-2">
+        <span className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+          Segmentar conversas
+        </span>
+        {activeCount > 0 && (
+          <button
+            type="button"
+            onClick={() =>
+              setDraft((d) => ({
+                ...d,
+                windowState: undefined,
+                lastMessageDirection: undefined,
+              }))
+            }
+            className="font-display text-[10px] font-semibold text-[var(--brand-primary)]"
+          >
+            Limpar
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-3 rounded-[var(--radius-lg)] border border-slate-200/90 bg-slate-50/80 p-2.5 v2-dark:border-white/10 v2-dark:bg-white/5">
+        <div>
+          <span className="mb-1.5 block font-body text-[10.5px] text-[var(--text-muted)]">
+            Status
+          </span>
+          <div className="grid grid-cols-2 gap-1.5">
+            {statusOptions.map((option) => {
+              const active = draft.windowState === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() =>
+                    setDraft((d) => ({
+                      ...d,
+                      windowState: active ? undefined : option.value,
+                    }))
+                  }
+                  className={cn(
+                    "rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11px] font-semibold transition-colors",
+                    active
+                      ? "bg-[var(--brand-primary)] text-white"
+                      : "bg-[var(--glass-bg-modal)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)]",
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <span className="mb-1.5 block font-body text-[10.5px] text-[var(--text-muted)]">
+            Direção da última mensagem
+          </span>
+          <div className="grid grid-cols-2 gap-1.5">
+            {directionOptions.map((option) => {
+              const active = draft.lastMessageDirection === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() =>
+                    setDraft((d) => ({
+                      ...d,
+                      lastMessageDirection: active ? undefined : option.value,
+                    }))
+                  }
+                  className={cn(
+                    "rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11px] font-semibold transition-colors",
+                    active
+                      ? "bg-[var(--brand-primary)] text-white"
+                      : "bg-[var(--glass-bg-modal)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)]",
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -401,6 +504,8 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
           </button>
         );
       })}
+      <div className="my-3 border-t border-[var(--glass-border-subtle)]" />
+      <ConversationSegmentation draft={draft} setDraft={setDraft} />
     </div>
   );
 
@@ -487,50 +592,26 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
         </div>
       </FieldCard>
 
-      <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 [&>*]:h-full">
-        <FieldCard
-          label="Canal"
-          active={Boolean(draft.channel)}
-          onClear={() => setDraft((d) => ({ ...d, channel: undefined }))}
-        >
-          <DropdownGlass
-            placeholder="Selecionar canal…"
-            options={channelOptions.map((o) => ({
-              value: o.value,
-              label: o.label,
-            }))}
-            value={draft.channel}
-            onValueChange={(v) =>
-              setDraft((d) => ({
-                ...d,
-                channel: d.channel === v ? undefined : v,
-              }))
-            }
-          />
-        </FieldCard>
-
-        <FieldCard
-          label="Conversa"
-          active={Boolean(draft.windowState)}
-          onClear={() => setDraft((d) => ({ ...d, windowState: undefined }))}
-        >
-          <DropdownGlass
-            placeholder="Selecionar status…"
-            options={WINDOW_OPTIONS.map((o) => ({
-              value: o.value,
-              label: o.label,
-            }))}
-            value={draft.windowState}
-            onValueChange={(v) =>
-              setDraft((d) => ({
-                ...d,
-                windowState:
-                  d.windowState === v ? undefined : (v as "open" | "closed"),
-              }))
-            }
-          />
-        </FieldCard>
-      </div>
+      <FieldCard
+        label="Canal"
+        active={Boolean(draft.channel)}
+        onClear={() => setDraft((d) => ({ ...d, channel: undefined }))}
+      >
+        <DropdownGlass
+          placeholder="Selecionar canal…"
+          options={channelOptions.map((o) => ({
+            value: o.value,
+            label: o.label,
+          }))}
+          value={draft.channel}
+          onValueChange={(v) =>
+            setDraft((d) => ({
+              ...d,
+              channel: d.channel === v ? undefined : v,
+            }))
+          }
+        />
+      </FieldCard>
     </div>
   );
 
@@ -591,69 +672,75 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
 
   const tagsColumn = (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="mb-2 flex items-center justify-between px-0.5">
-        <span className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
-          Tags
-        </span>
-        <span className="font-display text-[10.5px] font-bold text-[var(--brand-primary)]">
-          {selectedTagIds.length} selecionadas
-        </span>
-      </div>
-      <input
-        type="search"
-        value={tagQuery}
-        onChange={(e) => setTagQuery(e.target.value)}
-        placeholder="Buscar tags…"
-        className="mb-2 h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] px-3 font-body text-[12px] outline-none focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
-      />
-      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto [scrollbar-width:thin]">
-        {filteredTags.map((t) => {
-          const selected = selectedTagIds.includes(t.id);
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => toggleTag(t.id)}
-              className={cn(
-                "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left transition-colors",
-                selected
-                  ? "bg-[var(--brand-primary)]/10"
-                  : "hover:bg-[var(--glass-bg-strong)]",
-              )}
-            >
-              <span
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ background: t.color ?? "var(--brand-primary)" }}
-              />
-              <span className="min-w-0 flex-1 truncate font-display text-[12px] font-semibold text-[var(--text-primary)]">
-                {t.name}
-              </span>
-              {selected && (
-                <IconCheck size={13} stroke={2.6} className="shrink-0 text-[var(--brand-primary)]" />
-              )}
-            </button>
-          );
-        })}
-        {filteredTags.length === 0 && (
-          <p className="py-6 text-center font-body text-[12px] text-[var(--text-muted)]">
-            {tagQuery.trim() ? "Nenhuma tag encontrada." : "Nenhuma tag cadastrada."}
-          </p>
+      <div className="sticky top-0 z-[1] space-y-2 bg-[var(--glass-bg-modal)] pb-2">
+        <div className="flex items-center justify-between px-0.5">
+          <span className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+            Tags
+          </span>
+          <span className="font-display text-[10.5px] font-bold text-[var(--brand-primary)]">
+            {selectedTagIds.length} selecionadas
+          </span>
+        </div>
+        <input
+          type="search"
+          value={tagQuery}
+          onChange={(e) => setTagQuery(e.target.value)}
+          placeholder="Localizar tags…"
+          className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+        />
+        {selectedTagIds.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setDraft((d) => ({ ...d, tagIds: undefined }))}
+            className="font-display text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--brand-primary)]"
+          >
+            Limpar tags
+          </button>
         )}
       </div>
-      {selectedTagIds.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setDraft((d) => ({ ...d, tagIds: undefined }))}
-          className="mt-2 font-display text-[11px] font-semibold text-[var(--brand-primary)]"
-        >
-          Limpar tags
-        </button>
-      )}
+
+      <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex flex-wrap content-start gap-1.5 pt-1">
+          {filteredTags.map((tag) => {
+            const color = tag.color || "#6366f1";
+            const selected = selectedTagIds.includes(tag.id);
+            return (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => toggleTag(tag.id)}
+                aria-pressed={selected}
+                className={cn(
+                  "inline-flex max-w-full items-center gap-1 rounded-[7px] border px-2 py-1 font-display text-[11.5px] font-semibold transition-all",
+                  selected ? "text-white shadow-sm" : "hover:-translate-y-px",
+                )}
+                style={
+                  selected
+                    ? { background: color, borderColor: color }
+                    : {
+                        background: `color-mix(in srgb, ${color} 15%, white)`,
+                        borderColor: `color-mix(in srgb, ${color} 45%, #d9dfeb)`,
+                        color: "#35405b",
+                      }
+                }
+                title={tag.name}
+              >
+                <span className="truncate">{tag.name}</span>
+              </button>
+            );
+          })}
+          {filteredTags.length === 0 && (
+            <p className="w-full py-6 text-center font-body text-[12px] text-[var(--text-muted)]">
+              {tagQuery.trim() ? "Nenhuma tag encontrada." : "Nenhuma tag cadastrada."}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 
   const middleContent = (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="sticky top-0 z-[2] border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-modal)] px-4 pb-3 pt-4">
         <div
           role="tablist"
@@ -748,7 +835,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
               <div
                 className="grid h-full min-h-0"
                 style={{
-                  gridTemplateColumns: "200px minmax(0,1.2fr) minmax(220px,.85fr)",
+                  gridTemplateColumns: "235px minmax(0,1.2fr) minmax(220px,.85fr)",
                 }}
               >
                 <aside className="min-h-0 overflow-y-auto border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] p-4 [scrollbar-width:none]">

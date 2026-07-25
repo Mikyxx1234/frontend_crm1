@@ -151,6 +151,8 @@ export interface InboxFilters {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   windowState?: "open" | "closed";
+  /** Direção da última mensagem, aplicada client-side na lista do Inbox. */
+  lastMessageDirection?: "in" | "out";
 }
 
 /** Filtros enviados ao GET /api/conversations (exclui ordenação e janela). */
@@ -158,7 +160,13 @@ export function hasInboxServerFilters(
   f: InboxFilters | null | undefined,
 ): boolean {
   if (!f) return false;
-  const { sortBy: _sb, sortOrder: _so, windowState: _ws, ...server } = f;
+  const {
+    sortBy: _sb,
+    sortOrder: _so,
+    windowState: _ws,
+    lastMessageDirection: _lmd,
+    ...server
+  } = f;
   return (
     Boolean(server.ownerId) ||
     Boolean(server.withoutOwner) ||

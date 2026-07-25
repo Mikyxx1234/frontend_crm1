@@ -218,7 +218,8 @@ function writeStoredInboxFilters(filters: InboxFilters) {
       !hasInboxServerFilters(filters) &&
       !filters.sortBy &&
       !filters.sortOrder &&
-      !filters.windowState;
+      !filters.windowState &&
+      !filters.lastMessageDirection;
     if (empty) {
       window.localStorage.removeItem(INBOX_FILTERS_STORAGE_KEY);
       return;
@@ -422,7 +423,13 @@ export default function InboxV2ClientPage({
   // ── Dados ───────────────────────────────────────────────────────
   // Ordem e janela são CLIENT-SIDE — não vão ao servidor (evita refetch
   // ao mudar ordenação e a limitação do `sortBy` do backend).
-  const { sortBy, sortOrder, windowState, ...serverFilters } = filters;
+  const {
+    sortBy,
+    sortOrder,
+    windowState,
+    lastMessageDirection,
+    ...serverFilters
+  } = filters;
 
   const {
     data: listData,
@@ -455,6 +462,16 @@ export default function InboxV2ClientPage({
       // "Fechada" = conversa resolvida.
       list = list.filter((r) => r.status === "RESOLVED");
     }
+    if (lastMessageDirection) {
+      list = list.filter((r) => {
+        const direction = String(
+          r.lastMessage?.direction ?? r.lastMessagePreview?.direction ?? "",
+        ).toLowerCase();
+        return lastMessageDirection === "out"
+          ? direction === "out" || direction === "outbound"
+          : direction === "in" || direction === "inbound";
+      });
+    }
     const by = sortBy ?? "lastInboundAt";
     const sign = (sortOrder ?? "desc") === "asc" ? 1 : -1;
     const ts = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
@@ -467,7 +484,7 @@ export default function InboxV2ClientPage({
       }
       return sign * (lastActivityTs(a) - lastActivityTs(b));
     });
-  }, [rawRows, windowState, sortBy, sortOrder]);
+  }, [rawRows, windowState, lastMessageDirection, sortBy, sortOrder]);
 
   const { data: tabCounts } = useTabCounts(isAuthenticated, filters);
 

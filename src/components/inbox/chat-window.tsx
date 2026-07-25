@@ -99,7 +99,12 @@ type MessagesResponse = {
 async function fetchMessages(
   conversationId: string,
 ): Promise<MessagesResponse> {
-  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages`));
+  // history=1: inclui as mensagens dos tickets ANTERIORES do mesmo contato/canal
+  // (modelo "reabrir = novo ticket"). Sem isto, o chat do deal/contato/pipeline
+  // mostrava só o ticket atual e o histórico "sumia" ao encerrar (o ticket
+  // vira histórico) e "reaparecia" ao reabrir. Espelha o inbox
+  // (features/inbox-v2/api/messages.ts), que já usava history=1. [jul/26]
+  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages?history=1`));
   const data = await res.json().catch(() => ({}));
   if (!res.ok)
     throw new Error(
@@ -108,7 +113,15 @@ async function fetchMessages(
         : "Erro ao carregar mensagens",
     );
   return {
-    messages: Array.isArray(data.messages) ? data.messages : [],
+    // Remove os separadores sintéticos de ticket que o backend injeta com
+    // history=1 (`messageType: "ticket-separator"`, `direction: "system"`).
+    // O ChatWindow não tem divisor de ticket — cairiam no SystemEventRow
+    // exibindo o JSON cru. Aqui o histórico aparece de forma contínua.
+    messages: Array.isArray(data.messages)
+      ? data.messages.filter(
+          (m: { messageType?: unknown }) => m?.messageType !== "ticket-separator",
+        )
+      : [],
     pinnedNoteId: data.pinnedNoteId ?? null,
     channelProvider: data.channelProvider ?? null,
     session: data.session ?? undefined,

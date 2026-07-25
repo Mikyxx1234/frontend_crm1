@@ -62,6 +62,11 @@ export function useBoard(params: {
     enabled: preview ? true : ((params.enabled ?? true) && !!params.pipelineId),
     staleTime: 10_000,
     refetchInterval: 30_000,
+    // [jul/26] Mantém o quadro anterior VISÍVEL enquanto refaz o fetch
+    // (troca de funil/ordenação, refetch de 30s, invalidação pós-move).
+    // Evita o "flash" de tela vazia/"Carregando..." — a query mais cara do
+    // app leva ~1-2s, então sem isso o board pisca em branco a cada refetch.
+    placeholderData: (prev) => prev,
   });
 }
 
@@ -113,6 +118,9 @@ export function useBoardSearch(params: {
     // Evita fan-out: troca rápida de termo cancela o POST anterior.
     refetchOnWindowFocus: false,
     retry: 1,
+    // [jul/26] Preserva os resultados anteriores enquanto o novo termo é
+    // buscado — sem piscar em branco entre teclas (já debounced no caller).
+    placeholderData: (prev) => prev,
   });
 }
 
@@ -160,5 +168,8 @@ export function useBoardFiltered(params: {
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
+    // [jul/26] Mantém o quadro filtrado anterior enquanto reaplica filtros
+    // (evita flash de vazio ao mexer em tags/datas/origem).
+    placeholderData: (prev) => prev,
   });
 }

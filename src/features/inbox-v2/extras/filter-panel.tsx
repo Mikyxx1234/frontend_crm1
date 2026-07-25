@@ -24,7 +24,7 @@ import {
 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
-import { PageSearchBar } from "@/components/crm/page-toolbar";
+import { FilterSearchTrigger } from "@/components/crm/filter-search-trigger";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { TagChip } from "@/components/crm/tag-chip";
 import { UserAvatar } from "@/components/crm/user-avatar";
@@ -52,6 +52,11 @@ interface InboxFilterButtonProps {
   value: InboxFilters;
   onChange: (next: InboxFilters) => void;
   variant?: "standalone" | "integrated";
+  /** Controle externo do modal (ex.: barra com `FilterSearchTrigger`). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Só o portal do modal — o trigger fica no `FilterSearchTrigger`. */
+  hideTrigger?: boolean;
 }
 
 interface InboxSearchFilterBarProps {
@@ -355,22 +360,30 @@ export function InboxSearchFilterBar({
   placeholder = "Pesquisar e filtrar...",
   className,
 }: InboxSearchFilterBarProps) {
+  const [open, setOpen] = React.useState(false);
+  const activeCount = countActive(filters);
+
   return (
-    <div className={cn("relative w-full", className)}>
-      <PageSearchBar
-        variant="compact"
-        className="[&>input]:pr-12"
-        value={search}
-        onChange={onSearch}
+    <>
+      <FilterSearchTrigger
+        search={search}
+        onSearch={onSearch}
+        onOpenFilters={() => setOpen(true)}
+        filtersOpen={open}
+        activeCount={activeCount}
         placeholder={placeholder}
-        aria-label="Buscar e filtrar conversas"
+        ariaLabel="Buscar e filtrar conversas"
+        tooltipLabel="Filtrar conversas"
+        className={className}
       />
       <InboxFilterButton
         value={filters}
         onChange={onChangeFilters}
-        variant="integrated"
+        open={open}
+        onOpenChange={setOpen}
+        hideTrigger
       />
-    </div>
+    </>
   );
 }
 
@@ -378,8 +391,20 @@ export function InboxFilterButton({
   value,
   onChange,
   variant = "standalone",
+  open: openProp,
+  onOpenChange,
+  hideTrigger = false,
 }: InboxFilterButtonProps) {
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : uncontrolledOpen;
+  const setOpen = React.useCallback(
+    (next: boolean) => {
+      if (!controlled) setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    },
+    [controlled, onOpenChange],
+  );
   const [draft, setDraft] = React.useState<InboxFilters>(() =>
     normalizeInboxFilters(value),
   );
@@ -808,46 +833,48 @@ export function InboxFilterButton({
 
   return (
     <>
-      <TooltipGlass label="Filtrar conversas" side="bottom">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          aria-label={
-            activeCount > 0
-              ? `Filtros (${activeCount} ativos)`
-              : "Filtrar conversas"
-          }
-          className={cn(
-            variant === "integrated"
-              ? "absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center gap-0.5 rounded-full transition-colors"
-              : "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
-            variant === "integrated" && (activeCount > 0 ? "min-w-7 px-1.5" : "w-7"),
-            variant === "integrated"
-              ? activeCount > 0 || open
-                ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-                : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]"
-              : activeCount > 0 || open
-                ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]",
-          )}
-        >
-          <IconFilter size={variant === "integrated" ? 15 : 17} stroke={2} />
-          {activeCount > 0 && (
-            <span
-              className={cn(
-                "font-display font-bold leading-none tabular-nums",
-                variant === "integrated"
-                  ? "text-[10px]"
-                  : "absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 text-[9px] text-white",
-              )}
-            >
-              {activeCount}
-            </span>
-          )}
-        </button>
-      </TooltipGlass>
+      {!hideTrigger && (
+        <TooltipGlass label="Filtrar conversas" side="bottom">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            aria-label={
+              activeCount > 0
+                ? `Filtros (${activeCount} ativos)`
+                : "Filtrar conversas"
+            }
+            className={cn(
+              variant === "integrated"
+                ? "absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center gap-0.5 rounded-full transition-colors"
+                : "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
+              variant === "integrated" && (activeCount > 0 ? "min-w-7 px-1.5" : "w-7"),
+              variant === "integrated"
+                ? activeCount > 0 || open
+                  ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]"
+                : activeCount > 0 || open
+                  ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]",
+            )}
+          >
+            <IconFilter size={variant === "integrated" ? 15 : 17} stroke={2} />
+            {activeCount > 0 && (
+              <span
+                className={cn(
+                  "font-display font-bold leading-none tabular-nums",
+                  variant === "integrated"
+                    ? "text-[10px]"
+                    : "absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 text-[9px] text-white",
+                )}
+              >
+                {activeCount}
+              </span>
+            )}
+          </button>
+        </TooltipGlass>
+      )}
 
       {open &&
         typeof document !== "undefined" &&

@@ -5035,10 +5035,10 @@ function AudioMessage({
         </span>
       ) : null}
 
-      <div className="flex min-w-[250px] max-w-[350px] flex-col gap-1.5">
+      <div className="min-w-[230px] max-w-[320px]">
         <div
           className={cn(
-            "font-display flex items-center gap-3 rounded-[var(--radius-md)] px-2.5 py-2",
+            "font-display flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1",
             playerSurface,
           )}
         >
@@ -5048,16 +5048,16 @@ function AudioMessage({
             disabled={!ready}
             aria-label={isPlaying ? "Pausar" : "Reproduzir"}
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm transition-all active:scale-95 disabled:opacity-60",
+              "flex size-8 shrink-0 items-center justify-center rounded-full shadow-sm transition-all active:scale-95 disabled:opacity-60",
               out
                 ? "bg-current/15 hover:bg-current/20"
                 : "bg-primary text-primary-foreground hover:bg-primary-dark",
             )}
           >
             {isPlaying ? (
-              <Pause className="size-4" fill="currentColor" />
+              <Pause className="size-3.5" fill="currentColor" />
             ) : (
-              <Play className="size-4 translate-x-px" fill="currentColor" />
+              <Play className="size-3.5 translate-x-px" fill="currentColor" />
             )}
           </button>
 
@@ -5088,7 +5088,7 @@ function AudioMessage({
             />
             <div
               className={cn(
-                "-mt-0.5 flex items-center justify-between text-[10px] tabular-nums",
+                "-mt-px flex items-center justify-between text-[9px] leading-none tabular-nums",
                 out
                   ? "text-[color:var(--chat-bubble-sent-time)]"
                   : "text-ink-muted",
@@ -5096,16 +5096,36 @@ function AudioMessage({
             >
               <span>{currentLabel}</span>
               <span>{durationLabel}</span>
+              {time || showDeliveryCheck ? (
+                <span className="flex items-center gap-0.5 font-bold">
+                  {time ? <span>{time}</span> : null}
+                  {showDeliveryCheck ? (
+                    <CheckCheck
+                      className={cn(
+                        "size-2.5",
+                        out
+                          ? isRead
+                            ? "text-[color:var(--chat-bubble-sent-check-read)]"
+                            : "text-[color:var(--chat-bubble-sent-time)]"
+                          : isRead
+                            ? "text-[var(--color-info)]"
+                            : "text-[var(--color-ink-muted)]",
+                      )}
+                      strokeWidth={2.5}
+                    />
+                  ) : null}
+                </span>
+              ) : null}
             </div>
           </div>
 
-          <div className="flex shrink-0 flex-col items-center justify-between self-stretch py-1">
+          <div className="flex shrink-0 items-center gap-0.5">
             <button
               type="button"
               onClick={cycleRate}
               disabled={isUploading}
               className={cn(
-                "rounded-full px-2 py-1 text-[10px] font-bold tabular-nums transition-colors disabled:opacity-50",
+                "flex h-6 items-center rounded-full px-1.5 text-[9px] font-bold tabular-nums transition-colors disabled:opacity-50",
                 out
                   ? "bg-current/10 hover:bg-current/15"
                   : "bg-primary/10 text-primary hover:bg-primary/15",
@@ -5124,7 +5144,7 @@ function AudioMessage({
                 }}
                 disabled={downloading}
                 className={cn(
-                  "inline-flex size-7 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                  "inline-flex size-6 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                   out
                     ? "text-[color:var(--chat-bubble-sent-time)] hover:bg-current/10"
                     : "text-[var(--color-ink-muted)] hover:bg-primary/10 hover:text-primary",
@@ -5132,42 +5152,14 @@ function AudioMessage({
                 aria-label="Baixar MP3"
               >
                 {downloading ? (
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <Loader2 className="size-3 animate-spin" />
                 ) : (
-                  <Download className="size-3.5" />
+                  <Download className="size-3" />
                 )}
               </button>
             ) : null}
           </div>
         </div>
-
-        {time || showDeliveryCheck ? (
-          <div
-            className={cn(
-              "flex justify-end gap-0.5 pr-0.5 text-[10px] font-bold tabular-nums",
-              out
-                ? "text-[color:var(--chat-bubble-sent-time)]"
-                : "text-ink-muted",
-            )}
-          >
-            {time ? <span>{time}</span> : null}
-            {showDeliveryCheck ? (
-              <CheckCheck
-                className={cn(
-                  "size-3",
-                  out
-                    ? isRead
-                      ? "text-[color:var(--chat-bubble-sent-check-read)]"
-                      : "text-[color:var(--chat-bubble-sent-time)]"
-                    : isRead
-                      ? "text-[var(--color-info)]"
-                      : "text-[var(--color-ink-muted)]",
-                )}
-                strokeWidth={2.5}
-              />
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       {transcriptionOpen ? (

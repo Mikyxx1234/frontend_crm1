@@ -5,8 +5,8 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { cn } from "@/lib/utils";
 
 const WAVEFORM_BARS = [
-  8, 14, 20, 12, 25, 17, 30, 22, 35, 18, 27, 39, 24, 32, 16, 28, 36, 21,
-  31, 17, 26, 34, 20, 29, 15, 23, 31, 18, 25, 14, 21, 12, 18, 10, 15, 8,
+  5, 8, 12, 7, 15, 10, 18, 13, 21, 11, 16, 23, 14, 19, 10, 17, 22, 13,
+  19, 10, 16, 20, 12, 17, 9, 14, 19, 11, 15, 8, 13, 7, 11, 6, 9, 5,
 ] as const;
 
 function formatAudioTime(seconds: number): string {
@@ -67,7 +67,7 @@ export function AudioWaveform({
   };
 
   const bars = (
-    <div className="flex h-10 w-full items-center gap-[2px]" aria-hidden="true">
+    <div className="flex h-6 w-full items-center gap-px" aria-hidden="true">
       {WAVEFORM_BARS.map((height, index) => (
         <span
           key={`${height}-${index}`}
@@ -91,7 +91,7 @@ export function AudioWaveform({
       onClick={seekFromPointer}
       onKeyDown={seekFromKeyboard}
       className={cn(
-        "group relative h-10 min-w-0 cursor-pointer select-none outline-none",
+        "group relative h-6 min-w-0 cursor-pointer select-none outline-none",
         "focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2",
         disabled && "cursor-default opacity-60",
         className,
@@ -117,7 +117,7 @@ export function AudioWaveform({
       <span
         aria-hidden="true"
         className={cn(
-          "absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-sm",
+          "absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-sm",
           "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
           outgoing ? "bg-current" : "bg-[var(--brand-primary)]",
         )}

@@ -686,20 +686,20 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
   return (
     <div
       className={cn(
-        "flex w-[min(350px,74vw)] flex-col gap-1.5 py-0.5",
-        transcript.status === "done" ? "pb-4" : "pb-3",
+        "flex w-[min(320px,74vw)] flex-col gap-1 py-0.5",
+        transcript.status === "done" ? "pb-2" : "pb-1",
       )}
     >
       {url && <audio ref={audioRef} src={url} preload="metadata" aria-hidden="true" />}
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={toggle}
           disabled={!url}
           aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm transition-all active:scale-95",
+            "flex size-8 shrink-0 items-center justify-center rounded-full shadow-sm transition-all active:scale-95",
             isOutgoing
               ? "bg-current/15 hover:bg-current/20"
               : "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-dark)]",
@@ -707,8 +707,8 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
           )}
         >
           {playing
-            ? <IconPlayerPause size={18} fill="currentColor" />
-            : <IconPlayerPlay size={18} className="translate-x-px" fill="currentColor" />
+            ? <IconPlayerPause size={14} fill="currentColor" />
+            : <IconPlayerPlay size={14} className="translate-x-px" fill="currentColor" />
           }
         </button>
 
@@ -725,7 +725,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
               setCurrent(nextTime)
             }}
           />
-          <div className={cn("flex items-center justify-between text-[10px] tabular-nums", timeColor)}>
+          <div className={cn("-mt-px flex items-center justify-between text-[9px] leading-none tabular-nums", timeColor)}>
             <span>{fmtTime(current)}</span>
             <span>{duration > 0 ? fmtTime(duration) : "--:--"}</span>
           </div>
@@ -737,7 +737,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
           disabled={!url}
           aria-label="Velocidade de reprodução"
           className={cn(
-            "flex h-7 shrink-0 items-center justify-center self-end rounded-full px-2 font-display text-[10px] font-bold tabular-nums transition-colors",
+            "flex h-6 shrink-0 items-center justify-center rounded-full px-1.5 font-display text-[9px] font-bold tabular-nums transition-colors",
             isOutgoing
               ? "bg-current/10 hover:bg-current/15"
               : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20",
@@ -754,7 +754,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
           disabled={transcript.status === "loading"}
           onClick={handleTranscribe}
           className={cn(
-            "flex items-center gap-1 self-start rounded-full px-2 py-0.5 transition-colors",
+            "flex h-4 items-center gap-1 self-start rounded-full px-1.5 transition-colors",
             btnBase,
             transcript.status === "loading" && "cursor-wait",
           )}
@@ -763,7 +763,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
             ? <IconLoader2 size={10} className="animate-spin" />
             : <IconTextCaption size={10} />
           }
-          <span className="font-display text-[10px] font-semibold">
+          <span className="font-display text-[9px] font-semibold leading-none">
             {transcript.status === "loading" ? "Transcrevendo…" : "Transcrever"}
           </span>
         </button>

@@ -1513,7 +1513,7 @@ export default function InboxV2ClientPage({
       className={cn(
         "grid shrink-0 overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out",
         headerCollapsed
-          ? "grid-rows-[0fr] opacity-0"
+          ? "pointer-events-none grid-rows-[0fr] opacity-0"
           : "grid-rows-[1fr] opacity-100",
       )}
       aria-hidden={headerCollapsed}
@@ -1538,16 +1538,16 @@ export default function InboxV2ClientPage({
   );
 
   // Botão "mostrar cabeçalho" — pill circular no padrão da NavRailV2
-  // (border-brand + bg branco + shadow + hover fills). Fica no topo
-  // esquerdo da coluna de conteúdo (encostado no NavRail) para ficar
-  // à frente e bem visível, sem competir com o chat.
+  // (border-brand + bg branco + shadow + hover fills). Fica no CANTO
+  // SUPERIOR DIREITO da coluna de conteúdo (espelho do pill da NavRail,
+  // que fica à esquerda), z-40 para ficar à frente do aside.
   const expandHeaderBtn = headerCollapsed ? (
-    <TooltipGlass label="Mostrar cabeçalho" side="bottom">
+    <TooltipGlass label="Mostrar cabeçalho" side="left">
       <button
         type="button"
         onClick={() => setHeaderCollapsed(false)}
         aria-label="Mostrar cabeçalho"
-        className="absolute -left-3 top-3 z-40 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.25)] transition-all hover:scale-110 hover:bg-[var(--brand-primary)] hover:text-white"
+        className="absolute -right-3 top-3 z-40 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.25)] transition-all hover:scale-110 hover:bg-[var(--brand-primary)] hover:text-white"
       >
         <IconChevronsDown size={14} stroke={2.5} />
       </button>

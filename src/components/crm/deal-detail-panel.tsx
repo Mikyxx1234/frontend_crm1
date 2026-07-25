@@ -1192,12 +1192,12 @@ export function DealDetailPanel({
                                             <div
                                               key={field.fieldId}
                                               className={cn(
-                                                "flex items-center justify-between gap-2 py-2 text-sm",
+                                                "flex min-w-0 max-w-full items-center justify-between gap-2 py-2 text-sm",
                                                 fieldIdx > 0 && "border-t border-slate-50",
                                               )}
                                             >
                                               <span className="w-[38%] shrink-0 text-[12px] font-medium leading-tight text-slate-500">{field.label}</span>
-                                              <div className="min-w-0 flex-1">
+                                              <div className="min-w-0 max-w-full flex-1">
                                                 {dealCustomEditMode && canEdit ? (
                                                   <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                                 ) : hl ? (
@@ -1205,7 +1205,7 @@ export function DealDetailPanel({
                                                 ) : canEdit ? (
                                                   <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                                 ) : (
-                                                  <span className="block min-w-0 break-words [overflow-wrap:anywhere] font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
+                                                  <span className="block min-w-0 max-w-full break-words [overflow-wrap:anywhere] font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || "—"}</span>
                                                 )}
                                               </div>
                                             </div>
@@ -1223,14 +1223,14 @@ export function DealDetailPanel({
                                             <div
                                               key={field.fieldId}
                                               className={cn(
-                                                "flex flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
+                                                "flex min-w-0 max-w-full flex-col items-start gap-0.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5",
                                                 isLong && "col-span-2",
                                               )}
                                             >
                                               <span className="text-[11px] font-medium text-slate-500">
                                                 {field.label}
                                               </span>
-                                              <div className="min-w-0 w-full">
+                                              <div className="min-w-0 w-full max-w-full">
                                                 {dealCustomEditMode && canEdit ? (
                                                   <InlineFieldEditor
                                                     fieldId={field.fieldId}
@@ -1265,7 +1265,7 @@ export function DealDetailPanel({
                                                     placeholder="+ Adicionar"
                                                   />
                                                 ) : (
-                                                  <span className="block min-w-0 break-words [overflow-wrap:anywhere] font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                  <span className="block min-w-0 max-w-full break-words [overflow-wrap:anywhere] font-display text-[13px] font-bold text-[var(--text-primary)]">
                                                     {currentValue || "—"}
                                                   </span>
                                                 )}
@@ -1294,7 +1294,7 @@ export function DealDetailPanel({
                                           <div className="flex flex-col gap-3">
                                             {customFieldGroups.map((g) => {
                                               const grid = (
-                                                <div className="grid grid-cols-2 gap-2">
+                                                <div className="grid min-w-0 grid-cols-2 gap-2">
                                                   {g.fields.map(renderGridCard)}
                                                 </div>
                                               )

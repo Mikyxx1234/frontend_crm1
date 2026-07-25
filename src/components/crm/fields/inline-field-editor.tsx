@@ -144,7 +144,7 @@ export function InlineFieldEditor({
         type="button"
         onClick={startEdit}
         className={cn(
-          "group flex min-w-0 items-center gap-1.5 text-left transition-colors",
+          "group flex w-full min-w-0 max-w-full items-center gap-1.5 text-left transition-colors",
           isEmpty
             ? "font-display text-[11px] text-[var(--text-muted)] opacity-60 italic"
             : textClassName ??
@@ -152,7 +152,7 @@ export function InlineFieldEditor({
         )}
         aria-label={`Editar ${fieldId}`}
       >
-        <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+        <span className="min-w-0 max-w-full flex-1 break-words [overflow-wrap:anywhere]">
           {isEmpty ? placeholder : formatDisplayValue(value!, fieldType)}
         </span>
         <IconPencil

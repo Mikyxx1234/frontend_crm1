@@ -36,7 +36,7 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
   return (
     <article
       className={cn(
-        "group relative grid h-[72px] min-w-0 shrink-0 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-transparent px-3.5 transition-colors duration-150 hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-base)] focus-within:border-[var(--input-border-focus)] sm:px-4 lg:h-16 lg:grid-cols-[minmax(200px,1.55fr)_minmax(132px,1fr)_72px_88px_112px_96px] lg:gap-4",
+        "group relative grid min-h-[72px] min-w-0 shrink-0 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)] focus-within:border-[var(--brand-primary)]/40 sm:px-4 lg:min-h-16 lg:grid-cols-[minmax(200px,1.55fr)_minmax(132px,1fr)_72px_88px_112px_96px] lg:gap-4 lg:py-2.5",
       )}
       role="row"
     >

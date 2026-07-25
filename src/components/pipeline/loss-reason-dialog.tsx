@@ -5,7 +5,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -141,7 +141,7 @@ export function LossReasonDialog({
   };
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       busy={isPending}
@@ -234,6 +234,6 @@ export function LossReasonDialog({
           </div>
         )}
       </div>
-    </FormSheet>
+    </FormDialog>
   );
 }

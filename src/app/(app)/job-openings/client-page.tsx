@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
@@ -267,7 +267,7 @@ function CreateJobDialog({
   };
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       busy={create.isPending}
@@ -392,7 +392,7 @@ function CreateJobDialog({
             </div>
           )}
       </div>
-    </FormSheet>
+    </FormDialog>
   );
 }
 

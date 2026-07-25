@@ -12,6 +12,10 @@ import {
 } from "@/components/ui/sheet";
 
 /**
+ * @deprecated Use `FormDialog` (`@/components/ui/form-dialog`) — modal
+ * central com a mesma API. FormSheet permanece apenas durante a migracao
+ * gradual dos drawers laterais; nao use em codigo novo.
+ *
  * Padrao unificado de drawer lateral para formularios de criacao e edicao.
  *
  * Uso:

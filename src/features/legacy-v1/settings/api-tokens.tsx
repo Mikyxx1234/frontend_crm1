@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import {
@@ -272,7 +272,7 @@ export default function ApiTokensPage() {
       </GlassCard>
 
       {/* Create drawer */}
-      <FormSheet
+      <FormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
         busy={createMutation.isPending}
@@ -321,7 +321,7 @@ export default function ApiTokensPage() {
             )}
           </div>
         )}
-      </FormSheet>
+      </FormDialog>
 
       {/* Delete confirm */}
       <Dialog

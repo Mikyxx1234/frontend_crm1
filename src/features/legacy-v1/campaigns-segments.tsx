@@ -24,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
@@ -236,7 +236,7 @@ export default function SegmentsPage({
         </div>
       )}
 
-      <FormSheet
+      <FormDialog
         open={dialogOpen}
         onOpenChange={(v) => !v && closeDialog()}
         busy={saveMutation.isPending}
@@ -334,7 +334,7 @@ export default function SegmentsPage({
             </div>
           </div>
 
-      </FormSheet>
+      </FormDialog>
     </div>
   );
 }

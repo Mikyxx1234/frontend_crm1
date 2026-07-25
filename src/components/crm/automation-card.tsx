@@ -4,9 +4,6 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import {
   IconBolt,
-  IconActivity,
-  IconCircleCheck,
-  IconClock,
   IconTrash,
 } from "@tabler/icons-react"
 import { SwitchGlass } from "./switch-glass"
@@ -39,8 +36,9 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
   return (
     <article
       className={cn(
-        "group relative flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)] sm:gap-4 sm:px-4",
+        "group relative grid h-[72px] min-w-0 shrink-0 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-transparent px-3.5 transition-colors duration-150 hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-base)] focus-within:border-[var(--input-border-focus)] sm:px-4 lg:h-16 lg:grid-cols-[minmax(200px,1.55fr)_minmax(132px,1fr)_72px_88px_112px_96px] lg:gap-4",
       )}
+      role="row"
     >
       <Link
         href={`/automations/${automation.id}`}
@@ -50,9 +48,7 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
         <span className="sr-only">Abrir editor</span>
       </Link>
 
-      {/* Nome flexível: trunca no mobile para o switch não ser cortado.
-          pointer-events-none deixa o clique atravessar até o <Link> de fundo. */}
-      <div className="pointer-events-none relative z-10 min-w-0 flex-1 lg:min-w-[200px] lg:flex-none lg:shrink-0">
+      <div className="pointer-events-none relative z-10 min-w-0" role="cell">
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
@@ -75,82 +71,74 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
         </div>
       </div>
 
-      <div className="pointer-events-none relative z-10 hidden min-w-0 flex-1 lg:block">
-        <MiniFlow steps={steps} max={5} size="sm" connected={false} />
+      <div className="pointer-events-none relative z-10 hidden min-w-0 overflow-hidden lg:block" role="cell">
+        <MiniFlow steps={steps} max={4} size="sm" connected={false} />
       </div>
 
-      <div className="pointer-events-none relative z-10 hidden shrink-0 items-center gap-6.5 md:flex">
-        <RowMetric
-          icon={<IconCircleCheck size={13} />}
-          value={`${automation.successRate}%`}
-          label="Sucesso"
-        />
-        <RowMetric
-          icon={<IconActivity size={13} />}
-          value={automation.runs.toLocaleString("pt-BR")}
-          label="Execuções"
-        />
-        <RowMetric
-          icon={<IconClock size={13} />}
-          value={automation.lastRun}
-          label="Última"
-        />
+      <div className="pointer-events-none relative z-10 hidden text-left lg:block" role="cell">
+        <RowMetric value={`${automation.successRate}%`} />
       </div>
 
-      <SwitchGlass
-        checked={automation.active}
-        onChange={() => onToggle(automation.id)}
-        size="list"
-        className="relative z-10 shrink-0"
-        aria-label={`${automation.active ? "Desativar" : "Ativar"} ${automation.name}`}
-      />
+      <div className="pointer-events-none relative z-10 hidden text-left lg:block" role="cell">
+        <RowMetric value={automation.runs.toLocaleString("pt-BR")} />
+      </div>
 
-      {onDelete && (
-        <button
-          type="button"
-          onClick={(e) => {
-            // O card inteiro é coberto por um <Link> em inset-0 — sem
-            // stopPropagation+preventDefault, o clique navegaria pro editor.
-            e.preventDefault()
-            e.stopPropagation()
-            onDelete(automation.id)
-          }}
-          aria-label={`Excluir ${automation.name}`}
-          title="Excluir automação"
-          className={cn(
-            "relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full",
-            "border border-transparent text-[var(--text-muted)] transition-all duration-150",
-            "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
-            "hover:border-[var(--color-danger)]/30 hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-danger)]/40",
-          )}
-        >
-          <IconTrash size={15} stroke={2.2} />
-        </button>
-      )}
+      <div className="pointer-events-none relative z-10 hidden min-w-0 lg:block" role="cell">
+        <RowMetric value={automation.lastRun} subdued />
+      </div>
+
+      <div className="relative z-10 flex items-center justify-end gap-1" role="cell">
+        <SwitchGlass
+          checked={automation.active}
+          onChange={() => onToggle(automation.id)}
+          size="list"
+          className="shrink-0"
+          aria-label={`${automation.active ? "Desativar" : "Ativar"} ${automation.name}`}
+        />
+
+        {onDelete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onDelete(automation.id)
+            }}
+            aria-label={`Excluir ${automation.name}`}
+            title="Excluir automação"
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-full",
+              "border border-transparent text-[var(--text-muted)] transition-all duration-150",
+              "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
+              "hover:border-[var(--color-danger)]/30 hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-danger)]/40",
+            )}
+          >
+            <IconTrash size={15} stroke={2.2} />
+          </button>
+        )}
+      </div>
     </article>
   )
 }
 
 function RowMetric({
-  icon,
   value,
-  label,
+  subdued = false,
 }: {
-  icon: React.ReactNode
   value: string
-  label: string
+  subdued?: boolean
 }) {
   return (
-    <div className="min-w-[58px] text-center">
-      <div className="mb-0.5 flex items-center justify-center gap-1 text-[var(--text-muted)]">
-        {icon}
-      </div>
-      <p className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
+    <div className="min-w-0">
+      <p
+        className={cn(
+          "truncate font-display text-[13px] font-bold tabular-nums",
+          subdued ? "text-[var(--text-secondary)]" : "text-[var(--text-primary)]",
+        )}
+        title={value}
+      >
         {value}
-      </p>
-      <p className="font-body text-[10px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
-        {label}
       </p>
     </div>
   )

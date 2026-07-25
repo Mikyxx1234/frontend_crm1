@@ -42,6 +42,7 @@ import { DealCallButton } from "@/features/softphone/components/deal-call-button
 import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { Chip } from "@/components/crm/chip";
+import { TagChip } from "@/components/crm/tag-chip";
 import { UserAvatar } from "@/components/crm/user-avatar";
 
 import {
@@ -1254,19 +1255,11 @@ export default function KanbanV2ClientPage({
                   // container não quebra — "+N" e "+" ficam sempre visíveis
                   // na mesma linha.
                   <TooltipGlass key={t.id} label={t.name} side="top">
-                    {/* Chip claro (color-mix com white) — mesmo padrão do
-                        DealTagsTray do inbox, garante contraste legível sobre
-                        o hero escuro (--nav-bg). */}
-                    <span
-                      className="inline-block max-w-[7.5rem] min-w-0 truncate rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
-                      style={{
-                        background: `color-mix(in srgb, ${t.color ?? "#5b6ff5"} 18%, white)`,
-                        color: `color-mix(in srgb, ${t.color ?? "#5b6ff5"} 75%, black)`,
-                        border: `1px solid color-mix(in srgb, ${t.color ?? "#5b6ff5"} 40%, transparent)`,
-                      }}
-                    >
-                      {t.name}
-                    </span>
+                    <TagChip
+                      name={t.name}
+                      color={t.color}
+                      className="max-w-[7.5rem] min-w-0 shrink"
+                    />
                   </TooltipGlass>
                 ))}
                 {hiddenTags.length > 0 && (
@@ -1274,7 +1267,7 @@ export default function KanbanV2ClientPage({
                     label={hiddenTags.map((t) => t.name).join(", ")}
                     side="top"
                   >
-                    <span className="inline-flex shrink-0 cursor-default items-center rounded-full border border-white/25 bg-white/15 px-1.5 py-0.5 font-display text-[10.5px] font-bold text-white/85">
+                    <span className="inline-flex shrink-0 cursor-default items-center rounded-[6px] border border-white/25 bg-white/15 px-1.5 py-0.5 font-display text-[10.5px] font-bold text-white/85">
                       +{hiddenTags.length}
                     </span>
                   </TooltipGlass>
@@ -1777,16 +1770,11 @@ function DroppableColumn({
                               // mostra o nome completo no hover. Padrão já
                               // usado no inbox v2 (`inbox/_v2-client.tsx`).
                               <TooltipGlass key={t.id} label={t.name} side="top">
-                                <span
-                                  className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide whitespace-nowrap"
-                                  style={{
-                                    background: `${t.color || "#5b6ff5"}33`,
-                                    color: t.color || "var(--brand-primary)",
-                                    border: `1px solid ${t.color || "#5b6ff5"}66`,
-                                  }}
-                                >
-                                  {t.name}
-                                </span>
+                                <TagChip
+                                  name={t.name}
+                                  color={t.color}
+                                  className="max-w-[7.5rem] whitespace-nowrap"
+                                />
                               </TooltipGlass>
                             ))}
                             {hiddenTags.length > 0 && (
@@ -1794,7 +1782,7 @@ function DroppableColumn({
                                 label={hiddenTags.map((t) => t.name).join(", ")}
                                 side="top"
                               >
-                                <span className="inline-flex cursor-default items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px font-display text-[9.5px] font-bold text-[var(--text-muted)]">
+                                <span className="inline-flex cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--text-muted)]">
                                   +{hiddenTags.length}
                                 </span>
                               </TooltipGlass>

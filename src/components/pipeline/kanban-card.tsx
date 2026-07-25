@@ -23,11 +23,10 @@ import {
   formatCurrency,
   formatDate,
   resolveContactAvatarDisplayUrl,
-  tagPillStyle,
 } from "@/lib/utils";
 import { ds } from "@/lib/design-system";
-import { dt } from "@/lib/design-tokens";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
+import { TagChip } from "@/components/crm/tag-chip";
 import { UserAvatar } from "@/components/crm/user-avatar";
 import { TooltipHost } from "@/components/ui/tooltip";
 
@@ -439,9 +438,11 @@ export function KanbanCard({
 
                     {primaryTags.map((tag) => (
                       <TooltipHost key={tag.id} label={tag.name} side="top">
-                        <span className={cn("whitespace-nowrap", dt.pill.sm)} style={tagPillStyle(tag.name, tag.color)}>
-                          {tag.name}
-                        </span>
+                        <TagChip
+                          name={tag.name}
+                          color={tag.color}
+                          className="max-w-[7.5rem] whitespace-nowrap"
+                        />
                       </TooltipHost>
                     ))}
 

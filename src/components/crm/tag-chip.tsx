@@ -42,10 +42,10 @@ export function TagChip({
       aria-pressed={ariaPressed ?? (onClick ? selected : undefined)}
       title={title ?? name}
       className={cn(
-        "inline-flex max-w-full items-center gap-1 border font-display font-semibold transition-all",
+        "inline-flex max-w-full items-center gap-1 border font-display font-semibold leading-tight transition-all",
         size === "md"
           ? "rounded-[8px] px-2.5 py-1 text-[12.5px]"
-          : "rounded-[7px] px-2 py-1 text-[11.5px]",
+          : "rounded-[6px] px-2 py-0.5 text-[11px]",
         selected ? "text-white shadow-sm" : "hover:-translate-y-px",
         onClick && "cursor-pointer",
         className,
@@ -54,9 +54,9 @@ export function TagChip({
         selected
           ? { background: chipColor, borderColor: chipColor }
           : {
-              background: `color-mix(in srgb, ${chipColor} 15%, white)`,
-              borderColor: `color-mix(in srgb, ${chipColor} 45%, #d9dfeb)`,
-              color: "#35405b",
+              background: `color-mix(in srgb, ${chipColor} 18%, white)`,
+              borderColor: `color-mix(in srgb, ${chipColor} 48%, #d1d8e6)`,
+              color: `color-mix(in srgb, ${chipColor} 58%, #1a2338)`,
             }
       }
     >

@@ -26,6 +26,7 @@ import {
 } from "@tabler/icons-react"
 import { Chip } from "./chip"
 import { CheckboxGlass } from "./checkbox-glass"
+import { TagChip } from "./tag-chip"
 
 export type ConversationAvatarColor = "sunset" | "forest" | "ocean" | "dusk"
 
@@ -308,34 +309,20 @@ export function ConversationCard({
       {/* Tags de contato — max 2 visíveis, +N para overflow */}
       {conversation.tags && conversation.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1">
-          {conversation.tags.slice(0, 2).map((t) => {
-            const hex = (t.color ?? "#6366f1").replace("#", "");
-            const r = parseInt(hex.slice(0, 2), 16);
-            const g = parseInt(hex.slice(2, 4), 16);
-            const b = parseInt(hex.slice(4, 6), 16);
-            const valid = ![r, g, b].some(Number.isNaN);
-            const bg = valid ? `rgba(${r},${g},${b},0.14)` : "rgba(91,111,245,0.14)";
-            const fg = valid
-              ? `rgb(${Math.max(0, r - 25)},${Math.max(0, g - 25)},${Math.max(0, b - 25)})`
-              : "var(--brand-primary)";
-            const border = valid ? `rgba(${r},${g},${b},0.28)` : "rgba(91,111,245,0.25)";
-            return (
-              <span
-                key={t.id}
-                className="inline-flex whitespace-nowrap rounded-full border px-2 py-px font-display text-[10px] font-semibold"
-                style={{ background: bg, color: fg, borderColor: border }}
-                title={t.name}
-              >
-                {t.name}
-              </span>
-            );
-          })}
+          {conversation.tags.slice(0, 2).map((t) => (
+            <TagChip
+              key={t.id}
+              name={t.name}
+              color={t.color}
+              className="max-w-[7.5rem]"
+            />
+          ))}
           {conversation.tags.length > 2 && (
             <TooltipGlass
               label={conversation.tags.slice(2).map((t) => t.name).join(", ")}
               side="top"
             >
-              <span className="inline-flex shrink-0 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10px] font-bold text-[var(--text-secondary)]">
+              <span className="inline-flex shrink-0 rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-display text-[10px] font-bold text-[var(--text-secondary)]">
                 +{conversation.tags.length - 2}
               </span>
             </TooltipGlass>

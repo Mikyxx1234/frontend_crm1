@@ -22,7 +22,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconSearch as Search, IconPackage as Package, IconPlus as Plus, IconLoader2 as Loader2, IconX as X, IconChevronDown as ChevronDown, IconPhone as Phone, IconCheck as Check, IconUserMinus as UserMinus, IconArrowsUpDown as ArrowUpDown, IconMicrophone as Mic, IconPhoto as ImageIcon, IconFileText as FileText, IconPaperclip as Paperclip, IconVideo as Video, IconExternalLink as ExternalLink, IconAdjustments as Settings2, IconEye as Eye, IconEyeOff as EyeOff } from "@tabler/icons-react";
 import { toast } from "sonner";
-import { cn, formatCurrency, tagPillStyle } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { useMoveMutation } from "@/components/sales-hub/deal-actions";
@@ -30,6 +30,7 @@ import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-men
 import { SUBTLE_SPRING } from "@/lib/design-system";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
 import { AvatarGlass } from "@/components/crm/avatar-glass";
+import { TagChip } from "@/components/crm/tag-chip";
 import { SidebarField } from "@/components/ui/sidebar-field";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { dt } from "@/lib/design-tokens";
@@ -981,13 +982,12 @@ function DealCard({
           {!expanded && tagList.length > 0 ? (
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
               {tagList.slice(0, 3).map((t) => (
-                <span
+                <TagChip
                   key={t.id}
-                  className={dt.pill.sm}
-                  style={tagPillStyle(t.name, t.color)}
-                >
-                  {t.name}
-                </span>
+                  name={t.name}
+                  color={t.color}
+                  className="max-w-[7.5rem]"
+                />
               ))}
               {tagList.length > 3 ? (
                 <span className="text-[10px] text-[var(--color-ink-muted)]">+{tagList.length - 3}</span>

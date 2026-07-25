@@ -18,8 +18,8 @@ import { MotionDiv, staggerItem } from "@/components/ui/motion";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
 import { PresenceDashboard } from "@/components/inbox/presence-dashboard";
 import { SwipeRow } from "@/components/inbox/swipe-row";
-import { dt } from "@/lib/design-tokens";
-import { cn, tagPillStyle } from "@/lib/utils";
+import { TagChip } from "@/components/crm/tag-chip";
+import { cn } from "@/lib/utils";
 // InboxFilters type moved here (inbox-filters.tsx é código morto — DS-010/DS-012)
 export type InboxFilters = {
   ownerId?: string;
@@ -1138,9 +1138,11 @@ function ConversationItem({
           <div className="mt-1 flex flex-wrap items-center gap-1">
             {visibleTags.map((tag) => (
               <TooltipHost key={tag.id ?? tag.name} label={tag.name} side="top">
-                <span className={dt.pill.sm} style={tagPillStyle(tag.name, tag.color)}>
-                  {tag.name}
-                </span>
+                <TagChip
+                  name={tag.name}
+                  color={tag.color}
+                  className="max-w-[7.5rem]"
+                />
               </TooltipHost>
             ))}
             {extraTagCount > 0 ? (

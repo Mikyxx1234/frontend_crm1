@@ -5,6 +5,7 @@ import { IconCircleX, IconClock, IconMessage } from "@tabler/icons-react"
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar"
 import { AVATAR_SIZE } from "@/lib/avatar"
 import { Chip } from "./chip"
+import { TagChip } from "./tag-chip"
 
 export type AvatarColor =
   | "green"
@@ -86,15 +87,6 @@ function dealOpenHref(deal: Deal): string {
   const raw = deal.dealNumber.replace(/^#/, "")
   const param = /^\d+$/.test(raw) ? raw : deal.id
   return `/pipeline?deal=${encodeURIComponent(param)}`
-}
-
-const tagStyles: Record<TagType, string> = {
-  hot: "bg-[rgba(239,68,68,0.12)] text-[var(--color-danger-text)] border-[rgba(239,68,68,0.20)]",
-  warm: "bg-[var(--color-lead-bg)] text-[var(--color-warning-text)] border-[rgba(245,158,11,0.25)]",
-  cold: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)] border-[rgba(91,111,245,0.25)]",
-  vip: "bg-[rgba(167,139,250,0.15)] text-violet-800 border-[rgba(167,139,250,0.25)]",
-  partner: "bg-[var(--color-success-bg)] text-[var(--color-success-text)] border-[rgba(16,185,129,0.25)]",
-  ref: "bg-[rgba(244,114,182,0.12)] text-pink-700 border-[rgba(244,114,182,0.25)]",
 }
 
 export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode }: DealCardProps) {
@@ -231,20 +223,28 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
         {tagsSlot ?? (
           <>
             {deal.tags?.map((tag, i) => (
-              <span
+              <TagChip
                 key={i}
-                className={cn(
-                  "inline-flex items-center rounded-full border px-2 py-px font-display text-[9.5px] font-bold tracking-wide",
-                  tagStyles[tag.type],
-                )}
-              >
-                {tag.label}
-              </span>
+                name={tag.label}
+                color={
+                  tag.type === "hot"
+                    ? "#ef4444"
+                    : tag.type === "warm"
+                      ? "#f59e0b"
+                      : tag.type === "cold"
+                        ? "#5b6ff5"
+                        : tag.type === "vip"
+                          ? "#a855f7"
+                          : tag.type === "partner"
+                            ? "#0d9488"
+                            : "#64748b"
+                }
+              />
             ))}
             <button
               type="button"
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              className="inline-flex cursor-pointer items-center rounded-full border border-dashed border-[var(--glass-border)] bg-transparent px-2 py-px font-display text-[9.5px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+              className="inline-flex cursor-pointer items-center rounded-[6px] border border-dashed border-[var(--glass-border)] bg-transparent px-2 py-0.5 font-display text-[9.5px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
             >
               +
             </button>

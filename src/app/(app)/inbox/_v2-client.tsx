@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { TagChip } from "@/components/crm/tag-chip";
 
 import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
@@ -109,20 +110,13 @@ function DealTagsTray({
   const overflow = currentTags.slice(MAX_VISIBLE);
 
   function chip(t: { id: string; name: string; color: string | null }) {
-    const color = t.color ?? "#5b6ff5";
     return (
-      <span
+      <TagChip
         key={t.id}
-        className="tag-chip inline-flex h-5 min-w-0 max-w-[7rem] shrink items-center overflow-hidden rounded-full px-2 text-[11px] font-semibold"
-        style={{
-          background: `color-mix(in srgb, ${color} 18%, white)`,
-          color: `color-mix(in srgb, ${color} 75%, black)`,
-          border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
-        }}
-        title={t.name}
-      >
-        <span className="truncate">{t.name}</span>
-      </span>
+        name={t.name}
+        color={t.color}
+        className="h-5 min-w-0 max-w-[7rem] shrink"
+      />
     );
   }
 
@@ -133,7 +127,7 @@ function DealTagsTray({
       {visible.map(chip)}
       {overflow.length > 0 && (
         <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
-          <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
+          <span className="inline-flex h-5 shrink-0 items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
             +{overflow.length}
           </span>
         </TooltipGlass>
@@ -158,20 +152,13 @@ function ContactTagsTray({
   const overflow = currentTags.slice(MAX_VISIBLE);
 
   function chip(t: { id: string; name: string; color: string | null }) {
-    const color = t.color ?? "#5b6ff5";
     return (
-      <span
+      <TagChip
         key={t.id}
-        className="tag-chip inline-flex h-5 min-w-0 max-w-[7rem] shrink items-center overflow-hidden rounded-full px-2 text-[11px] font-semibold"
-        style={{
-          background: `color-mix(in srgb, ${color} 18%, white)`,
-          color: `color-mix(in srgb, ${color} 75%, black)`,
-          border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
-        }}
-        title={t.name}
-      >
-        <span className="truncate">{t.name}</span>
-      </span>
+        name={t.name}
+        color={t.color}
+        className="h-5 min-w-0 max-w-[7rem] shrink"
+      />
     );
   }
 
@@ -182,7 +169,7 @@ function ContactTagsTray({
       {visible.map(chip)}
       {overflow.length > 0 && (
         <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
-          <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
+          <span className="inline-flex h-5 shrink-0 items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
             +{overflow.length}
           </span>
         </TooltipGlass>

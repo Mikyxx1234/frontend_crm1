@@ -13,6 +13,9 @@ export interface TeamUser {
   email?: string | null;
   role?: string | null;
   avatarUrl?: string | null;
+  /** Presença de USO do CRM (aba aberta) — separada do status da Distribuição. */
+  systemOnline?: boolean;
+  lastSeenAt?: string | null;
 }
 
 /** GET /api/users — lista todos os usuários da organização. */

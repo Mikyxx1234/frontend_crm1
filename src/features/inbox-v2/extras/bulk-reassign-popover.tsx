@@ -6,12 +6,16 @@
  * individual via Promise.allSettled (backend bulk não cobre `assign`).
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconUserPlus, IconUserOff } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { UserAvatar } from "@/components/crm/user-avatar";
+import {
+  SystemPresenceIndicator,
+  sortByPresence,
+} from "@/components/crm/system-presence-indicator";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   useBulkAssignConversations,
@@ -45,11 +49,13 @@ export function BulkReassignPopover({
   const { data: users = [], isLoading } = useTeamUsers(open);
   const bulkAssign = useBulkAssignConversations();
 
-  const filtered = users.filter((u) =>
-    (u.name ?? u.email ?? "")
-      .toLowerCase()
-      .includes(filter.trim().toLowerCase()),
-  );
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    const list = users.filter((u) =>
+      (u.name ?? u.email ?? "").toLowerCase().includes(q),
+    );
+    return sortByPresence(list);
+  }, [users, filter]);
 
   async function handleSelect(userId: string | null, assigneeName: string) {
     if (conversationIds.length === 0 || bulkAssign.isPending) return;
@@ -169,6 +175,10 @@ export function BulkReassignPopover({
                           name={name}
                           imageUrl={u.avatarUrl ?? null}
                           size={24}
+                        />
+                        <SystemPresenceIndicator
+                          systemOnline={u.systemOnline}
+                          lastSeenAt={u.lastSeenAt}
                         />
                         <span className="min-w-0 truncate">{name}</span>
                       </button>

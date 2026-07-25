@@ -6,9 +6,13 @@
  * stacking contexts criados por @hello-pangea/dnd em cada Draggable.
  */
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import {
+  SystemPresenceIndicator,
+  sortByPresence,
+} from "@/components/crm/system-presence-indicator";
 
 import { useTeamUsers, useUpdateDeal } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
@@ -40,11 +44,13 @@ export function AssigneePopover({
   const { data: users = [], isLoading } = useTeamUsers(open);
   const update = useUpdateDeal(pipelineId, statusFilter);
 
-  const filtered = users.filter((u) =>
-    (u.name ?? u.email ?? "")
-      .toLowerCase()
-      .includes(filter.trim().toLowerCase()),
-  );
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    const list = users.filter((u) =>
+      (u.name ?? u.email ?? "").toLowerCase().includes(q),
+    );
+    return sortByPresence(list);
+  }, [users, filter]);
 
   function handleSelect(userId: string | null) {
     if (!dealId) return;
@@ -136,7 +142,15 @@ export function AssigneePopover({
                           : "text-[var(--text-primary)]"
                       }`}
                     >
-                      <span className="truncate">{u.name ?? u.email ?? "—"}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <SystemPresenceIndicator
+                          systemOnline={u.systemOnline}
+                          lastSeenAt={u.lastSeenAt}
+                        />
+                        <span className="truncate">
+                          {u.name ?? u.email ?? "—"}
+                        </span>
+                      </span>
                       {isActive && <span aria-hidden>✓</span>}
                     </button>
                   </li>

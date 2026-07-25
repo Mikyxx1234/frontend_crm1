@@ -29,6 +29,10 @@ import { toast } from "sonner";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { UserAvatar } from "@/components/crm/user-avatar";
+import {
+  SystemPresenceIndicator,
+  sortByPresence,
+} from "@/components/crm/system-presence-indicator";
 import { DistributionIcon } from "@/components/icons/distribution-icon";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
@@ -90,6 +94,7 @@ export default function DistributionClientPage({
   const { ready: roleReady, isManagerUp } = useRequireManager();
   const isAuthenticated = sessionStatus === "authenticated";
   const currentUserId = session?.user?.id ?? null;
+  const currentUserImage = session?.user?.image ?? null;
   const role = session?.user?.role;
   const canManage = role === "ADMIN" || role === "MANAGER";
 
@@ -156,7 +161,7 @@ export default function DistributionClientPage({
 
   const filteredResponsibles = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return responsibles.filter((r) => {
+    const filtered = responsibles.filter((r) => {
       if (q) {
         const hay = `${r.name ?? ""} ${r.email ?? ""} ${r.type ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -169,6 +174,9 @@ export default function DistributionClientPage({
       if (types.length > 0 && (!r.type || !types.includes(r.type))) return false;
       return true;
     });
+    // Ordena por presença de USO (CRM aberto) — quem está no sistema agora sobe.
+    // Não interfere na elegibilidade da Distribuição — é só ordem de exibição.
+    return sortByPresence(filtered);
   }, [responsibles, search, presence, eligibility, types]);
 
   const clearFilters = () => {
@@ -323,6 +331,7 @@ export default function DistributionClientPage({
                   hasFilters={hasFilters}
                   onClearFilters={clearFilters}
                   currentUserId={currentUserId}
+                  currentUserImage={currentUserImage}
                   canManage={canManage}
                   onEdit={(r) => setEditing(r)}
                 />
@@ -513,6 +522,7 @@ function ResponsiblesCardList({
   hasFilters,
   onClearFilters,
   currentUserId,
+  currentUserImage,
   canManage,
   onEdit,
 }: {
@@ -521,6 +531,7 @@ function ResponsiblesCardList({
   hasFilters: boolean;
   onClearFilters: () => void;
   currentUserId: string | null;
+  currentUserImage: string | null;
   canManage: boolean;
   onEdit: (r: DistributionResponsibleDto) => void;
 }) {
@@ -575,6 +586,7 @@ function ResponsiblesCardList({
             key={r.userId}
             r={r}
             isCurrentUser={r.userId === currentUserId}
+            currentUserImage={currentUserImage}
             canManage={canManage}
             onEdit={onEdit}
           />
@@ -587,11 +599,13 @@ function ResponsiblesCardList({
 function ResponsibleCard({
   r,
   isCurrentUser,
+  currentUserImage,
   canManage,
   onEdit,
 }: {
   r: DistributionResponsibleDto;
   isCurrentUser: boolean;
+  currentUserImage: string | null;
   canManage: boolean;
   onEdit: (r: DistributionResponsibleDto) => void;
 }) {
@@ -616,7 +630,7 @@ function ResponsibleCard({
       <div className="flex min-w-0 items-center gap-2.5">
         <UserAvatar
           name={r.name ?? r.email}
-          imageUrl={r.avatarUrl}
+          imageUrl={r.avatarUrl ?? (isCurrentUser ? currentUserImage : null)}
           size={36}
           status={
             !r.participates
@@ -629,8 +643,13 @@ function ResponsibleCard({
           }
         />
         <div className="min-w-0">
-          <p className="truncate font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
-            {r.name ?? "Sem nome"}
+          <p className="flex items-center gap-1.5 truncate font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
+            <span className="truncate">{r.name ?? "Sem nome"}</span>
+            {/* Presença de USO ("CRM aberto") — distinta do status da Distribuição. */}
+            <SystemPresenceIndicator
+              systemOnline={r.systemOnline}
+              lastSeenAt={r.lastSeenAt}
+            />
           </p>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[10.5px] leading-tight">
             <span className="min-w-0 truncate font-body text-[var(--text-muted)]">

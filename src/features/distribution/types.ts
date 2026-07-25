@@ -36,6 +36,13 @@ export interface DistributionResponsibleDto {
   queueCount: number;
   eligible: boolean;
   blockedReasons: DistributionBlockReason[];
+  /**
+   * Presença de USO do CRM ("aba aberta") — separada do `status`
+   * (Online/Ausente/Offline da Distribuição). Alimentada pelo
+   * heartbeat global do frontend.
+   */
+  systemOnline?: boolean;
+  lastSeenAt?: string | null;
 }
 
 export interface ResponsiblesResponse {

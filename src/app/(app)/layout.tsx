@@ -23,6 +23,7 @@ import { ChatThemeApplier } from "@/components/providers/chat-theme-applier";
 import { MobileBottomNav } from "@/components/crm/mobile-bottom-nav";
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RouteTransition } from "@/components/crm/route-transition";
+import { SystemPresenceHeartbeat } from "@/components/layout/system-presence-heartbeat";
 
 // O TooltipProvider (Radix) é provido uma única vez na raiz (app/providers.tsx),
 // cobrindo tanto os TooltipGlass quanto os TooltipContent/TooltipHost. Não é
@@ -35,6 +36,7 @@ export default function AppLayout({
   return (
     <>
       <ChatThemeApplier />
+      <SystemPresenceHeartbeat />
       <div className="v2-root v2-min-screen">
         {/* Trilho de navegação ÚNICO e PERSISTENTE. Vive aqui (fora do
             RouteTransition) para NÃO remontar ao navegar — antes cada página

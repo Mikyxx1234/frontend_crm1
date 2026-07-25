@@ -11,11 +11,15 @@
  * e aciona a Distribuição Inteligente escopada a esse departamento.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IconArrowsExchange, IconCheck } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import {
+  SystemPresenceIndicator,
+  sortByPresence,
+} from "@/components/crm/system-presence-indicator";
 import { useTeamUsers, useTransferConversation } from "@/features/inbox-v2/hooks";
 import { useDepartments } from "@/features/conversations-settings/hooks/use-departments";
 
@@ -70,11 +74,14 @@ export function TransferPopover({
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
 
-  const filteredUsers = users.filter((u) =>
-    (u.name ?? u.email ?? "")
-      .toLowerCase()
-      .includes(agentFilter.trim().toLowerCase()),
-  );
+  const filteredUsers = useMemo(() => {
+    const q = agentFilter.trim().toLowerCase();
+    const filtered = users.filter((u) =>
+      (u.name ?? u.email ?? "").toLowerCase().includes(q),
+    );
+    // Online no sistema aparece primeiro — offline continua selecionável.
+    return sortByPresence(filtered);
+  }, [users, agentFilter]);
 
   const canConfirm =
     !!conversationId &&
@@ -180,13 +187,19 @@ export function TransferPopover({
                           : "text-[var(--text-primary)]"
                       }`}
                     >
-                      <span className="truncate">
-                        {u.name ?? u.email ?? "—"}
-                        {isCurrent && (
-                          <span className="ml-1 text-[11px] text-[var(--text-muted)]">
-                            (atual)
-                          </span>
-                        )}
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <SystemPresenceIndicator
+                          systemOnline={u.systemOnline}
+                          lastSeenAt={u.lastSeenAt}
+                        />
+                        <span className="truncate">
+                          {u.name ?? u.email ?? "—"}
+                          {isCurrent && (
+                            <span className="ml-1 text-[11px] text-[var(--text-muted)]">
+                              (atual)
+                            </span>
+                          )}
+                        </span>
                       </span>
                       {isSelected && (
                         <IconCheck

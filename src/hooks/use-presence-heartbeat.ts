@@ -3,16 +3,29 @@
 import { apiUrl } from "@/lib/api";
 import { useEffect, useRef } from "react";
 
-/** Intervalo mínimo entre pings — evita fila no pool HTTP do navegador (6 conexões/host). */
+/**
+ * Intervalo mínimo entre pings — evita fila no pool HTTP do navegador
+ * (6 conexões/host). Também blindado contra duplicidade caso o hook
+ * seja montado por engano em mais de um lugar (o app shell é único).
+ */
 const MIN_PING_GAP_MS = 8_000;
 
 /**
- * Envia um ping para /api/agents/me/ping a cada `intervalMs` (default 90s) enquanto
- * a aba estiver visível. Também dispara quando a aba recupera foco, com debounce.
+ * Envia um ping para `/api/agents/me/ping` a cada `intervalMs` (default 90s).
  *
- * Falhas são silenciadas propositalmente.
+ * Diferente da versão anterior, o timer roda tanto com a aba visível
+ * quanto em segundo plano — o navegador pode throttlar `setInterval`
+ * em abas ocultas (~1 ping/min), o que ainda cabe na tolerância do
+ * sweeper (`SYSTEM_PRESENCE_STALE_MS = 150s`). Quando a aba volta ao
+ * foco/visibilidade, dispara um ping imediato para reidratar a
+ * presença sem esperar o próximo tick.
+ *
+ * Falhas são silenciadas — presença é best-effort.
  */
-export function usePresenceHeartbeat(options?: { intervalMs?: number; enabled?: boolean }) {
+export function usePresenceHeartbeat(options?: {
+  intervalMs?: number;
+  enabled?: boolean;
+}) {
   const { intervalMs = 90_000, enabled = true } = options ?? {};
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlightRef = useRef(false);
@@ -36,28 +49,15 @@ export function usePresenceHeartbeat(options?: { intervalMs?: number; enabled?: 
           keepalive: true,
         });
       } catch {
-        // silenciado de propósito (ver doc do hook)
+        // silenciado de propósito
       } finally {
         inFlightRef.current = false;
       }
     }
 
-    function scheduleNext() {
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = null;
-      if (document.visibilityState !== "visible") return;
-      timerRef.current = setInterval(() => {
-        if (document.visibilityState === "visible") void ping();
-      }, intervalMs);
-    }
-
     function onVisibilityChange() {
       if (document.visibilityState === "visible") {
         void ping();
-        scheduleNext();
-      } else if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
       }
     }
 
@@ -66,7 +66,7 @@ export function usePresenceHeartbeat(options?: { intervalMs?: number; enabled?: 
     }
 
     void ping();
-    scheduleNext();
+    timerRef.current = setInterval(() => void ping(), intervalMs);
 
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("focus", onFocus);

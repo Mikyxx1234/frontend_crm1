@@ -18,7 +18,6 @@ import {
   IconPlayerPlay,
   IconRefresh,
   IconRotateClockwise,
-  IconRoute,
   IconSearch,
   IconTag,
   IconUserCheck,
@@ -28,6 +27,7 @@ import {
 import { toast } from "sonner";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
+import { DistributionIcon } from "@/components/icons/distribution-icon";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
@@ -221,7 +221,7 @@ export default function DistributionClientPage({
 
       <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden pb-3 sm:gap-4 sm:pb-4">
         <PageHeader
-          icon={<IconRoute size={22} />}
+          icon={<DistributionIcon size={22} />}
           title="Distribuição"
           center={
             smartInstalled && view === "team" ? (
@@ -520,7 +520,7 @@ function ResponsiblesCardList({
     return (
       <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
         <EmptyState
-          icon={<IconRoute size={28} />}
+          icon={<DistributionIcon size={28} />}
           title="Nenhum responsável disponível"
           description="Adicione consultores à organização para distribuir leads."
         />
@@ -1327,7 +1327,7 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
       <div className="flex shrink-0 flex-col gap-3 border-b border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
         <div className="flex items-start gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-primary)_15%,transparent)] text-[var(--color-primary)]">
-            <IconRoute size={20} />
+            <DistributionIcon size={20} />
           </div>
           <div className="min-w-0">
             <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">
@@ -1416,7 +1416,7 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
       ) : items.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] text-[var(--text-muted)]">
-            <IconRoute size={24} />
+            <DistributionIcon size={24} />
           </div>
           <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
             Nenhuma distribuição registrada
@@ -2077,7 +2077,7 @@ function DepartmentsDistributionPanel() {
 function NotEnabledState() {
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-12 text-center shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <IconRoute size={36} className="text-[var(--text-muted)]" />
+      <DistributionIcon size={36} className="text-[var(--text-muted)]" />
       <p className="font-display text-[16px] font-bold text-[var(--text-primary)]">
         Módulo de Distribuição não habilitado
       </p>

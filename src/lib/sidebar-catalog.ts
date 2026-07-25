@@ -8,11 +8,11 @@ import {
   IconMail,
   IconMessageCircle,
   IconRobot,
-  IconRoute,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
 
+import { DistributionIcon } from "@/components/icons/distribution-icon";
 import type { AppUserRole } from "@/lib/auth-types";
 
 /**
@@ -130,7 +130,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "distribution",
     title: "Distribuição",
     href: "/widgets/distribution",
-    icon: IconRoute,
+    icon: DistributionIcon,
     description: "Distribuição inteligente de leads entre consultores.",
     locked: false,
     allowedRoles: ["ADMIN", "MANAGER"],

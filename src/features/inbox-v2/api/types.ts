@@ -149,6 +149,8 @@ export interface InboxFilters {
   tagIds?: string[];
   /** Origens do contato (Contact.source). Pode incluir `__none__` para "Sem origem". */
   sources?: string[];
+  /** Sessões Meta ainda abertas que expiram entre agora e agora + X horas. */
+  sessionExpiresWithinHours?: number;
   /**
    * Ordenação e janela são aplicadas CLIENT-SIDE no /inbox-v2 (não vão
    * para o backend). `sortBy` aceita "lastInboundAt" (padrão) ou
@@ -169,15 +171,21 @@ export function normalizeInboxFilters(raw: InboxFilters): InboxFilters {
   const stageIds = Array.from(
     new Set([...(raw.stageIds ?? []), ...(raw.stageId ? [raw.stageId] : [])].filter(Boolean)),
   );
+  const sessionHours = Number(raw.sessionExpiresWithinHours);
+  const sessionExpiresWithinHours =
+    Number.isFinite(sessionHours) && sessionHours > 0 && sessionHours < 24
+      ? sessionHours
+      : undefined;
   const { ownerId: _o, stageId: _s, ...rest } = raw;
   return {
     ...rest,
     ownerIds: ownerIds.length ? ownerIds : undefined,
     stageIds: stageIds.length ? stageIds : undefined,
+    sessionExpiresWithinHours,
   };
 }
 
-/** Filtros enviados ao GET /api/conversations (exclui ordenação e janela). */
+/** Filtros enviados ao GET /api/conversations (exclui ordenação/status local). */
 export function hasInboxServerFilters(
   f: InboxFilters | null | undefined,
 ): boolean {
@@ -196,7 +204,8 @@ export function hasInboxServerFilters(
     Boolean(server.channel) ||
     (server.stageIds?.length ?? 0) > 0 ||
     (server.tagIds?.length ?? 0) > 0 ||
-    (server.sources?.length ?? 0) > 0
+    (server.sources?.length ?? 0) > 0 ||
+    server.sessionExpiresWithinHours != null
   );
 }
 

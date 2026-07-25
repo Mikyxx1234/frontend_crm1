@@ -39,6 +39,9 @@ function appendInboxServerFilters(
   else if (p.stageId) q.set("stageId", p.stageId);
   if (p.tagIds?.length) q.set("tagIds", p.tagIds.join(","));
   if (p.sources?.length) q.set("sources", p.sources.join(","));
+  if (p.sessionExpiresWithinHours != null) {
+    q.set("sessionExpiresWithinHours", String(p.sessionExpiresWithinHours));
+  }
 }
 
 function buildConversationsUrl(p: ListConversationsParams): string {

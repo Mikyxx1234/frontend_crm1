@@ -159,6 +159,9 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
 
 function summarizeTrigger(triggerType: string, triggerConfig: Record<string, unknown>): string {
   const parts: string[] = []
+  if (triggerType === "whatsapp_session_expiring") {
+    return `${String(triggerConfig.hoursBeforeExpiry ?? 1)}h antes do encerramento`
+  }
   if (triggerConfig.pipelineId) parts.push(`Pipeline: ${String(triggerConfig.pipelineId).slice(0, 12)}…`)
   if (triggerConfig.fromStageId) parts.push(`De: ${String(triggerConfig.stageName ?? triggerConfig.fromStageId).slice(0, 24)}`)
   if (triggerConfig.toStageId) parts.push(`Para: ${String(triggerConfig.stageName ?? triggerConfig.toStageId).slice(0, 24)}`)

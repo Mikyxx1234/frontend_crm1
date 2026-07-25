@@ -225,6 +225,7 @@ export function useTabCounts(enabled = true, filters?: InboxFilters | null) {
         stageIds: filters.stageIds ?? (filters.stageId ? [filters.stageId] : []),
         tagIds: filters.tagIds ?? [],
         sources: filters.sources ?? [],
+        sessionExpiresWithinHours: filters.sessionExpiresWithinHours ?? null,
       }
     : null;
   return useQuery<TabCounts>({

@@ -112,6 +112,7 @@ function countActive(f: InboxFilters): number {
   if ((f.stageIds?.length ?? 0) > 0 || f.stageId) n += 1;
   if (f.tagIds && f.tagIds.length > 0) n += 1;
   if (f.sources && f.sources.length > 0) n += 1;
+  if (f.sessionExpiresWithinHours != null) n += 1;
   if (f.windowState) n += 1;
   if (f.lastMessageDirection) n += 1;
   if (sortIdFromFilters(f) !== DEFAULT_SORT_ID) n += 1;
@@ -122,7 +123,8 @@ function middleTabCount(id: MiddleTab, f: InboxFilters): number {
   if (id === "conversa") {
     return (
       ((f.ownerIds?.length ?? 0) > 0 || f.ownerId || f.withoutOwner ? 1 : 0) +
-      (f.channel ? 1 : 0)
+      (f.channel ? 1 : 0) +
+      (f.sessionExpiresWithinHours != null ? 1 : 0)
     );
   }
   return (
@@ -139,7 +141,9 @@ function ConversationSegmentation({
   setDraft: React.Dispatch<React.SetStateAction<InboxFilters>>;
 }) {
   const activeCount =
-    (draft.windowState ? 1 : 0) + (draft.lastMessageDirection ? 1 : 0);
+    (draft.windowState ? 1 : 0) +
+    (draft.lastMessageDirection ? 1 : 0) +
+    (draft.sessionExpiresWithinHours != null ? 1 : 0);
   const statusOptions = [
     { value: "open" as const, label: "Aberta" },
     { value: "closed" as const, label: "Fechada" },
@@ -163,6 +167,7 @@ function ConversationSegmentation({
                 ...d,
                 windowState: undefined,
                 lastMessageDirection: undefined,
+                sessionExpiresWithinHours: undefined,
               }))
             }
             className="font-display text-[10px] font-semibold text-[var(--brand-primary)]"
@@ -202,6 +207,59 @@ function ConversationSegmentation({
               );
             })}
           </div>
+        </div>
+
+        <div>
+          <span className="mb-1.5 block font-body text-[10.5px] text-[var(--text-muted)]">
+            Sessão do WhatsApp expira em até
+          </span>
+          <div className="grid grid-cols-5 gap-1.5">
+            {[1, 2, 4, 6, 12].map((hours) => {
+              const active = draft.sessionExpiresWithinHours === hours;
+              return (
+                <button
+                  key={hours}
+                  type="button"
+                  onClick={() =>
+                    setDraft((d) => ({
+                      ...d,
+                      sessionExpiresWithinHours: active ? undefined : hours,
+                    }))
+                  }
+                  className={cn(
+                    "rounded-[var(--radius-md)] px-1 py-1.5 font-display text-[11px] font-semibold transition-colors",
+                    active
+                      ? "bg-[var(--brand-primary)] text-white"
+                      : "bg-[var(--glass-bg-modal)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)]",
+                  )}
+                >
+                  {hours}h
+                </button>
+              );
+            })}
+          </div>
+          <input
+            type="number"
+            min={0.1}
+            max={23.9}
+            step={0.5}
+            value={draft.sessionExpiresWithinHours ?? ""}
+            onChange={(event) => {
+              const hours = Number(event.target.value);
+              setDraft((d) => ({
+                ...d,
+                sessionExpiresWithinHours:
+                  Number.isFinite(hours) && hours > 0 && hours < 24
+                    ? hours
+                    : undefined,
+              }));
+            }}
+            placeholder="Outro valor (0–24h)"
+            className="mt-1.5 h-8 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] px-2.5 font-body text-[11px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]/40"
+          />
+          <p className="mt-1 font-body text-[10px] text-[var(--text-muted)]">
+            Apenas sessões Meta ainda abertas.
+          </p>
         </div>
 
         <div>

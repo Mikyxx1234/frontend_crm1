@@ -423,8 +423,8 @@ export function ConversationColumn({
         const showFilterSelect =
           !!onSelectAllFilterChange && (selectAllFilter || (allDisplayedSelected && hasMoreThanLoaded))
         return (
-        <div className="mb-2.5 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2">
-          <div className="flex items-center justify-between gap-2">
+        <div className="@container mb-2.5 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2">
+          <div className="flex items-center justify-between gap-2 @max-[520px]:flex-col @max-[520px]:items-stretch">
             <label className="flex min-w-0 items-center gap-2 cursor-pointer">
               <CheckboxGlass
                 checked={selectAllFilter || allDisplayedSelected}

@@ -911,7 +911,7 @@ export default function InboxV2ClientPage({
   // permissão) + Cancelar (sempre visível). Reatribuir usa assign individual
   // (bulk API não cobre assign) e não se aplica a "todas do filtro".
   const bulkActionsNode = (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex shrink-0 items-center gap-1.5 @max-[520px]:grid @max-[520px]:w-full @max-[520px]:grid-cols-2">
       {selectedIds.size > 0 && (
         <>
           <RequirePermission permission="conversation:resolve">

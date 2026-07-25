@@ -179,6 +179,9 @@ jobs:
           echo "Chamando webhook do Easypanel (fire-and-forget, com retry)..."
           WEBHOOK="${{ steps.env.outputs.WEBHOOK }}"
           code=000
+          ex=
+          tconn=
+          got_http_response=0
           for i in 1 2 3 4 5; do
             # --connect-timeout: falha rapido se o host nao responder.
             # --max-time: NUNCA pendura — o EasyPanel mantem a conexao aberta
@@ -195,6 +198,11 @@ jobs:
             case "$code" in
               2*) echo "Webhook aceito pelo Easypanel (HTTP $code)."; exit 0 ;;
             esac
+            # Qualquer HTTP real (3xx/4xx/5xx) = conexao estabelecida e resposta do servidor.
+            # Nao tratar como "falha de rede" no final; 4xx/5xx devem falhar o step.
+            if [ -n "$code" ] && [ "$code" != "000" ]; then
+              got_http_response=1
+            fi
             # Timeout de LEITURA apos conectar (exit 28 + conexao estabelecida):
             # o EasyPanel ja RECEBEU o POST e faz o redeploy de forma assincrona.
             if [ "$ex" = "28" ] && [ -n "$tconn" ] && [ "$tconn" != "0.000000" ] && [ "$tconn" != "0" ]; then
@@ -203,5 +211,11 @@ jobs:
             fi
             sleep 5
           done
-          echo "ERRO: webhook do Easypanel falhou apos 5 tentativas (ultimo HTTP ${code:-000})."
+          # Sem HTTP real apos retries (HTTP 000, curl 28/7 etc.): imagem ja no GHCR;
+          # nao invalidar o job — so avisar que o redeploy nao disparou.
+          if [ "$got_http_response" != "1" ]; then
+            echo "::warning::Imagem publicada no GHCR, mas redeploy do Easypanel nao foi disparado (falha de conexao/timeout apos 5 tentativas; ultimo HTTP ${code:-000}, curl exit ${ex:-?}). Dispare o redeploy manualmente se necessario."
+            exit 0
+          fi
+          echo "ERRO: webhook do Easypanel respondeu erro apos 5 tentativas (ultimo HTTP ${code:-000})."
           exit 1

@@ -181,7 +181,7 @@ export function FieldCard({
         "rounded-xl border p-3 transition-[border-color,background-color,box-shadow]",
         active
           ? "border-[var(--brand-primary)]/30 bg-[var(--color-enterprise-bg)] shadow-[0_1px_3px_rgba(91,111,245,0.08)]"
-          : "border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-[var(--brand-primary)]/20 hover:bg-[var(--glass-bg-overlay)]",
+          : "border-slate-200/90 bg-slate-50/80 shadow-[0_1px_3px_rgba(15,23,42,0.06)] hover:border-[var(--brand-primary)]/25 hover:bg-white v2-dark:border-white/10 v2-dark:bg-white/5 v2-dark:hover:bg-white/8",
         className,
       )}
     >

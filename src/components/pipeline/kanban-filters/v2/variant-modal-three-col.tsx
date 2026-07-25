@@ -63,6 +63,50 @@ const SORT_OPTIONS: { key: PipelineSortKey; label: string }[] = [
   { key: "created_oldest", label: "Criação: mais antiga" },
 ];
 
+type MiddleTab = "negocio" | "pessoas" | "conversa" | "periodo" | "custom";
+
+const MIDDLE_TABS: { id: MiddleTab; label: string; hint: string }[] = [
+  { id: "negocio", label: "Negócio", hint: "Busca, etapa, origem, status e valor" },
+  { id: "pessoas", label: "Pessoas", hint: "Responsável e dados do contato" },
+  { id: "conversa", label: "Conversa", hint: "Estado e direção da última mensagem" },
+  { id: "periodo", label: "Período", hint: "Criação e fechamento" },
+  { id: "custom", label: "Personalizados", hint: "Campos do negócio e contato" },
+];
+
+function middleTabCount(id: MiddleTab, f: AdvancedDealFilters): number {
+  if (id === "negocio") {
+    return (
+      (f.search?.trim() ? 1 : 0) +
+      (f.stageIds?.length ? 1 : 0) +
+      (f.sources?.length || f.withoutSource ? 1 : 0) +
+      (f.statuses?.length ? 1 : 0) +
+      (f.lostReasons?.length ? 1 : 0) +
+      (f.valueFrom != null || f.valueTo != null ? 1 : 0)
+    );
+  }
+  if (id === "pessoas") {
+    return (
+      (f.ownerIds?.length || f.withoutOwner ? 1 : 0) +
+      (f.contactSearch?.trim() ||
+      f.contactHasPhone != null ||
+      f.contactHasEmail != null ||
+      f.withoutContact
+        ? 1
+        : 0)
+    );
+  }
+  if (id === "conversa") {
+    return (f.conversationStatus ? 1 : 0) + (f.lastMessageDirection ? 1 : 0);
+  }
+  if (id === "periodo") {
+    return (
+      (f.createdAt?.from || f.createdAt?.to ? 1 : 0) +
+      (f.closedAt?.from || f.closedAt?.to ? 1 : 0)
+    );
+  }
+  return (f.dealCustomFields?.length ?? 0) + (f.contactCustomFields?.length ?? 0);
+}
+
 type ModalProps = VariantProps & {
   sortKey?: PipelineSortKey;
   onSortKeyChange?: (key: PipelineSortKey) => void;
@@ -125,7 +169,7 @@ function TagsChipColumn({
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex flex-wrap content-start gap-1.5 pt-1">
           <button
             type="button"
@@ -183,14 +227,6 @@ function TagsChipColumn({
         </div>
       </div>
     </div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
-      {children}
-    </h3>
   );
 }
 
@@ -327,6 +363,12 @@ export function FilterModalThreeCol({
   );
   const isDesktop = useIsDesktop();
   const draftCount = countActiveFilters(draft);
+  const [middleTab, setMiddleTab] = React.useState<MiddleTab>("negocio");
+  const middleScrollRef = React.useRef<HTMLElement>(null);
+
+  React.useEffect(() => {
+    middleScrollRef.current?.scrollTo({ top: 0 });
+  }, [middleTab]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -442,7 +484,7 @@ export function FilterModalThreeCol({
         style={{ gridTemplateColumns: "235px minmax(0,1.15fr) minmax(270px,.9fr)" }}
       >
         {/* Col 1 — visualizações */}
-        <aside className="flex min-h-0 flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] p-4 pr-5 [scrollbar-gutter:stable] [scrollbar-width:thin] [&_button]:!text-[11.5px] [&_.text-\[13px\]]:!text-[11.5px]">
+        <aside className="flex min-h-0 flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&_button]:!text-[11.5px] [&_.text-\[13px\]]:!text-[11.5px]">
           {sortBlock}
           <span className="px-2 pb-2 font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
             Visualizações
@@ -455,70 +497,95 @@ export function FilterModalThreeCol({
           />
         </aside>
 
-        {/* Col 2 — propriedades (multi-selects fechados) */}
-        <main className="min-h-0 overflow-y-auto bg-[var(--glass-bg-base)] p-4 [scrollbar-width:thin]">
-          <div className="mb-4">
-            <span className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
-              Propriedades do negócio
-            </span>
-            <p className="mt-1 font-body text-[11px] text-[var(--text-muted)]">
-              Listas longas abrem sob demanda — multi-seleção com busca e rolagem.
-            </p>
+        {/* Col 2 — uma categoria por vez: reduz ruído e elimina o scroll longo. */}
+        <main
+          ref={middleScrollRef}
+          className="min-h-0 overflow-y-auto bg-[var(--glass-bg-base)] [scrollbar-width:thin]"
+        >
+          <div className="sticky top-0 z-[2] border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-modal)] px-4 pb-3 pt-4">
+            <div
+              role="tablist"
+              aria-label="Categorias de filtros"
+              className="flex items-center gap-1 overflow-x-auto rounded-[var(--radius-lg)] bg-[var(--glass-bg-strong)] p-1 [scrollbar-width:none]"
+            >
+              {MIDDLE_TABS.map((tab) => {
+                const active = middleTab === tab.id;
+                const count = middleTabCount(tab.id, draft);
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setMiddleTab(tab.id)}
+                    className={cn(
+                      "inline-flex min-w-max flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-2.5 py-2 font-display text-[11px] font-bold transition-colors",
+                      active
+                        ? "bg-[var(--glass-bg-modal)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
+                  >
+                    {tab.label}
+                    {count > 0 && (
+                      <span
+                        className={cn(
+                          "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold",
+                          active
+                            ? "bg-[var(--brand-primary)] text-white"
+                            : "bg-[var(--glass-border)] text-[var(--text-secondary)]",
+                        )}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="space-y-5">
-            {/* Busca isolada: ponto de entrada visual do miolo. */}
-            <section className="space-y-2">
-              <SectionLabel>Busca</SectionLabel>
-              <SearchSection {...section} />
-            </section>
+          <div className="p-5">
+            <div className="mb-4">
+              <h3 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+                {MIDDLE_TABS.find((tab) => tab.id === middleTab)?.label}
+              </h3>
+              <p className="mt-0.5 font-body text-[11.5px] text-[var(--text-muted)]">
+                {MIDDLE_TABS.find((tab) => tab.id === middleTab)?.hint}
+              </p>
+            </div>
 
-            {/* Linhas previsíveis substituem o masonry de duas colunas:
-                cards do mesmo assunto ficam alinhados e com mesma altura. */}
-            <section className="space-y-2">
-              <SectionLabel>Distribuição e etapa</SectionLabel>
-              <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
-                <OwnersSection {...section} />
-                <StagesSection {...section} />
-              </div>
-            </section>
+            <div className="space-y-3">
+              {middleTab === "negocio" && (
+                <>
+                  <SearchSection {...section} />
+                  <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                    <StagesSection {...section} />
+                    <SourcesSection {...section} />
+                    <StatusSection {...section} />
+                    <LossReasonsSection {...section} />
+                  </div>
+                  <ValueSection {...section} />
+                </>
+              )}
 
-            <section className="space-y-2">
-              <SectionLabel>Classificação</SectionLabel>
-              <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
-                <SourcesSection {...section} />
-                <StatusSection {...section} />
-              </div>
-            </section>
+              {middleTab === "pessoas" && (
+                <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                  <OwnersSection {...section} />
+                  <ContactSection {...section} />
+                </div>
+              )}
 
-            <section className="space-y-2">
-              <SectionLabel>Contato e conversa</SectionLabel>
-              <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
-                <ContactSection {...section} />
-                <ConversationSection {...section} />
-              </div>
-            </section>
+              {middleTab === "conversa" && <ConversationSection {...section} />}
 
-            <section className="space-y-2">
-              <SectionLabel>Qualificação</SectionLabel>
-              <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
-                <LossReasonsSection {...section} />
-                <ValueSection {...section} />
-              </div>
-            </section>
+              {middleTab === "periodo" && <DatesPeriodSection {...section} />}
 
-            <section className="space-y-2">
-              <SectionLabel>Período</SectionLabel>
-              <DatesPeriodSection {...section} />
-            </section>
-
-            <section className="space-y-2 pb-1">
-              <SectionLabel>Campos personalizados</SectionLabel>
-              <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
-                <DealCustomFieldsSection {...section} />
-                <ContactCustomFieldsSection {...section} />
-              </div>
-            </section>
+              {middleTab === "custom" && (
+                <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                  <DealCustomFieldsSection {...section} />
+                  <ContactCustomFieldsSection {...section} />
+                </div>
+              )}
+            </div>
           </div>
         </main>
 

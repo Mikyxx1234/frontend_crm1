@@ -1503,9 +1503,9 @@ export default function InboxV2ClientPage({
   );
 
   // Cabeçalho da página com colapso animado (slide up/down) — dá mais
-  // altura ao chat/asides. O toggle é um chevron flutuante (absoluto)
-  // no topo-centro da área de conteúdo, para não roubar linha e permitir
-  // que as colunas usem quase toda a tela quando o header estiver oculto.
+  // altura ao chat/asides. Não renderiza toggle inline; o controle
+  // fica integrado ao PageHeader (actions) ou flutua no canto sup.
+  // direito quando colapsado.
   const renderCollapsiblePageHeader = (headerNode: React.ReactNode) => (
     <div
       className={cn(
@@ -1520,31 +1520,36 @@ export default function InboxV2ClientPage({
     </div>
   );
 
-  // Botão flutuante do toggle — posicionamento absolute, não consome
-  // altura. Subtil por padrão (opacity 30%), destaca no hover/focus.
-  const headerToggleNode = (
-    <TooltipGlass
-      label={headerCollapsed ? "Mostrar cabeçalho" : "Ocultar cabeçalho"}
-      side="bottom"
-    >
+  // Botão "ocultar cabeçalho" — vai dentro do slot `actions` do
+  // PageHeader (extremo direito, ao lado dos demais controles).
+  const collapseHeaderBtn = (
+    <TooltipGlass label="Ocultar cabeçalho" side="bottom">
       <button
         type="button"
-        onClick={() => setHeaderCollapsed((v) => !v)}
-        aria-label={headerCollapsed ? "Mostrar cabeçalho" : "Ocultar cabeçalho"}
-        aria-expanded={!headerCollapsed}
-        className={cn(
-          "absolute left-1/2 top-0 z-20 flex h-3.5 w-14 -translate-x-1/2 items-center justify-center rounded-b-[var(--radius-md)] border border-t-0 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-sm transition-all hover:h-5 hover:w-20 hover:bg-[var(--glass-bg)] hover:text-[var(--brand-primary)] focus-visible:h-5 focus-visible:w-20 focus-visible:opacity-100 focus-visible:outline-none",
-          headerCollapsed ? "opacity-40" : "opacity-25",
-        )}
+        onClick={() => setHeaderCollapsed(true)}
+        aria-label="Ocultar cabeçalho"
+        className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
       >
-        {headerCollapsed ? (
-          <IconChevronDown size={14} stroke={2.4} />
-        ) : (
-          <IconChevronUp size={14} stroke={2.4} />
-        )}
+        <IconChevronUp size={18} stroke={2.2} />
       </button>
     </TooltipGlass>
   );
+
+  // Botão "mostrar cabeçalho" — chevron pequeno e discreto no canto
+  // superior direito da área de conteúdo, só quando colapsado. Fica
+  // fora da área de leitura de chat/lista.
+  const expandHeaderBtn = headerCollapsed ? (
+    <TooltipGlass label="Mostrar cabeçalho" side="left">
+      <button
+        type="button"
+        onClick={() => setHeaderCollapsed(false)}
+        aria-label="Mostrar cabeçalho"
+        className="absolute right-1 top-1 z-30 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] opacity-40 shadow-sm transition-all hover:opacity-100 hover:text-[var(--brand-primary)] focus-visible:opacity-100 focus-visible:outline-none"
+      >
+        <IconChevronDown size={12} stroke={2.4} />
+      </button>
+    </TooltipGlass>
+  ) : null;
 
   // Layout COM cabeçalho de página (estilo "Caixa de entrada" da
   // referência): NavRail fixo à esquerda; à direita o header no topo e
@@ -1553,12 +1558,7 @@ export default function InboxV2ClientPage({
     // ── Mobile: layout de painel único (lista → chat/negócio) ──────
     if (!isDesktop) {
       return (
-        <div
-          className={cn(
-            "v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] overflow-hidden",
-            headerCollapsed ? "gap-2 p-2 pt-1" : "gap-3 p-3",
-          )}
-        >
+        <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
           {navRailNode}
           <div
             className={cn(
@@ -1571,10 +1571,10 @@ export default function InboxV2ClientPage({
                 icon={pageHeader.icon}
                 title={pageHeader.title}
                 center={inboxSearchFilterNode}
-                actions={null}
+                actions={collapseHeaderBtn}
               />,
             )}
-            {headerToggleNode}
+            {expandHeaderBtn}
             {!activeId ? (
               <div className="min-h-0 flex-1 overflow-hidden">
                 {conversationColumnNode}
@@ -1635,10 +1635,7 @@ export default function InboxV2ClientPage({
     // ── Desktop: layout original de 3 colunas ─────────────────────
     return (
       <div
-        className={cn(
-          "v2-screen grid",
-          headerCollapsed ? "gap-2 p-2 pt-1" : "gap-4 p-4",
-        )}
+        className="v2-screen grid gap-4 p-4"
         style={{ gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)" }}
       >
         {navRailNode}
@@ -1653,10 +1650,10 @@ export default function InboxV2ClientPage({
               icon={pageHeader.icon}
               title={pageHeader.title}
               center={inboxSearchFilterNode}
-              actions={null}
+              actions={collapseHeaderBtn}
             />,
           )}
-          {headerToggleNode}
+          {expandHeaderBtn}
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
             style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}` }}

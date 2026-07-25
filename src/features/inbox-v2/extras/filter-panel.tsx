@@ -19,7 +19,6 @@ import {
   IconAdjustmentsHorizontal as SlidersHorizontal,
   IconCheck,
   IconFilter,
-  IconSearch,
   IconUserOff,
   IconX as X,
 } from "@tabler/icons-react";
@@ -30,7 +29,6 @@ import { ModalPortalContext } from "@/components/ui/modal-portal-context";
 import {
   FieldCard,
   MultiSelectDropdown,
-  TextField,
 } from "@/components/pipeline/kanban-filters/v2/core";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { useTeamUsers } from "@/features/inbox-v2/hooks";
@@ -41,6 +39,7 @@ import {
   listTags,
   type InboxFilters,
 } from "@/features/inbox-v2/api";
+import { normalizeInboxFilters } from "@/features/inbox-v2/api/types";
 import { SOURCE_NONE } from "@/components/pipeline/kanban-filters/types";
 import { useContactSources } from "@/hooks/use-contact-sources";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
@@ -90,9 +89,9 @@ function sortIdFromFilters(f: InboxFilters): string {
 
 function countActive(f: InboxFilters): number {
   let n = 0;
-  if (f.ownerId || f.withoutOwner) n += 1;
+  if ((f.ownerIds?.length ?? 0) > 0 || f.ownerId || f.withoutOwner) n += 1;
   if (f.channel) n += 1;
-  if (f.stageId) n += 1;
+  if ((f.stageIds?.length ?? 0) > 0 || f.stageId) n += 1;
   if (f.tagIds && f.tagIds.length > 0) n += 1;
   if (f.sources && f.sources.length > 0) n += 1;
   if (f.windowState) n += 1;
@@ -104,39 +103,13 @@ function countActive(f: InboxFilters): number {
 function middleTabCount(id: MiddleTab, f: InboxFilters): number {
   if (id === "conversa") {
     return (
-      (f.ownerId || f.withoutOwner ? 1 : 0) +
+      ((f.ownerIds?.length ?? 0) > 0 || f.ownerId || f.withoutOwner ? 1 : 0) +
       (f.channel ? 1 : 0)
     );
   }
-  return (f.stageId ? 1 : 0) + (f.sources && f.sources.length > 0 ? 1 : 0);
-}
-
-function OptionRow({
-  active,
-  onClick,
-  children,
-  leading,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  leading?: React.ReactNode;
-}) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left font-display text-[13px] transition-colors",
-        active
-          ? "bg-[var(--color-primary-soft)] font-medium text-[var(--brand-primary)]"
-          : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
-      )}
-    >
-      {leading}
-      <span className="min-w-0 flex-1 truncate">{children}</span>
-      {active && <IconCheck size={14} stroke={2.6} className="shrink-0" />}
-    </button>
+    ((f.stageIds?.length ?? 0) > 0 || f.stageId ? 1 : 0) +
+    (f.sources && f.sources.length > 0 ? 1 : 0)
   );
 }
 
@@ -363,17 +336,17 @@ function InboxFilterModalShell({
 
 export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
   const [open, setOpen] = React.useState(false);
-  const [draft, setDraft] = React.useState<InboxFilters>(value);
+  const [draft, setDraft] = React.useState<InboxFilters>(() =>
+    normalizeInboxFilters(value),
+  );
   const [middleTab, setMiddleTab] = React.useState<MiddleTab>("conversa");
-  const [ownerSearch, setOwnerSearch] = React.useState("");
   const [tagQuery, setTagQuery] = React.useState("");
   const isDesktop = useIsDesktop();
 
   React.useEffect(() => {
     if (!open) return;
-    setDraft(value);
+    setDraft(normalizeInboxFilters(value));
     setMiddleTab("conversa");
-    setOwnerSearch("");
     setTagQuery("");
   }, [open, value]);
 
@@ -424,19 +397,14 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
     return filtered.length > 0 ? filtered : CHANNEL_OPTIONS;
   }, [channels, myPerms?.channelGrants]);
 
-  const filteredUsers = React.useMemo(() => {
-    const q = ownerSearch.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter((u) =>
-      (u.name || u.email || "").toLowerCase().includes(q),
-    );
-  }, [users, ownerSearch]);
-
   const selectedTagIds = draft.tagIds ?? [];
   const selectedSources = draft.sources ?? [];
+  const selectedOwnerIds = draft.ownerIds ?? [];
+  const selectedStageIds = draft.stageIds ?? [];
   const activeCount = countActive(value);
   const draftCount = countActive(draft);
-  const ownerActive = Boolean(draft.ownerId || draft.withoutOwner);
+  const ownerActive =
+    selectedOwnerIds.length > 0 || Boolean(draft.withoutOwner);
 
   const filteredTags = React.useMemo(() => {
     const needle = tagQuery.trim().toLowerCase();
@@ -465,13 +433,12 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
   }
 
   function apply() {
-    onChange(draft);
+    onChange(normalizeInboxFilters(draft));
     setOpen(false);
   }
 
   function clear() {
     setDraft({});
-    setOwnerSearch("");
   }
 
   const sortColumn = (
@@ -518,62 +485,40 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
           setDraft((d) => ({
             ...d,
             ownerId: undefined,
+            ownerIds: undefined,
             withoutOwner: undefined,
           }))
         }
       >
-        <div className="space-y-2">
-          <TextField
-            value={ownerSearch}
-            onChange={setOwnerSearch}
-            placeholder="Buscar usuário…"
-            icon={<IconSearch className="size-3.5" />}
-          />
-          <div className="max-h-44 space-y-0.5 overflow-y-auto [scrollbar-width:thin]">
-            <OptionRow
-              active={!ownerActive}
-              onClick={() =>
-                setDraft((d) => ({
-                  ...d,
-                  ownerId: undefined,
-                  withoutOwner: undefined,
-                }))
-              }
-            >
-              Todos
-            </OptionRow>
-            <OptionRow
-              active={Boolean(draft.withoutOwner)}
-              onClick={() =>
-                setDraft((d) => ({
-                  ...d,
-                  ownerId: undefined,
-                  withoutOwner: d.withoutOwner ? undefined : true,
-                }))
-              }
-              leading={
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] text-[var(--text-muted)]">
-                  <IconUserOff size={13} stroke={2.2} />
+        <MultiSelectDropdown
+          placeholder="Selecionar responsáveis…"
+          searchable={users.length > 6}
+          searchPlaceholder="Buscar usuário…"
+          selected={
+            draft.withoutOwner
+              ? ["__none__", ...selectedOwnerIds]
+              : selectedOwnerIds
+          }
+          options={[
+            {
+              value: "__none__",
+              searchText: "Sem responsável",
+              label: (
+                <span className="inline-flex items-center gap-2">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] text-[var(--text-muted)]">
+                    <IconUserOff size={13} stroke={2.2} />
+                  </span>
+                  Sem responsável
                 </span>
-              }
-            >
-              Sem responsável
-            </OptionRow>
-            {filteredUsers.map((u) => {
-              const active = draft.ownerId === u.id;
+              ),
+            },
+            ...users.map((u) => {
               const name = u.name || u.email;
-              return (
-                <OptionRow
-                  key={u.id}
-                  active={active}
-                  onClick={() =>
-                    setDraft((d) => ({
-                      ...d,
-                      ownerId: active ? undefined : u.id,
-                      withoutOwner: undefined,
-                    }))
-                  }
-                  leading={
+              return {
+                value: u.id,
+                searchText: name,
+                label: (
+                  <span className="inline-flex items-center gap-2">
                     <span
                       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
                       style={{
@@ -582,14 +527,36 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                     >
                       {name[0]?.toUpperCase()}
                     </span>
-                  }
-                >
-                  {name}
-                </OptionRow>
-              );
-            })}
-          </div>
-        </div>
+                    {name}
+                  </span>
+                ),
+              };
+            }),
+          ]}
+          onToggle={(value) => {
+            if (value === "__none__") {
+              setDraft((d) => ({
+                ...d,
+                withoutOwner: d.withoutOwner ? undefined : true,
+                ownerId: undefined,
+                ownerIds: undefined,
+              }));
+              return;
+            }
+            setDraft((d) => {
+              const current = d.ownerIds ?? [];
+              const next = current.includes(value)
+                ? current.filter((id) => id !== value)
+                : [...current, value];
+              return {
+                ...d,
+                withoutOwner: undefined,
+                ownerId: undefined,
+                ownerIds: next.length ? next : undefined,
+              };
+            });
+          }}
+        />
       </FieldCard>
 
       <FieldCard
@@ -619,26 +586,44 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
     <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 [&>*]:h-full">
       <FieldCard
         label="Negócio na etapa"
-        active={Boolean(draft.stageId)}
-        onClear={() => setDraft((d) => ({ ...d, stageId: undefined }))}
+        active={selectedStageIds.length > 0}
+        onClear={() =>
+          setDraft((d) => ({ ...d, stageId: undefined, stageIds: undefined }))
+        }
       >
-        <DropdownGlass
-          placeholder="Selecionar etapa…"
+        <MultiSelectDropdown
+          placeholder="Selecionar etapas…"
+          emptyLabel="Nenhuma etapa."
+          searchable={stages.length > 8}
+          searchPlaceholder="Buscar etapa…"
+          selected={selectedStageIds}
           options={stages.map((s) => ({
             value: s.id,
-            label: s.name,
+            searchText: s.name,
+            label: (
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ background: s.color || "#94a3b8" }}
+                />
+                {s.name}
+              </span>
+            ),
           }))}
-          value={draft.stageId}
-          onValueChange={(v) =>
-            setDraft((d) => ({
-              ...d,
-              stageId: d.stageId === v ? undefined : v,
-            }))
+          onToggle={(id) =>
+            setDraft((d) => {
+              const current = d.stageIds ?? [];
+              const next = current.includes(id)
+                ? current.filter((x) => x !== id)
+                : [...current, id];
+              return {
+                ...d,
+                stageId: undefined,
+                stageIds: next.length ? next : undefined,
+              };
+            })
           }
         />
-        {stages.length === 0 && (
-          <p className="mt-1.5 text-[12px] text-[var(--text-muted)]">Nenhuma etapa.</p>
-        )}
       </FieldCard>
 
       <FieldCard

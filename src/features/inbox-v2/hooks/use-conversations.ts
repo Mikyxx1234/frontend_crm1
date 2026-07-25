@@ -219,10 +219,10 @@ export function useCancelAutomation(contactId: string | null) {
 export function useTabCounts(enabled = true, filters?: InboxFilters | null) {
   const filterKey = filters
     ? {
-        ownerId: filters.ownerId ?? null,
+        ownerIds: filters.ownerIds ?? (filters.ownerId ? [filters.ownerId] : []),
         withoutOwner: filters.withoutOwner ?? false,
         channel: filters.channel ?? null,
-        stageId: filters.stageId ?? null,
+        stageIds: filters.stageIds ?? (filters.stageId ? [filters.stageId] : []),
         tagIds: filters.tagIds ?? [],
         sources: filters.sources ?? [],
       }

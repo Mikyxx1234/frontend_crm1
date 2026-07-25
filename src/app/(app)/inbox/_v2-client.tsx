@@ -79,7 +79,7 @@ import {
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
-import { hasInboxServerFilters } from "@/features/inbox-v2/api/types";
+import { hasInboxServerFilters, normalizeInboxFilters } from "@/features/inbox-v2/api/types";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   useBoard,
@@ -206,7 +206,7 @@ function readStoredInboxFilters(): InboxFilters {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return DEFAULT_FILTERS;
     }
-    return parsed as InboxFilters;
+    return normalizeInboxFilters(parsed as InboxFilters);
   } catch {
     return DEFAULT_FILTERS;
   }
@@ -214,17 +214,21 @@ function readStoredInboxFilters(): InboxFilters {
 
 function writeStoredInboxFilters(filters: InboxFilters) {
   try {
+    const normalized = normalizeInboxFilters(filters);
     const empty =
-      !hasInboxServerFilters(filters) &&
-      !filters.sortBy &&
-      !filters.sortOrder &&
-      !filters.windowState &&
-      !filters.lastMessageDirection;
+      !hasInboxServerFilters(normalized) &&
+      !normalized.sortBy &&
+      !normalized.sortOrder &&
+      !normalized.windowState &&
+      !normalized.lastMessageDirection;
     if (empty) {
       window.localStorage.removeItem(INBOX_FILTERS_STORAGE_KEY);
       return;
     }
-    window.localStorage.setItem(INBOX_FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    window.localStorage.setItem(
+      INBOX_FILTERS_STORAGE_KEY,
+      JSON.stringify(normalized),
+    );
   } catch {
     /* localStorage indisponível */
   }

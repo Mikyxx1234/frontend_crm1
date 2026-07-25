@@ -135,11 +135,17 @@ export interface TabCounts {
 }
 
 export interface InboxFilters {
+  /** @deprecated Preferir `ownerIds`. Mantido para localStorage antigo. */
   ownerId?: string;
+  /** Multi-seleção de responsáveis. */
+  ownerIds?: string[];
   /** true = só conversas sem responsável (`assignedToId` null). */
   withoutOwner?: boolean;
   channel?: string;
+  /** @deprecated Preferir `stageIds`. Mantido para localStorage antigo. */
   stageId?: string;
+  /** Multi-seleção de etapas do negócio. */
+  stageIds?: string[];
   tagIds?: string[];
   /** Origens do contato (Contact.source). Pode incluir `__none__` para "Sem origem". */
   sources?: string[];
@@ -155,23 +161,40 @@ export interface InboxFilters {
   lastMessageDirection?: "in" | "out";
 }
 
+/** Normaliza filtros legados (`ownerId`/`stageId`) para arrays multi. */
+export function normalizeInboxFilters(raw: InboxFilters): InboxFilters {
+  const ownerIds = Array.from(
+    new Set([...(raw.ownerIds ?? []), ...(raw.ownerId ? [raw.ownerId] : [])].filter(Boolean)),
+  );
+  const stageIds = Array.from(
+    new Set([...(raw.stageIds ?? []), ...(raw.stageId ? [raw.stageId] : [])].filter(Boolean)),
+  );
+  const { ownerId: _o, stageId: _s, ...rest } = raw;
+  return {
+    ...rest,
+    ownerIds: ownerIds.length ? ownerIds : undefined,
+    stageIds: stageIds.length ? stageIds : undefined,
+  };
+}
+
 /** Filtros enviados ao GET /api/conversations (exclui ordenação e janela). */
 export function hasInboxServerFilters(
   f: InboxFilters | null | undefined,
 ): boolean {
   if (!f) return false;
+  const n = normalizeInboxFilters(f);
   const {
     sortBy: _sb,
     sortOrder: _so,
     windowState: _ws,
     lastMessageDirection: _lmd,
     ...server
-  } = f;
+  } = n;
   return (
-    Boolean(server.ownerId) ||
+    (server.ownerIds?.length ?? 0) > 0 ||
     Boolean(server.withoutOwner) ||
     Boolean(server.channel) ||
-    Boolean(server.stageId) ||
+    (server.stageIds?.length ?? 0) > 0 ||
     (server.tagIds?.length ?? 0) > 0 ||
     (server.sources?.length ?? 0) > 0
   );

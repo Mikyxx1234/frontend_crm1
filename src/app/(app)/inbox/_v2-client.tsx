@@ -69,6 +69,7 @@ import {
 } from "@/features/inbox-v2/hooks";
 import {
   AssigneePopover,
+  BulkReassignPopover,
   Composer,
   ConversationActionsMenu,
   ConversationTimelineTab,
@@ -906,33 +907,48 @@ export default function InboxV2ClientPage({
     </TooltipGlass>
   );
 
-  // Ações da barra de seleção — Encerrar/Reabrir (protegidas por permissão,
-  // mesma regra do menu de ações de uma conversa) + Cancelar (sempre visível).
+  // Ações da barra de seleção — Encerrar/Reabrir/Reatribuir (protegidas por
+  // permissão) + Cancelar (sempre visível). Reatribuir usa assign individual
+  // (bulk API não cobre assign) e não se aplica a "todas do filtro".
   const bulkActionsNode = (
     <div className="flex shrink-0 items-center gap-1.5">
       {selectedIds.size > 0 && (
-        <RequirePermission permission="conversation:resolve">
-          <ButtonGlass
-            type="button"
-            variant="glass"
-            size="sm"
-            disabled={bulkAction.isPending}
-            onClick={() => handleBulkAction("resolve")}
-          >
-            <IconCircleCheck size={14} />
-            <span className="ml-1.5">Encerrar</span>
-          </ButtonGlass>
-          <ButtonGlass
-            type="button"
-            variant="glass"
-            size="sm"
-            disabled={bulkAction.isPending}
-            onClick={() => handleBulkAction("reopen")}
-          >
-            <IconRotateClockwise size={14} />
-            <span className="ml-1.5">Reabrir</span>
-          </ButtonGlass>
-        </RequirePermission>
+        <>
+          <RequirePermission permission="conversation:resolve">
+            <ButtonGlass
+              type="button"
+              variant="glass"
+              size="sm"
+              disabled={bulkAction.isPending}
+              onClick={() => handleBulkAction("resolve")}
+            >
+              <IconCircleCheck size={14} />
+              <span className="ml-1.5">Encerrar</span>
+            </ButtonGlass>
+            <ButtonGlass
+              type="button"
+              variant="glass"
+              size="sm"
+              disabled={bulkAction.isPending}
+              onClick={() => handleBulkAction("reopen")}
+            >
+              <IconRotateClockwise size={14} />
+              <span className="ml-1.5">Reabrir</span>
+            </ButtonGlass>
+          </RequirePermission>
+          <RequirePermission permission="conversation:reassign_others">
+            <BulkReassignPopover
+              conversationIds={[...selectedIds]}
+              disabled={bulkAction.isPending || selectAllFilter}
+              disabledReason={
+                selectAllFilter
+                  ? "Reatribuir não se aplica a “todas do filtro”. Selecione conversas nesta página."
+                  : undefined
+              }
+              onDone={exitSelectionMode}
+            />
+          </RequirePermission>
+        </>
       )}
       <ButtonGlass type="button" variant="glass" size="sm" onClick={exitSelectionMode}>
         Cancelar

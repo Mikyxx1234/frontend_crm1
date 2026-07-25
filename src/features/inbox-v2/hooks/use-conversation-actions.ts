@@ -211,3 +211,63 @@ export function useBulkConversationAction() {
     onError: (err) => toast.error(err.message),
   });
 }
+
+/**
+ * Reatribuir em massa — o POST /api/conversations/bulk NÃO implementa `assign`.
+ * Usa o endpoint individual (`POST /api/conversations/:id/actions` action=assign)
+ * com Promise.allSettled e reporta êxitos/falhas.
+ */
+export function useBulkAssignConversations() {
+  const qc = useQueryClient();
+  return useMutation<
+    { succeeded: number; failed: number; total: number },
+    Error,
+    { ids: string[]; assignedToId: string | null }
+  >({
+    mutationFn: async (vars) => {
+      const results = await Promise.allSettled(
+        vars.ids.map((id) =>
+          postConversationAction(id, {
+            action: "assign",
+            assignedToId: vars.assignedToId,
+          }),
+        ),
+      );
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.length - succeeded;
+      return { succeeded, failed, total: results.length };
+    },
+    onSuccess: (result, vars) => {
+      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
+      qc.invalidateQueries({ queryKey: ["deal-detail-v2"] });
+      qc.invalidateQueries({ queryKey: ["activity-feed"] });
+      for (const id of vars.ids) {
+        qc.invalidateQueries({ queryKey: ["conversation-timeline", id] });
+      }
+
+      const verb =
+        vars.assignedToId === null ? "desatribuída" : "reatribuída";
+      const verbPlural =
+        vars.assignedToId === null ? "desatribuídas" : "reatribuídas";
+
+      if (result.failed === 0) {
+        toast.success(
+          `${result.succeeded} conversa${result.succeeded > 1 ? "s" : ""} ${
+            result.succeeded > 1 ? verbPlural : verb
+          }`,
+        );
+      } else if (result.succeeded === 0) {
+        toast.error(
+          `Falha ao reatribuir ${result.failed} conversa${result.failed > 1 ? "s" : ""}.`,
+        );
+      } else {
+        toast.warning(
+          `${result.succeeded} reatribuída(s), ${result.failed} falharam`,
+        );
+      }
+    },
+    onError: (err) => toast.error(err.message || "Falha ao reatribuir"),
+  });
+}

@@ -24,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
@@ -898,11 +898,12 @@ function TeamContent() {
       </>
       )}
 
-      {/* ─── Drawer: criar usuário ─── */}
-      <FormSheet
+      {/* ─── Dialog: criar usuário ─── */}
+      <FormDialog
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         busy={invite.isPending}
+        size="lg"
         title="Criar usuário"
         description="O usuário é criado na hora e já acessa com o e-mail e a senha definidos abaixo. Nenhum e-mail de convite é enviado."
         footer={
@@ -1035,15 +1036,16 @@ function TeamContent() {
             </p>
           ) : null}
         </div>
-      </FormSheet>
+      </FormDialog>
 
-      {/* ─── Drawer: trocar senha ─── */}
-      <FormSheet
+      {/* ─── Dialog: trocar senha ─── */}
+      <FormDialog
         open={passwordTarget != null}
         onOpenChange={(open) => {
           if (!open) closePasswordDialog();
         }}
         busy={updatePassword.isPending}
+        size="sm"
         icon={<KeyRound className="size-5 text-[var(--color-lavender)]" />}
         title="Trocar senha"
         description={
@@ -1124,7 +1126,7 @@ function TeamContent() {
               ) : null}
             </div>
         </div>
-      </FormSheet>
+      </FormDialog>
 
       {/* ─── Dialog: excluir (single) ─── */}
       <Dialog

@@ -60,7 +60,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { apiUrl } from "@/lib/api";
 import {
   useDepartments,
@@ -198,10 +198,11 @@ function CreateDepartmentModal({ open, onClose }: { open: boolean; onClose: () =
   }
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={(v) => { if (!v) { reset(); onClose(); } }}
       busy={createMutation.isPending}
+      size="lg"
       icon={<DeptIcon name={iconName} size={20} color={color} />}
       title="Novo departamento"
       description={name.trim() || undefined}
@@ -293,7 +294,7 @@ function CreateDepartmentModal({ open, onClose }: { open: boolean; onClose: () =
           </div>
         </div>
       </form>
-    </FormSheet>
+    </FormDialog>
   );
 }
 
@@ -363,10 +364,11 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   }
 
   return (
-    <FormSheet
+    <FormDialog
       open={!!dept}
       onOpenChange={(v) => { if (!v) onClose(); }}
       busy={saving}
+      size="xl"
       icon={dept ? <DeptIcon name={icon} size={20} color={color} /> : undefined}
       title="Editar departamento"
       description={dept?.name}
@@ -572,7 +574,7 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
           </p>
         </div>
       </div>
-    </FormSheet>
+    </FormDialog>
   );
 }
 

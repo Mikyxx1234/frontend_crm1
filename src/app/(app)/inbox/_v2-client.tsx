@@ -33,7 +33,6 @@ import { FavoritesPanel } from "@/components/crm/favorites-panel";
 import { ContactAside } from "@/components/crm/contact-aside";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { PageHeader } from "@/components/crm/page-header";
-import { PageSearchBar } from "@/components/crm/page-toolbar";
 import {
   ColumnResizer,
   usePersistentWidth,
@@ -80,6 +79,7 @@ import {
   whatsappTemplateToPending,
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
+import { InboxSearchFilterBar } from "@/features/inbox-v2/extras/filter-panel";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
 import { hasInboxServerFilters, normalizeInboxFilters } from "@/features/inbox-v2/api/types";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -863,6 +863,15 @@ export default function InboxV2ClientPage({
   const useFilteredTabCount =
     hasInboxServerFilters(filters) || debouncedSearch.trim().length > 0;
 
+  const inboxSearchFilterNode = (
+    <InboxSearchFilterBar
+      search={searchInput}
+      onSearch={setSearchInput}
+      filters={filters}
+      onChangeFilters={setFilters}
+    />
+  );
+
   // Aviso sonoro por mensagem recebida — o botão só (des)liga a preferência
   // (persistida no localStorage). O ping em si toca no useInboxRealtime.
   const [soundMuted, setSoundMuted] = useInboxSoundMuted();
@@ -1402,19 +1411,7 @@ export default function InboxV2ClientPage({
             <PageHeader
               icon={pageHeader.icon}
               title={pageHeader.title}
-              center={
-                <div className="flex w-full min-w-0 items-center gap-2">
-                  <PageSearchBar
-                    variant="compact"
-                    className="min-w-0 flex-1"
-                    value={searchInput}
-                    onChange={setSearchInput}
-                    placeholder="Buscar conversa, contato, telefone..."
-                    aria-label="Buscar conversas"
-                  />
-                  <InboxFilterButton value={filters} onChange={setFilters} />
-                </div>
-              }
+              center={inboxSearchFilterNode}
               actions={null}
             />
             {!activeId ? (
@@ -1485,19 +1482,7 @@ export default function InboxV2ClientPage({
           <PageHeader
             icon={pageHeader.icon}
             title={pageHeader.title}
-            center={
-              <div className="flex w-full min-w-0 items-center gap-2">
-                <PageSearchBar
-                  variant="compact"
-                  className="min-w-0 flex-1"
-                  value={searchInput}
-                  onChange={setSearchInput}
-                  placeholder="Buscar conversa, contato, telefone..."
-                  aria-label="Buscar conversas"
-                />
-                <InboxFilterButton value={filters} onChange={setFilters} />
-              </div>
-            }
+            center={inboxSearchFilterNode}
             actions={null}
           />
           <div

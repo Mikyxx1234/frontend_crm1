@@ -24,6 +24,7 @@ import {
 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
+import { PageSearchBar } from "@/components/crm/page-toolbar";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { TagChip } from "@/components/crm/tag-chip";
 import { UserAvatar } from "@/components/crm/user-avatar";
@@ -50,6 +51,16 @@ import { useIsDesktop } from "@/hooks/use-media-query";
 interface InboxFilterButtonProps {
   value: InboxFilters;
   onChange: (next: InboxFilters) => void;
+  variant?: "standalone" | "integrated";
+}
+
+interface InboxSearchFilterBarProps {
+  search: string;
+  onSearch: (value: string) => void;
+  filters: InboxFilters;
+  onChangeFilters: (next: InboxFilters) => void;
+  placeholder?: string;
+  className?: string;
 }
 
 const CHANNEL_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
@@ -336,7 +347,38 @@ function InboxFilterModalShell({
   );
 }
 
-export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
+export function InboxSearchFilterBar({
+  search,
+  onSearch,
+  filters,
+  onChangeFilters,
+  placeholder = "Pesquisar e filtrar...",
+  className,
+}: InboxSearchFilterBarProps) {
+  return (
+    <div className={cn("relative w-full", className)}>
+      <PageSearchBar
+        variant="compact"
+        className="[&>input]:pr-12"
+        value={search}
+        onChange={onSearch}
+        placeholder={placeholder}
+        aria-label="Buscar e filtrar conversas"
+      />
+      <InboxFilterButton
+        value={filters}
+        onChange={onChangeFilters}
+        variant="integrated"
+      />
+    </div>
+  );
+}
+
+export function InboxFilterButton({
+  value,
+  onChange,
+  variant = "standalone",
+}: InboxFilterButtonProps) {
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<InboxFilters>(() =>
     normalizeInboxFilters(value),
@@ -772,16 +814,35 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
           onClick={() => setOpen(true)}
           aria-haspopup="dialog"
           aria-expanded={open}
+          aria-label={
+            activeCount > 0
+              ? `Filtros (${activeCount} ativos)`
+              : "Filtrar conversas"
+          }
           className={cn(
-            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
-            activeCount > 0 || open
-              ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-              : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]",
+            variant === "integrated"
+              ? "absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center gap-0.5 rounded-full transition-colors"
+              : "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
+            variant === "integrated" && (activeCount > 0 ? "min-w-7 px-1.5" : "w-7"),
+            variant === "integrated"
+              ? activeCount > 0 || open
+                ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+                : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]"
+              : activeCount > 0 || open
+                ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]",
           )}
         >
-          <IconFilter size={17} stroke={2} />
+          <IconFilter size={variant === "integrated" ? 15 : 17} stroke={2} />
           {activeCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[9px] font-bold text-white">
+            <span
+              className={cn(
+                "font-display font-bold leading-none tabular-nums",
+                variant === "integrated"
+                  ? "text-[10px]"
+                  : "absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 text-[9px] text-white",
+              )}
+            >
               {activeCount}
             </span>
           )}

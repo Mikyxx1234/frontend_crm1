@@ -13,6 +13,8 @@ import {
   IconBellOff,
   IconBriefcase,
   IconChevronDown,
+  IconChevronsDown,
+  IconChevronsUp,
   IconChevronUp,
   IconCircleCheck,
   IconMessageCircle,
@@ -1530,23 +1532,24 @@ export default function InboxV2ClientPage({
         aria-label="Ocultar cabeçalho"
         className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
       >
-        <IconChevronUp size={18} stroke={2.2} />
+        <IconChevronsUp size={18} stroke={2.2} />
       </button>
     </TooltipGlass>
   );
 
-  // Botão "mostrar cabeçalho" — chevron pequeno e discreto no canto
-  // superior direito da área de conteúdo, só quando colapsado. Fica
-  // fora da área de leitura de chat/lista.
+  // Botão "mostrar cabeçalho" — pill circular no padrão da NavRailV2
+  // (border-brand + bg branco + shadow + hover fills). Fica no topo
+  // esquerdo da coluna de conteúdo (encostado no NavRail) para ficar
+  // à frente e bem visível, sem competir com o chat.
   const expandHeaderBtn = headerCollapsed ? (
-    <TooltipGlass label="Mostrar cabeçalho" side="left">
+    <TooltipGlass label="Mostrar cabeçalho" side="bottom">
       <button
         type="button"
         onClick={() => setHeaderCollapsed(false)}
         aria-label="Mostrar cabeçalho"
-        className="absolute right-1 top-1 z-30 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] opacity-40 shadow-sm transition-all hover:opacity-100 hover:text-[var(--brand-primary)] focus-visible:opacity-100 focus-visible:outline-none"
+        className="absolute -left-3 top-3 z-40 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.25)] transition-all hover:scale-110 hover:bg-[var(--brand-primary)] hover:text-white"
       >
-        <IconChevronDown size={12} stroke={2.4} />
+        <IconChevronsDown size={14} stroke={2.5} />
       </button>
     </TooltipGlass>
   ) : null;

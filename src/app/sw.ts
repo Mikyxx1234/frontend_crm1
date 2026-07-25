@@ -2,7 +2,7 @@ import { apiUrl } from "@/lib/api";
 /// <reference lib="webworker" />
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist } from "serwist";
+import { NetworkOnly, Serwist } from "serwist";
 
 /**
  * Service Worker do EduIT CRM — gerenciado pelo Serwist.
@@ -15,8 +15,9 @@ import { Serwist } from "serwist";
  *  4. Fallback offline minimo.
  *
  * NAO faz:
- *  - Cache de /api/* (excluido no next.config.ts) — APIs sao sempre
- *    network-first; CRM precisa de dados quentes.
+ *  - Cache de mídia autenticada (/api/storage e /api/media). Respostas
+ *    parciais HTTP 206 precisam preservar o Range e nunca podem vir do
+ *    cache runtime genérico de APIs do Serwist.
  *  - Cache de SSE — streams nao sao cacheaveis.
  *  - Background sync de mensagens (proxima fase).
  */
@@ -36,7 +37,17 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching: [
+    {
+      matcher: ({ sameOrigin, url: { pathname } }) =>
+        sameOrigin &&
+        (pathname.startsWith("/api/storage/") ||
+          pathname.startsWith("/api/media/")),
+      method: "GET",
+      handler: new NetworkOnly(),
+    },
+    ...defaultCache,
+  ],
 });
 
 serwist.addEventListeners();

@@ -238,6 +238,138 @@
 
   /* Mesh gradient base — usado em <body> */
   --bg-gradient: #dde8f5;
+
+  /* Toasts preenchidos — tons sólidos com contraste AA. */
+  --toast-success-bg: #047857;
+  --toast-success-border: #065f46;
+  --toast-error-bg: #b91c1c;
+  --toast-error-border: #991b1b;
+  --toast-warning-bg: #d97706;
+  --toast-warning-border: #b45309;
+  --toast-warning-fg: #1c1917;
+  --toast-info-bg: #0369a1;
+  --toast-info-border: #075985;
+  --toast-loading-bg: #4338ca;
+  --toast-loading-border: #3730a3;
+  --toast-neutral-bg: #334155;
+  --toast-neutral-border: #1e293b;
+  --toast-on-solid: #ffffff;
+  --toast-shadow: 0 12px 30px rgba(15, 23, 42, 0.24);
+}
+
+/* Sonner global — traduz o modelo "filled" da referência sem alterar
+   chamadas toast.success/error/info/warning existentes. */
+.crm-toaster {
+  font-family: var(--font-sans);
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 44px 16px 16px;
+  color: var(--toast-on-solid);
+  background: var(--toast-neutral-bg);
+  border: 1px solid var(--toast-neutral-border);
+  border-radius: 10px;
+  box-shadow: var(--toast-shadow);
+}
+
+.crm-toaster [data-sonner-toast][data-type="success"] {
+  background: var(--toast-success-bg);
+  border-color: var(--toast-success-border);
+}
+
+.crm-toaster [data-sonner-toast][data-type="error"] {
+  background: var(--toast-error-bg);
+  border-color: var(--toast-error-border);
+}
+
+.crm-toaster [data-sonner-toast][data-type="warning"] {
+  color: var(--toast-warning-fg);
+  background: var(--toast-warning-bg);
+  border-color: var(--toast-warning-border);
+}
+
+.crm-toaster [data-sonner-toast][data-type="info"] {
+  background: var(--toast-info-bg);
+  border-color: var(--toast-info-border);
+}
+
+.crm-toaster [data-sonner-toast][data-type="loading"] {
+  background: var(--toast-loading-bg);
+  border-color: var(--toast-loading-border);
+}
+
+.crm-toaster [data-sonner-toast][data-type="loading"] .sonner-loading-bar {
+  background: currentColor;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-icon] {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  color: inherit;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-icon] svg {
+  width: 20px;
+  height: 20px;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-title] {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-description] {
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  opacity: 0.9;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-close-button] {
+  top: 10px;
+  right: 10px;
+  left: auto;
+  width: 28px;
+  height: 28px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 7px;
+  transform: none;
+}
+
+.crm-toaster [data-sonner-toast][data-type="warning"] [data-close-button] {
+  background: rgba(28, 25, 23, 0.1);
+  border-color: rgba(28, 25, 23, 0.2);
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-close-button]:hover {
+  color: inherit;
+  background: rgba(255, 255, 255, 0.24) !important;
+  border-color: rgba(255, 255, 255, 0.36) !important;
+}
+
+.crm-toaster [data-sonner-toast][data-type="warning"] [data-close-button]:hover {
+  background: rgba(28, 25, 23, 0.18) !important;
+  border-color: rgba(28, 25, 23, 0.3) !important;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-close-button]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-button] {
+  color: inherit;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.crm-toaster [data-sonner-toast][data-styled="true"] [data-button]:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 /* ══════════════════════════════════════════════════════════════════

@@ -117,17 +117,11 @@ export default async function RootLayout({
         <PreviewMocksInstaller />
         <Providers session={session}>{children}</Providers>
         <Toaster
+          className="crm-toaster"
           position="bottom-right"
-          richColors
+          closeButton
           toastOptions={{
-            style: {
-              borderRadius: "22px",
-              fontFamily: "var(--font-sans)",
-              background: "var(--glass-bg-overlay)",
-              backdropFilter: "var(--glass-blur)",
-              border: "1px solid var(--glass-border)",
-              boxShadow: "var(--glass-shadow)",
-            },
+            closeButtonAriaLabel: "Fechar notificação",
           }}
         />
       </body>

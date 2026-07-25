@@ -5,7 +5,7 @@
  * document.body para escapar dos stacking contexts do Draggable.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
@@ -37,6 +37,14 @@ export function TagsPopover({
 }: TagsPopoverProps) {
   const { open, rect, triggerRef, popoverRef, toggle } = usePortalPopover();
   const [filter, setFilter] = useState("");
+  // Guard anti-double-dispatch: dois eventos do mesmo clique (ex: click +
+  // mousedown replay do dnd/HMR, ou propagação através de um wrapper)
+  // chamavam `handleToggle` duas vezes no MESMO tick — como o `useMutation`
+  // é síncrono ao disparar `mutationFn`, ambas as requests iam para a rede
+  // ANTES do isPending mudar, resultando no "add + remove" que se cancelava
+  // (bug reportado 25/jul/26). O ref persiste enquanto uma toggle daquele
+  // (deal, tag) está em voo; segundo disparo no mesmo par é ignorado.
+  const inFlightTogglesRef = useRef<Set<string>>(new Set());
 
   const tagsQuery = useDealTags();
   const addMutation = useAddDealTag(pipelineId, statusFilter);
@@ -59,10 +67,29 @@ export function TagsPopover({
 
   function handleToggle(tagId: string) {
     if (!dealId) return;
+    const key = `${dealId}:${tagId}`;
+    if (inFlightTogglesRef.current.has(key)) {
+      // Diagnóstico: ajuda a detectar dispatches duplicados no mesmo tick
+      // (mantido gated em dev para não poluir prod).
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[TagsPopover] toggle ignorado (já em voo)", key);
+      }
+      return;
+    }
+    inFlightTogglesRef.current.add(key);
+    const release = () => {
+      inFlightTogglesRef.current.delete(key);
+    };
     if (currentIds.has(tagId)) {
-      removeMutation.mutate({ dealId, tagId });
+      removeMutation.mutate(
+        { dealId, tagId },
+        { onSettled: release },
+      );
     } else {
-      addMutation.mutate({ dealId, tagId });
+      addMutation.mutate(
+        { dealId, tagId },
+        { onSettled: release },
+      );
     }
   }
 

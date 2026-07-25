@@ -1503,45 +1503,47 @@ export default function InboxV2ClientPage({
   );
 
   // Cabeçalho da página com colapso animado (slide up/down) — dá mais
-  // altura ao chat/asides quando os agentes querem foco máximo.
-  // A "alça" central com o chevron fica sempre visível; ao colapsar o
-  // header some suavemente e a área de conteúdo cresce.
+  // altura ao chat/asides. O toggle é um chevron flutuante (absoluto)
+  // no topo-centro da área de conteúdo, para não roubar linha e permitir
+  // que as colunas usem quase toda a tela quando o header estiver oculto.
   const renderCollapsiblePageHeader = (headerNode: React.ReactNode) => (
-    <div className="flex shrink-0 flex-col">
-      <div
-        className={cn(
-          "grid overflow-hidden transition-[grid-template-rows,opacity,margin] duration-300 ease-out",
-          headerCollapsed
-            ? "grid-rows-[0fr] opacity-0"
-            : "grid-rows-[1fr] opacity-100",
-        )}
-        aria-hidden={headerCollapsed}
-      >
-        <div className="min-h-0 overflow-hidden">{headerNode}</div>
-      </div>
-      <div className="flex items-center justify-center">
-        <TooltipGlass
-          label={headerCollapsed ? "Mostrar cabeçalho" : "Ocultar cabeçalho"}
-          side="bottom"
-        >
-          <button
-            type="button"
-            onClick={() => setHeaderCollapsed((v) => !v)}
-            aria-label={headerCollapsed ? "Mostrar cabeçalho" : "Ocultar cabeçalho"}
-            aria-expanded={!headerCollapsed}
-            className={cn(
-              "group flex h-4 w-16 items-center justify-center rounded-b-[var(--radius-md)] border border-t-0 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-all hover:h-5 hover:w-20 hover:bg-[var(--glass-bg)] hover:text-[var(--brand-primary)]",
-            )}
-          >
-            {headerCollapsed ? (
-              <IconChevronDown size={14} stroke={2.4} />
-            ) : (
-              <IconChevronUp size={14} stroke={2.4} />
-            )}
-          </button>
-        </TooltipGlass>
-      </div>
+    <div
+      className={cn(
+        "grid shrink-0 overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out",
+        headerCollapsed
+          ? "grid-rows-[0fr] opacity-0"
+          : "grid-rows-[1fr] opacity-100",
+      )}
+      aria-hidden={headerCollapsed}
+    >
+      <div className="min-h-0 overflow-hidden">{headerNode}</div>
     </div>
+  );
+
+  // Botão flutuante do toggle — posicionamento absolute, não consome
+  // altura. Subtil por padrão (opacity 30%), destaca no hover/focus.
+  const headerToggleNode = (
+    <TooltipGlass
+      label={headerCollapsed ? "Mostrar cabeçalho" : "Ocultar cabeçalho"}
+      side="bottom"
+    >
+      <button
+        type="button"
+        onClick={() => setHeaderCollapsed((v) => !v)}
+        aria-label={headerCollapsed ? "Mostrar cabeçalho" : "Ocultar cabeçalho"}
+        aria-expanded={!headerCollapsed}
+        className={cn(
+          "absolute left-1/2 top-0 z-20 flex h-3.5 w-14 -translate-x-1/2 items-center justify-center rounded-b-[var(--radius-md)] border border-t-0 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-sm transition-all hover:h-5 hover:w-20 hover:bg-[var(--glass-bg)] hover:text-[var(--brand-primary)] focus-visible:h-5 focus-visible:w-20 focus-visible:opacity-100 focus-visible:outline-none",
+          headerCollapsed ? "opacity-40" : "opacity-25",
+        )}
+      >
+        {headerCollapsed ? (
+          <IconChevronDown size={14} stroke={2.4} />
+        ) : (
+          <IconChevronUp size={14} stroke={2.4} />
+        )}
+      </button>
+    </TooltipGlass>
   );
 
   // Layout COM cabeçalho de página (estilo "Caixa de entrada" da
@@ -1551,9 +1553,19 @@ export default function InboxV2ClientPage({
     // ── Mobile: layout de painel único (lista → chat/negócio) ──────
     if (!isDesktop) {
       return (
-        <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
+        <div
+          className={cn(
+            "v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] overflow-hidden",
+            headerCollapsed ? "gap-2 p-2 pt-1" : "gap-3 p-3",
+          )}
+        >
           {navRailNode}
-          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
+          <div
+            className={cn(
+              "relative flex min-h-0 min-w-0 flex-col overflow-hidden",
+              headerCollapsed ? "gap-0" : "gap-3",
+            )}
+          >
             {renderCollapsiblePageHeader(
               <PageHeader
                 icon={pageHeader.icon}
@@ -1562,6 +1574,7 @@ export default function InboxV2ClientPage({
                 actions={null}
               />,
             )}
+            {headerToggleNode}
             {!activeId ? (
               <div className="min-h-0 flex-1 overflow-hidden">
                 {conversationColumnNode}
@@ -1622,11 +1635,19 @@ export default function InboxV2ClientPage({
     // ── Desktop: layout original de 3 colunas ─────────────────────
     return (
       <div
-        className="v2-screen grid gap-4 p-4"
+        className={cn(
+          "v2-screen grid",
+          headerCollapsed ? "gap-2 p-2 pt-1" : "gap-4 p-4",
+        )}
         style={{ gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)" }}
       >
         {navRailNode}
-        <div className="flex min-w-0 flex-col gap-4 overflow-hidden">
+        <div
+          className={cn(
+            "relative flex min-w-0 flex-col overflow-hidden",
+            headerCollapsed ? "gap-0" : "gap-4",
+          )}
+        >
           {renderCollapsiblePageHeader(
             <PageHeader
               icon={pageHeader.icon}
@@ -1635,6 +1656,7 @@ export default function InboxV2ClientPage({
               actions={null}
             />,
           )}
+          {headerToggleNode}
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
             style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}` }}

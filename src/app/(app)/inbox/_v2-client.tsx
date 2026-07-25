@@ -1528,7 +1528,10 @@ export default function InboxV2ClientPage({
     <TooltipGlass label="Ocultar cabeçalho" side="bottom">
       <button
         type="button"
-        onClick={() => setHeaderCollapsed(true)}
+        onClick={(e) => {
+          e.currentTarget.blur();
+          setHeaderCollapsed(true);
+        }}
         aria-label="Ocultar cabeçalho"
         className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
       >
@@ -1539,15 +1542,16 @@ export default function InboxV2ClientPage({
 
   // Botão "mostrar cabeçalho" — pill circular no padrão da NavRailV2
   // (border-brand + bg branco + shadow + hover fills). Fica no CANTO
-  // SUPERIOR DIREITO da coluna de conteúdo (espelho do pill da NavRail,
-  // que fica à esquerda), z-40 para ficar à frente do aside.
+  // SUPERIOR DIREITO do outer grid (fora do container com overflow-hidden,
+  // senão é cortado). Alinhado verticalmente com o pill da NavRail
+  // (`top-6` = mesmo offset dela).
   const expandHeaderBtn = headerCollapsed ? (
     <TooltipGlass label="Mostrar cabeçalho" side="left">
       <button
         type="button"
         onClick={() => setHeaderCollapsed(false)}
         aria-label="Mostrar cabeçalho"
-        className="absolute -right-3 top-3 z-40 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.25)] transition-all hover:scale-110 hover:bg-[var(--brand-primary)] hover:text-white"
+        className="absolute right-4 top-6 z-40 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.25)] transition-all hover:scale-110 hover:bg-[var(--brand-primary)] hover:text-white"
       >
         <IconChevronsDown size={14} stroke={2.5} />
       </button>
@@ -1561,7 +1565,7 @@ export default function InboxV2ClientPage({
     // ── Mobile: layout de painel único (lista → chat/negócio) ──────
     if (!isDesktop) {
       return (
-        <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
+        <div className="v2-screen relative grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
           {navRailNode}
           <div
             className={cn(
@@ -1577,7 +1581,6 @@ export default function InboxV2ClientPage({
                 actions={collapseHeaderBtn}
               />,
             )}
-            {expandHeaderBtn}
             {!activeId ? (
               <div className="min-h-0 flex-1 overflow-hidden">
                 {conversationColumnNode}
@@ -1629,6 +1632,7 @@ export default function InboxV2ClientPage({
               </div>
             )}
           </div>
+          {expandHeaderBtn}
           {templateModalNode}
           {extraDialogsNode}
         </div>
@@ -1638,7 +1642,7 @@ export default function InboxV2ClientPage({
     // ── Desktop: layout original de 3 colunas ─────────────────────
     return (
       <div
-        className="v2-screen grid gap-4 p-4"
+        className="v2-screen relative grid gap-4 p-4"
         style={{ gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)" }}
       >
         {navRailNode}
@@ -1656,7 +1660,6 @@ export default function InboxV2ClientPage({
               actions={collapseHeaderBtn}
             />,
           )}
-          {expandHeaderBtn}
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
             style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}` }}
@@ -1677,6 +1680,7 @@ export default function InboxV2ClientPage({
             </div>
           </div>
         </div>
+        {expandHeaderBtn}
         {templateModalNode}
         {extraDialogsNode}
       </div>

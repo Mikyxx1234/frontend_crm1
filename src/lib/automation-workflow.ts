@@ -552,7 +552,8 @@ export type ApiAutomationStep = {
   id: string;
   type: string;
   config: unknown;
-  position: number;
+  /** APIs antigas/exportações podem omitir; a conversão usa a ordem do array. */
+  position?: number;
 };
 
 function normalizeLegacyStepConfig(

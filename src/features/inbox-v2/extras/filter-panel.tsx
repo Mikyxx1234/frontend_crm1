@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { TagChip } from "@/components/crm/tag-chip";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import { ModalPortalContext } from "@/components/ui/modal-portal-context";
 import {
   FieldCard,
@@ -520,14 +521,11 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 searchText: name,
                 label: (
                   <span className="inline-flex items-center gap-2">
-                    <span
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-                      style={{
-                        background: `hsl(${(name.charCodeAt(0) * 47) % 360} 55% 50%)`,
-                      }}
-                    >
-                      {name[0]?.toUpperCase()}
-                    </span>
+                    <UserAvatar
+                      name={name}
+                      imageUrl={u.avatarUrl ?? null}
+                      size={24}
+                    />
                     {name}
                   </span>
                 ),

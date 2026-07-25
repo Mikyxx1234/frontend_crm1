@@ -9,12 +9,13 @@ import { Suspense } from "react";
 
 import KanbanV2ClientPage from "./_v2-client";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
+import { PageLoading } from "@/components/crm/page-loading";
 
 export const dynamic = "force-dynamic";
 
 export default function V2PipelinePage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageLoading />}>
       <KanbanV2ClientPage navRail={<NavRailSpacer />} listHref="/pipeline/list" />
     </Suspense>
   );

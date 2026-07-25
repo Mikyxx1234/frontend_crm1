@@ -44,7 +44,7 @@ export default function AppLayout({
             (que as páginas reservam via `--nav-rail-w` + <NavRailSpacer/>),
             mantendo o mesmo recuo (p-3/p-4) das shells. */}
         <div
-          className="fixed left-3 top-3 bottom-3 z-40 max-md:hidden sm:left-4 sm:top-4 sm:bottom-4"
+          className="v2-nav-rail-fixed fixed left-3 top-3 z-40 max-md:hidden sm:left-4 sm:top-4"
           style={{ width: "var(--nav-rail-w, 72px)" }}
         >
           <NavRailV2 />

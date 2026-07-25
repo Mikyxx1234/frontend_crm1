@@ -11,6 +11,7 @@ import { ChatAvatar } from "@/components/inbox/chat-avatar";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { AudioRecorder } from "@/components/inbox/audio-recorder";
+import { AudioWaveform } from "@/components/inbox/audio-waveform";
 import { EmojiPicker } from "@/components/inbox/emoji-picker";
 import { TemplatePicker } from "@/components/inbox/template-picker";
 import {
@@ -4913,25 +4914,11 @@ function AudioMessage({
     setRateIndex((i) => (i + 1) % PLAYBACK_RATES.length);
   }, []);
 
-  const progress =
-    duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
   const currentLabel = formatAudioTime(currentTime);
   // `--:--` enquanto a duração está sendo medida (truque do
   // MAX_SAFE_INTEGER pode demorar 1-2s em arquivos OGG sem header).
   // Mostrar `0:00` aqui dava a impressão errada de "áudio vazio".
   const durationLabel = duration > 0 ? formatAudioTime(duration) : "--:--";
-
-  const onSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const a = audioRef.current;
-    if (!a || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = Math.min(
-      1,
-      Math.max(0, (e.clientX - rect.left) / rect.width),
-    );
-    a.currentTime = ratio * duration;
-    setCurrentTime(a.currentTime);
-  };
 
   // Nome amigável para download MP3 (timestamp da mensagem quando disponível).
   const downloadName = (() => {
@@ -5037,7 +5024,7 @@ function AudioMessage({
   }, [onRegisterTranscribe, transcribe]);
 
   const playerSurface = out
-    ? "bg-[color:var(--chat-bubble-sent-text)]/12"
+    ? "bg-current/8"
     : "bg-[var(--color-bg-subtle)]";
 
   return (
@@ -5048,10 +5035,10 @@ function AudioMessage({
         </span>
       ) : null}
 
-      <div className="flex min-w-[220px] max-w-[320px] flex-col gap-1">
+      <div className="flex min-w-[250px] max-w-[350px] flex-col gap-1.5">
         <div
           className={cn(
-            "font-display flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5",
+            "font-display flex items-center gap-3 rounded-[var(--radius-md)] px-2.5 py-2",
             playerSurface,
           )}
         >
@@ -5060,7 +5047,12 @@ function AudioMessage({
             onClick={togglePlay}
             disabled={!ready}
             aria-label={isPlaying ? "Pausar" : "Reproduzir"}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all active:scale-95 disabled:opacity-60"
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm transition-all active:scale-95 disabled:opacity-60",
+              out
+                ? "bg-current/15 hover:bg-current/20"
+                : "bg-primary text-primary-foreground hover:bg-primary-dark",
+            )}
           >
             {isPlaying ? (
               <Pause className="size-4" fill="currentColor" />
@@ -5069,7 +5061,7 @@ function AudioMessage({
             )}
           </button>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 flex-1 flex-col">
             {isUploading ? (
               <span
                 className={cn(
@@ -5082,80 +5074,71 @@ function AudioMessage({
                 Enviando…
               </span>
             ) : null}
+            <AudioWaveform
+              currentTime={currentTime}
+              duration={duration}
+              outgoing={out}
+              disabled={!ready || duration <= 0}
+              onSeek={(nextTime) => {
+                const audio = audioRef.current;
+                if (!audio) return;
+                audio.currentTime = nextTime;
+                setCurrentTime(nextTime);
+              }}
+            />
             <div
-              onClick={onSeek}
-              role="slider"
-              aria-label="Posição do áudio"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(progress)}
-              className="relative h-[3px] w-full cursor-pointer rounded-full bg-subtle"
-            >
-              <div
-                className="h-full rounded-full bg-primary transition-[width] duration-150"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <span
               className={cn(
-                "text-[10px] tabular-nums",
+                "-mt-0.5 flex items-center justify-between text-[10px] tabular-nums",
                 out
                   ? "text-[color:var(--chat-bubble-sent-time)]"
                   : "text-ink-muted",
               )}
             >
-              {currentLabel}
-              <span
-                className={
-                  out
-                    ? "text-[color:var(--chat-bubble-sent-time)]/70"
-                    : "text-[var(--color-ink-muted)]"
-                }
-              >
-                /
-              </span>
-              {durationLabel}
-            </span>
+              <span>{currentLabel}</span>
+              <span>{durationLabel}</span>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={cycleRate}
-            disabled={isUploading}
-            className={cn(
-              "shrink-0 text-[10px] font-bold tabular-nums disabled:opacity-50",
-              out
-                ? "text-[color:var(--chat-bubble-sent-time)] hover:text-[color:var(--chat-bubble-sent-text)]"
-                : "text-[var(--color-ink-muted)] hover:text-foreground",
-            )}
-            aria-label={`Velocidade ${formatRate(rate)}`}
-          >
-            {formatRate(rate)}
-          </button>
-
-          {!isUploading ? (
+          <div className="flex shrink-0 flex-col items-center justify-between self-stretch py-1">
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                downloadMp3();
-              }}
-              disabled={downloading}
+              onClick={cycleRate}
+              disabled={isUploading}
               className={cn(
-                "inline-flex size-7 shrink-0 items-center justify-center rounded disabled:cursor-not-allowed disabled:opacity-60",
+                "rounded-full px-2 py-1 text-[10px] font-bold tabular-nums transition-colors disabled:opacity-50",
                 out
-                  ? "text-[color:var(--chat-bubble-sent-time)] hover:text-[color:var(--chat-bubble-sent-text)]"
-                  : "text-[var(--color-ink-muted)] hover:text-foreground",
+                  ? "bg-current/10 hover:bg-current/15"
+                  : "bg-primary/10 text-primary hover:bg-primary/15",
               )}
-              aria-label="Baixar MP3"
+              aria-label={`Velocidade ${formatRate(rate)}`}
             >
-              {downloading ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Download className="size-3.5" />
-              )}
+              {formatRate(rate)}
             </button>
-          ) : null}
+
+            {!isUploading ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadMp3();
+                }}
+                disabled={downloading}
+                className={cn(
+                  "inline-flex size-7 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                  out
+                    ? "text-[color:var(--chat-bubble-sent-time)] hover:bg-current/10"
+                    : "text-[var(--color-ink-muted)] hover:bg-primary/10 hover:text-primary",
+                )}
+                aria-label="Baixar MP3"
+              >
+                {downloading ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Download className="size-3.5" />
+                )}
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {time || showDeliveryCheck ? (

@@ -267,6 +267,37 @@ export function useDealTags() {
   });
 }
 
+/**
+ * Patcha tags de um deal em TODOS os boards em cache que começam com
+ * `["pipeline-board", ...]` — cobre variações de sort/status/pipeline
+ * sem depender de matching exato de chave. Usado por add/remove tag
+ * pra ganhar update otimista instantâneo.
+ */
+function patchDealTagsInBoards(
+  qc: ReturnType<typeof useQueryClient>,
+  dealId: string,
+  patch: (
+    tags: { id: string; name: string; color: string }[],
+  ) => { id: string; name: string; color: string }[],
+) {
+  const boards = qc.getQueriesData<BoardStageDto[]>({
+    queryKey: ["pipeline-board"],
+  });
+  for (const [key, data] of boards) {
+    if (!Array.isArray(data)) continue;
+    let touched = false;
+    const next = data.map((stage) => {
+      const nextDeals = stage.deals.map((d) => {
+        if (d.id !== dealId) return d;
+        touched = true;
+        return { ...d, tags: patch(d.tags ?? []) };
+      });
+      return { ...stage, deals: nextDeals };
+    });
+    if (touched) qc.setQueryData(key, next);
+  }
+}
+
 export function useAddDealTag(pipelineId: string | null, status: StatusFilter = "OPEN") {
   const qc = useQueryClient();
   const boardK = boardKey(pipelineId, status);
@@ -277,12 +308,41 @@ export function useAddDealTag(pipelineId: string | null, status: StatusFilter = 
     { dealId: string; tagId?: string; tagName?: string; color?: string }
   >({
     mutationFn: ({ dealId, ...payload }) => addDealTag(dealId, payload),
+    // Update otimista: se `tagId` foi passado (tag existente), buscamos
+    // nome/cor do catálogo em cache e injetamos no card imediatamente.
+    // Para `tagName` (criação), pulamos o otimista — o refetch cuida.
+    onMutate: (vars) => {
+      if (!vars.tagId) return;
+      const catalog =
+        qc.getQueryData<DealTag[]>(["deal-tags-v2"]) ??
+        qc.getQueryData<DealTag[]>(["tags"]) ??
+        [];
+      const meta = catalog.find((t) => t.id === vars.tagId);
+      if (!meta) return;
+      patchDealTagsInBoards(qc, vars.dealId, (tags) =>
+        tags.some((t) => t.id === vars.tagId!)
+          ? tags
+          : [
+              ...tags,
+              {
+                id: vars.tagId!,
+                name: meta.name,
+                color: (meta.color ?? "#6366f1") as string,
+              },
+            ],
+      );
+    },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["deal-tags-v2"] });
       qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
       qc.invalidateQueries({ queryKey: boardK });
     },
-    onError: (err) => toast.error(err.message || "Falha ao adicionar tag"),
+    onError: (err, vars) => {
+      // Rollback: refaz o board para desfazer o otimista.
+      qc.invalidateQueries({ queryKey: boardK });
+      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
+      toast.error(err.message || "Falha ao adicionar tag");
+    },
   });
 }
 
@@ -292,11 +352,20 @@ export function useRemoveDealTag(pipelineId: string | null, status: StatusFilter
 
   return useMutation<{ ok: true }, Error, { dealId: string; tagId: string }>({
     mutationFn: ({ dealId, tagId }) => removeDealTag(dealId, tagId),
+    onMutate: (vars) => {
+      patchDealTagsInBoards(qc, vars.dealId, (tags) =>
+        tags.filter((t) => t.id !== vars.tagId),
+      );
+    },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
       qc.invalidateQueries({ queryKey: boardK });
     },
-    onError: (err) => toast.error(err.message || "Falha ao remover tag"),
+    onError: (err, vars) => {
+      qc.invalidateQueries({ queryKey: boardK });
+      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
+      toast.error(err.message || "Falha ao remover tag");
+    },
   });
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { IconCheck } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 
@@ -52,14 +53,25 @@ export function TagChip({
       )}
       style={
         selected
-          ? { background: chipColor, borderColor: chipColor }
+          ? {
+              background: chipColor,
+              borderColor: chipColor,
+              boxShadow: `0 0 0 2px color-mix(in srgb, ${chipColor} 25%, transparent)`,
+            }
           : {
-              background: `color-mix(in srgb, ${chipColor} 18%, white)`,
-              borderColor: `color-mix(in srgb, ${chipColor} 48%, #d1d8e6)`,
+              background: `color-mix(in srgb, ${chipColor} 10%, white)`,
+              borderColor: `color-mix(in srgb, ${chipColor} 35%, #d1d8e6)`,
               color: `color-mix(in srgb, ${chipColor} 58%, #1a2338)`,
             }
       }
     >
+      {selected && (
+        <IconCheck
+          size={size === "md" ? 12 : 10}
+          stroke={3}
+          className="shrink-0"
+        />
+      )}
       <span className="truncate">{name}</span>
       {count != null && (
         <small

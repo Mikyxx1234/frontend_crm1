@@ -2,8 +2,8 @@ import { forwardRef } from "react";
 import type { IconProps } from "@tabler/icons-react";
 
 /**
- * Ícone custom de Distribuição, redesenhado a partir do asset de referência.
- * Mantém a API dos ícones Tabler e usa currentColor para respeitar o tema.
+ * Rede radial de distribuição.
+ * Mantém a API Tabler e herda cor/estados do CRM via currentColor.
  */
 export const DistributionIcon = forwardRef<SVGSVGElement, IconProps>(
   function DistributionIcon(
@@ -27,17 +27,28 @@ export const DistributionIcon = forwardRef<SVGSVGElement, IconProps>(
         {...props}
       >
         {title ? <title>{title}</title> : null}
-        <g opacity="0.68">
-          <path d="M4 5 12 3.5l4.5 5L11.5 13 4.5 11.5 4 5Z" />
-          <path d="m4 5 7.5 8M12 3.5l-7.5 8" />
+        <g opacity="0.78">
+          <path d="M12 8.5V5.25" />
+          <path d="m9.45 9.55-2.8-2.8" />
+          <path d="m14.55 9.55 2.8-2.8" />
+          <path d="M8.5 12H5.25" />
+          <path d="M12 15.5v3.25" />
+          <path d="m14.75 14.2 2.65 2.2" />
         </g>
-        <path d="m11.5 13 8.5 8m0 0v-5m0 5h-5" />
+        <circle cx="12" cy="12" r="3.5" fill={color} fillOpacity="0.14" />
+        <circle cx="12" cy="3.5" r="1.75" />
+        <circle cx="5.4" cy="5.5" r="1.75" />
+        <circle cx="18.6" cy="5.5" r="1.75" />
+        <circle cx="3.5" cy="12" r="1.75" />
+        <circle cx="12" cy="20.5" r="1.75" />
+        <circle cx="19" cy="18" r="1.75" />
         <g fill={color} stroke="none">
-          <circle cx="4" cy="5" r="1.1" />
-          <circle cx="12" cy="3.5" r="1.1" />
-          <circle cx="16.5" cy="8.5" r="1.1" />
-          <circle cx="11.5" cy="13" r="1.1" />
-          <circle cx="4.5" cy="11.5" r="1.1" />
+          <circle cx="12" cy="3.5" r="0.48" />
+          <circle cx="5.4" cy="5.5" r="0.48" />
+          <circle cx="18.6" cy="5.5" r="0.48" />
+          <circle cx="3.5" cy="12" r="0.48" />
+          <circle cx="12" cy="20.5" r="0.48" />
+          <circle cx="19" cy="18" r="0.48" />
         </g>
       </svg>
     );

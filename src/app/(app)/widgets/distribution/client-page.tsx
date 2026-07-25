@@ -2,13 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
   IconAdjustmentsHorizontal,
   IconAlertTriangle,
   IconCheck,
+  IconChevronDown,
   IconCircleCheck,
   IconClockExclamation,
+  IconExternalLink,
   IconLoader2,
   IconPencil,
   IconPhone,
@@ -1251,25 +1254,152 @@ function fmtDateTime(iso: string): string {
   });
 }
 
+type LogResultFilter = "all" | "success" | "failure";
+type LogPeriodFilter = "all" | "today" | "7d";
+
 function DistributionLogsList({ enabled }: { enabled: boolean }) {
   const q = useDistributionLogs(enabled);
-  const items = q.data?.pages.flatMap((p) => p.items) ?? [];
+  const items = useMemo(
+    () => q.data?.pages.flatMap((p) => p.items) ?? [],
+    [q.data],
+  );
   const loading = q.isLoading;
+  const [logSearch, setLogSearch] = useState("");
+  const [result, setResult] = useState<LogResultFilter>("all");
+  const [period, setPeriod] = useState<LogPeriodFilter>("all");
+  const [origin, setOrigin] = useState("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const origins = useMemo(
+    () =>
+      Array.from(
+        new Set(items.map((log) => log.triggerSource).filter(Boolean)),
+      ).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [items],
+  );
+
+  const filteredItems = useMemo(() => {
+    const query = logSearch.trim().toLocaleLowerCase("pt-BR");
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    ).getTime();
+    const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+
+    return items.filter((log) => {
+      const searchable = [
+        log.contactPhone,
+        log.contactName,
+        log.selectedUserName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("pt-BR");
+      if (query && !searchable.includes(query)) return false;
+      if (result === "success" && !log.success) return false;
+      if (result === "failure" && log.success) return false;
+      if (origin !== "all" && log.triggerSource !== origin) return false;
+
+      const createdAt = new Date(log.createdAt).getTime();
+      if (period === "today" && createdAt < startOfToday) return false;
+      if (period === "7d" && createdAt < sevenDaysAgo) return false;
+      return true;
+    });
+  }, [items, logSearch, origin, period, result]);
+
+  const hasActiveFilters =
+    Boolean(logSearch) ||
+    result !== "all" ||
+    period !== "all" ||
+    origin !== "all";
+
+  const clearFilters = () => {
+    setLogSearch("");
+    setResult("all");
+    setPeriod("all");
+    setOrigin("all");
+  };
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <div className="flex shrink-0 items-start gap-3 border-b border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-primary)_15%,transparent)] text-[var(--color-primary)]">
-          <IconRoute size={20} />
+      <div className="flex shrink-0 flex-col gap-3 border-b border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-primary)_15%,transparent)] text-[var(--color-primary)]">
+            <IconRoute size={20} />
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">
+              Logs de distribuição
+            </h2>
+            <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
+              Histórico operacional com resultado, responsável, origem e horário.
+            </p>
+          </div>
+          {!loading && items.length > 0 && (
+            <span className="ml-auto shrink-0 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-1 font-body text-[10.5px] font-semibold tabular-nums text-[var(--text-muted)]">
+              {filteredItems.length} de {items.length}
+            </span>
+          )}
         </div>
-        <div className="min-w-0">
-          <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">
-            Logs de distribuição
-          </h2>
-          <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
-            Histórico de todas as distribuições — para quem foi, resultado, dia e horário.
-          </p>
-        </div>
+
+        {!loading && items.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-[minmax(220px,1fr)_160px_150px_170px_auto]">
+            <label className="relative col-span-2 lg:col-span-1">
+              <span className="sr-only">Buscar nos logs</span>
+              <IconSearch
+                size={14}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+              />
+              <input
+                type="search"
+                value={logSearch}
+                onChange={(event) => setLogSearch(event.target.value)}
+                placeholder="Telefone, contato ou responsável"
+                className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] pl-9 pr-3 font-body text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+              />
+            </label>
+            <LogFilterSelect
+              label="Resultado"
+              value={result}
+              onChange={(value) => setResult(value as LogResultFilter)}
+              options={[
+                { value: "all", label: "Todos os resultados" },
+                { value: "success", label: "Sucesso" },
+                { value: "failure", label: "Falha" },
+              ]}
+            />
+            <LogFilterSelect
+              label="Período"
+              value={period}
+              onChange={(value) => setPeriod(value as LogPeriodFilter)}
+              options={[
+                { value: "all", label: "Todo o período" },
+                { value: "today", label: "Hoje" },
+                { value: "7d", label: "Últimos 7 dias" },
+              ]}
+            />
+            <LogFilterSelect
+              label="Origem"
+              value={origin}
+              onChange={setOrigin}
+              options={[
+                { value: "all", label: "Todas as origens" },
+                ...origins.map((value) => ({ value, label: value })),
+              ]}
+            />
+            <button
+              type="button"
+              onClick={clearFilters}
+              disabled={!hasActiveFilters}
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-3 font-display text-[11.5px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)] disabled:pointer-events-none disabled:opacity-35"
+            >
+              <IconRotateClockwise size={13} />
+              Limpar
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -1295,46 +1425,59 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
             Assim que a Distribuição Inteligente rodar, o histórico aparece aqui.
           </p>
         </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+          <IconSearch size={24} className="text-[var(--text-muted)]" />
+          <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
+            Nenhum log encontrado
+          </p>
+          <p className="font-body text-[12px] text-[var(--text-muted)]">
+            Ajuste os filtros ou limpe a busca para ver outros registros.
+          </p>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="mt-1 font-display text-[12px] font-bold text-[var(--brand-primary)] hover:underline"
+          >
+            Limpar filtros
+          </button>
+        </div>
       ) : (
-        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-          <ul className="flex flex-col divide-y divide-[var(--glass-border)]">
-            {items.map((log) => (
-              <li
-                key={log.id}
-                className="flex items-center gap-2.5 px-4 py-2 transition-colors hover:bg-[var(--glass-bg-overlay)]"
-              >
-                <span
-                  className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-full",
-                    log.success
-                      ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
-                      : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
-                  )}
-                >
-                  {log.success ? (
-                    <IconUserCheck size={14} />
-                  ) : (
-                    <IconClockExclamation size={14} />
-                  )}
-                </span>
-
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate font-mono text-[12.5px] font-semibold text-[var(--text-primary)]">
-                    {log.contactPhone || log.contactName || "Atendimento"}
-                  </span>
-                  <span className="truncate font-body text-[11px] text-[var(--text-muted)]">
-                    {log.success
-                      ? `→ ${log.selectedUserName ?? "responsável"}`
-                      : DIST_REASON_LABELS[log.reason] ?? log.reason}
-                  </span>
-                </div>
-
-                <span className="ml-auto shrink-0 whitespace-nowrap font-body text-[11px] tabular-nums text-[var(--text-muted)]">
-                  {fmtDateTime(log.createdAt)}
-                </span>
-              </li>
-            ))}
-          </ul>
+        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <table className="w-full min-w-[820px] border-collapse">
+            <thead className="sticky top-0 z-10 bg-[var(--glass-bg-modal,#fff)] shadow-[0_1px_0_var(--glass-border)]">
+              <tr>
+                {["Contato", "Resultado", "Responsável / motivo", "Origem", "Quando"].map(
+                  (label) => (
+                    <th
+                      key={label}
+                      scope="col"
+                      className="px-4 py-2.5 text-left font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]"
+                    >
+                      {label}
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.map((log) => {
+                const expanded = expandedId === log.id;
+                const resultLabel =
+                  DIST_REASON_LABELS[log.reason] ??
+                  (log.success ? "Distribuído" : log.reason);
+                return (
+                  <LogTableRows
+                    key={log.id}
+                    log={log}
+                    expanded={expanded}
+                    resultLabel={resultLabel}
+                    onToggle={() => setExpandedId(expanded ? null : log.id)}
+                  />
+                );
+              })}
+            </tbody>
+          </table>
 
           {q.hasNextPage && (
             <div className="flex shrink-0 justify-center border-t border-[var(--glass-border)] p-3">
@@ -1356,6 +1499,193 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
         </div>
       )}
     </section>
+  );
+}
+
+function LogFilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="relative">
+      <span className="sr-only">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 pr-8 font-body text-[12px] text-[var(--text-secondary)] outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <IconChevronDown
+        size={13}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+      />
+    </label>
+  );
+}
+
+function LogTableRows({
+  log,
+  expanded,
+  resultLabel,
+  onToggle,
+}: {
+  log: {
+    id: string;
+    createdAt: string;
+    success: boolean;
+    reason: string;
+    triggerSource: string;
+    selectedUserName: string | null;
+    contactName: string | null;
+    contactPhone: string | null;
+    conversationId: string | null;
+  };
+  expanded: boolean;
+  resultLabel: string;
+  onToggle: () => void;
+}) {
+  return (
+    <>
+      <tr
+        className={cn(
+          "cursor-pointer border-b border-[var(--glass-border)] transition-colors hover:bg-[var(--glass-bg-overlay)]",
+          expanded && "bg-[var(--glass-bg-overlay)]",
+        )}
+        onClick={onToggle}
+        aria-expanded={expanded}
+      >
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span
+              className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-full",
+                log.success
+                  ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
+                  : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
+              )}
+            >
+              {log.success ? (
+                <IconUserCheck size={14} />
+              ) : (
+                <IconClockExclamation size={14} />
+              )}
+            </span>
+            <div className="min-w-0">
+              <p className="max-w-[230px] truncate font-mono text-[12px] font-semibold text-[var(--text-primary)]">
+                {log.contactPhone || log.contactName || "Atendimento"}
+              </p>
+              {log.contactPhone && log.contactName && (
+                <p className="max-w-[230px] truncate font-body text-[10.5px] text-[var(--text-muted)]">
+                  {log.contactName}
+                </p>
+              )}
+            </div>
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-display text-[10.5px] font-bold",
+              log.success
+                ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
+                : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
+            )}
+          >
+            <span className="size-1.5 rounded-full bg-current" />
+            {resultLabel}
+          </span>
+        </td>
+        <td className="max-w-[260px] px-4 py-3 font-body text-[11.5px] text-[var(--text-secondary)]">
+          <span className="block truncate">
+            {log.success
+              ? log.selectedUserName ?? "Responsável"
+              : resultLabel}
+          </span>
+        </td>
+        <td className="max-w-[180px] px-4 py-3">
+          <span className="block truncate font-body text-[11px] text-[var(--text-muted)]">
+            {log.triggerSource || "—"}
+          </span>
+        </td>
+        <td className="whitespace-nowrap px-4 py-3">
+          <span className="inline-flex items-center gap-2 font-body text-[11px] tabular-nums text-[var(--text-muted)]">
+            {fmtDateTime(log.createdAt)}
+            <IconChevronDown
+              size={13}
+              className={cn(
+                "transition-transform duration-200",
+                expanded && "rotate-180",
+              )}
+            />
+          </span>
+        </td>
+      </tr>
+      {expanded && (
+        <tr className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
+          <td colSpan={5} className="px-4 py-3">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1.2fr_auto]">
+              <LogDetail label="Motivo técnico" value={log.reason} mono />
+              <LogDetail
+                label="Origem / trigger"
+                value={log.triggerSource || "—"}
+              />
+              <LogDetail label="ID do log" value={log.id} mono />
+              {log.conversationId ? (
+                <Link
+                  href={`/inbox?c=${encodeURIComponent(log.conversationId)}`}
+                  onClick={(event) => event.stopPropagation()}
+                  className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 font-display text-[11.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+                >
+                  Abrir conversa
+                  <IconExternalLink size={13} />
+                </Link>
+              ) : (
+                <LogDetail label="Conversa" value="Não vinculada" />
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function LogDetail({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2">
+      <p className="font-display text-[9.5px] font-bold uppercase tracking-[0.05em] text-[var(--text-muted)]">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-1 truncate text-[11.5px] font-semibold text-[var(--text-primary)]",
+          mono ? "font-mono" : "font-body",
+        )}
+        title={value}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
 
@@ -1755,12 +2085,12 @@ function NotEnabledState() {
         A Distribuição Inteligente é um módulo instalável. Ative-o na Central de
         Widgets para liberar esta área.
       </p>
-      <a
+      <Link
         href="/widgets"
         className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white transition-all hover:-translate-y-px"
       >
         Ir para a Central de Widgets
-      </a>
+      </Link>
     </div>
   );
 }

@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import { DistributionIcon } from "@/components/icons/distribution-icon";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
@@ -506,14 +507,6 @@ function DistributionMiniDash({
 const RESP_GRID =
   "grid-cols-[minmax(300px,3fr)_minmax(155px,1.25fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(190px,1.55fr)_minmax(82px,0.75fr)]";
 
-/* Paleta de avatares: rotaciona pelo índice do responsável */
-const AVATAR_PALETTES = [
-  "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
-  "bg-[var(--color-success-bg)] text-[var(--color-success-dark,#0f7a5a)]",
-  "bg-[var(--color-warn-bg,rgba(217,119,6,0.10))] text-[var(--color-warn,#d97706)]",
-  "bg-[color-mix(in_srgb,var(--brand-secondary)_16%,transparent)] text-[var(--brand-secondary)]",
-] as const;
-
 function ResponsiblesCardList({
   responsibles,
   total,
@@ -577,11 +570,10 @@ function ResponsiblesCardList({
           <ListColumnLabel>Elegibilidade</ListColumnLabel>
           <ListColumnLabel align="right">Ações</ListColumnLabel>
         </div>
-        {responsibles.map((r, idx) => (
+        {responsibles.map((r) => (
           <ResponsibleCard
             key={r.userId}
             r={r}
-            idx={idx}
             isCurrentUser={r.userId === currentUserId}
             canManage={canManage}
             onEdit={onEdit}
@@ -594,27 +586,17 @@ function ResponsiblesCardList({
 
 function ResponsibleCard({
   r,
-  idx,
   isCurrentUser,
   canManage,
   onEdit,
 }: {
   r: DistributionResponsibleDto;
-  idx: number;
   isCurrentUser: boolean;
   canManage: boolean;
   onEdit: (r: DistributionResponsibleDto) => void;
 }) {
   const statusMut = useSetAgentStatus();
-  const initials = (r.name ?? r.email ?? "?")
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
   const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
-  const avatarClass = AVATAR_PALETTES[idx % AVATAR_PALETTES.length];
 
   const toggleOwnStatus = () => {
     statusMut.mutate(
@@ -632,11 +614,20 @@ function ResponsibleCard({
     >
       {/* Responsável */}
       <div className="flex min-w-0 items-center gap-2.5">
-        <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-extrabold ${avatarClass}`}
-        >
-          {initials}
-        </div>
+        <UserAvatar
+          name={r.name ?? r.email}
+          imageUrl={r.avatarUrl}
+          size={36}
+          status={
+            !r.participates
+              ? "offline"
+              : r.paused || r.status === "AWAY"
+                ? "away"
+                : isOnline
+                  ? "online"
+                  : "offline"
+          }
+        />
         <div className="min-w-0">
           <p className="truncate font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
             {r.name ?? "Sem nome"}

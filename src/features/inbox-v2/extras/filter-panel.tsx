@@ -624,7 +624,7 @@ export function InboxFilterButton({
   );
 
   const negocioContent = (
-    <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 [&>*]:h-full">
+    <div className="grid grid-cols-1 items-stretch gap-3 [&>*]:h-full">
       <FieldCard
         label="Negócio na etapa"
         active={selectedStageIds.length > 0}

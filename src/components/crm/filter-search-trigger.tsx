@@ -1,15 +1,14 @@
 "use client";
 
 /**
- * Trigger canônico de busca + filtro (pill com funil à direita).
+ * Trigger canônico de busca + filtro (pill com ajustes à direita).
  *
  * Extraído do Kanban (`PipelineSearchFilterBar`) para reuso no Inbox e demais
- * barras. Ícone: `IconFilter` (funil contornado) — não usar
- * `IconAdjustmentsHorizontal`/sliders neste botão.
+ * barras. Ícone: `IconAdjustmentsHorizontal` (sliders horizontais).
  */
 
 import * as React from "react";
-import { IconFilter, IconSearch } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal, IconSearch } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
@@ -58,7 +57,7 @@ export function FilterSearchTrigger({
           : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
       )}
     >
-      <IconFilter size={15} stroke={2} />
+      <IconAdjustmentsHorizontal size={15} stroke={2} />
       {activeCount > 0 && (
         <span className="font-display text-[10px] font-bold leading-none tabular-nums">
           {activeCount}

@@ -76,7 +76,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { ImportPanel, downloadFromApi } from "@/features/pipeline-v2/import-export";
 import { apiUrl } from "@/lib/api";
 
@@ -662,7 +662,7 @@ export default function V2ContactsClientPage() {
         />
       </main>
 
-      <ContactFormSheet
+      <ContactFormDialog
         open={createOpen || editing !== null}
         contact={editing}
         availableTags={tagsQuery.data ?? []}
@@ -1190,7 +1190,7 @@ function DuplicatesSheet({ open, onOpenChange }: { open: boolean; onOpenChange: 
   }
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       title="Localizar duplicadas"
@@ -1271,7 +1271,7 @@ function DuplicatesSheet({ open, onOpenChange }: { open: boolean; onOpenChange: 
           </>
         )}
       </div>
-    </FormSheet>
+    </FormDialog>
   );
 }
 
@@ -1335,7 +1335,7 @@ function DuplicateContactRow({
 function ImportSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const qc = useQueryClient();
   return (
-    <FormSheet open={open} onOpenChange={onOpenChange} title="Importar contatos" size="lg">
+    <FormDialog open={open} onOpenChange={onOpenChange} title="Importar contatos" size="lg">
       <ImportPanel
         fixedEntity="contacts"
         onDone={() => {
@@ -1343,7 +1343,7 @@ function ImportSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
           qc.invalidateQueries({ queryKey: ["v2-contact-stats"] });
         }}
       />
-    </FormSheet>
+    </FormDialog>
   );
 }
 
@@ -1704,7 +1704,7 @@ function ConfirmDeleteDialog({ open, count, pending, onCancel, onConfirm }: {
   );
 }
 
-function ContactFormSheet({
+function ContactFormDialog({
   open, contact, availableTags, onOpenChange,
 }: {
   open: boolean;
@@ -1804,10 +1804,11 @@ function ContactFormSheet({
   }
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Editar contato" : "Novo contato"}
+      size="xl"
       busy={pending}
       footer={
         <>
@@ -1877,7 +1878,7 @@ function ContactFormSheet({
           </div>
         </div>
       </form>
-    </FormSheet>
+    </FormDialog>
   );
 }
 

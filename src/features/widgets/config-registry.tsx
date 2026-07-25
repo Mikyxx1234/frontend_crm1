@@ -8,8 +8,8 @@
  * o botão "Configurar" no card.
  *
  * Contrato:
- *  - `Component` é renderizado dentro do corpo rolável do FormSheet, sem
- *    header próprio (o header vem do drawer).
+ *  - `Component` é renderizado dentro do corpo rolável do FormDialog, sem
+ *    header próprio (o header vem do modal).
  *  - `requiredPermission` é a permission key canônica (`resource:action`).
  *    Falta dela (ou de "*") esconde o botão "Configurar" no card.
  */

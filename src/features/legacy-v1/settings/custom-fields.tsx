@@ -34,7 +34,7 @@ import {
   DialogClose,
   DialogContent,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import {
   DragDropContext,
   Draggable,
@@ -508,10 +508,11 @@ function FieldFormDialog({
   ];
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       busy={mutation.isPending}
+      size="lg"
       icon={<span className="text-[var(--brand-primary)]">{TYPE_ICONS[type] ?? <IconLetterT size={16} strokeWidth={2.5} />}</span>}
       title={mode === "create" ? "Novo campo" : "Editar campo"}
       description={mode === "create" ? "Defina o nome, tipo e entidade." : `Editando "${initial?.label}"`}
@@ -646,6 +647,6 @@ function FieldFormDialog({
             )}
           </div>
       </form>
-    </FormSheet>
+    </FormDialog>
   );
 }

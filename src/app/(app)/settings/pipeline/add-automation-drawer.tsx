@@ -8,9 +8,9 @@ import {
   IconPlus,
   IconSearch,
   IconTrash,
-  IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { useAutomations } from "@/features/automations-v2/hooks";
 import type { AutomationListItemDto } from "@/features/automations-v2/api";
 import {
@@ -590,16 +590,6 @@ export function AddAutomationDrawer({
 
   const needsTargetStage = STAGE_TARGET_TRIGGERS.has(trigger);
 
-  // Fecha ao pressionar Escape
-  useEffect(() => {
-    if (!open) return;
-    const fn = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", fn);
-    return () => document.removeEventListener("keydown", fn);
-  }, [open, onClose]);
-
   const canConfirm = !!automationId && (!needsTargetStage || !!targetStageId);
 
   const handleConfirm = () => {
@@ -615,57 +605,41 @@ export function AddAutomationDrawer({
   };
 
   return (
-    <>
-      {/* Overlay — leve, sem blur pesado */}
-      <div
-        className={cn(
-          "fixed inset-0 z-40 bg-[var(--glass-bg-modal)]/20 transition-opacity duration-200",
-          open ? "opacity-100" : "pointer-events-none opacity-0",
-        )}
-        onClick={onClose}
-      />
-
-      {/* Painel lateral */}
-      <div
-        className={cn(
-          "fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-[440px] flex-col border-l border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[-12px_0_40px_rgba(15,23,42,0.10)] transition-transform duration-250",
-          open ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        {/* Header com gradiente sutil */}
-        <div className="relative flex items-start justify-between bg-gradient-to-br from-[var(--brand-primary)]/8 via-white to-white px-6 pb-5 pt-6">
-          {/* Barra lateral colorida */}
-          <span className="absolute left-0 top-0 h-full w-[3px] rounded-r-full bg-[var(--brand-primary)]" />
-
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
-              <IconBolt size={18} className="text-[var(--brand-primary)]" />
-            </div>
-            <div>
-              <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
-                {initialAutomationId ? "Editar automação" : "Adicionar automação"}
-              </h2>
-              <p className="mt-0.5 font-display text-[12px] text-[var(--text-muted)]">
-                Estágio:{" "}
-                <span className="font-semibold text-[var(--brand-primary)]">{stageName}</span>
-              </p>
-            </div>
-          </div>
-
+    <FormDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title={initialAutomationId ? "Editar automação" : "Adicionar automação"}
+      description={
+        <>
+          Estágio: <span className="font-semibold text-[var(--brand-primary)]">{stageName}</span>
+        </>
+      }
+      icon={<IconBolt size={18} className="text-[var(--brand-primary)]" />}
+      size="lg"
+      bodyClassName="flex flex-col gap-5"
+      footer={
+        <>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)]"
+            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] px-5 py-2 font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--glass-border)] hover:bg-[var(--glass-bg-overlay)]"
           >
-            <IconX size={17} />
+            Cancelar
           </button>
-        </div>
-
-        {/* Divider */}
-        <div className="h-px w-full bg-[var(--glass-bg-base)]" />
-
-        {/* Corpo com scroll */}
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
+          <button
+            type="button"
+            disabled={!canConfirm}
+            onClick={handleConfirm}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-5 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.30)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <IconCheck size={14} />
+            Finalizado
+          </button>
+        </>
+      }
+    >
 
           {/* Condições */}
           <ConditionsEditor conditions={conditions} onChange={setConditions} />
@@ -758,28 +732,6 @@ export function AddAutomationDrawer({
               </p>
             </div>
           </label>
-        </div>
-
-        {/* Rodapé fixo */}
-        <div className="flex items-center justify-end gap-2.5 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)]/80 px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] px-5 py-2 font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--glass-border)] hover:bg-[var(--glass-bg-overlay)]"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            disabled={!canConfirm}
-            onClick={handleConfirm}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-5 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.30)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <IconCheck size={14} />
-            Finalizado
-          </button>
-        </div>
-      </div>
-    </>
+    </FormDialog>
   );
 }

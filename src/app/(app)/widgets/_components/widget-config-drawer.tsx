@@ -3,13 +3,13 @@
 /**
  * Drawer de configuração do widget — porta de entrada única a partir do
  * card na Central (`/widgets`). Faz lookup no `WIDGET_CONFIG_REGISTRY` e
- * renderiza o painel de config do widget dentro de um FormSheet.
+ * renderiza o painel de config do widget dentro de um FormDialog.
  *
  * O componente do painel é lazy (dynamic import no registry), então o
  * bundle da Central não cresce com configs pesadas.
  */
 
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { getWidgetConfig } from "@/features/widgets/config-registry";
 
 interface WidgetConfigDrawerProps {
@@ -23,7 +23,7 @@ export function WidgetConfigDrawer({ slug, onClose }: WidgetConfigDrawerProps) {
   const Component = entry?.Component;
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={(next) => {
         if (!next) onClose();
@@ -34,6 +34,6 @@ export function WidgetConfigDrawer({ slug, onClose }: WidgetConfigDrawerProps) {
       size={entry?.size ?? "lg"}
     >
       {Component ? <Component /> : null}
-    </FormSheet>
+    </FormDialog>
   );
 }

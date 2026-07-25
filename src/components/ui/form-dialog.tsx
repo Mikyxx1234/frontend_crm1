@@ -16,7 +16,7 @@ import {
 /**
  * Padrao unificado de modal central para formularios de criacao e edicao.
  *
- * API espelhada do `FormSheet` (drawer lateral) para migracao drop-in:
+ * API compatível com o antigo drawer lateral para migração drop-in:
  * ```
  * <FormDialog
  *   open={open}
@@ -41,14 +41,15 @@ import {
  * do DialogContent.
  */
 
-type FormDialogSize = "sm" | "md" | "lg" | "xl";
+type FormDialogSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
-/** Mapeia tamanhos da API FormSheet → presets do Dialog. */
+/** Mapeia os tamanhos legados para presets do Dialog. */
 const SIZE_TO_DIALOG: Record<FormDialogSize, DialogSize> = {
   sm: "sm",
   md: "md",
   lg: "lg",
   xl: "xl",
+  "2xl": "2xl",
 };
 
 export interface FormDialogProps {

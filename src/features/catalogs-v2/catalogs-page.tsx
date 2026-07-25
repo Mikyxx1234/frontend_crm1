@@ -34,7 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -507,7 +507,7 @@ export function CatalogsManager() {
       )}
 
       {/* WIZARD — criar */}
-      <FormSheet
+      <FormDialog
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         size="lg"
@@ -521,10 +521,10 @@ export function CatalogsManager() {
           }}
           onCancel={() => setWizardOpen(false)}
         />
-      </FormSheet>
+      </FormDialog>
 
       {/* WIZARD — editar */}
-      <FormSheet
+      <FormDialog
         open={!!editing}
         onOpenChange={(o) => !o && setEditing(null)}
         size="lg"
@@ -539,7 +539,7 @@ export function CatalogsManager() {
             onCancel={() => setEditing(null)}
           />
         )}
-      </FormSheet>
+      </FormDialog>
 
       {/* Pós-criação: abre dialog de produto vinculado. */}
       <ProductDialog

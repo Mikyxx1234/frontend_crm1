@@ -8,7 +8,7 @@ import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { SwitchGlass } from "@/components/crm/switch-glass";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { connectEmailAccount, testEmailConnection } from "../api/accounts";
 import type { ConnectEmailInput, EmailEncryption, EmailVisibility } from "../api/types";
 
@@ -81,10 +81,11 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
 
   if (step === "email") {
     return (
-      <FormSheet
+      <FormDialog
         open={open}
         onOpenChange={(o) => { if (!o) resetAndClose(); else onOpenChange(true); }}
         busy={loading}
+        size="lg"
         icon={<IconMail size={20} />}
         title="Conecte seu endereço de e-mail"
         description="Conecte uma conta de e-mail para enviar, receber e vincular mensagens automaticamente aos seus contatos no CRM."
@@ -110,15 +111,16 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
             <p className="text-xs text-destructive mt-1">{errors.email}</p>
           )}
         </div>
-      </FormSheet>
+      </FormDialog>
     );
   }
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={(o) => { if (!o) resetAndClose(); else onOpenChange(true); }}
       busy={loading}
+      size="lg"
       title={form.email}
       description="Mensagens enviadas desse endereço serão vinculadas automaticamente ao contato correspondente no CRM."
       footer={
@@ -259,7 +261,7 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
               </div>
         </div>
       </>
-    </FormSheet>
+    </FormDialog>
   );
 }
 

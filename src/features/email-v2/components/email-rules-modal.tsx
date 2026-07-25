@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
@@ -114,10 +114,11 @@ export function EmailRulesModal({
   }
 
   return (
-    <FormSheet
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       busy={saving}
+      size="lg"
       icon={<IconFilter size={18} stroke={2.2} className="text-[var(--brand-primary)]" />}
       title="Regras de e-mail"
       description="Quando um e-mail recebido corresponder à condição, aplique a ação automaticamente na sincronização."
@@ -259,7 +260,7 @@ export function EmailRulesModal({
             )}
           </div>
       </form>
-    </FormSheet>
+    </FormDialog>
   );
 }
 

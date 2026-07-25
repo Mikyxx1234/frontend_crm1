@@ -15,10 +15,8 @@ import * as React from "react";
 import {
   IconCheck as Check,
   IconChevronDown as ChevronDown,
-  IconFlag,
   IconSearch as Search,
   IconDeviceFloppy as Save,
-  IconSparkles,
   IconTrash as Trash2,
   IconBookmark as Bookmark,
   IconLock as Lock,
@@ -916,10 +914,7 @@ export function DatesPeriodSection({ draft, setDraftField }: SectionProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div>
-        <p className="mb-2 font-display text-[11px] font-semibold text-[var(--text-muted)]">
-          Atalhos rápidos (data de criação)
-        </p>
+      <FieldCard label="Atalhos de criação">
         <div className="flex flex-wrap gap-1.5">
           {CREATED_PRESETS.map((p) => {
             const on = createdPreset === p.key;
@@ -940,26 +935,13 @@ export function DatesPeriodSection({ draft, setDraftField }: SectionProps) {
             );
           })}
         </div>
-      </div>
+      </FieldCard>
 
-      {/* Criação */}
-      <div
-        className={cn(
-          "rounded-[16px] border p-3",
-          createdActive
-            ? "border-[var(--brand-primary)]/35 bg-[var(--color-primary-soft)]"
-            : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
-        )}
+      <FieldCard
+        label="Criação"
+        active={createdActive}
+        onClear={() => setDraftField("createdAt", undefined)}
       >
-        <div className="mb-2.5 flex items-center gap-1.5">
-          <IconSparkles
-            size={14}
-            className={createdActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}
-          />
-          <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-            Criação
-          </span>
-        </div>
         <div className="flex items-center gap-2">
           <DatePicker
             value={draft.createdAt?.from ?? null}
@@ -977,26 +959,13 @@ export function DatesPeriodSection({ draft, setDraftField }: SectionProps) {
             triggerClassName={DATE_TRIGGER_CLASS}
           />
         </div>
-      </div>
+      </FieldCard>
 
-      {/* Fechamento */}
-      <div
-        className={cn(
-          "rounded-[16px] border p-3",
-          closedActive
-            ? "border-[var(--brand-primary)]/35 bg-[var(--color-primary-soft)]"
-            : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
-        )}
+      <FieldCard
+        label="Fechamento"
+        active={closedActive}
+        onClear={() => setDraftField("closedAt", undefined)}
       >
-        <div className="mb-2.5 flex items-center gap-1.5">
-          <IconFlag
-            size={14}
-            className={closedActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}
-          />
-          <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-            Fechamento
-          </span>
-        </div>
         <div className="flex items-center gap-2">
           <DatePicker
             value={draft.closedAt?.from ?? null}
@@ -1014,7 +983,7 @@ export function DatesPeriodSection({ draft, setDraftField }: SectionProps) {
             triggerClassName={DATE_TRIGGER_CLASS}
           />
         </div>
-      </div>
+      </FieldCard>
     </div>
   );
 }

@@ -373,14 +373,14 @@ export function FilterModalThreeCol({
             type="button"
             onClick={() => onSortKeyChange(opt.key)}
             className={cn(
-              "flex w-full items-center justify-between rounded-[var(--radius-md)] px-2.5 py-1.5 text-left font-display text-[12px] font-semibold transition-colors",
+              "flex w-full items-start justify-between gap-2 rounded-[var(--radius-md)] px-2.5 py-2 text-left font-display text-[11.5px] font-semibold leading-snug transition-colors",
               active
                 ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
                 : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
             )}
           >
-            <span className="truncate">{opt.label}</span>
-            {active && <IconCheck size={13} stroke={2.6} />}
+            <span>{opt.label}</span>
+            {active && <IconCheck size={13} stroke={2.6} className="mt-0.5 shrink-0" />}
           </button>
         );
       })}
@@ -439,10 +439,10 @@ export function FilterModalThreeCol({
     >
       <div
         className="grid h-full min-h-0"
-        style={{ gridTemplateColumns: "220px minmax(0,1.15fr) minmax(260px,.9fr)" }}
+        style={{ gridTemplateColumns: "235px minmax(0,1.15fr) minmax(270px,.9fr)" }}
       >
         {/* Col 1 — visualizações */}
-        <aside className="flex min-h-0 flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] p-3 [&_button]:!text-[12px] [&_.text-\[13px\]]:!text-[12px]">
+        <aside className="flex min-h-0 flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] p-4 pr-5 [scrollbar-gutter:stable] [scrollbar-width:thin] [&_button]:!text-[11.5px] [&_.text-\[13px\]]:!text-[11.5px]">
           {sortBlock}
           <span className="px-2 pb-2 font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
             Visualizações

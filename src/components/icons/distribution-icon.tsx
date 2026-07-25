@@ -27,16 +27,18 @@ export const DistributionIcon = forwardRef<SVGSVGElement, IconProps>(
         {...props}
       >
         {title ? <title>{title}</title> : null}
-        <path d="M4 5 14 3l6 6-2 9-11 3-3-7Z" />
-        <path d="m4 5 8 7 8-3M14 3l-2 9m0 0 6 6m-6-6L7 21" />
-        <path d="m5 18 10-4m0 0-2-1m2 1-1 2" />
-        <circle cx="4" cy="5" r="1" fill="currentColor" stroke="none" />
-        <circle cx="14" cy="3" r="1" fill="currentColor" stroke="none" />
-        <circle cx="20" cy="9" r="1" fill="currentColor" stroke="none" />
-        <circle cx="18" cy="18" r="1" fill="currentColor" stroke="none" />
-        <circle cx="7" cy="21" r="1" fill="currentColor" stroke="none" />
-        <circle cx="4" cy="14" r="1" fill="currentColor" stroke="none" />
-        <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+        <g opacity="0.68">
+          <path d="M4 5 12 3.5l4.5 5L11.5 13 4.5 11.5 4 5Z" />
+          <path d="m4 5 7.5 8M12 3.5l-7.5 8" />
+        </g>
+        <path d="m11.5 13 8.5 8m0 0v-5m0 5h-5" />
+        <g fill={color} stroke="none">
+          <circle cx="4" cy="5" r="1.1" />
+          <circle cx="12" cy="3.5" r="1.1" />
+          <circle cx="16.5" cy="8.5" r="1.1" />
+          <circle cx="11.5" cy="13" r="1.1" />
+          <circle cx="4.5" cy="11.5" r="1.1" />
+        </g>
       </svg>
     );
   },

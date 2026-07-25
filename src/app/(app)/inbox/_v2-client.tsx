@@ -1551,7 +1551,7 @@ export default function InboxV2ClientPage({
         type="button"
         onClick={() => setHeaderCollapsed(false)}
         aria-label="Mostrar cabeçalho"
-        className="absolute right-4 top-6 z-40 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.25)] transition-all hover:scale-110 hover:bg-[var(--brand-primary)] hover:text-white"
+        className="fixed right-6 top-6 z-50 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.25)] transition-all hover:scale-110 hover:bg-[var(--brand-primary)] hover:text-white"
       >
         <IconChevronsDown size={14} stroke={2.5} />
       </button>

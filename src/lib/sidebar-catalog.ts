@@ -1,6 +1,5 @@
 import {
   IconBuilding,
-  IconBuildingStore,
   IconChecklist,
   IconClipboardList,
   IconLayoutKanban,
@@ -13,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 
 import { DistributionIcon } from "@/components/icons/distribution-icon";
+import { WidgetsIcon } from "@/components/icons/widgets-icon";
 import type { AppUserRole } from "@/lib/auth-types";
 
 /**
@@ -150,7 +150,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "widgets",
     title: "Widgets",
     href: "/widgets",
-    icon: IconBuildingStore,
+    icon: WidgetsIcon,
     description: "Central de extensões da organização.",
     locked: false,
     requiredPermission: "nav:widgets",

@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  IconBuildingStore,
   IconInfoCircle,
   IconLayoutGrid,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
+import { WidgetsIcon } from "@/components/icons/widgets-icon";
 import { PageHeader } from "@/components/crm/page-header";
 import {
   PageSearchBar,
@@ -140,7 +140,7 @@ export default function WidgetsClientPage({
 
       <main className="flex min-w-0 flex-col gap-3 overflow-y-auto pr-1 sm:gap-4">
         <PageHeader
-          icon={<IconBuildingStore size={22} />}
+          icon={<WidgetsIcon size={22} />}
           title="Widgets"
           center={
             <PageSearchBar

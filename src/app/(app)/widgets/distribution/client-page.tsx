@@ -36,7 +36,7 @@ import { PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-too
 import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import { EmptyState } from "@/components/crm/empty-state";
 import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
-import { FormSheet } from "@/components/ui/form-sheet";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { cn } from "@/lib/utils";
 import { useWidgets } from "@/features/widgets/hooks";
 import {
@@ -349,7 +349,7 @@ export default function DistributionClientPage({
         />
       )}
 
-      <FormSheet
+      <FormDialog
         open={deptConfigOpen}
         onOpenChange={setDeptConfigOpen}
         title="Departamentos · distribuição automática"
@@ -358,7 +358,7 @@ export default function DistributionClientPage({
         size="lg"
       >
         <DepartmentsDistributionPanel />
-      </FormSheet>
+      </FormDialog>
     </div>
   );
 }
@@ -502,9 +502,9 @@ function DistributionMiniDash({
 
 // ── Lista de responsáveis em cards ───────────────────────────────────────
 
-// 6 colunas com mínimos legíveis — H-scroll no container quando < ~960px.
+// 6 colunas com mínimos legíveis — H-scroll preserva o conteúdo em telas estreitas.
 const RESP_GRID =
-  "grid-cols-[minmax(200px,2.4fr)_minmax(160px,1.4fr)_minmax(64px,0.7fr)_minmax(72px,0.8fr)_minmax(150px,1.2fr)_minmax(100px,0.9fr)]";
+  "grid-cols-[minmax(300px,3fr)_minmax(155px,1.25fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(190px,1.55fr)_minmax(82px,0.75fr)]";
 
 /* Paleta de avatares: rotaciona pelo índice do responsável */
 const AVATAR_PALETTES = [
@@ -568,8 +568,8 @@ function ResponsiblesCardList({
 
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-      <div className="flex min-w-[960px] flex-col gap-2">
-        <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-3.5 border border-transparent px-4 py-2"))}>
+      <div className="flex min-w-[1040px] flex-col gap-1.5">
+        <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-2.5 border border-transparent px-3 py-1.5"))}>
           <ListColumnLabel>Responsável</ListColumnLabel>
           <ListColumnLabel>Presença</ListColumnLabel>
           <ListColumnLabel className="text-center">Fila</ListColumnLabel>
@@ -626,53 +626,53 @@ function ResponsibleCard({
   return (
     <div
       className={cn(
-        "grid items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+        "grid items-center gap-2.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-px hover:shadow-[var(--glass-shadow)]",
         RESP_GRID,
       )}
     >
       {/* Responsável */}
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2.5">
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-extrabold ${avatarClass}`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-extrabold ${avatarClass}`}
         >
           {initials}
         </div>
         <div className="min-w-0">
-          <p className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">
+          <p className="truncate font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
             {r.name ?? "Sem nome"}
           </p>
-          <p className="truncate font-body text-[11.5px] text-[var(--text-muted)]">
-            {r.email ?? "—"}{" "}
-            <span className="font-mono text-[10px] text-[var(--text-secondary)]">· {r.role}</span>
-          </p>
-          {r.departments && r.departments.length > 0 ? (
-            <div className="mt-1 flex flex-wrap gap-1">
-              {r.departments.map((d) => (
-                <span
-                  key={d.id}
-                  className="inline-flex items-center rounded-full bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--text-secondary)]"
-                >
-                  {d.name}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-1 font-body text-[10px] italic text-[var(--text-muted)]">
-              Sem departamento
-            </p>
-          )}
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[10.5px] leading-tight">
+            <span className="min-w-0 truncate font-body text-[var(--text-muted)]">
+              {r.email ?? "—"}
+            </span>
+            <span className="shrink-0 font-mono text-[9.5px] text-[var(--text-secondary)]">
+              · {r.role}
+            </span>
+            <span
+              className="min-w-0 truncate border-l border-[var(--glass-border)] pl-1.5 font-display font-semibold text-[var(--text-secondary)]"
+              title={
+                r.departments && r.departments.length > 0
+                  ? r.departments.map((d) => d.name).join(", ")
+                  : "Sem departamento"
+              }
+            >
+              {r.departments && r.departments.length > 0
+                ? r.departments.map((d) => d.name).join(", ")
+                : "Sem departamento"}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Presença */}
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
         <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
         {isCurrentUser && (
           <button
             type="button"
             onClick={toggleOwnStatus}
             disabled={statusMut.isPending}
-            className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+            className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10.5px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
           >
             {statusMut.isPending ? "…" : isOnline ? "Ficar offline" : "Ficar online"}
           </button>
@@ -696,18 +696,21 @@ function ResponsibleCard({
       </div>
 
       {/* Elegibilidade */}
-      <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-0.5">
         {r.eligible ? (
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-success-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-success-dark,#0f7a5a)]">
+          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-success-dark,#0f7a5a)]">
             <IconCircleCheck size={13} /> Elegível
           </span>
         ) : (
           <>
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-danger-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-danger-text)]">
+            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
               <IconAlertTriangle size={13} /> Indisponível
             </span>
             {r.blockedReasons.length > 0 && (
-              <span className="min-w-0 break-words pl-0.5 font-body text-[11px] text-[var(--text-muted)]">
+              <span
+                className="min-w-0 truncate pl-0.5 font-body text-[10.5px] leading-tight text-[var(--text-muted)]"
+                title={r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
+              >
                 {r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
               </span>
             )}
@@ -721,7 +724,7 @@ function ResponsibleCard({
           <button
             type="button"
             onClick={() => onEdit(r)}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+            className="inline-flex cursor-pointer items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
           >
             <IconPencil size={13} /> Editar
           </button>
@@ -742,7 +745,7 @@ function PresenceBadge({
 }) {
   if (!participates) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-muted)]/12 px-2.5 py-1 text-[12px] font-semibold text-[var(--text-muted)]">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-muted)]/12 px-2 py-0.5 text-[11.5px] font-semibold text-[var(--text-muted)]">
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)]" /> Inativo
       </span>
     );
@@ -756,7 +759,7 @@ function PresenceBadge({
   const cfg = map[effective];
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+      className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-semibold"
       style={{ backgroundColor: `${cfg.color}1f`, color: cfg.color }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: cfg.color }} />

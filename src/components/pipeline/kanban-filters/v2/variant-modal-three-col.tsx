@@ -1,27 +1,35 @@
 /**
- * Variação D — Modal de três colunas reorganizado (DS v2).
+ * Modal canônico do filtro do funil (padrão B + densidade Kommo).
  *
- * Mantém o modal central do filtro atual, porém maior (~1120px), com hierarquia
- * revista e tokens DS v2:
- *   Col 1 (atalhos + salvos) · Col 2 (propriedades, 2 sub-colunas) · Col 3 (tags)
+ * Shell: Dialog central com backdrop blur (igual modelos/automações).
+ * Layout: 3 colunas
+ *   Col 1 — Visualizações / atalhos / salvos (fonte menor)
+ *   Col 2 — Propriedades (multi-seletores FECHADOS com busca + scroll)
+ *   Col 3 — Tags em chips (fonte menor, multi-seleção)
+ *
+ * jul/26 — substitui o popover tabulado da PipelineSearchFilterBar.
  */
 
 "use client";
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { IconBriefcase as Briefcase, IconCalendarStats as CalendarRange, IconAdjustmentsHorizontal as SlidersHorizontal, IconTag as TagIcon, IconUsers as UsersIcon, IconWand as Wand2, IconBolt as Zap, IconChevronDown as ChevronDown, IconX as X } from "@tabler/icons-react";
+import {
+  IconAdjustmentsHorizontal as SlidersHorizontal,
+  IconCheck,
+  IconX as X,
+} from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { useIsDesktop } from "@/hooks/use-media-query";
+import { ModalPortalContext } from "@/components/ui/modal-portal-context";
 
 import {
-  ActiveCountBadge,
   ContactCustomFieldsSection,
   ContactSection,
+  ConversationSection,
   DatesPeriodSection,
   DealCustomFieldsSection,
-  FilterHeaderActions,
   LossReasonsSection,
   OwnersSection,
   QuickFiltersList,
@@ -29,54 +37,267 @@ import {
   SourcesSection,
   StagesSection,
   StatusSection,
-  TagsSection,
   ValueSection,
   useFilterDraft,
   type SectionProps,
 } from "./core";
-import type { AdvancedDealFilters } from "../types";
+import { countActiveFilters, isEmptyFilters, type AdvancedDealFilters } from "../types";
 import type { VariantProps } from "./types";
 
-type GroupId = "quick" | "deal" | "people" | "dates" | "tags" | "custom";
+export type PipelineSortKey =
+  | "default"
+  | "interaction_newest"
+  | "interaction_oldest"
+  | "name_az"
+  | "name_za"
+  | "created_newest"
+  | "created_oldest";
 
-const GROUPS: { id: GroupId; label: string; icon: React.ElementType; hint: string }[] = [
-  { id: "quick", label: "Atalhos", icon: Zap, hint: "Filtros rápidos e salvos" },
-  { id: "deal", label: "Negócio", icon: Briefcase, hint: "Nome, status, etapa, valor…" },
-  { id: "people", label: "Pessoas", icon: UsersIcon, hint: "Responsável e contato" },
-  { id: "dates", label: "Datas", icon: CalendarRange, hint: "Criação, fechamento…" },
-  { id: "tags", label: "Tags", icon: TagIcon, hint: "Etiquetas do negócio" },
-  { id: "custom", label: "Personalizados", icon: Wand2, hint: "Campos custom" },
+const SORT_OPTIONS: { key: PipelineSortKey; label: string }[] = [
+  { key: "default", label: "Padrão (posição)" },
+  { key: "interaction_newest", label: "Última interação: mais recente" },
+  { key: "interaction_oldest", label: "Última interação: mais antiga" },
+  { key: "name_az", label: "Nome: A → Z" },
+  { key: "name_za", label: "Nome: Z → A" },
+  { key: "created_newest", label: "Criação: mais recente" },
+  { key: "created_oldest", label: "Criação: mais antiga" },
 ];
 
-function groupCount(id: GroupId, f: AdvancedDealFilters): number {
-  let n = 0;
-  switch (id) {
-    case "deal":
-      if (f.search?.trim()) n++;
-      if (f.statuses?.length) n++;
-      if (f.lostReasons?.length) n++;
-      if (f.stageIds?.length) n++;
-      if (f.sources?.length || f.withoutSource) n++;
-      if (f.valueFrom != null || f.valueTo != null) n++;
-      break;
-    case "people":
-      if (f.ownerIds?.length || f.withoutOwner) n++;
-      if (f.contactSearch?.trim() || f.contactHasPhone != null || f.contactHasEmail != null || f.withoutContact) n++;
-      break;
-    case "dates":
-      if (f.createdAt?.from || f.createdAt?.to) n++;
-      if (f.closedAt?.from || f.closedAt?.to) n++;
-      break;
-    case "tags":
-      if (f.tagIds?.length || f.withoutTags) n++;
-      break;
-    case "custom":
-      n += (f.dealCustomFields?.length ?? 0) + (f.contactCustomFields?.length ?? 0);
-      break;
-    default:
-      break;
+type ModalProps = VariantProps & {
+  sortKey?: PipelineSortKey;
+  onSortKeyChange?: (key: PipelineSortKey) => void;
+};
+
+/** Chips de tags — coluna dedicada (multi-seleção com busca). */
+function TagsChipColumn({
+  draft,
+  options,
+  setDraftField,
+}: Pick<SectionProps, "draft" | "options" | "setDraftField">) {
+  const [q, setQ] = React.useState("");
+  const allTags = options?.tags ?? [];
+  const selectedIds = draft.tagIds ?? [];
+  const selected = new Set(selectedIds);
+
+  const filtered = React.useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return allTags;
+    return allTags.filter((t) => t.name.toLowerCase().includes(needle));
+  }, [allTags, q]);
+
+  function toggle(id: string) {
+    const next = selected.has(id)
+      ? selectedIds.filter((x) => x !== id)
+      : [...selectedIds, id];
+    setDraftField("tagIds", next.length ? next : undefined);
+    setDraftField("withoutTags", undefined);
   }
-  return n;
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="sticky top-0 z-[1] space-y-2 bg-[var(--glass-bg-modal)] pb-2">
+        <div className="flex items-center justify-between px-0.5">
+          <span className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+            Tags
+          </span>
+          <span className="font-display text-[10.5px] font-bold text-[var(--brand-primary)]">
+            {selectedIds.length} selecionadas
+          </span>
+        </div>
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Localizar tags…"
+          className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+        />
+        {(selectedIds.length > 0 || draft.withoutTags) && (
+          <button
+            type="button"
+            onClick={() => {
+              setDraftField("tagIds", undefined);
+              setDraftField("withoutTags", undefined);
+            }}
+            className="font-display text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--brand-primary)]"
+          >
+            Limpar tags
+          </button>
+        )}
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="flex flex-wrap content-start gap-1.5 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              const next = !draft.withoutTags;
+              setDraftField("withoutTags", next || undefined);
+              if (next) setDraftField("tagIds", undefined);
+            }}
+            className={cn(
+              "inline-flex items-center rounded-[7px] border px-2 py-1 font-display text-[11.5px] font-semibold transition-colors",
+              draft.withoutTags
+                ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]/40",
+            )}
+          >
+            Sem tags
+          </button>
+          {filtered.map((tag) => {
+            const color = tag.color || "#6366f1";
+            const on = selected.has(tag.id);
+            return (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => toggle(tag.id)}
+                className={cn(
+                  "inline-flex max-w-full items-center gap-1 rounded-[7px] border px-2 py-1 font-display text-[11.5px] font-semibold transition-all",
+                  on ? "text-white shadow-sm" : "hover:-translate-y-px",
+                )}
+                style={
+                  on
+                    ? { background: color, borderColor: color }
+                    : {
+                        background: `color-mix(in srgb, ${color} 15%, white)`,
+                        borderColor: `color-mix(in srgb, ${color} 45%, #d9dfeb)`,
+                        color: "#35405b",
+                      }
+                }
+                title={tag.name}
+              >
+                <span className="truncate">{tag.name}</span>
+                {tag.dealCount != null && (
+                  <small className={cn("tabular-nums", on ? "opacity-80" : "opacity-65")}>
+                    {tag.dealCount.toLocaleString("pt-BR")}
+                  </small>
+                )}
+              </button>
+            );
+          })}
+          {filtered.length === 0 && (
+            <p className="w-full py-6 text-center font-body text-[12px] text-[var(--text-muted)]">
+              {q.trim() ? "Nenhuma tag encontrada." : "Nenhuma tag cadastrada."}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModalShell({
+  onClose,
+  draft,
+  draftCount,
+  onClear,
+  onApply,
+  onRequestSave,
+  children,
+  wide,
+}: {
+  onClose: () => void;
+  draft: AdvancedDealFilters;
+  draftCount: number;
+  onClear: () => void;
+  onApply: () => void;
+  onRequestSave?: (f: AdvancedDealFilters) => void;
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
+  // Publica o painel no ModalPortalContext p/ MultiSelectDropdown/DropdownGlass
+  // portarem DENTRO do modal (top-layer), não atrás do backdrop. [jul/26]
+  const [portalNode, setPortalNode] = React.useState<HTMLDivElement | null>(null);
+
+  return (
+    <div className="fixed inset-0 z-(--z-popover) flex items-center justify-center p-0 sm:p-4">
+      <div
+        className="absolute inset-0 bg-black/30 backdrop-blur-md"
+        onMouseDown={onClose}
+        aria-hidden
+      />
+      <div
+        ref={setPortalNode}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filtros do funil"
+        className={cn(
+          "relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] text-[var(--text-primary)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl",
+          wide ? "h-[min(84vh,760px)] max-w-[1120px]" : "h-[min(92dvh,100%)] max-w-lg",
+        )}
+      >
+        <ModalPortalContext.Provider value={portalNode}>
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--glass-border-subtle)] px-5 py-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+              <SlidersHorizontal className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-display text-[16px] font-bold tracking-tight text-[var(--text-primary)]">
+                  Filtros do funil
+                </h2>
+                {draftCount > 0 && (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1.5 font-display text-[10px] font-bold text-white">
+                    {draftCount}
+                  </span>
+                )}
+              </div>
+              <p className="mt-0.5 font-body text-[12px] text-[var(--text-muted)]">
+                Multi-seleção em responsáveis, etapas, origens e tags
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+            aria-label="Fechar"
+          >
+            <X className="size-4" />
+          </button>
+        </header>
+
+        <div className="min-h-0 flex-1">{children}</div>
+
+        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-5 py-3">
+          <p className="font-body text-[12px] text-[var(--text-muted)]">
+            <b className="font-semibold text-[var(--brand-primary)]">{draftCount}</b> critérios
+            selecionados
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onClear}
+              disabled={isEmptyFilters(draft)}
+              className="inline-flex h-9 items-center rounded-[var(--radius-md)] px-3 font-display text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-40"
+            >
+              Limpar tudo
+            </button>
+            {onRequestSave && (
+              <button
+                type="button"
+                onClick={() => onRequestSave(draft)}
+                disabled={isEmptyFilters(draft)}
+                className="inline-flex h-9 items-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] px-3 font-display text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-40"
+              >
+                Salvar filtro
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onApply}
+              className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 font-display text-[12px] font-bold text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-opacity hover:opacity-90"
+            >
+              <IconCheck size={13} />
+              Aplicar filtros
+            </button>
+          </div>
+        </footer>
+        </ModalPortalContext.Provider>
+      </div>
+    </div>
+  );
 }
 
 export function FilterModalThreeCol({
@@ -89,17 +310,15 @@ export function FilterModalThreeCol({
   onApply,
   onClear,
   onRequestSave,
-}: VariantProps) {
-  const { draft, setDraftField, applyWhole, toggleArray, reset } = useFilterDraft(value, onApply);
+  sortKey = "default",
+  onSortKeyChange,
+}: ModalProps) {
+  const { draft, setDraftField, applyWhole, toggleArray, reset } = useFilterDraft(
+    value,
+    onApply,
+  );
   const isDesktop = useIsDesktop();
-  const [openGroups, setOpenGroups] = React.useState<Set<GroupId>>(() => new Set(["quick"]));
-
-  const toggleGroup = (id: GroupId) =>
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const draftCount = countActiveFilters(draft);
 
   React.useEffect(() => {
     if (!open) return;
@@ -114,236 +333,154 @@ export function FilterModalThreeCol({
 
   if (!open || typeof document === "undefined") return null;
 
-  const section: SectionProps = { draft, options, optionsLoading, optionsError, setDraftField, toggleArray };
+  const section: SectionProps = {
+    draft,
+    options,
+    optionsLoading,
+    optionsError,
+    setDraftField,
+    toggleArray,
+  };
+
+  function handleClear() {
+    reset();
+    onClear();
+  }
+
+  function handleApply() {
+    applyWhole(draft);
+    onOpenChange(false);
+  }
+
+  const sortBlock = onSortKeyChange ? (
+    <div className="mb-3 space-y-1">
+      <span className="px-2 font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+        Ordenar
+      </span>
+      {SORT_OPTIONS.map((opt) => {
+        const active = sortKey === opt.key;
+        return (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => onSortKeyChange(opt.key)}
+            className={cn(
+              "flex w-full items-center justify-between rounded-[var(--radius-md)] px-2.5 py-1.5 text-left font-display text-[12px] font-semibold transition-colors",
+              active
+                ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
+            )}
+          >
+            <span className="truncate">{opt.label}</span>
+            {active && <IconCheck size={13} stroke={2.6} />}
+          </button>
+        );
+      })}
+      <div className="my-2 border-t border-[var(--glass-border-subtle)]" />
+    </div>
+  ) : null;
 
   if (!isDesktop) {
     return createPortal(
-      <div className="fixed inset-0 z-(--z-popover) flex items-center justify-center p-0 sm:p-4">
-        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onMouseDown={() => onOpenChange(false)} aria-hidden />
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Filtros avançados"
-          className="relative flex h-[min(92dvh,100%)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
-        >
-          {/* Header */}
-          <header className="flex items-center justify-between gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
-                <SlidersHorizontal className="size-4" />
-              </span>
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <h2 className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)]">Filtros avançados</h2>
-                <ActiveCountBadge draft={draft} />
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <FilterHeaderActions
-                draft={draft}
-                onClear={() => {
-                  reset();
-                  onClear();
-                }}
-                onRequestSave={onRequestSave}
-              />
-              <div className="h-6 w-px bg-[var(--glass-border-subtle)]" />
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-                aria-label="Fechar"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-          </header>
-
-          {/* Corpo — accordion */}
-          <div className="flex-1 space-y-2.5 overflow-y-auto p-3">
-            {GROUPS.map((g) => {
-              const expanded = openGroups.has(g.id);
-              const count = groupCount(g.id, draft);
-              const Icon = g.icon;
-              return (
-                <section
-                  key={g.id}
-                  className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)]"
-                >
-                  <button
-                    type="button"
-                    aria-expanded={expanded}
-                    onClick={() => toggleGroup(g.id)}
-                    className={cn(
-                      "flex w-full items-center gap-3 px-3 py-3 text-left transition-colors",
-                      expanded ? "bg-[var(--color-enterprise-bg)]" : "hover:bg-[var(--glass-bg-overlay)]",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
-                        expanded ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
-                      )}
-                    >
-                      <Icon className="size-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="truncate text-[13px] font-bold text-[var(--text-primary)]">{g.label}</h3>
-                        {count > 0 && (
-                          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1.5 text-[11px] font-semibold text-white">
-                            {count}
-                          </span>
-                        )}
-                      </div>
-                      <p className="truncate text-[11px] text-[var(--text-muted)]">{g.hint}</p>
-                    </div>
-                    <ChevronDown className={cn("size-4 shrink-0 text-[var(--text-muted)] transition-transform", expanded && "rotate-180")} />
-                  </button>
-
-                  {expanded && (
-                    <div className="space-y-3 border-t border-[var(--glass-border-subtle)] px-3 py-3">
-                      {g.id === "quick" && (
-                        <QuickFiltersList draft={draft} onApply={applyWhole} onRequestSave={onRequestSave} orientation="vertical" />
-                      )}
-                      {g.id === "deal" && (
-                        <>
-                          <SearchSection {...section} />
-                          <StatusSection {...section} />
-                          <LossReasonsSection {...section} />
-                          <StagesSection {...section} />
-                          <SourcesSection {...section} />
-                          <ValueSection {...section} />
-                        </>
-                      )}
-                      {g.id === "people" && (
-                        <>
-                          <OwnersSection {...section} />
-                          <ContactSection {...section} />
-                        </>
-                      )}
-                      {g.id === "dates" && (
-                        <>
-                          <DatesPeriodSection {...section} />
-                        </>
-                      )}
-                      {g.id === "tags" && <TagsSection {...section} />}
-                      {g.id === "custom" && (
-                        <>
-                          <DealCustomFieldsSection {...section} />
-                          <ContactCustomFieldsSection {...section} />
-                        </>
-                      )}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
+      <ModalShell
+        onClose={() => onOpenChange(false)}
+        draft={draft}
+        draftCount={draftCount}
+        onClear={handleClear}
+        onApply={handleApply}
+        onRequestSave={onRequestSave}
+      >
+        <div className="h-full space-y-3 overflow-y-auto p-4">
+          {sortBlock}
+          <QuickFiltersList
+            draft={draft}
+            onApply={applyWhole}
+            onRequestSave={onRequestSave}
+            orientation="vertical"
+          />
+          <SearchSection {...section} />
+          <StatusSection {...section} />
+          <LossReasonsSection {...section} />
+          <StagesSection {...section} />
+          <SourcesSection {...section} />
+          <OwnersSection {...section} />
+          <ContactSection {...section} />
+          <ConversationSection {...section} />
+          <ValueSection {...section} />
+          <DatesPeriodSection {...section} />
+          <DealCustomFieldsSection {...section} />
+          <ContactCustomFieldsSection {...section} />
+          <div className="min-h-[220px] rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] p-3">
+            <TagsChipColumn {...section} />
           </div>
-
-          {/* Footer */}
-          <footer className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] px-3 py-3">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-5 text-[13px] font-medium text-white transition-colors hover:bg-[var(--brand-primary-dark)]"
-            >
-              Aplicar filtros
-            </button>
-          </footer>
         </div>
-      </div>,
+      </ModalShell>,
       document.body,
     );
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-(--z-popover) flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onMouseDown={() => onOpenChange(false)} aria-hidden />
+    <ModalShell
+      wide
+      onClose={() => onOpenChange(false)}
+      draft={draft}
+      draftCount={draftCount}
+      onClear={handleClear}
+      onApply={handleApply}
+      onRequestSave={onRequestSave}
+    >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Filtros avançados"
-        className="relative flex h-[min(84vh,760px)] w-[min(1120px,100%)] flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+        className="grid h-full min-h-0"
+        style={{ gridTemplateColumns: "220px minmax(0,1.15fr) minmax(260px,.9fr)" }}
       >
-        {/* Header */}
-        <header className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
-              <SlidersHorizontal className="size-4" />
-            </span>
-            <div className="flex items-center gap-2">
-              <h2 className="text-[16px] font-semibold tracking-tight text-[var(--text-primary)]">Filtros avançados</h2>
-              <ActiveCountBadge draft={draft} />
+        {/* Col 1 — visualizações */}
+        <aside className="flex min-h-0 flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] p-3 [&_button]:!text-[12px] [&_.text-\[13px\]]:!text-[12px]">
+          {sortBlock}
+          <span className="px-2 pb-2 font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+            Visualizações
+          </span>
+          <QuickFiltersList
+            draft={draft}
+            onApply={applyWhole}
+            onRequestSave={onRequestSave}
+            orientation="vertical"
+          />
+        </aside>
+
+        {/* Col 2 — propriedades (multi-selects fechados) */}
+        <main className="min-h-0 space-y-3 overflow-y-auto p-4">
+          <span className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+            Propriedades do negócio
+          </span>
+          <p className="-mt-1 font-body text-[11px] text-[var(--text-muted)]">
+            Listas longas abrem sob demanda — multi-seleção com busca e rolagem.
+          </p>
+          <SearchSection {...section} />
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+            <div className="space-y-3">
+              <OwnersSection {...section} />
+              <StagesSection {...section} />
+              <SourcesSection {...section} />
+              <StatusSection {...section} />
+            </div>
+            <div className="space-y-3">
+              <LossReasonsSection {...section} />
+              <ContactSection {...section} />
+              <ConversationSection {...section} />
+              <ValueSection {...section} />
+              <DatesPeriodSection {...section} />
+              <DealCustomFieldsSection {...section} />
+              <ContactCustomFieldsSection {...section} />
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <FilterHeaderActions
-              draft={draft}
-              onClear={() => {
-                reset();
-                onClear();
-              }}
-              onRequestSave={onRequestSave}
-            />
-            <div className="h-6 w-px bg-[var(--glass-border-subtle)]" />
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-              aria-label="Fechar"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        </header>
+        </main>
 
-        {/* 3 colunas */}
-        <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: "232px minmax(0,1fr) 300px" }}>
-          {/* Col 1 — Atalhos */}
-          <aside className="flex flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] p-3">
-            <span className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Atalhos</span>
-            <QuickFiltersList draft={draft} onApply={applyWhole} onRequestSave={onRequestSave} orientation="vertical" />
-          </aside>
-
-          {/* Col 2 — Propriedades */}
-          <main className="overflow-y-auto border-r border-[var(--glass-border-subtle)] p-4">
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <div className="space-y-3">
-                <SearchSection {...section} />
-                <StatusSection {...section} />
-                <LossReasonsSection {...section} />
-                <StagesSection {...section} />
-                <SourcesSection {...section} />
-                <ValueSection {...section} />
-              </div>
-              <div className="space-y-3">
-                <OwnersSection {...section} />
-                <ContactSection {...section} />
-                <DatesPeriodSection {...section} />
-                <DealCustomFieldsSection {...section} />
-                <ContactCustomFieldsSection {...section} />
-              </div>
-            </div>
-          </main>
-
-          {/* Col 3 — Tags */}
-          <aside className="overflow-y-auto p-4">
-            <TagsSection {...section} />
-          </aside>
-        </div>
-
-        {/* Footer */}
-        <footer className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] px-5 py-3">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-5 text-[13px] font-medium text-white transition-colors hover:bg-[var(--brand-primary-dark)]"
-          >
-            Aplicar filtros
-          </button>
-        </footer>
+        {/* Col 3 — tags */}
+        <aside className="min-h-0 overflow-hidden border-l border-[var(--glass-border-subtle)] p-4">
+          <TagsChipColumn {...section} />
+        </aside>
       </div>
-    </div>,
+    </ModalShell>,
     document.body,
   );
 }

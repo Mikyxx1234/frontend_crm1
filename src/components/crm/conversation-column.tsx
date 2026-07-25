@@ -12,9 +12,9 @@ import {
   IconInbox,
   IconCornerUpLeft,
   IconCircleCheck,
-  IconRobot,
   type Icon as TablerIcon,
 } from "@tabler/icons-react"
+import { AutomationBotIcon } from "@/components/icons/automation-bot-icon"
 import { InputGlass } from "./input-glass"
 import { type TabItem } from "./tabs-glass"
 import { TooltipGlass } from "./tooltip-glass"
@@ -142,7 +142,7 @@ function statusVisual(label: string | undefined): {
     }
   if (l.includes("automa"))
     return {
-      Icon: IconRobot,
+      Icon: AutomationBotIcon,
       bg: "rgba(139,92,246,0.14)",
       fg: "rgb(124,58,237)",
     }

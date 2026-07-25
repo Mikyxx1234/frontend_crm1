@@ -5,13 +5,13 @@ import { cn } from "@/lib/utils"
 import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog"
 import { ImageLightbox } from "@/components/crm/image-lightbox"
 import { AudioWaveform } from "@/components/inbox/audio-waveform"
+import { AutomationBotIcon } from "@/components/icons/automation-bot-icon"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
-  IconRobot,
   IconClipboardList,
   IconChevronDown,
   IconFile,
@@ -1478,7 +1478,7 @@ export function MessageBubble({
                     className="flex h-9 w-9 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
                     style={{ background: AUTOMATION_ACCENT }}
                   >
-                    <IconRobot size={19} />
+                    <AutomationBotIcon size={20} />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="font-medium text-[11px]">
@@ -1533,7 +1533,7 @@ export function MessageBubble({
                           ) ?? null
                         : null
                     const photo = message.senderImageUrl || byName || selfPhoto
-                    if (isBot) return <IconRobot size={18} />
+                    if (isBot) return <AutomationBotIcon size={19} />
                     if (photo) {
                       return (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -1611,7 +1611,7 @@ export function MessageBubble({
                     : senderName || "Automação"
                 }
               >
-                <IconRobot size={10} />
+                <AutomationBotIcon size={11} />
                 {message.isAutomationRun ? "Manual" : senderName || "Automação"}
               </span>
             </div>

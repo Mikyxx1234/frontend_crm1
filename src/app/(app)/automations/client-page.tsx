@@ -13,13 +13,13 @@ import {
   IconClock,
   IconLoader2,
   IconPlus,
-  IconRobot,
   IconRotateClockwise,
   IconSearch,
   IconUpload,
 } from "@tabler/icons-react"
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer"
+import { AutomationBotIcon } from "@/components/icons/automation-bot-icon"
 import { RestrictedScreen } from "@/components/crm/restricted-screen"
 import { useRequireManager } from "@/hooks/use-user-role"
 import { PageHeader } from "@/components/crm/page-header"
@@ -324,7 +324,7 @@ export default function V2AutomationsClientPage() {
         />
 
         <PageHeader
-          icon={<IconRobot size={22} stroke={2.2} />}
+          icon={<AutomationBotIcon size={22} stroke={2.2} />}
           title="Automações"
           center={
             <AutomationsSearchFilterBar

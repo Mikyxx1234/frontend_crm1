@@ -104,7 +104,7 @@ export function TransferPopover({
             aria-label="Transferir conversa"
             disabled={disabled || !conversationId}
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)] transition-all hover:bg-[var(--brand-primary-dark)] disabled:opacity-50"
+            className="inline-flex size-8 items-center justify-center rounded-full bg-cyan-500 text-white shadow-[0_2px_8px_rgba(6,182,212,0.35)] transition-all hover:bg-cyan-600 disabled:opacity-50"
           >
             <IconArrowsExchange size={15} stroke={2.2} />
           </button>

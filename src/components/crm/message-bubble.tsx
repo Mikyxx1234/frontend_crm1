@@ -1475,10 +1475,15 @@ export function MessageBubble({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className="flex h-9 w-9 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
+                    className="flex h-9 w-9 cursor-default items-center justify-center overflow-hidden rounded-full font-display text-[10px] font-bold text-white"
                     style={{ background: AUTOMATION_ACCENT }}
                   >
-                    <AutomationBotIcon size={20} />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/avatars/automation-bot.png"
+                      alt="Automação"
+                      className="size-full scale-[1.28] object-cover"
+                    />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="font-medium text-[11px]">
@@ -1533,7 +1538,16 @@ export function MessageBubble({
                           ) ?? null
                         : null
                     const photo = message.senderImageUrl || byName || selfPhoto
-                    if (isBot) return <AutomationBotIcon size={19} />
+                    if (isBot) {
+                      return (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src="/avatars/automation-bot.png"
+                          alt="Automação"
+                          className="size-full scale-[1.28] object-cover"
+                        />
+                      )
+                    }
                     if (photo) {
                       return (
                         // eslint-disable-next-line @next/next/no-img-element

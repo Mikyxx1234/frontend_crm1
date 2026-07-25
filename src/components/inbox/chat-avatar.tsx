@@ -18,7 +18,6 @@ import {
   getAvatarSolidColor,
 } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
-import { AutomationBotIcon } from "@/components/icons/automation-bot-icon";
 
 export type ChatAvatarChannel =
   | "whatsapp"
@@ -168,10 +167,11 @@ export function ChatAvatar({
           />
         ) : isBotResolved ? (
           <div className="relative flex size-full items-center justify-center">
-            <AutomationBotIcon
-              size="72%"
-              stroke={1.8}
-              className="relative z-10 text-white"
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/avatars/automation-bot.png"
+              alt="Automação"
+              className="size-full scale-[1.28] object-cover"
             />
           </div>
         ) : (

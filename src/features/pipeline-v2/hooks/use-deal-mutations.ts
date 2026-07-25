@@ -283,6 +283,9 @@ const BOARD_CACHE_KEYS = [
 /**
  * Patcha tags de um deal em TODOS os caches de board (regular, busca,
  * filtrado). Usado por add/remove tag pra update otimista instantâneo.
+ * Retorna snapshots (`queryKey` + `data` originais) pra rollback exato
+ * em `onError` — invalidar dispararia refetch e re-introduziria a race
+ * que este mecanismo tenta evitar.
  */
 function patchDealTagsInBoards(
   qc: ReturnType<typeof useQueryClient>,
@@ -290,7 +293,8 @@ function patchDealTagsInBoards(
   patch: (
     tags: { id: string; name: string; color: string }[],
   ) => { id: string; name: string; color: string }[],
-) {
+): Array<{ queryKey: readonly unknown[]; data: BoardStageDto[] }> {
+  const snapshots: Array<{ queryKey: readonly unknown[]; data: BoardStageDto[] }> = [];
   for (const rootKey of BOARD_CACHE_KEYS) {
     const boards = qc.getQueriesData<BoardStageDto[]>({ queryKey: rootKey });
     for (const [key, data] of boards) {
@@ -304,9 +308,13 @@ function patchDealTagsInBoards(
         });
         return { ...stage, deals: nextDeals };
       });
-      if (touched) qc.setQueryData(key, next);
+      if (touched) {
+        snapshots.push({ queryKey: key, data });
+        qc.setQueryData(key, next);
+      }
     }
   }
+  return snapshots;
 }
 
 /** Invalida todos os caches de board (regular, busca, filtrado). */
@@ -316,27 +324,55 @@ function invalidateAllBoards(qc: ReturnType<typeof useQueryClient>) {
   }
 }
 
+/**
+ * Cancela refetches em voo em TODOS os caches de board.
+ *
+ * Bug 25/jul/26 — o `useBoard` mantém `refetchInterval: 30_000` (poll).
+ * Se um refetch periódico (ou de invalidação concorrente de outra mutação)
+ * estiver em voo no exato momento em que o usuário clica numa tag, sua
+ * resposta stale (pré-mutação) aterrissa DEPOIS do patch otimista e
+ * sobrescreve o cache — o card visualmente reverte, depois o `onSettled`
+ * refeta e volta ao estado final. Efeito descrito pelo operador: "clico
+ * uma vez e a tag some / volta / some" (a "ação dobrada"). Cancelar as
+ * queries antes do patch elimina essa janela — mesma estratégia usada em
+ * `useMoveDeal`.
+ */
+async function cancelAllBoards(qc: ReturnType<typeof useQueryClient>) {
+  for (const rootKey of BOARD_CACHE_KEYS) {
+    await qc.cancelQueries({ queryKey: rootKey });
+  }
+}
+
+type TagMutationContext = {
+  snapshots: Array<{ queryKey: readonly unknown[]; data: BoardStageDto[] }>;
+};
+
 export function useAddDealTag(_pipelineId: string | null, _status: StatusFilter = "OPEN") {
   const qc = useQueryClient();
 
   return useMutation<
     { ok: true },
     Error,
-    { dealId: string; tagId?: string; tagName?: string; color?: string }
+    { dealId: string; tagId?: string; tagName?: string; color?: string },
+    TagMutationContext
   >({
     mutationFn: ({ dealId, ...payload }) => addDealTag(dealId, payload),
     // Update otimista: se `tagId` foi passado (tag existente), buscamos
     // nome/cor do catálogo em cache e injetamos no card imediatamente.
     // Para `tagName` (criação), pulamos o otimista — o refetch cuida.
-    onMutate: (vars) => {
-      if (!vars.tagId) return;
+    onMutate: async (vars) => {
+      // Cancela refetches em voo (poll de 30s / invalidações concorrentes)
+      // ANTES de patchar — evita que uma resposta stale sobrescreva o
+      // otimista e cause a "ação dobrada" visual.
+      await cancelAllBoards(qc);
+      if (!vars.tagId) return { snapshots: [] };
       const catalog =
         qc.getQueryData<DealTag[]>(["deal-tags-v2"]) ??
         qc.getQueryData<DealTag[]>(["tags"]) ??
         [];
       const meta = catalog.find((t) => t.id === vars.tagId);
-      if (!meta) return;
-      patchDealTagsInBoards(qc, vars.dealId, (tags) =>
+      if (!meta) return { snapshots: [] };
+      const snapshots = patchDealTagsInBoards(qc, vars.dealId, (tags) =>
         tags.some((t) => t.id === vars.tagId!)
           ? tags
           : [
@@ -348,17 +384,21 @@ export function useAddDealTag(_pipelineId: string | null, _status: StatusFilter 
               },
             ],
       );
+      return { snapshots };
     },
-    onSuccess: (_data, vars) => {
+    onError: (err, _vars, ctx) => {
+      // Rollback exato via snapshot — invalidar aqui dispararia refetch
+      // e o cache mostraria "vaziando" antes de voltar, reintroduzindo a
+      // race que estamos evitando.
+      if (ctx?.snapshots) {
+        for (const s of ctx.snapshots) qc.setQueryData(s.queryKey, s.data);
+      }
+      toast.error(err.message || "Falha ao adicionar tag");
+    },
+    onSettled: (_data, _err, vars) => {
       qc.invalidateQueries({ queryKey: ["deal-tags-v2"] });
       qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
       invalidateAllBoards(qc);
-    },
-    onError: (err, vars) => {
-      // Rollback: refaz o board para desfazer o otimista.
-      invalidateAllBoards(qc);
-      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
-      toast.error(err.message || "Falha ao adicionar tag");
     },
   });
 }
@@ -366,21 +406,29 @@ export function useAddDealTag(_pipelineId: string | null, _status: StatusFilter 
 export function useRemoveDealTag(_pipelineId: string | null, _status: StatusFilter = "OPEN") {
   const qc = useQueryClient();
 
-  return useMutation<{ ok: true }, Error, { dealId: string; tagId: string }>({
+  return useMutation<
+    { ok: true },
+    Error,
+    { dealId: string; tagId: string },
+    TagMutationContext
+  >({
     mutationFn: ({ dealId, tagId }) => removeDealTag(dealId, tagId),
-    onMutate: (vars) => {
-      patchDealTagsInBoards(qc, vars.dealId, (tags) =>
+    onMutate: async (vars) => {
+      await cancelAllBoards(qc);
+      const snapshots = patchDealTagsInBoards(qc, vars.dealId, (tags) =>
         tags.filter((t) => t.id !== vars.tagId),
       );
+      return { snapshots };
     },
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
-      invalidateAllBoards(qc);
-    },
-    onError: (err, vars) => {
-      invalidateAllBoards(qc);
-      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
+    onError: (err, _vars, ctx) => {
+      if (ctx?.snapshots) {
+        for (const s of ctx.snapshots) qc.setQueryData(s.queryKey, s.data);
+      }
       toast.error(err.message || "Falha ao remover tag");
+    },
+    onSettled: (_data, _err, vars) => {
+      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
+      invalidateAllBoards(qc);
     },
   });
 }

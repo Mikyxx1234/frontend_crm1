@@ -220,7 +220,7 @@ export function useBulkConversationAction() {
 export function useBulkAssignConversations() {
   const qc = useQueryClient();
   return useMutation<
-    { succeeded: number; failed: number; total: number },
+    { succeeded: number; failed: number; total: number; errors: string[] },
     Error,
     { ids: string[]; assignedToId: string | null }
   >({
@@ -235,7 +235,19 @@ export function useBulkAssignConversations() {
       );
       const succeeded = results.filter((r) => r.status === "fulfilled").length;
       const failed = results.length - succeeded;
-      return { succeeded, failed, total: results.length };
+      const errors = results.flatMap((result) =>
+        result.status === "rejected"
+          ? [
+              result.reason instanceof Error
+                ? result.reason.message
+                : "Erro de rede ao reatribuir conversa",
+            ]
+          : [],
+      );
+      if (succeeded === 0 && failed > 0) {
+        throw new Error(errors[0] ?? "Falha ao reatribuir conversas");
+      }
+      return { succeeded, failed, total: results.length, errors };
     },
     onSuccess: (result, vars) => {
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
@@ -264,7 +276,9 @@ export function useBulkAssignConversations() {
         );
       } else {
         toast.warning(
-          `${result.succeeded} reatribuída(s), ${result.failed} falharam`,
+          `${result.succeeded} reatribuída(s), ${result.failed} falharam: ${
+            result.errors[0] ?? "erro desconhecido"
+          }`,
         );
       }
     },

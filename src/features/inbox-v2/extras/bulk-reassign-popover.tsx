@@ -12,6 +12,7 @@ import { IconUserPlus, IconUserOff } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { UserAvatar } from "@/components/crm/user-avatar";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   useBulkAssignConversations,
   useTeamUsers,
@@ -39,6 +40,7 @@ export function BulkReassignPopover({
   const { open, rect, triggerRef, popoverRef, toggle, close } =
     usePortalPopover();
   const [filter, setFilter] = useState("");
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   const { data: users = [], isLoading } = useTeamUsers(open);
   const bulkAssign = useBulkAssignConversations();
@@ -49,21 +51,27 @@ export function BulkReassignPopover({
       .includes(filter.trim().toLowerCase()),
   );
 
-  function handleSelect(userId: string | null) {
+  async function handleSelect(userId: string | null, assigneeName: string) {
     if (conversationIds.length === 0 || bulkAssign.isPending) return;
+
+    const count = conversationIds.length;
+    const confirmed = await confirm({
+      title: "Confirmar reatribuição",
+      description: `Reatribuir ${count} conversa${count === 1 ? "" : "s"} para ${assigneeName}?`,
+      confirmLabel: "Reatribuir",
+    });
+    if (!confirmed) return;
+
+    close();
     bulkAssign.mutate(
       { ids: conversationIds, assignedToId: userId },
       {
         onSuccess: (result) => {
-          close();
           setFilter("");
           // Só sai do modo seleção se houve ao menos um êxito (paridade Encerrar/Reabrir).
           if (result.succeeded > 0) onDone?.();
         },
-        onError: () => {
-          close();
-          setFilter("");
-        },
+        onError: () => setFilter(""),
       },
     );
   }
@@ -128,7 +136,7 @@ export function BulkReassignPopover({
                   <button
                     type="button"
                     disabled={bulkAssign.isPending}
-                    onClick={() => handleSelect(null)}
+                    onClick={() => void handleSelect(null, "Sem responsável")}
                     className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--color-warning)] transition-colors hover:bg-[var(--color-warning)]/10"
                   >
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] text-[var(--text-muted)]">
@@ -154,7 +162,7 @@ export function BulkReassignPopover({
                       <button
                         type="button"
                         disabled={bulkAssign.isPending}
-                        onClick={() => handleSelect(u.id)}
+                        onClick={() => void handleSelect(u.id, name)}
                         className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
                       >
                         <UserAvatar
@@ -172,6 +180,7 @@ export function BulkReassignPopover({
             document.body,
           )
         : null}
+      {confirmDialog}
     </>
   );
 }

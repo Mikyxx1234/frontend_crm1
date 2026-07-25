@@ -964,16 +964,15 @@ export default function InboxV2ClientPage({
       searchValue={searchInput}
       onSearchChange={setSearchInput}
       hideSearch={searchInHeader}
-      // Filtro sempre na ColumnConversa (ao lado do dropdown
-      // "Todas/Aguardando/Entrada/..."). Quando `pageHeader` está ativo, a
-      // busca sobe pro topo mas o filtro **fica** aqui — antes ele migrava
-      // pro canto direito superior junto da busca, distante do controle
-      // mais relacionado a ele (tabs de status).
+      // Sem PageHeader, o filtro permanece ao lado do status. No Inbox ele
+      // sobe junto da busca, como botão irmão (fora do input).
       filterSlot={
         <>
           {soundToggleNode}
           {selectionToggleNode}
-          <InboxFilterButton value={filters} onChange={setFilters} />
+          {!searchInHeader && (
+            <InboxFilterButton value={filters} onChange={setFilters} />
+          )}
           {confirmDialogNode}
         </>
       }
@@ -1404,13 +1403,17 @@ export default function InboxV2ClientPage({
               icon={pageHeader.icon}
               title={pageHeader.title}
               center={
-                <PageSearchBar
-                  variant="compact"
-                  value={searchInput}
-                  onChange={setSearchInput}
-                  placeholder="Buscar conversa, contato, telefone..."
-                  aria-label="Buscar conversas"
-                />
+                <div className="flex w-full min-w-0 items-center gap-2">
+                  <PageSearchBar
+                    variant="compact"
+                    className="min-w-0 flex-1"
+                    value={searchInput}
+                    onChange={setSearchInput}
+                    placeholder="Buscar conversa, contato, telefone..."
+                    aria-label="Buscar conversas"
+                  />
+                  <InboxFilterButton value={filters} onChange={setFilters} />
+                </div>
               }
               actions={null}
             />
@@ -1483,16 +1486,18 @@ export default function InboxV2ClientPage({
             icon={pageHeader.icon}
             title={pageHeader.title}
             center={
-              <PageSearchBar
-                variant="compact"
-                value={searchInput}
-                onChange={setSearchInput}
-                placeholder="Buscar conversa, contato, telefone..."
-                aria-label="Buscar conversas"
-              />
+              <div className="flex w-full min-w-0 items-center gap-2">
+                <PageSearchBar
+                  variant="compact"
+                  className="min-w-0 flex-1"
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  placeholder="Buscar conversa, contato, telefone..."
+                  aria-label="Buscar conversas"
+                />
+                <InboxFilterButton value={filters} onChange={setFilters} />
+              </div>
             }
-            // PageHeader sem botão de filtro: ele agora vive ao lado dos
-            // tabs de status na coluna de conversas (ver `filterSlot` acima).
             actions={null}
           />
           <div

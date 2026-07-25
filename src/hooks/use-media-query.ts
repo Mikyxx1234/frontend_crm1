@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
+
+// SSR-safe: usa useLayoutEffect no cliente (sync antes do paint, elimina
+// o "flash mobile" de 1 frame no desktop) e useEffect no server (evita o
+// warning de hydration).
+const useIsoLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * Hook SSR-safe que reage a media queries CSS.
@@ -22,7 +28,7 @@ import { useEffect, useState } from "react";
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);
 
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
     const mq = window.matchMedia(query);
     setMatches(mq.matches);

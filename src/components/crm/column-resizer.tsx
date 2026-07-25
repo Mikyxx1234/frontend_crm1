@@ -14,8 +14,13 @@
  *  - Respeita `min` / `max`.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+
+// SSR-safe layout effect — no cliente roda sync antes do paint (evita
+// "flash" de valor default antes de ler o localStorage).
+const useIsoLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 interface ColumnResizerProps {
   /** Largura atual em px (controlada pelo pai). */
@@ -119,7 +124,7 @@ export function usePersistentWidth(
 ): [number, (v: number) => void] {
   const [v, setV] = useState(defaultValue);
 
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     try {
       const raw = window.localStorage.getItem(storageKey);
       if (raw) {

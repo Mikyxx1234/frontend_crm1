@@ -55,7 +55,7 @@ export type PipelineSortKey =
 
 const SORT_OPTIONS: { key: PipelineSortKey; label: string }[] = [
   { key: "default", label: "Padrão (posição)" },
-  { key: "interaction_newest", label: "Última interação: mais recente" },
+  { key: "interaction_newest", label: "Última interação: mais nova" },
   { key: "interaction_oldest", label: "Última interação: mais antiga" },
   { key: "name_az", label: "Nome: A → Z" },
   { key: "name_za", label: "Nome: Z → A" },
@@ -63,12 +63,11 @@ const SORT_OPTIONS: { key: PipelineSortKey; label: string }[] = [
   { key: "created_oldest", label: "Criação: mais antiga" },
 ];
 
-type MiddleTab = "negocio" | "pessoas" | "conversa" | "periodo" | "custom";
+type MiddleTab = "negocio" | "pessoas" | "periodo" | "custom";
 
 const MIDDLE_TABS: { id: MiddleTab; label: string; hint: string }[] = [
   { id: "negocio", label: "Negócio", hint: "Busca, etapa, origem, status e valor" },
   { id: "pessoas", label: "Pessoas", hint: "Responsável e dados do contato" },
-  { id: "conversa", label: "Conversa", hint: "Estado e direção da última mensagem" },
   { id: "periodo", label: "Período", hint: "Criação e fechamento" },
   { id: "custom", label: "Personalizados", hint: "Campos do negócio e contato" },
 ];
@@ -94,9 +93,6 @@ function middleTabCount(id: MiddleTab, f: AdvancedDealFilters): number {
         ? 1
         : 0)
     );
-  }
-  if (id === "conversa") {
-    return (f.conversationStatus ? 1 : 0) + (f.lastMessageDirection ? 1 : 0);
   }
   if (id === "periodo") {
     return (
@@ -224,6 +220,108 @@ function TagsChipColumn({
               {q.trim() ? "Nenhuma tag encontrada." : "Nenhuma tag cadastrada."}
             </p>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConversationSegmentation({
+  draft,
+  setDraftField,
+}: Pick<SectionProps, "draft" | "setDraftField">) {
+  const statusOptions = [
+    { value: "open" as const, label: "Aberta" },
+    { value: "closed" as const, label: "Fechada" },
+  ];
+  const directionOptions = [
+    { value: "out" as const, label: "Agente" },
+    { value: "in" as const, label: "Cliente" },
+  ];
+  const activeCount =
+    (draft.conversationStatus ? 1 : 0) + (draft.lastMessageDirection ? 1 : 0);
+
+  return (
+    <div className="mb-4 border-b border-[var(--glass-border-subtle)] pb-4">
+      <div className="mb-2.5 flex items-center justify-between px-2">
+        <span className="font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+          Segmentar conversas
+        </span>
+        {activeCount > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              setDraftField("conversationStatus", undefined);
+              setDraftField("lastMessageDirection", undefined);
+            }}
+            className="font-display text-[10px] font-semibold text-[var(--brand-primary)]"
+          >
+            Limpar
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-3 rounded-[var(--radius-lg)] border border-slate-200/90 bg-slate-50/80 p-2.5 v2-dark:border-white/10 v2-dark:bg-white/5">
+        <div>
+          <span className="mb-1.5 block font-body text-[10.5px] text-[var(--text-muted)]">
+            Status
+          </span>
+          <div className="grid grid-cols-2 gap-1.5">
+            {statusOptions.map((option) => {
+              const active = draft.conversationStatus === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() =>
+                    setDraftField(
+                      "conversationStatus",
+                      active ? undefined : option.value,
+                    )
+                  }
+                  className={cn(
+                    "rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11px] font-semibold transition-colors",
+                    active
+                      ? "bg-[var(--brand-primary)] text-white"
+                      : "bg-[var(--glass-bg-modal)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)]",
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <span className="mb-1.5 block font-body text-[10.5px] text-[var(--text-muted)]">
+            Direção da última mensagem
+          </span>
+          <div className="grid grid-cols-2 gap-1.5">
+            {directionOptions.map((option) => {
+              const active = draft.lastMessageDirection === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() =>
+                    setDraftField(
+                      "lastMessageDirection",
+                      active ? undefined : option.value,
+                    )
+                  }
+                  className={cn(
+                    "rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11px] font-semibold transition-colors",
+                    active
+                      ? "bg-[var(--brand-primary)] text-white"
+                      : "bg-[var(--glass-bg-modal)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)]",
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -415,14 +513,14 @@ export function FilterModalThreeCol({
             type="button"
             onClick={() => onSortKeyChange(opt.key)}
             className={cn(
-              "flex w-full items-start justify-between gap-2 rounded-[var(--radius-md)] px-2.5 py-2 text-left font-display text-[11.5px] font-semibold leading-snug transition-colors",
+              "flex w-full items-center justify-between gap-1.5 rounded-[var(--radius-md)] px-2 py-2 text-left font-display text-[11px] font-semibold leading-snug transition-colors",
               active
                 ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
                 : "text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
             )}
           >
-            <span>{opt.label}</span>
-            {active && <IconCheck size={13} stroke={2.6} className="mt-0.5 shrink-0" />}
+            <span className="whitespace-nowrap">{opt.label}</span>
+            {active && <IconCheck size={13} stroke={2.6} className="shrink-0" />}
           </button>
         );
       })}
@@ -486,6 +584,7 @@ export function FilterModalThreeCol({
         {/* Col 1 — visualizações */}
         <aside className="flex min-h-0 flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&_button]:!text-[11.5px] [&_.text-\[13px\]]:!text-[11.5px]">
           {sortBlock}
+          <ConversationSegmentation {...section} />
           <span className="px-2 pb-2 font-display text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--text-muted)]">
             Visualizações
           </span>
@@ -558,7 +657,7 @@ export function FilterModalThreeCol({
               {middleTab === "negocio" && (
                 <>
                   <SearchSection {...section} />
-                  <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] items-stretch gap-3 [&>*]:h-full">
                     <StagesSection {...section} />
                     <SourcesSection {...section} />
                     <StatusSection {...section} />
@@ -569,18 +668,16 @@ export function FilterModalThreeCol({
               )}
 
               {middleTab === "pessoas" && (
-                <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(min(260px,100%),1fr))] items-stretch gap-3 [&>*]:h-full">
                   <OwnersSection {...section} />
                   <ContactSection {...section} />
                 </div>
               )}
 
-              {middleTab === "conversa" && <ConversationSection {...section} />}
-
               {middleTab === "periodo" && <DatesPeriodSection {...section} />}
 
               {middleTab === "custom" && (
-                <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 [&>*]:h-full">
+                <div className="space-y-3">
                   <DealCustomFieldsSection {...section} />
                   <ContactCustomFieldsSection {...section} />
                 </div>

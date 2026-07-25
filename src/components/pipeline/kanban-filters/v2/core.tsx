@@ -506,8 +506,8 @@ const CONVERSATION_STATUS_OPTIONS: { value: "open" | "closed"; label: string }[]
   { value: "closed", label: "Fechada" },
 ];
 const LAST_DIRECTION_OPTIONS: { value: "in" | "out"; label: string }[] = [
-  { value: "out", label: "Nossa" },
-  { value: "in", label: "Do cliente" },
+  { value: "out", label: "Agente" },
+  { value: "in", label: "Cliente" },
 ];
 
 /** Filtra negócios pela conversa do contato: status + direção da última mensagem. */

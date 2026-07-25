@@ -19,6 +19,7 @@ import {
   IconRefresh,
   IconRotateClockwise,
   IconSearch,
+  IconSettings,
   IconTag,
   IconUserCheck,
   IconUsers,
@@ -1035,17 +1036,16 @@ function DistributionActionsMenu({
   return (
     <PageActionsMenu
       items={[
-        {
-          icon: testing ? (
-            <IconLoader2 size={13} className="animate-spin" />
-          ) : (
-            <IconPlayerPlay size={13} />
-          ),
-          label: testing ? "Testando…" : "Testar distribuição",
-          onClick: onTest,
-          disabled: testing,
-          primary: true,
-        },
+        ...(onDepartmentsConfig
+          ? [
+              {
+                icon: <IconSettings size={13} />,
+                label: "Configurações",
+                onClick: onDepartmentsConfig,
+                primary: true as const,
+              },
+            ]
+          : []),
         {
           icon: retrying ? (
             <IconLoader2 size={13} className="animate-spin" />
@@ -1055,23 +1055,24 @@ function DistributionActionsMenu({
           label: retrying ? "Reprocessando…" : "Reprocessar fila",
           onClick: onRetry,
           disabled: retrying || !canRetry,
+          primary: !onDepartmentsConfig,
         },
-        ...(onDepartmentsConfig
-          ? [
-              {
-                icon: <IconUsers size={13} />,
-                label: "Distribuição por departamento",
-                onClick: onDepartmentsConfig,
-                divider: true,
-              },
-            ]
-          : []),
         {
           icon: <IconX size={13} />,
           label: "Limpar filtros",
           onClick: onClearFilters,
           disabled: !hasFilters,
-          divider: !onDepartmentsConfig,
+          divider: true,
+        },
+        {
+          icon: testing ? (
+            <IconLoader2 size={13} className="animate-spin" />
+          ) : (
+            <IconPlayerPlay size={13} />
+          ),
+          label: testing ? "Testando…" : "Testar distribuição",
+          onClick: onTest,
+          disabled: testing,
         },
       ]}
     />

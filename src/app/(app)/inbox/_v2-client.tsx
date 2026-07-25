@@ -428,13 +428,25 @@ export default function InboxV2ClientPage({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isLoading: isListLoading,
   } = useConversations({
     tab,
     filters: serverFilters,
     search: debouncedSearch,
-    enabled: isAuthenticated,
+    // Só busca depois da sessão + prefs (tab/filtros do localStorage).
+    // Sem isso: (1) query disabled → isLoading=false → empty flash;
+    // (2) fetch com tab default "esperando" antes de hidratar a aba salva.
+    enabled: isAuthenticated && tabHydrated && filtersHydrated,
   });
   const rawRows = (listData?.items ?? []).filter(Boolean);
+
+  // Skeleton estável no F5: sessão, prefs ainda não lidas, ou 1ª carga da lista.
+  // Query desabilitada (sessão/prefs) NÃO seta isLoading no React Query.
+  const listBootstrapping =
+    sessionStatus === "loading" ||
+    !tabHydrated ||
+    !filtersHydrated ||
+    (isAuthenticated && isListLoading);
 
   // Ordena (default: última atividade primeiro) e filtra a janela de 24h.
   // Usa `lastMessageAt` (com fallback p/ `lastInboundAt`) para casar a ordem
@@ -478,7 +490,10 @@ export default function InboxV2ClientPage({
     });
   }, [rawRows, windowState, lastMessageDirection, sortBy, sortOrder]);
 
-  const { data: tabCounts } = useTabCounts(isAuthenticated, filters);
+  const { data: tabCounts } = useTabCounts(
+    isAuthenticated && filtersHydrated,
+    filters,
+  );
 
   // ── Sticky activeRow ────────────────────────────────────────────
   // A `rows` reflete o filtro da aba atual (ex.: "entrada"). Se o
@@ -1056,6 +1071,7 @@ export default function InboxV2ClientPage({
       }}
       hasMore={hasNextPage}
       isLoadingMore={isFetchingNextPage}
+      isLoading={listBootstrapping}
       className="h-full min-h-0"
       renderCardSlots={(c) => ({
         assigneeSlot: (

@@ -17,10 +17,12 @@ import {
   IconCheck,
   IconX,
   IconLoader2,
+  IconCopy,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 export type FieldEntityType = "contact" | "deal";
 
@@ -139,22 +141,49 @@ export function InlineFieldEditor({
   /* ── Modo de exibição ── */
   if (!editing) {
     const isEmpty = !value?.trim();
-    return (
-      <button
-        type="button"
-        onClick={startEdit}
+    const displayValue = isEmpty
+      ? placeholder
+      : formatDisplayValue(value!, fieldType);
+
+    const handleCopy = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isEmpty) return;
+      try {
+        await navigator.clipboard.writeText(value!);
+        toast.success("Copiado");
+      } catch {
+        toast.error("Falha ao copiar");
+      }
+    };
+
+    const row = (
+      <div
         className={cn(
-          "group flex w-full min-w-0 max-w-full items-center gap-1.5 text-left transition-colors",
+          "group flex w-full min-w-0 max-w-full items-center gap-1.5 transition-colors",
           isEmpty
             ? "font-display text-[11px] text-[var(--text-muted)] opacity-60 italic"
             : textClassName ??
                 "font-display text-[13px] font-bold text-[var(--text-primary)]",
         )}
-        aria-label={`Editar ${fieldId}`}
       >
-        <span className="min-w-0 max-w-full flex-1 break-words [overflow-wrap:anywhere]">
-          {isEmpty ? placeholder : formatDisplayValue(value!, fieldType)}
-        </span>
+        <button
+          type="button"
+          onClick={startEdit}
+          aria-label={`Editar ${fieldId}`}
+          className="min-w-0 max-w-full flex-1 truncate text-left"
+        >
+          {displayValue}
+        </button>
+        {!isEmpty && (
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-label="Copiar"
+            className="shrink-0 opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100"
+          >
+            <IconCopy size={12} />
+          </button>
+        )}
         <IconPencil
           size={12}
           className={cn(
@@ -162,7 +191,15 @@ export function InlineFieldEditor({
             editMode ? "opacity-40" : "opacity-0",
           )}
         />
-      </button>
+      </div>
+    );
+
+    // Sem valor: sem tooltip nem copy — só o placeholder clicável.
+    if (isEmpty) return row;
+    return (
+      <TooltipGlass label={value!} side="top">
+        {row}
+      </TooltipGlass>
     );
   }
 

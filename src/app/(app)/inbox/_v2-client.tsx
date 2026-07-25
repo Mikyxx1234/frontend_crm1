@@ -499,7 +499,14 @@ export default function InboxV2ClientPage({
   // carregada — supervisor abrindo o link de outra aba/filtro/página, ou
   // conversa que saiu do filtro — busca a conversa direto pelo id para abri-la
   // mesmo assim. Erro (404 sem acesso / inexistente) é tratado abaixo.
-  const needsDeepLinkFetch = Boolean(activeId) && !foundActiveRow;
+  //
+  // Se já temos sticky do mesmo id (ex.: acabou de Encerrar e a conversa
+  // saiu da aba "abertas"/"entrada"), NÃO refetch — evita corrida que
+  // dispara toast "Erro ao carregar conversa" no caminho feliz.
+  const needsDeepLinkFetch =
+    Boolean(activeId) &&
+    !foundActiveRow &&
+    stickyRow?.id !== activeId;
   const {
     data: deepLinkRow,
     error: deepLinkError,
@@ -519,7 +526,10 @@ export default function InboxV2ClientPage({
     // anterior — NÃO sobrescreve com null.
     if (deepLinkRow && deepLinkRow.id === activeId) {
       setStickyRow(deepLinkRow);
+      return;
     }
+    // Reabrir (novo ticket) / troca de id: não manter header do ticket antigo.
+    setStickyRow((prev) => (prev?.id === activeId ? prev : null));
   }, [activeId, foundActiveRow, deepLinkRow]);
 
   // Deep-link inválido (id inexistente ou sem permissão): avisa e limpa a
@@ -530,14 +540,18 @@ export default function InboxV2ClientPage({
   // instante derrubava a conversa que o F5 deveria manter aberta. Esperar a
   // lista settlar garante que a conversa em `rows` (foundActiveRow) tenha
   // chance de reidratar antes de qualquer reset.
+  //
+  // Também ignora erro se ainda há sticky do activeId — conversa só saiu
+  // do filtro da aba (Encerrar), não é deep-link inválido.
   useEffect(() => {
     if (needsDeepLinkFetch && deepLinkError && listData !== undefined) {
+      if (stickyRow?.id === activeId) return;
       toast.error(
         deepLinkError.message || "Conversa não encontrada ou sem permissão.",
       );
       setActiveId(null);
     }
-  }, [needsDeepLinkFetch, deepLinkError, listData]);
+  }, [needsDeepLinkFetch, deepLinkError, listData, stickyRow, activeId]);
 
   const activeRow = stickyRow;
   const activeContactId = activeRow?.contact?.id ?? null;
@@ -1270,6 +1284,17 @@ export default function InboxV2ClientPage({
               isResolved={activeRow.status === "RESOLVED"}
               onOpenFavorites={() => setFavoritesOpen(true)}
               onReopenNewConversation={(newId) => setActiveId(newId)}
+              onResolved={(id) => {
+                setStickyRow((prev) =>
+                  prev?.id === id
+                    ? {
+                        ...prev,
+                        status: "RESOLVED",
+                        closedAt: new Date().toISOString(),
+                      }
+                    : prev,
+                );
+              }}
               departmentId={activeRow.departmentId ?? activeRow.department?.id ?? null}
               requireTabulationOnClose={
                 activeRow.department?.requireTabulationOnClose ?? false
@@ -1304,6 +1329,17 @@ export default function InboxV2ClientPage({
               activeRow.department?.requireTabulationOnClose ?? false
             }
             onReopenNewConversation={(newId) => setActiveId(newId)}
+            onResolved={(id) => {
+              setStickyRow((prev) =>
+                prev?.id === id
+                  ? {
+                      ...prev,
+                      status: "RESOLVED",
+                      closedAt: new Date().toISOString(),
+                    }
+                  : prev,
+              );
+            }}
             conversationNumber={activeRow?.number ?? null}
             transferSlot={
               <TransferPopover

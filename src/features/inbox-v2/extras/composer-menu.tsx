@@ -48,6 +48,7 @@ export function ComposerMenu({
   onPickInternal,
   onPickTemplate,
   onReopenNewConversation,
+  onResolved,
   departmentId,
   requireTabulationOnClose,
 }: {
@@ -69,6 +70,7 @@ export function ComposerMenu({
   /** Callback quando "Reabrir" cria novo ticket (modelo de ticket). Ver
    *  ConversationActionsMenu e useToggleConversationResolve. */
   onReopenNewConversation?: (newConversationId: string) => void;
+  onResolved?: (conversationId: string) => void;
   /** Departamento vinculado — abre modal de tabulacao quando encerrar. */
   departmentId?: string | null;
   requireTabulationOnClose?: boolean;
@@ -84,6 +86,7 @@ export function ComposerMenu({
     onNewConversation: (newId) => {
       onReopenNewConversation?.(newId);
     },
+    onResolved: (id) => onResolved?.(id),
   });
 
   function closeMenu() {

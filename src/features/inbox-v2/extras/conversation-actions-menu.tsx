@@ -32,6 +32,7 @@ interface ConversationActionsMenuProps {
    * `conversationId` (que era o anterior).
    */
   onReopenNewConversation?: (newConversationId: string) => void;
+  onResolved?: (conversationId: string) => void;
   /** Departamento vinculado a conversa — usado para o modal de tabulacao. */
   departmentId?: string | null;
   /** Se true, o botao "Encerrar" abre um modal exigindo folha da arvore. */
@@ -45,6 +46,7 @@ export function ConversationActionsMenu({
   onSearchInConversation,
   onOpenFavorites,
   onReopenNewConversation,
+  onResolved,
   departmentId,
   requireTabulationOnClose,
 }: ConversationActionsMenuProps) {
@@ -55,6 +57,7 @@ export function ConversationActionsMenu({
     onNewConversation: (newId) => {
       onReopenNewConversation?.(newId);
     },
+    onResolved: (id) => onResolved?.(id),
   });
 
   useEffect(() => {

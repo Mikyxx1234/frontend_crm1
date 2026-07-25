@@ -90,6 +90,7 @@ export function Composer({
   departmentId,
   requireTabulationOnClose,
   onReopenNewConversation,
+  onResolved,
   conversationNumber,
   transferSlot,
 }: {
@@ -149,6 +150,8 @@ export function Composer({
    *  chat ativo pro id novo. Sem isto o reopen acontece no backend mas a UI
    *  fica presa no ticket resolvido (que some do colapso) — parece "não reabriu". */
   onReopenNewConversation?: (newConversationId: string) => void;
+  /** Após Encerrar — atualiza sticky/status local (evita toast de deep-link). */
+  onResolved?: (conversationId: string) => void;
   /** Nº do ticket — exibido ao lado de Encerrar/Reabrir. */
   conversationNumber?: number | null;
   /** Slot à esquerda das tabs (ex.: TransferPopover). */
@@ -810,6 +813,7 @@ export function Composer({
                   departmentId={departmentId}
                   requireTabulationOnClose={requireTabulationOnClose}
                   onReopenNewConversation={onReopenNewConversation}
+                  onResolved={onResolved}
                   disabled={sending}
                 />
               )}
@@ -838,6 +842,7 @@ export function Composer({
               departmentId={departmentId ?? null}
               requireTabulationOnClose={requireTabulationOnClose}
               onReopenNewConversation={onReopenNewConversation}
+              onResolved={onResolved}
             />
             <TooltipGlass label="Emoji" side="top">
               <span className="inline-flex">

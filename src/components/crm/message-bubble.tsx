@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
+  IconRobot,
   IconClipboardList,
   IconChevronDown,
   IconFile,
@@ -1475,15 +1476,10 @@ export function MessageBubble({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className="flex h-9 w-9 cursor-default items-center justify-center overflow-hidden rounded-full font-display text-[10px] font-bold text-white"
+                    className="flex h-9 w-9 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white"
                     style={{ background: AUTOMATION_ACCENT }}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/avatars/automation-bot.png"
-                      alt="Automação"
-                      className="size-full scale-[1.28] object-cover"
-                    />
+                    <IconRobot size={20} aria-label="Automação" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="font-medium text-[11px]">
@@ -1539,14 +1535,7 @@ export function MessageBubble({
                         : null
                     const photo = message.senderImageUrl || byName || selfPhoto
                     if (isBot) {
-                      return (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src="/avatars/automation-bot.png"
-                          alt="Automação"
-                          className="size-full scale-[1.28] object-cover"
-                        />
-                      )
+                      return <IconRobot size={19} aria-label="Automação" />
                     }
                     if (photo) {
                       return (

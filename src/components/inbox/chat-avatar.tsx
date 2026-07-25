@@ -9,6 +9,7 @@ import {
   IconBrandWhatsapp,
   IconForms,
   IconMail,
+  IconRobot,
 } from "@tabler/icons-react";
 
 import {
@@ -167,11 +168,11 @@ export function ChatAvatar({
           />
         ) : isBotResolved ? (
           <div className="relative flex size-full items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/avatars/automation-bot.png"
-              alt="Automação"
-              className="size-full scale-[1.28] object-cover"
+            <IconRobot
+              size="72%"
+              stroke={1.8}
+              className="relative z-10 text-white"
+              aria-label="Automação"
             />
           </div>
         ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -13,6 +13,7 @@ import {
   IconBellOff,
   IconBriefcase,
   IconChevronDown,
+  IconChevronUp,
   IconCircleCheck,
   IconMessageCircle,
   IconRotateClockwise,
@@ -305,7 +306,9 @@ export default function InboxV2ClientPage({
   // localStorage e restaurada no F5 (lê no effect, SSR-safe).
   const [tab, setTab] = useState<InboxTab>(DEFAULT_INBOX_TAB);
   const [tabHydrated, setTabHydrated] = useState(false);
-  useEffect(() => {
+  // useLayoutEffect: restaura aba ANTES do paint (useEffect deixava
+  // 1 frame com default "Aguardando" + empty no F5).
+  useLayoutEffect(() => {
     setTab(readStoredInboxTab());
     setTabHydrated(true);
   }, []);
@@ -317,7 +320,7 @@ export default function InboxV2ClientPage({
   // para outras páginas do CRM e refresh. Lê no effect (SSR-safe).
   const [filters, setFilters] = useState<InboxFilters>(DEFAULT_FILTERS);
   const [filtersHydrated, setFiltersHydrated] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     setFilters(readStoredInboxFilters());
     setFiltersHydrated(true);
   }, []);
@@ -334,6 +337,33 @@ export default function InboxV2ClientPage({
   const [externalTemplate, setExternalTemplate] = useState<PendingTemplate | null>(null);
   const [asideCollapsed, setAsideCollapsed] = useState(false);
   const [mobilePaneTab, setMobilePaneTab] = useState<"chat" | "negocio">("chat");
+
+  // Colapso do cabeçalho de página (ícone + título + busca) — ganha altura
+  // pra o chat e para o painel de contato. Persistido em localStorage;
+  // hidratado com `useLayoutEffect` pra evitar flash no F5.
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const [headerHydrated, setHeaderHydrated] = useState(false);
+  useLayoutEffect(() => {
+    try {
+      setHeaderCollapsed(
+        window.localStorage.getItem("inbox:header-collapsed") === "1",
+      );
+    } catch {
+      /* ignore */
+    }
+    setHeaderHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!headerHydrated) return;
+    try {
+      window.localStorage.setItem(
+        "inbox:header-collapsed",
+        headerCollapsed ? "1" : "0",
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [headerCollapsed, headerHydrated]);
 
   // ── Seleção múltipla + ações em massa (encerrar/reabrir) ────────
   // Modo explícito (como o legado): entrar em "seleção" desativa o clique
@@ -428,7 +458,7 @@ export default function InboxV2ClientPage({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading: isListLoading,
+    isError: isListError,
   } = useConversations({
     tab,
     filters: serverFilters,
@@ -440,13 +470,14 @@ export default function InboxV2ClientPage({
   });
   const rawRows = (listData?.items ?? []).filter(Boolean);
 
-  // Skeleton estável no F5: sessão, prefs ainda não lidas, ou 1ª carga da lista.
-  // Query desabilitada (sessão/prefs) NÃO seta isLoading no React Query.
+  // Skeleton até a 1ª resposta da lista (mesmo se items=[]).
+  // NÃO usar só isLoading: no RQ v5 há frame com enabled=true,
+  // isPending + fetchStatus=idle → isLoading=false + data=undefined → empty flash.
   const listBootstrapping =
     sessionStatus === "loading" ||
     !tabHydrated ||
     !filtersHydrated ||
-    (isAuthenticated && isListLoading);
+    (isAuthenticated && !listData && !isListError);
 
   // Ordena (default: última atividade primeiro) e filtra a janela de 24h.
   // Usa `lastMessageAt` (com fallback p/ `lastInboundAt`) para casar a ordem
@@ -1046,8 +1077,10 @@ export default function InboxV2ClientPage({
       bulkActionsSlot={bulkActionsNode}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
-        count:
-          useFilteredTabCount && t.id === tab
+        // Sem count no bootstrap → pulse no badge (evita "0" prematuro).
+        count: listBootstrapping
+          ? undefined
+          : useFilteredTabCount && t.id === tab
             ? listData?.total
             : tabCounts?.[t.id] ?? undefined,
       }))}
@@ -1469,6 +1502,48 @@ export default function InboxV2ClientPage({
     </>
   );
 
+  // Cabeçalho da página com colapso animado (slide up/down) — dá mais
+  // altura ao chat/asides quando os agentes querem foco máximo.
+  // A "alça" central com o chevron fica sempre visível; ao colapsar o
+  // header some suavemente e a área de conteúdo cresce.
+  const renderCollapsiblePageHeader = (headerNode: React.ReactNode) => (
+    <div className="flex shrink-0 flex-col">
+      <div
+        className={cn(
+          "grid overflow-hidden transition-[grid-template-rows,opacity,margin] duration-300 ease-out",
+          headerCollapsed
+            ? "grid-rows-[0fr] opacity-0"
+            : "grid-rows-[1fr] opacity-100",
+        )}
+        aria-hidden={headerCollapsed}
+      >
+        <div className="min-h-0 overflow-hidden">{headerNode}</div>
+      </div>
+      <div className="flex items-center justify-center">
+        <TooltipGlass
+          label={headerCollapsed ? "Mostrar cabeçalho" : "Ocultar cabeçalho"}
+          side="bottom"
+        >
+          <button
+            type="button"
+            onClick={() => setHeaderCollapsed((v) => !v)}
+            aria-label={headerCollapsed ? "Mostrar cabeçalho" : "Ocultar cabeçalho"}
+            aria-expanded={!headerCollapsed}
+            className={cn(
+              "group flex h-4 w-16 items-center justify-center rounded-b-[var(--radius-md)] border border-t-0 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-all hover:h-5 hover:w-20 hover:bg-[var(--glass-bg)] hover:text-[var(--brand-primary)]",
+            )}
+          >
+            {headerCollapsed ? (
+              <IconChevronDown size={14} stroke={2.4} />
+            ) : (
+              <IconChevronUp size={14} stroke={2.4} />
+            )}
+          </button>
+        </TooltipGlass>
+      </div>
+    </div>
+  );
+
   // Layout COM cabeçalho de página (estilo "Caixa de entrada" da
   // referência): NavRail fixo à esquerda; à direita o header no topo e
   // as 3 colunas (lista/chat/contato) numa grade abaixo.
@@ -1479,12 +1554,14 @@ export default function InboxV2ClientPage({
         <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
           {navRailNode}
           <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
-            <PageHeader
-              icon={pageHeader.icon}
-              title={pageHeader.title}
-              center={inboxSearchFilterNode}
-              actions={null}
-            />
+            {renderCollapsiblePageHeader(
+              <PageHeader
+                icon={pageHeader.icon}
+                title={pageHeader.title}
+                center={inboxSearchFilterNode}
+                actions={null}
+              />,
+            )}
             {!activeId ? (
               <div className="min-h-0 flex-1 overflow-hidden">
                 {conversationColumnNode}
@@ -1550,12 +1627,14 @@ export default function InboxV2ClientPage({
       >
         {navRailNode}
         <div className="flex min-w-0 flex-col gap-4 overflow-hidden">
-          <PageHeader
-            icon={pageHeader.icon}
-            title={pageHeader.title}
-            center={inboxSearchFilterNode}
-            actions={null}
-          />
+          {renderCollapsiblePageHeader(
+            <PageHeader
+              icon={pageHeader.icon}
+              title={pageHeader.title}
+              center={inboxSearchFilterNode}
+              actions={null}
+            />,
+          )}
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
             style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}` }}

@@ -121,6 +121,8 @@ export function useConversations(params: {
   return {
     data,
     isLoading: query.isLoading,
+    isPending: query.isPending,
+    isFetched: query.isFetched,
     isError: query.isError,
     error: query.error,
     fetchNextPage: query.fetchNextPage,

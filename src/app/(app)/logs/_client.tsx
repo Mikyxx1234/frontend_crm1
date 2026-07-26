@@ -82,8 +82,19 @@ import { useActivityStats } from "@/features/activity-feed/use-activity-stats";
 import { MOCK_FEED } from "@/features/activity-feed/mock-feed";
 import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 import { cn } from "@/lib/utils";
+import { SystemUsageTab } from "@/features/system-usage/system-usage-tab";
+import {
+  SystemUsagePeriodFilter,
+  defaultSystemUsagePeriod,
+  type SystemUsagePeriodValue,
+} from "@/features/system-usage/system-usage-period-filter";
 
-const LOG_TABS = ["Eventos", "Chamadas", "Estatísticas (30d)"] as const;
+const LOG_TABS = [
+  "Eventos",
+  "Chamadas",
+  "Estatísticas (30d)",
+  "Uso do sistema",
+] as const;
 
 const ENTITY_OPTIONS = [
   { value: "ALL", label: "Todas as entidades" },
@@ -249,6 +260,13 @@ export default function LogsClientPage() {
   const [activeTab, setActiveTab] = React.useState(0);
   const isFeed = activeTab === 0;
   const isCalls = activeTab === 1;
+  const isStats = activeTab === 2;
+  const isUsage = activeTab === 3;
+
+  // Filtro de período da aba "Uso do sistema" (30d default).
+  const [usagePeriod, setUsagePeriod] = React.useState<SystemUsagePeriodValue>(
+    () => defaultSystemUsagePeriod(),
+  );
 
   // Aba Chamadas (histórico movido do ícone da nav rail para dentro de Logs).
   const callsWidget = useCallsWidget(sessionStatus === "authenticated");
@@ -482,7 +500,8 @@ export default function LogsClientPage() {
     return () => io.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const { data: stats, isLoading: statsLoading } = useActivityStats(!isFeed);
+  // Estatísticas só devem carregar quando a aba correspondente estiver ativa.
+  const { data: stats, isLoading: statsLoading } = useActivityStats(isStats);
 
   if (ready && !isManagerUp) return <RestrictedScreen />;
 
@@ -519,6 +538,13 @@ export default function LogsClientPage() {
                   onSearch={setCallsSearch}
                   filters={callsFilters}
                   onFiltersChange={setCallsFilters}
+                />
+              </div>
+            ) : isUsage ? (
+              <div className="flex w-full justify-start">
+                <SystemUsagePeriodFilter
+                  value={usagePeriod}
+                  onChange={setUsagePeriod}
                 />
               </div>
             ) : undefined
@@ -698,6 +724,8 @@ export default function LogsClientPage() {
               />
             )}
           </>
+        ) : isUsage ? (
+          <SystemUsageTab range={usagePeriod.range} />
         ) : isCalls ? (
           callsWidget.isLoading ? (
             <div className="space-y-3">

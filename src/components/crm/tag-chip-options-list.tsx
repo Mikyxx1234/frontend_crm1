@@ -16,6 +16,8 @@ export type TagChipOptionsListProps = {
   selectedIds: ReadonlySet<string> | readonly string[];
   onToggle: (tagId: string) => void;
   disabled?: boolean;
+  /** Desabilita só as chips com mutation em voo (outras continuam clicáveis). */
+  pendingIds?: ReadonlySet<string> | readonly string[];
   isLoading?: boolean;
   emptyLabel?: string;
   /** Quando definido, exibe a ação de criar tag no final da lista. */
@@ -41,6 +43,7 @@ export function TagChipOptionsList({
   selectedIds,
   onToggle,
   disabled = false,
+  pendingIds,
   isLoading = false,
   emptyLabel = "Nenhuma tag.",
   createLabel = null,
@@ -52,6 +55,10 @@ export function TagChipOptionsList({
   const selected = React.useMemo(
     () => toSelectedSet(selectedIds),
     [selectedIds],
+  );
+  const pending = React.useMemo(
+    () => (pendingIds ? toSelectedSet(pendingIds) : null),
+    [pendingIds],
   );
 
   if (isLoading) {
@@ -74,6 +81,8 @@ export function TagChipOptionsList({
         >
           {tags.map((tag) => {
             const checked = selected.has(tag.id);
+            const chipPending = pending?.has(tag.id) ?? false;
+            const chipDisabled = disabled || chipPending;
             return (
               <TagChip
                 key={tag.id}
@@ -82,9 +91,9 @@ export function TagChipOptionsList({
                 selected={checked}
                 aria-pressed={checked}
                 onClick={() => {
-                  if (!disabled) onToggle(tag.id);
+                  if (!chipDisabled) onToggle(tag.id);
                 }}
-                className={cn(disabled && "pointer-events-none opacity-60")}
+                className={cn(chipDisabled && "pointer-events-none opacity-60")}
               />
             );
           })}

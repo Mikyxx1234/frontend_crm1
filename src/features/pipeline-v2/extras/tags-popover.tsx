@@ -3,9 +3,14 @@
 /*
  * Popover de Tags do Deal — renderizado via createPortal em
  * document.body para escapar dos stacking contexts do Draggable.
+ *
+ * Seleção local durante a sessão do popover: o toggle NÃO lê
+ * `currentTags` do parent (board otimista) para decidir add/remove.
+ * Isso evita que o reflow/reclassificação das chips no meio do gesto
+ * dispare mutações em tagIds diferentes ("1 clique → N requests").
  */
 
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
@@ -27,6 +32,10 @@ interface TagsPopoverProps {
   trigger: ReactNode;
 }
 
+function idsFromTags(tags: { id: string }[]): Set<string> {
+  return new Set(tags.map((t) => t.id));
+}
+
 export function TagsPopover({
   dealId,
   currentTags,
@@ -37,23 +46,39 @@ export function TagsPopover({
 }: TagsPopoverProps) {
   const { open, rect, triggerRef, popoverRef, toggle } = usePortalPopover();
   const [filter, setFilter] = useState("");
-  // Guard anti-double-dispatch: dois eventos do mesmo clique (ex: click +
-  // mousedown replay do dnd/HMR, ou propagação através de um wrapper)
-  // chamavam `handleToggle` duas vezes no MESMO tick — como o `useMutation`
-  // é síncrono ao disparar `mutationFn`, ambas as requests iam para a rede
-  // ANTES do isPending mudar, resultando no "add + remove" que se cancelava
-  // (bug reportado 25/jul/26). O ref persiste enquanto uma toggle daquele
-  // (deal, tag) está em voo; segundo disparo no mesmo par é ignorado.
-  const inFlightTogglesRef = useRef<Set<string>>(new Set());
+  /** Seleção espelhada ao abrir; toggles atualizam só este Set. */
+  const [localSelected, setLocalSelected] = useState<Set<string>>(() =>
+    idsFromTags(currentTags),
+  );
+  /** Tags com mutation em voo — bloqueia só aquela chip, não a lista. */
+  const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
+  const pendingIdsRef = useRef<Set<string>>(new Set());
+  const wasOpenRef = useRef(false);
+  const syncedDealIdRef = useRef<string | null>(null);
 
   const tagsQuery = useDealTags();
   const addMutation = useAddDealTag(pipelineId, statusFilter);
   const removeMutation = useRemoveDealTag(pipelineId, statusFilter);
 
-  const currentIds = useMemo(
-    () => new Set(currentTags.map((t) => t.id)),
-    [currentTags],
-  );
+  // Sincroniza com o board só ao abrir (ou ao trocar de deal).
+  // NÃO re-sincroniza quando `currentTags` muda por update otimista —
+  // essa reclassificação no meio do clique era a raiz do bug.
+  useEffect(() => {
+    if (!open) {
+      wasOpenRef.current = false;
+      syncedDealIdRef.current = null;
+      return;
+    }
+    const justOpened = !wasOpenRef.current;
+    const dealChanged = dealId !== syncedDealIdRef.current;
+    wasOpenRef.current = true;
+    if (justOpened || dealChanged) {
+      syncedDealIdRef.current = dealId;
+      setLocalSelected(idsFromTags(currentTags));
+      pendingIdsRef.current = new Set();
+      setPendingIds(new Set());
+    }
+  }, [open, dealId, currentTags]);
 
   const filtered = (tagsQuery.data ?? []).filter((t) =>
     t.name.toLowerCase().includes(filter.trim().toLowerCase()),
@@ -65,26 +90,31 @@ export function TagsPopover({
       (t) => t.name.toLowerCase() === filter.trim().toLowerCase(),
     );
 
+  function markPending(tagId: string, pending: boolean) {
+    if (pending) pendingIdsRef.current.add(tagId);
+    else pendingIdsRef.current.delete(tagId);
+    setPendingIds(new Set(pendingIdsRef.current));
+  }
+
   function handleToggle(tagId: string) {
     if (!dealId) return;
-    const key = `${dealId}:${tagId}`;
-    if (inFlightTogglesRef.current.has(key)) {
-      if (process.env.NODE_ENV !== "production") {
-        console.debug("[TagsPopover] toggle ignorado (dispatch duplicado no mesmo tick)", key);
-      }
-      return;
-    }
-    inFlightTogglesRef.current.add(key);
-    // Libera o lock no PRÓXIMO tick — janela suficiente para engolir
-    // dispatches duplicados síncronos (double click / replay de dnd / HMR)
-    // sem depender do ciclo do RQ (`onSettled` per-call podia não ser
-    // chamado em cenários de erro/StrictMode, deixando o par travado
-    // permanentemente).
-    setTimeout(() => inFlightTogglesRef.current.delete(key), 0);
-    if (currentIds.has(tagId)) {
-      removeMutation.mutate({ dealId, tagId });
+    if (pendingIdsRef.current.has(tagId)) return;
+
+    const wasSelected = localSelected.has(tagId);
+    setLocalSelected((prev) => {
+      const next = new Set(prev);
+      if (wasSelected) next.delete(tagId);
+      else next.add(tagId);
+      return next;
+    });
+
+    markPending(tagId, true);
+    const onSettled = () => markPending(tagId, false);
+
+    if (wasSelected) {
+      removeMutation.mutate({ dealId, tagId }, { onSettled });
     } else {
-      addMutation.mutate({ dealId, tagId });
+      addMutation.mutate({ dealId, tagId }, { onSettled });
     }
   }
 
@@ -94,7 +124,18 @@ export function TagsPopover({
     if (!name) return;
     addMutation.mutate(
       { dealId, tagName: name },
-      { onSuccess: () => setFilter("") },
+      {
+        onSuccess: () => {
+          setFilter("");
+          const catalog = tagsQuery.data ?? [];
+          const created = catalog.find(
+            (t) => t.name.toLowerCase() === name.toLowerCase(),
+          );
+          if (created) {
+            setLocalSelected((prev) => new Set(prev).add(created.id));
+          }
+        },
+      },
     );
   }
 
@@ -139,9 +180,9 @@ export function TagsPopover({
             />
             <TagChipOptionsList
               tags={filtered}
-              selectedIds={currentIds}
+              selectedIds={localSelected}
+              pendingIds={pendingIds}
               onToggle={handleToggle}
-              disabled={addMutation.isPending || removeMutation.isPending}
               isLoading={tagsQuery.isLoading}
               createLabel={canCreate ? `+ Criar “${filter.trim()}”` : null}
               onCreate={handleCreate}

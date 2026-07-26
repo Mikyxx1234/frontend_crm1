@@ -29,6 +29,8 @@ import { toast } from "sonner";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { UserAvatar } from "@/components/crm/user-avatar";
+import { AgentStatusDot } from "@/components/crm/agent-status-dot";
+import type { AgentOnlineStatus } from "@/components/crm/agent-status";
 import {
   SystemPresenceIndicator,
   sortByPresence,
@@ -628,20 +630,33 @@ function ResponsibleCard({
     >
       {/* Responsável */}
       <div className="flex min-w-0 items-center gap-2.5">
-        <UserAvatar
-          name={r.name ?? r.email}
-          imageUrl={r.avatarUrl ?? (isCurrentUser ? currentUserImage : null)}
-          size={36}
-          status={
-            !r.participates
-              ? "offline"
-              : r.paused || r.status === "AWAY"
-                ? "away"
-                : isOnline
-                  ? "online"
-                  : "offline"
-          }
-        />
+        {/*
+          Avatar + bolinha de status EQUIVALENTE à NavRail: a bolinha é
+          renderizada como IRMÃ (fora do overflow-hidden do avatar) para
+          ficar à frente e não ser cortada. Mesmas cores/tokens do
+          `AgentStatusDot` — fonte única de verdade visual do status.
+        */}
+        <span className="relative isolate shrink-0">
+          <UserAvatar
+            name={r.name ?? r.email}
+            imageUrl={r.avatarUrl ?? (isCurrentUser ? currentUserImage : null)}
+            size={36}
+          />
+          <AgentStatusDot
+            status={
+              (!r.participates
+                ? "OFFLINE"
+                : r.paused || r.status === "AWAY"
+                  ? "AWAY"
+                  : isOnline
+                    ? "ONLINE"
+                    : "OFFLINE") satisfies AgentOnlineStatus
+            }
+            size={12}
+            borderWidth={2}
+            borderColor="var(--glass-bg-base)"
+          />
+        </span>
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 truncate font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
             <span className="truncate">{r.name ?? "Sem nome"}</span>

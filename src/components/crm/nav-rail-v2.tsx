@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DockButton, DockProvider } from "@/components/crm/floating-dock";
 import { UserAvatar } from "@/components/crm/user-avatar";
+import { AgentStatusDot } from "@/components/crm/agent-status-dot";
 import {
   AGENT_STATUS_META,
   AgentStatusPopup,
@@ -662,11 +663,7 @@ export function NavRailV2({ className }: { className?: string }) {
                   : "border-[var(--glass-bg-strong)]",
               )}
             />
-            <span
-              className="absolute -bottom-0.5 -right-0.5 z-30 h-3.5 w-3.5 rounded-full border-[3px] border-[var(--nav-bg)] shadow-[0_1px_5px_rgba(0,0,0,0.35)]"
-              style={{ backgroundColor: statusMeta.color }}
-              aria-label={`Status: ${statusMeta.label}`}
-            />
+            <AgentStatusDot status={agentStatus.status} />
           </span>
           {expanded && (
             <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[var(--nav-text-hover)]">
@@ -697,11 +694,7 @@ export function NavRailV2({ className }: { className?: string }) {
                   : "border-[var(--glass-bg-strong)]",
               )}
             />
-            <span
-              className="absolute -bottom-0.5 -right-0.5 z-30 h-3.5 w-3.5 rounded-full border-[3px] border-[var(--nav-bg)] shadow-[0_1px_5px_rgba(0,0,0,0.35)]"
-              style={{ backgroundColor: statusMeta.color }}
-              aria-label={`Status: ${statusMeta.label}`}
-            />
+            <AgentStatusDot status={agentStatus.status} />
           </span>
           {expanded && (
             <div className="min-w-0 flex-1 overflow-hidden">

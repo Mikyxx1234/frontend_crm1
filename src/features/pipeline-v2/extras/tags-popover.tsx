@@ -69,27 +69,22 @@ export function TagsPopover({
     if (!dealId) return;
     const key = `${dealId}:${tagId}`;
     if (inFlightTogglesRef.current.has(key)) {
-      // Diagnóstico: ajuda a detectar dispatches duplicados no mesmo tick
-      // (mantido gated em dev para não poluir prod).
       if (process.env.NODE_ENV !== "production") {
-        console.debug("[TagsPopover] toggle ignorado (já em voo)", key);
+        console.debug("[TagsPopover] toggle ignorado (dispatch duplicado no mesmo tick)", key);
       }
       return;
     }
     inFlightTogglesRef.current.add(key);
-    const release = () => {
-      inFlightTogglesRef.current.delete(key);
-    };
+    // Libera o lock no PRÓXIMO tick — janela suficiente para engolir
+    // dispatches duplicados síncronos (double click / replay de dnd / HMR)
+    // sem depender do ciclo do RQ (`onSettled` per-call podia não ser
+    // chamado em cenários de erro/StrictMode, deixando o par travado
+    // permanentemente).
+    setTimeout(() => inFlightTogglesRef.current.delete(key), 0);
     if (currentIds.has(tagId)) {
-      removeMutation.mutate(
-        { dealId, tagId },
-        { onSettled: release },
-      );
+      removeMutation.mutate({ dealId, tagId });
     } else {
-      addMutation.mutate(
-        { dealId, tagId },
-        { onSettled: release },
-      );
+      addMutation.mutate({ dealId, tagId });
     }
   }
 

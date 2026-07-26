@@ -1772,16 +1772,13 @@ function DroppableColumn({
                         return (
                           <>
                             {visibleTags.map((t) => (
-                              // max-w + truncate evita que nomes longos
-                              // ("Lead Estagiário Suporte SP" etc.) estourem
-                              // a largura do card kanban (300px). Tooltip
-                              // mostra o nome completo no hover. Padrão já
-                              // usado no inbox v2 (`inbox/_v2-client.tsx`).
+                              // Linha única: chips truncam (max-w + min-w-0)
+                              // e "+N"/trigger ficam shrink-0 na mesma linha.
                               <TooltipGlass key={t.id} label={t.name} side="top">
                                 <TagChip
                                   name={t.name}
                                   color={t.color}
-                                  className="max-w-[7.5rem] whitespace-nowrap"
+                                  className="max-w-[7.5rem] min-w-0 shrink"
                                 />
                               </TooltipGlass>
                             ))}
@@ -1790,7 +1787,7 @@ function DroppableColumn({
                                 label={hiddenTags.map((t) => t.name).join(", ")}
                                 side="top"
                               >
-                                <span className="inline-flex cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--text-muted)]">
+                                <span className="inline-flex shrink-0 cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--text-muted)]">
                                   +{hiddenTags.length}
                                 </span>
                               </TooltipGlass>
@@ -1801,7 +1798,7 @@ function DroppableColumn({
                               pipelineId={pipelineId}
                               statusFilter={statusFilter}
                               trigger={
-                                <span className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
+                                <span className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
                                   +
                                 </span>
                               }

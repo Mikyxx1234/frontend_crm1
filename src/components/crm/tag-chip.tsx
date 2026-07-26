@@ -65,13 +65,15 @@ export function TagChip({
             }
       }
     >
-      {selected && (
-        <IconCheck
-          size={size === "md" ? 12 : 10}
-          stroke={3}
-          className="shrink-0"
-        />
-      )}
+      {/* Reserva espaço do check sempre — evita reflow em flex-wrap
+          quando selected muda no meio de um gesto de clique (ghost click
+          em outra chip). */}
+      <IconCheck
+        size={size === "md" ? 12 : 10}
+        stroke={3}
+        className={cn("shrink-0", !selected && "invisible")}
+        aria-hidden={!selected}
+      />
       <span className="truncate">{name}</span>
       {count != null && (
         <small

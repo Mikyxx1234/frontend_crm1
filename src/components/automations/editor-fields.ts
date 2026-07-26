@@ -201,6 +201,8 @@ export const CONDITION_FIELDS: Opt[] = [
   { value: "conversation.isClosed", label: "Conversa encerrada", group: "Conversa" },
   { value: "conversation.hasAgentReply", label: "Teve resposta do agente", group: "Conversa" },
   { value: "conversation.hasError", label: "Conversa com erro", group: "Conversa" },
+  // Sistema (pseudo-fields — não vêm do runtime, são avaliados por operador)
+  { value: "system.now", label: "Momento atual (expediente)", group: "Sistema" },
 ]
 
 /** Campos booleanos → valor vira select Sim/Não. */
@@ -244,7 +246,15 @@ export const CONDITION_OPS: Opt[] = [
   { value: "not_empty", label: "Não vazio" },
   { value: "has_tag", label: "Tem a tag" },
   { value: "not_has_tag", label: "Não tem a tag" },
+  { value: "in_business_hours", label: "Está no expediente" },
+  { value: "not_in_business_hours", label: "Está fora do expediente" },
 ]
+
+/** Ops que usam schedule (dias+faixas horárias) como valor. */
+export const CONDITION_SCHEDULE_OPS = new Set<string>([
+  "in_business_hours",
+  "not_in_business_hours",
+])
 
 export const WEEK_DAYS = [
   { value: 0, label: "D" },

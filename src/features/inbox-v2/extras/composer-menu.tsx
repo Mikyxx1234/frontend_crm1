@@ -146,10 +146,12 @@ export function ComposerMenu({
         variant="icon"
         size="icon"
         className={className}
-        onClick={() => {
+        onClick={(e) => {
+          e.stopPropagation();
           setOpen((v) => !v);
           setView("root");
         }}
+        onMouseDown={(e) => e.stopPropagation()}
         disabled={!conversationId}
         title="Anexos e mais opções"
       >
@@ -159,8 +161,9 @@ export function ComposerMenu({
       {open && conversationId ? (
         <div
           ref={popoverRef}
-          className="absolute bottom-12 left-0 z-30"
+          className="absolute bottom-12 left-0 z-50"
           role="menu"
+          onMouseDown={(e) => e.stopPropagation()}
         >
           {view === "root" ? (
             <div

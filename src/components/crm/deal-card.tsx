@@ -214,7 +214,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           stopPropagation em multiplos eventos para nao abrir o deal
           ou iniciar drag ao interagir com popovers injetados. */}
       <div
-        className="mb-1 mt-1 flex flex-wrap items-center gap-1"
+        className="mb-1 mt-1 flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden"
         onClick={tagsSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
         onMouseDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
         onPointerDown={tagsSlot ? (e) => e.stopPropagation() : undefined}

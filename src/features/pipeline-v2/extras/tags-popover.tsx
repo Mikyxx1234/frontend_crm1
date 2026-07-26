@@ -3,9 +3,14 @@
 /*
  * Popover de Tags do Deal — renderizado via createPortal em
  * document.body para escapar dos stacking contexts do Draggable.
+ *
+ * Fluxo rascunho → Salvar: ao abrir, copia `currentTags` para
+ * seleção local; cliques nas chips só alteram o rascunho (UI).
+ * Mutations de add/remove disparam apenas no botão Salvar.
+ * Criar tag nova ainda persiste na hora e já marca selected.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
@@ -27,6 +32,10 @@ interface TagsPopoverProps {
   trigger: ReactNode;
 }
 
+function idsFromTags(tags: { id: string }[]): Set<string> {
+  return new Set(tags.map((t) => t.id));
+}
+
 export function TagsPopover({
   dealId,
   currentTags,
@@ -35,17 +44,43 @@ export function TagsPopover({
   disabled,
   trigger,
 }: TagsPopoverProps) {
-  const { open, rect, triggerRef, popoverRef, toggle } = usePortalPopover();
+  const { open, rect, triggerRef, popoverRef, toggle, close } =
+    usePortalPopover();
   const [filter, setFilter] = useState("");
+  /** Seleção espelhada ao abrir; toggles atualizam só este Set. */
+  const [localSelected, setLocalSelected] = useState<Set<string>>(() =>
+    idsFromTags(currentTags),
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const wasOpenRef = useRef(false);
+  const syncedDealIdRef = useRef<string | null>(null);
+  /** Snapshot dos ids do deal no momento da abertura (base do diff). */
+  const baselineIdsRef = useRef<Set<string>>(idsFromTags(currentTags));
 
   const tagsQuery = useDealTags();
   const addMutation = useAddDealTag(pipelineId, statusFilter);
   const removeMutation = useRemoveDealTag(pipelineId, statusFilter);
 
-  const currentIds = useMemo(
-    () => new Set(currentTags.map((t) => t.id)),
-    [currentTags],
-  );
+  // Sincroniza com o board só ao abrir (ou ao trocar de deal).
+  // NÃO re-sincroniza quando `currentTags` muda por update otimista.
+  useEffect(() => {
+    if (!open) {
+      wasOpenRef.current = false;
+      syncedDealIdRef.current = null;
+      return;
+    }
+    const justOpened = !wasOpenRef.current;
+    const dealChanged = dealId !== syncedDealIdRef.current;
+    wasOpenRef.current = true;
+    if (justOpened || dealChanged) {
+      syncedDealIdRef.current = dealId;
+      const baseline = idsFromTags(currentTags);
+      baselineIdsRef.current = baseline;
+      setLocalSelected(baseline);
+      setIsSaving(false);
+      setFilter("");
+    }
+  }, [open, dealId, currentTags]);
 
   const filtered = (tagsQuery.data ?? []).filter((t) =>
     t.name.toLowerCase().includes(filter.trim().toLowerCase()),
@@ -57,26 +92,88 @@ export function TagsPopover({
       (t) => t.name.toLowerCase() === filter.trim().toLowerCase(),
     );
 
+  const hasChanges = useMemo(() => {
+    const baseline = baselineIdsRef.current;
+    if (localSelected.size !== baseline.size) return true;
+    for (const id of localSelected) {
+      if (!baseline.has(id)) return true;
+    }
+    return false;
+  }, [localSelected]);
+
   function handleToggle(tagId: string) {
-    if (!dealId) return;
-    if (currentIds.has(tagId)) {
-      removeMutation.mutate({ dealId, tagId });
-    } else {
-      addMutation.mutate({ dealId, tagId });
+    if (!dealId || isSaving) return;
+    setLocalSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(tagId)) next.delete(tagId);
+      else next.add(tagId);
+      return next;
+    });
+  }
+
+  async function handleSave() {
+    if (!dealId || isSaving || !hasChanges) return;
+
+    const baseline = baselineIdsRef.current;
+    const toAdd: string[] = [];
+    const toRemove: string[] = [];
+    for (const id of localSelected) {
+      if (!baseline.has(id)) toAdd.push(id);
+    }
+    for (const id of baseline) {
+      if (!localSelected.has(id)) toRemove.push(id);
+    }
+    if (toAdd.length === 0 && toRemove.length === 0) return;
+
+    setIsSaving(true);
+    try {
+      // Sequencial: evita corrida de onMutate/onSettled no mesmo
+      // useMutation ao disparar vários mutateAsync em paralelo.
+      for (const tagId of toRemove) {
+        await removeMutation.mutateAsync({ dealId, tagId });
+      }
+      for (const tagId of toAdd) {
+        await addMutation.mutateAsync({ dealId, tagId });
+      }
+      baselineIdsRef.current = new Set(localSelected);
+      close();
+    } catch {
+      // Mantém popover aberto com o rascunho para o usuário tentar de novo.
+    } finally {
+      setIsSaving(false);
     }
   }
 
-  function handleCreate() {
-    if (!dealId) return;
-    const name = filter.trim();
-    if (!name) return;
-    addMutation.mutate(
-      { dealId, tagName: name },
-      { onSuccess: () => setFilter("") },
-    );
+  function handleCancel() {
+    if (isSaving) return;
+    setLocalSelected(new Set(baselineIdsRef.current));
+    setFilter("");
+    close();
   }
 
-  const position = computePopoverPosition(rect, 320, 288);
+  async function handleCreate() {
+    if (!dealId || isSaving) return;
+    const name = filter.trim();
+    if (!name) return;
+    try {
+      await addMutation.mutateAsync({ dealId, tagName: name });
+      setFilter("");
+      const refreshed = await tagsQuery.refetch();
+      const created = (refreshed.data ?? []).find(
+        (t) => t.name.toLowerCase() === name.toLowerCase(),
+      );
+      if (created) {
+        setLocalSelected((prev) => new Set(prev).add(created.id));
+        // Já persistido no servidor — entra na baseline também.
+        baselineIdsRef.current = new Set(baselineIdsRef.current).add(created.id);
+      }
+    } catch {
+      // toast já vem do hook
+    }
+  }
+
+  const position = computePopoverPosition(rect, 320, 328);
+  const saveDisabled = !hasChanges || isSaving || !dealId;
 
   return (
     <>
@@ -85,7 +182,7 @@ export function TagsPopover({
         type="button"
         disabled={disabled || !dealId}
         onClick={toggle}
-        className="inline-flex"
+        className="inline-flex shrink-0"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
@@ -113,18 +210,37 @@ export function TagsPopover({
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Buscar ou criar tag…"
-              className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+              disabled={isSaving}
+              className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:opacity-60"
             />
             <TagChipOptionsList
               tags={filtered}
-              selectedIds={currentIds}
+              selectedIds={localSelected}
               onToggle={handleToggle}
-              disabled={addMutation.isPending || removeMutation.isPending}
+              disabled={isSaving}
               isLoading={tagsQuery.isLoading}
               createLabel={canCreate ? `+ Criar “${filter.trim()}”` : null}
-              onCreate={handleCreate}
-              createDisabled={addMutation.isPending}
+              onCreate={() => void handleCreate()}
+              createDisabled={addMutation.isPending || isSaving}
             />
+            <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-[var(--glass-border-subtle)] pt-2">
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={isSaving}
+                className="rounded-[var(--radius-md)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)] disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={saveDisabled}
+                className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-2.5 py-1 text-[12px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isSaving ? "Salvando…" : "Salvar"}
+              </button>
+            </div>
           </div>,
           document.body,
         )}

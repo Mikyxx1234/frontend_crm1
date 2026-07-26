@@ -20,6 +20,7 @@ import {
   CONDITION_BOOL_FIELDS,
   CONDITION_FIELDS,
   CONDITION_OPS,
+  CONDITION_SCHEDULE_OPS,
   DEAL_STATUS_OPTS,
   STEP_FIELDS,
   WEEK_DAYS,
@@ -1032,6 +1033,45 @@ function HeadersBuilder({ items, onChange }: { items: Header[]; onChange: (v: He
 
 type Schedule = { days?: number[]; from?: string; to?: string }
 
+/**
+ * Widget de valor para as ops `in_business_hours` / `not_in_business_hours`
+ * do bloco Condição. Reusa `ScheduleBuilder` e um input de timezone,
+ * serializando/deserializando como JSON `{ schedule, timezone }` no
+ * value da regra.
+ */
+function BusinessHoursValue({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  let parsed: { schedule: Schedule[]; timezone: string } = { schedule: [], timezone: "America/Sao_Paulo" }
+  try {
+    const raw = value ? JSON.parse(value) : null
+    if (raw && typeof raw === "object") {
+      parsed = {
+        schedule: Array.isArray(raw.schedule) ? raw.schedule : [],
+        timezone: typeof raw.timezone === "string" && raw.timezone ? raw.timezone : "America/Sao_Paulo",
+      }
+    }
+  } catch { /* ignore parse errors — usa default */ }
+
+  const emit = (schedule: Schedule[], timezone: string) => {
+    onChange(JSON.stringify({ schedule, timezone }))
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-2">
+      <ScheduleBuilder items={parsed.schedule} onChange={(next) => emit(next, parsed.timezone)} />
+      <label className="flex items-center gap-2 text-[11px] text-[var(--color-ink-muted)]">
+        <span className="shrink-0">Fuso:</span>
+        <input
+          type="text"
+          className="cfg-input nodrag flex-1"
+          placeholder="America/Sao_Paulo"
+          value={parsed.timezone}
+          onChange={(e) => emit(parsed.schedule, e.target.value)}
+        />
+      </label>
+    </div>
+  )
+}
+
 function ScheduleBuilder({ items, onChange }: { items: Schedule[]; onChange: (v: Schedule[]) => void }) {
   const update = (i: number, patch: Partial<Schedule>) => onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
   const toggleDay = (i: number, day: number) => {
@@ -1102,6 +1142,11 @@ function ConditionValue({
   const isTagField = field.endsWith(".tags") || field.endsWith(".tagIds")
   if (op === "has_tag" || op === "not_has_tag" || isTagField) {
     return <HookSelect hook={useTagOptions} value={value} onChange={onChange} placeholder="Selecione uma tag…" />
+  }
+  // Expediente: dias + faixas horárias + fuso — value serializado como JSON
+  // { schedule: [{days,from,to}], timezone }
+  if (CONDITION_SCHEDULE_OPS.has(op)) {
+    return <BusinessHoursValue value={value} onChange={onChange} />
   }
   if (CONDITION_BOOL_FIELDS.has(field)) {
     return <ConfigSelect value={value} options={BOOL_OPTS} onChange={onChange} placeholder="Sim/Não" />

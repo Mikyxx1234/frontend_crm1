@@ -470,6 +470,9 @@ export function ChatWindow({
   const [reactionPickerMsgId, setReactionPickerMsgId] = React.useState<
     string | number | null
   >(null);
+  const [fullEmojiPickerMsgId, setFullEmojiPickerMsgId] = React.useState<
+    string | number | null
+  >(null);
   const [forwardingMessage, setForwardingMessage] =
     React.useState<InboxMessageDto | null>(null);
   const [forwardSearch, setForwardSearch] = React.useState("");
@@ -975,6 +978,29 @@ export function ChatWindow({
     return () => document.removeEventListener("mousedown", handler);
   }, [reactionPickerMsgId]);
 
+  React.useEffect(() => {
+    if (fullEmojiPickerMsgId == null) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-full-emoji-picker]")) {
+        setFullEmojiPickerMsgId(null);
+        setHoveredMsgId(null);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setFullEmojiPickerMsgId(null);
+        setHoveredMsgId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [fullEmojiPickerMsgId]);
+
   const sendMutation = useMutation({
     mutationFn: ({
       content,
@@ -1091,6 +1117,7 @@ export function ChatWindow({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: messagesKey });
       setReactionPickerMsgId(null);
+      setFullEmojiPickerMsgId(null);
       setHoveredMsgId(null);
     },
     onError: (e: Error) => {
@@ -2255,7 +2282,11 @@ export function ChatWindow({
                   )}
                   onMouseEnter={() => setHoveredMsgId(m.id)}
                   onMouseLeave={() => {
-                    if (reactionPickerMsgId !== m.id) setHoveredMsgId(null);
+                    if (
+                      reactionPickerMsgId !== m.id &&
+                      fullEmojiPickerMsgId !== m.id
+                    )
+                      setHoveredMsgId(null);
                   }}
                 >
                   <div
@@ -2275,6 +2306,33 @@ export function ChatWindow({
                   da faixa — então ele fica sempre visível na linha do
                   cabecalho, no canto direito.
                 */}
+                    {fullEmojiPickerMsgId === m.id && (
+                      <div
+                        data-full-emoji-picker
+                        className={cn(
+                          "absolute bottom-full z-30 mb-1 w-72",
+                          out ? "right-0" : "left-0",
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <EmojiPicker
+                          open
+                          onPick={(emoji) => {
+                            if (
+                              typeof m.id === "string" &&
+                              m.id.startsWith("temp-")
+                            )
+                              return;
+                            reactionMutation.mutate({
+                              messageId: msgId,
+                              emoji,
+                            });
+                            setFullEmojiPickerMsgId(null);
+                          }}
+                        />
+                      </div>
+                    )}
                     {reactionPickerMsgId === m.id && (
                       <div
                         data-reaction-picker
@@ -2406,7 +2464,16 @@ export function ChatWindow({
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
-                                onClick={() => setReactionPickerMsgId(m.id)}
+                                disabled={
+                                  typeof m.id === "string" &&
+                                  m.id.startsWith("temp-")
+                                }
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  setReactionPickerMsgId(null);
+                                  setHoveredMsgId(m.id);
+                                  setFullEmojiPickerMsgId(m.id);
+                                }}
                               >
                                 <Smile className="size-3.5 shrink-0 opacity-70" />
                                 Reagir…

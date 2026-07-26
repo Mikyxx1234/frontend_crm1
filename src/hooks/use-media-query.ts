@@ -1,13 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
+
+// SSR-safe: usa useLayoutEffect no cliente (sync antes do paint, elimina
+// o "flash mobile" de 1 frame no desktop) e useEffect no server (evita o
+// warning de hydration).
+const useIsoLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * Hook SSR-safe que reage a media queries CSS.
  *
- * Retorna `false` no server e no primeiro render do client (antes do
- * mount), evitando hydration mismatch. Atualiza assim que o cliente
+ * Retorna `initialValue` no server e no primeiro render do client (antes
+ * do mount), evitando hydration mismatch. Atualiza assim que o cliente
  * hidrata e responde a mudancas de viewport (resize, orientacao).
+ *
+ * `initialValue` controla a aposta feita durante o SSR/1o paint. Para
+ * um CRM 100% desktop, `useIsDesktop()` aposta `true` — assim o F5 no
+ * desktop nao passa por 1 frame de layout mobile (flash coluna-unica
+ * antes do useLayoutEffect setar `true`). Em telas mobile o custo e' o
+ * inverso (1 frame de desktop), mas o publico e' minoritario.
  *
  * Usar APENAS quando JS e necessario (ex.: trocar texto de placeholder,
  * calculo derivado de breakpoint). Sempre que possivel, prefira a
@@ -19,10 +31,10 @@ import { useEffect, useState } from "react";
  *   - useIsTablet():  768-1023 (md-lg)
  *   - useIsDesktop(): >= 1024px (lg+)
  */
-export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
+export function useMediaQuery(query: string, initialValue = false): boolean {
+  const [matches, setMatches] = useState(initialValue);
 
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
     const mq = window.matchMedia(query);
     setMatches(mq.matches);
@@ -46,6 +58,13 @@ export function useIsTablet() {
   return useMediaQuery("(min-width: 768px) and (max-width: 1023px)");
 }
 
+// Default `true`: CRM e' primariamente desktop. Sem esse default, no F5
+// o SSR renderiza mobile (`false`) e o cliente pinta 1 frame de layout
+// mobile (coluna unica, sem chat/aside) antes do useLayoutEffect flipar
+// para desktop — vira "flash mobile → desktop" no F5 de desktop.
+// Apostar `true` no server + 1o render elimina esse flash para desktop
+// (caso comum). Em mobile, o custo e' inverso: 1 frame de desktop antes
+// do media query corrigir — aceitavel dado o publico majoritario.
 export function useIsDesktop() {
-  return useMediaQuery("(min-width: 1024px)");
+  return useMediaQuery("(min-width: 1024px)", true);
 }

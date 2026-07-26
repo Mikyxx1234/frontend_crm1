@@ -338,6 +338,10 @@ export default function InboxV2ClientPage({
   // Template escolhido no modal (sessão expirada) → abre o painel no Composer.
   const [externalTemplate, setExternalTemplate] = useState<PendingTemplate | null>(null);
   const [asideCollapsed, setAsideCollapsed] = useState(false);
+  // Sem conversa ativa, força o aside a ficar colapsado — evita a "faixa
+  // fantasma" branca à direita no F5 (aside visível mas sem contato pra
+  // exibir). Assim que o operador seleciona uma conversa, respeita a
+  // preferência do usuário (`asideCollapsed`).
   const [mobilePaneTab, setMobilePaneTab] = useState<"chat" | "negocio">("chat");
 
   // Colapso do cabeçalho de página (ícone + título + busca) — ganha altura
@@ -603,6 +607,11 @@ export default function InboxV2ClientPage({
 
   const activeRow = stickyRow;
   const activeContactId = activeRow?.contact?.id ?? null;
+
+  // Se não há conversa ativa, o aside não tem o que mostrar — força
+  // colapso pra evitar o "vazio branco" que dá sensação de fantasma no
+  // F5. Toggle manual continua funcionando quando há activeRow.
+  const effectiveAsideCollapsed = asideCollapsed || !activeRow;
 
   const { data: messagesData } = useMessages(activeId);
   const messages = messagesData?.messages ?? [];
@@ -1454,7 +1463,7 @@ export default function InboxV2ClientPage({
             />
           ) : null
         }
-        collapsed={asideCollapsed}
+        collapsed={effectiveAsideCollapsed}
         onToggleCollapse={() => setAsideCollapsed((v) => !v)}
         contactFieldConfigSlot={
           <RequirePermission permission="settings:custom_fields">
@@ -1511,7 +1520,14 @@ export default function InboxV2ClientPage({
   const renderCollapsiblePageHeader = (headerNode: React.ReactNode) => (
     <div
       className={cn(
-        "grid shrink-0 overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out",
+        "grid shrink-0 overflow-hidden",
+        // Só ligamos a transição APÓS a hidratação. Sem isso, quando o
+        // usuário tinha `headerCollapsed=true` salvo, o SSR pintava o header
+        // aberto e o `useLayoutEffect` flipava pra `true` logo depois — o
+        // browser animava o fechamento em 300ms ("fantasma": header pisca
+        // visível → colapsa animado → pill aparece). Com o gate, o estado
+        // salvo é aplicado sem animação no primeiro paint pós-hidratação.
+        headerHydrated && "transition-[grid-template-rows,opacity] duration-300 ease-out",
         headerCollapsed
           ? "pointer-events-none grid-rows-[0fr] opacity-0"
           : "grid-rows-[1fr] opacity-100",
@@ -1545,7 +1561,13 @@ export default function InboxV2ClientPage({
   // SUPERIOR DIREITO do outer grid (fora do container com overflow-hidden,
   // senão é cortado). Alinhado verticalmente com o pill da NavRail
   // (`top-6` = mesmo offset dela).
-  const expandHeaderBtn = headerCollapsed ? (
+  // Gate em `headerHydrated`: o default é `headerCollapsed=false`, então
+  // sem gate o pill nunca aparecia indevidamente — MAS, se por qualquer
+  // razão o default virasse `true` ou o SSR divergisse do client, o pill
+  // "fantasma" apareceria por 1 frame. Manter o gate garante que a
+  // decisão de mostrar/esconder o pill nunca dependa de estado
+  // pré-hidratação.
+  const expandHeaderBtn = headerHydrated && headerCollapsed ? (
     <TooltipGlass label="Mostrar cabeçalho" side="left">
       <button
         type="button"
@@ -1662,12 +1684,12 @@ export default function InboxV2ClientPage({
           )}
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
-            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}` }}
+            style={{ gridTemplateColumns: `${convWidth}px 1fr ${effectiveAsideCollapsed ? "0px" : `${asideWidth}px`}` }}
           >
             {conversationColumnNode}
             {chatNode}
             <div className="relative min-h-0 overflow-visible">
-              {!asideCollapsed && (
+              {!effectiveAsideCollapsed && (
                 <ColumnResizer
                   direction="left"
                   value={asideWidth}
@@ -1758,14 +1780,14 @@ export default function InboxV2ClientPage({
       className="v2-screen grid gap-4 p-4"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
-        gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${asideCollapsed ? "0px" : `${asideWidth}px`}`,
+        gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${effectiveAsideCollapsed ? "0px" : `${asideWidth}px`}`,
       }}
     >
       {navRailNode}
       {conversationColumnNode}
       {chatNode}
       <div className="relative min-h-0 overflow-visible">
-        {!asideCollapsed && (
+        {!effectiveAsideCollapsed && (
           <ColumnResizer
             direction="left"
             value={asideWidth}
@@ -1783,8 +1805,11 @@ export default function InboxV2ClientPage({
 }
 
 function EmptyChatArea() {
+  // `h-full min-h-0` garante que o card cubra toda a coluna do grid pai
+  // (antes o main colapsava ao tamanho do conteúdo, deixando uma faixa
+  // branca gigante no centro — sensação de "fantasma" no F5).
   return (
-    <main className="flex flex-col items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg)] p-10 text-center backdrop-blur-md shadow-[var(--glass-shadow)]">
+    <main className="flex h-full min-h-0 w-full flex-col items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg)] p-10 text-center backdrop-blur-md shadow-[var(--glass-shadow)]">
       <div className="grid size-16 place-items-center rounded-[var(--radius-lg)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
@@ -1815,7 +1840,11 @@ function EmptyAside() {
   return (
     <aside
       aria-label="Detalhes do contato"
-      className="flex items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 text-center text-[12px] text-[var(--text-muted)] backdrop-blur-md shadow-[var(--glass-shadow)]"
+      // `h-full min-h-0` — mesma correção do EmptyChatArea. Sem isso,
+      // quando o aside NÃO é colapsado (ex.: preferência do usuário
+      // salva como aberto), o placeholder ficava com altura de conteúdo
+      // e sobrava uma faixa vazia embaixo.
+      className="flex h-full min-h-0 w-full items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 text-center text-[12px] text-[var(--text-muted)] backdrop-blur-md shadow-[var(--glass-shadow)]"
     >
       Sem contato selecionado.
     </aside>

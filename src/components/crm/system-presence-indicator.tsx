@@ -27,12 +27,11 @@ export function SystemPresenceIndicator({
   const label = describeSystemPresence({ systemOnline, lastSeenAt });
   const online = Boolean(systemOnline);
 
-  // Cor distinta do verde de AgentStatus (Distribuição): azul = "CRM aberto",
-  // verde = elegível na distribuição. Evita confundir uso com disponibilidade.
+  // Azul = CRM aberto (uso do sistema). Verde fica só no Online da Distribuição.
   const dotClass = cn(
     "inline-block h-2 w-2 shrink-0 rounded-full",
     online
-      ? "bg-sky-400 shadow-[0_0_0_2px_var(--glass-bg-strong)]"
+      ? "bg-[#38bdf8] shadow-[0_0_0_2px_var(--glass-bg-strong)]"
       : "bg-[var(--text-muted)]/40",
   );
 
@@ -52,7 +51,7 @@ export function SystemPresenceIndicator({
     <span
       className={cn(
         "inline-flex items-center gap-1.5 text-[11px]",
-        online ? "text-sky-400" : "text-[var(--text-muted)]",
+        online ? "text-[#38bdf8]" : "text-[var(--text-muted)]",
         className,
       )}
     >

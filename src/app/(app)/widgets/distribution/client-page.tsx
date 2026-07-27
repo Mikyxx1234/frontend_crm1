@@ -514,9 +514,9 @@ function DistributionMiniDash({
 
 // ── Lista de responsáveis em cards ───────────────────────────────────────
 
-// 7 colunas: responsável, ativo, presença, fila, volume, elegibilidade, ações
+// 6 colunas: responsável, presença (+ Ficar online), fila, volume, elegibilidade, ações
 const RESP_GRID =
-  "grid-cols-[minmax(260px,2.6fr)_minmax(88px,0.7fr)_minmax(145px,1.15fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(170px,1.4fr)_minmax(82px,0.75fr)]";
+  "grid-cols-[minmax(300px,3fr)_minmax(175px,1.35fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(190px,1.55fr)_minmax(82px,0.75fr)]";
 
 function ResponsiblesCardList({
   responsibles,
@@ -574,10 +574,9 @@ function ResponsiblesCardList({
 
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-      <div className="flex min-w-[1120px] flex-col gap-1.5">
+      <div className="flex min-w-[1040px] flex-col gap-1.5">
         <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-2.5 border border-transparent px-3 py-1.5"))}>
           <ListColumnLabel>Responsável</ListColumnLabel>
-          <ListColumnLabel className="text-center">Ativo</ListColumnLabel>
           <ListColumnLabel>Presença</ListColumnLabel>
           <ListColumnLabel className="text-center">Fila</ListColumnLabel>
           <ListColumnLabel className="text-center">Volume</ListColumnLabel>
@@ -613,28 +612,14 @@ function ResponsibleCard({
   onEdit: (r: DistributionResponsibleDto) => void;
 }) {
   const statusMut = useSetAgentStatus();
-  const updateMut = useUpdateResponsible();
   const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
+  // Próprio usuário ou admin/manager — mesmo botão simples de produção.
+  const canTogglePresence = isCurrentUser || canManage;
 
-  const toggleOwnStatus = () => {
+  const togglePresence = () => {
     statusMut.mutate(
       { userId: r.userId, status: isOnline ? "OFFLINE" : "ONLINE" },
       { onError: (e) => toast.error(e.message || "Erro ao alterar status.") },
-    );
-  };
-
-  const toggleActive = () => {
-    updateMut.mutate(
-      { userId: r.userId, input: { participates: !r.participates } },
-      {
-        onSuccess: () =>
-          toast.success(
-            r.participates
-              ? "Consultor inativado na distribuição."
-              : "Consultor ativado na distribuição.",
-          ),
-        onError: (e) => toast.error(e.message || "Erro ao alterar ativo."),
-      },
     );
   };
 
@@ -647,12 +632,6 @@ function ResponsibleCard({
     >
       {/* Responsável */}
       <div className="flex min-w-0 items-center gap-2.5">
-        {/*
-          Avatar + bolinha de status EQUIVALENTE à NavRail: a bolinha é
-          renderizada como IRMÃ (fora do overflow-hidden do avatar) para
-          ficar à frente e não ser cortada. Mesmas cores/tokens do
-          `AgentStatusDot` — fonte única de verdade visual do status.
-        */}
         <span className="relative isolate shrink-0">
           <UserAvatar
             name={r.name ?? r.email}
@@ -677,7 +656,7 @@ function ResponsibleCard({
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 truncate font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
             <span className="truncate">{r.name ?? "Sem nome"}</span>
-            {/* Presença de USO ("CRM aberto") — distinta do status da Distribuição. */}
+            {/* Bolinha azul = CRM aberto (não confundir com Online da Distribuição). */}
             <SystemPresenceIndicator
               systemOnline={r.systemOnline}
               lastSeenAt={r.lastSeenAt}
@@ -706,56 +685,13 @@ function ResponsibleCard({
         </div>
       </div>
 
-      {/* Ativo na distribuição */}
-      <div className="flex justify-center">
-        {canManage ? (
-          <button
-            type="button"
-            role="switch"
-            aria-checked={r.participates}
-            aria-label={
-              r.participates
-                ? "Ativo na distribuição — clicar para inativar"
-                : "Inativo na distribuição — clicar para ativar"
-            }
-            title={r.participates ? "Ativo — clicar para inativar" : "Inativo — clicar para ativar"}
-            disabled={updateMut.isPending}
-            onClick={toggleActive}
-            className={cn(
-              "relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors disabled:opacity-50",
-              r.participates
-                ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
-                : "border-[var(--text-muted)]/40 bg-[var(--text-muted)]/25",
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border border-black/10 bg-white shadow-sm transition-all",
-                r.participates ? "right-0.5" : "left-0.5",
-              )}
-            />
-          </button>
-        ) : (
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 font-display text-[10.5px] font-bold",
-              r.participates
-                ? "bg-[var(--color-success-bg)] text-[var(--color-success-dark,#0f7a5a)]"
-                : "bg-[var(--text-muted)]/12 text-[var(--text-muted)]",
-            )}
-          >
-            {r.participates ? "Ativo" : "Inativo"}
-          </span>
-        )}
-      </div>
-
-      {/* Presença */}
+      {/* Presença — botão "Ficar online" como em produção */}
       <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
         <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
-        {isCurrentUser && (
+        {canTogglePresence && r.participates && (
           <button
             type="button"
-            onClick={toggleOwnStatus}
+            onClick={togglePresence}
             disabled={statusMut.isPending}
             className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10.5px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
           >

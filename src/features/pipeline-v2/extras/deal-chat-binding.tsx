@@ -407,26 +407,25 @@ export function useDealChatBinding(params: {
     }
   }, [pinnedMessagesPreview, activePinIndex, scrollToMessage]);
 
-  function handleSend() {
-    const t = draft.trim();
+  async function handleSend(value?: string) {
+    // Composer passa o texto já com assinatura; fallback no draft local.
+    const t = (value ?? draft).trim();
     if (!t || !effectiveConversationId) return;
-    sendMutation.mutate(
-      {
+    try {
+      await sendMutation.mutateAsync({
         content: t,
         ...(replyTo ? { replyToId: replyTo.id } : {}),
         // Override só quando o canal escolhido difere do atual da conversa.
         ...(selectedChannelId && selectedChannelId !== conversationChannelId
           ? { channelId: selectedChannelId }
           : {}),
-      },
-      {
-        onSuccess: () => {
-          setDraft("");
-          setReplyTo(null);
-        },
-        onError: (e: Error) => toast.error(e.message || "Falha ao enviar"),
-      },
-    );
+      });
+      setDraft("");
+      setReplyTo(null);
+    } catch (e) {
+      toast.error((e as Error)?.message || "Falha ao enviar");
+      throw e;
+    }
   }
 
   // Handler do botão "Responder" — deriva o nome do citado a partir da

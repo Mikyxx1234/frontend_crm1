@@ -90,6 +90,7 @@ export function BulkEditFieldsDialog({ open, onOpenChange, dealIds, onEnqueued, 
     name: "", email: "", phone: "", source: "",
   });
   const [selectedTagIds, setSelectedTagIds] = React.useState<Set<string>>(new Set());
+  /** Filtro da lista + nome para criar tag (Enter / Adicionar). */
   const [newTagName, setNewTagName] = React.useState("");
   const [newTagNames, setNewTagNames] = React.useState<string[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
@@ -112,6 +113,12 @@ export function BulkEditFieldsDialog({ open, onOpenChange, dealIds, onEnqueued, 
     enabled: open,
     staleTime: 60_000,
   });
+
+  const tagQuery = newTagName.trim().toLowerCase();
+  const visibleTags = React.useMemo(() => {
+    if (!tagQuery) return tags;
+    return tags.filter((t) => t.name.toLowerCase().includes(tagQuery));
+  }, [tags, tagQuery]);
 
   // Reset ao abrir.
   React.useEffect(() => {
@@ -384,8 +391,25 @@ export function BulkEditFieldsDialog({ open, onOpenChange, dealIds, onEnqueued, 
 
           {/* Tags */}
           <Section title="Adicionar tags ao negócio">
-            <div className="flex flex-wrap gap-2">
-              {tags.map((t: DealTag) => (
+            <div className="flex items-center gap-2">
+              <Input
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addNewTag();
+                  }
+                }}
+                placeholder="Buscar ou criar tag…"
+                className="h-9"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={addNewTag}>
+                Adicionar
+              </Button>
+            </div>
+            <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto">
+              {visibleTags.map((t: DealTag) => (
                 <button
                   key={t.id}
                   type="button"
@@ -402,6 +426,11 @@ export function BulkEditFieldsDialog({ open, onOpenChange, dealIds, onEnqueued, 
               ))}
               {tags.length === 0 && (
                 <span className="text-[12px] text-muted-foreground">Nenhuma tag cadastrada.</span>
+              )}
+              {tags.length > 0 && visibleTags.length === 0 && (
+                <span className="text-[12px] text-muted-foreground">
+                  Nenhuma tag com “{newTagName.trim()}”. Enter cria uma nova.
+                </span>
               )}
             </div>
             {newTagNames.length > 0 && (
@@ -424,23 +453,6 @@ export function BulkEditFieldsDialog({ open, onOpenChange, dealIds, onEnqueued, 
                 ))}
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <Input
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addNewTag();
-                  }
-                }}
-                placeholder="Criar/selecionar tag por nome…"
-                className="h-9"
-              />
-              <Button type="button" variant="outline" size="sm" onClick={addNewTag}>
-                Adicionar
-              </Button>
-            </div>
           </Section>
         </div>
 

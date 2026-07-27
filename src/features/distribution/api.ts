@@ -109,16 +109,38 @@ export function simulateDistribution(): Promise<DistributionResult> {
   );
 }
 
-export function setAgentStatus(
+export async function setAgentStatus(
   userId: string,
   status: AgentOnlineStatus,
 ): Promise<void> {
-  return sendJson<void>(
-    `/api/agents/${userId}/status`,
-    "PUT",
-    { status },
-    "Erro ao alterar status.",
-  );
+  const res = await fetch(apiUrl(`/api/agents/${userId}/status`), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    let message = "Erro ao alterar status.";
+    try {
+      const parsed = JSON.parse(text) as { message?: unknown };
+      if (typeof parsed?.message === "string") message = parsed.message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+  if (text.trim()) {
+    try {
+      const body = JSON.parse(text) as { _migrationPending?: boolean };
+      if (body._migrationPending) {
+        throw new Error(
+          "Não foi possível gravar o status. Tente novamente ou recarregue a página.",
+        );
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("Não foi possível")) throw e;
+    }
+  }
 }
 
 export function fetchPending(): Promise<PendingResponse> {

@@ -131,10 +131,50 @@ export function useAgentStatus(): AgentStatusController {
         body: JSON.stringify({ status: next }),
       });
       if (!r.ok) throw new Error("Erro ao atualizar status");
-      return r.json();
+      const body = (await r.json()) as {
+        status?: AgentOnlineStatus;
+        _migrationPending?: boolean;
+      };
+      if (body._migrationPending) {
+        throw new Error(
+          "Não foi possível gravar o status. Tente novamente ou recarregue a página.",
+        );
+      }
+      return body;
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["my-agent-status", myUserId] }),
+    onMutate: async (next) => {
+      await queryClient.cancelQueries({ queryKey: ["my-agent-status", myUserId] });
+      const prev = queryClient.getQueryData<{ status: AgentOnlineStatus }>([
+        "my-agent-status",
+        myUserId,
+      ]);
+      queryClient.setQueryData(["my-agent-status", myUserId], { status: next });
+      // Atualiza a lista da Distribuição na hora (sem esperar F5).
+      queryClient.setQueryData(
+        ["distribution-responsibles"],
+        (old: { responsibles?: Array<Record<string, unknown>> } | undefined) => {
+          if (!old?.responsibles || !myUserId) return old;
+          return {
+            ...old,
+            responsibles: old.responsibles.map((r) =>
+              r.userId === myUserId ? { ...r, status: next } : r,
+            ),
+          };
+        },
+      );
+      return { prev };
+    },
+    onError: (_err, _next, ctx) => {
+      if (ctx?.prev) {
+        queryClient.setQueryData(["my-agent-status", myUserId], ctx.prev);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-agent-status", myUserId] });
+      // Elegibilidade / fila dependem do status — refetch sem F5.
+      queryClient.invalidateQueries({ queryKey: ["distribution-responsibles"] });
+      queryClient.invalidateQueries({ queryKey: ["distribution-pending"] });
+    },
   });
 
   return {

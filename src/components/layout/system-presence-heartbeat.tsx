@@ -13,8 +13,9 @@ import { useSystemActivity } from "@/features/system-usage/use-system-activity";
  * recente. Independe da disponibilidade da Distribuição (Online/Ausente
  * /Offline), que segue sendo controlada pelo AgentStatusPopup.
  *
- * Também escuta o SSE `system_presence_update` para manter em dia as
- * caches de listagem de agentes (transferências, filtros, Distribuição).
+ * Também escuta o SSE `system_presence_update` e `presence_update` para
+ * manter em dia as caches de listagem de agentes (transferências, filtros,
+ * Distribuição — CRM aberto e Online/Offline).
  */
 export function SystemPresenceHeartbeat() {
   const { status } = useSession();

@@ -852,10 +852,10 @@ export default function InboxV2ClientPage({
     setReplyTo(null);
   }
 
-  function handleSend(value: string) {
+  async function handleSend(value: string) {
     if (!activeId) return;
-    sendMessage.mutate(
-      {
+    try {
+      const data = await sendMessage.mutateAsync({
         content: value,
         ...(replyTo ? { replyToId: replyTo.id } : {}),
         // Só envia override quando o canal escolhido difere do canal
@@ -865,20 +865,18 @@ export default function InboxV2ClientPage({
         ...(selectedChannelId && selectedChannelId !== conversationChannelId
           ? { channelId: selectedChannelId }
           : {}),
-      },
-      {
-        onSuccess: (data) => {
-          setDraft("");
-          setReplyTo(null);
-          // Conversa estava encerrada e o envio reabriu como NOVO ticket:
-          // troca o chat ativo para o id novo (regra "reabrir = novo id").
-          if (data.reopenedConversationId) {
-            handleReopenNewConversation(data.reopenedConversationId);
-          }
-        },
-        onError: (err) => toast.error(err.message || "Falha ao enviar"),
-      },
-    );
+      });
+      setDraft("");
+      setReplyTo(null);
+      // Conversa estava encerrada e o envio reabriu como NOVO ticket:
+      // troca o chat ativo para o id novo (regra "reabrir = novo id").
+      if (data.reopenedConversationId) {
+        handleReopenNewConversation(data.reopenedConversationId);
+      }
+    } catch (err) {
+      toast.error((err as Error)?.message || "Falha ao enviar");
+      throw err;
+    }
   }
 
   function handleSendNote(value: string) {

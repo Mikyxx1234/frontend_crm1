@@ -98,7 +98,8 @@ export function Composer({
   conversationId: string | null;
   value: string;
   onChange: (value: string) => void;
-  onSend: (value: string) => void;
+  /** Pode retornar Promise — o composer aguarda antes de enviar anexos do modelo. */
+  onSend: (value: string) => void | Promise<void>;
   /** Envio como nota interna (isPrivate). Quando ausente, o item "Nota interna" não aparece no menu. */
   onSendNote?: (value: string) => void;
   sending?: boolean;
@@ -403,8 +404,12 @@ export function Composer({
     contactId,
     // Desabilita o atalho em modo nota (não faz sentido inserir templates ali)
     disabled: disabled || noteMode,
-    // Modelo/mensagem rápida com anexo → encosta a mídia pra ir junto no envio.
-    onInsertMedia: (media) => setPendingMediaList((prev) => [...prev, media]),
+    // Modelo/mensagem rápida com anexo → encosta a mídia pra ir junto no envio
+    // (aceita 1 item ou lista — o "/" passa array quando o modelo tem multi-anexo).
+    onInsertMedia: (media) => {
+      const list = Array.isArray(media) ? media : [media];
+      setPendingMediaList((prev) => [...prev, ...list]);
+    },
     onPickMetaTemplate: (item) =>
       setPendingTemplate({
         name: item.name,
@@ -494,7 +499,7 @@ export function Composer({
     files.forEach((f) => URL.revokeObjectURL(f.previewUrl));
   }
 
-  function performSend() {
+  async function performSend() {
     const trimmed = value.trim();
     // Permite enviar quando há texto OU algum anexo encostado (modelo ou imagem colada).
     if (
@@ -508,9 +513,17 @@ export function Composer({
       if (trimmed) onSendNote(trimmed);
       return;
     }
-    if (trimmed) onSend(applySignature(trimmed));
-    void flushPendingMedia();
-    void flushPendingFiles();
+    // Aguarda o texto sair antes dos anexos — evita race (arquivo aparecer
+    // antes da 1ª mensagem) e garante ordem: texto → arq1 → msg2 → arq2…
+    if (trimmed) {
+      try {
+        await Promise.resolve(onSend(applySignature(trimmed)));
+      } catch {
+        /* texto falhou; ainda tenta anexos se o caller não bloqueou */
+      }
+    }
+    await flushPendingMedia();
+    await flushPendingFiles();
   }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {

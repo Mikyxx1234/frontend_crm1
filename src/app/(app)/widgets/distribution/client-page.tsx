@@ -765,43 +765,158 @@ function SchedulePresenceHint({
   schedule: DistributionResponsibleDto["schedule"];
   preLunchStopMinutes?: number;
 }) {
-  if (!schedule) {
-    return (
-      <span className="truncate font-body text-[10px] leading-tight text-[var(--text-muted)]">
-        Sem horário configurado
-      </span>
-    );
-  }
-  const lunchMins = minutesBetween(schedule.lunchStart, schedule.lunchEnd);
-  const pre = preLunchStopMinutes ?? 30;
-  const lunchLabel =
-    lunchMins > 0
-      ? `Pausa almoço ${lunchMins} min (${hhmm(schedule.lunchStart)}–${hhmm(schedule.lunchEnd)})`
-      : `Almoço ${hhmm(schedule.lunchStart)}–${hhmm(schedule.lunchEnd)}`;
-  const title = `Expediente ${hhmm(schedule.startTime)}–${hhmm(schedule.endTime)} · ${lunchLabel} · pré-corte ${pre} min (almoço e saída)`;
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  if (!schedule) return null;
+
+  const alert = resolveSchedulePresenceAlert({
+    schedule,
+    preMinutes: preLunchStopMinutes ?? 30,
+    now,
+  });
+  if (!alert) return null;
+
   return (
     <span
-      className="min-w-0 truncate font-body text-[10px] leading-tight text-[var(--text-muted)]"
-      title={title}
+      className="min-w-0 truncate font-body text-[10px] font-semibold leading-tight text-[var(--brand-primary)]"
+      title={alert.title}
     >
-      {hhmm(schedule.startTime)}–{hhmm(schedule.endTime)} · {lunchLabel}
-      {pre > 0 ? ` · pré-corte ${pre} min` : null}
+      {alert.label}
     </span>
   );
+}
+
+type SchedulePresenceAlert = { label: string; title: string };
+
+/**
+ * Mostra aviso só perto do pré-corte:
+ * - 10 min antes do pré-almoço → "N min para o almoço"
+ * - dentro do pré-corte/almoço → "N min almoço"
+ * - 10 min antes do pré-fim → "N min para a saída"
+ * - dentro do pré-fim → "N min para a saída"
+ * Fora dessas janelas: oculto (lista fica limpa).
+ */
+function resolveSchedulePresenceAlert(input: {
+  schedule: NonNullable<DistributionResponsibleDto["schedule"]>;
+  preMinutes: number;
+  now: Date;
+}): SchedulePresenceAlert | null {
+  const { schedule, now } = input;
+  const pre = Math.max(0, Math.floor(input.preMinutes));
+  const WARN_AHEAD = 10;
+
+  const current = localMinutesInTimezone(schedule.timezone, now);
+  if (current == null) return null;
+  if (!isScheduleWeekday(schedule, now)) return null;
+
+  const lunchStart = parseHhmmToMinutes(schedule.lunchStart);
+  const lunchEnd = parseHhmmToMinutes(schedule.lunchEnd);
+  const endTime = parseHhmmToMinutes(schedule.endTime);
+  if (lunchStart == null || lunchEnd == null || endTime == null) return null;
+
+  const lunchPreStart = lunchStart - pre;
+  const lunchWarnStart = lunchPreStart - WARN_AHEAD;
+  const endPreStart = endTime - pre;
+  const endWarnStart = endPreStart - WARN_AHEAD;
+
+  // Almoço tem prioridade sobre fim do expediente.
+  if (pre > 0 && current >= lunchWarnStart && current < lunchPreStart) {
+    const left = lunchPreStart - current;
+    return {
+      label: `${left} min para o almoço`,
+      title: `Pré-corte de ${pre} min começa em ${left} min (almoço ${hhmm(schedule.lunchStart)}–${hhmm(schedule.lunchEnd)})`,
+    };
+  }
+  if (current >= lunchPreStart && current < lunchEnd) {
+    if (pre > 0 && current < lunchStart) {
+      return {
+        label: `${pre} min almoço`,
+        title: `Pré-corte ativo — para de receber leads até o fim do almoço (${hhmm(schedule.lunchEnd)})`,
+      };
+    }
+    return {
+      label: "Pausa almoço",
+      title: `Em almoço até ${hhmm(schedule.lunchEnd)} — sem receber leads`,
+    };
+  }
+
+  if (pre > 0 && current >= endWarnStart && current < endPreStart) {
+    const left = endPreStart - current;
+    return {
+      label: `${left} min para a saída`,
+      title: `Pré-corte de ${pre} min antes do fim (${hhmm(schedule.endTime)}) começa em ${left} min`,
+    };
+  }
+  if (pre > 0 && current >= endPreStart && current < endTime) {
+    return {
+      label: `${pre} min para a saída`,
+      title: `Pré-fim de expediente ativo — para de receber leads até ${hhmm(schedule.endTime)}`,
+    };
+  }
+
+  return null;
 }
 
 function hhmm(v: string): string {
   return (v || "").slice(0, 5);
 }
 
-/** Diferença em minutos entre dois "HH:MM" no mesmo dia (0 se inválido). */
-function minutesBetween(start: string, end: string): number {
-  const toMin = (s: string) => {
-    const [h, m] = s.split(":").map(Number);
-    return (h ?? 0) * 60 + (m ?? 0);
-  };
-  const d = toMin(end) - toMin(start);
-  return d > 0 ? d : 0;
+function parseHhmmToMinutes(v: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})/.exec((v || "").trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(min)) return null;
+  return h * 60 + min;
+}
+
+function localMinutesInTimezone(timezone: string, now: Date): number | null {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone || "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(now);
+    const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "NaN");
+    const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "NaN");
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+    // Intl pode devolver "24" em alguns engines à meia-noite.
+    const h = hour === 24 ? 0 : hour;
+    return h * 60 + minute;
+  } catch {
+    return null;
+  }
+}
+
+function isScheduleWeekday(
+  schedule: NonNullable<DistributionResponsibleDto["schedule"]>,
+  now: Date,
+): boolean {
+  try {
+    const weekdayStr = new Intl.DateTimeFormat("en-US", {
+      timeZone: schedule.timezone || "America/Sao_Paulo",
+      weekday: "short",
+    }).format(now);
+    const map: Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+    const day = map[weekdayStr];
+    if (day == null) return true;
+    return (schedule.weekdays ?? []).includes(day);
+  } catch {
+    return true;
+  }
 }
 
 function PresenceBadge({

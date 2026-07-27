@@ -10,7 +10,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
@@ -35,8 +35,8 @@ import {
   SlashCommandMenu,
 } from "@/components/inbox/slash-command-menu";
 import { getContact } from "@/features/inbox-v2/api/misc";
-import { sendAttachment, sendMessage } from "@/features/inbox-v2/api";
-import { apiUrl } from "@/lib/api";
+import { sendAttachment, sendInternalTemplateSequence } from "@/features/inbox-v2/api";
+import { messagesKey } from "@/features/inbox-v2/hooks";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
 import { ActiveBotsButton } from "./active-bots-button";
@@ -208,9 +208,30 @@ export function Composer({
   // Anexo(s) "encostado(s)" por um modelo interno / mensagem rápida escolhido
   // no "/" ou no menu "+". Vão junto com o texto quando o operador enviar
   // (um modelo pode ter vários arquivos — enviados em sequência, na ordem).
+  // Esse caminho de "encostar e enviar no Enter" só se aplica a 1 anexo SEM
+  // messageBefore (o agente ainda pode editar o texto antes de enviar) —
+  // multi-anexo ou messageBefore>=1 disparam a sequência na hora (ver
+  // `insertTemplateText` / `onInsertMedia` abaixo).
   const [pendingMediaList, setPendingMediaList] = useState<
     Array<{ url: string; name: string | null; messageBefore?: string | null }>
   >([]);
+  // Ref espelhando `pendingMediaList` — evita stale closure no flush do
+  // Enter (performSend/flushPendingMedia podem rodar após re-renders).
+  const pendingMediaListRef = useRef(pendingMediaList);
+  useEffect(() => {
+    pendingMediaListRef.current = pendingMediaList;
+  }, [pendingMediaList]);
+
+  // Espelha `value` — permite ler o texto MAIS RECENTE do draft dentro de
+  // callbacks síncronos disparados pelo slash menu (`onInsertMedia`), que
+  // roda logo após `setDraft(next)` mas antes do próximo render (a prop
+  // `value` ainda não teria o texto novo).
+  const draftRef = useRef(value);
+  useEffect(() => {
+    draftRef.current = value;
+  }, [value]);
+
+  const qc = useQueryClient();
 
   // Imagens coladas (Ctrl+V) → ficam "encostadas" como anexos pendentes e só
   // são enviadas quando o operador clica em enviar / pressiona Enter (mesma
@@ -368,19 +389,55 @@ export function Composer({
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [value, disabled, noteMode]);
 
+  // Um modelo com múltiplos anexos, ou com `messageBefore` a partir do 2º
+  // anexo, precisa da SEQUÊNCIA (texto → anexo1 → messageBefore → anexo2…)
+  // pra não perder a mensagem intermediária — "encostar tudo e mandar no
+  // Enter" não preserva essa ordem. 1 anexo sem messageBefore continua
+  // editável no composer antes do envio (caminho robusto/antigo).
+  function mediaNeedsSequence(
+    media: Array<{ url: string; name: string | null; messageBefore?: string | null }>,
+  ): boolean {
+    return (
+      media.length > 1 ||
+      media.some((m, i) => i >= 1 && !!m.messageBefore?.trim())
+    );
+  }
+
   // Insere o texto de um modelo interno no campo (editável) e foca o cursor.
-  // Se `media` vier junto, encosta o(s) anexo(s) pra ser(em) enviado(s) com a
-  // mensagem (na ordem do modelo).
+  // Se `media` vier junto:
+  //  - 1 anexo sem messageBefore → encosta pra ser enviado com a mensagem
+  //    (editável, envio pelo Enter/botão — comportamento antigo).
+  //  - multi-anexo OU messageBefore>=1 → envia a SEQUÊNCIA imediatamente
+  //    (texto + anexos), sem depender do Enter.
   function insertTemplateText(
     text: string,
     media?: Array<{ url: string; name: string | null; messageBefore?: string | null }> | null,
   ) {
-    if (media && media.length > 0) setPendingMediaList((prev) => [...prev, ...media]);
+    const list = media && media.length > 0 ? media : [];
     const base = value;
     const next = base.trim()
       ? `${base}${base.endsWith("\n") ? "" : "\n"}${text}`
       : text;
+
+    if (list.length > 0 && mediaNeedsSequence(list) && conversationId) {
+      const targetConversationId = conversationId;
+      void (async () => {
+        await sendInternalTemplateSequence({
+          conversationId: targetConversationId,
+          content: next,
+          attachments: list,
+        });
+        onChange("");
+        draftRef.current = "";
+        qc.invalidateQueries({ queryKey: messagesKey(targetConversationId) });
+        qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      })();
+      return;
+    }
+
+    if (list.length > 0) setPendingMediaList((prev) => [...prev, ...list]);
     onChange(next);
+    draftRef.current = next;
     requestAnimationFrame(() => {
       const el = textareaRef.current;
       if (!el) return;
@@ -394,9 +451,19 @@ export function Composer({
   // ── Slash command (/modelos) ────────────────────────────────────
   // Modelo interno → o hook insere o texto interpolado no campo (editável).
   // Template Meta → abre o painel de validação.
+  // Wrapper de `setDraft` para o slash menu: atualiza `draftRef`
+  // SINCRONAMENTE antes de propagar pro estado do pai. O slash chama
+  // `setDraft(next)` e, logo em seguida (ainda síncrono), `onInsertMedia` —
+  // por isso `draftRef.current` já reflete o texto novo quando
+  // `onInsertMedia` roda, mesmo a prop `value` só atualizando no próximo render.
+  function handleSlashDraftChange(next: string) {
+    draftRef.current = next;
+    onChange(next);
+  }
+
   const slash = useSlashMenu({
     draft: value,
-    setDraft: onChange,
+    setDraft: handleSlashDraftChange,
     textareaRef,
     templateContext,
     // Conversa/contato atuais — habilitam a seção "Automações" no menu "/".
@@ -404,10 +471,31 @@ export function Composer({
     contactId,
     // Desabilita o atalho em modo nota (não faz sentido inserir templates ali)
     disabled: disabled || noteMode,
-    // Modelo/mensagem rápida com anexo → encosta a mídia pra ir junto no envio
-    // (aceita 1 item ou lista — o "/" passa array quando o modelo tem multi-anexo).
+    // Modelo/mensagem rápida com anexo — 1 anexo sem messageBefore encosta
+    // pra ir junto no Enter (editável); multi-anexo ou messageBefore>=1
+    // exige a SEQUÊNCIA imediata (texto já está em `draftRef` — ver acima).
     onInsertMedia: (media) => {
       const list = Array.isArray(media) ? media : [media];
+      if (mediaNeedsSequence(list) && conversationId) {
+        const targetConversationId = conversationId;
+        // `queueMicrotask` garante que rodamos após o restante do handler
+        // síncrono do slash (setDraft já rodou, `draftRef` já está fresco).
+        queueMicrotask(() => {
+          const text = draftRef.current;
+          void (async () => {
+            await sendInternalTemplateSequence({
+              conversationId: targetConversationId,
+              content: text,
+              attachments: list,
+            });
+            onChange("");
+            draftRef.current = "";
+            qc.invalidateQueries({ queryKey: messagesKey(targetConversationId) });
+            qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+          })();
+        });
+        return;
+      }
       setPendingMediaList((prev) => [...prev, ...list]);
     },
     onPickMetaTemplate: (item) =>
@@ -449,33 +537,15 @@ export function Composer({
   const inputDisabled = noteMode ? false : !!disabled;
 
   // Envia os anexos encostados (mídia de modelo/mensagem rápida) logo após o
-  // texto — SEQUENCIAL (não Promise.all) pra evitar rate limit do canal
-  // quando há vários arquivos. Silencioso em erro — o texto já saiu.
+  // texto do Enter — via o helper compartilhado (SEQUENCIAL, com toast em
+  // falha intermediária). Lê de `pendingMediaListRef` (não do state direto)
+  // pra evitar stale closure entre o render que agendou e o flush em si.
   async function flushPendingMedia() {
-    if (pendingMediaList.length === 0 || !conversationId) return;
-    const list = pendingMediaList;
+    const list = pendingMediaListRef.current;
+    if (list.length === 0 || !conversationId) return;
     setPendingMediaList([]);
-    for (let i = 0; i < list.length; i++) {
-      const media = list[i];
-      // A partir do 2º anexo, `messageBefore` (se preenchido) sai como
-      // mensagem de texto própria — via `sendMessage` direto, sem depender
-      // do estado do composer — imediatamente antes do arquivo.
-      if (i > 0 && media.messageBefore?.trim()) {
-        try {
-          await sendMessage(conversationId, { content: media.messageBefore.trim() });
-        } catch {
-          /* mensagem intermediária falhou; segue para o anexo mesmo assim */
-        }
-      }
-      try {
-        const res = await fetch(apiUrl(media.url));
-        if (!res.ok) continue;
-        const blob = await res.blob();
-        await sendAttachment(conversationId, blob, { fileName: media.name ?? undefined });
-      } catch {
-        /* texto já foi enviado; este anexo falhou — segue para o próximo */
-      }
-    }
+    pendingMediaListRef.current = [];
+    await sendInternalTemplateSequence({ conversationId, content: "", attachments: list });
   }
 
   // Remove uma imagem colada da fila de pendentes (revoga a URL de preview).
@@ -639,31 +709,42 @@ export function Composer({
         </div>
       )}
 
-      {/* Anexo(s) encostado(s) por um modelo/mensagem rápida — vão junto no envio. */}
+      {/* Anexo(s) encostado(s) por um modelo/mensagem rápida — vão junto no envio.
+          (Só aparece pra 1 anexo sem messageBefore — os demais casos disparam
+          a sequência na hora, sem passar por aqui.) */}
       {pendingMediaList.length > 0 && (
         <div className="mb-2 flex flex-col gap-1.5">
-          {pendingMediaList.map((media, i) => (
-            <div
-              key={`${media.url}-${i}`}
-              className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2 shadow-[var(--glass-shadow-sm)]"
-            >
-              <div className="flex shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12 p-1.5 text-[var(--brand-primary)]">
-                <IconPaperclip size={14} />
-              </div>
-              <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-secondary)]">
-                {media.name?.trim() || "Anexo do modelo"} · será enviado junto
-                {i > 0 && media.messageBefore?.trim() ? " · com texto antes" : ""}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPendingMediaList((prev) => prev.filter((_, idx) => idx !== i))}
-                aria-label="Remover anexo"
-                className="shrink-0 rounded-full p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+          {pendingMediaList.map((media, i) => {
+            const before = i > 0 ? media.messageBefore?.trim() : "";
+            return (
+              <div
+                key={`${media.url}-${i}`}
+                className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2 shadow-[var(--glass-shadow-sm)]"
               >
-                <IconX size={14} />
-              </button>
-            </div>
-          ))}
+                <div className="flex shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12 p-1.5 text-[var(--brand-primary)]">
+                  <IconPaperclip size={14} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate font-body text-[12px] text-[var(--text-secondary)]">
+                    {media.name?.trim() || "Anexo do modelo"} · será enviado junto
+                  </span>
+                  {before ? (
+                    <span className="block truncate font-body text-[11px] italic text-[var(--text-muted)]">
+                      Antes: &ldquo;{before}&rdquo;
+                    </span>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPendingMediaList((prev) => prev.filter((_, idx) => idx !== i))}
+                  aria-label="Remover anexo"
+                  className="shrink-0 rounded-full p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+                >
+                  <IconX size={14} />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 

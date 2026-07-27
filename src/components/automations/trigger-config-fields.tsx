@@ -776,9 +776,10 @@ function ConversationTabulatedFields({
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Disparado quando um agente encerra uma conversa e escolhe uma
-        tabulação. Filtre por departamento e/ou tabulação; escolher uma
-        categoria pai também dispara para todos os itens abaixo dela.
+        Disparado quando um agente encerra uma conversa. Se uma tabulação
+        for escolhida no encerramento, você pode filtrar por departamento
+        e/ou tabulação (categoria pai inclui todos os itens abaixo). Sem
+        filtro, dispara em qualquer encerramento — com ou sem tabulação.
       </p>
 
       <div className="space-y-2">

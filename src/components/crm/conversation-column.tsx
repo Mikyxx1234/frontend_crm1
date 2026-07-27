@@ -13,6 +13,7 @@ import {
   IconCornerUpLeft,
   IconCircleCheck,
   IconRobot,
+  IconRefresh,
   type Icon as TablerIcon,
 } from "@tabler/icons-react"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -108,6 +109,13 @@ interface ConversationColumnProps {
   onSelectAllFilterChange?: (value: boolean) => void
   /** Ações renderizadas ao lado do contador, na barra de seleção (ex.: Encerrar, Reabrir, Cancelar). */
   bulkActionsSlot?: React.ReactNode
+  /**
+   * Atualiza só a fila atual (lista + contadores), sem reload da página.
+   * Renderiza um botão ↻ ao lado do seletor de status (Entrada/Aguardando/…).
+   */
+  onRefresh?: () => void
+  /** true enquanto a atualização manual da fila está em curso (gira o ícone). */
+  isRefreshing?: boolean
 }
 
 const DEFAULT_TABS: TabItem[] = [
@@ -192,6 +200,8 @@ export function ConversationColumn({
   onToggleSelectOne,
   onSelectAllChange,
   bulkActionsSlot,
+  onRefresh,
+  isRefreshing = false,
 }: ConversationColumnProps) {
   // Sentinela invisível no fim da lista. Quando entra no viewport
   // (com 200px de margem), dispara `onLoadMore`. IntersectionObserver
@@ -361,6 +371,26 @@ export function ConversationColumn({
           )}
         />
       </button>
+      {onRefresh ? (
+        <TooltipGlass label="Atualizar fila" side="bottom">
+          <button
+            type="button"
+            aria-label="Atualizar fila"
+            onClick={() => onRefresh()}
+            disabled={isRefreshing}
+            className={cn(
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)] disabled:opacity-60",
+              isRefreshing && "text-[var(--brand-primary)]",
+            )}
+          >
+            <IconRefresh
+              size={17}
+              stroke={2}
+              className={cn(isRefreshing && "animate-spin")}
+            />
+          </button>
+        </TooltipGlass>
+      ) : null}
       {filterSlot}
       </div>
 

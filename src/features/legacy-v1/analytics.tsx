@@ -41,7 +41,6 @@ import {
 } from "@/components/analytics/metric-cards";
 import { RevenueChart } from "@/components/analytics/revenue-chart";
 import { SourcesChart } from "@/components/analytics/sources-chart";
-import { SystemUsageTable } from "@/components/analytics/system-usage-table";
 import { TeamTable } from "@/components/analytics/team-table";
 import { StageRankingWidget } from "@/components/dashboard/widgets/stage-ranking-widget";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -289,7 +288,6 @@ export default function AnalyticsPage() {
             { v: "team", label: "Equipe" },
             { v: "sources", label: "Fontes" },
             { v: "forecast", label: "Previsão" },
-            { v: "system-usage", label: "Uso do sistema" },
           ].map((t) => (
             <TabsTrigger
               key={t.v}
@@ -338,10 +336,6 @@ export default function AnalyticsPage() {
 
         <TabsContent value="forecast" className="mt-6">
           <ForecastChart pipelineId={pipelineId || undefined} />
-        </TabsContent>
-
-        <TabsContent value="system-usage" className="mt-6">
-          <SystemUsageTable from={from} to={to} />
         </TabsContent>
       </Tabs>
     </div>

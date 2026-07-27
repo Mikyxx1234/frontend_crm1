@@ -8,9 +8,8 @@ import { IconAlertTriangle, IconBrandWhatsapp, IconX } from "@tabler/icons-react
 
 import {
   listAgentEnabledTemplates,
-  sendAttachment,
+  sendInternalTemplateSequence,
   sendTemplate,
-  sendMessage,
   type WhatsappTemplate,
 } from "@/features/inbox-v2/api";
 import { emitConversationReopened, messagesKey, useMessages } from "@/features/inbox-v2/hooks";
@@ -324,32 +323,8 @@ export function InternalTemplatePickerList({
   const sendMutation = useMutation({
     mutationFn: async (tpl: InternalTemplate) => {
       const text = interpolateInternalTemplate(tpl.content, templateContext ?? {});
-      const result = await sendMessage(conversationId, { content: text });
-      // Envia cada anexo em sequência (não Promise.all) — evita sobrecarregar
-      // o rate limit do canal quando o modelo tem vários arquivos. A partir
-      // do 2º anexo, `messageBefore` (se preenchido) sai como mensagem de
-      // texto própria imediatamente antes do arquivo correspondente.
       const attachments = getTemplateAttachments(tpl);
-      for (let i = 0; i < attachments.length; i++) {
-        const att = attachments[i];
-        if (i > 0 && att.messageBefore?.trim()) {
-          try {
-            await sendMessage(conversationId, { content: att.messageBefore.trim() });
-          } catch {
-            // Mensagem intermediária falhou; segue para o anexo mesmo assim
-          }
-        }
-        try {
-          const mediaRes = await fetch(apiUrl(att.url));
-          if (mediaRes.ok) {
-            const blob = await mediaRes.blob();
-            await sendAttachment(conversationId, blob, { fileName: att.name ?? undefined });
-          }
-        } catch {
-          // Anexo falhou; segue para o próximo (texto e demais já saíram)
-        }
-      }
-      return result;
+      await sendInternalTemplateSequence({ conversationId, content: text, attachments });
     },
     onSuccess: () => {
       toast.success("Modelo enviado");

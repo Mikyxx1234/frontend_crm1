@@ -3,7 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconArrowsLeftRight as ArrowRightLeft, IconCircleCheck as CheckCircle2, IconChevronDown as ChevronDown, IconLoader2 as Loader2, IconPencil as Pencil, IconTrash as Trash2, IconTrophy as Trophy, IconUserCog as UserCog, IconX as X, IconCircleX as XCircle } from "@tabler/icons-react";
+import { IconArrowsLeftRight as ArrowRightLeft, IconCircleCheck as CheckCircle2, IconChevronDown as ChevronDown, IconLoader2 as Loader2, IconPencil as Pencil, IconTag as Tag, IconTrash as Trash2, IconTrophy as Trophy, IconUserCog as UserCog, IconX as X, IconCircleX as XCircle } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import {
@@ -227,6 +227,7 @@ export function BulkActionsBar({
 
   const invalidate = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["pipeline-board", pipelineId] });
+    queryClient.invalidateQueries({ queryKey: ["deals-list"] });
   }, [queryClient, pipelineId]);
 
   const mutation = useMutation({
@@ -380,6 +381,17 @@ export function BulkActionsBar({
           </div>
 
           {/* Edit fields/tags */}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setEditFieldsOpen(true)}
+            className="h-8 gap-1.5 rounded-xl text-[12px] dark:!border-[var(--glass-border)] dark:!bg-[var(--glass-bg-panel)] dark:!text-[var(--text-primary)] dark:hover:!bg-[var(--glass-bg-strong)] dark:hover:!text-[var(--text-primary)]"
+            disabled={mutation.isPending}
+          >
+            <Tag className="size-3.5" />
+            Tags
+          </Button>
           <Button
             type="button"
             size="sm"

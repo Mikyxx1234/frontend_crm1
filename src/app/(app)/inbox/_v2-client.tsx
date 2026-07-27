@@ -801,6 +801,19 @@ export default function InboxV2ClientPage({
 
   // ── Polling do encerramento em massa (leads-worker) ─────────────
   const qc = useQueryClient();
+  const [inboxRefreshing, setInboxRefreshing] = useState(false);
+  const refreshInboxQueue = async () => {
+    if (inboxRefreshing) return;
+    setInboxRefreshing(true);
+    try {
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ["inbox-conversations"] }),
+        qc.refetchQueries({ queryKey: ["conversations", "tab-counts"] }),
+      ]);
+    } finally {
+      setInboxRefreshing(false);
+    }
+  };
   const bulkOp = useBulkOperation(bulkOpId);
   const bulkOpStatus = bulkOp.data?.status;
   useEffect(() => {
@@ -1100,6 +1113,10 @@ export default function InboxV2ClientPage({
         const next = TABS[idx]?.id;
         if (next) setTab(next);
       }}
+      onRefresh={() => {
+        void refreshInboxQueue();
+      }}
+      isRefreshing={inboxRefreshing}
       resizerSlot={
         isDesktop ? (
           <ColumnResizer

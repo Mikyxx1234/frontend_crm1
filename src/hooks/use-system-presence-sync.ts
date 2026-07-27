@@ -12,13 +12,18 @@ interface SystemPresenceEvent {
   lastSeenAt: string | null;
 }
 
+interface AgentPresenceEvent {
+  userId: string;
+  status: "ONLINE" | "OFFLINE" | "AWAY";
+}
+
 /**
- * Escuta `system_presence_update` do SSE e patcheia in-place as caches
- * de listagem de agentes (React Query) que carregam `systemOnline` /
- * `lastSeenAt`. Nunca refetcha em resposta ao evento — só faz merge.
+ * Escuta SSE de presença e patcheia in-place as caches de listagem:
+ *  - `system_presence_update` → systemOnline / lastSeenAt (CRM aberto)
+ *  - `presence_update` → AgentStatus (Online/Ausente/Offline da Distribuição)
  *
- * Também dispara um refetch leve dessas queries a cada 60s como rede
- * de segurança (SSE pode cair silenciosamente atrás de proxies).
+ * Sem isso, mudar status na NavRail (ou em outra aba) deixa a lista da
+ * Distribuição desatualizada até um F5.
  *
  * Montado UMA vez por sessão (ex.: no shell autenticado).
  */
@@ -28,10 +33,50 @@ export function useSystemPresenceSync(enabled = true) {
   useSSE(
     apiUrl("/api/sse/messages"),
     (event, data) => {
-      if (event !== "system_presence_update") return;
-      const evt = data as Partial<SystemPresenceEvent> | undefined;
-      if (!evt || typeof evt.userId !== "string") return;
-      patchUsersCaches(qc, evt as SystemPresenceEvent);
+      if (event === "system_presence_update") {
+        const evt = data as Partial<SystemPresenceEvent> | undefined;
+        if (!evt || typeof evt.userId !== "string") return;
+        patchUsersCaches(qc, {
+          kind: "system",
+          userId: evt.userId,
+          systemOnline: Boolean(evt.systemOnline),
+          lastSeenAt: evt.lastSeenAt ?? null,
+        });
+        return;
+      }
+      if (event === "presence_update") {
+        const evt = data as Partial<AgentPresenceEvent> | undefined;
+        if (!evt || typeof evt.userId !== "string") return;
+        if (
+          evt.status !== "ONLINE" &&
+          evt.status !== "OFFLINE" &&
+          evt.status !== "AWAY"
+        ) {
+          return;
+        }
+        patchUsersCaches(qc, {
+          kind: "agent",
+          userId: evt.userId,
+          status: evt.status,
+        });
+        // NavRail / popup do próprio usuário.
+        qc.setQueriesData(
+          { queryKey: ["my-agent-status", evt.userId] },
+          (prev: unknown) => {
+            if (!prev || typeof prev !== "object") return { status: evt.status };
+            return { ...(prev as object), status: evt.status };
+          },
+        );
+        // Elegibilidade depende do status — refetch em background.
+        void qc.invalidateQueries({
+          queryKey: ["distribution-responsibles"],
+          refetchType: "active",
+        });
+        void qc.invalidateQueries({
+          queryKey: ["distribution-pending"],
+          refetchType: "active",
+        });
+      }
     },
     enabled,
   );
@@ -39,20 +84,34 @@ export function useSystemPresenceSync(enabled = true) {
   useEffect(() => {
     if (!enabled) return;
     const t = setInterval(() => {
-      // Refetch em background — não invalida instantaneamente para não
-      // provocar loading state em popovers já abertos.
       qc.invalidateQueries({ queryKey: ["users", "assign-picker"], refetchType: "active" });
       qc.invalidateQueries({ queryKey: ["team-users"], refetchType: "active" });
+      qc.invalidateQueries({
+        queryKey: ["distribution-responsibles"],
+        refetchType: "active",
+      });
     }, 60_000);
     return () => clearInterval(t);
   }, [enabled, qc]);
 }
 
+type PatchEvent =
+  | {
+      kind: "system";
+      userId: string;
+      systemOnline: boolean;
+      lastSeenAt: string | null;
+    }
+  | {
+      kind: "agent";
+      userId: string;
+      status: "ONLINE" | "OFFLINE" | "AWAY";
+    };
+
 function patchUsersCaches(
   qc: ReturnType<typeof useQueryClient>,
-  evt: SystemPresenceEvent,
+  evt: PatchEvent,
 ) {
-  // Caches que carregam TeamUser[] no shape do backend.
   const keys: readonly (readonly unknown[])[] = [
     ["users", "assign-picker"],
     ["team-users"],
@@ -69,7 +128,7 @@ function patchUsersCaches(
 
 type MaybeUser = { id?: string; userId?: string } & Record<string, unknown>;
 
-function mergePresence(prev: unknown, evt: SystemPresenceEvent): unknown {
+function mergePresence(prev: unknown, evt: PatchEvent): unknown {
   if (Array.isArray(prev)) {
     let touched = false;
     const next = prev.map((item) => {
@@ -77,10 +136,16 @@ function mergePresence(prev: unknown, evt: SystemPresenceEvent): unknown {
       const uid = u.id ?? u.userId;
       if (uid !== evt.userId) return item;
       touched = true;
+      if (evt.kind === "system") {
+        return {
+          ...(item as object),
+          systemOnline: evt.systemOnline,
+          lastSeenAt: evt.lastSeenAt,
+        };
+      }
       return {
         ...(item as object),
-        systemOnline: evt.systemOnline,
-        lastSeenAt: evt.lastSeenAt,
+        status: evt.status,
       };
     });
     return touched ? next : prev;

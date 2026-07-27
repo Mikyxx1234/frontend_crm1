@@ -79,6 +79,9 @@ interface DealListTableProps {
   visibleColumns?: DealListColumnKey[];
   onRowClick?: (id: string) => void;
   className?: string;
+  /** Seleção controlada (ações em massa na Lista). */
+  selectedIds?: Set<string>;
+  onSelectionChange?: (next: Set<string>) => void;
 }
 
 const statusToTab: Record<DealListStatus, Exclude<DealListTab, "todos">> = {
@@ -114,10 +117,19 @@ export function DealListTable({
   visibleColumns,
   onRowClick,
   className,
+  selectedIds,
+  onSelectionChange,
 }: DealListTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [internalSelected, setInternalSelected] = useState<Set<string>>(new Set());
+  const selected = selectedIds ?? internalSelected;
+  const setSelected = (updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    const next =
+      typeof updater === "function" ? updater(selectedIds ?? internalSelected) : updater;
+    if (onSelectionChange) onSelectionChange(next);
+    else setInternalSelected(next);
+  };
   const { getWidth, setWidth } = useColumnWidths(WIDTHS_STORAGE_KEY, COLUMN_WIDTH_DEFAULTS);
 
   const columns = useMemo(() => resolveColumns(visibleColumns), [visibleColumns]);

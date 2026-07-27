@@ -71,7 +71,8 @@ export function useDistributionResponsibles(enabled = true) {
     queryKey: DISTRIBUTION_RESPONSIBLES_KEY,
     queryFn: fetchResponsibles,
     enabled,
-    staleTime: 15_000,
+    staleTime: 5_000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -80,11 +81,77 @@ export function useUpdateResponsible() {
   return useMutation<
     unknown,
     Error,
-    { userId: string; input: UpdateResponsibleInput }
+    { userId: string; input: UpdateResponsibleInput },
+    { prev: ResponsiblesResponse | undefined }
   >({
     mutationFn: ({ userId, input }) => updateResponsible(userId, input),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: DISTRIBUTION_RESPONSIBLES_KEY }),
+    onMutate: async ({ userId, input }) => {
+      await qc.cancelQueries({ queryKey: DISTRIBUTION_RESPONSIBLES_KEY });
+      const prev = qc.getQueryData<ResponsiblesResponse>(
+        DISTRIBUTION_RESPONSIBLES_KEY,
+      );
+      if (prev?.responsibles) {
+        qc.setQueryData<ResponsiblesResponse>(DISTRIBUTION_RESPONSIBLES_KEY, {
+          ...prev,
+          responsibles: prev.responsibles.map((r) => {
+            if (r.userId !== userId) return r;
+            return {
+              ...r,
+              ...(input.participates !== undefined
+                ? { participates: input.participates }
+                : {}),
+              ...(input.paused !== undefined ? { paused: input.paused } : {}),
+              ...(input.queueLimit !== undefined
+                ? { queueLimit: input.queueLimit }
+                : {}),
+              ...(input.type !== undefined ? { type: input.type } : {}),
+              ...(input.preLunchStopMinutes !== undefined
+                ? { preLunchStopMinutes: input.preLunchStopMinutes }
+                : {}),
+              ...(input.schedule
+                ? {
+                    schedule: {
+                      startTime:
+                        input.schedule.startTime ??
+                        r.schedule?.startTime ??
+                        "08:00",
+                      lunchStart:
+                        input.schedule.lunchStart ??
+                        r.schedule?.lunchStart ??
+                        "12:00",
+                      lunchEnd:
+                        input.schedule.lunchEnd ??
+                        r.schedule?.lunchEnd ??
+                        "13:00",
+                      endTime:
+                        input.schedule.endTime ??
+                        r.schedule?.endTime ??
+                        "18:00",
+                      timezone:
+                        input.schedule.timezone ??
+                        r.schedule?.timezone ??
+                        "America/Sao_Paulo",
+                      weekdays:
+                        input.schedule.weekdays ??
+                        r.schedule?.weekdays ?? [1, 2, 3, 4, 5],
+                    },
+                    hasSchedule: true,
+                  }
+                : {}),
+            };
+          }),
+        });
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(DISTRIBUTION_RESPONSIBLES_KEY, ctx.prev);
+    },
+    onSettled: () =>
+      qc.invalidateQueries({
+        queryKey: DISTRIBUTION_RESPONSIBLES_KEY,
+        refetchType: "active",
+      }),
   });
 }
 
@@ -93,13 +160,38 @@ export function useSetAgentStatus() {
   return useMutation<
     void,
     Error,
-    { userId: string; status: AgentOnlineStatus }
+    { userId: string; status: AgentOnlineStatus },
+    { prev: ResponsiblesResponse | undefined }
   >({
     mutationFn: ({ userId, status }) => setAgentStatus(userId, status),
-    onSuccess: () => {
+    onMutate: async ({ userId, status }) => {
+      await qc.cancelQueries({ queryKey: DISTRIBUTION_RESPONSIBLES_KEY });
+      const prev = qc.getQueryData<ResponsiblesResponse>(
+        DISTRIBUTION_RESPONSIBLES_KEY,
+      );
+      if (prev?.responsibles) {
+        qc.setQueryData<ResponsiblesResponse>(DISTRIBUTION_RESPONSIBLES_KEY, {
+          ...prev,
+          responsibles: prev.responsibles.map((r) =>
+            r.userId === userId ? { ...r, status } : r,
+          ),
+        });
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(DISTRIBUTION_RESPONSIBLES_KEY, ctx.prev);
+    },
+    onSettled: () => {
       // Ficar ONLINE drena a fila de espera no backend — atualiza ambos.
-      qc.invalidateQueries({ queryKey: DISTRIBUTION_RESPONSIBLES_KEY });
-      qc.invalidateQueries({ queryKey: DISTRIBUTION_PENDING_KEY });
+      void qc.invalidateQueries({
+        queryKey: DISTRIBUTION_RESPONSIBLES_KEY,
+        refetchType: "active",
+      });
+      void qc.invalidateQueries({
+        queryKey: DISTRIBUTION_PENDING_KEY,
+        refetchType: "active",
+      });
     },
   });
 }

@@ -514,9 +514,9 @@ function DistributionMiniDash({
 
 // ── Lista de responsáveis em cards ───────────────────────────────────────
 
-// 6 colunas com mínimos legíveis — H-scroll preserva o conteúdo em telas estreitas.
+// 6 colunas: responsável, presença (+ horário), fila, volume, elegibilidade, ações
 const RESP_GRID =
-  "grid-cols-[minmax(300px,3fr)_minmax(155px,1.25fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(190px,1.55fr)_minmax(82px,0.75fr)]";
+  "grid-cols-[minmax(280px,2.8fr)_minmax(220px,1.7fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(180px,1.45fr)_minmax(82px,0.75fr)]";
 
 function ResponsiblesCardList({
   responsibles,
@@ -613,8 +613,10 @@ function ResponsibleCard({
 }) {
   const statusMut = useSetAgentStatus();
   const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
+  // Próprio usuário ou admin/manager — mesmo botão simples de produção.
+  const canTogglePresence = isCurrentUser || canManage;
 
-  const toggleOwnStatus = () => {
+  const togglePresence = () => {
     statusMut.mutate(
       { userId: r.userId, status: isOnline ? "OFFLINE" : "ONLINE" },
       { onError: (e) => toast.error(e.message || "Erro ao alterar status.") },
@@ -630,12 +632,6 @@ function ResponsibleCard({
     >
       {/* Responsável */}
       <div className="flex min-w-0 items-center gap-2.5">
-        {/*
-          Avatar + bolinha de status EQUIVALENTE à NavRail: a bolinha é
-          renderizada como IRMÃ (fora do overflow-hidden do avatar) para
-          ficar à frente e não ser cortada. Mesmas cores/tokens do
-          `AgentStatusDot` — fonte única de verdade visual do status.
-        */}
         <span className="relative isolate shrink-0">
           <UserAvatar
             name={r.name ?? r.email}
@@ -660,7 +656,7 @@ function ResponsibleCard({
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 truncate font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
             <span className="truncate">{r.name ?? "Sem nome"}</span>
-            {/* Presença de USO ("CRM aberto") — distinta do status da Distribuição. */}
+            {/* Bolinha azul = CRM aberto (não confundir com Online da Distribuição). */}
             <SystemPresenceIndicator
               systemOnline={r.systemOnline}
               lastSeenAt={r.lastSeenAt}
@@ -689,19 +685,22 @@ function ResponsibleCard({
         </div>
       </div>
 
-      {/* Presença */}
-      <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
-        <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
-        {isCurrentUser && (
-          <button
-            type="button"
-            onClick={toggleOwnStatus}
-            disabled={statusMut.isPending}
-            className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10.5px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
-          >
-            {statusMut.isPending ? "…" : isOnline ? "Ficar offline" : "Ficar online"}
-          </button>
-        )}
+      {/* Presença + resumo de expediente/almoço */}
+      <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
+          <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
+          {canTogglePresence && r.participates && (
+            <button
+              type="button"
+              onClick={togglePresence}
+              disabled={statusMut.isPending}
+              className="shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10.5px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+            >
+              {statusMut.isPending ? "…" : isOnline ? "Ficar offline" : "Ficar online"}
+            </button>
+          )}
+        </div>
+        <SchedulePresenceHint schedule={r.schedule} preLunchStopMinutes={r.preLunchStopMinutes} />
       </div>
 
       {/* Fila */}
@@ -757,6 +756,167 @@ function ResponsibleCard({
       </div>
     </div>
   );
+}
+
+function SchedulePresenceHint({
+  schedule,
+  preLunchStopMinutes,
+}: {
+  schedule: DistributionResponsibleDto["schedule"];
+  preLunchStopMinutes?: number;
+}) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  if (!schedule) return null;
+
+  const alert = resolveSchedulePresenceAlert({
+    schedule,
+    preMinutes: preLunchStopMinutes ?? 30,
+    now,
+  });
+  if (!alert) return null;
+
+  return (
+    <span
+      className="min-w-0 truncate font-body text-[10px] font-semibold leading-tight text-[var(--brand-primary)]"
+      title={alert.title}
+    >
+      {alert.label}
+    </span>
+  );
+}
+
+type SchedulePresenceAlert = { label: string; title: string };
+
+/**
+ * Mostra aviso só perto do pré-corte:
+ * - 10 min antes do pré-almoço → "N min para o almoço"
+ * - dentro do pré-corte/almoço → "N min almoço"
+ * - 10 min antes do pré-fim → "N min para a saída"
+ * - dentro do pré-fim → "N min para a saída"
+ * Fora dessas janelas: oculto (lista fica limpa).
+ */
+function resolveSchedulePresenceAlert(input: {
+  schedule: NonNullable<DistributionResponsibleDto["schedule"]>;
+  preMinutes: number;
+  now: Date;
+}): SchedulePresenceAlert | null {
+  const { schedule, now } = input;
+  const pre = Math.max(0, Math.floor(input.preMinutes));
+  const WARN_AHEAD = 10;
+
+  const current = localMinutesInTimezone(schedule.timezone, now);
+  if (current == null) return null;
+  if (!isScheduleWeekday(schedule, now)) return null;
+
+  const lunchStart = parseHhmmToMinutes(schedule.lunchStart);
+  const lunchEnd = parseHhmmToMinutes(schedule.lunchEnd);
+  const endTime = parseHhmmToMinutes(schedule.endTime);
+  if (lunchStart == null || lunchEnd == null || endTime == null) return null;
+
+  const lunchPreStart = lunchStart - pre;
+  const lunchWarnStart = lunchPreStart - WARN_AHEAD;
+  const endPreStart = endTime - pre;
+  const endWarnStart = endPreStart - WARN_AHEAD;
+
+  // Almoço tem prioridade sobre fim do expediente.
+  if (pre > 0 && current >= lunchWarnStart && current < lunchPreStart) {
+    const left = lunchPreStart - current;
+    return {
+      label: `${left} min para o almoço`,
+      title: `Pré-corte de ${pre} min começa em ${left} min (almoço ${hhmm(schedule.lunchStart)}–${hhmm(schedule.lunchEnd)})`,
+    };
+  }
+  if (current >= lunchPreStart && current < lunchEnd) {
+    if (pre > 0 && current < lunchStart) {
+      return {
+        label: `${pre} min almoço`,
+        title: `Pré-corte ativo — para de receber leads até o fim do almoço (${hhmm(schedule.lunchEnd)})`,
+      };
+    }
+    return {
+      label: "Pausa almoço",
+      title: `Em almoço até ${hhmm(schedule.lunchEnd)} — sem receber leads`,
+    };
+  }
+
+  if (pre > 0 && current >= endWarnStart && current < endPreStart) {
+    const left = endPreStart - current;
+    return {
+      label: `${left} min para a saída`,
+      title: `Pré-corte de ${pre} min antes do fim (${hhmm(schedule.endTime)}) começa em ${left} min`,
+    };
+  }
+  if (pre > 0 && current >= endPreStart && current < endTime) {
+    return {
+      label: `${pre} min para a saída`,
+      title: `Pré-fim de expediente ativo — para de receber leads até ${hhmm(schedule.endTime)}`,
+    };
+  }
+
+  return null;
+}
+
+function hhmm(v: string): string {
+  return (v || "").slice(0, 5);
+}
+
+function parseHhmmToMinutes(v: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})/.exec((v || "").trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(min)) return null;
+  return h * 60 + min;
+}
+
+function localMinutesInTimezone(timezone: string, now: Date): number | null {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone || "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(now);
+    const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "NaN");
+    const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "NaN");
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+    // Intl pode devolver "24" em alguns engines à meia-noite.
+    const h = hour === 24 ? 0 : hour;
+    return h * 60 + minute;
+  } catch {
+    return null;
+  }
+}
+
+function isScheduleWeekday(
+  schedule: NonNullable<DistributionResponsibleDto["schedule"]>,
+  now: Date,
+): boolean {
+  try {
+    const weekdayStr = new Intl.DateTimeFormat("en-US", {
+      timeZone: schedule.timezone || "America/Sao_Paulo",
+      weekday: "short",
+    }).format(now);
+    const map: Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+    const day = map[weekdayStr];
+    if (day == null) return true;
+    return (schedule.weekdays ?? []).includes(day);
+  } catch {
+    return true;
+  }
 }
 
 function PresenceBadge({
@@ -1759,6 +1919,21 @@ function EditResponsibleDialog({
   const [paused, setPaused] = useState(responsible.paused);
   const [volume, setVolume] = useState(String(responsible.queueLimit));
   const [type, setType] = useState(responsible.type ?? "");
+  const [lunchStart, setLunchStart] = useState(
+    responsible.schedule?.lunchStart ?? "12:00",
+  );
+  const [lunchEnd, setLunchEnd] = useState(
+    responsible.schedule?.lunchEnd ?? "13:00",
+  );
+  const [startTime, setStartTime] = useState(
+    responsible.schedule?.startTime ?? "08:00",
+  );
+  const [endTime, setEndTime] = useState(
+    responsible.schedule?.endTime ?? "18:00",
+  );
+  const [preLunchStop, setPreLunchStop] = useState(
+    String(responsible.preLunchStopMinutes ?? 30),
+  );
   const [deptIds, setDeptIds] = useState<string[]>(
     responsible.departments?.map((d) => d.id) ?? [],
   );
@@ -1781,6 +1956,11 @@ function EditResponsibleDialog({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const limit = Math.max(0, Math.floor(Number(volume) || 0));
+    const preMins = Math.min(
+      180,
+      Math.max(0, Math.floor(Number(preLunchStop) || 0)),
+    );
+    const toHhmm = (v: string) => v.slice(0, 5);
     updateMut.mutate(
       {
         userId: responsible.userId,
@@ -1790,6 +1970,15 @@ function EditResponsibleDialog({
           queueLimit: limit,
           type: type.trim() || null,
           departmentIds: deptIds,
+          preLunchStopMinutes: preMins,
+          schedule: {
+            lunchStart: toHhmm(lunchStart),
+            lunchEnd: toHhmm(lunchEnd),
+            startTime: toHhmm(startTime),
+            endTime: toHhmm(endTime),
+            timezone: responsible.schedule?.timezone ?? "America/Sao_Paulo",
+            weekdays: responsible.schedule?.weekdays ?? [1, 2, 3, 4, 5],
+          },
         },
       },
       {
@@ -1810,7 +1999,7 @@ function EditResponsibleDialog({
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={handleSave}
-        className="w-full max-w-md rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 shadow-[var(--glass-shadow)]"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 shadow-[var(--glass-shadow)]"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -1833,7 +2022,7 @@ function EditResponsibleDialog({
 
         <div className="flex flex-col gap-4">
           <ToggleField
-            label="Participa da distribuição"
+            label="Ativo na distribuição"
             hint="Desligado = inativo (não recebe leads)."
             checked={participates}
             onChange={setParticipates}
@@ -1844,6 +2033,76 @@ function EditResponsibleDialog({
             checked={paused}
             onChange={setPaused}
           />
+
+          <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]/40 p-3">
+            <span className="font-body text-[12px] font-semibold text-[var(--text-secondary)]">
+              Expediente
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--text-muted)]">Início</span>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+                  required
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--text-muted)]">Saída</span>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+                  required
+                />
+              </label>
+            </div>
+            <span className="font-body text-[12px] font-semibold text-[var(--text-secondary)]">
+              Almoço
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--text-muted)]">Início</span>
+                <input
+                  type="time"
+                  value={lunchStart}
+                  onChange={(e) => setLunchStart(e.target.value)}
+                  className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+                  required
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--text-muted)]">Fim</span>
+                <input
+                  type="time"
+                  value={lunchEnd}
+                  onChange={(e) => setLunchEnd(e.target.value)}
+                  className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+                  required
+                />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] text-[var(--text-muted)]">
+                Parar de receber leads (min antes do almoço e da saída)
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={180}
+                value={preLunchStop}
+                onChange={(e) => setPreLunchStop(e.target.value)}
+                className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+              />
+              <span className="text-[11px] text-[var(--text-muted)]">
+                Default 30. Ex.: almoço 12:00 e saída 18:00 com 30 min → para às
+                11:30 e às 17:30. 0 = só no intervalo de almoço (sem pré-corte).
+              </span>
+            </label>
+          </div>
 
           <label className="flex flex-col gap-1">
             <span className="font-body text-[12px] font-semibold text-[var(--text-secondary)]">

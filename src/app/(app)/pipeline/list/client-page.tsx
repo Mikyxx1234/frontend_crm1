@@ -63,11 +63,7 @@ import {
 import { FormDialog } from "@/components/ui/form-dialog";
 import { RequirePermission } from "@/components/auth/require-permission";
 
-import {
-  useBoard,
-  useDealsList,
-  usePipelines,
-} from "@/features/pipeline-v2/hooks";
+import { useBoard, useDealsList, usePipelines, useTeamUsers } from "@/features/pipeline-v2/hooks";
 import { toDealListRow } from "@/features/pipeline-v2/adapters";
 import {
   ExportPanel,
@@ -75,6 +71,8 @@ import {
   useImportExportBump,
 } from "@/features/pipeline-v2/import-export";
 import type { DealListItemDto } from "@/features/pipeline-v2/api";
+import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
+import type { BulkScopeContext } from "@/components/pipeline/bulk-edit-fields-dialog";
 
 import { cn } from "@/lib/utils";
 
@@ -149,6 +147,7 @@ export default function V2PipelineListClientPage() {
   const [columnsOpen, setColumnsOpen] = useState(false);
   const [dupesOpen, setDupesOpen] = useState(false);
   const [activeColumnKeys, setActiveColumnKeys] = useState<DealListColumnKey[]>(readStoredColumns);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const { filters, setFilters, patch: patchFilters, clear: clearFilters } = useKanbanFilters();
   const [filterOptions, setFilterOptions] = useState<FilterOptionsResponse | null>(null);
@@ -257,14 +256,50 @@ export default function V2PipelineListClientPage() {
   const boardQuery = useBoard({
     pipelineId,
     status: "OPEN",
-    enabled: isAuthenticated && !!pipelineId && addOpen,
+    enabled: isAuthenticated && !!pipelineId,
   });
-  const stages = (boardQuery.data ?? []).map((s) => ({ id: s.id, name: s.name }));
+  const stages = (boardQuery.data ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    color: s.color ?? undefined,
+    isLost: Boolean(s.isLost),
+  }));
+  const { data: teamUsers = [] } = useTeamUsers(isAuthenticated && selectedIds.size > 0);
 
   const total = dealsQuery.data?.total ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / perPage));
   const items = dealsQuery.data?.items ?? [];
   const rows = items.map(toDealListRow);
+
+  // Limpa seleção ao mudar página / filtros / pipeline / status.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, perPage, pipelineId, statusTab, debounced, filters]);
+
+  const scopeContext = useMemo<BulkScopeContext | undefined>(() => {
+    if (!pipelineId) return undefined;
+    const status =
+      statusTab === "abertos"
+        ? "OPEN"
+        : statusTab === "ganhos"
+          ? "WON"
+          : statusTab === "perdidos"
+            ? "LOST"
+            : "ALL";
+    let stage: { id: string; name: string; total: number } | null = null;
+    const stageIds = filters.stageIds;
+    if (stageIds?.length === 1) {
+      const s = stages.find((x) => x.id === stageIds[0]);
+      if (s) stage = { id: s.id, name: s.name, total };
+    }
+    return {
+      pipelineId,
+      status,
+      filters: { ...filters, ...(debounced ? { search: debounced } : {}) },
+      pipelineTotal: total,
+      stage,
+    };
+  }, [pipelineId, statusTab, filters, debounced, stages, total]);
 
   const tabCounts = useMemo(
     () => ({
@@ -419,6 +454,8 @@ export default function V2PipelineListClientPage() {
             deals={rows}
             statusTab={statusTab}
             visibleColumns={activeColumnKeys}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
             onRowClick={(id) => {
               const item = items.find((d) => d.id === id);
               openDeal(id, item?.number);
@@ -442,6 +479,18 @@ export default function V2PipelineListClientPage() {
           }}
         />
       </main>
+
+      {pipelineId ? (
+        <BulkActionsBar
+          selectedCount={selectedIds.size}
+          selectedIds={selectedIds}
+          onClear={() => setSelectedIds(new Set())}
+          pipelineId={pipelineId}
+          stages={stages}
+          users={teamUsers.map((u) => ({ id: u.id, name: u.name }))}
+          scopeContext={scopeContext}
+        />
+      ) : null}
 
       <AddDealDialog
         open={addOpen}

@@ -204,11 +204,12 @@ export function Composer({
     });
   }
 
-  // Anexo "encostado" por um modelo interno / mensagem rápida escolhido no
-  // "/" ou no menu "+". Vai junto com o texto quando o operador enviar.
-  const [pendingMedia, setPendingMedia] = useState<{ url: string; name: string | null } | null>(
-    null,
-  );
+  // Anexo(s) "encostado(s)" por um modelo interno / mensagem rápida escolhido
+  // no "/" ou no menu "+". Vão junto com o texto quando o operador enviar
+  // (um modelo pode ter vários arquivos — enviados em sequência, na ordem).
+  const [pendingMediaList, setPendingMediaList] = useState<
+    Array<{ url: string; name: string | null }>
+  >([]);
 
   // Imagens coladas (Ctrl+V) → ficam "encostadas" como anexos pendentes e só
   // são enviadas quando o operador clica em enviar / pressiona Enter (mesma
@@ -367,12 +368,13 @@ export function Composer({
   }, [value, disabled, noteMode]);
 
   // Insere o texto de um modelo interno no campo (editável) e foca o cursor.
-  // Se `media` vier junto, encosta o anexo pra ser enviado com a mensagem.
+  // Se `media` vier junto, encosta o(s) anexo(s) pra ser(em) enviado(s) com a
+  // mensagem (na ordem do modelo).
   function insertTemplateText(
     text: string,
-    media?: { url: string; name: string | null } | null,
+    media?: Array<{ url: string; name: string | null }> | null,
   ) {
-    if (media) setPendingMedia(media);
+    if (media && media.length > 0) setPendingMediaList((prev) => [...prev, ...media]);
     const base = value;
     const next = base.trim()
       ? `${base}${base.endsWith("\n") ? "" : "\n"}${text}`
@@ -402,7 +404,7 @@ export function Composer({
     // Desabilita o atalho em modo nota (não faz sentido inserir templates ali)
     disabled: disabled || noteMode,
     // Modelo/mensagem rápida com anexo → encosta a mídia pra ir junto no envio.
-    onInsertMedia: (media) => setPendingMedia(media),
+    onInsertMedia: (media) => setPendingMediaList((prev) => [...prev, media]),
     onPickMetaTemplate: (item) =>
       setPendingTemplate({
         name: item.name,
@@ -441,19 +443,22 @@ export function Composer({
   // `onSendNote=undefined`.
   const inputDisabled = noteMode ? false : !!disabled;
 
-  // Envia o anexo encostado (mídia de modelo/mensagem rápida) logo após o
-  // texto. Silencioso em erro — o texto já saiu.
+  // Envia os anexos encostados (mídia de modelo/mensagem rápida) logo após o
+  // texto — SEQUENCIAL (não Promise.all) pra evitar rate limit do canal
+  // quando há vários arquivos. Silencioso em erro — o texto já saiu.
   async function flushPendingMedia() {
-    if (!pendingMedia || !conversationId) return;
-    const media = pendingMedia;
-    setPendingMedia(null);
-    try {
-      const res = await fetch(apiUrl(media.url));
-      if (!res.ok) return;
-      const blob = await res.blob();
-      await sendAttachment(conversationId, blob, { fileName: media.name ?? undefined });
-    } catch {
-      /* texto já foi enviado; anexo falhou silenciosamente */
+    if (pendingMediaList.length === 0 || !conversationId) return;
+    const list = pendingMediaList;
+    setPendingMediaList([]);
+    for (const media of list) {
+      try {
+        const res = await fetch(apiUrl(media.url));
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        await sendAttachment(conversationId, blob, { fileName: media.name ?? undefined });
+      } catch {
+        /* texto já foi enviado; este anexo falhou — segue para o próximo */
+      }
     }
   }
 
@@ -480,9 +485,9 @@ export function Composer({
 
   function performSend() {
     const trimmed = value.trim();
-    // Permite enviar quando há texto OU um anexo encostado (modelo ou imagem colada).
+    // Permite enviar quando há texto OU algum anexo encostado (modelo ou imagem colada).
     if (
-      (!trimmed && !pendingMedia && pendingFiles.length === 0) ||
+      (!trimmed && pendingMediaList.length === 0 && pendingFiles.length === 0) ||
       sending ||
       inputDisabled
     )
@@ -610,23 +615,30 @@ export function Composer({
         </div>
       )}
 
-      {/* Anexo encostado por um modelo/mensagem rápida — vai junto no envio. */}
-      {pendingMedia && (
-        <div className="mb-2 flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2 shadow-[var(--glass-shadow-sm)]">
-          <div className="flex shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12 p-1.5 text-[var(--brand-primary)]">
-            <IconPaperclip size={14} />
-          </div>
-          <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-secondary)]">
-            {pendingMedia.name?.trim() || "Anexo do modelo"} · será enviado junto
-          </span>
-          <button
-            type="button"
-            onClick={() => setPendingMedia(null)}
-            aria-label="Remover anexo"
-            className="shrink-0 rounded-full p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-          >
-            <IconX size={14} />
-          </button>
+      {/* Anexo(s) encostado(s) por um modelo/mensagem rápida — vão junto no envio. */}
+      {pendingMediaList.length > 0 && (
+        <div className="mb-2 flex flex-col gap-1.5">
+          {pendingMediaList.map((media, i) => (
+            <div
+              key={`${media.url}-${i}`}
+              className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2 shadow-[var(--glass-shadow-sm)]"
+            >
+              <div className="flex shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12 p-1.5 text-[var(--brand-primary)]">
+                <IconPaperclip size={14} />
+              </div>
+              <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-secondary)]">
+                {media.name?.trim() || "Anexo do modelo"} · será enviado junto
+              </span>
+              <button
+                type="button"
+                onClick={() => setPendingMediaList((prev) => prev.filter((_, idx) => idx !== i))}
+                aria-label="Remover anexo"
+                className="shrink-0 rounded-full p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+              >
+                <IconX size={14} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -984,7 +996,7 @@ export function Composer({
                 size="icon"
                 className="h-9 w-9 shrink-0"
                 disabled={
-                  (!value.trim() && pendingFiles.length === 0 && !pendingMedia) ||
+                  (!value.trim() && pendingFiles.length === 0 && pendingMediaList.length === 0) ||
                   sending ||
                   inputDisabled
                 }

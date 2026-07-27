@@ -27,10 +27,11 @@ export function SystemPresenceIndicator({
   const label = describeSystemPresence({ systemOnline, lastSeenAt });
   const online = Boolean(systemOnline);
 
+  // Azul = CRM aberto (uso do sistema). Verde fica só no Online da Distribuição.
   const dotClass = cn(
     "inline-block h-2 w-2 shrink-0 rounded-full",
     online
-      ? "bg-[var(--color-online)] shadow-[0_0_0_2px_var(--glass-bg-strong)]"
+      ? "bg-[#38bdf8] shadow-[0_0_0_2px_var(--glass-bg-strong)]"
       : "bg-[var(--text-muted)]/40",
   );
 
@@ -50,7 +51,7 @@ export function SystemPresenceIndicator({
     <span
       className={cn(
         "inline-flex items-center gap-1.5 text-[11px]",
-        online ? "text-[var(--color-online)]" : "text-[var(--text-muted)]",
+        online ? "text-[#38bdf8]" : "text-[var(--text-muted)]",
         className,
       )}
     >
@@ -64,7 +65,7 @@ export function describeSystemPresence(input: {
   systemOnline: boolean | undefined;
   lastSeenAt: string | null | undefined;
 }): string {
-  if (input.systemOnline) return "Online agora";
+  if (input.systemOnline) return "CRM aberto agora";
   if (!input.lastSeenAt) return "Nunca acessou";
   const seen = new Date(input.lastSeenAt).getTime();
   if (Number.isNaN(seen)) return "Offline";

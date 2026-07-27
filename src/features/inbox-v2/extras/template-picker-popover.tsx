@@ -245,6 +245,12 @@ function TemplateItemWithConfirm({
    Modelos Internos do CRM
 ───────────────────────────────────────────────────────────── */
 
+interface InternalTemplateAttachment {
+  url: string;
+  mimeType?: string | null;
+  name?: string | null;
+}
+
 interface InternalTemplate {
   id: string;
   name: string;
@@ -254,6 +260,7 @@ interface InternalTemplate {
   mediaUrl?: string | null;
   mediaType?: string | null;
   mediaName?: string | null;
+  attachments?: InternalTemplateAttachment[] | null;
 }
 
 async function fetchInternalTemplates(): Promise<InternalTemplate[]> {
@@ -261,6 +268,21 @@ async function fetchInternalTemplates(): Promise<InternalTemplate[]> {
   if (!res.ok) return [];
   const data = await res.json().catch(() => []);
   return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Anexos efetivos de um modelo interno: usa `attachments` (multi-arquivo)
+ * quando presente/não-vazio; senão cai no `mediaUrl` legado (1 arquivo) —
+ * mantém compat com modelos criados antes do multi-anexo.
+ */
+function getTemplateAttachments(
+  tpl: InternalTemplate,
+): Array<{ url: string; name: string | null }> {
+  if (Array.isArray(tpl.attachments) && tpl.attachments.length > 0) {
+    return tpl.attachments.map((a) => ({ url: a.url, name: a.name ?? null }));
+  }
+  if (tpl.mediaUrl) return [{ url: tpl.mediaUrl, name: tpl.mediaName ?? null }];
+  return [];
 }
 
 /**
@@ -283,7 +305,7 @@ export function InternalTemplatePickerList({
    */
   onPick?: (
     text: string,
-    media?: { url: string; name: string | null } | null,
+    media?: Array<{ url: string; name: string | null }> | null,
   ) => void;
 }) {
   const qc = useQueryClient();
@@ -297,15 +319,17 @@ export function InternalTemplatePickerList({
     mutationFn: async (tpl: InternalTemplate) => {
       const text = interpolateInternalTemplate(tpl.content, templateContext ?? {});
       const result = await sendMessage(conversationId, { content: text });
-      if (tpl.mediaUrl) {
+      // Envia cada anexo em sequência (não Promise.all) — evita sobrecarregar
+      // o rate limit do canal quando o modelo tem vários arquivos.
+      for (const att of getTemplateAttachments(tpl)) {
         try {
-          const mediaRes = await fetch(apiUrl(tpl.mediaUrl));
+          const mediaRes = await fetch(apiUrl(att.url));
           if (mediaRes.ok) {
             const blob = await mediaRes.blob();
-            await sendAttachment(conversationId, blob, { fileName: tpl.mediaName ?? undefined });
+            await sendAttachment(conversationId, blob, { fileName: att.name ?? undefined });
           }
         } catch {
-          // Media send failed; text was already delivered
+          // Anexo falhou; segue para o próximo (texto e demais já saíram)
         }
       }
       return result;
@@ -373,11 +397,10 @@ export function InternalTemplatePickerList({
                   disabled={sendMutation.isPending}
                   onClick={() => {
                     if (onPick) {
+                      const media = getTemplateAttachments(tpl);
                       onPick(
                         interpolateInternalTemplate(tpl.content, templateContext ?? {}),
-                        tpl.mediaUrl
-                          ? { url: tpl.mediaUrl, name: tpl.mediaName ?? null }
-                          : null,
+                        media.length > 0 ? media : null,
                       );
                       onClose?.();
                     } else {
@@ -390,9 +413,9 @@ export function InternalTemplatePickerList({
                     <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[var(--text-primary)]">
                       {tpl.name}
                     </span>
-                    {tpl.mediaUrl && (
+                    {getTemplateAttachments(tpl).length > 0 && (
                       <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-px text-[9.5px] text-[var(--text-muted)]">
-                        📎
+                        📎{getTemplateAttachments(tpl).length > 1 ? ` ${getTemplateAttachments(tpl).length}` : ""}
                       </span>
                     )}
                   </div>

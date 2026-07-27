@@ -32,6 +32,8 @@ import {
   HubToolbar,
 } from "./message-models/hub-ui";
 
+type TemplateAttachment = { url: string; mimeType?: string | null; name?: string | null };
+
 type TemplateRow = {
   id: string;
   name: string;
@@ -44,7 +46,10 @@ type TemplateRow = {
   mediaUrl: string | null;
   mediaType: string | null;
   mediaName: string | null;
+  attachments?: TemplateAttachment[] | null;
 };
+
+const MAX_TEMPLATE_ATTACHMENTS = 5;
 
 const CHANNEL_LABELS: Record<string, string> = {
   WHATSAPP: "WhatsApp",
@@ -84,7 +89,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
   });
 
   const createMutation = useMutation({
-    mutationFn: async (body: { name: string; content: string; category?: string; language?: string; channelType?: string; mediaUrl?: string | null; mediaType?: string | null; mediaName?: string | null }) => {
+    mutationFn: async (body: { name: string; content: string; category?: string; language?: string; channelType?: string; mediaUrl?: string | null; mediaType?: string | null; mediaName?: string | null; attachments?: TemplateAttachment[] }) => {
       const res = await fetch(apiUrl("/api/templates"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,7 +108,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...body }: { id: string; name: string; content: string; category?: string; language?: string; channelType?: string | null; mediaUrl?: string | null; mediaType?: string | null; mediaName?: string | null }) => {
+    mutationFn: async ({ id, ...body }: { id: string; name: string; content: string; category?: string; language?: string; channelType?: string | null; mediaUrl?: string | null; mediaType?: string | null; mediaName?: string | null; attachments?: TemplateAttachment[] }) => {
       const res = await fetch(apiUrl(`/api/templates/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -355,7 +360,7 @@ function TemplateForm({
   onCancel,
 }: {
   initial: TemplateRow | null;
-  onSubmit: (data: { name: string; content: string; category?: string; language?: string; channelType?: string; mediaUrl?: string | null; mediaType?: string | null; mediaName?: string | null }) => void;
+  onSubmit: (data: { name: string; content: string; category?: string; language?: string; channelType?: string; mediaUrl?: string | null; mediaType?: string | null; mediaName?: string | null; attachments: TemplateAttachment[] }) => void;
   isPending: boolean;
   onCancel: () => void;
 }) {
@@ -366,9 +371,16 @@ function TemplateForm({
   const language = initial?.language ?? "pt_BR";
   const contentRef = React.useRef<HTMLTextAreaElement | null>(null);
 
-  const [mediaUrl, setMediaUrl] = React.useState<string | null>(initial?.mediaUrl ?? null);
-  const [mediaType, setMediaType] = React.useState<string | null>(initial?.mediaType ?? null);
-  const [mediaName, setMediaName] = React.useState<string | null>(initial?.mediaName ?? null);
+  // Anexos do modelo — array (máx. `MAX_TEMPLATE_ATTACHMENTS`). Inicializa de
+  // `initial.attachments` quando presente; senão cai no mediaUrl legado
+  // (templates antigos, criados antes do multi-anexo).
+  const [attachments, setAttachments] = React.useState<TemplateAttachment[]>(() => {
+    if (initial?.attachments && initial.attachments.length > 0) return initial.attachments;
+    if (initial?.mediaUrl) {
+      return [{ url: initial.mediaUrl, mimeType: initial.mediaType ?? null, name: initial.mediaName ?? null }];
+    }
+    return [];
+  });
   const [uploading, setUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -386,9 +398,10 @@ function TemplateForm({
       const res = await fetch(apiUrl("/api/uploads/automation-media"), { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) { toast.error(data.message ?? "Erro ao enviar arquivo."); return; }
-      setMediaUrl(data.url);
-      setMediaType(data.mimeType);
-      setMediaName(data.fileName ?? file.name);
+      setAttachments((prev) => [
+        ...prev,
+        { url: data.url, mimeType: data.mimeType, name: data.fileName ?? file.name },
+      ]);
     } catch {
       toast.error("Erro de rede ao enviar arquivo.");
     } finally {
@@ -397,18 +410,24 @@ function TemplateForm({
     }
   };
 
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !content.trim()) return;
+    const first = attachments[0] ?? null;
     onSubmit({
       name: name.trim(),
       content: content.trim(),
       category: category.trim() || undefined,
       language,
       channelType: channelType || undefined,
-      mediaUrl: mediaUrl || null,
-      mediaType: mediaType || null,
-      mediaName: mediaName || null,
+      mediaUrl: first?.url ?? null,
+      mediaType: first?.mimeType ?? null,
+      mediaName: first?.name ?? null,
+      attachments,
     });
   };
 
@@ -513,20 +532,30 @@ function TemplateForm({
           onChange={handleFileChange}
           className="hidden"
         />
-        {mediaUrl && mediaName ? (
-          <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2">
-            <Paperclip className="size-4 shrink-0 text-[var(--brand-primary)]" />
-            <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-primary)]">{mediaName}</span>
-            <button
-              type="button"
-              onClick={() => { setMediaUrl(null); setMediaType(null); setMediaName(null); }}
-              className="shrink-0 rounded-full p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
-              aria-label="Remover arquivo"
-            >
-              <XIcon className="size-3.5" />
-            </button>
+        {attachments.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            {attachments.map((att, i) => (
+              <div
+                key={`${att.url}-${i}`}
+                className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2"
+              >
+                <Paperclip className="size-4 shrink-0 text-[var(--brand-primary)]" />
+                <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-primary)]">
+                  {att.name || att.url}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(i)}
+                  className="shrink-0 rounded-full p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
+                  aria-label="Remover arquivo"
+                >
+                  <XIcon className="size-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
-        ) : (
+        ) : null}
+        {attachments.length < MAX_TEMPLATE_ATTACHMENTS ? (
           <ButtonGlass
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -535,13 +564,15 @@ function TemplateForm({
           >
             {uploading ? (
               <><Loader2 className="size-4 animate-spin" /> Enviando…</>
-            ) : (
+            ) : attachments.length === 0 ? (
               <><Paperclip className="size-4" /> Selecionar arquivo</>
+            ) : (
+              <><Plus className="size-4" /> Novo arquivo</>
             )}
           </ButtonGlass>
-        )}
+        ) : null}
         <p className="font-body text-[11px] text-[var(--text-muted)]">
-          Aceita: JPG, PNG, WEBP, GIF, MP4, WEBM — máx. 16 MB.
+          Até {MAX_TEMPLATE_ATTACHMENTS} arquivos. Aceita: JPG, PNG, WEBP, GIF, MP4, WEBM — máx. 16 MB cada.
         </p>
       </div>
 

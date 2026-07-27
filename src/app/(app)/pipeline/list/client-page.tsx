@@ -273,8 +273,10 @@ export default function V2PipelineListClientPage() {
 
   // Limpa seleção ao mudar página / filtros / pipeline / status.
   useEffect(() => {
+    // Limpa só quando o contexto da lista muda — NÃO ao trocar de página
+    // (seleção acumula entre páginas para ações em massa).
     setSelectedIds(new Set());
-  }, [page, perPage, pipelineId, statusTab, debounced, filters]);
+  }, [pipelineId, statusTab, debounced, filters]);
 
   const scopeContext = useMemo<BulkScopeContext | undefined>(() => {
     if (!pipelineId) return undefined;
@@ -473,6 +475,7 @@ export default function V2PipelineListClientPage() {
           onPrev={() => setPage((p) => Math.max(1, p - 1))}
           onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
           perPage={perPage}
+          perPageOptions={[25, 50, 100, 1000]}
           onPerPageChange={(value) => {
             setPerPage(value);
             setPage(1);

@@ -514,9 +514,9 @@ function DistributionMiniDash({
 
 // ── Lista de responsáveis em cards ───────────────────────────────────────
 
-// 6 colunas com mínimos legíveis — H-scroll preserva o conteúdo em telas estreitas.
+// 7 colunas: responsável, ativo, presença, fila, volume, elegibilidade, ações
 const RESP_GRID =
-  "grid-cols-[minmax(300px,3fr)_minmax(155px,1.25fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(190px,1.55fr)_minmax(82px,0.75fr)]";
+  "grid-cols-[minmax(260px,2.6fr)_minmax(88px,0.7fr)_minmax(145px,1.15fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(170px,1.4fr)_minmax(82px,0.75fr)]";
 
 function ResponsiblesCardList({
   responsibles,
@@ -574,9 +574,10 @@ function ResponsiblesCardList({
 
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-      <div className="flex min-w-[1040px] flex-col gap-1.5">
+      <div className="flex min-w-[1120px] flex-col gap-1.5">
         <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-2.5 border border-transparent px-3 py-1.5"))}>
           <ListColumnLabel>Responsável</ListColumnLabel>
+          <ListColumnLabel className="text-center">Ativo</ListColumnLabel>
           <ListColumnLabel>Presença</ListColumnLabel>
           <ListColumnLabel className="text-center">Fila</ListColumnLabel>
           <ListColumnLabel className="text-center">Volume</ListColumnLabel>
@@ -612,12 +613,28 @@ function ResponsibleCard({
   onEdit: (r: DistributionResponsibleDto) => void;
 }) {
   const statusMut = useSetAgentStatus();
+  const updateMut = useUpdateResponsible();
   const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
 
   const toggleOwnStatus = () => {
     statusMut.mutate(
       { userId: r.userId, status: isOnline ? "OFFLINE" : "ONLINE" },
       { onError: (e) => toast.error(e.message || "Erro ao alterar status.") },
+    );
+  };
+
+  const toggleActive = () => {
+    updateMut.mutate(
+      { userId: r.userId, input: { participates: !r.participates } },
+      {
+        onSuccess: () =>
+          toast.success(
+            r.participates
+              ? "Consultor inativado na distribuição."
+              : "Consultor ativado na distribuição.",
+          ),
+        onError: (e) => toast.error(e.message || "Erro ao alterar ativo."),
+      },
     );
   };
 
@@ -687,6 +704,49 @@ function ResponsibleCard({
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Ativo na distribuição */}
+      <div className="flex justify-center">
+        {canManage ? (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={r.participates}
+            aria-label={
+              r.participates
+                ? "Ativo na distribuição — clicar para inativar"
+                : "Inativo na distribuição — clicar para ativar"
+            }
+            title={r.participates ? "Ativo — clicar para inativar" : "Inativo — clicar para ativar"}
+            disabled={updateMut.isPending}
+            onClick={toggleActive}
+            className={cn(
+              "relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors disabled:opacity-50",
+              r.participates
+                ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
+                : "border-[var(--text-muted)]/40 bg-[var(--text-muted)]/25",
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border border-black/10 bg-white shadow-sm transition-all",
+                r.participates ? "right-0.5" : "left-0.5",
+              )}
+            />
+          </button>
+        ) : (
+          <span
+            className={cn(
+              "inline-flex items-center rounded-full px-2 py-0.5 font-display text-[10.5px] font-bold",
+              r.participates
+                ? "bg-[var(--color-success-bg)] text-[var(--color-success-dark,#0f7a5a)]"
+                : "bg-[var(--text-muted)]/12 text-[var(--text-muted)]",
+            )}
+          >
+            {r.participates ? "Ativo" : "Inativo"}
+          </span>
+        )}
       </div>
 
       {/* Presença */}
@@ -1759,6 +1819,15 @@ function EditResponsibleDialog({
   const [paused, setPaused] = useState(responsible.paused);
   const [volume, setVolume] = useState(String(responsible.queueLimit));
   const [type, setType] = useState(responsible.type ?? "");
+  const [lunchStart, setLunchStart] = useState(
+    responsible.schedule?.lunchStart ?? "12:00",
+  );
+  const [lunchEnd, setLunchEnd] = useState(
+    responsible.schedule?.lunchEnd ?? "13:00",
+  );
+  const [preLunchStop, setPreLunchStop] = useState(
+    String(responsible.preLunchStopMinutes ?? 30),
+  );
   const [deptIds, setDeptIds] = useState<string[]>(
     responsible.departments?.map((d) => d.id) ?? [],
   );
@@ -1781,6 +1850,11 @@ function EditResponsibleDialog({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const limit = Math.max(0, Math.floor(Number(volume) || 0));
+    const preMins = Math.min(
+      180,
+      Math.max(0, Math.floor(Number(preLunchStop) || 0)),
+    );
+    const toHhmm = (v: string) => v.slice(0, 5);
     updateMut.mutate(
       {
         userId: responsible.userId,
@@ -1790,6 +1864,15 @@ function EditResponsibleDialog({
           queueLimit: limit,
           type: type.trim() || null,
           departmentIds: deptIds,
+          preLunchStopMinutes: preMins,
+          schedule: {
+            lunchStart: toHhmm(lunchStart),
+            lunchEnd: toHhmm(lunchEnd),
+            startTime: responsible.schedule?.startTime ?? "08:00",
+            endTime: responsible.schedule?.endTime ?? "18:00",
+            timezone: responsible.schedule?.timezone ?? "America/Sao_Paulo",
+            weekdays: responsible.schedule?.weekdays ?? [1, 2, 3, 4, 5],
+          },
         },
       },
       {
@@ -1810,7 +1893,7 @@ function EditResponsibleDialog({
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={handleSave}
-        className="w-full max-w-md rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 shadow-[var(--glass-shadow)]"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 shadow-[var(--glass-shadow)]"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -1833,7 +1916,7 @@ function EditResponsibleDialog({
 
         <div className="flex flex-col gap-4">
           <ToggleField
-            label="Participa da distribuição"
+            label="Ativo na distribuição"
             hint="Desligado = inativo (não recebe leads)."
             checked={participates}
             onChange={setParticipates}
@@ -1844,6 +1927,51 @@ function EditResponsibleDialog({
             checked={paused}
             onChange={setPaused}
           />
+
+          <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]/40 p-3">
+            <span className="font-body text-[12px] font-semibold text-[var(--text-secondary)]">
+              Almoço
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--text-muted)]">Início</span>
+                <input
+                  type="time"
+                  value={lunchStart}
+                  onChange={(e) => setLunchStart(e.target.value)}
+                  className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+                  required
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--text-muted)]">Fim</span>
+                <input
+                  type="time"
+                  value={lunchEnd}
+                  onChange={(e) => setLunchEnd(e.target.value)}
+                  className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+                  required
+                />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] text-[var(--text-muted)]">
+                Parar de receber leads (min antes do almoço)
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={180}
+                value={preLunchStop}
+                onChange={(e) => setPreLunchStop(e.target.value)}
+                className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+              />
+              <span className="text-[11px] text-[var(--text-muted)]">
+                Default 30. Ex.: almoço 12:00 com 30 min → para de receber às 11:30.
+                0 = só durante o intervalo de almoço.
+              </span>
+            </label>
+          </div>
 
           <label className="flex flex-col gap-1">
             <span className="font-body text-[12px] font-semibold text-[var(--text-secondary)]">

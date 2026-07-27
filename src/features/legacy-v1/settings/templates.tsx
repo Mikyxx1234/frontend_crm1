@@ -32,7 +32,13 @@ import {
   HubToolbar,
 } from "./message-models/hub-ui";
 
-type TemplateAttachment = { url: string; mimeType?: string | null; name?: string | null };
+type TemplateAttachment = {
+  url: string;
+  mimeType?: string | null;
+  name?: string | null;
+  /** Texto enviado ANTES deste arquivo (só faz sentido para índice >= 1). */
+  messageBefore?: string | null;
+};
 
 type TemplateRow = {
   id: string;
@@ -414,6 +420,12 @@ function TemplateForm({
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const updateMessageBefore = (index: number, text: string) => {
+    setAttachments((prev) =>
+      prev.map((att, i) => (i === index ? { ...att, messageBefore: text } : att)),
+    );
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !content.trim()) return;
@@ -535,25 +547,44 @@ function TemplateForm({
         {attachments.length > 0 ? (
           <div className="flex flex-col gap-1.5">
             {attachments.map((att, i) => (
-              <div
-                key={`${att.url}-${i}`}
-                className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2"
-              >
-                <Paperclip className="size-4 shrink-0 text-[var(--brand-primary)]" />
-                <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-primary)]">
-                  {att.name || att.url}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(i)}
-                  className="shrink-0 rounded-full p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
-                  aria-label="Remover arquivo"
-                >
-                  <XIcon className="size-3.5" />
-                </button>
-              </div>
+              <React.Fragment key={`${att.url}-${i}`}>
+                {i >= 1 ? (
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <label htmlFor={`tpl-msg-before-${i}`} className={FIELD_LABEL_CLASS}>
+                      {i + 1}° mensagem
+                    </label>
+                    <textarea
+                      id={`tpl-msg-before-${i}`}
+                      value={att.messageBefore ?? ""}
+                      onChange={(e) => updateMessageBefore(i, e.target.value)}
+                      placeholder="Texto opcional enviado antes deste arquivo…"
+                      rows={2}
+                      className="min-h-[52px] w-full min-w-0 max-w-full resize-y rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/10"
+                    />
+                  </div>
+                ) : null}
+                <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+                  <Paperclip className="size-4 shrink-0 text-[var(--brand-primary)]" />
+                  <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-primary)]">
+                    {att.name || att.url}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(i)}
+                    className="shrink-0 rounded-full p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
+                    aria-label="Remover arquivo"
+                  >
+                    <XIcon className="size-3.5" />
+                  </button>
+                </div>
+              </React.Fragment>
             ))}
           </div>
+        ) : null}
+        {attachments.length > 1 ? (
+          <p className="font-body text-[11px] text-[var(--text-muted)]">
+            A 2ª mensagem é enviada antes do 2º arquivo, e assim por diante.
+          </p>
         ) : null}
         {attachments.length < MAX_TEMPLATE_ATTACHMENTS ? (
           <ButtonGlass

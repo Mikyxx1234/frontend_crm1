@@ -64,7 +64,7 @@ export function ComposerMenu({
    *  (um ou mais arquivos, na ordem do modelo). */
   onPickInternal?: (
     text: string,
-    media?: Array<{ url: string; name: string | null }> | null,
+    media?: Array<{ url: string; name: string | null; messageBefore: string | null }> | null,
   ) => void;
   /** Abre o painel de validação do template do WhatsApp no composer. */
   onPickTemplate?: (tpl: WhatsappTemplate) => void;

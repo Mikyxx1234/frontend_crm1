@@ -35,7 +35,7 @@ import {
   SlashCommandMenu,
 } from "@/components/inbox/slash-command-menu";
 import { getContact } from "@/features/inbox-v2/api/misc";
-import { sendAttachment } from "@/features/inbox-v2/api";
+import { sendAttachment, sendMessage } from "@/features/inbox-v2/api";
 import { apiUrl } from "@/lib/api";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
@@ -208,7 +208,7 @@ export function Composer({
   // no "/" ou no menu "+". Vão junto com o texto quando o operador enviar
   // (um modelo pode ter vários arquivos — enviados em sequência, na ordem).
   const [pendingMediaList, setPendingMediaList] = useState<
-    Array<{ url: string; name: string | null }>
+    Array<{ url: string; name: string | null; messageBefore?: string | null }>
   >([]);
 
   // Imagens coladas (Ctrl+V) → ficam "encostadas" como anexos pendentes e só
@@ -372,7 +372,7 @@ export function Composer({
   // mensagem (na ordem do modelo).
   function insertTemplateText(
     text: string,
-    media?: Array<{ url: string; name: string | null }> | null,
+    media?: Array<{ url: string; name: string | null; messageBefore?: string | null }> | null,
   ) {
     if (media && media.length > 0) setPendingMediaList((prev) => [...prev, ...media]);
     const base = value;
@@ -450,7 +450,18 @@ export function Composer({
     if (pendingMediaList.length === 0 || !conversationId) return;
     const list = pendingMediaList;
     setPendingMediaList([]);
-    for (const media of list) {
+    for (let i = 0; i < list.length; i++) {
+      const media = list[i];
+      // A partir do 2º anexo, `messageBefore` (se preenchido) sai como
+      // mensagem de texto própria — via `sendMessage` direto, sem depender
+      // do estado do composer — imediatamente antes do arquivo.
+      if (i > 0 && media.messageBefore?.trim()) {
+        try {
+          await sendMessage(conversationId, { content: media.messageBefore.trim() });
+        } catch {
+          /* mensagem intermediária falhou; segue para o anexo mesmo assim */
+        }
+      }
       try {
         const res = await fetch(apiUrl(media.url));
         if (!res.ok) continue;
@@ -628,6 +639,7 @@ export function Composer({
               </div>
               <span className="min-w-0 flex-1 truncate font-body text-[12px] text-[var(--text-secondary)]">
                 {media.name?.trim() || "Anexo do modelo"} · será enviado junto
+                {i > 0 && media.messageBefore?.trim() ? " · com texto antes" : ""}
               </span>
               <button
                 type="button"

@@ -249,6 +249,8 @@ interface InternalTemplateAttachment {
   url: string;
   mimeType?: string | null;
   name?: string | null;
+  /** Texto enviado ANTES deste arquivo (só faz sentido para índice >= 1). */
+  messageBefore?: string | null;
 }
 
 interface InternalTemplate {
@@ -277,11 +279,15 @@ async function fetchInternalTemplates(): Promise<InternalTemplate[]> {
  */
 function getTemplateAttachments(
   tpl: InternalTemplate,
-): Array<{ url: string; name: string | null }> {
+): Array<{ url: string; name: string | null; messageBefore: string | null }> {
   if (Array.isArray(tpl.attachments) && tpl.attachments.length > 0) {
-    return tpl.attachments.map((a) => ({ url: a.url, name: a.name ?? null }));
+    return tpl.attachments.map((a) => ({
+      url: a.url,
+      name: a.name ?? null,
+      messageBefore: a.messageBefore ?? null,
+    }));
   }
-  if (tpl.mediaUrl) return [{ url: tpl.mediaUrl, name: tpl.mediaName ?? null }];
+  if (tpl.mediaUrl) return [{ url: tpl.mediaUrl, name: tpl.mediaName ?? null, messageBefore: null }];
   return [];
 }
 
@@ -305,7 +311,7 @@ export function InternalTemplatePickerList({
    */
   onPick?: (
     text: string,
-    media?: Array<{ url: string; name: string | null }> | null,
+    media?: Array<{ url: string; name: string | null; messageBefore: string | null }> | null,
   ) => void;
 }) {
   const qc = useQueryClient();
@@ -320,8 +326,19 @@ export function InternalTemplatePickerList({
       const text = interpolateInternalTemplate(tpl.content, templateContext ?? {});
       const result = await sendMessage(conversationId, { content: text });
       // Envia cada anexo em sequência (não Promise.all) — evita sobrecarregar
-      // o rate limit do canal quando o modelo tem vários arquivos.
-      for (const att of getTemplateAttachments(tpl)) {
+      // o rate limit do canal quando o modelo tem vários arquivos. A partir
+      // do 2º anexo, `messageBefore` (se preenchido) sai como mensagem de
+      // texto própria imediatamente antes do arquivo correspondente.
+      const attachments = getTemplateAttachments(tpl);
+      for (let i = 0; i < attachments.length; i++) {
+        const att = attachments[i];
+        if (i > 0 && att.messageBefore?.trim()) {
+          try {
+            await sendMessage(conversationId, { content: att.messageBefore.trim() });
+          } catch {
+            // Mensagem intermediária falhou; segue para o anexo mesmo assim
+          }
+        }
         try {
           const mediaRes = await fetch(apiUrl(att.url));
           if (mediaRes.ok) {

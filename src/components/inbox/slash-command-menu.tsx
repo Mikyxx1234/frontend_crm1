@@ -72,7 +72,7 @@ type SlashItemHighlight = {
 };
 
 export type SlashItem = SlashItemHighlight &
-  ( | {
+  (   | {
       kind: "internal-template";
       id: string;
       name: string;
@@ -81,6 +81,7 @@ export type SlashItem = SlashItemHighlight &
       channelType: string | null;
       mediaUrl: string | null;
       mediaName: string | null;
+      attachments?: InternalAttachment[] | null;
     }
   | {
       kind: "quick-reply";
@@ -168,6 +169,13 @@ export function detectSlashTokenAt(
 // Fetchers
 // ─────────────────────────────────────────────────────────────────
 
+type InternalAttachment = {
+  url: string;
+  name?: string | null;
+  mimeType?: string | null;
+  messageBefore?: string | null;
+};
+
 type InternalRow = {
   id: string;
   name: string;
@@ -178,6 +186,8 @@ type InternalRow = {
   channelType: string | null;
   mediaUrl?: string | null;
   mediaName?: string | null;
+  /** Multi-anexo (com messageBefore opcional a partir do 2º). */
+  attachments?: InternalAttachment[] | null;
 };
 type QuickReplyRow = {
   id: string;
@@ -361,7 +371,11 @@ export type UseSlashMenuOptions = {
    * enviado junto com o texto no envio. Ignorado quando `onSelectOverride`
    * está definido (esse caminho cuida do envio por conta própria).
    */
-  onInsertMedia?: (media: { url: string; name: string | null }) => void;
+  onInsertMedia?: (
+    media:
+      | { url: string; name: string | null; messageBefore?: string | null }
+      | Array<{ url: string; name: string | null; messageBefore?: string | null }>,
+  ) => void;
   /**
    * Conversa/contato atuais — necessários para a seção "Automações".
    * Quando ausentes, a seção fica oculta (não dá pra disparar automação
@@ -479,6 +493,7 @@ export function useSlashMenu({
           channelType: t.channelType,
           mediaUrl: t.mediaUrl ?? null,
           mediaName: t.mediaName ?? null,
+          attachments: Array.isArray(t.attachments) ? t.attachments : null,
           favorite: p.favorite,
           useCount: p.useCount,
         });
@@ -743,12 +758,26 @@ export function useSlashMenu({
       setDraft(next);
       close();
 
-      // Encosta a mídia (se houver) pra ir junto no envio.
-      const mediaUrl =
-        item.kind === "internal-template" ? item.mediaUrl : item.attachmentUrl;
-      const mediaName =
-        item.kind === "internal-template" ? item.mediaName : null;
-      if (mediaUrl) onInsertMedia?.({ url: mediaUrl, name: mediaName });
+      // Encosta a(s) mídia(s) pra ir junto no envio. Modelos internos usam
+      // `attachments` (multi-arquivo + messageBefore); legado cai em mediaUrl.
+      if (item.kind === "internal-template") {
+        const fromAtt = Array.isArray(item.attachments)
+          ? item.attachments
+              .filter((a) => typeof a?.url === "string" && a.url.trim())
+              .map((a) => ({
+                url: a.url.trim(),
+                name: a.name ?? null,
+                messageBefore: a.messageBefore ?? null,
+              }))
+          : [];
+        if (fromAtt.length > 0) {
+          onInsertMedia?.(fromAtt);
+        } else if (item.mediaUrl) {
+          onInsertMedia?.({ url: item.mediaUrl, name: item.mediaName ?? null });
+        }
+      } else if (item.attachmentUrl) {
+        onInsertMedia?.({ url: item.attachmentUrl, name: null });
+      }
 
       // Move o cursor pro fim do texto inserido.
       const pos = (before + replacement).length;

@@ -51,7 +51,7 @@ const GROUPS: { title: string; items: PaletteItem[] }[] = [
   },
   {
     title: "Lógica",
-    items: [{ type: "delay" }, { type: "condition" }],
+    items: [{ type: "delay" }, { type: "condition" }, { type: "round_robin" }],
   },
   {
     title: "WhatsApp",

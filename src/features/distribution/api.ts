@@ -16,6 +16,8 @@ import type {
   AgentOnlineStatus,
   DistributionResult,
   PendingResponse,
+  RedistributeInput,
+  RedistributeResult,
   ResponsiblesResponse,
   RetryResult,
   UpdateResponsibleInput,
@@ -97,6 +99,18 @@ export function updateResponsible(
     "PATCH",
     input,
     "Erro ao atualizar responsável.",
+  );
+}
+
+export function redistributeResponsible(
+  userId: string,
+  input: RedistributeInput,
+): Promise<{ result: RedistributeResult }> {
+  return sendJson(
+    `/api/distribution/responsibles/${userId}/redistribute`,
+    "POST",
+    input,
+    "Erro ao redistribuir fila.",
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconRobotFace as BotMessageSquare, IconBriefcase as Briefcase, IconCalendarPlus as CalendarPlus, IconCircleCheck as CheckCircle2, IconClock as Clock, IconCornerDownRight as CornerDownRight, IconFileText as FileText, IconGitBranch as GitBranch, IconGlobe as Globe, IconPhoto as Image, IconMail as Mail, IconMessageQuestion as MessageCircleQuestion, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPackageOff as PackageMinus, IconPlayerPause as Pause, IconPencil as Pencil, IconPlus as Plus, IconRepeat as Repeat, IconRoute as Route, IconShoppingBag as ShoppingBag, IconSquare as Square, IconPlayerStop as StopCircle, IconTag as Tag, IconClock as Timer, IconTrendingUp as TrendingUp, IconUserPlus as UserPlus, IconUsersGroup as UsersGroup, IconVariable as Variable } from "@tabler/icons-react";
+import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconRobotFace as BotMessageSquare, IconBriefcase as Briefcase, IconCalendarPlus as CalendarPlus, IconCircleCheck as CheckCircle2, IconClock as Clock, IconCornerDownRight as CornerDownRight, IconFileText as FileText, IconGitBranch as GitBranch, IconGlobe as Globe, IconPhoto as Image, IconMail as Mail, IconMessageQuestion as MessageCircleQuestion, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPackageOff as PackageMinus, IconPlayerPause as Pause, IconPencil as Pencil, IconPlus as Plus, IconRefresh as RefreshCw, IconRepeat as Repeat, IconRoute as Route, IconShoppingBag as ShoppingBag, IconSquare as Square, IconPlayerStop as StopCircle, IconTag as Tag, IconClock as Timer, IconTrendingUp as TrendingUp, IconUserPlus as UserPlus, IconUsersGroup as UsersGroup, IconVariable as Variable } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ export const stepIcon: Record<string, ComponentType<{ className?: string; stroke
   webhook: Globe,
   delay: Clock,
   condition: GitBranch,
+  round_robin: RefreshCw,
   update_lead_score: TrendingUp,
   question: MessageCircleQuestion,
   wait_for_reply: Pause,
@@ -63,6 +64,8 @@ export const stepDescription: Record<string, string> = {
   webhook: "Dispara uma chamada HTTP para um sistema externo.",
   delay: "Aguarda um intervalo de tempo antes do proximo passo.",
   condition: "Define uma regra com saidas Sim/Nao.",
+  round_robin:
+    "Escolhe qual caminho seguir em rodizio circular entre execucoes — nao atribui agente.",
   update_lead_score: "Soma ou subtrai pontos no lead score.",
   question: "Faz uma pergunta com opcoes de resposta.",
   wait_for_reply: "Aguarda o contato responder antes de seguir.",
@@ -100,6 +103,7 @@ export const stepColor: Record<string, string> = {
   webhook: "text-[var(--text-muted)]",
   delay: "text-[var(--color-orange)]",
   condition: "text-[var(--color-cyan)]",
+  round_robin: "text-[var(--color-cyan)]",
   update_lead_score: "text-[var(--color-pink)]",
   question: "text-[var(--color-info)]",
   wait_for_reply: "text-[var(--color-warning)]",
@@ -154,7 +158,7 @@ export const STEP_GROUPS: StepGroup[] = [
   },
   {
     title: "Lógica",
-    items: ["delay", "condition", "business_hours"],
+    items: ["delay", "condition", "round_robin", "business_hours"],
   },
   {
     title: "Integrações",

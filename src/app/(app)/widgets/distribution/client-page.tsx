@@ -1997,7 +1997,9 @@ function RedistributeDialog({
     source.queueCount > 0 &&
     (mode === "equal"
       ? onlineCandidates.length > 0
-      : selectedIds.length > 0) &&
+      : mode === "to_pending"
+        ? true
+        : selectedIds.length > 0) &&
     !mut.isPending;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -2021,6 +2023,14 @@ function RedistributeDialog({
                   ? "Não havia conversas na fila selecionada."
                   : `${result.skipped} conversa(s) não puderam ser reatribuídas.`,
             });
+          } else if (mode === "to_pending") {
+            toast.success(
+              `${result.moved} lead(s) enviados para a Fila de espera.`,
+              {
+                description:
+                  "Serão distribuídos automaticamente quando um consultor ficar online.",
+              },
+            );
           } else {
             const detail = result.recipients
               .filter((r) => r.received > 0)
@@ -2174,6 +2184,33 @@ function RedistributeDialog({
                   </span>
                   <span className="block font-body text-[12px] text-[var(--text-muted)]">
                     Um ou mais destinatários específicos (round-robin)
+                  </span>
+                </span>
+              </label>
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 transition-colors",
+                  mode === "to_pending"
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/8"
+                    : "border-[var(--glass-border)] hover:bg-[var(--glass-bg-overlay)]",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="mode"
+                  className="mt-0.5"
+                  checked={mode === "to_pending"}
+                  onChange={() => setMode("to_pending")}
+                />
+                <span>
+                  <span className="block font-display text-[13px] font-bold text-[var(--text-primary)]">
+                    Enviar para Fila de espera
+                  </span>
+                  <span className="block font-body text-[12px] text-[var(--text-muted)]">
+                    Remove o responsável e deixa aguardando o próximo consultor online
+                    {onlineCandidates.length === 0
+                      ? " (útil quando ninguém está ativo)"
+                      : ""}
                   </span>
                 </span>
               </label>

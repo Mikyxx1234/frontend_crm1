@@ -112,7 +112,7 @@ export interface RetryResult {
   pending: number;
 }
 
-export type RedistributeMode = "equal" | "specific";
+export type RedistributeMode = "equal" | "specific" | "to_pending";
 export type RedistributeQueueScope = "all" | "entrada" | "aguardando";
 
 export interface RedistributeInput {

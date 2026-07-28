@@ -12,6 +12,7 @@ import {
   fetchDistributionSettings,
   fetchPending,
   fetchResponsibles,
+  redistributeResponsible,
   retryPending,
   setAgentStatus,
   simulateDistribution,
@@ -24,6 +25,8 @@ import type {
   AgentOnlineStatus,
   DistributionResult,
   PendingResponse,
+  RedistributeInput,
+  RedistributeResult,
   ResponsiblesResponse,
   RetryResult,
   UpdateResponsibleInput,
@@ -152,6 +155,21 @@ export function useUpdateResponsible() {
         queryKey: DISTRIBUTION_RESPONSIBLES_KEY,
         refetchType: "active",
       }),
+  });
+}
+
+export function useRedistributeResponsible() {
+  const qc = useQueryClient();
+  return useMutation<
+    { result: RedistributeResult },
+    Error,
+    { userId: string; input: RedistributeInput }
+  >({
+    mutationFn: ({ userId, input }) => redistributeResponsible(userId, input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: DISTRIBUTION_RESPONSIBLES_KEY });
+      void qc.invalidateQueries({ queryKey: DISTRIBUTION_PENDING_KEY });
+    },
   });
 }
 

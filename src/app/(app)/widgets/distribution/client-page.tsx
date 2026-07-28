@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import {
   IconAdjustmentsHorizontal,
   IconAlertTriangle,
+  IconArrowsShuffle,
   IconCheck,
   IconChevronDown,
   IconCircleCheck,
@@ -51,6 +52,7 @@ import {
   useDistributionResponsibles,
   useDistributionSettings,
   usePendingDistributions,
+  useRedistributeResponsible,
   useRetryPending,
   useSetAgentStatus,
   useSimulateDistribution,
@@ -62,6 +64,8 @@ import {
   type DistributionResponsibleDto,
   type DistributionResult,
   type PendingDistributionDto,
+  type RedistributeMode,
+  type RedistributeQueueScope,
 } from "@/features/distribution/types";
 import {
   useDepartments,
@@ -116,6 +120,8 @@ export default function DistributionClientPage({
   const retryMut = useRetryPending();
 
   const [editing, setEditing] = useState<DistributionResponsibleDto | null>(null);
+  const [redistributing, setRedistributing] =
+    useState<DistributionResponsibleDto | null>(null);
   const [simResult, setSimResult] = useState<DistributionResult | null>(null);
   const [deptConfigOpen, setDeptConfigOpen] = useState(false);
 
@@ -336,6 +342,7 @@ export default function DistributionClientPage({
                   currentUserImage={currentUserImage}
                   canManage={canManage}
                   onEdit={(r) => setEditing(r)}
+                  onRedistribute={(r) => setRedistributing(r)}
                 />
               ) : view === "queue" ? (
                 <PendingQueueCards
@@ -358,6 +365,14 @@ export default function DistributionClientPage({
         <EditResponsibleDialog
           responsible={editing}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {redistributing && (
+        <RedistributeDialog
+          source={redistributing}
+          candidates={responsibles.filter((r) => r.userId !== redistributing.userId)}
+          onClose={() => setRedistributing(null)}
         />
       )}
 
@@ -516,7 +531,7 @@ function DistributionMiniDash({
 
 // 6 colunas: responsável, presença (+ horário), fila, volume, elegibilidade, ações
 const RESP_GRID =
-  "grid-cols-[minmax(280px,2.8fr)_minmax(220px,1.7fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(180px,1.45fr)_minmax(82px,0.75fr)]";
+  "grid-cols-[minmax(260px,2.6fr)_minmax(200px,1.5fr)_minmax(56px,0.55fr)_minmax(64px,0.65fr)_minmax(170px,1.35fr)_minmax(168px,1.1fr)]";
 
 function ResponsiblesCardList({
   responsibles,
@@ -527,6 +542,7 @@ function ResponsiblesCardList({
   currentUserImage,
   canManage,
   onEdit,
+  onRedistribute,
 }: {
   responsibles: DistributionResponsibleDto[];
   total: number;
@@ -536,6 +552,7 @@ function ResponsiblesCardList({
   currentUserImage: string | null;
   canManage: boolean;
   onEdit: (r: DistributionResponsibleDto) => void;
+  onRedistribute: (r: DistributionResponsibleDto) => void;
 }) {
   if (total === 0) {
     return (
@@ -591,6 +608,7 @@ function ResponsiblesCardList({
             currentUserImage={currentUserImage}
             canManage={canManage}
             onEdit={onEdit}
+            onRedistribute={onRedistribute}
           />
         ))}
       </div>
@@ -604,12 +622,14 @@ function ResponsibleCard({
   currentUserImage,
   canManage,
   onEdit,
+  onRedistribute,
 }: {
   r: DistributionResponsibleDto;
   isCurrentUser: boolean;
   currentUserImage: string | null;
   canManage: boolean;
   onEdit: (r: DistributionResponsibleDto) => void;
+  onRedistribute: (r: DistributionResponsibleDto) => void;
 }) {
   const statusMut = useSetAgentStatus();
   const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
@@ -743,7 +763,17 @@ function ResponsibleCard({
       </div>
 
       {/* Ações */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-1.5">
+        {canManage && r.queueCount > 0 && (
+          <button
+            type="button"
+            onClick={() => onRedistribute(r)}
+            className="inline-flex cursor-pointer items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+            title="Redistribuir fila deste consultor"
+          >
+            <IconArrowsShuffle size={13} /> Redistribuir
+          </button>
+        )}
         {canManage && (
           <button
             type="button"
@@ -1905,6 +1935,352 @@ function LogDetail({
 }
 
 // ── Diálogo de edição (admin/manager) ───────────────────────────────────
+
+function RedistributeDialog({
+  source,
+  candidates,
+  onClose,
+}: {
+  source: DistributionResponsibleDto;
+  candidates: DistributionResponsibleDto[];
+  onClose: () => void;
+}) {
+  const mut = useRedistributeResponsible();
+  const [mode, setMode] = useState<RedistributeMode>("equal");
+  const [queueScope, setQueueScope] = useState<RedistributeQueueScope>("all");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [recipientSearch, setRecipientSearch] = useState("");
+
+  const onlineCandidates = useMemo(
+    () =>
+      candidates.filter(
+        (c) =>
+          c.participates &&
+          !c.paused &&
+          (c.status ?? "OFFLINE") === "ONLINE",
+      ),
+    [candidates],
+  );
+
+  const filteredCandidates = useMemo(() => {
+    const q = recipientSearch.trim().toLowerCase();
+    const list = [...candidates].sort((a, b) => {
+      const aOn = (a.status ?? "OFFLINE") === "ONLINE" ? 0 : 1;
+      const bOn = (b.status ?? "OFFLINE") === "ONLINE" ? 0 : 1;
+      if (aOn !== bOn) return aOn - bOn;
+      return (a.name ?? a.email ?? "").localeCompare(b.name ?? b.email ?? "", "pt-BR");
+    });
+    if (!q) return list;
+    return list.filter(
+      (c) =>
+        (c.name ?? "").toLowerCase().includes(q) ||
+        (c.email ?? "").toLowerCase().includes(q),
+    );
+  }, [candidates, recipientSearch]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (typeof document === "undefined") return null;
+
+  const toggleRecipient = (id: string) =>
+    setSelectedIds((cur) =>
+      cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
+    );
+
+  const canSubmit =
+    source.queueCount > 0 &&
+    (mode === "equal"
+      ? onlineCandidates.length > 0
+      : selectedIds.length > 0) &&
+    !mut.isPending;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    mut.mutate(
+      {
+        userId: source.userId,
+        input: {
+          mode,
+          queueScope,
+          ...(mode === "specific" ? { recipientUserIds: selectedIds } : {}),
+        },
+      },
+      {
+        onSuccess: ({ result }) => {
+          if (result.moved === 0) {
+            toast.message("Nenhum lead movido.", {
+              description:
+                result.total === 0
+                  ? "Não havia conversas na fila selecionada."
+                  : `${result.skipped} conversa(s) não puderam ser reatribuídas.`,
+            });
+          } else {
+            const detail = result.recipients
+              .filter((r) => r.received > 0)
+              .map((r) => `${r.name ?? "Consultor"}: ${r.received}`)
+              .join(" · ");
+            toast.success(
+              `${result.moved} lead(s) redistribuído(s).`,
+              detail ? { description: detail } : undefined,
+            );
+          }
+          onClose();
+        },
+        onError: (err) => toast.error(err.message || "Erro ao redistribuir."),
+      },
+    );
+  };
+
+  const scopeOptions: { value: RedistributeQueueScope; label: string; hint: string }[] = [
+    {
+      value: "all",
+      label: "Fila completa",
+      hint: `${source.queueCount} lead(s) na fila atual`,
+    },
+    {
+      value: "entrada",
+      label: "Entrada",
+      hint: "Sem resposta humana ainda",
+    },
+    {
+      value: "aguardando",
+      label: "Aguardando",
+      hint: "Cliente falou por último",
+    },
+  ];
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 shadow-[var(--glass-shadow)]"
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-[17px] font-bold text-[var(--text-primary)]">
+              Redistribuir fila
+            </h2>
+            <p className="font-body text-[13px] text-[var(--text-muted)]">
+              De {source.name ?? source.email ?? "consultor"} · {source.queueCount}{" "}
+              na fila
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="cursor-pointer rounded-full p-1 text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)]"
+            aria-label="Fechar"
+          >
+            <IconX size={18} />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-5">
+          <fieldset>
+            <legend className="mb-2 font-display text-[12px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+              Qual fila mover
+            </legend>
+            <div className="grid gap-2">
+              {scopeOptions.map((opt) => (
+                <label
+                  key={opt.value}
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 transition-colors",
+                    queueScope === opt.value
+                      ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/8"
+                      : "border-[var(--glass-border)] hover:bg-[var(--glass-bg-overlay)]",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="queueScope"
+                    className="mt-0.5"
+                    checked={queueScope === opt.value}
+                    onChange={() => setQueueScope(opt.value)}
+                  />
+                  <span>
+                    <span className="block font-display text-[13px] font-bold text-[var(--text-primary)]">
+                      {opt.label}
+                    </span>
+                    <span className="block font-body text-[12px] text-[var(--text-muted)]">
+                      {opt.hint}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className="mb-2 font-display text-[12px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+              Destino
+            </legend>
+            <div className="grid gap-2">
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 transition-colors",
+                  mode === "equal"
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/8"
+                    : "border-[var(--glass-border)] hover:bg-[var(--glass-bg-overlay)]",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="mode"
+                  className="mt-0.5"
+                  checked={mode === "equal"}
+                  onChange={() => setMode("equal")}
+                />
+                <span>
+                  <span className="block font-display text-[13px] font-bold text-[var(--text-primary)]">
+                    Distribuir por igual (online)
+                  </span>
+                  <span className="block font-body text-[12px] text-[var(--text-muted)]">
+                    {onlineCandidates.length > 0
+                      ? `${onlineCandidates.length} consultor(es) online elegível(is)`
+                      : "Nenhum consultor online no momento"}
+                  </span>
+                </span>
+              </label>
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 transition-colors",
+                  mode === "specific"
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/8"
+                    : "border-[var(--glass-border)] hover:bg-[var(--glass-bg-overlay)]",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="mode"
+                  className="mt-0.5"
+                  checked={mode === "specific"}
+                  onChange={() => setMode("specific")}
+                />
+                <span>
+                  <span className="block font-display text-[13px] font-bold text-[var(--text-primary)]">
+                    Escolher consultor(es)
+                  </span>
+                  <span className="block font-body text-[12px] text-[var(--text-muted)]">
+                    Um ou mais destinatários específicos (round-robin)
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          {mode === "specific" && (
+            <div className="flex flex-col gap-2">
+              <div className="relative">
+                <IconSearch
+                  size={14}
+                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+                />
+                <input
+                  type="search"
+                  value={recipientSearch}
+                  onChange={(e) => setRecipientSearch(e.target.value)}
+                  placeholder="Buscar consultor…"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-8 pr-3 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+                />
+              </div>
+              <div className="max-h-48 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)]">
+                {filteredCandidates.length === 0 ? (
+                  <p className="px-3 py-4 text-center font-body text-[12px] text-[var(--text-muted)]">
+                    Nenhum consultor encontrado.
+                  </p>
+                ) : (
+                  filteredCandidates.map((c) => {
+                    const checked = selectedIds.includes(c.userId);
+                    const presence = classifyPresence(c);
+                    return (
+                      <label
+                        key={c.userId}
+                        className={cn(
+                          "flex cursor-pointer items-center gap-2.5 border-b border-[var(--glass-border-subtle)] px-3 py-2 last:border-b-0 hover:bg-[var(--glass-bg-overlay)]",
+                          checked && "bg-[var(--brand-primary)]/6",
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleRecipient(c.userId)}
+                        />
+                        <UserAvatar
+                          name={c.name ?? c.email}
+                          imageUrl={c.avatarUrl}
+                          size={28}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-display text-[12.5px] font-bold text-[var(--text-primary)]">
+                            {c.name ?? c.email ?? "—"}
+                          </span>
+                          <span className="block truncate font-body text-[11px] text-[var(--text-muted)]">
+                            {presence === "ONLINE"
+                              ? "Online"
+                              : presence === "AWAY"
+                                ? "Ausente"
+                                : presence === "INACTIVE"
+                                  ? "Inativo"
+                                  : "Offline"}
+                            {" · "}
+                            fila {c.queueCount}/{c.queueLimit || "∞"}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+              {selectedIds.length > 0 && (
+                <p className="font-body text-[12px] text-[var(--text-muted)]">
+                  {selectedIds.length} selecionado(s)
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="cursor-pointer rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 font-display text-[12.5px] font-bold text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-3.5 py-2 font-display text-[12.5px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {mut.isPending ? (
+                <>
+                  <IconLoader2 size={14} className="animate-spin" /> Redistribuindo…
+                </>
+              ) : (
+                <>
+                  <IconArrowsShuffle size={14} /> Confirmar
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>,
+    document.body,
+  );
+}
 
 function EditResponsibleDialog({
   responsible,

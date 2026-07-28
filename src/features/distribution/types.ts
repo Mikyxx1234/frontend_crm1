@@ -112,6 +112,22 @@ export interface RetryResult {
   pending: number;
 }
 
+export type RedistributeMode = "equal" | "specific";
+export type RedistributeQueueScope = "all" | "entrada" | "aguardando";
+
+export interface RedistributeInput {
+  mode: RedistributeMode;
+  recipientUserIds?: string[];
+  queueScope?: RedistributeQueueScope;
+}
+
+export interface RedistributeResult {
+  moved: number;
+  skipped: number;
+  total: number;
+  recipients: { userId: string; name: string | null; received: number }[];
+}
+
 export interface UpdateResponsibleInput {
   participates?: boolean;
   paused?: boolean;

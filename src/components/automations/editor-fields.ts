@@ -30,6 +30,7 @@ export type EditorField =
   | (Common & { kind: "number"; min?: number; step?: number; suffix?: string })
   | (Common & { kind: "select"; options: Opt[] })
   | (Common & { kind: "source"; source: SourceKey })
+  | (Common & { kind: "departmentMulti" })
   | (Common & { kind: "step" })
   | (Common & { kind: "duration" })
   | (Common & { kind: "delay" })
@@ -167,6 +168,13 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   ],
   consume_stock: [{ kind: "info", text: "Baixa o estoque dos produtos do negócio. Bloqueia se faltar saldo." }],
   execute_distribution: [
+    {
+      kind: "departmentMulti",
+      key: "departmentIds",
+      label: "Departamentos",
+      optional: true,
+      hint: "Vazio = distribuição geral. Com seleção, só membros desses departamentos.",
+    },
     { kind: "text", key: "distributionType", label: "Tipo / segmento", optional: true },
   ],
 }

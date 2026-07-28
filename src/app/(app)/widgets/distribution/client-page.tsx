@@ -13,6 +13,8 @@ import {
   IconCircleCheck,
   IconClockExclamation,
   IconExternalLink,
+  IconEye,
+  IconEyeOff,
   IconLoader2,
   IconPencil,
   IconPhone,
@@ -131,6 +133,8 @@ export default function DistributionClientPage({
   const [presence, setPresence] = useState<PresenceKey[]>([]);
   const [eligibility, setEligibility] = useState<("eligible" | "blocked")[]>([]);
   const [types, setTypes] = useState<string[]>([]);
+  /** ADMINs ficam ocultos na lista por padrão (não poluem a equipe). */
+  const [showAdmins, setShowAdmins] = useState(false);
 
   const realResponsibles = respQuery.data?.responsibles ?? [];
   const realPending = pendingQuery.data?.pending ?? [];
@@ -161,6 +165,14 @@ export default function DistributionClientPage({
     [responsibles],
   );
 
+  const adminCount = useMemo(
+    () => responsibles.filter((r) => r.role === "ADMIN").length,
+    [responsibles],
+  );
+  const teamListCount = showAdmins
+    ? responsibles.length
+    : Math.max(0, responsibles.length - adminCount);
+
   const hasFilters =
     search.trim().length > 0 ||
     presence.length > 0 ||
@@ -170,6 +182,7 @@ export default function DistributionClientPage({
   const filteredResponsibles = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = responsibles.filter((r) => {
+      if (!showAdmins && r.role === "ADMIN") return false;
       if (q) {
         const hay = `${r.name ?? ""} ${r.email ?? ""} ${r.type ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -185,7 +198,7 @@ export default function DistributionClientPage({
     // Ordena por presença de USO (CRM aberto) — quem está no sistema agora sobe.
     // Não interfere na elegibilidade da Distribuição — é só ordem de exibição.
     return sortByPresence(filtered);
-  }, [responsibles, search, presence, eligibility, types]);
+  }, [responsibles, search, presence, eligibility, types, showAdmins]);
 
   const clearFilters = () => {
     setSearch("");
@@ -269,7 +282,7 @@ export default function DistributionClientPage({
                     {
                       value: "team",
                       label: (
-                        <SegLabel label="Equipe" count={responsibles.length} />
+                        <SegLabel label="Equipe" count={teamListCount} />
                       ),
                     },
                     {
@@ -290,6 +303,29 @@ export default function DistributionClientPage({
                   value={view}
                   onChange={(v) => setView(v as DistributionView)}
                 />
+                {adminCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAdmins((v) => !v)}
+                    className={cn(
+                      "inline-flex size-8 cursor-pointer items-center justify-center rounded-full border transition-colors",
+                      showAdmins
+                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                        : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
+                    title={
+                      showAdmins
+                        ? `Ocultar ${adminCount} admin(s)`
+                        : `Mostrar ${adminCount} admin(s) oculto(s)`
+                    }
+                    aria-label={
+                      showAdmins ? "Ocultar administradores" : "Mostrar administradores"
+                    }
+                    aria-pressed={showAdmins}
+                  >
+                    {showAdmins ? <IconEye size={16} /> : <IconEyeOff size={16} />}
+                  </button>
+                )}
                 <DistributionActionsMenu
                   onTest={handleTest}
                   testing={simulateMut.isPending}
@@ -335,7 +371,7 @@ export default function DistributionClientPage({
               {view === "team" ? (
                 <ResponsiblesCardList
                   responsibles={filteredResponsibles}
-                  total={responsibles.length}
+                  total={teamListCount}
                   hasFilters={hasFilters}
                   onClearFilters={clearFilters}
                   currentUserId={currentUserId}

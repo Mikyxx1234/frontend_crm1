@@ -321,8 +321,13 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
   const [category, setCategory] = React.useState<"UTILITY" | "MARKETING" | "AUTHENTICATION">("UTILITY");
   const [parameterFormat, setParameterFormat] = React.useState<"POSITIONAL" | "NAMED">("POSITIONAL");
   const [body, setBody] = React.useState("");
-  const [headerFormat, setHeaderFormat] = React.useState<"NONE" | "TEXT">("NONE");
+  const [headerFormat, setHeaderFormat] = React.useState<"NONE" | "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT">("NONE");
   const [headerText, setHeaderText] = React.useState("");
+  const [headerMediaUrl, setHeaderMediaUrl] = React.useState("");
+  const [headerMediaFileName, setHeaderMediaFileName] = React.useState("");
+  const [headerMediaUploading, setHeaderMediaUploading] = React.useState(false);
+  const headerMediaInputRef = React.useRef<HTMLInputElement>(null);
+  const isHeaderMedia = headerFormat === "IMAGE" || headerFormat === "VIDEO" || headerFormat === "DOCUMENT";
   const [footer, setFooter] = React.useState("");
   const [addSecurityRecommendation, setAddSecurityRecommendation] = React.useState(true);
   const [codeExpirationMinutes, setCodeExpirationMinutes] = React.useState(10);
@@ -406,6 +411,8 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
     setFooter("");
     setHeaderText("");
     setHeaderFormat("NONE");
+    setHeaderMediaUrl("");
+    setHeaderMediaFileName("");
     setQuickTexts([""]);
     setUrlRows([{ text: "", url: "" }]);
     setCreateMode("assisted");
@@ -442,6 +449,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
       body,
       headerFormat,
       headerText: headerFormat === "TEXT" ? headerText : undefined,
+      headerMediaUrl: isHeaderMedia ? headerMediaUrl.trim() : undefined,
       footer: category !== "AUTHENTICATION" ? footer : undefined,
       buttons: category !== "AUTHENTICATION" && buttons.length ? buttons : undefined,
       addSecurityRecommendation,
@@ -449,6 +457,33 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
       otpType,
       otpButtonText,
     });
+  }
+
+  async function onHeaderMediaFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error("Arquivo excede o limite de 16 MB.");
+      return;
+    }
+    setHeaderMediaUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(apiUrl("/api/uploads/automation-media"), { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(typeof data?.message === "string" ? data.message : "Erro ao enviar arquivo.");
+        return;
+      }
+      setHeaderMediaUrl(data.url);
+      setHeaderMediaFileName(data.fileName ?? "");
+    } catch {
+      toast.error("Erro de rede ao enviar arquivo.");
+    } finally {
+      setHeaderMediaUploading(false);
+      if (headerMediaInputRef.current) headerMediaInputRef.current.value = "";
+    }
   }
 
   function submitJson() {
@@ -930,9 +965,18 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                       options={[
                         { value: "NONE", label: "Sem cabeçalho" },
                         { value: "TEXT", label: "TEXT" },
+                        { value: "IMAGE", label: "IMAGE" },
+                        { value: "VIDEO", label: "VIDEO" },
+                        { value: "DOCUMENT", label: "DOCUMENT" },
                       ]}
                       value={headerFormat}
-                      onValueChange={(v) => setHeaderFormat(v as "NONE" | "TEXT")}
+                      onValueChange={(v) => {
+                        setHeaderFormat(v as typeof headerFormat);
+                        if (v !== "IMAGE" && v !== "VIDEO" && v !== "DOCUMENT") {
+                          setHeaderMediaUrl("");
+                          setHeaderMediaFileName("");
+                        }
+                      }}
                       triggerClassName="w-full"
                     />
                   </div>
@@ -940,6 +984,40 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                     <div>
                       <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Texto do cabeçalho</label>
                       <InputGlass value={headerText} onChange={(e) => setHeaderText(e.target.value)} />
+                    </div>
+                  ) : null}
+                  {isHeaderMedia ? (
+                    <div className="space-y-1.5 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] p-3">
+                      <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        URL HTTPS da mídia de exemplo (obrigatório)
+                      </label>
+                      <InputGlass
+                        value={headerMediaUrl}
+                        onChange={(e) => { setHeaderMediaUrl(e.target.value); setHeaderMediaFileName(""); }}
+                        placeholder="https://exemplo.com/exemplo.mp4"
+                      />
+                      <input
+                        ref={headerMediaInputRef}
+                        type="file"
+                        className="hidden"
+                        onChange={onHeaderMediaFile}
+                      />
+                      <ButtonGlass
+                        type="button"
+                        variant="glass"
+                        size="sm"
+                        disabled={headerMediaUploading}
+                        onClick={() => headerMediaInputRef.current?.click()}
+                      >
+                        {headerMediaUploading ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                        <span className={cn(headerMediaUploading && "ml-2")}>
+                          {headerMediaFileName ? `Enviado: ${headerMediaFileName}` : "ou fazer upload de um arquivo"}
+                        </span>
+                      </ButtonGlass>
+                      <p className="text-[11px] text-[var(--text-muted)]">
+                        A Meta exige uma mídia de exemplo na criação (vira <code className="font-mono">header_handle</code>).
+                        No envio da automação você poderá usar outra mídia.
+                      </p>
                     </div>
                   ) : null}
                 </>
@@ -1177,6 +1255,13 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
   );
 }
 
+/** Faixa placeholder exibida no preview quando o cabeçalho é mídia (sem preview real do arquivo). */
+const HEADER_MEDIA_PLACEHOLDER: Record<string, string> = {
+  IMAGE: "Imagem",
+  VIDEO: "Vídeo",
+  DOCUMENT: "Documento",
+};
+
 /** Realça variáveis {{...}} dentro do corpo no preview do balão. */
 function highlightTemplateVars(text: string): React.ReactNode {
   const parts = text.split(/(\{\{.*?\}\})/g);
@@ -1212,7 +1297,7 @@ function WhatsappTemplatePreview({
   otpButtonText,
 }: {
   category: "UTILITY" | "MARKETING" | "AUTHENTICATION";
-  headerFormat: "NONE" | "TEXT";
+  headerFormat: "NONE" | "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT";
   headerText: string;
   body: string;
   footer: string;
@@ -1250,6 +1335,14 @@ function WhatsappTemplatePreview({
           >
             {headerFormat === "TEXT" && headerText.trim() ? (
               <p className="mb-1 font-bold">{headerText}</p>
+            ) : null}
+            {HEADER_MEDIA_PLACEHOLDER[headerFormat] ? (
+              <div
+                className="mb-1.5 flex items-center justify-center gap-1.5 rounded-[var(--radius-sm)] py-4 text-[11px] font-bold uppercase tracking-wide"
+                style={{ background: "color-mix(in srgb, var(--wa-accent) 14%, transparent)", color: "var(--wa-accent-strong)" }}
+              >
+                {HEADER_MEDIA_PLACEHOLDER[headerFormat]}
+              </div>
             ) : null}
             <p className="whitespace-pre-line leading-relaxed">
               {body.trim() ? highlightTemplateVars(body) : "Corpo da mensagem…"}

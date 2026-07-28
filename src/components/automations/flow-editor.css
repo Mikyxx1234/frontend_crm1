@@ -1029,6 +1029,17 @@
   padding: 9px 11px;
   line-height: 1.45;
 }
+/* Aviso de campo obrigatório faltando (ex.: header de mídia sem URL). */
+.ds-flow .cfg-warning {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--color-danger, #e5484d);
+  background: color-mix(in srgb, var(--color-danger, #e5484d) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger, #e5484d) 30%, transparent);
+  border-radius: var(--radius-md);
+  padding: 6px 9px;
+}
 /* Preview do template WhatsApp — bolha branca estilo mensagem recebida,
    com botões EMPILHADOS abaixo do corpo (modelo original do WhatsApp). */
 .ds-flow .cfg-tpl-preview {

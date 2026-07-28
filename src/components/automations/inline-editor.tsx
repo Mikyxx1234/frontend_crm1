@@ -947,8 +947,22 @@ function TemplatePreview({
 
   if (!hasBody && !needsHeaderMedia) return null
 
+  const headerMediaMissing = needsHeaderMedia && str(config.headerMediaUrl) === ""
+
   return (
     <>
+      {needsHeaderMedia && (
+        <HeaderMediaField
+          headerFormat={headerFormat as "IMAGE" | "VIDEO" | "DOCUMENT"}
+          config={config}
+          onChange={onChange}
+        />
+      )}
+      {headerMediaMissing && (
+        <p className="cfg-warning">
+          Este template exige {HEADER_MEDIA_LABEL[headerFormat] ?? "mídia"} no cabeçalho — configure acima antes de ativar a automação.
+        </p>
+      )}
       {hasBody && (
         <div className="cfg-field">
           <span className="cfg-label">Pré-visualização</span>
@@ -962,15 +976,14 @@ function TemplatePreview({
           )}
         </div>
       )}
-      {needsHeaderMedia && (
-        <HeaderMediaField
-          headerFormat={headerFormat as "IMAGE" | "VIDEO" | "DOCUMENT"}
-          config={config}
-          onChange={onChange}
-        />
-      )}
     </>
   )
+}
+
+const HEADER_MEDIA_LABEL: Record<string, string> = {
+  IMAGE: "imagem",
+  VIDEO: "vídeo",
+  DOCUMENT: "documento",
 }
 
 // ───────────────────────────── Mídia (upload + URL) ─────────────────────────────

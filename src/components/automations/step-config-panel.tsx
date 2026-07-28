@@ -3497,7 +3497,160 @@ type TemplateOption = {
   buttons?: { type: string; text: string; url?: string | null }[];
   flowAction?: string | null;
   flowId?: string | null;
+  /** `format` do componente HEADER (Graph) — NONE | TEXT | IMAGE | VIDEO | DOCUMENT. */
+  headerFormat?: string | null;
 };
+
+const HEADER_MEDIA_LABEL_PT: Record<string, string> = {
+  IMAGE: "imagem",
+  VIDEO: "vídeo",
+  DOCUMENT: "documento",
+};
+
+/**
+ * Campo de mídia do HEADER do template (IMAGE/VIDEO/DOCUMENT), usado no
+ * painel legado (`TemplateStepConfig`). Mesma UX/endpoint do bloco de mídia
+ * do step `send_whatsapp_media` (`MediaStepConfig` abaixo) e do
+ * `HeaderMediaField` do editor inline — grava em `draft.headerMediaUrl` /
+ * `draft.headerMediaType`, os mesmos campos lidos pelo executor da
+ * automação (ver `injectTemplateHeaderMediaComponent`).
+ */
+function TemplateHeaderMediaField({
+  headerFormat,
+  draft,
+  setDraft,
+}: {
+  headerFormat: "IMAGE" | "VIDEO" | "DOCUMENT";
+  draft: Record<string, unknown>;
+  setDraft: Dispatch<SetStateAction<Record<string, unknown>>>;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const mediaType = headerFormat.toLowerCase();
+  const mediaUrl = String(draft.headerMediaUrl ?? "");
+  const uploadedFileName = String(draft.headerUploadedFileName ?? "");
+  const hasFile = mediaUrl.startsWith("/uploads/") || mediaUrl.startsWith("/api/storage/");
+  const missing = mediaUrl.trim() === "";
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 16 * 1024 * 1024) {
+      toast.warning("Arquivo excede o limite de 16 MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(apiUrl("/api/uploads/automation-media"), {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.message ?? "Erro ao enviar arquivo.");
+        return;
+      }
+      setDraft((d) => ({
+        ...d,
+        headerMediaUrl: data.url,
+        headerMediaType: mediaType,
+        headerUploadedFileName: data.fileName,
+      }));
+    } catch {
+      toast.error("Erro de rede ao enviar arquivo.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>Mídia do cabeçalho (obrigatório)</Label>
+      <p className="text-[11px] text-muted-foreground">
+        Este template exige {HEADER_MEDIA_LABEL_PT[headerFormat] ?? "mídia"} no cabeçalho — anexe um
+        arquivo ou cole uma URL HTTPS pública.
+      </p>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={MEDIA_ACCEPT[mediaType] ?? "*/*"}
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      <div className="flex flex-col gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full justify-start gap-2"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {uploading ? (
+            <>
+              <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              Enviando…
+            </>
+          ) : (
+            <>
+              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Carregar arquivo do computador
+            </>
+          )}
+        </Button>
+
+        {hasFile && uploadedFileName && (
+          <div className="flex items-center gap-2 rounded-md border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-2.5 py-1.5">
+            <svg className="size-4 shrink-0 text-[var(--color-success-text)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span className="flex-1 truncate text-xs font-medium text-[var(--color-success-text)]">
+              {uploadedFileName}
+            </span>
+            <button
+              type="button"
+              className="text-xs text-[var(--color-success-text)] underline hover:text-[var(--color-success-text)]"
+              onClick={() => setDraft((d) => ({ ...d, headerMediaUrl: "", headerUploadedFileName: "" }))}
+            >
+              Remover
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="relative">
+        <div className="absolute inset-x-0 top-1/2 border-t border-border/60" />
+        <p className="relative mx-auto w-fit bg-[var(--color-bg-card)] px-2 text-[10px] text-muted-foreground">
+          ou cole uma URL
+        </p>
+      </div>
+
+      <Input
+        value={hasFile ? "" : mediaUrl}
+        onChange={(e) =>
+          setDraft((d) => ({
+            ...d,
+            headerMediaUrl: e.target.value,
+            headerMediaType: mediaType,
+            headerUploadedFileName: "",
+          }))
+        }
+        placeholder="https://exemplo.com/arquivo.mp4"
+        disabled={hasFile}
+      />
+
+      {missing && (
+        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-[11px] text-destructive">
+          Este template exige {HEADER_MEDIA_LABEL_PT[headerFormat] ?? "mídia"} no cabeçalho.
+        </p>
+      )}
+    </div>
+  );
+}
 
 const CAT_LABEL: Record<string, string> = {
   UTILITY: "Utilidade",
@@ -3599,12 +3752,17 @@ function TemplateStepConfig({
             }))}
             onValueChange={(v) => {
               const tpl = templates.find((t) => t.metaTemplateName === v);
+              const stillNeedsHeaderMedia =
+                tpl?.headerFormat === "IMAGE" || tpl?.headerFormat === "VIDEO" || tpl?.headerFormat === "DOCUMENT";
               setDraft((d) => ({
                 ...d,
                 templateName: v,
                 templateLabel: tpl?.label ?? "",
                 languageCode: tpl?.language ?? d.languageCode ?? "pt_BR",
                 templateCategory: tpl?.category ?? "",
+                ...(stillNeedsHeaderMedia
+                  ? {}
+                  : { headerMediaUrl: "", headerMediaType: "", headerUploadedFileName: "" }),
               }));
             }}
           />
@@ -3657,6 +3815,17 @@ function TemplateStepConfig({
           )}
         </div>
       )}
+
+      {selected &&
+        (selected.headerFormat === "IMAGE" ||
+          selected.headerFormat === "VIDEO" ||
+          selected.headerFormat === "DOCUMENT") && (
+          <TemplateHeaderMediaField
+            headerFormat={selected.headerFormat}
+            draft={draft}
+            setDraft={setDraft}
+          />
+        )}
 
       {routeButtons.length > 0 && (
         <div className="space-y-2">

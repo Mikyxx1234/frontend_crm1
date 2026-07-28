@@ -230,13 +230,13 @@ export function ConversationCard({
           items-start alinha o nome no topo do avatar; o preview de 2
           linhas ocupa o espaço ao lado da metade inferior do avatar —
           card mais preenchido/organizado (estilo kanban). */}
-      <div className="flex items-start gap-2.5">
+      <div className="flex items-start gap-2">
         {selectionMode && (
           <CheckboxGlass
             checked={selected}
             onChange={() => onToggleSelect?.()}
             aria-label={`Selecionar conversa de ${conversation.name}`}
-            className="mt-1.5"
+            className="mt-1"
           />
         )}
         <div className="relative shrink-0">
@@ -246,13 +246,13 @@ export function ConversationCard({
               name: conversation.name,
             }}
             channel={(conversation.channel as ChatAvatarChannel) ?? null}
-            size={AVATAR_SIZE.inbox}
+            size={AVATAR_SIZE.lg}
           />
           {/* Sem canal: status online/offline no canto (padrão legado). */}
           {!hasChannel && conversation.status !== "none" && (
             <span
               className={cn(
-                "absolute bottom-[2px] right-[2px] z-10 h-2.5 w-2.5 rounded-full border-2 border-[var(--avatar-ring)]",
+                "absolute bottom-[1px] right-[1px] z-10 h-2 w-2 rounded-full border-2 border-[var(--avatar-ring)]",
                 conversation.status === "online"
                   ? "bg-[var(--color-online)]"
                   : "bg-[var(--color-offline)]",
@@ -263,14 +263,14 @@ export function ConversationCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="truncate font-display text-sm font-bold text-[var(--text-primary)]">
+            <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
               {conversation.name}
             </span>
-            <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+            <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] text-[var(--text-muted)]">
               {conversation.time}
               {conversation.urgent && (
-                <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--color-danger)] text-white">
-                  <IconClock size={8} stroke={3} />
+                <span className="flex h-3 w-3 items-center justify-center rounded-full bg-[var(--color-danger)] text-white">
+                  <IconClock size={7} stroke={3} />
                 </span>
               )}
             </span>
@@ -279,19 +279,19 @@ export function ConversationCard({
           {/* Preview — 1 linha, fonte menor itálica (estilo kanban).
               Texto => ícone de conversa com borda azul; mídia => ícone
               do tipo + label padronizado (sem itálico). */}
-          <div className="mt-1 flex items-center gap-1.5 text-[11.5px] italic leading-[1.4] text-[var(--text-muted)]">
+          <div className="mt-0.5 flex items-center gap-1 text-[11px] italic leading-[1.35] text-[var(--text-muted)]">
             {isOutgoing && (
               <IconCheck
-                size={12}
+                size={11}
                 className="shrink-0 not-italic text-[var(--color-success)]"
                 aria-label="Você"
               />
             )}
             {TypeIcon ? (
-              <TypeIcon size={13} className="shrink-0 text-[var(--brand-primary)]" />
+              <TypeIcon size={12} className="shrink-0 text-[var(--brand-primary)]" />
             ) : (
-              <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
-                <IconMessage size={9} />
+              <span className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
+                <IconMessage size={8} />
               </span>
             )}
             <span
@@ -322,7 +322,7 @@ export function ConversationCard({
               label={conversation.tags.slice(2).map((t) => t.name).join(", ")}
               side="top"
             >
-              <span className="inline-flex shrink-0 rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-display text-[10px] font-bold text-[var(--text-secondary)]">
+              <span className="inline-flex shrink-0 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[9px] font-bold text-[var(--text-secondary)]">
                 +{conversation.tags.length - 2}
               </span>
             </TooltipGlass>
@@ -333,22 +333,22 @@ export function ConversationCard({
       {/* Linha 3: assignee + sessao — flex-nowrap evita quebrar em 2 linhas
           quando o nome do responsavel + chip de sessao somam mais largura
           do que a coluna. O chip do assignee trunca com ellipsis. */}
-      <div className="mt-1.5 flex min-w-0 flex-nowrap items-center gap-2">
+      <div className="mt-1.5 flex min-w-0 flex-nowrap items-center gap-1.5">
         {/* Quando há responsável: exibe label "RESPONSÁVEL" + chip/slot.
             Sem responsável: apenas chip ghost "+Responsável". */}
-        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+        <span className="flex min-w-0 flex-1 items-center gap-1">
           {(conversation.assignee || conversation.assigneeId) && (
-            <span className="shrink-0 font-display text-[9.5px] font-bold text-[var(--text-muted)]">
+            <span className="shrink-0 font-display text-[9px] font-bold text-[var(--text-muted)]">
               Responsável
             </span>
           )}
           {assigneeSlot ??
             (conversation.assignee ? (
-              <Chip variant="brand" className="max-w-full truncate whitespace-nowrap">
+              <Chip variant="brand" className="max-w-full truncate whitespace-nowrap !px-1.5 !py-0 !text-[10px]">
                 {conversation.assignee}
               </Chip>
             ) : (
-              <Chip variant="ghost" className="max-w-full truncate whitespace-nowrap">
+              <Chip variant="ghost" className="max-w-full truncate whitespace-nowrap !px-1.5 !py-0 !text-[10px]">
                 +Responsável
               </Chip>
             ))}
@@ -356,8 +356,8 @@ export function ConversationCard({
 
         {conversation.resolved ? (
           <TooltipGlass label="Conversa encerrada" side="top">
-            <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-px font-display text-[10px] font-bold text-emerald-700 v2-dark:text-emerald-300">
-              <IconCheck size={10} stroke={3} />
+            <span className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-px font-display text-[9px] font-bold text-emerald-700 v2-dark:text-emerald-300">
+              <IconCheck size={9} stroke={3} />
               Encerrada
             </span>
           </TooltipGlass>
@@ -369,13 +369,13 @@ export function ConversationCard({
             >
               <span
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-px font-display text-[10px] font-bold",
+                  "inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full border px-1.5 py-px font-display text-[9px] font-bold",
                   conversation.sessionExpired
                     ? "border-[var(--color-danger)]/25 bg-[var(--color-danger)]/[0.10] text-[var(--color-danger-text)]"
                     : "border-[var(--color-lead)]/25 bg-[var(--color-lead-bg)] text-[var(--color-warning-text)]",
                 )}
               >
-                <IconClock size={10} />
+                <IconClock size={9} />
                 {conversation.sessionExpiresIn}
               </span>
             </TooltipGlass>
@@ -388,7 +388,7 @@ export function ConversationCard({
       {conversation.number != null && (
         <div
           className={cn(
-            "mt-1 font-display text-[11px] font-semibold tabular-nums",
+            "mt-1 font-display text-[10px] font-semibold tabular-nums",
             conversation.resolved
               ? "text-[var(--text-muted)]"
               : "text-emerald-600 v2-dark:text-emerald-400",

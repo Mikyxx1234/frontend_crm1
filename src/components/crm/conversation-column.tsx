@@ -515,7 +515,7 @@ export function ConversationColumn({
       })()}
 
       {/* Lista */}
-      <div className="flex flex-1 min-h-0 flex-col gap-2.5 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
+      <div className="flex flex-1 min-h-0 flex-col gap-1.5 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
         {isLoading ? (
           Array.from({ length: 6 }, (_, i) => (
             <div

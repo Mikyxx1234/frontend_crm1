@@ -180,9 +180,14 @@ type RawTemplateDetail = {
   name?: string
   bodyPreview?: string
   buttons?: { type?: string; text?: string }[]
+  headerFormat?: string | null
 }
 
-export type TemplateDetail = { bodyPreview: string; quickReplies: string[] }
+export type TemplateDetail = {
+  bodyPreview: string
+  quickReplies: string[]
+  headerFormat?: string | null
+}
 
 /**
  * Mapa nome-do-template → { bodyPreview, quickReplies }. Usado pelo nó
@@ -205,7 +210,11 @@ export function useTemplateDetailsMap() {
         const quickReplies = (t.buttons ?? [])
           .filter((b) => String(b.type).toUpperCase() === "QUICK_REPLY" && (b.text ?? "").trim() !== "")
           .map((b) => b.text!.trim())
-        map.set(name, { bodyPreview: (t.bodyPreview ?? "").trim(), quickReplies })
+        map.set(name, {
+          bodyPreview: (t.bodyPreview ?? "").trim(),
+          quickReplies,
+          headerFormat: t.headerFormat ?? null,
+        })
       }
       return map
     },

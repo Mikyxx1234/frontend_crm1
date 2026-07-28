@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   DragDropContext,
   Droppable,
@@ -368,10 +368,15 @@ function DealInline({
   deal,
   course,
   contact,
+  collapsed = false,
+  onToggle,
 }: {
   deal: NonNullable<ContactDetails["deals"]>[number]
   course: string | undefined
   contact: ContactDetails
+  /** Com 2+ negócios: card compacto até o atendente expandir. */
+  collapsed?: boolean
+  onToggle?: () => void
 }) {
   const fields = deal.customFields ?? []
   const segments = deal.funnelSegments
@@ -399,19 +404,60 @@ function DealInline({
   const currentStageColor =
     (currentSegIdx >= 0 ? sortedSegments?.[currentSegIdx]?.color : null) || "#f59e0b"
 
+  if (collapsed) {
+    return (
+      <div className="px-3 pt-1.5 pb-0">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-[#2e3b6e] px-3 py-2 text-left text-white shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[#35457a]"
+        >
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ backgroundColor: currentStageColor }}
+          />
+          <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">
+            {deal.number != null && (
+              <span className="mr-1.5 font-mono text-[11px] font-normal text-slate-300">
+                #{deal.number}
+              </span>
+            )}
+            <span className="uppercase tracking-wide">{stageLabel}</span>
+            {deal.pipelineName && (
+              <span className="ml-1.5 font-normal normal-case text-slate-400">
+                · {deal.pipelineName}
+              </span>
+            )}
+          </span>
+          {isLost && (
+            <span className="shrink-0 rounded-full bg-orange-500/20 px-1.5 py-px text-[9px] font-bold uppercase text-orange-200">
+              Perdido
+            </span>
+          )}
+          {isWon && (
+            <span className="shrink-0 rounded-full bg-emerald-500/20 px-1.5 py-px text-[9px] font-bold uppercase text-emerald-200">
+              Ganho
+            </span>
+          )}
+          <IconChevronDown size={14} className="shrink-0 text-slate-300" />
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="px-3 pt-2 pb-0">
       {/* ── Hero header (ref. Stitch): card escuro #2e3b6e como CARD interno,
           dentro do padding do container (não mais edge-to-edge). Mesma forma
           dos cards de contato/negócio: rounded-xl + borda sutil + shadow. ── */}
-      <header className="relative isolate mb-3 rounded-xl border border-white/10 bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-[var(--glass-shadow-sm)]">
+      <header className="relative isolate mb-2 rounded-xl border border-white/10 bg-[#2e3b6e] px-3 pb-2.5 pt-2.5 text-white shadow-[var(--glass-shadow-sm)]">
         {/* Linha topo: título (até 2 linhas, sem truncar o nome) + pill de etapa */}
-        <div className="relative mb-2.5 flex items-start justify-between gap-2">
-          <h1 className="min-w-0 text-[15px] font-bold leading-snug text-white">
+        <div className="relative mb-2 flex items-start justify-between gap-2">
+          <h1 className="min-w-0 text-[13px] font-bold leading-snug text-white">
             <span className="line-clamp-2">
               {deal.title}
               {deal.number != null && (
-                <span className="ml-1.5 whitespace-nowrap text-[12px] font-normal text-slate-400">
+                <span className="ml-1.5 whitespace-nowrap text-[11px] font-normal text-slate-400">
                   #{deal.number}
                 </span>
               )}
@@ -419,7 +465,19 @@ function DealInline({
           </h1>
 
           {/* Pill de etapa REMOVIDA do topo (jul/26): a fase virou o destaque
-              da linha base e é ela quem abre o dropdown de troca de estágio. */}
+              da linha base e é ela quem abre o dropdown de troca de estágio.
+              Com multi-deal, botão de recolher fica no canto. */}
+          {onToggle && (
+            <button
+              type="button"
+              onClick={onToggle}
+              className="shrink-0 rounded-md p-0.5 text-slate-300 hover:bg-white/10 hover:text-white"
+              aria-label="Recolher negócio"
+              title="Recolher"
+            >
+              <IconChevronDown size={14} className="rotate-180" />
+            </button>
+          )}
         </div>
 
         {/* Linha base: ETAPA em destaque + funil (secundário) + responsável.
@@ -460,7 +518,7 @@ function DealInline({
 
         {/* Barra de etapas segmentada — 2px, ativo na cor da etapa, inativo white/20 */}
         {sortedSegments && sortedSegments.length > 0 && (
-          <div className="relative mb-2.5 flex items-center gap-1">
+          <div className="relative mb-2 flex items-center gap-1">
             {sortedSegments.map((seg, i) => (
               <TooltipGlass key={seg.id} label={seg.name} side="top">
                 <span
@@ -477,7 +535,7 @@ function DealInline({
 
         {/* Grid 2 colunas de infos rápidas — Origem / Canal / Tags */}
         {(deal.origin || contact.connection || deal.dealTagsNode !== undefined) && (
-          <div className="relative grid grid-cols-2 items-center gap-y-1.5 border-t border-white/10 pt-2.5 text-xs">
+          <div className="relative grid grid-cols-2 items-center gap-y-1 border-t border-white/10 pt-2 text-[11px]">
             {deal.origin && (
               <>
                 <span className="text-slate-400">Origem</span>
@@ -508,11 +566,11 @@ function DealInline({
       </header>
 
       {isLost && lostReason && (
-        <div className="mt-3 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-danger,#dc2626)_24%,transparent)] bg-[color-mix(in_srgb,var(--color-danger,#dc2626)_6%,transparent)] px-4 py-2.5">
+        <div className="mt-2 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-danger,#dc2626)_24%,transparent)] bg-[color-mix(in_srgb,var(--color-danger,#dc2626)_6%,transparent)] px-3 py-2">
           <p className="mb-0.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--color-danger,#dc2626)]">
             Motivo da perda
           </p>
-          <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+          <p className="font-display text-[12px] font-semibold text-[var(--text-primary)]">
             {lostReason}
           </p>
         </div>
@@ -631,17 +689,37 @@ export function ContactAside({
 
   // Estados de colapso de seção (variante Vívida)
   const [contactSectionOpen, setContactSectionOpen] = useState(true)
-  const [dealFieldsSectionOpen, setDealFieldsSectionOpen] = useState(true)
+  // Com 2+ negócios: seção de campos começa recolhida; atendente abre ao atender.
+  const [dealFieldsSectionOpen, setDealFieldsSectionOpen] = useState(() => deals.length < 2)
   const [productsSectionOpen, setProductsSectionOpen] = useState(true)
+
+  // Qual negócio está expandido no hero. Com 1 deal: sempre aberto.
+  // Com 2+: começa recolhido; clique expande um de cada vez.
+  const [expandedDealId, setExpandedDealId] = useState<string | null>(
+    () => (deals.length === 1 ? deals[0]?.id ?? null : null),
+  )
+  const dealIdsKey = deals.map((d) => d.id).join("|")
+
+  useEffect(() => {
+    setExpandedDealId(deals.length === 1 ? deals[0]?.id ?? null : null)
+    setDealFieldsSectionOpen(deals.length < 2)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset só quando muda o conjunto de deals
+  }, [contact.contactId, dealIdsKey])
+
+  const activeDealId = expandedDealId ?? deals[0]?.id ?? null
+  const activeDeal = deals.find((d) => d.id === activeDealId) ?? deals[0]
+  const multiDeal = deals.length >= 2
 
   const resolvedContactPanelFields = contactPanelFields.map((f) => ({
     ...f,
     value: fieldValues[f.fieldId] ?? f.value,
   }))
-  const resolvedDealPanelFields = dealPanelFields.map((f) => ({
-    ...f,
-    value: fieldValues[f.fieldId] ?? f.value,
-  }))
+  const resolvedDealPanelFields = dealPanelFields
+    .filter((f) => !activeDealId || !f.entityId || f.entityId === activeDealId)
+    .map((f) => ({
+      ...f,
+      value: fieldValues[f.fieldId] ?? f.value,
+    }))
 
   const [sectionOrder, reorder] = useSectionOrder<AsideSection>(
     ASIDE_STORAGE_KEY,
@@ -809,12 +887,34 @@ export function ContactAside({
           </div>
         )}
 
-        {/* ── Hero do negócio (FIXO no topo, fora das abas) ── */}
+        {/* ── Hero do negócio (FIXO no topo, fora das abas) ──
+            Com 2+ negócios: lista retraída (# + etapa); atendente expande
+            só o que for atender. Com 1 negócio: sempre expandido. */}
         {deals.length > 0 && !sectionHiddenMap["negocios"] && (
-          <div className="border-b border-[var(--glass-border-subtle)]">
-            {deals.map((deal) => (
-              <DealInline key={deal.id} deal={deal} course={course} contact={contact} />
-            ))}
+          <div className="space-y-0.5 border-b border-[var(--glass-border-subtle)] pb-2">
+            {multiDeal && (
+              <p className="px-3 pt-2 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                {deals.length} negócios — toque para expandir
+              </p>
+            )}
+            {deals.map((deal) => {
+              const isExpanded = !multiDeal || expandedDealId === deal.id
+              return (
+                <DealInline
+                  key={deal.id}
+                  deal={deal}
+                  course={course}
+                  contact={contact}
+                  collapsed={multiDeal && !isExpanded}
+                  onToggle={
+                    multiDeal
+                      ? () =>
+                          setExpandedDealId((cur) => (cur === deal.id ? null : deal.id))
+                      : undefined
+                  }
+                />
+              )
+            })}
           </div>
         )}
 
@@ -1063,13 +1163,20 @@ export function ContactAside({
                               colapso. Usa o 1o negocio do contato (`deals[0]`)
                               como target — cenario dominante no inbox e um
                               contato com um deal ativo por vez. */}
-                          {sectionId === "produtos" && deals[0] && (
+                          {sectionId === "produtos" && activeDeal && (
                             <div className={SECTION_CARD_CLASS}>
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
                                 icon={<IconPackage size={16} />}
                                 open={productsSectionOpen}
                                 onToggle={() => setProductsSectionOpen((v) => !v)}
+                                meta={
+                                  multiDeal && activeDeal.number != null ? (
+                                    <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                      #{activeDeal.number}
+                                    </span>
+                                  ) : undefined
+                                }
                               >
                                 Produtos
                               </SectionHeader>
@@ -1079,7 +1186,7 @@ export function ContactAside({
                                       — quem provee o cabecalho e o SectionHeader
                                       acima; DealProductsSection so renderiza os
                                       items + botao adicionar + count. */}
-                                  <DealProductsSection dealId={deals[0].id} compact hideTitle />
+                                  <DealProductsSection dealId={activeDeal.id} compact hideTitle />
                                 </div>
                               )}
                             </div>
@@ -1095,11 +1202,36 @@ export function ContactAside({
                                   open={dealFieldsSectionOpen}
                                   onToggle={() => setDealFieldsSectionOpen((v) => !v)}
                                   meta={
-                                    deals[0]?.number != null ? (
-                                      <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
-                                        #{deals[0].number}
-                                      </span>
-                                    ) : undefined
+                                    <span className="flex flex-wrap items-center gap-1">
+                                      {deals
+                                        .filter((d) => d.number != null)
+                                        .map((d) => (
+                                          <button
+                                            key={d.id}
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              if (multiDeal) {
+                                                setExpandedDealId(d.id)
+                                                setDealFieldsSectionOpen(true)
+                                              }
+                                            }}
+                                            className={cn(
+                                              "rounded-full px-1.5 py-px font-mono text-[10px] font-semibold tabular-nums transition-colors",
+                                              activeDeal?.id === d.id
+                                                ? "bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]"
+                                                : "text-[var(--text-muted)] hover:bg-slate-100",
+                                            )}
+                                            title={
+                                              multiDeal
+                                                ? `Ver campos do negócio #${d.number}`
+                                                : undefined
+                                            }
+                                          >
+                                            #{d.number}
+                                          </button>
+                                        ))}
+                                    </span>
                                   }
                                   actions={
                                   <>

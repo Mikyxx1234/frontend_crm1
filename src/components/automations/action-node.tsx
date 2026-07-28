@@ -81,6 +81,10 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
     <div
       className={cn(
         "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
+        // Tag picker (cfg-pop) abre abaixo do input — precisa vazar do card.
+        (data.stepType === "add_tag" || data.stepType === "remove_tag") &&
+          selected &&
+          "z-20 overflow-visible",
         // Webhook abre o construtor visual (parâmetros + catálogo) —
         // precisa de card mais largo que os demais passos.
         selected

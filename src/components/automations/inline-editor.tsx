@@ -497,7 +497,7 @@ function TagInput({
           }}
         />
         {open && (
-          <div className="cfg-pop nowheel nopan">
+          <div className="cfg-pop cfg-pop--inplace nowheel nopan">
             {isLoading && <div className="cfg-pop-empty">Carregando tags…</div>}
             {!isLoading && filtered.length === 0 && (
               <div className="cfg-pop-empty">{value.trim() ? "Nenhuma tag — Enter cria esta." : "Nenhuma tag cadastrada."}</div>
@@ -627,7 +627,9 @@ function SourceSelect({ source, value, onChange }: { source: SourceKey; value: s
     case "aiAgentUserId":
       return <AgentSelect by="userId" value={value} onChange={onChange} />
     case "owner":
-      return <OwnerSelect value={value} onChange={onChange} />
+      // Placeholder deixa o clear (opção vazia) óbvio: selecionar "Sem
+      // responsável" desatribui no target configurado pro step.
+      return <OwnerSelect value={value} onChange={onChange} placeholder="Sem responsável (limpar)…" />
   }
 }
 
@@ -757,7 +759,15 @@ function AgentSelect({ by, value, onChange }: { by: "id" | "userId"; value: stri
   return <ConfigSelect value={value} options={options} onChange={onChange} placeholder="Selecione um agente…" loading={isLoading} />
 }
 
-function OwnerSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function OwnerSelect({
+  value,
+  onChange,
+  placeholder = "Selecione um responsável…",
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
   const users = useUserOptions()
   const agents = useAiAgentOptions("userId")
   const options: Opt[] = [
@@ -769,7 +779,7 @@ function OwnerSelect({ value, onChange }: { value: string; onChange: (v: string)
       value={value}
       options={options}
       onChange={onChange}
-      placeholder="Selecione um responsável…"
+      placeholder={placeholder}
       loading={users.isLoading || agents.isLoading}
     />
   )
@@ -908,28 +918,72 @@ function TemplatePreview({
         (b, i) => b.title === str(prev[i]?.title) && b.gotoStepId === str(prev[i]?.gotoStepId),
       )
     const sameBody = str(config.bodyPreview) === detail.bodyPreview
-    if (sameBtns && sameBody) return
-    onChange({ ...config, buttons: desired, bodyPreview: detail.bodyPreview })
+    const hf = (detail.headerFormat || "").toUpperCase()
+    const needsMedia = hf === "IMAGE" || hf === "VIDEO" || hf === "DOCUMENT"
+    const clearHeader =
+      !needsMedia &&
+      (str(config.headerMediaUrl) !== "" ||
+        str(config.headerMediaType) !== "" ||
+        str(config.headerUploadedFileName) !== "")
+    if (sameBtns && sameBody && !clearHeader) return
+    onChange({
+      ...config,
+      buttons: desired,
+      bodyPreview: detail.bodyPreview,
+      ...(clearHeader
+        ? { headerMediaUrl: "", headerMediaType: "", headerUploadedFileName: "" }
+        : {}),
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateName, detail])
 
   if (!templateName) return null
   if (isLoading && !detail) return <p className="cfg-info">Carregando preview…</p>
-  if (!detail || detail.bodyPreview.trim() === "") return null
+  if (!detail) return null
+
+  const headerFormat = (detail.headerFormat || "").toUpperCase()
+  const needsHeaderMedia = headerFormat === "IMAGE" || headerFormat === "VIDEO" || headerFormat === "DOCUMENT"
+  const hasBody = detail.bodyPreview.trim() !== ""
+
+  if (!hasBody && !needsHeaderMedia) return null
+
+  const headerMediaMissing = needsHeaderMedia && str(config.headerMediaUrl) === ""
 
   return (
-    <div className="cfg-field">
-      <span className="cfg-label">Pré-visualização</span>
-      <div className="cfg-tpl-preview nodrag nowheel">
-        <p className="cfg-tpl-body">{detail.bodyPreview}</p>
-      </div>
-      {detail.quickReplies.length > 0 && (
-        <p className="cfg-hint">
-          Os botões aparecem no card — arraste cada um para o próximo passo.
+    <>
+      {needsHeaderMedia && (
+        <HeaderMediaField
+          headerFormat={headerFormat as "IMAGE" | "VIDEO" | "DOCUMENT"}
+          config={config}
+          onChange={onChange}
+        />
+      )}
+      {headerMediaMissing && (
+        <p className="cfg-warning">
+          Este template exige {HEADER_MEDIA_LABEL[headerFormat] ?? "mídia"} no cabeçalho — configure acima antes de ativar a automação.
         </p>
       )}
-    </div>
+      {hasBody && (
+        <div className="cfg-field">
+          <span className="cfg-label">Pré-visualização</span>
+          <div className="cfg-tpl-preview nodrag nowheel">
+            <p className="cfg-tpl-body">{detail.bodyPreview}</p>
+          </div>
+          {detail.quickReplies.length > 0 && (
+            <p className="cfg-hint">
+              Os botões aparecem no card — arraste cada um para o próximo passo.
+            </p>
+          )}
+        </div>
+      )}
+    </>
   )
+}
+
+const HEADER_MEDIA_LABEL: Record<string, string> = {
+  IMAGE: "imagem",
+  VIDEO: "vídeo",
+  DOCUMENT: "documento",
 }
 
 // ───────────────────────────── Mídia (upload + URL) ─────────────────────────────
@@ -943,21 +997,30 @@ const MEDIA_ACCEPT: Record<string, string> = {
 }
 
 /**
- * Campo de mídia da automação: anexar arquivo direto (upload p/
- * `/api/uploads/automation-media`) OU colar uma URL. Grava em
- * `config.mediaUrl` e guarda `config.uploadedFileName` p/ mostrar o nome.
+ * Base compartilhada do campo de mídia: anexar arquivo direto (upload p/
+ * `/api/uploads/automation-media`) OU colar uma URL. `MediaField` e
+ * `HeaderMediaField` só diferem nas chaves de `config` onde gravam o
+ * resultado — a UI e a lógica de upload são as mesmas.
  */
-function MediaField({ label, config, onChange }: { label: string; config: Cfg; onChange: (next: Cfg) => void }) {
+function MediaUploadField({
+  label,
+  hint,
+  mediaType,
+  url,
+  fileName,
+  onPatch,
+}: {
+  label: string
+  hint?: string
+  mediaType: string
+  url: string
+  fileName: string
+  onPatch: (p: { url: string; fileName: string }) => void
+}) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
-  const mediaType = str(config.mediaType) || "image"
-  const mediaUrl = str(config.mediaUrl)
-  const uploadedFileName = str(config.uploadedFileName)
-  const hasFile =
-    mediaUrl.startsWith("/uploads/") || mediaUrl.startsWith("/api/storage/")
-
-  const patch = (p: Cfg) => onChange({ ...config, ...p })
+  const hasFile = url.startsWith("/uploads/") || url.startsWith("/api/storage/")
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -976,7 +1039,7 @@ function MediaField({ label, config, onChange }: { label: string; config: Cfg; o
         toast.error(data.message ?? "Erro ao enviar arquivo.")
         return
       }
-      patch({ mediaUrl: data.url, uploadedFileName: data.fileName })
+      onPatch({ url: data.url, fileName: data.fileName })
     } catch {
       toast.error("Erro de rede ao enviar arquivo.")
     } finally {
@@ -988,6 +1051,7 @@ function MediaField({ label, config, onChange }: { label: string; config: Cfg; o
   return (
     <div className="cfg-field">
       <span className="cfg-label">{label}</span>
+      {hint && <span className="cfg-hint">{hint}</span>}
 
       <input
         ref={inputRef}
@@ -1009,13 +1073,13 @@ function MediaField({ label, config, onChange }: { label: string; config: Cfg; o
       {hasFile && (
         <div className="cfg-row" style={{ alignItems: "center", marginTop: 6 }}>
           <span className="cfg-hint" style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            ✓ {uploadedFileName || "arquivo anexado"}
+            ✓ {fileName || "arquivo anexado"}
           </span>
           <button
             type="button"
             className="cfg-x nodrag"
             title="Remover"
-            onClick={() => patch({ mediaUrl: "", uploadedFileName: "" })}
+            onClick={() => onPatch({ url: "", fileName: "" })}
           >
             ×
           </button>
@@ -1025,21 +1089,68 @@ function MediaField({ label, config, onChange }: { label: string; config: Cfg; o
       {mediaType === "image" && hasFile && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={mediaUrl}
+          src={url}
           alt="Prévia"
           style={{ maxHeight: 120, width: "100%", objectFit: "contain", marginTop: 6, borderRadius: 6 }}
         />
       )}
 
-      <span className="cfg-hint" style={{ marginTop: 6 }}>ou cole uma URL:</span>
+      <span className="cfg-hint" style={{ marginTop: 6 }}>ou cole uma URL HTTPS:</span>
       <InputGlass
         className="nodrag"
-        value={hasFile ? "" : mediaUrl}
+        value={hasFile ? "" : url}
         placeholder="https://…"
         disabled={hasFile}
-        onChange={(e) => patch({ mediaUrl: e.target.value, uploadedFileName: "" })}
+        onChange={(e) => onPatch({ url: e.target.value, fileName: "" })}
       />
     </div>
+  )
+}
+
+/**
+ * Campo de mídia da automação: grava em `config.mediaUrl` e guarda
+ * `config.uploadedFileName` p/ mostrar o nome.
+ */
+function MediaField({ label, config, onChange }: { label: string; config: Cfg; onChange: (next: Cfg) => void }) {
+  const mediaType = str(config.mediaType) || "image"
+  return (
+    <MediaUploadField
+      label={label}
+      mediaType={mediaType}
+      url={str(config.mediaUrl)}
+      fileName={str(config.uploadedFileName)}
+      onPatch={({ url, fileName }) => onChange({ ...config, mediaUrl: url, uploadedFileName: fileName })}
+    />
+  )
+}
+
+/**
+ * Campo de mídia do HEADER do template (IMAGE/VIDEO/DOCUMENT). A Meta exige
+ * o parâmetro do header preenchido nesses casos (erro `132012`), com uma URL
+ * HTTPS pública — grava em `config.headerMediaUrl` + `config.headerMediaType`
+ * (usados pelo executor da automação, não pelo `mediaUrl` do template em si).
+ */
+function HeaderMediaField({
+  headerFormat,
+  config,
+  onChange,
+}: {
+  headerFormat: "IMAGE" | "VIDEO" | "DOCUMENT"
+  config: Cfg
+  onChange: (next: Cfg) => void
+}) {
+  const mediaType = headerFormat.toLowerCase()
+  return (
+    <MediaUploadField
+      label="Mídia do cabeçalho (obrigatório)"
+      hint="Obrigatório para este template. Faça upload aqui ou cole uma URL HTTPS pública."
+      mediaType={mediaType}
+      url={str(config.headerMediaUrl)}
+      fileName={str(config.headerUploadedFileName)}
+      onPatch={({ url, fileName }) =>
+        onChange({ ...config, headerMediaUrl: url, headerMediaType: mediaType, headerUploadedFileName: fileName })
+      }
+    />
   )
 }
 

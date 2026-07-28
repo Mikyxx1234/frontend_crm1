@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 
 import {
+  executeDistribution,
   fetchDistributionLogs,
   fetchDistributionSettings,
   fetchPending,
@@ -20,6 +21,7 @@ import {
   updateResponsible,
   type DistributionLogsPage,
   type DistributionSettings,
+  type ExecuteDistributionInput,
 } from "./api";
 import type {
   AgentOnlineStatus,
@@ -217,6 +219,18 @@ export function useSetAgentStatus() {
 export function useSimulateDistribution() {
   return useMutation<DistributionResult, Error, void>({
     mutationFn: () => simulateDistribution(),
+  });
+}
+
+export function useExecuteDistribution() {
+  const qc = useQueryClient();
+  return useMutation<DistributionResult, Error, ExecuteDistributionInput>({
+    mutationFn: (input) => executeDistribution(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: DISTRIBUTION_RESPONSIBLES_KEY });
+      void qc.invalidateQueries({ queryKey: DISTRIBUTION_PENDING_KEY });
+      void qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+    },
   });
 }
 

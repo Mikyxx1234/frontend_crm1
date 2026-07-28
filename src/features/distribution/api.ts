@@ -123,6 +123,28 @@ export function simulateDistribution(): Promise<DistributionResult> {
   );
 }
 
+export type ExecuteDistributionInput = {
+  dealId?: string;
+  contactId?: string;
+  conversationId?: string;
+  distributionType?: string | null;
+  departmentId?: string;
+  departmentIds?: string[];
+  /** Redistribui mesmo com responsável atual (handoff manual). */
+  reassign?: boolean;
+};
+
+export function executeDistribution(
+  input: ExecuteDistributionInput,
+): Promise<DistributionResult> {
+  return sendJson<DistributionResult>(
+    "/api/distribution/execute",
+    "POST",
+    input,
+    "Erro ao executar distribuição.",
+  );
+}
+
 export async function setAgentStatus(
   userId: string,
   status: AgentOnlineStatus,

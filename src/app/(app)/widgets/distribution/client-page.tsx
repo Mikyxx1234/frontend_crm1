@@ -1458,11 +1458,15 @@ function PendingQueueCards({
         <ul className="scrollbar-thin flex min-h-0 flex-1 flex-col divide-y divide-[var(--glass-border)] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
           {pending.map((p) => (
             <li key={p.id}>
-              <div className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]">
+              <Link
+                href={`/inbox?c=${encodeURIComponent(p.id)}`}
+                className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                title="Abrir conversa no inbox"
+              >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-warn)_10%,transparent)] text-[var(--color-warn)]">
                   <IconClockExclamation size={16} />
                 </span>
-                <span className="min-w-0 flex-1 truncate font-mono text-[13px] font-semibold text-[var(--text-primary)]">
+                <span className="min-w-0 flex-1 truncate font-mono text-[13px] font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)]">
                   {p.label}
                 </span>
                 <ChannelBadge channel={p.channel} />
@@ -1470,7 +1474,11 @@ function PendingQueueCards({
                   {p.attempts > 1 ? `${p.attempts}x · ` : ""}
                   {relativeTime(p.createdAt)}
                 </span>
-              </div>
+                <IconExternalLink
+                  size={14}
+                  className="shrink-0 text-[var(--text-muted)] opacity-0 transition-opacity group-hover:opacity-100"
+                />
+              </Link>
             </li>
           ))}
         </ul>

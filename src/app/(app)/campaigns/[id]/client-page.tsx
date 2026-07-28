@@ -16,6 +16,7 @@ import {
   IconMessage2,
   IconAlertTriangle,
   IconUsers,
+  IconExternalLink,
 } from "@tabler/icons-react";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
@@ -308,14 +309,18 @@ export default function CampaignDetailClientPage() {
                   return (
                     <div key={r.id} className="px-3 py-2">
                       <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
+                        <Link
+                          href={`/contacts/${r.contact.id}`}
+                          className="min-w-0 flex-1 rounded-[var(--radius-sm)] outline-none transition-colors hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+                          title="Abrir lead"
+                        >
+                          <p className="truncate font-display text-[12.5px] font-semibold text-[var(--text-primary)] hover:text-[var(--brand-primary)]">
                             {r.contact.name}
                           </p>
                           <p className="truncate font-body text-[11px] text-[var(--text-muted)]">
                             {r.contact.phone ?? "—"}
                           </p>
-                        </div>
+                        </Link>
                         <div className="flex shrink-0 items-center gap-2">
                           {r.errorMessage ? (
                             <button
@@ -337,6 +342,14 @@ export default function CampaignDetailClientPage() {
                           >
                             {rmeta.label}
                           </span>
+                          <Link
+                            href={`/contacts/${r.contact.id}`}
+                            className="inline-flex size-7 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+                            title="Abrir lead"
+                            aria-label={`Abrir lead ${r.contact.name}`}
+                          >
+                            <IconExternalLink size={14} />
+                          </Link>
                         </div>
                       </div>
                       {r.errorMessage && expandedErrors.has(r.id) ? (

@@ -1456,7 +1456,7 @@ function PendingQueueCards({
               </span>
             </h2>
             <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
-              Atendimentos sem responsável elegível. São redistribuídos quando alguém fica online.
+              Atendimentos sem responsável elegível. Redistribuídos automaticamente quando alguém fica elegível, libera capacidade ou pelo job de segurança.
             </p>
           </div>
         </div>
@@ -1559,13 +1559,19 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
   const [origin, setOrigin] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const origins = useMemo(
-    () =>
-      Array.from(
-        new Set(items.map((log) => log.triggerSource).filter(Boolean)),
-      ).sort((a, b) => a.localeCompare(b, "pt-BR")),
-    [items],
-  );
+  const origins = useMemo(() => {
+    const set = new Set<string>();
+    for (const log of items) {
+      const raw = log.triggerSource?.trim();
+      if (!raw) continue;
+      // Logs juntados ("AUTOMATION+SYSTEM") entram nos filtros base.
+      for (const part of raw.split("+")) {
+        const p = part.trim();
+        if (p) set.add(p);
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [items]);
 
   const filteredItems = useMemo(() => {
     const query = logSearch.trim().toLocaleLowerCase("pt-BR");
@@ -1589,7 +1595,13 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
       if (query && !searchable.includes(query)) return false;
       if (result === "success" && !log.success) return false;
       if (result === "failure" && log.success) return false;
-      if (origin !== "all" && log.triggerSource !== origin) return false;
+      if (origin !== "all") {
+        const parts = (log.triggerSource || "")
+          .split("+")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (!parts.includes(origin) && log.triggerSource !== origin) return false;
+      }
 
       const createdAt = new Date(log.createdAt).getTime();
       if (period === "today" && createdAt < startOfToday) return false;

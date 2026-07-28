@@ -282,14 +282,23 @@ export function downloadCsv(filename: string, content: string) {
 }
 
 export async function downloadFromApi(url: string, fallbackName: string): Promise<void> {
-  const res = await fetch(url, { method: "GET" });
+  const res = await fetch(url, { method: "GET", credentials: "include" });
   if (!res.ok) {
-    let msg = "Falha na exportação";
+    let msg = `Falha na exportação (${res.status})`;
     try {
-      const j = (await res.json()) as { message?: string };
-      if (typeof j?.message === "string") msg = j.message;
+      const text = await res.text();
+      try {
+        const j = JSON.parse(text) as { message?: string };
+        if (typeof j?.message === "string" && j.message.trim()) msg = j.message;
+      } catch {
+        if (text.trim().length > 0 && text.trim().length < 200) msg = text.trim();
+        else if (res.status === 502 || res.status === 504) {
+          msg =
+            "Exportação expirou (pipeline muito grande). Tente de novo — o servidor agora exporta em lotes.";
+        }
+      }
     } catch {
-      /* corpo não-JSON */
+      /* ignore */
     }
     throw new Error(msg);
   }

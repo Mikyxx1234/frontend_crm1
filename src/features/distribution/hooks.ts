@@ -239,7 +239,13 @@ export function usePendingDistributions(enabled = true) {
     queryKey: DISTRIBUTION_PENDING_KEY,
     queryFn: fetchPending,
     enabled,
-    staleTime: 15_000,
+    staleTime: 10_000,
+    // Enquanto houver fila, refresca para refletir drenagem automática
+    // (online / elegível / cron) sem depender só do botão manual.
+    refetchInterval: (q) => {
+      const n = q.state.data?.pending?.length ?? 0;
+      return n > 0 ? 15_000 : false;
+    },
   });
 }
 

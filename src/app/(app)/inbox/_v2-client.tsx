@@ -1371,6 +1371,7 @@ export default function InboxV2ClientPage({
             />
             <ConversationActionsMenu
               conversationId={activeId}
+              contactId={activeContactId}
               isResolved={activeRow.status === "RESOLVED"}
               onOpenFavorites={() => setFavoritesOpen(true)}
               onReopenNewConversation={handleReopenNewConversation}

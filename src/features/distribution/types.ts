@@ -78,7 +78,8 @@ export interface EvaluatedResponsibleSummary {
 export type DistributionReason =
   | "ASSIGNED"
   | "SMART_DISTRIBUTION_NOT_ENABLED"
-  | "NO_ELIGIBLE_RESPONSIBLE";
+  | "NO_ELIGIBLE_RESPONSIBLE"
+  | "NO_DEPARTMENT";
 
 export interface DistributionResult {
   success: boolean;

@@ -61,6 +61,13 @@ const TARGET_OPTS: Opt[] = [
   { value: "deal", label: "Negócio" },
   { value: "contact", label: "Contato" },
 ]
+// Opções próprias do assign_owner (não compartilhadas com transfer_to_ai_agent,
+// que ainda não implementa "both" no backend).
+const ASSIGN_TARGET_OPTS: Opt[] = [
+  { value: "deal", label: "Negócio" },
+  { value: "contact", label: "Contato" },
+  { value: "both", label: "Ambos" },
+]
 const TIMEOUT_ACTIONS: Opt[] = [
   { value: "continue", label: "Continuar fluxo" },
   { value: "stop", label: "Encerrar" },
@@ -77,7 +84,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   move_stage: [{ kind: "source", source: "stage", key: "stageId", label: "Mover para estágio" }],
   assign_owner: [
     { kind: "source", source: "owner", key: "userId", label: "Responsável" },
-    { kind: "select", key: "target", label: "Aplicar em", options: TARGET_OPTS },
+    { kind: "select", key: "target", label: "Aplicar em", options: ASSIGN_TARGET_OPTS },
   ],
   // Sem esta entrada o canvas não monta o seletor — o bloco ficava só com
   // "Selecionar departamento" (StepConfigPanel existe mas não é mais usado).

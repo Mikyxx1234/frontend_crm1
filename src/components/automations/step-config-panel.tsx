@@ -698,16 +698,15 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
       };
     }
     if (step.type === "assign_owner") {
-      const userId = String(config.userId ?? "");
-      if (!userId) {
-        toast.error("Selecione um responsável.");
-        return;
-      }
+      // userId vazio é permitido: significa "limpar responsável" no target
+      // escolhido (desatribuir deal/contato/ambos). Não bloqueia o save.
+      const userId = String(config.userId ?? "").trim();
+      const target = String(config.target ?? "deal");
       config = {
         userId,
-        userLabel: String(config.userLabel ?? ""),
+        userLabel: userId ? String(config.userLabel ?? "") : "",
         userType: String(config.userType ?? "HUMAN") === "AI" ? "AI" : "HUMAN",
-        target: String(config.target ?? "deal") === "contact" ? "contact" : "deal",
+        target: target === "contact" ? "contact" : target === "both" ? "both" : "deal",
       };
     }
     if (step.type === "transfer_department") {
@@ -3200,6 +3199,7 @@ function AssignOwnerStepConfig({
             placeholder="Selecione…"
             value={selectedId}
             options={[
+              { value: "", label: "Sem responsável (limpar)", description: "Desatribuir" },
               ...humans.map((u) => ({
                 value: u.id,
                 label: `${u.name} (${u.email})`,
@@ -3214,6 +3214,11 @@ function AssignOwnerStepConfig({
             onValueChange={handleChange}
           />
         )}
+        {!selectedId && (
+          <p className="text-xs text-muted-foreground">
+            Sem responsável selecionado: este passo vai <b>limpar</b> o responsável atual no alvo escolhido abaixo.
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -3224,6 +3229,7 @@ function AssignOwnerStepConfig({
           options={[
             { value: "deal", label: "Negócio (deal) — herda no contato e nas conversas" },
             { value: "contact", label: "Contato — propaga pras conversas abertas" },
+            { value: "both", label: "Ambos — negócio e contato" },
           ]}
           onValueChange={(v) => setDraft((d) => ({ ...d, target: v }))}
         />

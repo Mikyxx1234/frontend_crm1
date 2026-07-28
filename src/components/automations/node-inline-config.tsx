@@ -41,7 +41,7 @@ export function NodeInlineConfig({
   // de tratar o clique no campo como início de drag/seleção.
   return (
     <div
-      className="ds-flow"
+      className="ds-flow ds-flow--node-inline"
       onPointerDown={stopFlowPointer}
       onMouseDown={stopFlowPointer}
       onClick={stopFlowPointer}

@@ -20,6 +20,19 @@
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
+/* Escopo dos estilos `.cfg-*` DENTRO do card do node — sem o layout
+   full-page do editor (senão `overflow: hidden` + height 100% corta
+   o dropdown de tags para ~1 linha). */
+.ds-flow.ds-flow--node-inline {
+  width: auto;
+  height: auto;
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  display: block;
+  gap: 0;
+  overflow: visible;
+}
 .v2-dark .ds-flow {
   --canvas-dot: rgba(120, 140, 180, 0.16);
 }
@@ -1206,6 +1219,7 @@
 }
 .ds-flow .cfg-combo {
   position: relative;
+  overflow: visible;
 }
 .ds-flow .cfg-pop {
   position: absolute;
@@ -1213,13 +1227,24 @@
   left: 0;
   right: 0;
   z-index: 50;
-  max-height: 180px;
+  max-height: calc(7 * 34px + 8px);
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 4px;
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
   background: var(--glass-bg-modal);
   box-shadow: var(--glass-shadow-lg);
+}
+/* Lista de tags no node: em fluxo (não absolute) pra o card crescer
+   e o React Flow / `.ds-flow { overflow:hidden }` não cortar o dropdown. */
+.ds-flow .cfg-pop.cfg-pop--inplace {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  width: 100%;
+  margin-top: 6px;
 }
 .ds-flow .cfg-pop-item {
   display: flex;

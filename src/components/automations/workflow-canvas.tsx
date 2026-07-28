@@ -34,6 +34,10 @@ import {
   normalizeConditionConfig,
   type ConditionConfig,
 } from "@/lib/automation-condition";
+import {
+  normalizeRoundRobinConfig,
+  type RoundRobinConfig,
+} from "@/lib/automation-round-robin";
 import { cn } from "@/lib/utils";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
 import { IconCopy as Copy, IconTrash as Trash2 } from "@tabler/icons-react";
@@ -46,6 +50,7 @@ import { BusinessHoursNode } from "./business-hours-node";
 import { DistributionNode } from "./distribution-node";
 import { StepPickerModal } from "./step-picker-modal";
 import { ConditionNode } from "./condition-node";
+import { RoundRobinNode } from "./round-robin-node";
 import { DelayNode } from "./delay-node";
 import { FinishNode } from "./finish-node";
 import { GotoNode } from "./goto-node";
@@ -62,6 +67,7 @@ const nodeTypes = {
   trigger: TriggerNode,
   action: ActionNode,
   condition: ConditionNode,
+  roundRobin: RoundRobinNode,
   businessHours: BusinessHoursNode,
   distribution: DistributionNode,
   delay: DelayNode,
@@ -97,6 +103,7 @@ function readRfPos(config: unknown): RfPos | null {
 
 function rfNodeType(stepType: string): keyof typeof nodeTypes {
   if (stepType === "condition") return "condition";
+  if (stepType === "round_robin") return "roundRobin";
   if (stepType === "business_hours") return "businessHours";
   if (stepType === "execute_distribution") return "distribution";
   if (stepType === "delay") return "delay";
@@ -144,6 +151,7 @@ const TERMINAL_STEP_TYPES = new Set([
  */
 const BRANCHING_STEP_TYPES = new Set([
   "condition",
+  "round_robin",
   "wait_for_reply",
   "business_hours",
   "question",
@@ -334,6 +342,27 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
       }
     }
 
+    // round_robin: cada opção tem seu próprio handle `option:<id>` —
+    // sem "else" obrigatória (ver help text do card).
+    if (a.type === "round_robin") {
+      const rrCfg = normalizeRoundRobinConfig(cfg);
+      rrCfg.options.forEach((option) => {
+        if (option.nextStepId && stepIds.has(option.nextStepId)) {
+          out.push({
+            id: `${a.id}-option:${option.id}-${option.nextStepId}`,
+            source: a.id,
+            target: option.nextStepId,
+            sourceHandle: `option:${option.id}`,
+            animated: false,
+            data: EDGE_DATA_BUTTON,
+            type: EDGE_TYPE,
+            interactionWidth: INTERACT_W,
+            ...DELETE_LABEL_PROPS,
+          });
+        }
+      });
+    }
+
     // execute_distribution = IF de 2 saídas (estilo n8n):
     //   • SIM (handle "true") = fluxo linear via nextStepId (bloco genérico abaixo).
     //   • NÃO (handle "false") = ramo `elseStepId` (sem agente elegível).
@@ -387,6 +416,10 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
     // branch tem o seu. Pular pra não criar edge fantasma no handle
     // "false" do losango antigo.
     if (a.type === "condition") continue;
+
+    // round_robin idem — cada opção tem seu próprio destino, sem
+    // nextStepId raiz.
+    if (a.type === "round_robin") continue;
 
     // Nós interativos (question/interactive/template-com-botões) roteiam só
     // pelos handles (btn_N/else) — não usam nextStepId raiz. Pular evita
@@ -513,9 +546,9 @@ function WorkflowCanvasInner({
     migratedRef.current = true;
     const migrated = steps.map((s, i) => {
       const cfg = { ...(s.config as Record<string, unknown>) };
-      // Condition multi-branch controla destino nas branches — não
-      // inventa nextStepId raiz pra ele.
-      if (s.type !== "condition") {
+      // Condition multi-branch / round_robin controlam destino nas
+      // próprias branches/opções — não inventa nextStepId raiz pra eles.
+      if (s.type !== "condition" && s.type !== "round_robin") {
         const next = steps[i + 1];
         cfg.nextStepId = next ? next.id : NONE;
       }
@@ -674,6 +707,19 @@ function WorkflowCanvasInner({
           };
         }
 
+        if (step.type === "round_robin") {
+          const rrCfg = normalizeRoundRobinConfig(step.config);
+          return {
+            id: step.id,
+            type: "roundRobin" as const,
+            position: pos,
+            data: {
+              ...baseData,
+              options: rrCfg.options,
+            },
+          };
+        }
+
         if (step.type === "wait_for_reply") {
           const cfg = step.config as Record<string, unknown>;
           const tMs = Number(cfg.timeoutMs ?? 0);
@@ -801,6 +847,9 @@ function WorkflowCanvasInner({
           if (step.type === "condition") {
             data.branches = normalizeConditionConfig(next).branches;
           }
+          if (step.type === "round_robin") {
+            data.options = normalizeRoundRobinConfig(next).options;
+          }
           if (step.type === "wait_for_reply") {
             const tMs = Number(next.timeoutMs ?? 0);
             let timeoutLabel = "Cronômetro";
@@ -858,6 +907,15 @@ function WorkflowCanvasInner({
           changed = true;
         }
 
+        if (s.type === "round_robin" && Array.isArray(cfg.options)) {
+          const nextOptions = (cfg.options as Record<string, unknown>[]).map((o) => {
+            if (o.nextStepId === id) return { ...o, nextStepId: undefined };
+            return o;
+          });
+          cfg.options = nextOptions;
+          changed = true;
+        }
+
         return changed ? { ...s, config: cfg } : s;
       });
 
@@ -878,7 +936,7 @@ function WorkflowCanvasInner({
       const newId = newStepId();
       const cfg = { ...(orig.config as Record<string, unknown>) };
 
-      if (orig.type !== "condition") cfg.nextStepId = NONE;
+      if (orig.type !== "condition" && orig.type !== "round_robin") cfg.nextStepId = NONE;
       delete cfg.elseGotoStepId;
       delete cfg.elseStepId;
       delete cfg.timeoutGotoStepId;
@@ -892,6 +950,12 @@ function WorkflowCanvasInner({
       if (orig.type === "condition" && Array.isArray(cfg.branches)) {
         cfg.branches = (cfg.branches as Record<string, unknown>[]).map((b) => ({
           ...b,
+          nextStepId: undefined,
+        }));
+      }
+      if (orig.type === "round_robin" && Array.isArray(cfg.options)) {
+        cfg.options = (cfg.options as Record<string, unknown>[]).map((o) => ({
+          ...o,
           nextStepId: undefined,
         }));
       }
@@ -914,7 +978,7 @@ function WorkflowCanvasInner({
       config.__hasExplicitEdges = true;
       // Step novo é folha — marca explicitamente como "fim de ramo"
       // (ver comentário em handlePendingStepSelect).
-      if (stepType !== "condition") config.nextStepId = NONE;
+      if (stepType !== "condition" && stepType !== "round_robin") config.nextStepId = NONE;
 
       if (!afterStepId) {
         const lastStep = cur[cur.length - 1];
@@ -923,7 +987,7 @@ function WorkflowCanvasInner({
         config.__rfPos = { x, y: NODE_Y };
         const step: AutomationStep = { id, type: stepType, config };
 
-        if (lastStep && lastStep.type !== "condition") {
+        if (lastStep && lastStep.type !== "condition" && lastStep.type !== "round_robin") {
           const prevCfg = { ...(lastStep.config as Record<string, unknown>), nextStepId: id };
           const updated = cur.map((s) => s.id === lastStep.id ? { ...s, config: prevCfg } : s);
           onStepsChange([...updated, step]);
@@ -940,7 +1004,7 @@ function WorkflowCanvasInner({
 
         if (idx < 0) {
           onStepsChange([...cur, step]);
-        } else if (afterStep.type === "condition") {
+        } else if (afterStep.type === "condition" || afterStep.type === "round_robin") {
           onStepsChange([...cur.slice(0, idx + 1), step, ...cur.slice(idx + 1)]);
         } else {
           const prevCfg = { ...(afterStep.config as Record<string, unknown>), nextStepId: id };
@@ -1061,6 +1125,21 @@ function WorkflowCanvasInner({
           return;
         }
 
+        // Handle `option:<id>` → atribui destino a uma opção do round_robin
+        const optionMatch = sourceHandle.match(/^option:(.+)$/);
+        if (optionMatch && srcStep.type === "round_robin") {
+          const optionId = optionMatch[1];
+          const rrCfg = normalizeRoundRobinConfig(srcStep.config);
+          const nextCfg: RoundRobinConfig = {
+            options: rrCfg.options.map((o) =>
+              o.id === optionId ? { ...o, nextStepId: target } : o
+            ),
+          };
+          const cfg = nextCfg as unknown as Record<string, unknown>;
+          onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
+          return;
+        }
+
         // Handle `else` no condition multi-branch → fallback
         if (sourceHandle === "else" && srcStep.type === "condition") {
           const condCfg = normalizeConditionConfig(srcStep.config);
@@ -1095,9 +1174,10 @@ function WorkflowCanvasInner({
         }
       }
 
-      // Condition multi-branch não aceita `nextStepId` raiz — os
-      // destinos saem pelos handles `branch:<id>` ou `else` acima.
-      if (srcStep.type === "condition") return;
+      // Condition multi-branch / round_robin não aceitam `nextStepId`
+      // raiz — os destinos saem pelos handles `branch:<id>`/`else` ou
+      // `option:<id>` acima.
+      if (srcStep.type === "condition" || srcStep.type === "round_robin") return;
 
       const cfg = { ...srcStep.config } as Record<string, unknown>;
       cfg.nextStepId = target;
@@ -1160,7 +1240,7 @@ function WorkflowCanvasInner({
       // Step recém-criado é folha por default — marca explicitamente como
       // "fim de ramo" pra não cair no fallback linear da array (que
       // disparava passo do ramo vizinho por engano).
-      if (stepType !== "condition") config.nextStepId = NONE;
+      if (stepType !== "condition" && stepType !== "round_robin") config.nextStepId = NONE;
       const step: AutomationStep = { id, type: stepType, config };
       const cur = stepsRef.current;
 
@@ -1234,6 +1314,24 @@ function WorkflowCanvasInner({
           return;
         }
 
+        // round_robin: handle `option:<id>`
+        const optionMatch = sourceHandle.match(/^option:(.+)$/);
+        if (optionMatch && srcStep.type === "round_robin") {
+          const optionId = optionMatch[1];
+          const rrCfg = normalizeRoundRobinConfig(srcStep.config);
+          const nextCfg: RoundRobinConfig = {
+            options: rrCfg.options.map((o) =>
+              o.id === optionId ? { ...o, nextStepId: id } : o
+            ),
+          };
+          const cfg = nextCfg as unknown as Record<string, unknown>;
+          const updated = cur.map((s) =>
+            s.id === sourceId ? { ...s, config: cfg } : s
+          );
+          onStepsChange([...updated, step]);
+          return;
+        }
+
         if (sourceHandle === "else") {
           const cfg = { ...srcStep.config, elseGotoStepId: id };
           const updated = cur.map((s) =>
@@ -1272,7 +1370,7 @@ function WorkflowCanvasInner({
       }
 
       const srcStepForNext = cur.find((s) => s.id === sourceId);
-      if (srcStepForNext && srcStepForNext.type !== "condition") {
+      if (srcStepForNext && srcStepForNext.type !== "condition" && srcStepForNext.type !== "round_robin") {
         const srcCfg = { ...srcStepForNext.config } as Record<string, unknown>;
         srcCfg.nextStepId = id;
         const updated = cur.map((s) => s.id === sourceId ? { ...s, config: srcCfg } : s);
@@ -1441,6 +1539,21 @@ function WorkflowCanvasInner({
         return;
       }
 
+      // round_robin: handle `option:<id>` → limpa o destino da opção
+      const optionMatch = sourceHandle?.match(/^option:(.+)$/);
+      if (optionMatch && srcStep.type === "round_robin") {
+        const optionId = optionMatch[1];
+        const rrCfg = normalizeRoundRobinConfig(srcStep.config);
+        const nextCfg: RoundRobinConfig = {
+          options: rrCfg.options.map((o) =>
+            o.id === optionId ? { ...o, nextStepId: undefined } : o
+          ),
+        };
+        const cfg = nextCfg as unknown as Record<string, unknown>;
+        onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
+        return;
+      }
+
       if (sourceHandle === "else") {
         const cfg = { ...srcStep.config } as Record<string, unknown>;
         delete cfg.elseGotoStepId;
@@ -1501,6 +1614,7 @@ function WorkflowCanvasInner({
         "stop_automation",
         "transfer_automation",
         "condition",
+        "round_robin",
       ]);
       const prevNext = lastStep
         ? readNextStepId(lastStep.config)

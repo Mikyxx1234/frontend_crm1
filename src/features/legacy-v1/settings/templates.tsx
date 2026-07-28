@@ -535,7 +535,7 @@ function TemplateForm({
         </div>
 
         <div className="min-w-0">
-          <InternalTemplatePreview name={name} content={content} channelType={channelType} />
+          <InternalTemplatePreview name={name} content={content} channelType={channelType} attachments={attachments} />
         </div>
       </div>
 
@@ -638,10 +638,12 @@ function InternalTemplatePreview({
   name,
   content,
   channelType,
+  attachments,
 }: {
   name: string;
   content: string;
   channelType: string;
+  attachments: TemplateAttachment[];
 }) {
   const channelLabel = channelType ? CHANNEL_LABELS[channelType] ?? channelType : "Todos os canais";
   return (
@@ -656,20 +658,57 @@ function InternalTemplatePreview({
             {name.trim() || "Novo modelo"}
           </span>
         </div>
-        <div className="min-w-0 p-3">
-          <div className="break-words whitespace-pre-wrap rounded-xl rounded-tl-sm bg-[var(--glass-bg-strong)] px-3 py-2.5 text-[12.5px] leading-relaxed text-[var(--text-secondary)] shadow-sm">
-            {content.trim() ? (
-              highlightVars(content)
-            ) : (
-              <span className="text-[var(--text-muted)] opacity-60">A mensagem aparece aqui…</span>
-            )}
-          </div>
+        {/* Sequência de envio: 1ª mensagem (`content`) → Arquivo 1 →
+            (2ª mensagem / messageBefore) → Arquivo 2 → … */}
+        <div className="min-w-0 max-h-[360px] space-y-2.5 overflow-y-auto p-3">
+          <PreviewMessageBlock label="1ª mensagem" text={content} />
+          {attachments.map((att, i) => (
+            <React.Fragment key={`${att.url}-${i}`}>
+              {i >= 1 ? (
+                <PreviewMessageBlock label={`${i + 1}ª mensagem`} text={att.messageBefore ?? ""} />
+              ) : null}
+              <PreviewAttachmentBlock label={`Arquivo ${i + 1}`} attachment={att} />
+            </React.Fragment>
+          ))}
         </div>
         <div className="border-t border-[var(--glass-border-subtle)] px-3 py-2 text-[11px] font-semibold text-[var(--text-muted)]">
           {channelLabel}
         </div>
       </div>
     </aside>
+  );
+}
+
+function PreviewMessageBlock({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="min-w-0 space-y-1">
+      <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">{label}</p>
+      <div className="break-words whitespace-pre-wrap rounded-xl rounded-tl-sm bg-[var(--glass-bg-strong)] px-3 py-2.5 text-[12.5px] leading-relaxed text-[var(--text-secondary)] shadow-sm">
+        {text.trim() ? (
+          highlightVars(text)
+        ) : (
+          <span className="text-[var(--text-muted)] opacity-60">— sem texto —</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PreviewAttachmentBlock({ label, attachment }: { label: string; attachment: TemplateAttachment }) {
+  const fileName = attachment.name || attachment.url || "Arquivo";
+  return (
+    <div className="min-w-0 space-y-1">
+      <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">{label}</p>
+      <div className="flex min-w-0 items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2.5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]">
+          <FileText className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-body text-[12px] font-medium text-[var(--text-primary)]">{fileName}</p>
+          <p className="truncate font-body text-[10px] text-[var(--text-muted)]">Anexo · será enviado nesta ordem</p>
+        </div>
+      </div>
+    </div>
   );
 }
 

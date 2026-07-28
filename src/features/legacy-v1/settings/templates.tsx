@@ -339,7 +339,12 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
           <DialogHeader className="pr-10">
             <DialogTitle>{editing ? "Editar Template" : "Novo Template"}</DialogTitle>
           </DialogHeader>
+          {/* `key` força remount ao trocar criar↔editar: o form só lê
+              `initial` no useState do mount; sem key, reabrir "Editar"
+              após "Novo" (ou Dialog que mantém o conteúdo montado) deixa
+              os campos vazios com o título "Editar Template". */}
           <TemplateForm
+            key={editing?.id ?? "new"}
             initial={editing}
             onSubmit={(data) => {
               if (editing) {

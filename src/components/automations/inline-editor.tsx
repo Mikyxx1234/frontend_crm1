@@ -208,6 +208,28 @@ function Field({
         </Labeled>
       )
 
+    case "departmentMulti":
+      return (
+        <Labeled label={field.label} optional={field.optional} hint={field.hint}>
+          <DepartmentMultiSelect
+            selectedIds={
+              Array.isArray(config.departmentIds)
+                ? (config.departmentIds as unknown[]).filter(
+                    (v): v is string => typeof v === "string",
+                  )
+                : []
+            }
+            onChange={(ids, names) =>
+              onChange({
+                ...config,
+                departmentIds: ids,
+                departmentNames: names,
+              })
+            }
+          />
+        </Labeled>
+      )
+
     case "duration":
       return <DurationField label={field.label} ms={num(config[field.key])} onChange={(ms) => set(field.key, ms)} />
 
@@ -643,6 +665,75 @@ function DepartmentSelect({
         onPick(id, opt?.label ?? "")
       }}
     />
+  )
+}
+
+function DepartmentMultiSelect({
+  selectedIds,
+  onChange,
+}: {
+  selectedIds: string[]
+  onChange: (ids: string[], names: string[]) => void
+}) {
+  const { options, isLoading, isError } = useDepartmentOptions()
+  if (isError) {
+    return (
+      <p className="cfg-info">
+        Não foi possível carregar os departamentos. Verifique permissão (Admin/Manager)
+        ou se a API `/api/settings/departments` está respondendo.
+      </p>
+    )
+  }
+  if (!isLoading && options.length === 0) {
+    return (
+      <p className="cfg-info">
+        Nenhum departamento cadastrado. Crie em Configurações → Conversas → Departamentos.
+      </p>
+    )
+  }
+  const selected = new Set(selectedIds)
+  const toggle = (id: string) => {
+    const next = selected.has(id)
+      ? selectedIds.filter((x) => x !== id)
+      : [...selectedIds, id]
+    const names = next
+      .map((nid) => options.find((o) => o.value === nid)?.label)
+      .filter((n): n is string => !!n)
+    onChange(next, names)
+  }
+  return (
+    <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-2">
+      {isLoading ? (
+        <p className="cfg-info">Carregando departamentos…</p>
+      ) : (
+        options.map((opt) => {
+          const checked = selected.has(opt.value)
+          return (
+            <label
+              key={opt.value}
+              className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[12px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]"
+            >
+              <input
+                type="checkbox"
+                className="nodrag size-3.5 accent-[var(--brand-primary)]"
+                checked={checked}
+                onChange={() => toggle(opt.value)}
+              />
+              <span className="truncate font-medium">{opt.label}</span>
+            </label>
+          )
+        })
+      )}
+      {selectedIds.length > 0 && (
+        <button
+          type="button"
+          className="nodrag mt-0.5 self-start text-[11px] font-semibold text-[var(--brand-primary)] hover:underline"
+          onClick={() => onChange([], [])}
+        >
+          Limpar seleção
+        </button>
+      )}
+    </div>
   )
 }
 

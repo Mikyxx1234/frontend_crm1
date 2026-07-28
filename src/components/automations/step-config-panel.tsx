@@ -650,8 +650,21 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
       config = {};
     }
     if (step.type === "execute_distribution") {
+      const ids = Array.isArray(config.departmentIds)
+        ? (config.departmentIds as unknown[]).filter(
+            (v): v is string => typeof v === "string" && v.trim().length > 0,
+          )
+        : [];
+      const names = Array.isArray(config.departmentNames)
+        ? (config.departmentNames as unknown[]).filter(
+            (v): v is string => typeof v === "string",
+          )
+        : [];
       config = {
         distributionType: config.distributionType ?? "",
+        departmentIds: ids,
+        departmentNames: names,
+        elseStepId: config.elseStepId ?? "",
       };
     }
     if (step.type === "consume_stock") {
@@ -1631,6 +1644,7 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                   Conecte cada saída do bloco no canvas para definir os próximos passos.
                 </p>
               </div>
+              <ExecuteDistributionDeptsDraft draft={draft} setDraft={setDraft} />
               <div className="space-y-2">
                 <Label htmlFor="sc-dist-type">Tipo / segmento (opcional)</Label>
                 <Input
@@ -2942,6 +2956,100 @@ const ARCHETYPE_LABEL: Record<string, string> = {
   VENDEDOR: "Vendedor",
   SUPORTE: "Suporte",
 };
+
+function ExecuteDistributionDeptsDraft({
+  draft,
+  setDraft,
+}: {
+  draft: Record<string, unknown>;
+  setDraft: Dispatch<SetStateAction<Record<string, unknown>>>;
+}) {
+  const { data: departments = [], isLoading } = useQuery({
+    queryKey: ["automation-departments"],
+    queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
+      const res = await fetch(apiUrl("/api/settings/departments"), {
+        credentials: "include",
+      });
+      if (!res.ok) return [];
+      return (await res.json()) as Array<{ id: string; name: string }>;
+    },
+    staleTime: 120_000,
+  });
+
+  const selectedIds = Array.isArray(draft.departmentIds)
+    ? (draft.departmentIds as unknown[]).filter(
+        (v): v is string => typeof v === "string",
+      )
+    : [];
+  const selected = new Set(selectedIds);
+
+  const toggle = (id: string) => {
+    const next = selected.has(id)
+      ? selectedIds.filter((x) => x !== id)
+      : [...selectedIds, id];
+    const names = next
+      .map((nid) => departments.find((d) => d.id === nid)?.name)
+      .filter((n): n is string => !!n);
+    setDraft((prev) => ({
+      ...prev,
+      departmentIds: next,
+      departmentNames: names,
+    }));
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>Departamentos (opcional)</Label>
+      <p className="text-[11px] text-[var(--text-muted)]">
+        Vazio = distribuição geral. Com seleção, só membros desses departamentos
+        entram na disputa.
+      </p>
+      <div className="flex max-h-44 flex-col gap-1 overflow-y-auto rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-2">
+        {isLoading ? (
+          <p className="px-1 py-2 text-[12px] text-[var(--text-muted)]">
+            Carregando…
+          </p>
+        ) : departments.length === 0 ? (
+          <p className="px-1 py-2 text-[12px] text-[var(--text-muted)]">
+            Nenhum departamento cadastrado.
+          </p>
+        ) : (
+          departments.map((d) => (
+            <label
+              key={d.id}
+              className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[12.5px] hover:bg-[var(--glass-bg-overlay)]"
+            >
+              <input
+                type="checkbox"
+                className="size-3.5 accent-[var(--brand-primary)]"
+                checked={selected.has(d.id)}
+                onChange={() => toggle(d.id)}
+              />
+              <span className="truncate font-medium text-[var(--text-primary)]">
+                {d.name}
+              </span>
+            </label>
+          ))
+        )}
+      </div>
+      {selectedIds.length > 0 && (
+        <button
+          type="button"
+          className="text-[11px] font-semibold text-[var(--brand-primary)] hover:underline"
+          onClick={() =>
+            setDraft((prev) => ({
+              ...prev,
+              departmentIds: [],
+              departmentNames: [],
+            }))
+          }
+        >
+          Limpar seleção ({selectedIds.length})
+        </button>
+      )}
+    </div>
+  );
+}
 
 function TransferDepartmentStepConfig({
   draft,

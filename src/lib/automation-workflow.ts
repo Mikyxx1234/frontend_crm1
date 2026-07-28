@@ -382,8 +382,20 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
     case "consume_stock":
       return "Baixar estoque dos produtos do negócio";
     case "execute_distribution": {
-      const ruleId = c.distributionRuleId ? String(c.distributionRuleId) : "";
-      return ruleId ? `Regra: ${ruleId.slice(0, 8)}…` : "Distribuição inteligente";
+      const names = Array.isArray(c.departmentNames)
+        ? (c.departmentNames as unknown[]).filter(
+            (v): v is string => typeof v === "string" && v.trim().length > 0,
+          )
+        : [];
+      const t = c.distributionType ? String(c.distributionType) : "";
+      if (names.length > 0) {
+        const deptLabel =
+          names.length <= 2
+            ? names.join(", ")
+            : `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+        return t ? `${deptLabel} · ${t}` : deptLabel;
+      }
+      return t ? `Distribuição: ${t}` : "Distribuição inteligente";
     }
     case "business_hours": {
       const tz = c.timezone ? String(c.timezone) : "America/Sao_Paulo";
@@ -550,7 +562,7 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
         target: "deal",
       };
     case "execute_distribution":
-      return { distributionType: "" };
+      return { distributionType: "", departmentIds: [], departmentNames: [] };
     default:
       return {};
   }

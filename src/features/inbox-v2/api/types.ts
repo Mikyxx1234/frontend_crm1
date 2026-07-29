@@ -75,6 +75,8 @@ export interface ConversationListRow {
     name: string;
     email: string;
     avatarUrl?: string | null;
+    /** HUMAN | AI | … — usado para Assumir / Devolver à IA. */
+    type?: string | null;
   } | null;
   lastInboundAt: string | null;
   lastMessageAt?: string | null;

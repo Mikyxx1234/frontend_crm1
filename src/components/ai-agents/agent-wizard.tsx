@@ -68,9 +68,10 @@ const LANGUAGE_OPTIONS = [
 ];
 
 const MODEL_OPTIONS = [
+  { value: "gpt-4.1-mini", label: "gpt-4.1-mini — recomendado (atendimento)" },
   { value: "gpt-4o-mini", label: "gpt-4o-mini — rápido e barato" },
   { value: "gpt-4o", label: "gpt-4o — mais capaz, mais caro" },
-  { value: "gpt-4.1-mini", label: "gpt-4.1-mini — intermediário" },
+  { value: "gpt-5-mini", label: "gpt-5-mini — família 5 (se sua chave suportar)" },
 ];
 
 const TONE_PRESETS = [

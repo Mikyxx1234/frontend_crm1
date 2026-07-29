@@ -1373,6 +1373,8 @@ export default function InboxV2ClientPage({
               conversationId={activeId}
               contactId={activeContactId}
               isResolved={activeRow.status === "RESOLVED"}
+              assigneeId={activeRow.assignedTo?.id ?? null}
+              assigneeType={activeRow.assignedTo?.type ?? null}
               onOpenFavorites={() => setFavoritesOpen(true)}
               onReopenNewConversation={handleReopenNewConversation}
               onResolved={(id) => {

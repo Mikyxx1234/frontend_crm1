@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 
 import {
@@ -14,10 +15,15 @@ import {
   IconUsersGroup,
   IconChevronRight,
   IconLoader2,
+  IconRobot,
+  IconUser,
 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
-import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
+import {
+  useAssignConversation,
+  useToggleConversationResolve,
+} from "@/features/inbox-v2/hooks";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { useExecuteDistribution } from "@/features/distribution/hooks";
 import { apiUrl } from "@/lib/api";
@@ -44,6 +50,8 @@ interface ConversationActionsMenuProps {
   departmentId?: string | null;
   /** Se true, o botao "Encerrar" abre um modal exigindo folha da arvore. */
   requireTabulationOnClose?: boolean;
+  assigneeId?: string | null;
+  assigneeType?: string | null;
 }
 
 export function ConversationActionsMenu({
@@ -57,11 +65,18 @@ export function ConversationActionsMenu({
   onResolved,
   departmentId,
   requireTabulationOnClose,
+  assigneeId: _assigneeId,
+  assigneeType,
 }: ConversationActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [deptMenuOpen, setDeptMenuOpen] = useState(false);
   const [tabulationOpen, setTabulationOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { data: session } = useSession();
+  const currentUserId =
+    (session?.user as { id?: string } | undefined)?.id ?? null;
+  const assign = useAssignConversation();
+  const isAiAssignee = (assigneeType ?? "").toUpperCase() === "AI";
   const toggleResolve = useToggleConversationResolve({
     onNewConversation: (newId) => {
       onReopenNewConversation?.(newId);
@@ -69,6 +84,31 @@ export function ConversationActionsMenu({
     onResolved: (id) => onResolved?.(id),
   });
   const executeDist = useExecuteDistribution();
+
+  const aiAgentsQuery = useQuery({
+    queryKey: ["inbox-ai-agents-active"],
+    queryFn: async (): Promise<
+      Array<{ userId: string; name: string; active: boolean }>
+    > => {
+      const res = await fetch(apiUrl("/api/ai-agents"), {
+        credentials: "include",
+      });
+      if (!res.ok) return [];
+      const raw = (await res.json()) as unknown;
+      const list = Array.isArray(raw) ? raw : [];
+      return (
+        list as Array<{ userId?: string; name?: string; active?: boolean }>
+      )
+        .filter((a) => a.active !== false && typeof a.userId === "string")
+        .map((a) => ({
+          userId: a.userId as string,
+          name: a.name ?? "Agente IA",
+          active: a.active !== false,
+        }));
+    },
+    enabled: open && !isAiAssignee,
+    staleTime: 60_000,
+  });
 
   const deptsQuery = useQuery({
     queryKey: ["inbox-distribute-departments"],
@@ -192,8 +232,51 @@ export function ConversationActionsMenu({
     );
   }
 
+  function handleAssume() {
+    if (!conversationId || !currentUserId) {
+      toast.error("Sessão inválida para assumir.");
+      return;
+    }
+    assign.mutate(
+      { conversationId, assignedToId: currentUserId },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          toast.success("Você assumiu a conversa.");
+        },
+      },
+    );
+  }
+
+  function handleReturnToAi() {
+    if (!conversationId) return;
+    const agent = aiAgentsQuery.data?.[0];
+    if (!agent?.userId) {
+      toast.error("Nenhum agente IA ativo encontrado.");
+      return;
+    }
+    assign.mutate(
+      { conversationId, assignedToId: agent.userId },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          toast.success(`Devolvida à IA (${agent.name}).`);
+        },
+      },
+    );
+  }
+
   return (
-    <div ref={containerRef} className="relative inline-flex">
+    <div ref={containerRef} className="relative inline-flex items-center gap-1.5">
+      {isAiAssignee && (
+        <span
+          className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
+          title="Conversa atribuída a um agente de IA"
+        >
+          <IconRobot size={12} stroke={2} />
+          IA
+        </span>
+      )}
       <ButtonGlass
         variant="glass"
         size="icon"
@@ -209,6 +292,54 @@ export function ConversationActionsMenu({
         // com o padrao dos menus contextuais do CRM. Icones a esquerda,
         // labels a direita — legibilidade + affordance clara.
         <div className="absolute right-0 top-full z-30 mt-2 w-56 overflow-visible rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-1 shadow-[0_12px_32px_rgba(15,23,42,0.12)] v2-dark:bg-[#1a1f2e]">
+          {isAiAssignee ? (
+            <button
+              type="button"
+              onClick={handleAssume}
+              disabled={assign.isPending || !currentUserId}
+              className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left text-[13px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
+            >
+              {assign.isPending ? (
+                <IconLoader2
+                  size={16}
+                  className="shrink-0 animate-spin text-[var(--brand-primary)]"
+                />
+              ) : (
+                <IconUser
+                  size={16}
+                  className="shrink-0 text-[var(--text-muted)]"
+                  stroke={2}
+                />
+              )}
+              <span>Assumir conversa</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleReturnToAi}
+              disabled={
+                assign.isPending ||
+                aiAgentsQuery.isLoading ||
+                !(aiAgentsQuery.data && aiAgentsQuery.data.length > 0)
+              }
+              className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left text-[13px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
+            >
+              {assign.isPending || aiAgentsQuery.isLoading ? (
+                <IconLoader2
+                  size={16}
+                  className="shrink-0 animate-spin text-[var(--brand-primary)]"
+                />
+              ) : (
+                <IconRobot
+                  size={16}
+                  className="shrink-0 text-[var(--text-muted)]"
+                  stroke={2}
+                />
+              )}
+              <span>Devolver à IA</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleSearch}

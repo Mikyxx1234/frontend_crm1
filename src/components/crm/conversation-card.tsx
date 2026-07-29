@@ -65,6 +65,8 @@ export interface Conversation {
   tags?: Array<{ id: string; name: string; color?: string | null }>
   /** Id do responsável atual — usado pelo AssigneePopover. */
   assigneeId?: string | null
+  /** User.type do responsável (ex.: AI) — Assumir / Devolver à IA. */
+  assigneeType?: string | null
   /** Foto (User.avatarUrl) do responsável — usada no UserAvatar do slot. */
   assigneeAvatarUrl?: string | null
   /**

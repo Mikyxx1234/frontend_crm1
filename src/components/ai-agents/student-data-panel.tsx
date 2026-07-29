@@ -5,6 +5,7 @@ import {
   IconDatabase as Database,
   IconLoader2 as Loader2,
   IconSearch as Search,
+  IconTrash as Trash,
   IconUpload as Upload,
 } from "@tabler/icons-react";
 import * as React from "react";
@@ -81,6 +82,24 @@ export function StudentDataPanel() {
     },
   });
 
+  const clearMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(apiUrl("/api/academic-records"), {
+        method: "DELETE",
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.message ?? "Erro ao limpar a base.");
+      return d as { deleted: number };
+    },
+    onSuccess: (d) => {
+      toast.success(`Base limpa: ${d.deleted} registros removidos.`);
+      queryClient.invalidateQueries({ queryKey: ["academic-records-status"] });
+    },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Erro ao limpar a base.");
+    },
+  });
+
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) uploadMutation.mutate(file);
@@ -152,7 +171,7 @@ export function StudentDataPanel() {
           </div>
         </div>
 
-        <div className="shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           <input
             ref={inputRef}
             type="file"
@@ -160,6 +179,24 @@ export function StudentDataPanel() {
             onChange={onFile}
             className="hidden"
           />
+          {(data?.count ?? 0) > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              title="Limpar base"
+              aria-label="Limpar base"
+              className="text-destructive hover:text-destructive"
+              disabled={clearMutation.isPending}
+              onClick={() => clearMutation.mutate()}
+            >
+              {clearMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash className="size-4" />
+              )}
+            </Button>
+          )}
           <Button
             type="button"
             className="gap-2"

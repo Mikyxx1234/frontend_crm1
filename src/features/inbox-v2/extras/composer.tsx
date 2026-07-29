@@ -231,6 +231,11 @@ export function Composer({
     draftRef.current = value;
   }, [value]);
 
+  // 29/jul/26 — trava local da sequência multi-anexo: `sending` do pai só
+  // cobre a mutation, não o upload longo — sem isso o Enter reenvia o texto.
+  const [sequenceSending, setSequenceSending] = useState(false);
+  const busy = !!sending || sequenceSending;
+
   const qc = useQueryClient();
 
   // Imagens coladas (Ctrl+V) → ficam "encostadas" como anexos pendentes e só
@@ -421,16 +426,24 @@ export function Composer({
 
     if (list.length > 0 && mediaNeedsSequence(list) && conversationId) {
       const targetConversationId = conversationId;
+      const content = next;
+      // 29/jul/26 — limpa antes do await: durante o upload o texto no campo
+      // convidava Enter e gerava POST duplicado da 1ª mensagem.
+      onChange("");
+      draftRef.current = "";
+      setSequenceSending(true);
       void (async () => {
-        await sendInternalTemplateSequence({
-          conversationId: targetConversationId,
-          content: next,
-          attachments: list,
-        });
-        onChange("");
-        draftRef.current = "";
-        qc.invalidateQueries({ queryKey: messagesKey(targetConversationId) });
-        qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+        try {
+          await sendInternalTemplateSequence({
+            conversationId: targetConversationId,
+            content,
+            attachments: list,
+          });
+          qc.invalidateQueries({ queryKey: messagesKey(targetConversationId) });
+          qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+        } finally {
+          setSequenceSending(false);
+        }
       })();
       return;
     }
@@ -482,16 +495,21 @@ export function Composer({
         // síncrono do slash (setDraft já rodou, `draftRef` já está fresco).
         queueMicrotask(() => {
           const text = draftRef.current;
+          onChange("");
+          draftRef.current = "";
+          setSequenceSending(true);
           void (async () => {
-            await sendInternalTemplateSequence({
-              conversationId: targetConversationId,
-              content: text,
-              attachments: list,
-            });
-            onChange("");
-            draftRef.current = "";
-            qc.invalidateQueries({ queryKey: messagesKey(targetConversationId) });
-            qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+            try {
+              await sendInternalTemplateSequence({
+                conversationId: targetConversationId,
+                content: text,
+                attachments: list,
+              });
+              qc.invalidateQueries({ queryKey: messagesKey(targetConversationId) });
+              qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+            } finally {
+              setSequenceSending(false);
+            }
           })();
         });
         return;
@@ -574,7 +592,7 @@ export function Composer({
     // Permite enviar quando há texto OU algum anexo encostado (modelo ou imagem colada).
     if (
       (!trimmed && pendingMediaList.length === 0 && pendingFiles.length === 0) ||
-      sending ||
+      busy ||
       inputDisabled
     )
       return;
@@ -619,7 +637,7 @@ export function Composer({
   // no composer (com preview). NÃO envia: só vai no próximo clique em enviar
   // / Enter, junto com o texto. Paste de texto normal segue intacto.
   function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>) {
-    if (inputDisabled || sending) return;
+    if (inputDisabled || busy) return;
     const items = e.clipboardData?.items;
     if (!items) return;
 
@@ -846,7 +864,7 @@ export function Composer({
               selectedChannelId={selectedChannelId ?? null}
               conversationChannelId={conversationChannelId ?? null}
               onSelect={onSelectChannel}
-              disabled={sending}
+              disabled={busy}
               className="mr-1"
             />
           ) : null}
@@ -975,7 +993,7 @@ export function Composer({
                   requireTabulationOnClose={requireTabulationOnClose}
                   onReopenNewConversation={onReopenNewConversation}
                   onResolved={onResolved}
-                  disabled={sending}
+                  disabled={busy}
                 />
               )}
             </div>
@@ -1021,7 +1039,7 @@ export function Composer({
                       setEmojiOpen((v) => !v);
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
-                    disabled={inputDisabled || sending}
+                    disabled={inputDisabled || busy}
                   >
                     <IconMoodSmile size={20} />
                   </ButtonGlass>
@@ -1071,7 +1089,7 @@ export function Composer({
                     ? "Sessão encerrada — use um template"
                     : placeholder ?? "Escreva uma mensagem ou / para modelos..."
               }
-              disabled={inputDisabled || sending}
+              disabled={inputDisabled || busy}
               className="w-full resize-none overflow-y-auto border-none bg-transparent font-body text-sm leading-snug text-[var(--text-primary)] outline-none placeholder:truncate placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
               style={{ height: "24px", minHeight: "24px", maxHeight: "120px" }}
             />
@@ -1103,7 +1121,7 @@ export function Composer({
                 className="h-9 w-9 shrink-0"
                 disabled={
                   (!value.trim() && pendingFiles.length === 0 && pendingMediaList.length === 0) ||
-                  sending ||
+                  busy ||
                   inputDisabled
                 }
               >

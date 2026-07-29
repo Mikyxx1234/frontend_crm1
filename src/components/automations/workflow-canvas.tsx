@@ -500,7 +500,7 @@ function WorkflowCanvasInner({
   autoAlignVersion,
   className,
 }: InnerProps) {
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView, getIntersectingNodes } = useReactFlow();
   const { theme } = useThemeV2();
   const isDark = theme === "dark";
   const stepsRef = useRef(steps);
@@ -761,9 +761,8 @@ function WorkflowCanvasInner({
           id: ADD_STEP_ID,
           type: "addStep",
           position: { x: START_X, y: NODE_Y + 20 },
-          // Arrastável: ao soltar, o canvas abre o seletor de tipo na
-          // posição final (ver onNodeDragStop). Clique continua abrindo
-          // o seletor "no lugar padrão".
+          // Arrastável: soltar sobre outro node conecta; soltar no vazio
+          // abre o seletor (ver onNodeDragStop). Clique abre o seletor.
           draggable: true,
           selectable: false,
           data: {
@@ -1386,8 +1385,8 @@ function WorkflowCanvasInner({
     (_: unknown, node: Node) => {
       if (isAddStepNodeId(node.id)) {
         // Distingue clique (sem movimento → o onClick do botão abre o
-        // seletor no lugar) de arraste real (abre o seletor na posição
-        // solta). Sem isso, o clique dispararia os dois seletores.
+        // seletor no lugar) de arraste real. Sem isso, o clique
+        // dispararia os dois seletores.
         const start = dragStartPosRef.current;
         const moved = start
           ? Math.hypot(node.position.x - start.x, node.position.y - start.y)
@@ -1395,12 +1394,42 @@ function WorkflowCanvasInner({
         dragStartPosRef.current = null;
         if (moved < 6) return;
 
-        // Arrastou a pílula "+ Adicionar próximo passo": abre o seletor
-        // de tipo na posição solta e conecta ao passo de origem (reusa o
-        // fluxo de `pendingConn`). Id `__addStep__:<stepId>` carrega o
-        // afterStepId; `__addStep__` puro = sair do gatilho (fluxo vazio).
+        // Origem da pílula: `__addStep__:<stepId>` ou gatilho (fluxo vazio).
         const afterStepId =
           node.id === ADD_STEP_ID ? null : node.id.slice(ADD_STEP_ID.length + 1);
+
+        // Soltou em cima de outro node de passo → cria a conexão
+        // (mesmo contrato do onConnect / handle → handle). Soltar no
+        // vazio continua abrindo o seletor pra criar um passo novo.
+        const hits = getIntersectingNodes(node).filter(
+          (n) =>
+            !isAddStepNodeId(n.id) &&
+            n.id !== TRIGGER_ID &&
+            n.id !== afterStepId,
+        );
+        if (hits.length > 0) {
+          const cx = node.position.x + (node.width ?? 0) / 2;
+          const cy = node.position.y + (node.height ?? 0) / 2;
+          hits.sort((a, b) => {
+            const da = Math.hypot(
+              a.position.x + (a.width ?? 0) / 2 - cx,
+              a.position.y + (a.height ?? 0) / 2 - cy,
+            );
+            const db = Math.hypot(
+              b.position.x + (b.width ?? 0) / 2 - cx,
+              b.position.y + (b.height ?? 0) / 2 - cy,
+            );
+            return da - db;
+          });
+          onConnect({
+            source: afterStepId ?? TRIGGER_ID,
+            target: hits[0]!.id,
+            sourceHandle: null,
+            targetHandle: null,
+          });
+          return;
+        }
+
         setPendingConn({
           sourceId: afterStepId ?? TRIGGER_ID,
           sourceHandle: "",
@@ -1434,7 +1463,7 @@ function WorkflowCanvasInner({
       });
       onStepsChange(updated);
     },
-    [onStepsChange, triggerConfig]
+    [onStepsChange, triggerConfig, getIntersectingNodes, onConnect]
   );
 
   const onTriggerClickRef = useRef(onTriggerClick);

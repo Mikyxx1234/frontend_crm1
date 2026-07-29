@@ -208,7 +208,7 @@ export function AddStepNode({ data }: NodeProps<AddStepNodeData>) {
           e.stopPropagation();
           setOpen(true);
         }}
-        title="Clique para adicionar aqui · ou arraste para escolher o local"
+        title="Clique para adicionar um passo · arraste até outro node para conectar · ou solte no vazio para criar"
         className={cn(
           "flex cursor-grab items-center gap-2 rounded-full border-2 border-dashed px-4 py-2 text-[12px] font-bold tracking-tight transition-all duration-200 active:cursor-grabbing",
           open

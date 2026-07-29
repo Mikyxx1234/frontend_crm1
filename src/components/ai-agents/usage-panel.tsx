@@ -12,13 +12,17 @@ type Stats = {
     inputTokens: number;
     outputTokens: number;
     costUsd: number;
+    avgConfidence: number | null;
   };
   statusCounts: Record<string, number>;
+  handoffReasons: Record<string, number>;
   perDay: Array<{ day: string; runs: number; tokens: number; cost: number }>;
   lastRuns: Array<{
     id: string;
     source: string;
     status: string;
+    confidence: number | null;
+    handoffReason: string | null;
     inputTokens: number;
     outputTokens: number;
     costUsd: number;
@@ -28,6 +32,13 @@ type Stats = {
     finishedAt: string | null;
   }>;
   draftsPending: number;
+};
+
+const HANDOFF_LABELS: Record<string, string> = {
+  keyword: "Palavra-chave",
+  low_confidence: "Baixa confiança",
+  tool_transfer: "Pedido do aluno",
+  inactivity: "Inatividade",
 };
 
 /**
@@ -54,8 +65,12 @@ export function UsagePanel({ agentId }: { agentId: string }) {
     );
   }
 
-  const { totals, perDay, lastRuns, draftsPending } = data;
+  const { totals, perDay, lastRuns, draftsPending, handoffReasons } = data;
   const maxTokens = Math.max(1, ...perDay.map((d) => d.tokens));
+  const handoffEntries = Object.entries(handoffReasons ?? {}).sort(
+    (a, b) => b[1] - a[1],
+  );
+  const handoffTotal = handoffEntries.reduce((s, [, n]) => s + n, 0);
 
   return (
     <div className="space-y-4">
@@ -80,15 +95,65 @@ export function UsagePanel({ agentId }: { agentId: string }) {
         />
         <StatCard
           icon={<Clock className="size-3.5" />}
-          label="Rascunhos pendentes"
-          value={String(draftsPending)}
+          label="Confiança média"
+          value={
+            totals.avgConfidence != null
+              ? `${Math.round(totals.avgConfidence * 100)}%`
+              : "—"
+          }
           sub={
-            draftsPending > 0
-              ? "Aguardando aprovação humana"
-              : "Nenhum aguardando"
+            totals.avgConfidence != null
+              ? "Auto-declarada pelo agente"
+              : "Sem dados no período"
           }
         />
       </div>
+
+      {(handoffTotal > 0 || draftsPending > 0) && (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="rounded-xl border bg-card p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <ArrowRight className="size-3.5" />
+              Transferências para humano ({handoffTotal})
+            </div>
+            {handoffEntries.length === 0 ? (
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                Nenhuma no período.
+              </p>
+            ) : (
+              <ul className="mt-1.5 space-y-1">
+                {handoffEntries.map(([reason, count]) => (
+                  <li
+                    key={reason}
+                    className="flex items-center justify-between text-[12px]"
+                  >
+                    <span className="text-foreground/80">
+                      {HANDOFF_LABELS[reason] ?? reason}
+                    </span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {count} ·{" "}
+                      {handoffTotal > 0
+                        ? Math.round((count / handoffTotal) * 100)
+                        : 0}
+                      %
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <StatCard
+            icon={<Clock className="size-3.5" />}
+            label="Rascunhos pendentes"
+            value={String(draftsPending)}
+            sub={
+              draftsPending > 0
+                ? "Aguardando aprovação humana"
+                : "Nenhum aguardando"
+            }
+          />
+        </div>
+      )}
 
       <div className="rounded-xl border bg-muted/30 p-3">
         <div className="mb-2 flex items-center justify-between">
@@ -198,6 +263,24 @@ function RunRow({ run }: { run: Stats["lastRuns"][number] }) {
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
             {run.status}
           </span>
+          {run.status === "HANDOFF" && run.handoffReason && (
+            <span className="text-[10px] text-muted-foreground">
+              · {HANDOFF_LABELS[run.handoffReason] ?? run.handoffReason}
+            </span>
+          )}
+          {run.confidence != null && (
+            <span
+              className={`text-[10px] tabular-nums ${
+                run.confidence < 0.4
+                  ? "text-destructive"
+                  : run.confidence < 0.7
+                    ? "text-[var(--color-warn)]"
+                    : "text-[var(--color-success-text)]"
+              }`}
+            >
+              conf {Math.round(run.confidence * 100)}%
+            </span>
+          )}
           <span className="ml-auto text-[10px] text-muted-foreground">
             {new Date(run.createdAt).toLocaleString("pt-BR")}
           </span>

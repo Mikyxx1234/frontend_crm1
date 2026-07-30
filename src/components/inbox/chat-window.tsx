@@ -21,6 +21,7 @@ import {
 } from "@/components/inbox/slash-command-menu";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 import { getContact } from "@/features/inbox-v2/api/misc";
+import { emitConversationReopened } from "@/features/inbox-v2/hooks";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 import { Button } from "@/components/ui/button";
 import {
@@ -212,7 +213,14 @@ async function postConversationAction(
         ? data.message
         : "Erro ao atualizar status",
     );
-  return data as { conversation: { status: ConversationStatus } };
+  // Modelo de ticket: `reopen` cria uma NOVA conversa (id diferente) e
+  // devolve `previousConversationId`. Tipamos para o caller poder trocar
+  // o chat ativo — sem isso o painel do pipeline ficava travado no ticket
+  // antigo (RESOLVED) achando que "reabrir não funciona".
+  return data as {
+    conversation: { id: string; status: ConversationStatus };
+    previousConversationId?: string;
+  };
 }
 
 type ForwardPickRow = {
@@ -1183,8 +1191,32 @@ export function ChatWindow({
       postConversationAction(conversationId!, action),
     onSuccess: (data, action) => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      if (action === "resolve") onResolve?.(data.conversation.status);
-      else onReopen?.(data.conversation.status);
+      queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      // Pipeline v2 (`_v2-client.tsx`) lê `contact.conversations[0]` do
+      // cache `["deal-detail-v2", dealId]`. Sem invalidar aqui, o painel
+      // do deal continua exibindo a conversa antiga (RESOLVED) mesmo após
+      // reabrir — o backend criou o novo ticket, mas o frontend não
+      // atualizou porque o botão "Reabrir" do ChatWindow tem sua própria
+      // mutation local (não passa pelo useToggleConversationResolve que
+      // já cuida disso). Também invalida chaves usadas pelo deal-workspace
+      // antigo (`["deal", id]` / `["contact", id]`).
+      queryClient.invalidateQueries({ queryKey: ["deal-detail-v2"] });
+      queryClient.invalidateQueries({ queryKey: ["deal-timeline-v2"] });
+      queryClient.invalidateQueries({ queryKey: ["deal"] });
+      queryClient.invalidateQueries({ queryKey: ["contact"] });
+      if (action === "resolve") {
+        onResolve?.(data.conversation.status);
+      } else {
+        // Reopen no modelo de ticket: backend cria NOVA conversa e devolve
+        // o novo id. Emitimos o evento global — inbox e deal-workspace do
+        // pipeline escutam e trocam a conversa ativa/seleção para o id
+        // novo. Sem isso o botão "Reabrir" parecia não funcionar no
+        // pipeline (a UI ficava travada na conversa antiga RESOLVED).
+        onReopen?.(data.conversation.status);
+        if (data.conversation?.id && data.previousConversationId) {
+          emitConversationReopened(data.conversation.id);
+        }
+      }
     },
   });
   const pinNoteMutation = useMutation({

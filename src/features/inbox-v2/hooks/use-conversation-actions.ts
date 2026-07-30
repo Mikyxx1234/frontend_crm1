@@ -171,6 +171,11 @@ export function useToggleConversationResolve(
       // que alimentam o chip "Encerrada" + marcador de fim de chat no
       // pipeline. Sem esta invalidacao a UI ficava travada ate refresh manual.
       qc.invalidateQueries({ queryKey: ["deal-detail-v2"] });
+      // Deal-workspace antigo usa `["deal", id]` / `["contact", id]`.
+      // Sincroniza também esses caches p/ o `contact.conversations`
+      // refletir o novo ticket criado no reopen.
+      qc.invalidateQueries({ queryKey: ["deal"] });
+      qc.invalidateQueries({ queryKey: ["contact"] });
     },
     onError: (err) => toast.error(err.message),
   });

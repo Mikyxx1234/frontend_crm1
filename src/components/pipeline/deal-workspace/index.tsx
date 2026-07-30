@@ -30,6 +30,7 @@ import { WorkspaceConversationList } from "./workspace-conversation-list";
 import { ActivitiesPanel } from "./panels/activities";
 import { NotesPanel } from "./panels/notes";
 import { TimelinePanel } from "./panels/timeline";
+import { CONVERSATION_REOPENED_EVENT } from "@/features/inbox-v2/hooks";
 import type {
   ContactDetail,
   ConversationRow,
@@ -103,6 +104,10 @@ export function DealWorkspace({
 
   const [autoLoaded, setAutoLoaded] = React.useState(false);
   const autoCreateConvRef = React.useRef(false);
+  // Distingue "seleção automática" (initial load) de "clique manual do usuário
+  // numa conversa da lista". Sem isso, o auto-switch abaixo trocaria a conv
+  // que o usuário escolheu de propósito por uma mais recente.
+  const manualSelectionRef = React.useRef(false);
 
   const invalidateAll = React.useCallback(() => {
     if (dealId) queryClient.invalidateQueries({ queryKey: dealKey(dealId) });
@@ -120,6 +125,7 @@ export function DealWorkspace({
       setAutoLoaded(false);
       setConvListOpen(false);
       autoCreateConvRef.current = false;
+      manualSelectionRef.current = false;
     }
   }, [open]);
 
@@ -166,6 +172,54 @@ export function DealWorkspace({
       setAutoLoaded(true);
     }
   }, [contact, autoLoaded, selectedConv]);
+
+  // Auto-switch para a conversa MAIS RECENTE quando o backend traz uma nova
+  // no topo da lista (contact.conversations[0]) que ainda não é a selecionada.
+  // Cobre principalmente o caso do modelo de ticket: "reabrir" gera uma nova
+  // conversa com id diferente — sem esse effect, o painel ficava travado na
+  // conversa velha (RESOLVED) mesmo depois de reabrir. Só troca se o usuário
+  // não fez uma seleção manual (evita brigar com o clique dele na lista).
+  React.useEffect(() => {
+    if (!contact || contact.conversations.length === 0) return;
+    if (manualSelectionRef.current) return;
+    const latest = contact.conversations[0];
+    if (selectedConv && selectedConv.id === latest.id) return;
+    setSelectedConv(latest);
+    setConvStatus(latest.status);
+  }, [contact, selectedConv]);
+
+  // Modelo de ticket: reabrir cria NOVA conversa (novo id). Escuta o evento
+  // global disparado pelo `chat-window` / inbox-v2 (`emitConversationReopened`)
+  // e troca a conversa ativa para a recém-criada. Também invalida o contato
+  // pra o novo id aparecer na lista `contact.conversations` sem reload.
+  React.useEffect(() => {
+    if (!open) return;
+    function onReopened(e: Event) {
+      const newId = (e as CustomEvent<{ newId: string }>).detail?.newId;
+      if (!newId) return;
+      // O evento chega ANTES do refetch do contato — trocamos otimista para
+      // um placeholder com o id novo (status OPEN, sem detalhes ainda). O
+      // useEffect de auto-switch vai substituir pelo objeto completo assim
+      // que `contact.conversations` for atualizada com o novo ticket.
+      manualSelectionRef.current = false;
+      setSelectedConv((prev) => ({
+        id: newId,
+        externalId: null,
+        channel: prev?.channel ?? "whatsapp",
+        status: "OPEN",
+        inboxName: prev?.inboxName ?? null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        assignedTo: prev?.assignedTo ?? null,
+      } as ConversationRow));
+      setConvStatus("OPEN");
+      if (contactId) {
+        queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
+      }
+    }
+    window.addEventListener(CONVERSATION_REOPENED_EVENT, onReopened);
+    return () => window.removeEventListener(CONVERSATION_REOPENED_EVENT, onReopened);
+  }, [open, contactId, queryClient]);
 
   const statusMutation = useMutation({
     mutationFn: async (input: { status: "WON" | "LOST" | "OPEN"; lostReason?: string }) => {
@@ -407,6 +461,7 @@ export function DealWorkspace({
                     key={c.id}
                     type="button"
                     onClick={() => {
+                      manualSelectionRef.current = true;
                       setSelectedConv(c);
                       setConvStatus(c.status);
                     }}
@@ -538,6 +593,7 @@ export function DealWorkspace({
                       conversations={contact.conversations}
                       selectedId={selectedConv?.id ?? null}
                       onSelect={(c) => {
+                        manualSelectionRef.current = true;
                         setSelectedConv(c);
                         setConvStatus(c.status);
                         setConvListOpen(false);

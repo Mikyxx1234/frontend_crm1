@@ -62,6 +62,18 @@ export function useSendMessage(conversationId: string | null) {
       // para o chat carregar a linha do tempo já com a mensagem enviada.
       if (data.reopenedConversationId) {
         qc.invalidateQueries({ queryKey: messagesKey(data.reopenedConversationId) });
+        // Emite o evento global — inbox-v2 e deal-workspace do pipeline
+        // escutam e trocam o chat ativo para o id novo. Antes só o
+        // `useSendAttachment` fazia isso, e um simples envio de TEXTO em
+        // conversa RESOLVED deixava o painel do pipeline travado no
+        // ticket antigo (parecia que "reabrir" não funcionava).
+        emitConversationReopened(data.reopenedConversationId);
+        // Também invalida os caches do deal-detail-v2 (pipeline) e do
+        // deal/contact (deal-workspace) para o `contact.conversations[0]`
+        // apontar para o novo ticket sem reload.
+        qc.invalidateQueries({ queryKey: ["deal-detail-v2"] });
+        qc.invalidateQueries({ queryKey: ["deal"] });
+        qc.invalidateQueries({ queryKey: ["contact"] });
       }
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
       qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
@@ -240,6 +252,12 @@ export function useSendAttachment(conversationId: string | null) {
       if (data.reopenedConversationId) {
         qc.invalidateQueries({ queryKey: messagesKey(data.reopenedConversationId) });
         emitConversationReopened(data.reopenedConversationId);
+        // Sincroniza os painéis do deal (pipeline + workspace) com o
+        // novo ticket. Sem isso o `contact.conversations[0]` continuava
+        // apontando pra conversa velha RESOLVED após reopen por anexo.
+        qc.invalidateQueries({ queryKey: ["deal-detail-v2"] });
+        qc.invalidateQueries({ queryKey: ["deal"] });
+        qc.invalidateQueries({ queryKey: ["contact"] });
       }
     },
   });

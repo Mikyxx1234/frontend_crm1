@@ -13,7 +13,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, parseApiResponse } from "@/lib/api";
 
 type ImportHistory = {
   id: string;
@@ -65,11 +65,13 @@ export function StudentDataPanel() {
       form.append("file", file);
       const res = await fetch(apiUrl("/api/academic-records/upload"), {
         method: "POST",
+        credentials: "include",
         body: form,
       });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.message ?? "Erro ao enviar arquivo.");
-      return d as { totalRows: number; skipped: number; fileName: string };
+      return parseApiResponse<{ totalRows: number; skipped: number; fileName: string }>(
+        res,
+        "Erro ao enviar arquivo.",
+      );
     },
     onSuccess: (d) => {
       toast.success(

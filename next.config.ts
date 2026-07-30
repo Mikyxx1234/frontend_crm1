@@ -81,11 +81,11 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
-    // Uploads de mídia até 16MB + overhead multipart.
+    // Uploads de mídia e relatório de matriculados (até ~32MB + overhead).
     serverActions: {
-      bodySizeLimit: "20mb",
+      bodySizeLimit: "64mb",
     },
-    middlewareClientMaxBodySize: "20mb",
+    middlewareClientMaxBodySize: "64mb",
   },
   /**
    * REWRITES — Frontend separado.
@@ -112,6 +112,7 @@ const nextConfig: NextConfig = {
       afterFiles: [
         { source: "/api/:path*", destination: `${base}/api/:path*` },
         { source: "/uploads/:path*", destination: `${base}/api/uploads/:path*` },
+        { source: "/cockpit-agente.html", destination: `${base}/cockpit-agente.html` },
       ],
       fallback: [],
     };

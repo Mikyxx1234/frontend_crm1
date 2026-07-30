@@ -80,6 +80,8 @@ const PUBLIC_PATHS = new Set([
   "/health",
   "/accept-invite",
   "/test-bulk-bar",
+  // Cockpit: HTML estático; dados via Bearer token ou sessão CRM.
+  "/cockpit-agente.html",
 ]);
 
 const PUBLIC_API_PATHS = new Set(["/api/signup"]);
@@ -218,9 +220,9 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // api/uploads fica fora do matcher: multipart grande não deve passar pelo
-  // buffer do middleware; auth continua no backend / no proxy handler.
+  // api/uploads e academic-records/upload ficam fora do matcher: multipart
+  // grande não deve passar pelo buffer do middleware; auth no backend.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/uploads|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/uploads|api/academic-records/upload|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

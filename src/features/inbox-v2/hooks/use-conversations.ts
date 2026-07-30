@@ -215,10 +215,14 @@ export function useCancelAutomation(contactId: string | null) {
   });
 }
 
-/** Counts das abas (badges no header). Recebe os filtros do funil para que os
- *  badges reflitam o filtro ativo (refetch automático quando os filtros mudam,
- *  via queryKey). */
-export function useTabCounts(enabled = true, filters?: InboxFilters | null) {
+/** Counts das abas (badges no header). Recebe filtros do funil + busca para
+ *  que os badges casem com a lista (refetch via queryKey). */
+export function useTabCounts(
+  enabled = true,
+  filters?: InboxFilters | null,
+  search?: string | null,
+) {
+  const searchKey = search?.trim() || null;
   const filterKey = filters
     ? {
         ownerIds: filters.ownerIds ?? (filters.ownerId ? [filters.ownerId] : []),
@@ -231,8 +235,8 @@ export function useTabCounts(enabled = true, filters?: InboxFilters | null) {
       }
     : null;
   return useQuery<TabCounts>({
-    queryKey: ["conversations", "tab-counts", filterKey],
-    queryFn: () => fetchTabCounts(filters),
+    queryKey: ["conversations", "tab-counts", filterKey, searchKey],
+    queryFn: () => fetchTabCounts(filters, searchKey),
     refetchInterval: 15_000,
     enabled: isPreviewMode() ? true : enabled,
   });

@@ -72,13 +72,16 @@ export async function listConversations(
   return data as ConversationListResponse;
 }
 
-/** GET /api/conversations?counts=1 (com filtros do funil, para os badges
- *  refletirem o filtro ativo). */
+/** GET /api/conversations?counts=1 (com filtros do funil + busca, para os
+ *  badges refletirem o recorte ativo da lista). */
 export async function fetchTabCounts(
   filters?: InboxFilters | null,
+  search?: string | null,
 ): Promise<TabCounts> {
   const q = new URLSearchParams({ counts: "1" });
   if (filters) appendInboxServerFilters(q, filters);
+  const s = search?.trim();
+  if (s) q.set("search", s);
   const res = await fetch(apiUrl(`/api/conversations?${q.toString()}`));
   if (!res.ok) {
     return {

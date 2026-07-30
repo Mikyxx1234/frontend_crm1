@@ -530,6 +530,7 @@ export default function InboxV2ClientPage({
   const { data: tabCounts } = useTabCounts(
     isAuthenticated && filtersHydrated,
     filters,
+    debouncedSearch,
   );
 
   // ── Sticky activeRow ────────────────────────────────────────────
@@ -957,8 +958,9 @@ export default function InboxV2ClientPage({
   // Com header de página, busca no centro do header e filtro nas actions.
   const searchInHeader = !!pageHeader;
 
-  const useFilteredTabCount =
-    hasInboxServerFilters(filters) || debouncedSearch.trim().length > 0;
+  // Com busca ativa: só exibe badge nos status que têm match (esconde 0).
+  // Sem busca: badges globais/filtrados por funil como antes.
+  const searchActive = debouncedSearch.trim().length > 0;
 
   const inboxSearchFilterNode = (
     <InboxSearchFilterBar
@@ -1097,15 +1099,18 @@ export default function InboxV2ClientPage({
         if (v) setSelectedIds(new Set(conversationCards.map((c) => c.id)));
       }}
       bulkActionsSlot={bulkActionsNode}
-      tabsOverride={TABS.map((t) => ({
-        label: t.label,
-        // Sem count no bootstrap → pulse no badge (evita "0" prematuro).
-        count: listBootstrapping
+      tabsOverride={TABS.map((t) => {
+        const count = listBootstrapping
           ? undefined
-          : useFilteredTabCount && t.id === tab
-            ? listData?.total
-            : tabCounts?.[t.id] ?? undefined,
-      }))}
+          : tabCounts?.[t.id];
+        // Com busca: oculta badge dos status sem resultado (só mostra
+        // Todas + a fila real do lead). Sem busca: mostra todos os counts.
+        const hideZeroBadge = searchActive && (count ?? 0) === 0;
+        return {
+          label: t.label,
+          count: hideZeroBadge ? undefined : count,
+        };
+      })}
       activeTabIndex={TABS.findIndex((t) => t.id === tab)}
       onTabChange={(idx) => {
         const next = TABS[idx]?.id;

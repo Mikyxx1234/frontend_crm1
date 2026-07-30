@@ -43,7 +43,7 @@ export function AssigneePopover({
     usePortalPopover();
   const [filter, setFilter] = useState("");
 
-  const { data: users = [], isLoading } = useTeamUsers(open);
+  const { data: users = [], isLoading } = useTeamUsers(open, { includeAi: true });
   const assign = useAssignConversation();
 
   const filtered = useMemo(() => {
@@ -175,6 +175,7 @@ export function AssigneePopover({
                           />
                           <span className="truncate">
                             {u.name ?? u.email ?? "—"}
+                            {(u.type ?? "").toUpperCase() === "AI" ? " (IA)" : ""}
                           </span>
                         </span>
                         {isActive && (

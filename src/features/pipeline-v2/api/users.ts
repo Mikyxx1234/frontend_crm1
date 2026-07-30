@@ -12,15 +12,20 @@ export interface TeamUser {
   name: string;
   email?: string | null;
   role?: string | null;
+  /** HUMAN | AI — presente quando includeAi=1. */
+  type?: string | null;
   avatarUrl?: string | null;
   /** Presença de USO do CRM (aba aberta) — separada do status da Distribuição. */
   systemOnline?: boolean;
   lastSeenAt?: string | null;
 }
 
-/** GET /api/users — lista todos os usuários da organização. */
-export async function listTeamUsers(): Promise<TeamUser[]> {
-  const res = await fetch(apiUrl("/api/users"));
+/** GET /api/users — lista usuários da organização. */
+export async function listTeamUsers(opts?: {
+  includeAi?: boolean;
+}): Promise<TeamUser[]> {
+  const q = opts?.includeAi ? "?includeAi=1" : "";
+  const res = await fetch(apiUrl(`/api/users${q}`));
   if (!res.ok) throw new Error("Erro ao carregar usuarios");
   const data = await res.json();
   return Array.isArray(data) ? data : (data.users ?? []);

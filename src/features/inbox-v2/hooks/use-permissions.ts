@@ -54,11 +54,15 @@ export function useSelfAssignCapability() {
   });
 }
 
-/** Lista de membros da equipe (TransferControl). */
-export function useTeamUsers(enabled = true) {
+/** Lista de membros da equipe (TransferControl / assignee). */
+export function useTeamUsers(
+  enabled = true,
+  opts?: { includeAi?: boolean },
+) {
+  const includeAi = opts?.includeAi === true;
   return useQuery<TeamUser[]>({
-    queryKey: ["users", "assign-picker"],
-    queryFn: listUsers,
+    queryKey: ["users", "assign-picker", includeAi ? "with-ai" : "human"],
+    queryFn: () => listUsers({ includeAi }),
     enabled,
     staleTime: 60_000,
   });

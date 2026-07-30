@@ -120,6 +120,8 @@ export interface TeamUser {
   id: string;
   name: string;
   email: string;
+  /** HUMAN | AI — quando listado com includeAi. */
+  type?: string | null;
   /** Foto de perfil (User.avatarUrl) — o backend já retorna em GET /api/users. */
   avatarUrl?: string | null;
   /**
@@ -132,8 +134,11 @@ export interface TeamUser {
 }
 
 /** GET /api/users */
-export async function listUsers(): Promise<TeamUser[]> {
-  const res = await fetch(apiUrl("/api/users"));
+export async function listUsers(opts?: {
+  includeAi?: boolean;
+}): Promise<TeamUser[]> {
+  const q = opts?.includeAi ? "?includeAi=1" : "";
+  const res = await fetch(apiUrl(`/api/users${q}`));
   const data = await res.json().catch(() => []);
   if (!res.ok) {
     throw new Error(

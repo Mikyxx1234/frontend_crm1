@@ -41,7 +41,7 @@ export function AssigneePopover({
   const { open, rect, triggerRef, popoverRef, toggle, close } = usePortalPopover();
   const [filter, setFilter] = useState("");
 
-  const { data: users = [], isLoading } = useTeamUsers(open);
+  const { data: users = [], isLoading } = useTeamUsers(open, { includeAi: true });
   const update = useUpdateDeal(pipelineId, statusFilter);
 
   const filtered = useMemo(() => {
@@ -149,6 +149,7 @@ export function AssigneePopover({
                         />
                         <span className="truncate">
                           {u.name ?? u.email ?? "—"}
+                          {(u.type ?? "").toUpperCase() === "AI" ? " (IA)" : ""}
                         </span>
                       </span>
                       {isActive && <span aria-hidden>✓</span>}

@@ -468,10 +468,11 @@ export function useDeleteDeal(pipelineId: string | null, status: StatusFilter = 
   });
 }
 
-export function useTeamUsers(enabled: boolean = true) {
+export function useTeamUsers(enabled: boolean = true, opts?: { includeAi?: boolean }) {
+  const includeAi = opts?.includeAi === true;
   return useQuery<TeamUser[]>({
-    queryKey: ["team-users-v2"],
-    queryFn: listTeamUsers,
+    queryKey: ["team-users-v2", includeAi ? "with-ai" : "human"],
+    queryFn: () => listTeamUsers({ includeAi }),
     enabled,
     staleTime: 60_000,
   });

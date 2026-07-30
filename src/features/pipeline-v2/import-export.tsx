@@ -1314,7 +1314,7 @@ function MappingStep({
               {
                 value: "update" as ImportMode,
                 title: "Atualizar existentes",
-                desc: "Casa por ID de origem (external_id) e atualiza os dados. Linhas sem correspondência são ignoradas.",
+                desc: "Casa por Número do negócio ou ID de origem (external_id) e atualiza os dados. Linhas sem correspondência são ignoradas.",
               },
             ].map((opt) => {
               const active = importMode === opt.value;
@@ -1353,8 +1353,10 @@ function MappingStep({
             })}
           </div>
           <p className="font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
-            Para atualizar, mapeie a coluna que identifica o lead como{" "}
+            Para atualizar, mapeie a coluna que identifica o negócio como{" "}
+            <span className="font-medium">Número do negócio</span> ou{" "}
             <span className="font-medium">ID de origem (external_id)</span>.
+            A coluna vinda da Exportação do CRM já corresponde ao Número do negócio.
           </p>
         </div>
       ) : (

@@ -469,7 +469,7 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
     case "send_email":
       return { to: "", subject: "", body: "" };
     case "move_stage":
-      return { stageId: "" };
+      return { stageId: "", continueIfNoDeal: false };
     case "assign_owner":
       return { userId: "", target: "deal" };
     case "transfer_department":

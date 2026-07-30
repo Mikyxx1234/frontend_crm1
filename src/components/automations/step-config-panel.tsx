@@ -827,6 +827,22 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                     }}
                   />
                 )}
+                <label className="flex cursor-pointer items-start gap-2 rounded px-0.5 py-1 text-[12.5px]">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 size-3.5 accent-[var(--brand-primary)]"
+                    checked={draft.continueIfNoDeal === true}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, continueIfNoDeal: e.target.checked }))
+                    }
+                  />
+                  <span className="font-medium text-[var(--text-primary)]">
+                    Continuar o fluxo se o contato não tiver negócio aberto
+                    <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                      Sem isso, o fluxo é interrompido e os passos seguintes não executam.
+                    </span>
+                  </span>
+                </label>
               </div>
             );
           })()}

@@ -20,6 +20,7 @@ import {
   IconPhone,
   IconPlayerPlay,
   IconRefresh,
+  IconRobot,
   IconRotateClockwise,
   IconSearch,
   IconSettings,
@@ -1429,6 +1430,31 @@ function ChannelBadge({ channel }: { channel: string }) {
   );
 }
 
+function isAiAgentTrigger(triggerSource: string | null | undefined): boolean {
+  if (!triggerSource) return false;
+  return triggerSource
+    .split("+")
+    .map((s) => s.trim().toUpperCase())
+    .some((p) => p === "AI_AGENT" || p === "AI");
+}
+
+function AiAgentBadge() {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold"
+      style={{
+        backgroundColor:
+          "color-mix(in srgb, var(--brand-primary) 14%, transparent)",
+        color: "var(--brand-primary)",
+      }}
+      title="Distribuição solicitada pelo agente de IA"
+    >
+      <IconRobot size={12} stroke={2} />
+      Agente IA
+    </span>
+  );
+}
+
 function PendingQueueCards({
   pending,
   onRetry,
@@ -1505,6 +1531,7 @@ function PendingQueueCards({
                 <span className="min-w-0 flex-1 truncate font-mono text-[13px] font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)]">
                   {p.label}
                 </span>
+                {isAiAgentTrigger(p.triggerSource) ? <AiAgentBadge /> : null}
                 <ChannelBadge channel={p.channel} />
                 <span className="ml-auto shrink-0 font-body text-[11px] tabular-nums text-[var(--text-muted)]">
                   {p.attempts > 1 ? `${p.attempts}x · ` : ""}

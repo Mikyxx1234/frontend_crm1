@@ -101,14 +101,19 @@ export default async function RootLayout({
       data-chat-theme="azul"
       style={{ fontFamily: "var(--font-sans)" }}
     >
-      {/* Aplica `.v2-dark`/`.dark` no <html> ANTES do primeiro paint, lendo
-          o mesmo storage key usado por `useThemeV2` (`crm-v2-theme`). Sem
-          isso o tema só é aplicado no useEffect do hook, causando FOUC:
-          body renderiza com o gradiente light de `globals.css` por um
-          frame, mesmo quando o usuário escolheu dark. */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `(function () {
+      <body className="min-h-dvh font-sans antialiased">
+        {/* Aplica `.v2-dark`/`.dark` no <html> ANTES do primeiro paint, lendo
+            o mesmo storage key usado por `useThemeV2` (`crm-v2-theme`). Sem
+            isso o tema só é aplicado no useEffect do hook, causando FOUC:
+            body renderiza com o gradiente light de `globals.css` por um
+            frame, mesmo quando o usuário escolheu dark.
+            Precisa ser o PRIMEIRO filho de <body> (pai válido de <script>):
+            executa síncrono antes do resto do body pintar, e evita os avisos
+            de DOM nesting ("<script> cannot be a child of <html>") e de
+            hoisting do React 19. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function () {
   try {
     var t = localStorage.getItem("crm-v2-theme");
     if (t !== "dark" && t !== "light") {
@@ -121,9 +126,8 @@ export default async function RootLayout({
     el.style.colorScheme = dark ? "dark" : "light";
   } catch (e) {}
 })();`,
-        }}
-      />
-      <body className="min-h-dvh font-sans antialiased">
+          }}
+        />
         <PreviewMocksInstaller />
         <Providers session={session}>{children}</Providers>
         <Toaster

@@ -5,6 +5,54 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-07-31 — Trigger `conversation_tabulated`: rename semântico e filtro explícito de tabulação
+
+**Decisão.** Mantido o slug interno `conversation_tabulated` (não renomeado
+pra preservar automações já salvas em produção), mas:
+
+1. Label na UI passa de "Conversa tabulada (encerramento)" para
+   **"Conversa encerrada"** — reflete o comportamento real do backend, que
+   já disparava em qualquer `resolve` via `POST /api/conversations/:id/actions`,
+   com ou sem tabulação.
+2. Config do trigger ganha campo booleano `requireTabulation` (default
+   `false`). Quando marcado, `evaluateTrigger` só passa se o payload trouxer
+   `tabulationId` não-nulo — separando explicitamente a semântica de
+   "qualquer encerramento" vs "só quando tabular".
+
+**Contexto.** Usuário reportou que o gatilho "só funcionava quando tabulado".
+Investigação mostrou que o backend já dispara em qualquer encerramento manual
+(fix anterior no `actions/route.ts`), mas: (a) o label sugere o oposto,
+(b) selecionar uma tabulação específica no config aplicava filtro implícito
+que descartava encerramentos sem tabulação. Sem toggle explícito, "qualquer
+encerramento com filtro por tabulação genérica" não era representável.
+
+**Alternativas descartadas.**
+
+- **Renomear o slug `conversation_tabulated` → `conversation_closed`**:
+  quebraria todos os `triggerType` já salvos no DB (`Automation.triggerType`).
+  Custo (migration + backfill) desproporcional ao benefício estético.
+- **Disparar o trigger também no bulk resolve e no passo `finish_conversation`**:
+  usuário optou por não expandir — bulk pode disparar 100 automações de uma
+  vez, e passo de automação disparando trigger causa loops. Escopo continua
+  em encerramento individual manual via `/actions`.
+- **Toggle "modo estrito" que exige match exato de tabulação (folha, sem
+  ancestrais)**: comportamento atual (folha OU ancestral) já cobre o padrão
+  "categoria pai inclui folhas". Adicionar mais um modo aumenta cognitive
+  load sem caso de uso claro.
+
+**Impacto operacional.**
+
+- Automações existentes sem `tabulationId` no config → continuam disparando
+  em qualquer encerramento (comportamento inalterado).
+- Automações existentes COM `tabulationId` no config → continuam filtrando
+  pela tabulação específica (comportamento inalterado; `requireTabulation`
+  implícito).
+- Novas automações podem marcar `requireTabulation: true` sem escolher
+  tabulação específica → dispara em qualquer encerramento tabulado.
+- Label no dropdown de triggers muda visualmente para usuários finais.
+
+---
+
 ### 2026-07-16 — Vídeos WhatsApp: HTTP Range no `/api/storage`
 
 **Decisão.** `GET /api/storage/[...path]` passa a suportar HTTP Range

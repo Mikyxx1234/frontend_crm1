@@ -107,7 +107,7 @@ export function triggerTypeLabel(t: string): string {
     message_sent: "Mensagem enviada",
     call_received: "Ligação recebida",
     call_made: "Ligação realizada",
-    conversation_tabulated: "Conversa tabulada (encerramento)",
+    conversation_tabulated: "Conversa encerrada",
     whatsapp_session_expiring: "Sessão do WhatsApp prestes a encerrar",
     manual: "Manual (executar pela conversa)",
   };
@@ -268,6 +268,7 @@ export function summarizeTriggerConfig(
       if (c.tabulationLabel) return `Tabulação: ${String(c.tabulationLabel)}`;
       if (c.tabulationId) return `Tabulação ID: ${String(c.tabulationId).slice(0, 8)}…`;
       if (c.departmentId) return `Departamento: ${String(c.departmentId).slice(0, 8)}…`;
+      if (c.requireTabulation === true) return "Qualquer encerramento tabulado";
       return "Qualquer encerramento";
     }
     default:
@@ -726,7 +727,7 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
     case "manual":
       return {};
     case "conversation_tabulated":
-      return { departmentId: "", tabulationId: "", tabulationLabel: "" };
+      return { departmentId: "", tabulationId: "", tabulationLabel: "", requireTabulation: false };
     case "whatsapp_session_expiring":
       return { hoursBeforeExpiry: 1 };
     default:

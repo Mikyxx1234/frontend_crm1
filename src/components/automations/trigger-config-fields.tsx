@@ -744,6 +744,7 @@ function ConversationTabulatedFields({
 }) {
   const departmentId = String(value.departmentId ?? "");
   const tabulationId = String(value.tabulationId ?? "");
+  const requireTabulation = value.requireTabulation === true;
 
   const departmentsQuery = useQuery({
     queryKey: ["automation-trigger-departments"],
@@ -776,11 +777,21 @@ function ConversationTabulatedFields({
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Disparado quando um agente encerra uma conversa. Se uma tabulação
-        for escolhida no encerramento, você pode filtrar por departamento
-        e/ou tabulação (categoria pai inclui todos os itens abaixo). Sem
-        filtro, dispara em qualquer encerramento — com ou sem tabulação.
+        Disparado quando um agente encerra uma conversa. Por padrão vale
+        qualquer encerramento manual — marque a opção abaixo para restringir
+        apenas aos encerramentos com tabulação. Filtros de departamento e
+        tabulação são opcionais (categoria pai inclui todos os itens abaixo).
       </p>
+
+      <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+        <input
+          type="checkbox"
+          className="size-4 accent-[var(--brand-primary)]"
+          checked={requireTabulation}
+          onChange={(e) => patch({ requireTabulation: e.target.checked })}
+        />
+        <span>Somente quando tiver tabulação</span>
+      </label>
 
       <div className="space-y-2">
         <Label htmlFor="tc-tab-dept">Departamento (opcional)</Label>

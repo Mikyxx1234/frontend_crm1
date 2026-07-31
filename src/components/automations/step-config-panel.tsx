@@ -601,6 +601,9 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
         buttons: Array.isArray(config.buttons) ? config.buttons : [],
         elseGotoStepId: config.elseGotoStepId ?? "",
         saveToVariable: config.saveToVariable ?? "",
+        timeoutMs: Number(config.timeoutMs ?? 86_400_000),
+        timeoutAction: config.timeoutAction ?? "continue",
+        timeoutGotoStepId: config.timeoutGotoStepId ?? "",
       };
     }
     if (step.type === "set_variable") {
@@ -1186,6 +1189,77 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                     onChange={(e) => setDraft((d) => ({ ...d, footer: e.target.value }))}
                   />
                 </div>
+                {(() => {
+                  const tMs = Number(draft.timeoutMs ?? 86_400_000);
+                  const tHours = Math.floor(tMs / 3_600_000);
+                  const tMinutes = Math.floor((tMs % 3_600_000) / 60_000);
+                  return (
+                    <div className="space-y-2 border-t border-border pt-3">
+                      <Label>Sem resposta em</Label>
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={999}
+                            className="w-16 text-center"
+                            value={tHours}
+                            onChange={(e) => {
+                              const h = Math.max(0, Number(e.target.value) || 0);
+                              setDraft((d) => ({ ...d, timeoutMs: h * 3_600_000 + tMinutes * 60_000 }));
+                            }}
+                          />
+                          <span className="text-[10px] text-muted-foreground">horas</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={59}
+                            className="w-16 text-center"
+                            value={tMinutes}
+                            onChange={(e) => {
+                              const m = Math.max(0, Math.min(59, Number(e.target.value) || 0));
+                              setDraft((d) => ({ ...d, timeoutMs: tHours * 3_600_000 + m * 60_000 }));
+                            }}
+                          />
+                          <span className="text-[10px] text-muted-foreground">min</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Evita que o fluxo fique parado esperando resposta indefinidamente.
+                      </p>
+                    </div>
+                  );
+                })()}
+                <div className="space-y-2">
+                  <Label htmlFor="sc-int-tact">Se ninguém responder</Label>
+                  <DropdownGlass
+                    triggerClassName="w-full"
+                    value={String(draft.timeoutAction ?? "continue")}
+                    options={[
+                      { value: "continue", label: "Continuar fluxo (próximo passo)" },
+                      { value: "stop", label: "Encerrar automação" },
+                      { value: "goto", label: "Ir para passo" },
+                    ]}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, timeoutAction: v }))}
+                  />
+                </div>
+                {String(draft.timeoutAction) === "goto" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="sc-int-tgt">Ir para (no timeout)</Label>
+                    <DropdownGlass
+                      triggerClassName="w-full"
+                      placeholder="Selecione…"
+                      value={String(draft.timeoutGotoStepId ?? "")}
+                      options={otherSteps.map((s) => ({
+                        value: s.id,
+                        label: `${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                      }))}
+                      onValueChange={(v) => setDraft((d) => ({ ...d, timeoutGotoStepId: v }))}
+                    />
+                  </div>
+                )}
                 <p className="text-[11px] text-muted-foreground">
                   O bot pausa e aguarda o cliente clicar em um botão. Cada botão pode levar a um passo diferente.
                 </p>

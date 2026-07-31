@@ -689,7 +689,7 @@ function WorkflowCanvasInner({
               ...baseData,
               buttons,
               hasElse: true,
-              hasTimeout: step.type === "question",
+              hasTimeout: step.type === "question" || step.type === "send_whatsapp_interactive",
             },
           };
         }

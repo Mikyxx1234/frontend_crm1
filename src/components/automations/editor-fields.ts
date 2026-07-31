@@ -120,6 +120,18 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "builder", builder: "buttonsTitle", key: "buttons", label: "Botões (máx. 3)" },
     { kind: "step", key: "elseGotoStepId", label: "Se resposta não bater → ir para", optional: true },
     { kind: "text", key: "saveToVariable", label: "Salvar resposta em variável", optional: true },
+    { kind: "duration", key: "timeoutMs", label: "Sem resposta em" },
+    {
+      kind: "select",
+      key: "timeoutAction",
+      label: "Se ninguém responder",
+      options: [
+        { value: "continue", label: "Continuar fluxo (próximo passo)" },
+        { value: "stop", label: "Encerrar automação" },
+        { value: "goto", label: "Ir para passo" },
+      ],
+    },
+    { kind: "step", key: "timeoutGotoStepId", label: "Ir para (no timeout)", optional: true },
   ],
   // Construtor visual (WebhookStepConfig) — parâmetros + catálogo de
   // variáveis. O STEP_FIELDS antigo só tinha textarea JSON e escondeu

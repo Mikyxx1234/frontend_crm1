@@ -490,7 +490,11 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
     case "send_whatsapp_media":
       return { mediaType: "image", mediaUrl: "", caption: "" };
     case "send_whatsapp_interactive":
-      return { body: "", buttons: [], header: "", footer: "", elseGotoStepId: "", saveToVariable: "" };
+      return {
+        body: "", buttons: [], header: "", footer: "",
+        elseGotoStepId: "", saveToVariable: "",
+        timeoutMs: 86_400_000, timeoutAction: "continue", timeoutGotoStepId: "",
+      };
     case "webhook":
       return { url: "", method: "POST", headers: [], body: "" };
     case "delay":

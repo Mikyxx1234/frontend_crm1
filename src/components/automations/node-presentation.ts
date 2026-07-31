@@ -48,8 +48,13 @@ export function resolveFlowPresentation(
   switch (stepType) {
     case "send_whatsapp_interactive": {
       const body = String(config.body ?? "").trim()
+      const hasTimeout = !!(config.timeoutGotoStepId || config.timeoutMs)
+      const outputs = interactiveOutputs(config, true)
+      if (hasTimeout) {
+        outputs.push({ id: "timeout", label: "Sem resposta", icon: "clock", err: true })
+      }
       return {
-        outputs: interactiveOutputs(config, true),
+        outputs,
         subtitle: body ? clampSubtitle(body) : data.subtitle,
       }
     }

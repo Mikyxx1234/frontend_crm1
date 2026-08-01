@@ -78,7 +78,7 @@ import {
   MOCK_DISTRIBUTION_PENDING,
   MOCK_DISTRIBUTION_RESPONSIBLES,
 } from "@/features/distribution/mock";
-import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
+import { isPageMockMode } from "@/lib/page-mock-mode";
 
 const SMART_DISTRIBUTION_SLUG = "smart_distribution";
 
@@ -139,17 +139,11 @@ export default function DistributionClientPage({
 
   const realResponsibles = respQuery.data?.responsibles ?? [];
   const realPending = pendingQuery.data?.pending ?? [];
-  const useDemo =
-    isPageMockMode() ||
-    shouldAutoDemoEmpty({
-      realCount: realResponsibles.length,
-      hasFilters: false,
-      isLoading:
-        widgetsQuery.isLoading ||
-        ((isPageMockMode() || widgetInstalled) && respQuery.isLoading),
-      isError: !!respQuery.error,
-    }) ||
-    (!widgetsQuery.isLoading && !widgetInstalled);
+  // Dados de exemplo SÓ em modo mock/preview explícito (v0, ?mock=1,
+  // NEXT_PUBLIC_MOCK_PAGES). Em produção nunca caímos em dados ilustrativos:
+  // com o widget instalado mostramos os dados reais (mesmo vazios) e, sem o
+  // widget, a tela de habilitar — nada de consultores fictícios.
+  const useDemo = isPageMockMode();
 
   const smartInstalled = useDemo || widgetInstalled;
 

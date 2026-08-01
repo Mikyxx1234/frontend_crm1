@@ -78,9 +78,27 @@ import {
   MOCK_DISTRIBUTION_PENDING,
   MOCK_DISTRIBUTION_RESPONSIBLES,
 } from "@/features/distribution/mock";
-import { isPageMockMode } from "@/lib/page-mock-mode";
+import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const SMART_DISTRIBUTION_SLUG = "smart_distribution";
+
+/**
+ * Ambiente onde os dados de exemplo (EduIT ilustrativo) PODEM aparecer:
+ * localhost, host de DEV (`crm-dev-*`) ou modo mock/preview explícito. Em
+ * PRODUÇÃO retorna sempre false — lá a tela mostra dados reais ou o erro real,
+ * nunca consultores fictícios. Nunca casa o host de produção.
+ */
+function isDevDemoEnv(): boolean {
+  if (isPageMockMode()) return true;
+  if (typeof window === "undefined") return false;
+  const h = window.location.hostname.toLowerCase();
+  return (
+    h === "localhost" ||
+    h.startsWith("127.") ||
+    h.includes("crm-dev") ||
+    h.includes("-dev.")
+  );
+}
 
 type DistributionView = "team" | "queue" | "logs";
 
@@ -139,11 +157,22 @@ export default function DistributionClientPage({
 
   const realResponsibles = respQuery.data?.responsibles ?? [];
   const realPending = pendingQuery.data?.pending ?? [];
-  // Dados de exemplo SÓ em modo mock/preview explícito (v0, ?mock=1,
-  // NEXT_PUBLIC_MOCK_PAGES). Em produção nunca caímos em dados ilustrativos:
-  // com o widget instalado mostramos os dados reais (mesmo vazios) e, sem o
-  // widget, a tela de habilitar — nada de consultores fictícios.
-  const useDemo = isPageMockMode();
+  // Dados de exemplo (EduIT ilustrativo) SÓ em DEV/mock. Em PRODUÇÃO nunca
+  // exibimos dados fictícios: mostramos os dados reais (ou o erro/estado real).
+  // `isDevDemoEnv` casa localhost / host de DEV (crm-dev-*) / mock explícito
+  // (v0, ?mock=1, NEXT_PUBLIC_MOCK_PAGES) — nunca o host de produção.
+  const useDemo =
+    isDevDemoEnv() &&
+    (isPageMockMode() ||
+      shouldAutoDemoEmpty({
+        realCount: realResponsibles.length,
+        hasFilters: false,
+        isLoading:
+          widgetsQuery.isLoading ||
+          ((isPageMockMode() || widgetInstalled) && respQuery.isLoading),
+        isError: !!respQuery.error,
+      }) ||
+      (!widgetsQuery.isLoading && !widgetInstalled));
 
   const smartInstalled = useDemo || widgetInstalled;
 

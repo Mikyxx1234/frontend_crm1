@@ -21,6 +21,10 @@ export interface ResponsibleScheduleDto {
   endTime: string;
   timezone: string;
   weekdays: number[];
+  /** Expediente de sábado por consultor. */
+  saturdayEnabled?: boolean;
+  saturdayStart?: string;
+  saturdayEnd?: string;
 }
 
 export interface ResponsibleDepartmentRef {
@@ -146,6 +150,9 @@ export interface UpdateResponsibleInput {
     endTime?: string;
     timezone?: string;
     weekdays?: number[];
+    saturdayEnabled?: boolean;
+    saturdayStart?: string;
+    saturdayEnd?: string;
   };
 }
 

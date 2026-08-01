@@ -200,12 +200,6 @@ export function retryPending(): Promise<RetryResult> {
 
 export interface DistributionSettings {
   respectDepartment: boolean;
-  /** Expediente de sábado no nível da org (todos os consultores). */
-  saturdayEnabled: boolean;
-  /** "HH:MM" — início do sábado. */
-  saturdayStart: string;
-  /** "HH:MM" — fim do sábado. */
-  saturdayEnd: string;
 }
 
 export function fetchDistributionSettings(): Promise<DistributionSettings> {

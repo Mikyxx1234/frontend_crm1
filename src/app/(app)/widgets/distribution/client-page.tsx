@@ -2430,6 +2430,15 @@ function EditResponsibleDialog({
   const [preLunchStop, setPreLunchStop] = useState(
     String(responsible.preLunchStopMinutes ?? 30),
   );
+  const [saturdayEnabled, setSaturdayEnabled] = useState(
+    responsible.schedule?.saturdayEnabled ?? false,
+  );
+  const [satStart, setSatStart] = useState(
+    responsible.schedule?.saturdayStart ?? "09:00",
+  );
+  const [satEnd, setSatEnd] = useState(
+    responsible.schedule?.saturdayEnd ?? "13:00",
+  );
   const [deptIds, setDeptIds] = useState<string[]>(
     responsible.departments?.map((d) => d.id) ?? [],
   );
@@ -2474,6 +2483,9 @@ function EditResponsibleDialog({
             endTime: toHhmm(endTime),
             timezone: responsible.schedule?.timezone ?? "America/Sao_Paulo",
             weekdays: responsible.schedule?.weekdays ?? [1, 2, 3, 4, 5],
+            saturdayEnabled,
+            saturdayStart: toHhmm(satStart),
+            saturdayEnd: toHhmm(satEnd),
           },
         },
       },
@@ -2598,6 +2610,40 @@ function EditResponsibleDialog({
                 11:30 e às 17:30. 0 = só no intervalo de almoço (sem pré-corte).
               </span>
             </label>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]/40 p-3">
+            <ToggleField
+              label="Trabalha no sábado"
+              hint="Ligado = fica elegível no sábado dentro do horário abaixo (sem almoço). Desligado = sábado fora do expediente."
+              checked={saturdayEnabled}
+              onChange={setSaturdayEnabled}
+            />
+            <div
+              className={cn(
+                "grid grid-cols-2 gap-2 transition-opacity",
+                saturdayEnabled ? "" : "pointer-events-none opacity-50",
+              )}
+            >
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--text-muted)]">Início</span>
+                <input
+                  type="time"
+                  value={satStart}
+                  onChange={(e) => setSatStart(e.target.value)}
+                  className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--text-muted)]">Saída</span>
+                <input
+                  type="time"
+                  value={satEnd}
+                  onChange={(e) => setSatEnd(e.target.value)}
+                  className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+                />
+              </label>
+            </div>
           </div>
 
           <label className="flex flex-col gap-1">
@@ -2776,15 +2822,6 @@ function DepartmentsDistributionPanel() {
   const updateSettings = useUpdateDistributionSettings();
   const depts = deptsQuery.data ?? [];
   const respectDepartment = settingsQuery.data?.respectDepartment ?? false;
-  const saturdayEnabled = settingsQuery.data?.saturdayEnabled ?? false;
-  const [satStart, setSatStart] = useState("09:00");
-  const [satEnd, setSatEnd] = useState("13:00");
-  useEffect(() => {
-    if (settingsQuery.data) {
-      setSatStart(settingsQuery.data.saturdayStart || "09:00");
-      setSatEnd(settingsQuery.data.saturdayEnd || "13:00");
-    }
-  }, [settingsQuery.data]);
 
   if (deptsQuery.isLoading) {
     return (
@@ -2820,35 +2857,6 @@ function DepartmentsDistributionPanel() {
     updateSettings.mutate(
       { respectDepartment: !respectDepartment },
       {
-        onError: (e) =>
-          toast.error(
-            e instanceof Error ? e.message : "Erro ao salvar configuração.",
-          ),
-      },
-    );
-  };
-
-  const toggleSaturday = () => {
-    updateSettings.mutate(
-      { saturdayEnabled: !saturdayEnabled, saturdayStart: satStart, saturdayEnd: satEnd },
-      {
-        onError: (e) =>
-          toast.error(
-            e instanceof Error ? e.message : "Erro ao salvar configuração.",
-          ),
-      },
-    );
-  };
-
-  const saveSaturdayHours = () => {
-    if (satEnd <= satStart) {
-      toast.error("O fim do sábado deve ser após o início.");
-      return;
-    }
-    updateSettings.mutate(
-      { saturdayEnabled, saturdayStart: satStart, saturdayEnd: satEnd },
-      {
-        onSuccess: () => toast.success("Expediente de sábado salvo."),
         onError: (e) =>
           toast.error(
             e instanceof Error ? e.message : "Erro ao salvar configuração.",
@@ -2924,56 +2932,6 @@ function DepartmentsDistributionPanel() {
             </button>
           </div>
         ))}
-      </div>
-
-      {/* Expediente de sábado (nível da org — todos os consultores). */}
-      <div className="mt-1 flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-              Expediente de sábado
-            </p>
-            <p className="font-body text-[11.5px] text-[var(--text-muted)]">
-              {saturdayEnabled
-                ? `Ligado: sábado das ${satStart} às ${satEnd} para todos os consultores.`
-                : "Desligado: sábado fica fora do expediente (ninguém elegível)."}
-            </p>
-          </div>
-          <GlassSwitch
-            checked={saturdayEnabled}
-            disabled={updateSettings.isPending || settingsQuery.isLoading}
-            onClick={toggleSaturday}
-          />
-        </div>
-        <div
-          className={cn(
-            "flex flex-wrap items-center gap-2 transition-opacity",
-            saturdayEnabled ? "" : "pointer-events-none opacity-50",
-          )}
-        >
-          <label className="font-body text-[12px] text-[var(--text-muted)]">Das</label>
-          <input
-            type="time"
-            value={satStart}
-            onChange={(e) => setSatStart(e.target.value)}
-            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-1 font-body text-[13px] text-[var(--text-primary)]"
-          />
-          <label className="font-body text-[12px] text-[var(--text-muted)]">às</label>
-          <input
-            type="time"
-            value={satEnd}
-            onChange={(e) => setSatEnd(e.target.value)}
-            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-1 font-body text-[13px] text-[var(--text-primary)]"
-          />
-          <button
-            type="button"
-            onClick={saveSaturdayHours}
-            disabled={updateSettings.isPending}
-            className="ml-auto rounded-full bg-[var(--brand-primary)] px-3 py-1.5 font-display text-[12px] font-bold text-white transition-all hover:-translate-y-px disabled:opacity-50"
-          >
-            Salvar horário
-          </button>
-        </div>
       </div>
     </div>
   );

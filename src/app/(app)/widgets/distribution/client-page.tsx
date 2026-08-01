@@ -2776,6 +2776,15 @@ function DepartmentsDistributionPanel() {
   const updateSettings = useUpdateDistributionSettings();
   const depts = deptsQuery.data ?? [];
   const respectDepartment = settingsQuery.data?.respectDepartment ?? false;
+  const saturdayEnabled = settingsQuery.data?.saturdayEnabled ?? false;
+  const [satStart, setSatStart] = useState("09:00");
+  const [satEnd, setSatEnd] = useState("13:00");
+  useEffect(() => {
+    if (settingsQuery.data) {
+      setSatStart(settingsQuery.data.saturdayStart || "09:00");
+      setSatEnd(settingsQuery.data.saturdayEnd || "13:00");
+    }
+  }, [settingsQuery.data]);
 
   if (deptsQuery.isLoading) {
     return (
@@ -2811,6 +2820,35 @@ function DepartmentsDistributionPanel() {
     updateSettings.mutate(
       { respectDepartment: !respectDepartment },
       {
+        onError: (e) =>
+          toast.error(
+            e instanceof Error ? e.message : "Erro ao salvar configuração.",
+          ),
+      },
+    );
+  };
+
+  const toggleSaturday = () => {
+    updateSettings.mutate(
+      { saturdayEnabled: !saturdayEnabled, saturdayStart: satStart, saturdayEnd: satEnd },
+      {
+        onError: (e) =>
+          toast.error(
+            e instanceof Error ? e.message : "Erro ao salvar configuração.",
+          ),
+      },
+    );
+  };
+
+  const saveSaturdayHours = () => {
+    if (satEnd <= satStart) {
+      toast.error("O fim do sábado deve ser após o início.");
+      return;
+    }
+    updateSettings.mutate(
+      { saturdayEnabled, saturdayStart: satStart, saturdayEnd: satEnd },
+      {
+        onSuccess: () => toast.success("Expediente de sábado salvo."),
         onError: (e) =>
           toast.error(
             e instanceof Error ? e.message : "Erro ao salvar configuração.",
@@ -2877,15 +2915,65 @@ function DepartmentsDistributionPanel() {
                   : "border-[var(--text-muted)]/40 bg-[var(--text-muted)]/25",
               )}
             >
-              <span
-                className={cn(
-                  "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border border-black/10 bg-white shadow-sm transition-all",
-                  d.distributionEnabled ? "right-0.5" : "left-0.5",
-                )}
-              />
+            <span
+              className={cn(
+                "absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border border-black/10 bg-white shadow-sm transition-all",
+                d.distributionEnabled ? "right-0.5" : "left-0.5",
+              )}
+            />
             </button>
           </div>
         ))}
+      </div>
+
+      {/* Expediente de sábado (nível da org — todos os consultores). */}
+      <div className="mt-1 flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+              Expediente de sábado
+            </p>
+            <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+              {saturdayEnabled
+                ? `Ligado: sábado das ${satStart} às ${satEnd} para todos os consultores.`
+                : "Desligado: sábado fica fora do expediente (ninguém elegível)."}
+            </p>
+          </div>
+          <GlassSwitch
+            checked={saturdayEnabled}
+            disabled={updateSettings.isPending || settingsQuery.isLoading}
+            onClick={toggleSaturday}
+          />
+        </div>
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-2 transition-opacity",
+            saturdayEnabled ? "" : "pointer-events-none opacity-50",
+          )}
+        >
+          <label className="font-body text-[12px] text-[var(--text-muted)]">Das</label>
+          <input
+            type="time"
+            value={satStart}
+            onChange={(e) => setSatStart(e.target.value)}
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-1 font-body text-[13px] text-[var(--text-primary)]"
+          />
+          <label className="font-body text-[12px] text-[var(--text-muted)]">às</label>
+          <input
+            type="time"
+            value={satEnd}
+            onChange={(e) => setSatEnd(e.target.value)}
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-1 font-body text-[13px] text-[var(--text-primary)]"
+          />
+          <button
+            type="button"
+            onClick={saveSaturdayHours}
+            disabled={updateSettings.isPending}
+            className="ml-auto rounded-full bg-[var(--brand-primary)] px-3 py-1.5 font-display text-[12px] font-bold text-white transition-all hover:-translate-y-px disabled:opacity-50"
+          >
+            Salvar horário
+          </button>
+        </div>
       </div>
     </div>
   );

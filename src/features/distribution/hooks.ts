@@ -62,7 +62,7 @@ export function useDistributionSettings(enabled = true) {
 
 export function useUpdateDistributionSettings() {
   const qc = useQueryClient();
-  return useMutation<DistributionSettings, Error, DistributionSettings>({
+  return useMutation<DistributionSettings, Error, Partial<DistributionSettings>>({
     mutationFn: (input) => updateDistributionSettings(input),
     onSuccess: (data) => {
       qc.setQueryData(DISTRIBUTION_SETTINGS_KEY, data);

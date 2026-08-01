@@ -200,6 +200,12 @@ export function retryPending(): Promise<RetryResult> {
 
 export interface DistributionSettings {
   respectDepartment: boolean;
+  /** Expediente de sábado no nível da org (todos os consultores). */
+  saturdayEnabled: boolean;
+  /** "HH:MM" — início do sábado. */
+  saturdayStart: string;
+  /** "HH:MM" — fim do sábado. */
+  saturdayEnd: string;
 }
 
 export function fetchDistributionSettings(): Promise<DistributionSettings> {
@@ -209,8 +215,9 @@ export function fetchDistributionSettings(): Promise<DistributionSettings> {
   );
 }
 
+/** Atualização parcial: envie só as chaves que quer alterar. */
 export function updateDistributionSettings(
-  input: DistributionSettings,
+  input: Partial<DistributionSettings>,
 ): Promise<DistributionSettings> {
   return sendJson<DistributionSettings>(
     "/api/distribution/settings",

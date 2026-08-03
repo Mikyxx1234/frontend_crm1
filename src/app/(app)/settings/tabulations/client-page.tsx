@@ -30,10 +30,7 @@ import { SwitchGlass } from "@/components/crm/switch-glass";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
-import {
-  SettingsListFilterBar,
-  type SettingsFilterGroup,
-} from "@/components/crm/settings-filter-bar";
+import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import {
   Dialog,
   DialogContent,
@@ -443,27 +440,23 @@ function TabulationsBody() {
     importCsv.mutate(rows);
   };
 
-  // Busca + filtro de departamento no centro do PageHeader.
-  const centerNode = useMemo(() => {
-    const deptGroup: SettingsFilterGroup = {
-      key: "departamento",
-      label: "Departamento",
-      value: effectiveDeptId ?? "",
-      onChange: (id) => setDepartmentId(id),
-      options: departments.map((d) => ({ value: d.id, label: d.name })),
-    };
-    return (
+  // Apenas busca no centro do PageHeader. O departamento NAO fica aqui:
+  // escondido no popover de filtros, ele passava despercebido e as
+  // tabulacoes acabavam criadas no departamento errado (o primeiro da
+  // lista, escolhido por default). Agora ele e' um seletor fixo e
+  // destacado no topo do conteudo.
+  const centerNode = useMemo(
+    () => (
       <SettingsListFilterBar
         search={search}
         onSearch={setSearch}
         placeholder="Buscar tabulação…"
         ariaLabel="Buscar tabulação"
-        groups={[deptGroup]}
-        popoverTitle="Filtrar tabulações"
         onClearAll={() => setSearch("")}
       />
-    );
-  }, [departments, effectiveDeptId, search]);
+    ),
+    [search],
+  );
 
   // CTAs de CSV no hambúrguer à direita do PageHeader.
   const actionsNode = useMemo(
@@ -522,18 +515,30 @@ function TabulationsBody() {
         }}
       />
 
-      {/* Fallback do seletor de departamento quando fora do shell (sem slots). */}
-      {!slots ? (
+      {/* Departamento em edicao — sempre visivel. Cada departamento tem sua
+          propria arvore, e a tela abre no primeiro da lista por default;
+          sem esse destaque o admin cria tabulacoes no departamento errado. */}
+      {departments.length > 0 ? (
         <GlassCard variant="panel" className="relative z-30 min-w-0 overflow-visible p-4 sm:p-5">
-          <div className="max-w-[520px]">
-            <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-              Departamento
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+            <div className="min-w-[260px] flex-1 basis-[320px]">
+              <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                Departamento em edição
+              </p>
+              <DeptSelect
+                departments={departments}
+                selected={selectedDept}
+                onSelect={(id) => setDepartmentId(id)}
+              />
+            </div>
+            <p className="min-w-[240px] flex-1 basis-[280px] font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
+              Cada departamento tem sua própria árvore. Tudo que você criar aqui vale
+              somente para{" "}
+              <strong className="font-semibold text-[var(--text-primary)]">
+                {selectedDept?.name ?? "—"}
+              </strong>
+              .
             </p>
-            <DeptSelect
-              departments={departments}
-              selected={selectedDept}
-              onSelect={(id) => setDepartmentId(id)}
-            />
           </div>
         </GlassCard>
       ) : null}
@@ -563,7 +568,18 @@ function TabulationsBody() {
               </div>
               <div className="mt-0.5 font-body text-[12px] text-[var(--text-muted)]">
                 Quando ativado, o agente escolhe um nível final antes de resolver a conversa
-                deste departamento.
+                {selectedDept ? (
+                  <>
+                    {" "}
+                    de{" "}
+                    <strong className="font-semibold text-[var(--text-secondary)]">
+                      {selectedDept.name}
+                    </strong>
+                  </>
+                ) : (
+                  " deste departamento"
+                )}
+                .
               </div>
             </div>
             <SwitchGlass
@@ -619,6 +635,7 @@ function TabulationsBody() {
           tree={filteredTree}
           loading={treeQuery.isLoading}
           nodeCount={filteredCount}
+          departmentName={selectedDept?.name ?? null}
           onCreate={(parentId, name) => createNode.mutate({ parentId, name })}
           onRename={(id, name) => updateNode.mutate({ id, name })}
           onToggleActive={(id, active) => updateNode.mutate({ id, active })}
@@ -936,6 +953,7 @@ function TreeEditor(props: {
   tree: TabulationNode[];
   loading: boolean;
   nodeCount: number;
+  departmentName: string | null;
   onCreate: (parentId: string | null, name: string) => void;
   onRename: (id: string, name: string) => void;
   onToggleActive: (id: string, active: boolean) => void;
@@ -958,8 +976,13 @@ function TreeEditor(props: {
           <IconListTree size={20} />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+          <h2 className="flex flex-wrap items-center gap-x-2 font-display text-[15px] font-bold text-[var(--text-primary)]">
             Árvore de tabulações
+            {props.departmentName ? (
+              <span className="rounded-full bg-[var(--brand-primary)]/10 px-2.5 py-0.5 font-display text-[11.5px] font-bold text-[var(--brand-primary)]">
+                {props.departmentName}
+              </span>
+            ) : null}
           </h2>
           <p className="font-body text-[12px] text-[var(--text-muted)]">
             Organize os níveis; o agente escolhe um nível final ao encerrar.

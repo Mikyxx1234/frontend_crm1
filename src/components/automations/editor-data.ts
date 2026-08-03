@@ -373,3 +373,28 @@ export function useCustomFieldConditionMeta() {
   }
   return { byPath, isLoading: contact.isLoading || deal.isLoading }
 }
+
+export type CustomFieldSlugMeta = { type: string; options: string[] }
+
+/**
+ * Metadados (type + options) indexados pelo slug (`name`) do custom field,
+ * para o nó `update_field` (que grava só o slug em `config.field`).
+ * Reusa a queryKey de `useCustomFieldTokens` / `useCustomFieldConditionMeta`.
+ */
+export function useCustomFieldMetaBySlug(entity: "contact" | "deal") {
+  const q = useQuery({
+    queryKey: ["editor-custom-fields-raw", entity],
+    staleTime: STALE,
+    queryFn: async (): Promise<RawCustomField[]> =>
+      asArray(await getJson(`/api/custom-fields?entity=${entity}`)) as RawCustomField[],
+  })
+  const bySlug = new Map<string, CustomFieldSlugMeta>()
+  for (const c of q.data ?? []) {
+    if (!(c.name || "").trim()) continue
+    bySlug.set(c.name!, {
+      type: (c.type || "").toUpperCase(),
+      options: c.options ?? [],
+    })
+  }
+  return { bySlug, isLoading: q.isLoading }
+}

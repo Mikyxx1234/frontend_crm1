@@ -32,13 +32,24 @@ import {
 import { WebhookStepConfig } from "@/components/automations/webhook-step-config";
 import { useCustomFieldConditionMeta } from "@/components/automations/editor-data";
 import {
+  showsUpdateFieldVariableHint,
+  UpdateFieldValueControl,
+} from "@/components/automations/update-field-value";
+import {
   validateEntries as validateWebhookEntries,
   type WebhookBodyEntry,
 } from "@/lib/webhook-body-builder";
 
 type PipelineStage = { id: string; name: string };
 type Pipeline = { id: string; name: string; stages: PipelineStage[] };
-type CustomFieldOption = { id: string; name: string; label: string; entity: string };
+type CustomFieldOption = {
+  id: string;
+  name: string;
+  label: string;
+  entity: string;
+  type?: string;
+  options?: string[];
+};
 type VariableShortcutOption = { label: string; token: string; hint?: string };
 
 const UPDATE_FIELD_BUILTINS: Record<"contact" | "deal", Array<{ value: string; label: string }>> = {
@@ -873,84 +884,98 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
             </div>
           )}
 
-          {step.type === "update_field" && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="sc-uf-entity">Entidade</Label>
-                <DropdownGlass
-                  triggerClassName="w-full"
-                  value={String(draft.entity ?? "contact")}
-                  options={[
-                    { value: "contact", label: "Contato" },
-                    { value: "deal", label: "Negócio" },
-                  ]}
-                  onValueChange={(v) =>
-                    setDraft((d) => ({
-                      ...d,
-                      entity: v,
-                      field: "",
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sc-field-filter">Localizar campo</Label>
-                <Input
-                  id="sc-field-filter"
-                  value={updateFieldFilter}
-                  onChange={(e) => setUpdateFieldFilter(e.target.value)}
-                  placeholder="Digite para filtrar campos..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sc-field">Campo</Label>
-                <DropdownGlass
-                  triggerClassName="w-full"
-                  placeholder="Selecione um campo…"
-                  value={String(draft.field ?? "")}
-                  options={[
-                    ...(UPDATE_FIELD_BUILTINS[
-                      String(draft.entity ?? "contact") === "deal" ? "deal" : "contact"
-                    ] ?? [])
-                      .filter((o) =>
-                        `${o.label} ${o.value}`
-                          .toLowerCase()
-                          .includes(updateFieldFilter.trim().toLowerCase()),
-                      )
-                      .map((o) => ({
-                        value: o.value,
-                        label: o.label,
-                        description: "Campos nativos",
-                      })),
-                    ...(customFieldsQuery.data ?? [])
-                      .filter((f) => f.entity === String(draft.entity ?? "contact"))
-                      .filter((f) =>
-                        `${f.label} ${f.name}`
-                          .toLowerCase()
-                          .includes(updateFieldFilter.trim().toLowerCase()),
-                      )
-                      .map((f) => ({
-                        value: f.name,
-                        label: `${f.label} (${f.name})`,
-                        description: "Campos personalizados",
-                      })),
-                  ]}
-                  onValueChange={(v) => setDraft((d) => ({ ...d, field: v }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sc-val">Valor</Label>
-                <Input
-                  id="sc-val"
-                  value={String(draft.value ?? "")}
-                  onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value }))}
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Você pode usar variáveis no valor, ex.: {"{{"}lastResponse{"}}"}.
-                </p>
-              </div>
-            </>
-          )}
+          {step.type === "update_field" && (() => {
+            const entity = String(draft.entity ?? "contact") === "deal" ? "deal" : "contact";
+            const fieldSlug = String(draft.field ?? "");
+            const selectedCustom = (customFieldsQuery.data ?? []).find(
+              (f) => f.entity === entity && f.name === fieldSlug,
+            );
+            const fieldType = (selectedCustom?.type || "").toUpperCase();
+            const fieldOpts = selectedCustom?.options ?? [];
+            return (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="sc-uf-entity">Entidade</Label>
+                  <DropdownGlass
+                    triggerClassName="w-full"
+                    value={entity}
+                    options={[
+                      { value: "contact", label: "Contato" },
+                      { value: "deal", label: "Negócio" },
+                    ]}
+                    onValueChange={(v) =>
+                      setDraft((d) => ({
+                        ...d,
+                        entity: v,
+                        field: "",
+                        value: "",
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sc-field-filter">Localizar campo</Label>
+                  <Input
+                    id="sc-field-filter"
+                    value={updateFieldFilter}
+                    onChange={(e) => setUpdateFieldFilter(e.target.value)}
+                    placeholder="Digite para filtrar campos..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sc-field">Campo</Label>
+                  <DropdownGlass
+                    triggerClassName="w-full"
+                    placeholder="Selecione um campo…"
+                    value={fieldSlug}
+                    options={[
+                      ...(UPDATE_FIELD_BUILTINS[entity] ?? [])
+                        .filter((o) =>
+                          `${o.label} ${o.value}`
+                            .toLowerCase()
+                            .includes(updateFieldFilter.trim().toLowerCase()),
+                        )
+                        .map((o) => ({
+                          value: o.value,
+                          label: o.label,
+                          description: "Campos nativos",
+                        })),
+                      ...(customFieldsQuery.data ?? [])
+                        .filter((f) => f.entity === entity)
+                        .filter((f) =>
+                          `${f.label} ${f.name}`
+                            .toLowerCase()
+                            .includes(updateFieldFilter.trim().toLowerCase()),
+                        )
+                        .map((f) => ({
+                          value: f.name,
+                          label: `${f.label} (${f.name})`,
+                          description: "Campos personalizados",
+                        })),
+                    ]}
+                    onValueChange={(v) =>
+                      setDraft((d) => ({ ...d, field: v, value: "" }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sc-val">Valor</Label>
+                  <UpdateFieldValueControl
+                    fieldType={fieldType}
+                    options={fieldOpts}
+                    value={String(draft.value ?? "")}
+                    onChange={(v) => setDraft((d) => ({ ...d, value: v }))}
+                    variant="panel"
+                  />
+                  {showsUpdateFieldVariableHint(fieldType) && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Você pode usar variáveis no valor, ex.: {"{{"}lastResponse{"}}"}.
+                    </p>
+                  )}
+                </div>
+              </>
+            );
+          })()}
 
           {step.type === "create_activity" && (
             <>

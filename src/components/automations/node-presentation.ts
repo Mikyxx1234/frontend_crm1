@@ -22,6 +22,17 @@ function clampSubtitle(text: string, max = 48): string {
   return `${t.slice(0, max - 1)}…`
 }
 
+const FAILURE_OUTPUT = {
+  id: "failure",
+  label: "Falha ao enviar",
+  err: true as const,
+}
+
+const SUCCESS_SEND_OUTPUT = {
+  id: "next",
+  label: "Enviado",
+}
+
 function interactiveOutputs(config: Record<string, unknown>, withElse: boolean): NonNullable<FlowNodeData["outputs"]> {
   const buttons = Array.isArray(config.buttons) ? (config.buttons as Btn[]) : []
   const outputs: NonNullable<FlowNodeData["outputs"]> = buttons.map((btn, idx) => ({
@@ -32,6 +43,12 @@ function interactiveOutputs(config: Record<string, unknown>, withElse: boolean):
     outputs.push({ id: "else", label: "Outra resposta", icon: "list", err: true })
   }
   return outputs
+}
+
+function withFailureOutput(
+  outputs: NonNullable<FlowNodeData["outputs"]>,
+): NonNullable<FlowNodeData["outputs"]> {
+  return [...outputs, { ...FAILURE_OUTPUT }]
 }
 
 /**
@@ -54,7 +71,7 @@ export function resolveFlowPresentation(
         outputs.push({ id: "timeout", label: "Sem resposta", icon: "clock", err: true })
       }
       return {
-        outputs,
+        outputs: withFailureOutput(outputs),
         subtitle: body ? clampSubtitle(body) : data.subtitle,
       }
     }
@@ -66,7 +83,7 @@ export function resolveFlowPresentation(
         outputs.push({ id: "timeout", label: "Sem resposta", icon: "clock", err: true })
       }
       return {
-        outputs,
+        outputs: withFailureOutput(outputs),
         subtitle: message ? clampSubtitle(message) : data.subtitle,
       }
     }
@@ -83,7 +100,22 @@ export function resolveFlowPresentation(
     }
     case "send_whatsapp_message": {
       const content = String(config.content ?? "").trim()
-      return { subtitle: content ? clampSubtitle(content) : data.subtitle }
+      return {
+        subtitle: content ? clampSubtitle(content) : data.subtitle,
+        outputs: [{ ...SUCCESS_SEND_OUTPUT }, { ...FAILURE_OUTPUT }],
+      }
+    }
+    case "send_whatsapp_media": {
+      const caption = String(config.caption ?? "").trim()
+      const mediaType = String(config.mediaType ?? "image").trim()
+      return {
+        subtitle: caption
+          ? clampSubtitle(caption)
+          : mediaType
+            ? clampSubtitle(mediaType)
+            : data.subtitle,
+        outputs: [{ ...SUCCESS_SEND_OUTPUT }, { ...FAILURE_OUTPUT }],
+      }
     }
     case "send_whatsapp_template": {
       const tpl = String(config.templateName ?? "").trim()
@@ -94,9 +126,12 @@ export function resolveFlowPresentation(
       // Só vira nó ramificado quando o template tem botões de resposta rápida
       // (roteamento). Sem botões, mantém a saída única padrão (d.source).
       if (buttons.length > 0) {
-        return { outputs: interactiveOutputs(config, true), subtitle }
+        return { outputs: withFailureOutput(interactiveOutputs(config, true)), subtitle }
       }
-      return { subtitle }
+      return {
+        subtitle,
+        outputs: [{ ...SUCCESS_SEND_OUTPUT }, { ...FAILURE_OUTPUT }],
+      }
     }
     case "add_tag":
     case "remove_tag": {

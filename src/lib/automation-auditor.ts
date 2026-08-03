@@ -108,6 +108,7 @@ function strOrEmpty(v: unknown): string {
  *  - business_hours.elseStepId (fora do horário)
  *  - wait_for_reply.receivedGotoStepId + timeoutGotoStepId
  *  - question/send_whatsapp_interactive.buttons[].gotoStepId + elseGotoStepId + timeoutGotoStepId
+ *  - Meta send.failureAction=goto → failureGotoStepId
  *  - goto.targetStepId
  *  - transfer_automation.targetAutomationId (cross — retornado como cross-ref)
  *
@@ -157,6 +158,22 @@ export function getStepOutgoing(step: StepLike): StepOutgoing {
       push("else (nenhum botão bateu)", c.elseGotoStepId);
       push("timeout", c.timeoutGotoStepId);
       push("linear (após enviar)", c.nextStepId);
+      if (c.failureAction === "goto") push("falha ao enviar", c.failureGotoStepId);
+      break;
+    }
+    case "send_whatsapp_message":
+    case "send_whatsapp_media":
+    case "send_whatsapp_template": {
+      if (step.type === "send_whatsapp_template") {
+        const buttons = Array.isArray(c.buttons) ? (c.buttons as Record<string, unknown>[]) : [];
+        buttons.forEach((b, i) => {
+          const label = strOrEmpty(b.title) || strOrEmpty(b.text) || `botão #${i + 1}`;
+          push(label, b.gotoStepId);
+        });
+        push("else (nenhum botão bateu)", c.elseGotoStepId);
+      }
+      push("linear", c.nextStepId);
+      if (c.failureAction === "goto") push("falha ao enviar", c.failureGotoStepId);
       break;
     }
     case "goto": {

@@ -32,6 +32,7 @@ import {
   useAutomationOptions,
   useConditionFieldOptions,
   useCustomFieldConditionMeta,
+  useCustomFieldMetaBySlug,
   useCustomFieldTokens,
   useDepartmentOptions,
   useFieldOptions,
@@ -44,6 +45,10 @@ import {
   type Opt,
 } from "./editor-data"
 import { WebhookStepConfig } from "./webhook-step-config"
+import {
+  showsUpdateFieldVariableHint,
+  UpdateFieldValueControl,
+} from "./update-field-value"
 
 const CUSTOM_FIELD_SENTINEL = "__custom__"
 
@@ -859,7 +864,11 @@ function DelayField({ ms, onChange }: { ms: number; onChange: (ms: number) => vo
 function UpdateFieldEditor({ config, onChange }: { config: Cfg; onChange: (next: Cfg) => void }) {
   const entity = (str(config.entity) || "contact") as "contact" | "deal"
   const { options, isLoading } = useFieldOptions(entity)
-  const set = (k: string, v: unknown) => onChange({ ...config, [k]: v })
+  const { bySlug } = useCustomFieldMetaBySlug(entity)
+  const fieldSlug = str(config.field)
+  const meta = fieldSlug ? bySlug.get(fieldSlug) : undefined
+  const fieldType = meta?.type ?? ""
+  const fieldOpts = meta?.options ?? []
   return (
     <>
       <Labeled label="Entidade">
@@ -869,14 +878,33 @@ function UpdateFieldEditor({ config, onChange }: { config: Cfg; onChange: (next:
             { value: "contact", label: "Contato" },
             { value: "deal", label: "Negócio" },
           ]}
-          onChange={(v) => onChange({ ...config, entity: v, field: "" })}
+          onChange={(v) => onChange({ ...config, entity: v, field: "", value: "" })}
         />
       </Labeled>
       <Labeled label="Campo">
-        <ConfigSelect value={str(config.field)} options={options} loading={isLoading} onChange={(v) => set("field", v)} placeholder="Selecione o campo…" />
+        <ConfigSelect
+          value={fieldSlug}
+          options={options}
+          loading={isLoading}
+          onChange={(v) => onChange({ ...config, field: v, value: "" })}
+          placeholder="Selecione o campo…"
+        />
       </Labeled>
-      <Labeled label="Valor" hint="Aceita variáveis, ex.: {{lastResponse}}">
-        <InputGlass className="nodrag" value={str(config.value)} onChange={(e) => set("value", e.target.value)} />
+      <Labeled
+        label="Valor"
+        hint={
+          showsUpdateFieldVariableHint(fieldType)
+            ? "Aceita variáveis, ex.: {{lastResponse}}"
+            : undefined
+        }
+      >
+        <UpdateFieldValueControl
+          fieldType={fieldType}
+          options={fieldOpts}
+          value={str(config.value)}
+          onChange={(v) => onChange({ ...config, value: v })}
+          variant="inline"
+        />
       </Labeled>
     </>
   )

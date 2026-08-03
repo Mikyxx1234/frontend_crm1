@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconClock as Clock, IconHelpCircle as HelpCircle, IconMessageQuestion as MessageCircleQuestion, IconClick as MousePointerClick, IconTrash as Trash2 } from "@tabler/icons-react";
+import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconCircleOff as CircleSlash, IconClock as Clock, IconHelpCircle as HelpCircle, IconMessageQuestion as MessageCircleQuestion, IconClick as MousePointerClick, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -188,6 +188,22 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           )}
         </div>
       )}
+
+      {/* Fallback síncrono Meta — falha no envio (API). */}
+      <div className="border-t border-[var(--glass-border-subtle)]">
+        <div className="relative flex h-8 items-center gap-2 px-3.5">
+          <CircleSlash className="size-3 shrink-0 text-[var(--color-danger)]" strokeWidth={2.4} />
+          <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-danger-text)]">
+            Falha ao enviar
+          </span>
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="failure"
+            className="size-3! border-2! border-white! bg-[var(--color-danger)]!"
+          />
+        </div>
+      </div>
 
       {/* NOTE: não há "main flow handle" extra — cada botão/else/timeout
           tem seu próprio source handle na linha correspondente. Antes

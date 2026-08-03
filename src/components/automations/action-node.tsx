@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { IconActivity as Activity, IconAlertTriangle as AlertTriangle, IconArrowsLeftRight as ArrowRightLeft, IconRobotFace as BotMessageSquare, IconCircleCheck as CheckCircle2, IconPhoto as Image, IconMail as Mail, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPencil as Pencil, IconTag as Tag, IconTrash as Trash2, IconUserPlus as UserPlus, IconWebhook as Webhook } from "@tabler/icons-react";
+import { IconActivity as Activity, IconAlertTriangle as AlertTriangle, IconArrowsLeftRight as ArrowRightLeft, IconRobotFace as BotMessageSquare, IconCircleCheck as CheckCircle2, IconCircleOff as CircleSlash, IconPhoto as Image, IconMail as Mail, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPencil as Pencil, IconTag as Tag, IconTrash as Trash2, IconUserPlus as UserPlus, IconWebhook as Webhook } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -71,11 +71,19 @@ function StepIcon({ type }: { type: string }) {
   return <Icon className="size-4" strokeWidth={2.4} aria-hidden />;
 }
 
+/** Envios Meta lineares (ActionNode) — saída visual de falha síncrona. */
+const META_LINEAR_FAILURE_TYPES = new Set([
+  "send_whatsapp_message",
+  "send_whatsapp_template",
+  "send_whatsapp_media",
+]);
+
 export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
   const s = data.stats;
   const hasStats = s && (s.success > 0 || s.failed > 0);
   const iconColor = stepColor[data.stepType] ?? "text-primary";
   const iconBg = iconBgMap[data.stepType] ?? "bg-primary/10 ring-primary/15";
+  const hasFailureOutput = META_LINEAR_FAILURE_TYPES.has(data.stepType);
 
   return (
     <div
@@ -174,17 +182,49 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
           </button>
         </TooltipHost>
       )}
+      {hasFailureOutput ? (
+        // Espelha DistributionNode: handle de sucesso PRIMEIRO, senão a edge
+        // linear / "+ Adicionar próximo passo" (sem sourceHandle) cola no
+        // primeiro source handle do DOM — que seria o de falha.
+        <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-[var(--color-bg-subtle)] to-transparent">
+          <div className="relative flex h-9 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5">
+            <CheckCircle2 className="size-3.5 shrink-0 text-[var(--color-success)]" strokeWidth={2.4} />
+            <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-success-text)]">
+              Enviado
+            </span>
+            <Handle
+              type="source"
+              position={Position.Right}
+              id="next"
+              className="size-3! border-2! border-white! bg-[var(--color-success)]! shadow-[var(--shadow-indigo-glow)]!"
+            />
+          </div>
+          <div className="relative flex h-9 items-center gap-2 px-3.5">
+            <CircleSlash className="size-3.5 shrink-0 text-[var(--color-danger)]" strokeWidth={2.4} />
+            <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-danger-text)]">
+              Falha ao enviar
+            </span>
+            <Handle
+              type="source"
+              position={Position.Right}
+              id="failure"
+              className="size-3! border-2! border-white! bg-[var(--color-danger)]!"
+            />
+          </div>
+        </div>
+      ) : (
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="size-3! border-2! border-white! bg-primary! shadow-[var(--shadow-indigo-glow)]!"
+        />
+      )}
       <NodeInlineConfig
         selected={selected}
         stepType={data.stepType}
         config={data.config}
         stepOptions={data.stepOptions ?? []}
         onChange={(next) => data.onConfigChange?.(next)}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="size-3! border-2! border-white! bg-primary! shadow-[var(--shadow-indigo-glow)]!"
       />
     </div>
   );

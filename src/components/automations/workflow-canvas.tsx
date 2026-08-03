@@ -220,6 +220,22 @@ const EDGE_DATA_ADD: AnimatedEdgeData = { variant: "add", energized: false };
 const NONE = "__none__";
 const INTERACT_W = 20;
 
+/** Envios Meta com fallback síncrono (`failureAction` / `failureGotoStepId`). */
+const META_SEND_FAILURE_TYPES = new Set([
+  "send_whatsapp_message",
+  "send_whatsapp_template",
+  "send_whatsapp_media",
+  "send_whatsapp_interactive",
+  "question",
+]);
+
+function readFailureGotoStepId(cfg: Record<string, unknown>): string | null {
+  if (cfg.failureAction !== "goto") return null;
+  const id = cfg.failureGotoStepId;
+  if (typeof id !== "string" || !id || id === NONE) return null;
+  return id;
+}
+
 /**
  * Label "✕" das edges agora é renderizada pelo próprio AnimatedEdge via
  * <EdgeLabelRenderer> (pílula clicável estilizada). Não precisamos mais
@@ -412,6 +428,20 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
       }
     }
 
+    // Fallback síncrono Meta: handle `failure` → failureGotoStepId.
+    if (META_SEND_FAILURE_TYPES.has(a.type)) {
+      const failureGoto = readFailureGotoStepId(cfg);
+      if (failureGoto && stepIds.has(failureGoto)) {
+        out.push({
+          id: `${a.id}-failure-${failureGoto}`,
+          source: a.id, target: failureGoto,
+          sourceHandle: "failure",
+          animated: false, data: EDGE_DATA_ELSE, type: EDGE_TYPE,
+          interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
+        });
+      }
+    }
+
     // O condition (multi-branch) NÃO usa nextStepId raiz — cada
     // branch tem o seu. Pular pra não criar edge fantasma no handle
     // "false" do losango antigo.
@@ -431,9 +461,12 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
     if (explicit === NONE || !explicit) continue;
 
     if (stepIds.has(explicit)) {
+      const isMetaLinear =
+        META_SEND_FAILURE_TYPES.has(a.type) && !isInteractiveStep(a);
       out.push({
         id: `${a.id}-next-${explicit}`,
         source: a.id, target: explicit,
+        ...(isMetaLinear ? { sourceHandle: "next" } : {}),
         animated: false, data: EDGE_DATA_DEFAULT, type: EDGE_TYPE,
         interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
       });
@@ -446,10 +479,18 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
   // sem indicação visual de que dá pra continuar.
   const leaves = collectLeafStepIds(steps);
   for (const leafId of leaves) {
+    const leaf = steps.find((s) => s.id === leafId);
+    // Meta linear: handle de sucesso é `next` (declarado antes de `failure`).
+    // Sem sourceHandle a pílula colava na saída de falha.
+    const metaLinear =
+      leaf &&
+      META_SEND_FAILURE_TYPES.has(leaf.type) &&
+      !isInteractiveStep(leaf);
     out.push({
       id: `addstep-edge-${leafId}`,
       source: leafId,
       target: `${ADD_STEP_ID}:${leafId}`,
+      ...(metaLinear ? { sourceHandle: "next" } : {}),
       animated: false,
       data: EDGE_DATA_ADD,
       type: EDGE_TYPE,
@@ -887,6 +928,11 @@ function WorkflowCanvasInner({
         if (cfg.elseStepId === id) { delete cfg.elseStepId; changed = true; }
         if (cfg.timeoutGotoStepId === id) { delete cfg.timeoutGotoStepId; changed = true; }
         if (cfg.receivedGotoStepId === id) { delete cfg.receivedGotoStepId; changed = true; }
+        if (cfg.failureGotoStepId === id) {
+          delete cfg.failureGotoStepId;
+          cfg.failureAction = "stop";
+          changed = true;
+        }
 
         if (Array.isArray(cfg.buttons)) {
           const btns = (cfg.buttons as Record<string, unknown>[]).map((b) => {
@@ -940,6 +986,8 @@ function WorkflowCanvasInner({
       delete cfg.elseStepId;
       delete cfg.timeoutGotoStepId;
       delete cfg.receivedGotoStepId;
+      delete cfg.failureGotoStepId;
+      if (META_SEND_FAILURE_TYPES.has(orig.type)) cfg.failureAction = "stop";
       if (Array.isArray(cfg.buttons)) {
         cfg.buttons = (cfg.buttons as Record<string, unknown>[]).map((b) => ({
           ...b,
@@ -1171,6 +1219,16 @@ function WorkflowCanvasInner({
           onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
           return;
         }
+
+        if (sourceHandle === "failure" && META_SEND_FAILURE_TYPES.has(srcStep.type)) {
+          const cfg = {
+            ...srcStep.config,
+            failureAction: "goto",
+            failureGotoStepId: target,
+          };
+          onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
+          return;
+        }
       }
 
       // Condition multi-branch / round_robin não aceitam `nextStepId`
@@ -1360,6 +1418,19 @@ function WorkflowCanvasInner({
 
         if (sourceHandle === "received" && srcStep.type === "wait_for_reply") {
           const cfg = { ...srcStep.config, receivedGotoStepId: id };
+          const updated = cur.map((s) =>
+            s.id === sourceId ? { ...s, config: cfg } : s
+          );
+          onStepsChange([...updated, step]);
+          return;
+        }
+
+        if (sourceHandle === "failure" && META_SEND_FAILURE_TYPES.has(srcStep.type)) {
+          const cfg = {
+            ...srcStep.config,
+            failureAction: "goto",
+            failureGotoStepId: id,
+          };
           const updated = cur.map((s) =>
             s.id === sourceId ? { ...s, config: cfg } : s
           );
@@ -1607,6 +1678,14 @@ function WorkflowCanvasInner({
       if (sourceHandle === "received" && srcStep.type === "wait_for_reply") {
         const cfg = { ...srcStep.config } as Record<string, unknown>;
         delete cfg.receivedGotoStepId;
+        onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
+        return;
+      }
+
+      if (sourceHandle === "failure" && META_SEND_FAILURE_TYPES.has(srcStep.type)) {
+        const cfg = { ...srcStep.config } as Record<string, unknown>;
+        delete cfg.failureGotoStepId;
+        cfg.failureAction = "stop";
         onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
         return;
       }

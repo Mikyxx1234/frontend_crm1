@@ -5,6 +5,33 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-08-03 — Saída visual "Falha ao enviar" nos nodes Meta
+
+**Modelos usados.** GPT-5.6 Sol (decisão principal) e Opus 4.7 isolado
+(avaliação arquitetural).
+
+**Decisão.** Nodes de mensagem, template, mídia, botões e pergunta WhatsApp
+mostram uma saída própria `failure`, rotulada **"Falha ao enviar"**. Conectar
+essa saída persiste `failureAction: "goto"` e `failureGotoStepId`; desconectar
+ou remover o destino limpa a referência e volta para `failureAction: "stop"`.
+Os handles normais de sucesso/resposta permanecem inalterados.
+
+O `WorkflowCanvas` de produção e os helpers do segundo editor compartilham o
+mesmo contrato. A saída representa somente rejeições percebidas durante a
+chamada à Meta; falhas de entrega informadas posteriormente pelo webhook ficam
+fora desta fase.
+
+**Alternativas descartadas.**
+
+- Um node `condition` separado baseado em `conversation.hasError`: UX distante
+  do padrão Kommo e sujeita a corrida de atualização.
+- Mostrar a saída em todos os `ActionNode`: criaria um caminho sem semântica em
+  ações que não enviam pela Meta.
+- Reagir desde já a falha assíncrona: exige correlação persistente e política
+  segura para não reanimar fluxo já concluído.
+
+---
+
 ### 2026-07-31 — Trigger `conversation_tabulated`: rename semântico e filtro explícito de tabulação
 
 **Decisão.** Mantido o slug interno `conversation_tabulated` (não renomeado

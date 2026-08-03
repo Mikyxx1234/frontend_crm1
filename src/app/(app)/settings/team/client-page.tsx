@@ -1149,6 +1149,11 @@ function TeamContent() {
                     {deleteTarget.name}
                   </span>{" "}
                   (<span className="text-[var(--text-muted)]">{deleteTarget.email}</span>).
+                  Negócios e contatos sob responsabilidade dessa pessoa ficam{" "}
+                  <span className="font-medium text-[var(--text-primary)]">
+                    sem responsável
+                  </span>
+                  .
                 </>
               ) : null}
             </DialogDescription>

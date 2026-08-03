@@ -39,7 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useDepartments, type Department } from "@/features/conversations-settings/hooks/use-departments";
+import { useDepartments } from "@/features/conversations-settings/hooks/use-departments";
 import { DeptGlyph } from "@/features/conversations-settings/department-icons";
 
 import {
@@ -515,31 +515,62 @@ function TabulationsBody() {
         }}
       />
 
-      {/* Departamento em edicao — sempre visivel. Cada departamento tem sua
-          propria arvore, e a tela abre no primeiro da lista por default;
-          sem esse destaque o admin cria tabulacoes no departamento errado. */}
+      {/* Departamentos como abas SEMPRE visiveis. Antes ficavam escondidos no
+          popover de filtros da busca e a tela abria no primeiro da lista sem
+          avisar — na Cruzeiro EaD isso fez 67 tabulacoes nascerem no
+          departamento errado. Com as abas a vista, qual arvore esta aberta
+          (e quais existem) fica obvio sem nenhum clique. */}
       {departments.length > 0 ? (
-        <GlassCard variant="panel" className="relative z-30 min-w-0 overflow-visible p-4 sm:p-5">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-            <div className="min-w-[260px] flex-1 basis-[320px]">
-              <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                Departamento em edição
-              </p>
-              <DeptSelect
-                departments={departments}
-                selected={selectedDept}
-                onSelect={(id) => setDepartmentId(id)}
-              />
-            </div>
-            <p className="min-w-[240px] flex-1 basis-[280px] font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
-              Cada departamento tem sua própria árvore. Tudo que você criar aqui vale
-              somente para{" "}
-              <strong className="font-semibold text-[var(--text-primary)]">
-                {selectedDept?.name ?? "—"}
-              </strong>
-              .
-            </p>
+        <GlassCard variant="panel" className="min-w-0 p-4 sm:p-5">
+          <p className="mb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+            Departamento
+          </p>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Departamento das tabulações">
+            {departments.map((d) => {
+              const isSel = d.id === effectiveDeptId;
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSel}
+                  onClick={() => setDepartmentId(d.id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full border px-3.5 py-2 transition-colors",
+                    isSel
+                      ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                      : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] hover:border-[var(--brand-primary)]/50",
+                  )}
+                >
+                  <span
+                    className="flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)]"
+                    style={{ backgroundColor: (d.color ?? "#6366f1") + "1f" }}
+                  >
+                    <DeptGlyph icon={d.icon} size={14} color={d.color ?? undefined} />
+                  </span>
+                  <span
+                    className={cn(
+                      "font-display text-[13px] font-semibold",
+                      isSel ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)]",
+                    )}
+                  >
+                    {d.name}
+                  </span>
+                  {isSel ? (
+                    <IconCheck size={14} stroke={2.6} className="shrink-0 text-[var(--brand-primary)]" />
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
+          <p className="mt-3 font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
+            Cada departamento tem sua própria árvore. Tudo que você criar abaixo vale
+            somente para{" "}
+            <strong className="font-semibold text-[var(--text-primary)]">
+              {selectedDept?.name ?? "—"}
+            </strong>
+            .
+          </p>
         </GlassCard>
       ) : null}
 
@@ -845,102 +876,6 @@ function DraftNodeEditor({
               }
             />
           ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Seletor de departamento (dropdown glass com ícone real) ─────── */
-
-function DeptSelect({
-  departments,
-  selected,
-  onSelect,
-}: {
-  departments: Department[];
-  selected: Department | null;
-  onSelect: (id: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const fn = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", fn);
-    return () => document.removeEventListener("pointerdown", fn);
-  }, [open]);
-
-  const disabled = departments.length === 0;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--brand-primary)]/50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {selected ? (
-          <span
-            className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)]"
-            style={{ backgroundColor: (selected.color ?? "#6366f1") + "1f" }}
-          >
-            <DeptGlyph icon={selected.icon} size={16} color={selected.color ?? undefined} />
-          </span>
-        ) : null}
-        <span className="flex-1 truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
-          {selected?.name ?? "Nenhum departamento cadastrado"}
-        </span>
-        <IconChevronDown
-          size={16}
-          className={cn(
-            "shrink-0 text-[var(--text-muted)] transition-transform",
-            open && "rotate-180",
-          )}
-        />
-      </button>
-
-      {open && departments.length > 0 && (
-        <div className="absolute left-0 top-full z-[60] mt-1.5 max-h-[280px] w-full overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[0_16px_40px_rgba(15,23,42,0.22)] backdrop-blur-xl">
-          {departments.map((d) => {
-            const isSel = d.id === selected?.id;
-            return (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => {
-                  onSelect(d.id);
-                  setOpen(false);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
-                  isSel
-                    ? "bg-[var(--brand-primary)]/8"
-                    : "hover:bg-[var(--glass-bg-overlay)]",
-                )}
-              >
-                <span
-                  className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)]"
-                  style={{ backgroundColor: (d.color ?? "#6366f1") + "1f" }}
-                >
-                  <DeptGlyph icon={d.icon} size={16} color={d.color ?? undefined} />
-                </span>
-                <span
-                  className={cn(
-                    "flex-1 truncate font-display text-[13px] font-semibold",
-                    isSel ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]",
-                  )}
-                >
-                  {d.name}
-                </span>
-                {isSel && <IconCheck size={15} className="shrink-0 text-[var(--brand-primary)]" />}
-              </button>
-            );
-          })}
         </div>
       )}
     </div>

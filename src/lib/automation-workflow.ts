@@ -483,18 +483,19 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
     case "create_activity":
       return { type: "TASK", title: "", description: "" };
     case "send_whatsapp_message":
-      return { content: "" };
+      return { content: "", failureAction: "stop" };
     case "send_product":
       return { productId: "", productName: "", content: "" };
     case "send_whatsapp_template":
-      return { templateName: "", languageCode: "pt_BR" };
+      return { templateName: "", languageCode: "pt_BR", failureAction: "stop" };
     case "send_whatsapp_media":
-      return { mediaType: "image", mediaUrl: "", caption: "" };
+      return { mediaType: "image", mediaUrl: "", caption: "", failureAction: "stop" };
     case "send_whatsapp_interactive":
       return {
         body: "", buttons: [], header: "", footer: "",
         elseGotoStepId: "", saveToVariable: "",
         timeoutMs: 86_400_000, timeoutAction: "continue", timeoutGotoStepId: "",
+        failureAction: "stop",
       };
     case "webhook":
       return { url: "", method: "POST", headers: [], body: "" };
@@ -524,6 +525,7 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
         message: "", buttons: [], saveToVariable: "",
         timeoutMs: 86_400_000, timeoutAction: "continue",
         timeoutGotoStepId: "", elseGotoStepId: "",
+        failureAction: "stop",
       };
     case "wait_for_reply":
       return {

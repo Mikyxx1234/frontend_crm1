@@ -151,6 +151,10 @@ export function applyCopilotPatch(
         if (cfg.elseGotoStepId === op.stepId) cfg.elseGotoStepId = "";
         if (cfg.elseStepId === op.stepId) cfg.elseStepId = "";
         if (cfg.targetStepId === op.stepId) cfg.targetStepId = "";
+        if (cfg.failureGotoStepId === op.stepId) {
+          cfg.failureGotoStepId = "";
+          cfg.failureAction = "stop";
+        }
         if (Array.isArray(cfg.buttons)) {
           cfg.buttons = (cfg.buttons as Record<string, unknown>[]).map((b) =>
             b.gotoStepId === op.stepId ? { ...b, gotoStepId: "" } : b,

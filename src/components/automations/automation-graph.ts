@@ -78,6 +78,21 @@ function isInteractiveStep(type: string): boolean {
   )
 }
 
+const META_SEND_FAILURE_TYPES = new Set([
+  "send_whatsapp_message",
+  "send_whatsapp_template",
+  "send_whatsapp_media",
+  "send_whatsapp_interactive",
+  "question",
+])
+
+function readFailureGotoStepId(cfg: Record<string, unknown>): string | null {
+  if (cfg.failureAction !== "goto") return null
+  const id = cfg.failureGotoStepId
+  if (typeof id !== "string" || !id || id === NONE) return null
+  return id
+}
+
 function edge(
   id: string,
   source: string,
@@ -147,10 +162,26 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
       }
     }
 
+    if (META_SEND_FAILURE_TYPES.has(a.type)) {
+      const failureGoto = readFailureGotoStepId(cfg)
+      if (failureGoto && stepIds.has(failureGoto)) {
+        out.push(edge(`${a.id}-failure-${failureGoto}`, a.id, failureGoto, "failure", true))
+      }
+    }
+
     const explicit = readNextStepId(cfg)
     if (explicit === NONE || !explicit) continue
     if (stepIds.has(explicit)) {
-      out.push(edge(`${a.id}-next-${explicit}`, a.id, explicit))
+      const isMetaLinear =
+        META_SEND_FAILURE_TYPES.has(a.type) && !isInteractiveStep(a.type)
+      out.push(
+        edge(
+          `${a.id}-next-${explicit}`,
+          a.id,
+          explicit,
+          isMetaLinear ? "next" : undefined,
+        ),
+      )
     }
   }
 
@@ -205,6 +236,7 @@ function collectTargets(cfg: Record<string, unknown>): string[] {
   add(cfg.timeoutGotoStepId)
   add(cfg.receivedGotoStepId)
   add(cfg.elseStepId)
+  if (cfg.failureAction === "goto") add(cfg.failureGotoStepId)
   if (Array.isArray(cfg.buttons)) {
     for (const b of cfg.buttons as { gotoStepId?: string }[]) add(b.gotoStepId)
   }

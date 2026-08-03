@@ -74,6 +74,19 @@ const TIMEOUT_ACTIONS: Opt[] = [
   { value: "retry", label: "Repetir pergunta" },
   { value: "goto", label: "Ir para passo" },
 ]
+const FAILURE_ACTIONS: Opt[] = [
+  { value: "stop", label: "Encerrar automação" },
+  { value: "goto", label: "Ir para passo" },
+]
+const META_FAILURE_FIELDS: EditorField[] = [
+  {
+    kind: "select",
+    key: "failureAction",
+    label: "Se falhar ao enviar",
+    options: FAILURE_ACTIONS,
+  },
+  { kind: "step", key: "failureGotoStepId", label: "Ir para (na falha)", optional: true },
+]
 
 export const STEP_FIELDS: Record<string, EditorField[]> = {
   send_email: [
@@ -102,16 +115,19 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   send_whatsapp_message: [
     { kind: "textarea", key: "content", label: "Conteúdo da mensagem", hint: "Use {{campo}} para variáveis." },
     { kind: "text", key: "fallbackTemplateName", label: "Template fallback (sessão expirada)", optional: true },
+    ...META_FAILURE_FIELDS,
   ],
   send_whatsapp_template: [
     { kind: "source", source: "template", key: "templateName", label: "Template" },
     { kind: "text", key: "languageCode", label: "Idioma", placeholder: "pt_BR" },
     { kind: "templatePreview" },
+    ...META_FAILURE_FIELDS,
   ],
   send_whatsapp_media: [
     { kind: "select", key: "mediaType", label: "Tipo de mídia", options: MEDIA_TYPES },
     { kind: "media", key: "mediaUrl", label: "Arquivo" },
     { kind: "text", key: "caption", label: "Legenda", optional: true },
+    ...META_FAILURE_FIELDS,
   ],
   send_whatsapp_interactive: [
     { kind: "textarea", key: "body", label: "Texto da mensagem" },
@@ -132,6 +148,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
       ],
     },
     { kind: "step", key: "timeoutGotoStepId", label: "Ir para (no timeout)", optional: true },
+    ...META_FAILURE_FIELDS,
   ],
   // Construtor visual (WebhookStepConfig) — parâmetros + catálogo de
   // variáveis. O STEP_FIELDS antigo só tinha textarea JSON e escondeu
@@ -148,6 +165,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "hours", key: "timeoutMs", label: "Timeout (horas)" },
     { kind: "select", key: "timeoutAction", label: "Ação ao expirar", options: TIMEOUT_ACTIONS },
     { kind: "step", key: "timeoutGotoStepId", label: "Ir para (no timeout)", optional: true },
+    ...META_FAILURE_FIELDS,
   ],
   wait_for_reply: [
     { kind: "duration", key: "timeoutMs", label: "Cronômetro" },

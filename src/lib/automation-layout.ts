@@ -84,6 +84,7 @@ function outgoingTargets(step: AutomationStep, stepIds: Set<string>): string[] {
   push(cfg.elseGotoStepId);
   push(cfg.timeoutGotoStepId);
   push(cfg.nextStepId);
+  if (cfg.failureAction === "goto") push(cfg.failureGotoStepId);
 
   return out;
 }

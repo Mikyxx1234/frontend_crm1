@@ -9,6 +9,7 @@ import {
 
 import {
   executeDistribution,
+  fetchDistributionDepartmentStats,
   fetchDistributionLogs,
   fetchDistributionSettings,
   fetchPending,
@@ -19,6 +20,7 @@ import {
   simulateDistribution,
   updateDistributionSettings,
   updateResponsible,
+  type DepartmentDistributionStatsResponse,
   type DistributionLogsPage,
   type DistributionSettings,
   type ExecuteDistributionInput,
@@ -38,6 +40,9 @@ export const DISTRIBUTION_RESPONSIBLES_KEY = ["distribution-responsibles"] as co
 export const DISTRIBUTION_PENDING_KEY = ["distribution-pending"] as const;
 export const DISTRIBUTION_SETTINGS_KEY = ["distribution-settings"] as const;
 export const DISTRIBUTION_LOGS_KEY = ["distribution-logs"] as const;
+export const DISTRIBUTION_DEPT_STATS_KEY = [
+  "distribution-department-stats",
+] as const;
 
 export function useDistributionLogs(enabled = true) {
   return useInfiniteQuery<DistributionLogsPage>({
@@ -48,6 +53,16 @@ export function useDistributionLogs(enabled = true) {
     getNextPageParam: (last) => last.nextCursor,
     enabled,
     staleTime: 10_000,
+  });
+}
+
+export function useDistributionDepartmentStats(enabled = true) {
+  return useQuery<DepartmentDistributionStatsResponse>({
+    queryKey: DISTRIBUTION_DEPT_STATS_KEY,
+    queryFn: fetchDistributionDepartmentStats,
+    enabled,
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
   });
 }
 

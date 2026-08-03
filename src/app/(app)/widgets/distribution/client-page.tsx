@@ -51,6 +51,7 @@ import { FormDialog } from "@/components/ui/form-dialog";
 import { cn } from "@/lib/utils";
 import { useWidgets } from "@/features/widgets/hooks";
 import {
+  useDistributionDepartmentStats,
   useDistributionLogs,
   useDistributionResponsibles,
   useDistributionSettings,
@@ -1598,15 +1599,18 @@ type LogPeriodFilter = "all" | "today" | "7d";
 
 function DistributionLogsList({ enabled }: { enabled: boolean }) {
   const q = useDistributionLogs(enabled);
+  const deptStatsQ = useDistributionDepartmentStats(enabled);
   const items = useMemo(
     () => q.data?.pages.flatMap((p) => p.items) ?? [],
     [q.data],
   );
+  const deptStats = deptStatsQ.data?.departments ?? [];
   const loading = q.isLoading;
   const [logSearch, setLogSearch] = useState("");
   const [result, setResult] = useState<LogResultFilter>("all");
   const [period, setPeriod] = useState<LogPeriodFilter>("all");
   const [origin, setOrigin] = useState("all");
+  const [department, setDepartment] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const origins = useMemo(() => {
@@ -1623,6 +1627,22 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [items]);
 
+  const departmentOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of deptStats) {
+      map.set(row.departmentId ?? "__none__", row.departmentName);
+    }
+    for (const log of items) {
+      const key = log.departmentId ?? "__none__";
+      if (!map.has(key)) {
+        map.set(key, log.departmentName ?? "Sem departamento");
+      }
+    }
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }, [deptStats, items]);
+
   const filteredItems = useMemo(() => {
     const query = logSearch.trim().toLocaleLowerCase("pt-BR");
     const now = new Date();
@@ -1638,6 +1658,7 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
         log.contactPhone,
         log.contactName,
         log.selectedUserName,
+        log.departmentName,
       ]
         .filter(Boolean)
         .join(" ")
@@ -1645,6 +1666,10 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
       if (query && !searchable.includes(query)) return false;
       if (result === "success" && !log.success) return false;
       if (result === "failure" && log.success) return false;
+      if (department !== "all") {
+        const key = log.departmentId ?? "__none__";
+        if (key !== department) return false;
+      }
       if (origin !== "all") {
         const parts = (log.triggerSource || "")
           .split("+")
@@ -1658,20 +1683,29 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
       if (period === "7d" && createdAt < sevenDaysAgo) return false;
       return true;
     });
-  }, [items, logSearch, origin, period, result]);
+  }, [department, items, logSearch, origin, period, result]);
 
   const hasActiveFilters =
     Boolean(logSearch) ||
     result !== "all" ||
     period !== "all" ||
-    origin !== "all";
+    origin !== "all" ||
+    department !== "all";
 
   const clearFilters = () => {
     setLogSearch("");
     setResult("all");
     setPeriod("all");
     setOrigin("all");
+    setDepartment("all");
   };
+
+  const visibleDeptStats = useMemo(() => {
+    if (department === "all") return deptStats;
+    return deptStats.filter(
+      (row) => (row.departmentId ?? "__none__") === department,
+    );
+  }, [department, deptStats]);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
@@ -1685,7 +1719,7 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
               Logs de distribuição
             </h2>
             <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
-              Histórico operacional com resultado, responsável, origem e horário.
+              Histórico operacional com departamento, resultado, responsável, origem e horário.
             </p>
           </div>
           {!loading && items.length > 0 && (
@@ -1695,8 +1729,62 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
           )}
         </div>
 
+        {!loading && (deptStats.length > 0 || items.length > 0) && (
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {visibleDeptStats.length === 0 && !deptStatsQ.isLoading ? (
+              <div className="col-span-full rounded-[var(--radius-md)] border border-dashed border-[var(--glass-border)] px-3 py-2.5 font-body text-[11.5px] text-[var(--text-muted)]">
+                Sem contadores por departamento ainda.
+              </div>
+            ) : (
+              visibleDeptStats.map((row) => (
+                <button
+                  key={row.departmentId ?? "__none__"}
+                  type="button"
+                  onClick={() =>
+                    setDepartment(
+                      department === (row.departmentId ?? "__none__")
+                        ? "all"
+                        : (row.departmentId ?? "__none__"),
+                    )
+                  }
+                  className={cn(
+                    "rounded-[var(--radius-md)] border px-3 py-2.5 text-left transition-colors",
+                    department === (row.departmentId ?? "__none__")
+                      ? "border-[var(--brand-primary)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)]"
+                      : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] hover:bg-[var(--glass-bg-strong)]",
+                  )}
+                >
+                  <p className="truncate font-display text-[12px] font-bold text-[var(--text-primary)]">
+                    {row.departmentName}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-body text-[10.5px] tabular-nums text-[var(--text-muted)]">
+                    <span>
+                      <span className="font-semibold text-[var(--color-success)]">
+                        {row.distributed}
+                      </span>{" "}
+                      distribuídos
+                      {row.distributedByAi > 0 ? (
+                        <span className="text-[var(--text-muted)]">
+                          {" "}
+                          ({row.distributedByAi} IA)
+                        </span>
+                      ) : null}
+                    </span>
+                    <span>
+                      <span className="font-semibold text-[var(--color-warn)]">
+                        {row.pending}
+                      </span>{" "}
+                      aguardando
+                    </span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
         {!loading && items.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-[minmax(220px,1fr)_160px_150px_170px_auto]">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-[minmax(200px,1fr)_140px_140px_150px_160px_auto]">
             <label className="relative col-span-2 lg:col-span-1">
               <span className="sr-only">Buscar nos logs</span>
               <IconSearch
@@ -1707,7 +1795,7 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
                 type="search"
                 value={logSearch}
                 onChange={(event) => setLogSearch(event.target.value)}
-                placeholder="Telefone, contato ou responsável"
+                placeholder="Telefone, contato, responsável ou dept."
                 className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] pl-9 pr-3 font-body text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
               />
             </label>
@@ -1738,6 +1826,15 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
               options={[
                 { value: "all", label: "Todas as origens" },
                 ...origins.map((value) => ({ value, label: value })),
+              ]}
+            />
+            <LogFilterSelect
+              label="Departamento"
+              value={department}
+              onChange={setDepartment}
+              options={[
+                { value: "all", label: "Todos os departamentos" },
+                ...departmentOptions,
               ]}
             />
             <button
@@ -1902,6 +1999,8 @@ function LogTableRows({
     contactName: string | null;
     contactPhone: string | null;
     conversationId: string | null;
+    departmentId: string | null;
+    departmentName: string | null;
   };
   expanded: boolean;
   resultLabel: string;
@@ -1942,6 +2041,12 @@ function LogTableRows({
                   {log.contactName}
                 </p>
               )}
+              <p className="mt-0.5 flex max-w-[230px] items-center gap-1 truncate font-body text-[10px] font-semibold text-[var(--text-secondary)]">
+                <IconTag size={11} className="shrink-0 opacity-70" />
+                <span className="truncate">
+                  {log.departmentName || "Sem departamento"}
+                </span>
+              </p>
             </div>
           </div>
         </td>
@@ -1987,6 +2092,10 @@ function LogTableRows({
         <tr className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
           <td colSpan={5} className="px-4 py-3">
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1.2fr_auto]">
+              <LogDetail
+                label="Departamento"
+                value={log.departmentName || "Sem departamento"}
+              />
               <LogDetail label="Motivo técnico" value={log.reason} mono />
               <LogDetail
                 label="Origem / trigger"

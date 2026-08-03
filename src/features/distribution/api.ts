@@ -233,11 +233,25 @@ export interface DistributionLog {
   contactName: string | null;
   contactPhone: string | null;
   conversationId: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
 }
 
 export interface DistributionLogsPage {
   items: DistributionLog[];
   nextCursor: string | null;
+}
+
+export interface DepartmentDistributionStat {
+  departmentId: string | null;
+  departmentName: string;
+  distributed: number;
+  distributedByAi: number;
+  pending: number;
+}
+
+export interface DepartmentDistributionStatsResponse {
+  departments: DepartmentDistributionStat[];
 }
 
 export function fetchDistributionLogs(
@@ -250,5 +264,12 @@ export function fetchDistributionLogs(
   return getJson<DistributionLogsPage>(
     `/api/distribution/logs?${sp.toString()}`,
     "Erro ao carregar o histórico de distribuições.",
+  );
+}
+
+export function fetchDistributionDepartmentStats(): Promise<DepartmentDistributionStatsResponse> {
+  return getJson<DepartmentDistributionStatsResponse>(
+    "/api/distribution/department-stats",
+    "Erro ao carregar estatísticas por departamento.",
   );
 }

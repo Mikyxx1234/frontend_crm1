@@ -1578,7 +1578,7 @@ function PendingQueueCards({
 
 const DIST_REASON_LABELS: Record<string, string> = {
   ASSIGNED: "Distribuído",
-  NO_ELIGIBLE_RESPONSIBLE: "Sem responsável disponível",
+  NO_ELIGIBLE_RESPONSIBLE: "Sem responsável",
   NO_DEPARTMENT: "Sem departamento habilitado",
   SMART_DISTRIBUTION_NOT_ENABLED: "Módulo desabilitado",
 };
@@ -1895,17 +1895,22 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
           <table className="w-full min-w-[820px] border-collapse">
             <thead className="sticky top-0 z-10 bg-[var(--glass-bg-modal,#fff)] shadow-[0_1px_0_var(--glass-border)]">
               <tr>
-                {["Contato", "Resultado", "Responsável / motivo", "Origem", "Quando"].map(
-                  (label) => (
-                    <th
-                      key={label}
-                      scope="col"
-                      className="px-4 py-2.5 text-left font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]"
-                    >
-                      {label}
-                    </th>
-                  ),
-                )}
+                {[
+                  "Contato",
+                  "Departamento",
+                  "Resultado",
+                  "Responsável / motivo",
+                  "Origem",
+                  "Quando",
+                ].map((label) => (
+                  <th
+                    key={label}
+                    scope="col"
+                    className="px-4 py-2.5 text-left font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]"
+                  >
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -2006,6 +2011,9 @@ function LogTableRows({
   resultLabel: string;
   onToggle: () => void;
 }) {
+  const primaryName = log.contactName || log.contactPhone || "Atendimento";
+  const showPhoneUnderName = Boolean(log.contactName && log.contactPhone);
+
   return (
     <>
       <tr
@@ -2017,60 +2025,50 @@ function LogTableRows({
         aria-expanded={expanded}
       >
         <td className="px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <span
-              className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-full",
-                log.success
-                  ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
-                  : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
-              )}
-            >
-              {log.success ? (
-                <IconUserCheck size={14} />
-              ) : (
-                <IconClockExclamation size={14} />
-              )}
-            </span>
-            <div className="min-w-0">
-              <p className="max-w-[230px] truncate font-mono text-[12px] font-semibold text-[var(--text-primary)]">
-                {log.contactPhone || log.contactName || "Atendimento"}
+          <div className="min-w-0">
+            <p className="max-w-[220px] truncate font-body text-[12.5px] font-semibold text-[var(--text-primary)]">
+              {primaryName}
+            </p>
+            {showPhoneUnderName ? (
+              <p className="mt-0.5 max-w-[220px] truncate font-mono text-[11px] text-[var(--text-muted)]">
+                {log.contactPhone}
               </p>
-              {log.contactPhone && log.contactName && (
-                <p className="max-w-[230px] truncate font-body text-[10.5px] text-[var(--text-muted)]">
-                  {log.contactName}
-                </p>
-              )}
-              <p className="mt-0.5 flex max-w-[230px] items-center gap-1 truncate font-body text-[10px] font-semibold text-[var(--text-secondary)]">
-                <IconTag size={11} className="shrink-0 opacity-70" />
-                <span className="truncate">
-                  {log.departmentName || "Sem departamento"}
-                </span>
-              </p>
-            </div>
+            ) : null}
           </div>
+        </td>
+        <td className="px-4 py-3">
+          <span className="inline-flex max-w-[160px] items-center gap-1 truncate rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 py-1 font-body text-[11px] font-medium text-[var(--text-secondary)]">
+            <IconTag size={12} className="shrink-0 opacity-60" />
+            <span className="truncate">
+              {log.departmentName || "Sem departamento"}
+            </span>
+          </span>
         </td>
         <td className="px-4 py-3">
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-display text-[10.5px] font-bold",
+              "inline-flex max-w-[200px] items-center gap-1.5 rounded-md border px-2 py-1 font-body text-[11px] font-medium",
               log.success
-                ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
-                : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
+                ? "border-[color-mix(in_srgb,var(--color-success)_28%,var(--glass-border))] bg-[color-mix(in_srgb,var(--color-success)_8%,transparent)] text-[var(--color-success)]"
+                : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-secondary)]",
             )}
           >
-            <span className="size-1.5 rounded-full bg-current" />
-            {resultLabel}
+            {log.success ? (
+              <IconUserCheck size={13} className="shrink-0" />
+            ) : (
+              <IconClockExclamation size={13} className="shrink-0 opacity-70" />
+            )}
+            <span className="truncate">{resultLabel}</span>
           </span>
         </td>
-        <td className="max-w-[260px] px-4 py-3 font-body text-[11.5px] text-[var(--text-secondary)]">
+        <td className="max-w-[220px] px-4 py-3 font-body text-[12px] text-[var(--text-primary)]">
           <span className="block truncate">
             {log.success
               ? log.selectedUserName ?? "Responsável"
-              : resultLabel}
+              : "—"}
           </span>
         </td>
-        <td className="max-w-[180px] px-4 py-3">
+        <td className="max-w-[160px] px-4 py-3">
           <span className="block truncate font-body text-[11px] text-[var(--text-muted)]">
             {log.triggerSource || "—"}
           </span>
@@ -2090,7 +2088,7 @@ function LogTableRows({
       </tr>
       {expanded && (
         <tr className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
-          <td colSpan={5} className="px-4 py-3">
+          <td colSpan={6} className="px-4 py-3">
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1.2fr_auto]">
               <LogDetail
                 label="Departamento"

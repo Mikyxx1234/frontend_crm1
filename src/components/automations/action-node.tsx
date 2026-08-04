@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { IconActivity as Activity, IconAlertTriangle as AlertTriangle, IconArrowsLeftRight as ArrowRightLeft, IconRobotFace as BotMessageSquare, IconCircleCheck as CheckCircle2, IconCircleOff as CircleSlash, IconPhoto as Image, IconMail as Mail, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPencil as Pencil, IconTag as Tag, IconTrash as Trash2, IconUserPlus as UserPlus, IconWebhook as Webhook } from "@tabler/icons-react";
+import { IconActivity as Activity, IconAlertTriangle as AlertTriangle, IconArrowsLeftRight as ArrowRightLeft, IconRobotFace as BotMessageSquare, IconCircleCheck as CheckCircle2, IconCircleOff as CircleSlash, IconClock as Clock, IconPhoto as Image, IconMail as Mail, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPencil as Pencil, IconTag as Tag, IconTrash as Trash2, IconUserPlus as UserPlus, IconWebhook as Webhook } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -78,12 +78,19 @@ const META_LINEAR_FAILURE_TYPES = new Set([
   "send_whatsapp_media",
 ]);
 
+/** Mensagem/template (sem botões) também expõem "Sem resposta". */
+const META_WAIT_TIMEOUT_TYPES = new Set([
+  "send_whatsapp_message",
+  "send_whatsapp_template",
+]);
+
 export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
   const s = data.stats;
   const hasStats = s && (s.success > 0 || s.failed > 0);
   const iconColor = stepColor[data.stepType] ?? "text-primary";
   const iconBg = iconBgMap[data.stepType] ?? "bg-primary/10 ring-primary/15";
   const hasFailureOutput = META_LINEAR_FAILURE_TYPES.has(data.stepType);
+  const hasTimeoutOutput = META_WAIT_TIMEOUT_TYPES.has(data.stepType);
 
   return (
     <div
@@ -199,6 +206,20 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
               className="size-3! border-2! border-white! bg-[var(--color-success)]! shadow-[var(--shadow-indigo-glow)]!"
             />
           </div>
+          {hasTimeoutOutput && (
+            <div className="relative flex h-9 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5">
+              <Clock className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.4} />
+              <span className="flex-1 truncate text-[11px] font-medium tracking-tight text-[var(--text-muted)]">
+                Sem resposta
+              </span>
+              <Handle
+                type="source"
+                position={Position.Right}
+                id="timeout"
+                className="size-3! border-2! border-white! bg-[var(--color-status-offline)]!"
+              />
+            </div>
+          )}
           <div className="relative flex h-9 items-center gap-2 px-3.5">
             <CircleSlash className="size-3.5 shrink-0 text-[var(--color-danger)]" strokeWidth={2.4} />
             <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-danger-text)]">

@@ -428,6 +428,24 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
       }
     }
 
+    // Mensagem / template SEM botões (ActionNode): aresta "Sem resposta".
+    // Template COM botões já cai no bloco isInteractiveStep acima.
+    if (
+      !isInteractiveStep(a) &&
+      (a.type === "send_whatsapp_message" || a.type === "send_whatsapp_template") &&
+      typeof cfg.timeoutGotoStepId === "string" &&
+      cfg.timeoutGotoStepId &&
+      stepIds.has(cfg.timeoutGotoStepId)
+    ) {
+      out.push({
+        id: `${a.id}-timeout-${cfg.timeoutGotoStepId}`,
+        source: a.id, target: cfg.timeoutGotoStepId,
+        sourceHandle: "timeout",
+        animated: false, data: EDGE_DATA_TIMEOUT, type: EDGE_TYPE,
+        interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
+      });
+    }
+
     // Fallback síncrono Meta: handle `failure` → failureGotoStepId.
     if (META_SEND_FAILURE_TYPES.has(a.type)) {
       const failureGoto = readFailureGotoStepId(cfg);
@@ -730,7 +748,9 @@ function WorkflowCanvasInner({
               ...baseData,
               buttons,
               hasElse: true,
-              hasTimeout: step.type === "question" || step.type === "send_whatsapp_interactive",
+              // Template com botões também oferece "Sem resposta" (mesmo
+              // runtime de question/interactive — timeoutMs + timeoutGoto).
+              hasTimeout: true,
             },
           };
         }
@@ -1209,7 +1229,15 @@ function WorkflowCanvasInner({
         }
 
         if (sourceHandle === "timeout") {
-          const cfg = { ...srcStep.config, timeoutGotoStepId: target };
+          const cfg = {
+            ...srcStep.config,
+            timeoutGotoStepId: target,
+            timeoutAction: "goto",
+            timeoutMs:
+              Number(srcStep.config.timeoutMs) > 0
+                ? srcStep.config.timeoutMs
+                : 86_400_000,
+          };
           onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
           return;
         }
@@ -1408,7 +1436,15 @@ function WorkflowCanvasInner({
         }
 
         if (sourceHandle === "timeout") {
-          const cfg = { ...srcStep.config, timeoutGotoStepId: id };
+          const cfg = {
+            ...srcStep.config,
+            timeoutGotoStepId: id,
+            timeoutAction: "goto",
+            timeoutMs:
+              Number(srcStep.config.timeoutMs) > 0
+                ? srcStep.config.timeoutMs
+                : 86_400_000,
+          };
           const updated = cur.map((s) =>
             s.id === sourceId ? { ...s, config: cfg } : s
           );

@@ -172,6 +172,7 @@ export function getStepOutgoing(step: StepLike): StepOutgoing {
         });
         push("else (nenhum botão bateu)", c.elseGotoStepId);
       }
+      push("timeout (sem resposta)", c.timeoutGotoStepId);
       push("linear", c.nextStepId);
       if (c.failureAction === "goto") push("falha ao enviar", c.failureGotoStepId);
       break;

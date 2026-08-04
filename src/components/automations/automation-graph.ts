@@ -70,12 +70,13 @@ function readNextStepId(config: unknown): string | null {
   return typeof c.nextStepId === "string" ? c.nextStepId : null
 }
 
-function isInteractiveStep(type: string): boolean {
-  return (
-    type === "question" ||
-    type === "send_whatsapp_interactive" ||
-    type === "send_whatsapp_template"
-  )
+function isInteractiveStep(step: { type: string; config?: Record<string, unknown> }): boolean {
+  if (step.type === "question" || step.type === "send_whatsapp_interactive") return true
+  // Template só é interativo com botões de resposta rápida (espelha workflow-canvas).
+  if (step.type === "send_whatsapp_template") {
+    return Array.isArray(step.config?.buttons) && (step.config!.buttons as unknown[]).length > 0
+  }
+  return false
 }
 
 const META_SEND_FAILURE_TYPES = new Set([
@@ -113,7 +114,7 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
   for (const a of steps) {
     const cfg = a.config
 
-    if (isInteractiveStep(a.type)) {
+    if (isInteractiveStep(a)) {
       const buttons = Array.isArray(cfg.buttons) ? (cfg.buttons as { gotoStepId?: string }[]) : []
       buttons.forEach((btn, idx) => {
         const gotoId = btn.gotoStepId && btn.gotoStepId !== NONE ? btn.gotoStepId : undefined
@@ -155,6 +156,17 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
       // Sem continue — espelha workflow-canvas: nextStepId linear também vira aresta.
     }
 
+    // Mensagem / template linear (sem botões): aresta Sem resposta.
+    if (
+      !isInteractiveStep(a) &&
+      (a.type === "send_whatsapp_message" || a.type === "send_whatsapp_template")
+    ) {
+      const timeoutId = typeof cfg.timeoutGotoStepId === "string" ? cfg.timeoutGotoStepId : ""
+      if (timeoutId && stepIds.has(timeoutId)) {
+        out.push(edge(`${a.id}-timeout-${timeoutId}`, a.id, timeoutId, "timeout", true))
+      }
+    }
+
     if (a.type === "business_hours" || a.type === "execute_distribution") {
       const elseId = typeof cfg.elseStepId === "string" ? cfg.elseStepId : ""
       if (elseId && stepIds.has(elseId)) {
@@ -173,7 +185,7 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
     if (explicit === NONE || !explicit) continue
     if (stepIds.has(explicit)) {
       const isMetaLinear =
-        META_SEND_FAILURE_TYPES.has(a.type) && !isInteractiveStep(a.type)
+        META_SEND_FAILURE_TYPES.has(a.type) && !isInteractiveStep(a)
       out.push(
         edge(
           `${a.id}-next-${explicit}`,

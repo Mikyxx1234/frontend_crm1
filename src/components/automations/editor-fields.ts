@@ -115,12 +115,36 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   send_whatsapp_message: [
     { kind: "textarea", key: "content", label: "Conteúdo da mensagem", hint: "Use {{campo}} para variáveis." },
     { kind: "text", key: "fallbackTemplateName", label: "Template fallback (sessão expirada)", optional: true },
+    { kind: "duration", key: "timeoutMs", label: "Sem resposta em" },
+    {
+      kind: "select",
+      key: "timeoutAction",
+      label: "Se ninguém responder",
+      options: [
+        { value: "continue", label: "Continuar fluxo (próximo passo)" },
+        { value: "stop", label: "Encerrar automação" },
+        { value: "goto", label: "Ir para passo" },
+      ],
+    },
+    { kind: "step", key: "timeoutGotoStepId", label: "Ir para (no timeout)", optional: true },
     ...META_FAILURE_FIELDS,
   ],
   send_whatsapp_template: [
     { kind: "source", source: "template", key: "templateName", label: "Template" },
     { kind: "text", key: "languageCode", label: "Idioma", placeholder: "pt_BR" },
     { kind: "templatePreview" },
+    { kind: "duration", key: "timeoutMs", label: "Sem resposta em" },
+    {
+      kind: "select",
+      key: "timeoutAction",
+      label: "Se ninguém responder",
+      options: [
+        { value: "continue", label: "Continuar fluxo (próximo passo)" },
+        { value: "stop", label: "Encerrar automação" },
+        { value: "goto", label: "Ir para passo" },
+      ],
+    },
+    { kind: "step", key: "timeoutGotoStepId", label: "Ir para (no timeout)", optional: true },
     ...META_FAILURE_FIELDS,
   ],
   send_whatsapp_media: [

@@ -483,11 +483,24 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
     case "create_activity":
       return { type: "TASK", title: "", description: "" };
     case "send_whatsapp_message":
-      return { content: "", failureAction: "stop" };
+      return {
+        content: "",
+        failureAction: "stop",
+        timeoutMs: 86_400_000,
+        timeoutAction: "continue",
+        timeoutGotoStepId: "",
+      };
     case "send_product":
       return { productId: "", productName: "", content: "" };
     case "send_whatsapp_template":
-      return { templateName: "", languageCode: "pt_BR", failureAction: "stop" };
+      return {
+        templateName: "",
+        languageCode: "pt_BR",
+        failureAction: "stop",
+        timeoutMs: 86_400_000,
+        timeoutAction: "continue",
+        timeoutGotoStepId: "",
+      };
     case "send_whatsapp_media":
       return { mediaType: "image", mediaUrl: "", caption: "", failureAction: "stop" };
     case "send_whatsapp_interactive":

@@ -102,7 +102,11 @@ export function resolveFlowPresentation(
       const content = String(config.content ?? "").trim()
       return {
         subtitle: content ? clampSubtitle(content) : data.subtitle,
-        outputs: [{ ...SUCCESS_SEND_OUTPUT }, { ...FAILURE_OUTPUT }],
+        outputs: [
+          { ...SUCCESS_SEND_OUTPUT },
+          { id: "timeout", label: "Sem resposta", icon: "clock", err: true },
+          { ...FAILURE_OUTPUT },
+        ],
       }
     }
     case "send_whatsapp_media": {
@@ -126,11 +130,17 @@ export function resolveFlowPresentation(
       // Só vira nó ramificado quando o template tem botões de resposta rápida
       // (roteamento). Sem botões, mantém a saída única padrão (d.source).
       if (buttons.length > 0) {
-        return { outputs: withFailureOutput(interactiveOutputs(config, true)), subtitle }
+        const outputs = interactiveOutputs(config, true)
+        outputs.push({ id: "timeout", label: "Sem resposta", icon: "clock", err: true })
+        return { outputs: withFailureOutput(outputs), subtitle }
       }
       return {
         subtitle,
-        outputs: [{ ...SUCCESS_SEND_OUTPUT }, { ...FAILURE_OUTPUT }],
+        outputs: [
+          { ...SUCCESS_SEND_OUTPUT },
+          { id: "timeout", label: "Sem resposta", icon: "clock", err: true },
+          { ...FAILURE_OUTPUT },
+        ],
       }
     }
     case "add_tag":

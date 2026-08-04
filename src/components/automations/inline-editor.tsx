@@ -326,6 +326,8 @@ function useMessageVariables(): VarOpt[] {
       { token: "{{contact.email}}", label: "E-mail do contato" },
       { token: "{{deal.title}}", label: "Título do negócio" },
       { token: "{{deal.value}}", label: "Valor do negócio" },
+      { token: "{{assignee.name}}", label: "Responsável do lead", hint: "Consultor da conversa; sem ele, o dono do negócio" },
+      { token: "{{assignee.name|first_name}}", label: "Primeiro nome do responsável" },
       { token: "{{lastResponse}}", label: "Mensagem do cliente (passo anterior)" },
     ]
     for (const c of contact) {

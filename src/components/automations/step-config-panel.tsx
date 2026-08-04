@@ -397,6 +397,17 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
       // Dados do negócio
       { label: "Título do negócio", token: "{{deal.title}}" },
       { label: "Valor do negócio", token: "{{deal.value}}" },
+      // Responsável do lead
+      {
+        label: "Responsável do lead",
+        token: "{{assignee.name}}",
+        hint: "Consultor da conversa; sem ele, o dono do negócio",
+      },
+      {
+        label: "Primeiro nome do responsável",
+        token: "{{assignee.name|first_name}}",
+        hint: "Ideal para “sou o {{assignee.name|first_name}}”",
+      },
       // Resposta anterior
       {
         label: "Mensagem do cliente (passo anterior)",

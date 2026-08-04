@@ -105,3 +105,115 @@ export function KpiCard({
 
   return <div className={classNames}>{body}</div>;
 }
+
+export type KpiSquareItem = {
+  key: string;
+  label: string;
+  value: React.ReactNode;
+  icon: React.ReactNode;
+  /** Tom do ícone (padrão Contatos/Empresas). */
+  tone?: KpiTone;
+  /** Cor CSS alternativa ao tone (padrão Logs/Distribuição). */
+  accent?: string;
+  percent?: number;
+  active?: boolean;
+  onClick?: () => void;
+};
+
+const KPI_SQUARE_SCROLL_CLASS =
+  "-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden lg:hidden";
+
+/**
+ * Faixa mobile/APK: KPIs em quadrados com h-scroll (libera altura de tela).
+ * Em `lg+` não renderiza — o caller mantém o grid/desktop separado.
+ */
+export function KpiSquareScroll({
+  items,
+  className,
+}: {
+  items: readonly KpiSquareItem[];
+  className?: string;
+}) {
+  return (
+    <div className={cn(KPI_SQUARE_SCROLL_CLASS, className)}>
+      {items.map((item) => {
+        const classNames = cn(
+          "flex aspect-square w-[104px] shrink-0 flex-col justify-between rounded-[var(--radius-xl)] border p-2.5 text-left shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-colors",
+          item.active
+            ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-base)]",
+          item.onClick && !item.active && "cursor-pointer",
+        );
+
+        const iconWrap = item.tone ? (
+          <span
+            className={cn(
+              "flex size-7 items-center justify-center rounded-[var(--radius-md)] [&>svg]:size-4",
+              KPI_TONES[item.tone],
+            )}
+          >
+            {item.icon}
+          </span>
+        ) : (
+          <span
+            className="flex size-7 items-center justify-center rounded-full"
+            style={
+              item.accent
+                ? {
+                    background: `color-mix(in srgb, ${item.accent} 14%, transparent)`,
+                    color: item.accent,
+                  }
+                : undefined
+            }
+          >
+            {item.icon}
+          </span>
+        );
+
+        const body = (
+          <>
+            {iconWrap}
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-1">
+                <p className="truncate font-display text-[18px] font-extrabold leading-none tabular-nums text-[var(--text-primary)]">
+                  {item.value}
+                </p>
+                {item.percent !== undefined && (
+                  <span
+                    className="font-display text-[10px] font-bold tabular-nums"
+                    style={item.accent ? { color: item.accent } : undefined}
+                  >
+                    {item.percent}%
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 truncate font-display text-[10px] font-semibold uppercase leading-tight tracking-[0.02em] text-[var(--text-muted)]">
+                {item.label}
+              </p>
+            </div>
+          </>
+        );
+
+        if (item.onClick) {
+          return (
+            <button
+              key={item.key}
+              type="button"
+              aria-pressed={item.active}
+              onClick={item.onClick}
+              className={classNames}
+            >
+              {body}
+            </button>
+          );
+        }
+
+        return (
+          <div key={item.key} className={classNames}>
+            {body}
+          </div>
+        );
+      })}
+    </div>
+  );
+}

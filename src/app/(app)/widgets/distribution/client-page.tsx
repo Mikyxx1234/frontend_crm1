@@ -8,6 +8,8 @@ import {
   IconAdjustmentsHorizontal,
   IconAlertTriangle,
   IconArrowsShuffle,
+  IconBuilding,
+  IconCalendarEvent,
   IconCheck,
   IconChevronDown,
   IconCircleCheck,
@@ -24,6 +26,7 @@ import {
   IconRotateClockwise,
   IconSearch,
   IconSettings,
+  IconSourceCode,
   IconTag,
   IconUserCheck,
   IconUsers,
@@ -511,6 +514,7 @@ function DistributionMiniDash({
   const cards: {
     key: string;
     label: string;
+    shortLabel: string;
     value: number;
     percent?: number;
     accent: string;
@@ -519,6 +523,7 @@ function DistributionMiniDash({
     {
       key: "eligible",
       label: "Elegíveis agora",
+      shortLabel: "Elegíveis",
       value: stats.eligible,
       percent: stats.coverage,
       accent: "var(--color-success)",
@@ -527,6 +532,7 @@ function DistributionMiniDash({
     {
       key: "blocked",
       label: "Indisponíveis",
+      shortLabel: "Indisponíveis",
       value: stats.blocked,
       accent: "var(--color-danger, #dc2626)",
       icon: <IconAlertTriangle size={16} />,
@@ -534,6 +540,7 @@ function DistributionMiniDash({
     {
       key: "inService",
       label: "Aguardando resposta",
+      shortLabel: "Em atendimento",
       value: stats.inService,
       accent: "var(--brand-primary)",
       icon: <IconUsers size={16} />,
@@ -541,6 +548,7 @@ function DistributionMiniDash({
     {
       key: "waiting",
       label: "Aguardando · taxa de sucesso",
+      shortLabel: "Na fila",
       value: stats.waiting,
       percent: stats.successRate,
       accent: "var(--color-warn, #d97706)",
@@ -549,42 +557,83 @@ function DistributionMiniDash({
   ];
 
   return (
-    <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map((c) => (
-        <div
-          key={c.key}
-          className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-        >
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={{
-              background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
-              color: c.accent,
-            }}
+    <>
+      {/* Mobile / APK: 4 quadrados em h-scroll */}
+      <div className="-mx-1 flex shrink-0 gap-2 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden lg:hidden">
+        {cards.map((c) => (
+          <div
+            key={c.key}
+            className="flex aspect-square w-[104px] shrink-0 flex-col justify-between rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-2.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
           >
-            {c.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-display text-[11.5px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
-              {c.label}
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
-                {c.value.toLocaleString("pt-BR")}
-              </span>
-              {c.percent !== undefined && (
-                <span
-                  className="font-display text-[12px] font-bold tabular-nums"
-                  style={{ color: c.accent }}
-                >
-                  {c.percent}%
+            <span
+              className="flex size-7 items-center justify-center rounded-full"
+              style={{
+                background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
+                color: c.accent,
+              }}
+            >
+              {c.icon}
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-1">
+                <span className="font-display text-[20px] font-bold leading-none tabular-nums text-[var(--text-primary)]">
+                  {c.value.toLocaleString("pt-BR")}
                 </span>
-              )}
+                {c.percent !== undefined && (
+                  <span
+                    className="font-display text-[10px] font-bold tabular-nums"
+                    style={{ color: c.accent }}
+                  >
+                    {c.percent}%
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 truncate font-display text-[10px] font-semibold leading-tight text-[var(--text-muted)]">
+                {c.shortLabel}
+              </p>
             </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {/* Desktop: grid completo */}
+      <div className="hidden shrink-0 gap-3 sm:grid-cols-2 lg:grid lg:grid-cols-4">
+        {cards.map((c) => (
+          <div
+            key={c.key}
+            className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+          >
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{
+                background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
+                color: c.accent,
+              }}
+            >
+              {c.icon}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-display text-[11.5px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
+                {c.label}
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-[22px] font-bold leading-none tabular-nums text-[var(--text-primary)]">
+                  {c.value.toLocaleString("pt-BR")}
+                </span>
+                {c.percent !== undefined && (
+                  <span
+                    className="font-display text-[12px] font-bold tabular-nums"
+                    style={{ color: c.accent }}
+                  >
+                    {c.percent}%
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -1685,13 +1734,6 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
     });
   }, [department, items, logSearch, origin, period, result]);
 
-  const hasActiveFilters =
-    Boolean(logSearch) ||
-    result !== "all" ||
-    period !== "all" ||
-    origin !== "all" ||
-    department !== "all";
-
   const clearFilters = () => {
     setLogSearch("");
     setResult("all");
@@ -1709,144 +1751,51 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <div className="flex shrink-0 flex-col gap-3 border-b border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-primary)_15%,transparent)] text-[var(--color-primary)]">
-            <DistributionIcon size={20} />
+      {/* Cabeçalho compacto e fixo: título + busca/filtros (não compete com a lista) */}
+      <div className="flex shrink-0 flex-col gap-2.5 border-b border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3 sm:gap-3 sm:p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-primary)_15%,transparent)] text-[var(--color-primary)] sm:size-9">
+            <DistributionIcon size={18} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">
               Logs de distribuição
             </h2>
-            <p className="mt-0.5 text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)]">
+            <p className="hidden text-pretty font-body text-[12px] leading-snug text-[var(--text-muted)] sm:mt-0.5 sm:block">
               Histórico operacional com departamento, resultado, responsável, origem e horário.
             </p>
           </div>
           {!loading && items.length > 0 && (
-            <span className="ml-auto shrink-0 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-1 font-body text-[10.5px] font-semibold tabular-nums text-[var(--text-muted)]">
+            <span className="shrink-0 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-1 font-body text-[10.5px] font-semibold tabular-nums text-[var(--text-muted)]">
               {filteredItems.length} de {items.length}
             </span>
           )}
         </div>
 
-        {!loading && (deptStats.length > 0 || items.length > 0) && (
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {visibleDeptStats.length === 0 && !deptStatsQ.isLoading ? (
-              <div className="col-span-full rounded-[var(--radius-md)] border border-dashed border-[var(--glass-border)] px-3 py-2.5 font-body text-[11.5px] text-[var(--text-muted)]">
-                Sem contadores por departamento ainda.
-              </div>
-            ) : (
-              visibleDeptStats.map((row) => (
-                <button
-                  key={row.departmentId ?? "__none__"}
-                  type="button"
-                  onClick={() =>
-                    setDepartment(
-                      department === (row.departmentId ?? "__none__")
-                        ? "all"
-                        : (row.departmentId ?? "__none__"),
-                    )
-                  }
-                  className={cn(
-                    "rounded-[var(--radius-md)] border px-3 py-2.5 text-left transition-colors",
-                    department === (row.departmentId ?? "__none__")
-                      ? "border-[var(--brand-primary)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)]"
-                      : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] hover:bg-[var(--glass-bg-strong)]",
-                  )}
-                >
-                  <p className="truncate font-display text-[12px] font-bold text-[var(--text-primary)]">
-                    {row.departmentName}
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-body text-[10.5px] tabular-nums text-[var(--text-muted)]">
-                    <span>
-                      <span className="font-semibold text-[var(--color-success)]">
-                        {row.distributed}
-                      </span>{" "}
-                      distribuídos
-                      {row.distributedByAi > 0 ? (
-                        <span className="text-[var(--text-muted)]">
-                          {" "}
-                          ({row.distributedByAi} IA)
-                        </span>
-                      ) : null}
-                    </span>
-                    <span>
-                      <span className="font-semibold text-[var(--color-warn)]">
-                        {row.pending}
-                      </span>{" "}
-                      aguardando
-                    </span>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        )}
-
         {!loading && items.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-[minmax(200px,1fr)_140px_140px_150px_160px_auto]">
-            <label className="relative col-span-2 lg:col-span-1">
-              <span className="sr-only">Buscar nos logs</span>
-              <IconSearch
-                size={14}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-              />
-              <input
-                type="search"
-                value={logSearch}
-                onChange={(event) => setLogSearch(event.target.value)}
-                placeholder="Telefone, contato, responsável ou dept."
-                className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] pl-9 pr-3 font-body text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
-              />
-            </label>
-            <LogFilterSelect
-              label="Resultado"
-              value={result}
-              onChange={(value) => setResult(value as LogResultFilter)}
-              options={[
-                { value: "all", label: "Todos os resultados" },
-                { value: "success", label: "Sucesso" },
-                { value: "failure", label: "Falha" },
-              ]}
-            />
-            <LogFilterSelect
-              label="Período"
-              value={period}
-              onChange={(value) => setPeriod(value as LogPeriodFilter)}
-              options={[
-                { value: "all", label: "Todo o período" },
-                { value: "today", label: "Hoje" },
-                { value: "7d", label: "Últimos 7 dias" },
-              ]}
-            />
-            <LogFilterSelect
-              label="Origem"
-              value={origin}
-              onChange={setOrigin}
-              options={[
-                { value: "all", label: "Todas as origens" },
-                ...origins.map((value) => ({ value, label: value })),
-              ]}
-            />
-            <LogFilterSelect
-              label="Departamento"
-              value={department}
-              onChange={setDepartment}
-              options={[
-                { value: "all", label: "Todos os departamentos" },
-                ...departmentOptions,
-              ]}
-            />
-            <button
-              type="button"
-              onClick={clearFilters}
-              disabled={!hasActiveFilters}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-3 font-display text-[11.5px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)] disabled:pointer-events-none disabled:opacity-35"
-            >
-              <IconRotateClockwise size={13} />
-              Limpar
-            </button>
-          </div>
+          <LogsSearchFilterBar
+            search={logSearch}
+            onSearch={setLogSearch}
+            result={result}
+            period={period}
+            origin={origin}
+            department={department}
+            origins={origins}
+            departmentOptions={departmentOptions}
+            activeCount={
+              (result !== "all" ? 1 : 0) +
+              (period !== "all" ? 1 : 0) +
+              (origin !== "all" ? 1 : 0) +
+              (department !== "all" ? 1 : 0)
+            }
+            onClear={clearFilters}
+            onApply={({ result: r, period: p, origin: o, department: d }) => {
+              setResult(r);
+              setPeriod(p);
+              setOrigin(o);
+              setDepartment(d);
+            }}
+          />
         )}
       </div>
 
@@ -1891,8 +1840,79 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
           </button>
         </div>
       ) : (
-        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-          <table className="w-full min-w-[820px] border-collapse">
+        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          {/* Contadores por dept. dentro do scroll — chips horizontais no mobile */}
+          {(deptStats.length > 0 || deptStatsQ.isLoading) && (
+            <div className="sticky top-0 z-[5] border-b border-[var(--glass-border)] bg-[var(--glass-bg-base)]/95 px-3 py-2 backdrop-blur-sm sm:px-4 md:static md:bg-transparent md:backdrop-blur-none">
+              <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {visibleDeptStats.length === 0 && !deptStatsQ.isLoading ? (
+                  <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+                    Sem contadores por departamento ainda.
+                  </p>
+                ) : (
+                  visibleDeptStats.map((row) => (
+                    <button
+                      key={row.departmentId ?? "__none__"}
+                      type="button"
+                      onClick={() =>
+                        setDepartment(
+                          department === (row.departmentId ?? "__none__")
+                            ? "all"
+                            : (row.departmentId ?? "__none__"),
+                        )
+                      }
+                      className={cn(
+                        "w-[168px] shrink-0 rounded-[var(--radius-md)] border px-2.5 py-1.5 text-left transition-colors",
+                        department === (row.departmentId ?? "__none__")
+                          ? "border-[var(--brand-primary)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] hover:bg-[var(--glass-bg-strong)]",
+                      )}
+                    >
+                      <p className="truncate font-display text-[11px] font-bold text-[var(--text-primary)]">
+                        {row.departmentName}
+                      </p>
+                      <p className="mt-0.5 truncate font-body text-[10px] tabular-nums text-[var(--text-muted)]">
+                        <span className="font-semibold text-[var(--color-success)]">
+                          {row.distributed}
+                        </span>
+                        {row.distributedByAi > 0 ? (
+                          <span> · {row.distributedByAi} IA</span>
+                        ) : null}
+                        <span className="text-[var(--text-muted)]"> · </span>
+                        <span className="font-semibold text-[var(--color-warn)]">
+                          {row.pending}
+                        </span>
+                        <span> ag.</span>
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Mobile / APK: cards */}
+          <ul className="flex flex-col gap-2 p-3 md:hidden">
+            {filteredItems.map((log) => {
+              const resultLabel =
+                DIST_REASON_LABELS[log.reason] ??
+                (log.success ? "Distribuído" : log.reason);
+              return (
+                <LogMobileCard
+                  key={log.id}
+                  log={log}
+                  resultLabel={resultLabel}
+                  expanded={expandedId === log.id}
+                  onToggle={() =>
+                    setExpandedId(expandedId === log.id ? null : log.id)
+                  }
+                />
+              );
+            })}
+          </ul>
+
+          {/* Desktop: tabela */}
+          <table className="hidden w-full min-w-[820px] border-collapse md:table">
             <thead className="sticky top-0 z-10 bg-[var(--glass-bg-modal,#fff)] shadow-[0_1px_0_var(--glass-border)]">
               <tr>
                 {[
@@ -1955,36 +1975,469 @@ function DistributionLogsList({ enabled }: { enabled: boolean }) {
   );
 }
 
-function LogFilterSelect({
-  label,
-  value,
-  options,
-  onChange,
+type LogsFilterDraft = {
+  result: LogResultFilter;
+  period: LogPeriodFilter;
+  origin: string;
+  department: string;
+};
+
+type LogsFilterTab = "resultado" | "periodo" | "origem" | "departamento";
+
+function LogsFilterCountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[10px] font-bold leading-none text-white">
+      {count}
+    </span>
+  );
+}
+
+/**
+ * Busca + painel de filtros — mesmo padrão Contatos/Chamadas:
+ * input pill com botão de ajustes à direita e popover segmentado.
+ */
+function LogsSearchFilterBar({
+  search,
+  onSearch,
+  result,
+  period,
+  origin,
+  department,
+  origins,
+  departmentOptions,
+  activeCount,
+  onClear,
+  onApply,
 }: {
-  label: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
+  search: string;
+  onSearch: (v: string) => void;
+  result: LogResultFilter;
+  period: LogPeriodFilter;
+  origin: string;
+  department: string;
+  origins: string[];
+  departmentOptions: { value: string; label: string }[];
+  activeCount: number;
+  onClear: () => void;
+  onApply: (next: LogsFilterDraft) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<LogsFilterTab>("resultado");
+  const [draft, setDraft] = useState<LogsFilterDraft>({
+    result,
+    period,
+    origin,
+    department,
+  });
+
+  useEffect(() => {
+    if (open) setDraft({ result, period, origin, department });
+  }, [open, result, period, origin, department]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const draftCount =
+    (draft.result !== "all" ? 1 : 0) +
+    (draft.period !== "all" ? 1 : 0) +
+    (draft.origin !== "all" ? 1 : 0) +
+    (draft.department !== "all" ? 1 : 0);
+
+  const tabs: { id: LogsFilterTab; label: string; icon: React.ReactNode }[] = [
+    { id: "resultado", label: "Resultado", icon: <IconCircleCheck size={14} stroke={2.2} /> },
+    { id: "periodo", label: "Período", icon: <IconCalendarEvent size={14} stroke={2.2} /> },
+    { id: "origem", label: "Origem", icon: <IconSourceCode size={14} stroke={2.2} /> },
+    { id: "departamento", label: "Dept.", icon: <IconBuilding size={14} stroke={2.2} /> },
+  ];
+
+  const tabBadge = (id: LogsFilterTab) => {
+    if (id === "resultado") return draft.result !== "all" ? 1 : 0;
+    if (id === "periodo") return draft.period !== "all" ? 1 : 0;
+    if (id === "origem") return draft.origin !== "all" ? 1 : 0;
+    if (id === "departamento") return draft.department !== "all" ? 1 : 0;
+    return 0;
+  };
+
+  function handleClear() {
+    const empty: LogsFilterDraft = {
+      result: "all",
+      period: "all",
+      origin: "all",
+      department: "all",
+    };
+    setDraft(empty);
+    onClear();
+  }
+
+  function handleApply() {
+    onApply(draft);
+    setOpen(false);
+  }
+
+  function OptionButton({
+    selected,
+    label,
+    onClick,
+  }: {
+    selected: boolean;
+    label: string;
+    onClick: () => void;
+  }) {
+    return (
+      <button
+        type="button"
+        role="option"
+        aria-selected={selected}
+        onClick={onClick}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-[14px] border px-3.5 py-2.5 text-left font-display text-[13px] font-semibold transition-colors",
+          selected
+            ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--text-primary)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-[var(--text-secondary)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]",
+        )}
+      >
+        <span
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded-full border",
+            selected
+              ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+              : "border-[var(--glass-border)] text-transparent",
+          )}
+        >
+          <IconCheck size={12} stroke={3} />
+        </span>
+        <span className="min-w-0 truncate">{label}</span>
+      </button>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <IconSearch
+        size={15}
+        className="absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]"
+      />
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => onSearch(e.target.value)}
+        onFocus={() => setOpen(true)}
+        placeholder="Pesquisar e filtrar..."
+        aria-label="Buscar e filtrar logs"
+        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-11 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+      />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Filtros"
+        className={cn(
+          "absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors",
+          activeCount > 0 || open
+            ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+            : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
+        )}
+      >
+        <IconAdjustmentsHorizontal size={15} />
+        {activeCount > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full bg-[var(--color-warn)] font-display text-[8px] font-bold text-white">
+            {activeCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-40 flex max-h-[min(78vh,560px)] w-[min(100vw-1.5rem,380px)] flex-col overflow-hidden rounded-[22px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal,#fff)] text-left shadow-[var(--glass-shadow-lg)] backdrop-blur-md">
+          <div className="flex items-center justify-between px-4 pb-2 pt-3.5">
+            <div className="flex items-center gap-2">
+              <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">
+                Filtros
+              </span>
+              <LogsFilterCountBadge count={draftCount || activeCount} />
+            </div>
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={draftCount === 0 && activeCount === 0 && !search}
+              className="flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)] disabled:opacity-40"
+            >
+              <IconRotateClockwise size={13} /> Limpar
+            </button>
+          </div>
+
+          <div className="px-3 pb-3 sm:px-4">
+            <div
+              role="tablist"
+              aria-label="Seções do filtro"
+              className="flex items-center gap-0.5 overflow-x-auto rounded-full bg-[var(--glass-bg-strong)] p-1 [-webkit-overflow-scrolling:touch]"
+            >
+              {tabs.map((t) => {
+                const active = tab === t.id;
+                const badge = tabBadge(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(t.id)}
+                    className={cn(
+                      "flex shrink-0 flex-1 items-center justify-center gap-1 rounded-full px-2 py-1.5 font-display text-[11px] font-bold transition-all sm:gap-1.5 sm:text-[12px]",
+                      active
+                        ? "bg-[var(--glass-bg-modal,#fff)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
+                  >
+                    <span className={active ? "text-[var(--brand-primary)]" : undefined}>
+                      {t.icon}
+                    </span>
+                    {t.label}
+                    <LogsFilterCountBadge count={badge} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3">
+            {tab === "resultado" && (
+              <div className="flex flex-col gap-2" role="listbox" aria-label="Resultado">
+                {(
+                  [
+                    { value: "all", label: "Todos os resultados" },
+                    { value: "success", label: "Sucesso" },
+                    { value: "failure", label: "Falha" },
+                  ] as const
+                ).map((opt) => (
+                  <OptionButton
+                    key={opt.value}
+                    selected={draft.result === opt.value}
+                    label={opt.label}
+                    onClick={() => setDraft((prev) => ({ ...prev, result: opt.value }))}
+                  />
+                ))}
+              </div>
+            )}
+            {tab === "periodo" && (
+              <div className="flex flex-col gap-2" role="listbox" aria-label="Período">
+                {(
+                  [
+                    { value: "all", label: "Todo o período" },
+                    { value: "today", label: "Hoje" },
+                    { value: "7d", label: "Últimos 7 dias" },
+                  ] as const
+                ).map((opt) => (
+                  <OptionButton
+                    key={opt.value}
+                    selected={draft.period === opt.value}
+                    label={opt.label}
+                    onClick={() => setDraft((prev) => ({ ...prev, period: opt.value }))}
+                  />
+                ))}
+              </div>
+            )}
+            {tab === "origem" && (
+              <div className="flex flex-col gap-2" role="listbox" aria-label="Origem">
+                <OptionButton
+                  selected={draft.origin === "all"}
+                  label="Todas as origens"
+                  onClick={() => setDraft((prev) => ({ ...prev, origin: "all" }))}
+                />
+                {origins.map((value) => (
+                  <OptionButton
+                    key={value}
+                    selected={draft.origin === value}
+                    label={value}
+                    onClick={() => setDraft((prev) => ({ ...prev, origin: value }))}
+                  />
+                ))}
+              </div>
+            )}
+            {tab === "departamento" && (
+              <div className="flex flex-col gap-2" role="listbox" aria-label="Departamento">
+                <OptionButton
+                  selected={draft.department === "all"}
+                  label="Todos os departamentos"
+                  onClick={() => setDraft((prev) => ({ ...prev, department: "all" }))}
+                />
+                {departmentOptions.map((opt) => (
+                  <OptionButton
+                    key={opt.value}
+                    selected={draft.department === opt.value}
+                    label={opt.label}
+                    onClick={() =>
+                      setDraft((prev) => ({ ...prev, department: opt.value }))
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 border-t border-[var(--glass-border)] px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="h-10 flex-1 rounded-full border border-[var(--glass-border)] font-display text-[13px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleApply}
+              className="h-10 flex-1 rounded-full bg-[var(--brand-primary)] font-display text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-opacity hover:opacity-95"
+            >
+              Aplicar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LogMobileCard({
+  log,
+  resultLabel,
+  expanded,
+  onToggle,
+}: {
+  log: {
+    id: string;
+    createdAt: string;
+    success: boolean;
+    reason: string;
+    triggerSource: string;
+    selectedUserName: string | null;
+    contactName: string | null;
+    contactPhone: string | null;
+    conversationId: string | null;
+    departmentName: string | null;
+  };
+  resultLabel: string;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
   return (
-    <label className="relative">
-      <span className="sr-only">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 pr-8 font-body text-[12px] text-[var(--text-secondary)] outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+    <li>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className={cn(
+          "w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3 text-left transition-colors",
+          expanded && "bg-[var(--glass-bg-overlay)]",
+        )}
       >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <IconChevronDown
-        size={13}
-        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-      />
-    </label>
+        <div className="flex items-start gap-2.5">
+          <span
+            className={cn(
+              "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
+              log.success
+                ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
+                : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
+            )}
+          >
+            {log.success ? <IconUserCheck size={15} /> : <IconClockExclamation size={15} />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+                  {log.contactName || log.contactPhone || "Atendimento"}
+                </p>
+                {log.contactName && log.contactPhone ? (
+                  <p className="truncate font-mono text-[11px] text-[var(--text-muted)]">
+                    {log.contactPhone}
+                  </p>
+                ) : null}
+              </div>
+              <span className="inline-flex shrink-0 items-center gap-1 font-body text-[10.5px] tabular-nums text-[var(--text-muted)]">
+                {fmtDateTime(log.createdAt)}
+                <IconChevronDown
+                  size={13}
+                  className={cn(
+                    "transition-transform duration-200",
+                    expanded && "rotate-180",
+                  )}
+                />
+              </span>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10px] font-bold",
+                  log.success
+                    ? "bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)] text-[var(--color-success)]"
+                    : "bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] text-[var(--color-warn)]",
+                )}
+              >
+                <span className="size-1.5 rounded-full bg-current" />
+                {resultLabel}
+              </span>
+              <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full border border-[var(--glass-border)] px-2 py-0.5 font-body text-[10px] font-semibold text-[var(--text-secondary)]">
+                <IconTag size={11} className="shrink-0 opacity-70" />
+                <span className="truncate">
+                  {log.departmentName || "Sem departamento"}
+                </span>
+              </span>
+            </div>
+
+            <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 font-body text-[11px]">
+              <div className="min-w-0">
+                <p className="text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  Responsável
+                </p>
+                <p className="truncate font-semibold text-[var(--text-secondary)]">
+                  {log.success
+                    ? log.selectedUserName ?? "Responsável"
+                    : resultLabel}
+                </p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                  Origem
+                </p>
+                <p className="truncate font-semibold text-[var(--text-secondary)]">
+                  {log.triggerSource || "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="mt-1.5 grid gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-3">
+          <LogDetail
+            label="Departamento"
+            value={log.departmentName || "Sem departamento"}
+          />
+          <LogDetail label="Motivo técnico" value={log.reason} mono />
+          <LogDetail label="Origem / trigger" value={log.triggerSource || "—"} />
+          <LogDetail label="ID do log" value={log.id} mono />
+          {log.conversationId ? (
+            <Link
+              href={`/inbox?c=${encodeURIComponent(log.conversationId)}`}
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 font-display text-[12px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+            >
+              Abrir conversa
+              <IconExternalLink size={13} />
+            </Link>
+          ) : (
+            <LogDetail label="Conversa" value="Não vinculada" />
+          )}
+        </div>
+      )}
+    </li>
   );
 }
 

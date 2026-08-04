@@ -56,7 +56,7 @@ import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { Chip } from "@/components/crm/chip";
 import { InputGlass } from "@/components/crm/input-glass";
-import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
+import { KpiCard, KPI_TONES, type KpiTone } from "@/components/crm/kpi-card";
 import { ListHScroll } from "@/components/crm/list-hscroll";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -547,27 +547,66 @@ export default function V2ContactsClientPage() {
           }
         />
 
-        {/* KPI cards acionáveis — mesmo padrão tipográfico do mini-dash de Automações */}
-        <section
-          className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
-          aria-label="Indicadores de contatos"
-        >
-          {SEGMENTS.map((seg) => {
-            const val = seg.value(statsQuery.data);
-            return (
-              <KpiCard
-                key={seg.id}
-                label={seg.label}
-                value={val === undefined ? "—" : val.toLocaleString("pt-BR")}
-                icon={seg.icon}
-                tone={seg.tone}
-                active={segment === seg.id}
-                onClick={() =>
-                  setSegment((prev) => (prev === seg.id ? null : seg.id))
-                }
-              />
-            );
-          })}
+        {/* KPI cards — mobile: 4 quadrados em h-scroll; desktop: grid */}
+        <section className="shrink-0" aria-label="Indicadores de contatos">
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden lg:hidden">
+            {SEGMENTS.map((seg) => {
+              const val = seg.value(statsQuery.data);
+              const active = segment === seg.id;
+              return (
+                <button
+                  key={seg.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() =>
+                    setSegment((prev) => (prev === seg.id ? null : seg.id))
+                  }
+                  className={cn(
+                    "flex aspect-square w-[104px] shrink-0 flex-col justify-between rounded-[var(--radius-xl)] border p-2.5 text-left shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-colors",
+                    active
+                      ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)]"
+                      : "border-[var(--glass-border)] bg-[var(--glass-bg-base)]",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-7 items-center justify-center rounded-[var(--radius-md)] [&>svg]:size-4",
+                      KPI_TONES[seg.tone],
+                    )}
+                  >
+                    {seg.icon}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-display text-[18px] font-extrabold leading-none tabular-nums text-[var(--text-primary)]">
+                      {val === undefined ? "—" : val.toLocaleString("pt-BR")}
+                    </p>
+                    <p className="mt-1 truncate font-display text-[10px] font-semibold uppercase leading-tight tracking-[0.02em] text-[var(--text-muted)]">
+                      {seg.id === "sem-resp" ? "Sem resp." : seg.label}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="hidden gap-2.5 sm:gap-3.5 lg:grid lg:grid-cols-4">
+            {SEGMENTS.map((seg) => {
+              const val = seg.value(statsQuery.data);
+              return (
+                <KpiCard
+                  key={seg.id}
+                  label={seg.label}
+                  value={val === undefined ? "—" : val.toLocaleString("pt-BR")}
+                  icon={seg.icon}
+                  tone={seg.tone}
+                  active={segment === seg.id}
+                  onClick={() =>
+                    setSegment((prev) => (prev === seg.id ? null : seg.id))
+                  }
+                />
+              );
+            })}
+          </div>
         </section>
 
         {/* Barra de seleção em massa */}

@@ -67,6 +67,7 @@ import {
 } from "@/components/crm/sortable-header";
 import { DateRangePicker, type DateRange } from "@/components/crm/date-range-picker";
 import { EmptyState } from "@/components/crm/empty-state";
+import { KpiSquareScroll } from "@/components/crm/kpi-card";
 import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import {
   EVENT_CONFIG,
@@ -825,6 +826,7 @@ function CallsMiniDash({ stats }: { stats: CallsStatsSnapshot | undefined }) {
   const cards: {
     key: string;
     label: string;
+    shortLabel: string;
     value: number;
     percent?: number;
     accent: string;
@@ -833,6 +835,7 @@ function CallsMiniDash({ stats }: { stats: CallsStatsSnapshot | undefined }) {
     {
       key: "outbound",
       label: "Ligações feitas",
+      shortLabel: "Feitas",
       value: s.outbound,
       accent: "var(--brand-primary)",
       icon: <IconPhoneOutgoing size={16} />,
@@ -840,6 +843,7 @@ function CallsMiniDash({ stats }: { stats: CallsStatsSnapshot | undefined }) {
     {
       key: "inbound",
       label: "Ligações recebidas",
+      shortLabel: "Recebidas",
       value: s.inbound,
       accent: "var(--color-success)",
       icon: <IconPhoneIncoming size={16} />,
@@ -847,6 +851,7 @@ function CallsMiniDash({ stats }: { stats: CallsStatsSnapshot | undefined }) {
     {
       key: "answered",
       label: "Atendidas",
+      shortLabel: "Atendidas",
       value: s.answered,
       percent: pct(s.answered),
       accent: "var(--color-warning)",
@@ -855,6 +860,7 @@ function CallsMiniDash({ stats }: { stats: CallsStatsSnapshot | undefined }) {
     {
       key: "completed",
       label: "Completadas",
+      shortLabel: "Completadas",
       value: s.completed,
       percent: pct(s.completed),
       accent: "var(--brand-secondary, #a78bfa)",
@@ -863,42 +869,54 @@ function CallsMiniDash({ stats }: { stats: CallsStatsSnapshot | undefined }) {
   ];
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map((c) => (
-        <div
-          key={c.key}
-          className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-        >
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={{
-              background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
-              color: c.accent,
-            }}
+    <>
+      <KpiSquareScroll
+        items={cards.map((c) => ({
+          key: c.key,
+          label: c.shortLabel,
+          value: c.value.toLocaleString("pt-BR"),
+          icon: c.icon,
+          accent: c.accent,
+          percent: c.percent,
+        }))}
+      />
+      <div className="hidden gap-3 sm:grid-cols-2 lg:grid lg:grid-cols-4">
+        {cards.map((c) => (
+          <div
+            key={c.key}
+            className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
           >
-            {c.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="font-display text-[11.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-              {c.label}
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
-                {c.value.toLocaleString("pt-BR")}
-              </span>
-              {c.percent !== undefined && (
-                <span
-                  className="font-display text-[12px] font-bold tabular-nums"
-                  style={{ color: c.accent }}
-                >
-                  {c.percent}%
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{
+                background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
+                color: c.accent,
+              }}
+            >
+              {c.icon}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="font-display text-[11.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                {c.label}
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-[22px] font-bold leading-none tabular-nums text-[var(--text-primary)]">
+                  {c.value.toLocaleString("pt-BR")}
                 </span>
-              )}
+                {c.percent !== undefined && (
+                  <span
+                    className="font-display text-[12px] font-bold tabular-nums"
+                    style={{ color: c.accent }}
+                  >
+                    {c.percent}%
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -1283,6 +1301,7 @@ function FeedMiniDash({ items }: { items: FeedEvent[] }) {
   const cards: {
     key: string;
     label: string;
+    shortLabel: string;
     value: number;
     accent: string;
     icon: React.ReactNode;
@@ -1290,6 +1309,7 @@ function FeedMiniDash({ items }: { items: FeedEvent[] }) {
     {
       key: "total",
       label: "Total de eventos",
+      shortLabel: "Eventos",
       value: stats.total,
       accent: "var(--brand-primary)",
       icon: <IconActivity size={16} />,
@@ -1297,6 +1317,7 @@ function FeedMiniDash({ items }: { items: FeedEvent[] }) {
     {
       key: "messages",
       label: "Mensagens",
+      shortLabel: "Mensagens",
       value: stats.messages,
       accent: "var(--color-success)",
       icon: <IconMessageCircle size={16} />,
@@ -1304,6 +1325,7 @@ function FeedMiniDash({ items }: { items: FeedEvent[] }) {
     {
       key: "conversations",
       label: "Conversas",
+      shortLabel: "Conversas",
       value: stats.conversations,
       accent: "var(--color-info)",
       icon: <IconUsers size={16} />,
@@ -1311,6 +1333,7 @@ function FeedMiniDash({ items }: { items: FeedEvent[] }) {
     {
       key: "deals",
       label: "Negócios",
+      shortLabel: "Negócios",
       value: stats.deals,
       accent: "var(--brand-secondary, #a78bfa)",
       icon: <IconBriefcase size={16} />,
@@ -1318,32 +1341,43 @@ function FeedMiniDash({ items }: { items: FeedEvent[] }) {
   ];
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map((c) => (
-        <div
-          key={c.key}
-          className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-        >
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={{
-              background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
-              color: c.accent,
-            }}
+    <>
+      <KpiSquareScroll
+        items={cards.map((c) => ({
+          key: c.key,
+          label: c.shortLabel,
+          value: c.value.toLocaleString("pt-BR"),
+          icon: c.icon,
+          accent: c.accent,
+        }))}
+      />
+      <div className="hidden gap-3 sm:grid-cols-2 lg:grid lg:grid-cols-4">
+        {cards.map((c) => (
+          <div
+            key={c.key}
+            className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
           >
-            {c.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="font-display text-[11.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-              {c.label}
-            </div>
-            <div className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
-              {c.value.toLocaleString("pt-BR")}
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{
+                background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
+                color: c.accent,
+              }}
+            >
+              {c.icon}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="font-display text-[11.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                {c.label}
+              </div>
+              <div className="font-display text-[22px] font-bold leading-none tabular-nums text-[var(--text-primary)]">
+                {c.value.toLocaleString("pt-BR")}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
 

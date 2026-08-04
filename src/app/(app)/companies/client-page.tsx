@@ -44,7 +44,7 @@ import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { BadgeGlass } from "@/components/crm/badge-glass";
 import { InputGlass } from "@/components/crm/input-glass";
-import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
+import { KpiCard, KpiSquareScroll, type KpiTone } from "@/components/crm/kpi-card";
 import { ListHScroll } from "@/components/crm/list-hscroll";
 import { cn } from "@/lib/utils";
 import { formatPhoneDisplay, normalizePhone } from "@/lib/phone";
@@ -429,26 +429,45 @@ export default function V2CompaniesClientPage() {
           }
         />
 
-        <section
-          className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
-          aria-label="Indicadores de empresas"
-        >
-          {SEGMENTS.map((seg) => {
-            const val = seg.value(statsQuery.data);
-            return (
-              <KpiCard
-                key={seg.id}
-                label={seg.label}
-                value={val === undefined ? "—" : val.toLocaleString("pt-BR")}
-                icon={seg.icon}
-                tone={seg.tone}
-                active={segment === seg.id}
-                onClick={() =>
-                  setSegment((prev) => (prev === seg.id ? null : seg.id))
-                }
-              />
-            );
-          })}
+        <section className="shrink-0" aria-label="Indicadores de empresas">
+          <KpiSquareScroll
+            items={SEGMENTS.map((seg) => {
+              const val = seg.value(statsQuery.data);
+              return {
+                key: seg.id,
+                label:
+                  seg.id === "com-contatos"
+                    ? "Com contatos"
+                    : seg.id === "sem-telefone"
+                      ? "Sem tel."
+                      : seg.label,
+                value: val === undefined ? "—" : val.toLocaleString("pt-BR"),
+                icon: seg.icon,
+                tone: seg.tone,
+                active: segment === seg.id,
+                onClick: () =>
+                  setSegment((prev) => (prev === seg.id ? null : seg.id)),
+              };
+            })}
+          />
+          <div className="hidden gap-2.5 sm:gap-3.5 lg:grid lg:grid-cols-4">
+            {SEGMENTS.map((seg) => {
+              const val = seg.value(statsQuery.data);
+              return (
+                <KpiCard
+                  key={seg.id}
+                  label={seg.label}
+                  value={val === undefined ? "—" : val.toLocaleString("pt-BR")}
+                  icon={seg.icon}
+                  tone={seg.tone}
+                  active={segment === seg.id}
+                  onClick={() =>
+                    setSegment((prev) => (prev === seg.id ? null : seg.id))
+                  }
+                />
+              );
+            })}
+          </div>
         </section>
 
         {selected.size > 0 && (

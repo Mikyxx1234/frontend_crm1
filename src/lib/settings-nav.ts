@@ -100,7 +100,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         id: "tabulations",
         label: "Tabulações",
-        description: "Motivos hierárquicos ao encerrar",
+        description: "Árvore de motivos + dashboard/logs",
         icon: ListTree,
         href: "/settings/tabulations",
         allowedRoles: GESTAO,

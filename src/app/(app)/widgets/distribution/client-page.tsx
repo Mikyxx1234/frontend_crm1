@@ -1601,8 +1601,15 @@ function PendingQueueCards({
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-warn)_10%,transparent)] text-[var(--color-warn)]">
                   <IconClockExclamation size={16} />
                 </span>
-                <span className="min-w-0 flex-1 truncate font-mono text-[13px] font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)]">
-                  {p.label}
+                <span className="min-w-0 flex-1 truncate">
+                  <span className="font-mono text-[13px] font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)]">
+                    {p.label}
+                  </span>
+                  {p.departmentName ? (
+                    <span className="ml-2 font-body text-[12px] font-medium text-[var(--text-muted)]">
+                      {p.departmentName}
+                    </span>
+                  ) : null}
                 </span>
                 {isAiAgentTrigger(p.triggerSource) ? <AiAgentBadge /> : null}
                 <ChannelBadge channel={p.channel} />

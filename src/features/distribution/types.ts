@@ -100,6 +100,8 @@ export interface PendingDistributionDto {
   label: string;
   /** Canal de origem (WHATSAPP, INSTAGRAM, FACEBOOK, EMAIL, WEBCHAT). */
   channel: string;
+  departmentId?: string | null;
+  departmentName?: string | null;
   distributionType: string | null;
   triggerSource: string;
   attempts: number;

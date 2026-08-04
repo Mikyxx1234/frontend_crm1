@@ -50,6 +50,15 @@ interface ConversationActionsMenuProps {
   departmentId?: string | null;
   /** Se true, o botao "Encerrar" abre um modal exigindo folha da arvore. */
   requireTabulationOnClose?: boolean;
+  /**
+   * Após "Distribuir p/ departamento", atualiza sticky/cache local com o
+   * novo depto (e se exige tabulação) — senão Encerrar usa flag antigo.
+   */
+  onDepartmentChanged?: (dept: {
+    id: string;
+    name: string;
+    requireTabulationOnClose: boolean;
+  }) => void;
   assigneeId?: string | null;
   assigneeType?: string | null;
 }
@@ -65,25 +74,65 @@ export function ConversationActionsMenu({
   onResolved,
   departmentId,
   requireTabulationOnClose,
+  onDepartmentChanged,
   assigneeId: _assigneeId,
   assigneeType,
 }: ConversationActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [deptMenuOpen, setDeptMenuOpen] = useState(false);
   const [tabulationOpen, setTabulationOpen] = useState(false);
+  /** Departamento vindo do erro TABULATION_REQUIRED (flag FE desatualizado). */
+  const [tabulationDeptId, setTabulationDeptId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const currentUserId =
     (session?.user as { id?: string } | undefined)?.id ?? null;
   const assign = useAssignConversation();
   const isAiAssignee = (assigneeType ?? "").toUpperCase() === "AI";
+  const effectiveTabulationDeptId = tabulationDeptId ?? departmentId ?? null;
   const toggleResolve = useToggleConversationResolve({
     onNewConversation: (newId) => {
       onReopenNewConversation?.(newId);
     },
     onResolved: (id) => onResolved?.(id),
+    onTabulationRequired: ({ departmentId: deptFromApi }) => {
+      setOpen(false);
+      setTabulationDeptId(deptFromApi ?? departmentId ?? null);
+      setTabulationOpen(true);
+    },
   });
   const executeDist = useExecuteDistribution();
+
+  const departmentsQuery = useQuery({
+    queryKey: ["inbox-distribute-departments"],
+    queryFn: async (): Promise<
+      Array<{ id: string; name: string; requireTabulationOnClose: boolean }>
+    > => {
+      const res = await fetch(apiUrl("/api/settings/departments"), {
+        credentials: "include",
+      });
+      if (!res.ok) return [];
+      const raw = (await res.json()) as unknown;
+      const list = Array.isArray(raw)
+        ? raw
+        : Array.isArray((raw as { items?: unknown })?.items)
+          ? (raw as { items: unknown[] }).items
+          : [];
+      return (
+        list as Array<{
+          id: string;
+          name: string;
+          requireTabulationOnClose?: boolean;
+        }>
+      ).map((d) => ({
+        id: d.id,
+        name: d.name,
+        requireTabulationOnClose: !!d.requireTabulationOnClose,
+      }));
+    },
+    enabled: open,
+    staleTime: 120_000,
+  });
 
   const aiAgentsQuery = useQuery({
     queryKey: ["inbox-ai-agents-active"],
@@ -110,28 +159,6 @@ export function ConversationActionsMenu({
     staleTime: 60_000,
   });
 
-  const deptsQuery = useQuery({
-    queryKey: ["inbox-distribute-departments"],
-    queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
-      const res = await fetch(apiUrl("/api/settings/departments"), {
-        credentials: "include",
-      });
-      if (!res.ok) return [];
-      const raw = (await res.json()) as unknown;
-      const list = Array.isArray(raw)
-        ? raw
-        : Array.isArray((raw as { items?: unknown })?.items)
-          ? (raw as { items: unknown[] }).items
-          : [];
-      return (list as Array<{ id: string; name: string }>).map((d) => ({
-        id: d.id,
-        name: d.name,
-      }));
-    },
-    enabled: open,
-    staleTime: 120_000,
-  });
-
   useEffect(() => {
     if (!open) {
       setDeptMenuOpen(false);
@@ -152,9 +179,11 @@ export function ConversationActionsMenu({
 
   function handleToggleResolve() {
     if (!conversationId) return;
-    // Encerramento com departamento que exige tabulacao -> abre modal.
+    // Encerramento MANUAL com departamento que exige tabulacao -> abre modal.
+    // Encerramentos de bot/automação não passam por este menu.
     if (!isResolved && requireTabulationOnClose && departmentId) {
       setOpen(false);
+      setTabulationDeptId(departmentId);
       setTabulationOpen(true);
       return;
     }
@@ -198,7 +227,11 @@ export function ConversationActionsMenu({
     }
   }
 
-  function handleDistributeToDepartment(dept: { id: string; name: string }) {
+  function handleDistributeToDepartment(dept: {
+    id: string;
+    name: string;
+    requireTabulationOnClose: boolean;
+  }) {
     if (!conversationId) return;
     executeDist.mutate(
       {
@@ -211,6 +244,12 @@ export function ConversationActionsMenu({
         onSuccess: (result) => {
           setOpen(false);
           setDeptMenuOpen(false);
+          onDepartmentChanged?.({
+            id: dept.id,
+            name: dept.name,
+            requireTabulationOnClose: dept.requireTabulationOnClose,
+          });
+          setTabulationDeptId(dept.id);
           if (result.success) {
             toast.success(
               result.selectedUserName
@@ -402,17 +441,17 @@ export function ConversationActionsMenu({
                   <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
                     Escolha o departamento
                   </p>
-                  {deptsQuery.isLoading ? (
+                  {departmentsQuery.isLoading ? (
                     <p className="px-3 py-2 text-[12px] text-[var(--text-muted)]">
                       Carregando…
                     </p>
-                  ) : (deptsQuery.data ?? []).length === 0 ? (
+                  ) : (departmentsQuery.data ?? []).length === 0 ? (
                     <p className="px-3 py-2 text-[12px] text-[var(--text-muted)]">
                       Nenhum departamento cadastrado.
                     </p>
                   ) : (
                     <div className="max-h-56 overflow-y-auto">
-                      {(deptsQuery.data ?? []).map((d) => (
+                      {(departmentsQuery.data ?? []).map((d) => (
                         <button
                           key={d.id}
                           type="button"
@@ -450,7 +489,7 @@ export function ConversationActionsMenu({
       <TabulationDialog
         open={tabulationOpen}
         onOpenChange={setTabulationOpen}
-        departmentId={departmentId ?? null}
+        departmentId={effectiveTabulationDeptId}
         submitting={toggleResolve.isPending}
         onConfirm={handleConfirmTabulation}
       />

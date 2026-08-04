@@ -85,6 +85,8 @@ export function useDealChatBinding(params: {
   closedAt?: string | null;
   /** Nº do ticket — exibido na barra do Composer. */
   conversationNumber?: number | null;
+  departmentId?: string | null;
+  requireTabulationOnClose?: boolean;
 }): DealChatBindingResult {
   const {
     conversationId,
@@ -95,6 +97,8 @@ export function useDealChatBinding(params: {
     isResolved,
     closedAt,
     conversationNumber,
+    departmentId,
+    requireTabulationOnClose,
   } = params;
 
   const { data: session } = useSession();
@@ -684,6 +688,8 @@ export function useDealChatBinding(params: {
       onCancelReply={() => setReplyTo(null)}
       isResolved={isResolved}
       conversationNumber={conversationNumber ?? null}
+      departmentId={departmentId ?? null}
+      requireTabulationOnClose={requireTabulationOnClose ?? false}
     />
   ) : null;
 

@@ -1397,6 +1397,21 @@ export default function InboxV2ClientPage({
               requireTabulationOnClose={
                 activeRow.department?.requireTabulationOnClose ?? false
               }
+              onDepartmentChanged={(dept) => {
+                setStickyRow((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        departmentId: dept.id,
+                        department: {
+                          id: dept.id,
+                          name: dept.name,
+                          requireTabulationOnClose: dept.requireTabulationOnClose,
+                        },
+                      }
+                    : prev,
+                );
+              }}
             />
           </>
         }

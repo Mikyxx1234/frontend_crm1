@@ -199,6 +199,22 @@ export interface ConversationActionResponse {
   distribution?: TransferDistributionResult | null;
 }
 
+/** Erro tipado de ação de conversa (ex.: TABULATION_REQUIRED). */
+export class ConversationActionError extends Error {
+  code?: string;
+  departmentId?: string | null;
+
+  constructor(
+    message: string,
+    opts?: { code?: string; departmentId?: string | null },
+  ) {
+    super(message);
+    this.name = "ConversationActionError";
+    this.code = opts?.code;
+    this.departmentId = opts?.departmentId ?? null;
+  }
+}
+
 /** POST /api/conversations/:id/actions */
 export async function postConversationAction(
   conversationId: string,
@@ -211,8 +227,13 @@ export async function postConversationAction(
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(
+    throw new ConversationActionError(
       typeof data?.message === "string" ? data.message : "Erro ao executar acao",
+      {
+        code: typeof data?.code === "string" ? data.code : undefined,
+        departmentId:
+          typeof data?.departmentId === "string" ? data.departmentId : null,
+      },
     );
   }
   return data as ConversationActionResponse;

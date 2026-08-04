@@ -113,6 +113,13 @@ const MOCK_PENDING_SEED: {
   { phone: "+5511954662195", channel: "WHATSAPP", waitMinutes: 8 * 60 },
 ];
 
+const MOCK_PENDING_DEPTS = [
+  "Atendimento",
+  "Acolhimento",
+  "Comercial",
+  "Suporte",
+] as const;
+
 export const MOCK_DISTRIBUTION_PENDING: PendingResponse = {
   pending: MOCK_PENDING_SEED.map((s, i) => ({
     id: `mock-pend-${i + 1}`,
@@ -120,6 +127,8 @@ export const MOCK_DISTRIBUTION_PENDING: PendingResponse = {
     contactId: `mock-ct-${i + 1}`,
     label: s.phone,
     channel: s.channel,
+    departmentId: `mock-dept-${(i % MOCK_PENDING_DEPTS.length) + 1}`,
+    departmentName: MOCK_PENDING_DEPTS[i % MOCK_PENDING_DEPTS.length]!,
     distributionType: null,
     triggerSource: "INBOUND",
     attempts: 0,

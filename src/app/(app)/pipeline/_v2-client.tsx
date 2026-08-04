@@ -774,12 +774,24 @@ export default function KanbanV2ClientPage({
             status?: string | null;
             closedAt?: string | null;
             number?: number | null;
+            departmentId?: string | null;
+            department?: {
+              id: string;
+              name?: string | null;
+              requireTabulationOnClose?: boolean;
+            } | null;
           }[];
         }
       | null
       | undefined
     )?.conversations?.[0] ?? null;
   const dealConversationId = dealConversation?.id ?? null;
+  const dealConversationDepartmentId =
+    dealConversation?.departmentId ??
+    dealConversation?.department?.id ??
+    null;
+  const dealConversationRequiresTabulation =
+    !!dealConversation?.department?.requireTabulationOnClose;
   const dealContactName =
     sanitizeContactName(dealDetail?.contact?.name) ||
     personNameFromDealTitle(dealDetail?.title) ||
@@ -793,6 +805,8 @@ export default function KanbanV2ClientPage({
       isResolved: dealConversation?.status === "RESOLVED",
       closedAt: dealConversation?.closedAt ?? null,
       conversationNumber: dealConversation?.number ?? null,
+      departmentId: dealConversationDepartmentId,
+      requireTabulationOnClose: dealConversationRequiresTabulation,
       // sessionExpired derivado dentro do hook a partir do session retornado
       // por useMessages (backend = source of truth) com fallback heurístico
       // em lastInboundAt. Não passar override manual aqui.
@@ -1212,6 +1226,8 @@ export default function KanbanV2ClientPage({
           (dealDetail?.contact as { conversations?: { closedAt?: string | null }[] } | null | undefined)
             ?.conversations?.[0]?.closedAt ?? null
         }
+        conversationDepartmentId={dealConversationDepartmentId}
+        conversationRequiresTabulation={dealConversationRequiresTabulation}
         tabContentOverride={
           activeDealId
             ? {

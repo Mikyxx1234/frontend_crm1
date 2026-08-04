@@ -264,6 +264,9 @@ interface DealDetailPanelProps {
   conversationNumber?: number | null
   /** ISO do `closedAt` da conversa — usado no chip "Encerrada" do TabsBar. */
   conversationClosedAt?: string | null
+  /** Departamento da conversa — modal de tabulação no Encerrar (TabsBar). */
+  conversationDepartmentId?: string | null
+  conversationRequiresTabulation?: boolean
   /**
    * Conexão (Channel) por onde o contato está conversando (qual WhatsApp).
    * Exibida como chip no header do contato — distingue quando a pessoa fala
@@ -336,6 +339,8 @@ export function DealDetailPanel({
   isResolved,
   conversationNumber,
   conversationClosedAt,
+  conversationDepartmentId,
+  conversationRequiresTabulation,
   connection,
 }: DealDetailPanelProps) {
   // Retrocompatibilidade: split slots sobrepõem o legado fieldConfigSlot
@@ -1436,6 +1441,8 @@ export function DealDetailPanel({
                 isResolved={isResolved}
                 conversationNumber={conversationNumber}
                 conversationClosedAt={conversationClosedAt}
+                conversationDepartmentId={conversationDepartmentId}
+                conversationRequiresTabulation={conversationRequiresTabulation}
                 callButtonSlot={callButtonSlot}
               />
 
@@ -1550,8 +1557,17 @@ function TabsBar({
   const [menuOpen, setMenuOpen] = useState(false)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
   const [tabulationOpen, setTabulationOpen] = useState(false)
+  const [tabulationDeptId, setTabulationDeptId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const toggleResolve = useToggleConversationResolve()
+  const effectiveTabulationDeptId =
+    tabulationDeptId ?? conversationDepartmentId ?? null
+  const toggleResolve = useToggleConversationResolve({
+    onTabulationRequired: ({ departmentId: deptFromApi }) => {
+      setMenuOpen(false)
+      setTabulationDeptId(deptFromApi ?? conversationDepartmentId ?? null)
+      setTabulationOpen(true)
+    },
+  })
 
   /* Fecha kebab ao clicar fora */
   useEffect(() => {
@@ -1721,6 +1737,7 @@ function TabsBar({
                           conversationDepartmentId
                         ) {
                           setMenuOpen(false)
+                          setTabulationDeptId(conversationDepartmentId)
                           setTabulationOpen(true)
                           return
                         }
@@ -1753,7 +1770,7 @@ function TabsBar({
       <TabulationDialog
         open={tabulationOpen}
         onOpenChange={setTabulationOpen}
-        departmentId={conversationDepartmentId ?? null}
+        departmentId={effectiveTabulationDeptId}
         submitting={toggleResolve.isPending}
         onConfirm={(tabulationId) => {
           if (!conversationId) return

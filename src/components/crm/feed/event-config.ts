@@ -231,6 +231,12 @@ export const EVENT_CONFIG: Record<string, EventVisualConfig> = {
     bg: "bg-success-soft",
     label: "Conversa encerrada",
   },
+  CONVERSATION_TABULATED: {
+    Icon: CheckCircle2,
+    ring: "ring-accent/30 text-accent",
+    bg: "bg-lavender-soft",
+    label: "Conversa tabulada",
+  },
   CONVERSATION_REOPENED: {
     Icon: RotateCcw,
     ring: "ring-warning/30 text-warning",
@@ -551,6 +557,10 @@ export function eventDescription(ev: FeedEvent): string {
       const from = CONV_STATUS_LABEL[String(m.from)] ?? String(m.from ?? "");
       const to = CONV_STATUS_LABEL[String(m.to)] ?? String(m.to ?? "");
       return from && to ? `${from} → ${to}` : to || from;
+    }
+    case "CONVERSATION_TABULATED": {
+      const tabId = String(m.tabulationId ?? "").trim();
+      return tabId ? `tabulação ${tabId.slice(0, 8)}…` : "Tabulação registrada";
     }
     case "AUTOMATION_EXECUTED": {
       const name = String(m.automationName ?? "Automação");

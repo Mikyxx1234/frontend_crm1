@@ -33,9 +33,15 @@ export function ConversationResolveButton({
   disabled?: boolean;
 }) {
   const [tabulationOpen, setTabulationOpen] = useState(false);
+  const [tabulationDeptId, setTabulationDeptId] = useState<string | null>(null);
+  const effectiveTabulationDeptId = tabulationDeptId ?? departmentId ?? null;
   const toggleResolve = useToggleConversationResolve({
     onNewConversation: (newId) => onReopenNewConversation?.(newId),
     onResolved: (id) => onResolved?.(id),
+    onTabulationRequired: ({ departmentId: deptFromApi }) => {
+      setTabulationDeptId(deptFromApi ?? departmentId ?? null);
+      setTabulationOpen(true);
+    },
   });
 
   const label = isResolved ? "Reabrir conversa" : "Encerrar conversa";
@@ -43,6 +49,7 @@ export function ConversationResolveButton({
   function handleClick() {
     if (!conversationId) return;
     if (!isResolved && requireTabulationOnClose && departmentId) {
+      setTabulationDeptId(departmentId);
       setTabulationOpen(true);
       return;
     }
@@ -87,7 +94,7 @@ export function ConversationResolveButton({
         <TabulationDialog
           open={tabulationOpen}
           onOpenChange={setTabulationOpen}
-          departmentId={departmentId ?? null}
+          departmentId={effectiveTabulationDeptId}
           submitting={toggleResolve.isPending}
           onConfirm={handleConfirmTabulation}
         />

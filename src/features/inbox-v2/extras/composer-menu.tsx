@@ -82,12 +82,19 @@ export function ComposerMenu({
   const [taskOpen, setTaskOpen] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false);
   const [tabulationOpen, setTabulationOpen] = useState(false);
+  const [tabulationDeptId, setTabulationDeptId] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const effectiveTabulationDeptId = tabulationDeptId ?? departmentId ?? null;
   const toggleResolve = useToggleConversationResolve({
     onNewConversation: (newId) => {
       onReopenNewConversation?.(newId);
     },
     onResolved: (id) => onResolved?.(id),
+    onTabulationRequired: ({ departmentId: deptFromApi }) => {
+      closeMenu();
+      setTabulationDeptId(deptFromApi ?? departmentId ?? null);
+      setTabulationOpen(true);
+    },
   });
 
   function closeMenu() {
@@ -120,6 +127,7 @@ export function ComposerMenu({
     if (!conversationId) return;
     if (!isResolved && requireTabulationOnClose && departmentId) {
       closeMenu();
+      setTabulationDeptId(departmentId);
       setTabulationOpen(true);
       return;
     }
@@ -296,7 +304,7 @@ export function ComposerMenu({
       <TabulationDialog
         open={tabulationOpen}
         onOpenChange={setTabulationOpen}
-        departmentId={departmentId ?? null}
+        departmentId={effectiveTabulationDeptId}
         submitting={toggleResolve.isPending}
         onConfirm={handleConfirmTabulation}
       />

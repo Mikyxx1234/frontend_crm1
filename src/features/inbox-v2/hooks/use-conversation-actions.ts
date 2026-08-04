@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import {
+  ConversationActionError,
   markConversationRead,
   postBulkAction,
   postConversationAction,
@@ -99,12 +100,20 @@ export function useToggleConversationResolve(
     onNewConversation?: (newConversationId: string, previousConversationId: string) => void;
     /** Encerrar: caller pode atualizar sticky/status local antes do refetch da lista. */
     onResolved?: (conversationId: string) => void;
+    /**
+     * Departamento exige tabulação e o resolve foi rejeitado (ou a UI
+     * não tinha o flag hidratado). Caller abre o TabulationDialog.
+     */
+    onTabulationRequired?: (info: {
+      conversationId: string;
+      departmentId: string | null;
+    }) => void;
   },
 ) {
   const qc = useQueryClient();
   return useMutation<
     Awaited<ReturnType<typeof postConversationAction>>,
-    Error,
+    ConversationActionError,
     {
       conversationId: string;
       action: "resolve" | "reopen";
@@ -177,7 +186,22 @@ export function useToggleConversationResolve(
       qc.invalidateQueries({ queryKey: ["deal"] });
       qc.invalidateQueries({ queryKey: ["contact"] });
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err, vars) => {
+      if (
+        err instanceof ConversationActionError &&
+        err.code === "TABULATION_REQUIRED" &&
+        vars.action === "resolve"
+      ) {
+        if (callbacks?.onTabulationRequired) {
+          callbacks.onTabulationRequired({
+            conversationId: vars.conversationId,
+            departmentId: err.departmentId ?? null,
+          });
+          return;
+        }
+      }
+      toast.error(err.message);
+    },
   });
 }
 

@@ -18,6 +18,7 @@ import {
   IconUpload,
   IconX,
 } from "@tabler/icons-react";
+import { TabulationsDashboard } from "./tabulations-dashboard";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -29,7 +30,10 @@ import { KpiStrip } from "@/components/crm/kpi-strip";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
-import { PageActionsMenu } from "@/components/crm/page-toolbar";
+import {
+  PageActionsMenu,
+  PageSegmentedControl,
+} from "@/components/crm/page-toolbar";
 import { SettingsListFilterBar } from "@/components/crm/settings-filter-bar";
 import {
   Dialog,
@@ -272,6 +276,7 @@ function TabulationsBody() {
   const departmentsQuery = useDepartments();
   const departments = departmentsQuery.data ?? [];
 
+  const [view, setView] = useState<"tree" | "dashboard">("tree");
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [newOpen, setNewOpen] = useState(false);
@@ -461,44 +466,66 @@ function TabulationsBody() {
   // CTAs de CSV no hambúrguer à direita do PageHeader.
   const actionsNode = useMemo(
     () => (
-      <PageActionsMenu
-        aria-label="Ações de tabulações"
-        items={[
-          {
-            icon: <IconPlus size={16} />,
-            label: "Nova tabulação",
-            onClick: () => setNewOpen(true),
-            primary: true,
-          },
-          {
-            icon: <IconUpload size={16} />,
-            label: importCsv.isPending ? "Importando…" : "Importar CSV",
-            onClick: () => fileRef.current?.click(),
-            disabled: importCsv.isPending,
-            divider: true,
-          },
-          {
-            icon: <IconDownload size={16} />,
-            label: "Exportar CSV",
-            onClick: handleExport,
-            disabled: tree.length === 0,
-          },
-        ]}
-      />
+      <div className="flex items-center gap-2">
+        <PageSegmentedControl
+          aria-label="Visão de tabulações"
+          size="compact"
+          value={view}
+          onChange={(v) => setView(v as "tree" | "dashboard")}
+          items={[
+            { value: "tree", label: "Árvore" },
+            { value: "dashboard", label: "Dashboard" },
+          ]}
+        />
+        {view === "tree" ? (
+          <PageActionsMenu
+            aria-label="Ações de tabulações"
+            items={[
+              {
+                icon: <IconPlus size={16} />,
+                label: "Nova tabulação",
+                onClick: () => setNewOpen(true),
+                primary: true,
+              },
+              {
+                icon: <IconUpload size={16} />,
+                label: importCsv.isPending ? "Importando…" : "Importar CSV",
+                onClick: () => fileRef.current?.click(),
+                disabled: importCsv.isPending,
+                divider: true,
+              },
+              {
+                icon: <IconDownload size={16} />,
+                label: "Exportar CSV",
+                onClick: handleExport,
+                disabled: tree.length === 0,
+              },
+            ]}
+          />
+        ) : null}
+      </div>
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [importCsv.isPending, tree],
+    [importCsv.isPending, tree, view],
   );
 
   useEffect(() => {
     if (!slots) return;
-    slots.setCenter(centerNode);
+    slots.setCenter(view === "tree" ? centerNode : null);
     slots.setActions(actionsNode);
     return () => {
       slots.setCenter(null);
       slots.setActions(null);
     };
-  }, [slots, centerNode, actionsNode]);
+  }, [slots, centerNode, actionsNode, view]);
+
+  if (view === "dashboard") {
+    return (
+      <div className="flex w-full min-w-0 flex-col gap-4 px-1 pb-8">
+        <TabulationsDashboard />
+      </div>
+    );
+  }
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4 px-1 pb-8">

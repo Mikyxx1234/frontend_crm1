@@ -1034,6 +1034,29 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 </p>
               </div>
               <div className="space-y-2">
+                <Label>Enviar como</Label>
+                <DropdownGlass
+                  triggerClassName="w-full"
+                  value={String(draft.sendAs ?? "bot")}
+                  options={[
+                    { value: "bot", label: "Bot (automação)" },
+                    {
+                      value: "assignee",
+                      label: "Responsável da conversa",
+                      description:
+                        "Conta como 1ª resposta do consultor (sai da Entrada → Respondidas)",
+                    },
+                  ]}
+                  onValueChange={(v) =>
+                    setDraft((d) => ({ ...d, sendAs: v || "bot" }))
+                  }
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Com &quot;Responsável&quot;, a mensagem aparece como se o consultor
+                  tivesse respondido. Sem responsável humano, envia como bot.
+                </p>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="sc-cw-fb">Template fallback (sessão expirada)</Label>
                 <Input
                   id="sc-cw-fb"

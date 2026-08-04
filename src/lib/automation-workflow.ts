@@ -309,8 +309,10 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
       return c.title ? String(c.title) : "Nova atividade";
     case "send_whatsapp_message":
       return c.content
-        ? String(c.content).slice(0, 40) + (String(c.content).length > 40 ? "…" : "")
-        : "Mensagem";
+        ? `${c.sendAs === "assignee" ? "[Responsável] " : ""}${String(c.content).slice(0, 40)}${String(c.content).length > 40 ? "…" : ""}`
+        : c.sendAs === "assignee"
+          ? "Mensagem (como responsável)"
+          : "Mensagem";
     case "send_whatsapp_template": {
       const tplLabel = c.templateLabel ? String(c.templateLabel) : "";
       const tplName = c.templateName ? String(c.templateName) : "";
@@ -483,8 +485,10 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
     case "create_activity":
       return { type: "TASK", title: "", description: "" };
     case "send_whatsapp_message":
+      // sendAs: "bot" | "assignee" — ver backend automation-executor.
       return {
         content: "",
+        sendAs: "bot",
         failureAction: "stop",
         timeoutMs: 86_400_000,
         timeoutAction: "continue",

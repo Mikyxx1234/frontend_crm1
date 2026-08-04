@@ -100,8 +100,14 @@ export function resolveFlowPresentation(
     }
     case "send_whatsapp_message": {
       const content = String(config.content ?? "").trim()
+      const asAssignee = String(config.sendAs ?? "") === "assignee"
+      const prefix = asAssignee ? "[Responsável] " : ""
       return {
-        subtitle: content ? clampSubtitle(content) : data.subtitle,
+        subtitle: content
+          ? clampSubtitle(`${prefix}${content}`)
+          : asAssignee
+            ? "Como responsável"
+            : data.subtitle,
         outputs: [
           { ...SUCCESS_SEND_OUTPUT },
           { id: "timeout", label: "Sem resposta", icon: "clock", err: true },

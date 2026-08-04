@@ -114,6 +114,16 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   ],
   send_whatsapp_message: [
     { kind: "textarea", key: "content", label: "Conteúdo da mensagem", hint: "Use {{campo}} para variáveis." },
+    {
+      kind: "select",
+      key: "sendAs",
+      label: "Enviar como",
+      options: [
+        { value: "bot", label: "Bot (automação)" },
+        { value: "assignee", label: "Responsável da conversa" },
+      ],
+      hint: "Responsável = conta como 1ª resposta do consultor (Entrada → Respondidas).",
+    },
     { kind: "text", key: "fallbackTemplateName", label: "Template fallback (sessão expirada)", optional: true },
     { kind: "duration", key: "timeoutMs", label: "Sem resposta em" },
     {

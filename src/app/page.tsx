@@ -1,23 +1,22 @@
 import { redirect } from "next/navigation";
 
+import { NativeRootGate } from "@/components/layout/native-root-gate";
 import { auth } from "@/lib/auth-public";
 import { LandingClient } from "./landing-client";
 
 /**
  * Raiz pública. No frontend separado decidimos só com a session (JWT):
- *  - Não logado: mostra a landing com form de signup. Submit chama
- *    `/api/signup` (rewrite pro backend), que cria organization + user
- *    ADMIN, faz signIn, e o redirecionamento pro wizard fica no client.
- *  - Logado com organizationId: vai pro dashboard. O wizard de onboarding
- *    só é alcançado por link direto / signup flow — o checagem de
- *    `onboardingCompletedAt` fica no backend via `/api/organization`.
+ *  - Não logado (web): landing com form de signup.
+ *  - Não logado (APK): redireciona para /login (NativeRootGate).
+ *  - `?cadastro=empresa`: força a landing mesmo no APK (link "cadastre sua empresa").
+ *  - Logado com organizationId: vai pro dashboard.
  *  - Logado sem organizationId mas super-admin: painel /admin.
- *
- * Diferença do monólito: aqui NÃO consultamos `prismaBase` server-side
- * porque o frontend não tem Prisma. O wizard de onboarding e o admin
- * fazem fetch via `/api/*` quando precisam de dados frescos.
  */
-export default async function RootPage() {
+export default async function RootPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ cadastro?: string }>;
+}) {
   const session = await auth();
   if (session?.user) {
     const u = session.user as {
@@ -33,5 +32,10 @@ export default async function RootPage() {
     }
   }
 
-  return <LandingClient />;
+  const sp = (await searchParams) ?? {};
+  if (sp.cadastro === "empresa") {
+    return <LandingClient />;
+  }
+
+  return <NativeRootGate />;
 }

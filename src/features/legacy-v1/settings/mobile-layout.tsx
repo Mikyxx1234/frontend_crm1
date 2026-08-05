@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { MobileModuleIcon } from "@/components/layout/mobile-module-icon";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
+import { Switch } from "@/components/ui/switch";
 import {
   MOBILE_LAYOUT_QUERY_KEY,
   useMobileLayout,
@@ -57,6 +58,7 @@ export function MobileLayoutClientPage() {
   const { config, isLoading } = useMobileLayout();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<ModuleState[]>([]);
+  const [visualChrome, setVisualChrome] = useState(false);
   const [saved, setSaved] = useState(false);
 
   // Sincroniza draft quando config carrega/refetcha. Usamos
@@ -74,10 +76,15 @@ export function MobileLayoutClientPage() {
         bottomNavOrder: navOrder.get(m.id) ?? -1,
       })),
     );
-  }, [config.version, isLoading, config.bottomNav, config.enabled]);
+    setVisualChrome(config.visualChrome ?? false);
+  }, [config.version, isLoading, config.bottomNav, config.enabled, config.visualChrome]);
 
   const saveMutation = useMutation({
-    mutationFn: async (payload: { bottomNav: MobileModuleId[]; enabled: MobileModuleId[] }) => {
+    mutationFn: async (payload: {
+      bottomNav: MobileModuleId[];
+      enabled: MobileModuleId[];
+      visualChrome: boolean;
+    }) => {
       const res = await fetch(apiUrl("/api/mobile-layout"), {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -173,22 +180,25 @@ export function MobileLayoutClientPage() {
         bottomNavOrder: navSet.has(m.id) ? DEFAULT_BOTTOM_NAV.indexOf(m.id) : -1,
       })),
     );
+    setVisualChrome(false);
   }
 
   function save() {
     const enabled = draft.filter((d) => d.enabled).map((d) => d.id);
     const bottomNav = orderedBottomNav.map((d) => d.id);
-    saveMutation.mutate({ bottomNav, enabled });
+    saveMutation.mutate({ bottomNav, enabled, visualChrome });
   }
 
   const dirty =
     JSON.stringify({
       e: draft.filter((d) => d.enabled).map((d) => d.id).sort(),
       b: orderedBottomNav.map((d) => d.id),
+      c: visualChrome,
     }) !==
     JSON.stringify({
       e: [...config.enabled].sort(),
       b: config.bottomNav,
+      c: config.visualChrome ?? false,
     });
 
   return (
@@ -197,6 +207,26 @@ export function MobileLayoutClientPage() {
       <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-[1fr_360px]">
         {/* COLUNA ESQUERDA — Catalogo de modulos */}
         <div className="space-y-6">
+          <GlassCard variant="overlay" className="min-w-0 p-4 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
+                  Visual Chrome
+                </h2>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  Barra horizontal com todos os módulos do CRM (como no desktop).
+                  Disponível para administradores e gestores no app.
+                </p>
+              </div>
+              <Switch
+                checked={visualChrome}
+                onCheckedChange={setVisualChrome}
+                aria-label="Ativar Visual Chrome"
+                className="mt-1 shrink-0"
+              />
+            </div>
+          </GlassCard>
+
           {/* Bottom nav editor */}
           <GlassCard variant="overlay" className="min-w-0 p-4 sm:p-6">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

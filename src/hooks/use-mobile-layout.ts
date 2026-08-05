@@ -30,6 +30,7 @@ async function fetchMobileLayout(): Promise<MobileLayoutConfigDto> {
       enabled: DEFAULT_ENABLED,
       startRoute: "/dashboard",
       brandColor: null,
+      visualChrome: false,
       version: 0,
     };
   }
@@ -42,6 +43,7 @@ async function fetchMobileLayout(): Promise<MobileLayoutConfigDto> {
     enabled: sanitizeModuleIds(json.enabled, { ensureRequired: true }),
     startRoute: json.startRoute || "/dashboard",
     brandColor: json.brandColor ?? null,
+    visualChrome: json.visualChrome ?? false,
     version: json.version ?? 0,
   };
 }
@@ -60,6 +62,7 @@ export function useMobileLayout() {
       enabled: DEFAULT_ENABLED,
       startRoute: "/dashboard",
       brandColor: null,
+      visualChrome: false,
       version: 0,
     },
     isLoading: query.isLoading,

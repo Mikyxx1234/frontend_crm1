@@ -386,6 +386,14 @@ function LoginForm() {
               Criar conta
             </Link>
           </p>
+          <p className="mt-2 text-center text-[13px] text-[var(--text-secondary)]">
+            <Link
+              href="/?cadastro=empresa"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Cadastre sua empresa
+            </Link>
+          </p>
         </form>
 
         <p className="mt-6 text-center text-[12px] text-white/75">Acesso restrito · CRM EduIT</p>

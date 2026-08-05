@@ -6,7 +6,7 @@
  * Ver AGENT.md "Sidebar por Papel".
  *
  * Endpoints (backend):
- *   GET /api/profile/preferences  -> { sidebar: { items } } (uniao dos roles)
+ *   GET /api/profile/preferences  -> { sidebar, dashboard, appearance }
  */
 
 import { apiUrl } from "@/lib/api";

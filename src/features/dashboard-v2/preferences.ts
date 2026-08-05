@@ -5,7 +5,7 @@
  * Espelha o padrao da sidebar (features/sidebar).
  *
  * Endpoints (backend):
- *   GET   /api/profile/preferences            -> { sidebar, dashboard: { blocks } }
+ *   GET   /api/profile/preferences            -> { sidebar, dashboard, appearance }
  *   PATCH /api/profile/preferences/dashboard  -> { dashboard: { blocks } }
  */
 
@@ -21,6 +21,9 @@ export interface DashboardPreferences {
 
 interface PreferencesResponse {
   dashboard: DashboardPreferences;
+  appearance?: {
+    theme: "light" | "dark" | null;
+  };
 }
 
 async function getJson<T>(path: string): Promise<T> {

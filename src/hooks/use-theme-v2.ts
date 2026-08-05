@@ -2,16 +2,32 @@
 
 import { useEffect, useState } from "react";
 
+import { apiUrl } from "@/lib/api";
+import { isPreviewMode } from "@/lib/preview-mode";
+
 export type ThemeV2 = "light" | "dark";
 
 const STORAGE_KEY = "crm-v2-theme";
 const DARK_CLASS = "v2-dark";
 
+function readExplicitStored(): ThemeV2 | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "dark" || stored === "light") return stored;
+  } catch {
+    /* localStorage indisponível */
+  }
+  return null;
+}
+
 function readStored(): ThemeV2 {
   if (typeof window === "undefined") return "light";
-  const stored = localStorage.getItem(STORAGE_KEY) as ThemeV2 | null;
-  if (stored === "dark" || stored === "light") return stored;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  const explicit = readExplicitStored();
+  if (explicit) return explicit;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 function applyTheme(t: ThemeV2) {
@@ -31,9 +47,22 @@ function applyTheme(t: ThemeV2) {
  * seu próprio `useState` e o toggle de uma instância não refletia nas outras —
  * a classe `.v2-dark` mudava, mas os estados ficavam dessincronizados, dando a
  * impressão de "não troca sem refresh".
+ *
+ * Persistência híbrida: localStorage (cache + anti-FOUC) + preferência do
+ * usuário no servidor (`appearance.theme`) para paridade browser/APK.
  */
 let current: ThemeV2 | null = null;
 const listeners = new Set<(t: ThemeV2) => void>();
+
+/** Promise module-level evita fetch duplicado entre instâncias do hook. */
+let serverSyncPromise: Promise<void> | null = null;
+
+/**
+ * Geração local: capturada no início do GET de sync e incrementada só no
+ * toggle. Se o usuário trocar o tema enquanto o GET está em voo, a resposta
+ * antiga não sobrescreve a escolha otimista (o PATCH do toggle vence).
+ */
+let themeGeneration = 0;
 
 function setThemeGlobal(next: ThemeV2) {
   current = next;
@@ -44,6 +73,67 @@ function setThemeGlobal(next: ThemeV2) {
   }
   applyTheme(next);
   listeners.forEach((l) => l(next));
+}
+
+function persistThemeToServer(theme: ThemeV2) {
+  if (typeof window === "undefined" || isPreviewMode()) return;
+  void fetch(apiUrl("/api/profile/preferences/appearance"), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ theme }),
+  }).catch(() => {
+    /* falha de rede: tema local permanece */
+  });
+}
+
+/**
+ * Hidrata o tema a partir do servidor uma única vez por sessão de página.
+ * - Servidor com theme → vence e atualiza localStorage/classes/listeners
+ *   (exceto se houve toggle após o início desta sync).
+ * - Servidor null + valor explícito em localStorage → migra via PATCH.
+ * Preview mode: só local (mock incompatível).
+ */
+function ensureServerSync(): Promise<void> {
+  if (serverSyncPromise) return serverSyncPromise;
+  if (typeof window === "undefined" || isPreviewMode()) {
+    serverSyncPromise = Promise.resolve();
+    return serverSyncPromise;
+  }
+
+  const generationAtStart = themeGeneration;
+
+  serverSyncPromise = (async () => {
+    try {
+      const res = await fetch(apiUrl("/api/profile/preferences"));
+      if (!res.ok) return;
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) return;
+      const text = await res.text();
+      if (!text.trim()) return;
+      let data: { appearance?: { theme?: unknown } };
+      try {
+        data = JSON.parse(text) as { appearance?: { theme?: unknown } };
+      } catch {
+        return;
+      }
+      // Toggle (ou outra interação local) durante o GET: não sobrescrever.
+      if (themeGeneration !== generationAtStart) return;
+
+      const serverTheme = data?.appearance?.theme;
+      if (serverTheme === "light" || serverTheme === "dark") {
+        setThemeGlobal(serverTheme);
+        return;
+      }
+      const explicit = readExplicitStored();
+      if (explicit) {
+        persistThemeToServer(explicit);
+      }
+    } catch {
+      /* rede / parse: mantém tema local */
+    }
+  })();
+
+  return serverSyncPromise;
 }
 
 export function useThemeV2() {
@@ -69,6 +159,8 @@ export function useThemeV2() {
     };
     window.addEventListener("storage", onStorage);
 
+    void ensureServerSync();
+
     return () => {
       listeners.delete(onChange);
       window.removeEventListener("storage", onStorage);
@@ -76,8 +168,11 @@ export function useThemeV2() {
   }, []);
 
   function toggle() {
+    themeGeneration += 1;
     const base = current ?? theme;
-    setThemeGlobal(base === "light" ? "dark" : "light");
+    const next: ThemeV2 = base === "light" ? "dark" : "light";
+    setThemeGlobal(next);
+    persistThemeToServer(next);
   }
 
   return { theme, toggle };

@@ -36,9 +36,12 @@ export function Providers({
   return (
     <SessionProvider session={session}>
       {/* Tema controlado exclusivamente por `useThemeV2` (toggle Sol/Lua no
-          sidebar), que aplica `.v2-dark` + `.dark` no <html> e persiste em
-          localStorage (`crm-v2-theme`). Um script inline em `layout.tsx`
-          já aplica essas classes antes do paint (evita FOUC). Não usar
+          sidebar), que aplica `.v2-dark` + `.dark` no <html>. Persistência
+          híbrida: localStorage (`crm-v2-theme`) como cache/anti-FOUC +
+          preferência do usuário no servidor (`appearance.theme`) para
+          paridade browser/APK. Um script inline em `layout.tsx` já aplica
+          as classes a partir do localStorage antes do paint; a sync com o
+          servidor hidrata e regrava o cache depois. Não usar
           `ThemeProvider` do next-themes aqui — ele teria sua própria fonte
           de verdade e entraria em conflito com `useThemeV2`. */}
       <QueryClientProvider client={queryClient}>

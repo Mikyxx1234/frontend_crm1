@@ -700,18 +700,11 @@ function ResponsiblesCardList({
   }
 
   return (
-    <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-      <div className="flex min-w-[1040px] flex-col gap-1.5">
-        <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-2.5 border border-transparent px-3 py-1.5"))}>
-          <ListColumnLabel>Responsável</ListColumnLabel>
-          <ListColumnLabel>Presença</ListColumnLabel>
-          <ListColumnLabel className="text-center">Fila</ListColumnLabel>
-          <ListColumnLabel className="text-center">Volume</ListColumnLabel>
-          <ListColumnLabel>Elegibilidade</ListColumnLabel>
-          <ListColumnLabel align="right">Ações</ListColumnLabel>
-        </div>
+    <>
+      {/* Mobile / APK: lista de cards empilhados — sem scroll horizontal forçado. */}
+      <ul className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] md:hidden">
         {responsibles.map((r) => (
-          <ResponsibleCard
+          <ResponsibleMobileCard
             key={r.userId}
             r={r}
             isCurrentUser={r.userId === currentUserId}
@@ -721,8 +714,33 @@ function ResponsiblesCardList({
             onRedistribute={onRedistribute}
           />
         ))}
+      </ul>
+
+      {/* Desktop: grid tabular com scroll horizontal se necessário. */}
+      <div className="scrollbar-thin hidden min-h-0 flex-1 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch] md:flex md:flex-col">
+        <div className="flex min-w-[1040px] flex-col gap-1.5">
+          <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-2.5 border border-transparent px-3 py-1.5"))}>
+            <ListColumnLabel>Responsável</ListColumnLabel>
+            <ListColumnLabel>Presença</ListColumnLabel>
+            <ListColumnLabel className="text-center">Fila</ListColumnLabel>
+            <ListColumnLabel className="text-center">Volume</ListColumnLabel>
+            <ListColumnLabel>Elegibilidade</ListColumnLabel>
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
+          </div>
+          {responsibles.map((r) => (
+            <ResponsibleCard
+              key={r.userId}
+              r={r}
+              isCurrentUser={r.userId === currentUserId}
+              currentUserImage={currentUserImage}
+              canManage={canManage}
+              onEdit={onEdit}
+              onRedistribute={onRedistribute}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -895,6 +913,183 @@ function ResponsibleCard({
         )}
       </div>
     </div>
+  );
+}
+
+function ResponsibleMobileCard({
+  r,
+  isCurrentUser,
+  currentUserImage,
+  canManage,
+  onEdit,
+  onRedistribute,
+}: {
+  r: DistributionResponsibleDto;
+  isCurrentUser: boolean;
+  currentUserImage: string | null;
+  canManage: boolean;
+  onEdit: (r: DistributionResponsibleDto) => void;
+  onRedistribute: (r: DistributionResponsibleDto) => void;
+}) {
+  const statusMut = useSetAgentStatus();
+  const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
+  const canTogglePresence = isCurrentUser || canManage;
+
+  const togglePresence = () => {
+    statusMut.mutate(
+      { userId: r.userId, status: isOnline ? "OFFLINE" : "ONLINE" },
+      { onError: (e) => toast.error(e.message || "Erro ao alterar status.") },
+    );
+  };
+
+  return (
+    <li className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      {/* Responsável */}
+      <div className="flex min-w-0 items-start gap-2.5">
+        <span className="relative isolate shrink-0">
+          <UserAvatar
+            name={r.name ?? r.email}
+            imageUrl={r.avatarUrl ?? (isCurrentUser ? currentUserImage : null)}
+            size={38}
+          />
+          <AgentStatusDot
+            status={
+              (!r.participates
+                ? "OFFLINE"
+                : r.paused || r.status === "AWAY"
+                  ? "AWAY"
+                  : isOnline
+                    ? "ONLINE"
+                    : "OFFLINE") satisfies AgentOnlineStatus
+            }
+            size={12}
+            borderWidth={2}
+            borderColor="var(--glass-bg-base)"
+          />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="truncate font-display text-[13.5px] font-bold leading-tight text-[var(--text-primary)]">
+              {r.name ?? "Sem nome"}
+            </p>
+            <SystemPresenceIndicator
+              systemOnline={r.systemOnline}
+              lastSeenAt={r.lastSeenAt}
+            />
+            {isCurrentUser && (
+              <span className="shrink-0 rounded-full bg-[var(--color-primary-soft)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                Você
+              </span>
+            )}
+          </div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[10.5px] leading-tight">
+            <span className="min-w-0 truncate font-body text-[var(--text-muted)]">
+              {r.email ?? "—"}
+            </span>
+            <span className="shrink-0 font-mono text-[9.5px] text-[var(--text-secondary)]">
+              · {r.role}
+            </span>
+          </div>
+          <p
+            className="mt-0.5 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]"
+            title={
+              r.departments && r.departments.length > 0
+                ? r.departments.map((d) => d.name).join(", ")
+                : "Sem departamento"
+            }
+          >
+            {r.departments && r.departments.length > 0
+              ? r.departments.map((d) => d.name).join(", ")
+              : "Sem departamento"}
+          </p>
+        </div>
+      </div>
+
+      {/* Presença + expediente */}
+      <div className="mt-2.5 flex flex-col gap-1 border-t border-[var(--glass-border)] pt-2.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
+          {canTogglePresence && r.participates && (
+            <button
+              type="button"
+              onClick={togglePresence}
+              disabled={statusMut.isPending}
+              className="touch-target shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+            >
+              {statusMut.isPending ? "…" : isOnline ? "Ficar offline" : "Ficar online"}
+            </button>
+          )}
+        </div>
+        <SchedulePresenceHint schedule={r.schedule} preLunchStopMinutes={r.preLunchStopMinutes} />
+      </div>
+
+      {/* Fila, volume e elegibilidade */}
+      <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-[var(--glass-border)] pt-2.5">
+        <div>
+          <p className="text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Fila
+          </p>
+          <p className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
+            {r.queueCount}
+          </p>
+        </div>
+        <div>
+          <p className="text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Volume
+          </p>
+          <p className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
+            {r.queueLimit > 0 ? r.queueLimit : "∞"}
+          </p>
+        </div>
+        <div className="col-span-2 min-w-0">
+          <p className="text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Elegibilidade
+          </p>
+          {r.eligible ? (
+            <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-success-dark,#0f7a5a)]">
+              <IconCircleCheck size={13} /> Elegível
+            </span>
+          ) : (
+            <>
+              <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
+                <IconAlertTriangle size={13} /> Indisponível
+              </span>
+              {r.blockedReasons.length > 0 && (
+                <p
+                  className="mt-1 truncate font-body text-[10.5px] leading-tight text-[var(--text-muted)]"
+                  title={r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
+                >
+                  {r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Ações */}
+      {canManage && (
+        <div className="mt-2.5 flex justify-end gap-1.5 border-t border-[var(--glass-border)] pt-2.5">
+          {r.queueCount > 0 && (
+            <button
+              type="button"
+              onClick={() => onRedistribute(r)}
+              className="touch-target inline-flex cursor-pointer items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+              title="Redistribuir fila deste consultor"
+            >
+              <IconArrowsShuffle size={13} /> Redistribuir
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onEdit(r)}
+            className="touch-target inline-flex cursor-pointer items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+          >
+            <IconPencil size={13} /> Editar
+          </button>
+        </div>
+      )}
+    </li>
   );
 }
 

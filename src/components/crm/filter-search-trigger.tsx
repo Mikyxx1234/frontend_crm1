@@ -50,14 +50,20 @@ export function FilterSearchTrigger({
       aria-label={filterAria}
       title={tooltipLabel ? undefined : filterTitle}
       className={cn(
-        "absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center gap-0.5 rounded-full transition-colors",
-        activeCount > 0 ? "min-w-7 px-1.5" : "w-7",
+        // Botão foi de "ícone quadrado" pra pill com texto "Filtrar" —
+        // operadores relatavam que o ícone de sliders sozinho era pequeno
+        // demais e passava despercebido. `gap-1.5` separa o ícone do
+        // rótulo; `px-2.5`/`h-7` mantém a altura casada com o input.
+        "absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center gap-1.5 rounded-full px-2.5 transition-colors",
         activeCount > 0 || filtersOpen
           ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
           : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]",
       )}
     >
       <IconAdjustmentsHorizontal size={15} stroke={2} />
+      <span className="font-display text-[11px] font-semibold leading-none">
+        Filtrar
+      </span>
       {activeCount > 0 && (
         <span className="font-display text-[10px] font-bold leading-none tabular-nums">
           {activeCount}
@@ -78,7 +84,10 @@ export function FilterSearchTrigger({
         onChange={(e) => onSearch(e.target.value)}
         placeholder={placeholder}
         aria-label={ariaLabel ?? placeholder}
-        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-11 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+        // pr-24 (~96px) reserva espaço pro pill "Filtrar" (com contador
+        // quando ativo). Antes era pr-11 pro ícone-quadrado — sem esse
+        // ajuste o placeholder ficava por trás do botão.
+        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-24 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
       />
       {tooltipLabel ? (
         <TooltipGlass label={tooltipLabel} side="bottom">

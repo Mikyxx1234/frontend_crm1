@@ -29,6 +29,22 @@ function safeInternalPath(raw: string | null, fallback: string): string {
   return t;
 }
 
+/** Origem pós-login: no APK Capacitor evita `https://localhost` (androidScheme). */
+function resolvePostLoginOrigin(): string {
+  if (typeof window === "undefined") return "";
+  const origin = window.location.origin;
+  const host = window.location.hostname;
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    origin.startsWith("capacitor://") ||
+    origin.startsWith("ionic://")
+  ) {
+    return "https://banco-frontend-crm.6tqx2r.easypanel.host";
+  }
+  return origin;
+}
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = safeInternalPath(searchParams.get("callbackUrl"), "/dashboard");
@@ -61,7 +77,10 @@ function LoginForm() {
     if (!loginSuccess) return;
     const id = window.setTimeout(() => {
       // Navegação completa: o cookie definido na resposta do `signIn` segue no próximo pedido HTTP.
-      window.location.assign(`${window.location.origin}${callbackUrl}`);
+      // No APK (Capacitor), `window.location.origin` às vezes vira `https://localhost`
+      // por causa do androidScheme — redirecionar pra lá perde o cookie do CRM.
+      const origin = resolvePostLoginOrigin();
+      window.location.assign(`${origin}${callbackUrl}`);
     }, 1500);
     return () => window.clearTimeout(id);
   }, [loginSuccess, callbackUrl]);

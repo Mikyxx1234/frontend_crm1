@@ -4,6 +4,7 @@
   "webDir": "www",
   "server": {
     "url": "https://banco-frontend-crm.6tqx2r.easypanel.host",
+    "hostname": "banco-frontend-crm.6tqx2r.easypanel.host",
     "cleartext": false,
     "androidScheme": "https",
     "allowNavigation": [

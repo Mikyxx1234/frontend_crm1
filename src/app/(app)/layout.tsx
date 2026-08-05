@@ -15,6 +15,7 @@
 
 import "@/styles/globals-v2.css";
 import { UpdateAvailableBanner } from "@/components/layout/update-banner";
+import { NativeApkUpdateDialog } from "@/components/layout/native-apk-update-dialog";
 import { SoftphoneWidget } from "@/features/softphone/components";
 import { ChatThemeApplier } from "@/components/providers/chat-theme-applier";
 import { MobileBottomNav } from "@/components/crm/mobile-bottom-nav";
@@ -33,6 +34,7 @@ export default function AppLayout({
       <div className="v2-root v2-min-screen">
         {children}
         <UpdateAvailableBanner />
+        <NativeApkUpdateDialog />
         <SoftphoneWidget />
         {/* Teste mobile: barra inferior global (hide-on-scroll). md+ não renderiza. */}
         <MobileBottomNav />

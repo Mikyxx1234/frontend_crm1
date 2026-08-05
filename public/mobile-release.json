@@ -1,0 +1,7 @@
+{
+  "versionCode": 1,
+  "versionName": "1.0.0",
+  "apkUrl": "https://crm-mobile-releases.6tqx2r.easypanel.host/releases/eduit-crm-1.0.0.apk",
+  "force": false,
+  "notes": "Primeiro build de produção. APK hospedado no serviço crm-mobile-releases (não no frontend CRM)."
+}

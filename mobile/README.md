@@ -37,12 +37,39 @@ npm run sync           # copia www + sync plugins → android/
 npm run open:android   # abre Android Studio (requer JDK + SDK)
 ```
 
-Plataforma Android já foi adicionada (`mobile/android/`).
-
 ## Modelo de atualização
 
-- **UI / features do CRM** → deploy do frontend (sem novo APK).
-- **Casca nativa** (permissões, plugins, domínio) → novo APK.
+- **UI / features do CRM** → deploy do frontend CRM (sem novo APK).
+- **Casca nativa** (plugins, permissões, ícone) → novo APK no serviço
+  **`crm-mobile-releases`** (EasyPanel separado — ver `deploy/mobile-releases/README.md`).
+
+## Assinatura (release)
+
+A keystore **não** entra no Git. Fica em:
+
+- Arquivo: `%USERPROFILE%\eduit-crm-release.keystore`
+- Alias: `eduit-crm`
+- Credenciais locais: `mobile/android/keystore.properties` (gitignored; use `keystore.properties.example` como modelo)
+
+```bash
+cd mobile/android
+.\gradlew.bat assembleRelease
+```
+
+APK: `app/build/outputs/apk/release/app-release.apk`
+
+## Publicar APK (serviço separado)
+
+1. Bump `versionCode` / `versionName` em `mobile/android/app/build.gradle`
+2. `assembleRelease` (mesma keystore)
+3. Copiar APK → `deploy/mobile-releases/public/releases/eduit-crm-<ver>.apk`
+4. Atualizar `deploy/mobile-releases/public/mobile-release.json` e o espelho
+   `public/mobile-release.json`
+5. Push na `CRM_MOBILE` → rebuild **só** do serviço `crm-mobile-releases`
+6. (Opcional) Deploy leve do CRM se ainda usar o espelho em `/mobile-release.json`
+
+O app consulta primeiro:
+`https://crm-mobile-releases.6tqx2r.easypanel.host/mobile-release.json`
 
 ## iOS
 

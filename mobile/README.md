@@ -19,7 +19,9 @@ cd mobile
 npm install
 ```
 
-1. Edite `capacitor.config.json` → `server.url` com a URL HTTPS pública do CRM.
+1. `capacitor.config.json` → `server.url` aponta pra produção
+   (`https://banco-frontend-crm.6tqx2r.easypanel.host`). Para testar DEV,
+   troque temporariamente e rode `npm run sync`.
 2. Sincronize:
 
 ```bash

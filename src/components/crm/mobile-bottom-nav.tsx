@@ -1,8 +1,10 @@
 "use client";
 
 /**
- * MobileBottomNav — barra inferior mobile/APK com até 4 módulos do
+ * MobileBottomNav — barra inferior mobile/APK com os módulos pinados no
  * Layout Builder (`useMobileLayout().config.bottomNav`) + botão "Mais".
+ * Quando os ícones não cabem na largura da tela, a barra faz scroll
+ * horizontal (o botão "Mais" permanece fixo fora da área de scroll).
  *
  * Montada em `(app)/layout.tsx` (md:hidden). NavRail fica oculta no
  * mesmo breakpoint. Conta/status/tema ficam no MobileMoreSheet.
@@ -24,7 +26,7 @@ import { MobileMoreSheet } from "@/components/crm/mobile-more-sheet";
 import { MobileModuleIcon } from "@/components/layout/mobile-module-icon";
 import { useMobileLayout } from "@/hooks/use-mobile-layout";
 import { useUserRole } from "@/hooks/use-user-role";
-import { MOBILE_MODULES } from "@/lib/mobile-layout";
+import { isModuleAllowedForRole, MOBILE_MODULES } from "@/lib/mobile-layout";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +79,7 @@ function MobileBottomNavClassic() {
   const pathname = usePathname() ?? "";
   const { data: session } = useSession();
   const { config } = useMobileLayout();
+  const { role, isSuperAdmin } = useUserRole();
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(true);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -225,7 +228,8 @@ function MobileBottomNavClassic() {
 
   const items = config.bottomNav
     .map((id) => MOBILE_MODULE_MAP.get(id))
-    .filter((m): m is NonNullable<typeof m> => Boolean(m));
+    .filter((m): m is NonNullable<typeof m> => Boolean(m))
+    .filter((m) => isModuleAllowedForRole(m, role, isSuperAdmin));
 
   const activeHrefs = computeActiveHrefs(
     pathname,
@@ -234,7 +238,7 @@ function MobileBottomNavClassic() {
 
   const itemClass = (active: boolean) =>
     cn(
-      "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-md)] px-1.5 py-1.5",
+      "flex min-w-[3.75rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-md)] px-2.5 py-1.5",
       "font-display text-[10px] font-semibold leading-tight transition-colors",
       active
         ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
@@ -257,33 +261,37 @@ function MobileBottomNavClassic() {
         )}
       >
         <div className="flex items-stretch gap-1 px-2 py-1.5">
-          {items.map((item) => {
-            const path = modulePath(item.href);
-            const isActive = activeHrefs.has(path);
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                aria-label={item.label}
-                aria-current={isActive ? "page" : undefined}
-                className={itemClass(isActive)}
-              >
-                <MobileModuleIcon
-                  name={item.iconName}
-                  className="size-5"
-                  strokeWidth={isActive ? 2.2 : 1.8}
-                />
-                <span className="max-w-[4.5rem] truncate">{item.label}</span>
-              </Link>
-            );
-          })}
+          <div
+            className="flex min-w-0 flex-1 items-stretch gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
+          >
+            {items.map((item) => {
+              const path = modulePath(item.href);
+              const isActive = activeHrefs.has(path);
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  aria-label={item.label}
+                  aria-current={isActive ? "page" : undefined}
+                  className={itemClass(isActive)}
+                >
+                  <MobileModuleIcon
+                    name={item.iconName}
+                    className="size-5"
+                    strokeWidth={isActive ? 2.2 : 1.8}
+                  />
+                  <span className="max-w-[4.5rem] truncate">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
 
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
             aria-label="Mais opções"
             aria-expanded={moreOpen}
-            className={itemClass(moreOpen)}
+            className={cn(itemClass(moreOpen), "shrink-0")}
           >
             <IconDots size={20} stroke={1.8} />
             <span className="max-w-[4.5rem] truncate">Mais</span>

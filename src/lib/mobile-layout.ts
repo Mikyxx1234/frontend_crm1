@@ -20,6 +20,7 @@ export type MobileModuleId =
   | "companies"
   | "campaigns"
   | "automations"
+  | "distribution"
   | "reports"
   | "monitor"
   | "settings"
@@ -39,6 +40,8 @@ export interface MobileModuleDescriptor {
   category: "core" | "growth" | "analytics" | "config";
   /** Pode ser desabilitado pelo admin? Inbox NAO (default obrigatorio). */
   required?: boolean;
+  /** Restringe o modulo a papeis especificos (ex.: Distribuicao = ADMIN/MANAGER). */
+  allowedRoles?: Array<"ADMIN" | "MANAGER" | "MEMBER">;
 }
 
 export const MOBILE_MODULES: MobileModuleDescriptor[] = [
@@ -108,6 +111,15 @@ export const MOBILE_MODULES: MobileModuleDescriptor[] = [
     category: "growth",
   },
   {
+    id: "distribution",
+    label: "Distribuição",
+    href: "/widgets/distribution",
+    iconName: "Shuffle",
+    description: "Distribuição inteligente de leads entre consultores",
+    category: "growth",
+    allowedRoles: ["ADMIN", "MANAGER"],
+  },
+  {
     id: "reports",
     label: "Relatórios",
     href: "/reports",
@@ -152,6 +164,7 @@ export const DEFAULT_BOTTOM_NAV: MobileModuleId[] = [
   "pipeline",
   "contacts",
   "inbox",
+  "distribution",
 ];
 
 export const DEFAULT_ENABLED: MobileModuleId[] = [
@@ -163,10 +176,16 @@ export const DEFAULT_ENABLED: MobileModuleId[] = [
   "tasks",
   "settings",
   "profile",
+  "distribution",
 ];
 
-/** Limite de itens visiveis no bottom nav (acima vira "Mais"). */
-export const BOTTOM_NAV_MAX = 4;
+/**
+ * Limite de itens no bottom nav. Nao ha mais corte visual em N —
+ * o catalogo inteiro pode ser pinado e a barra faz scroll horizontal
+ * quando os icones nao cabem na largura da tela. O "limite" aqui so
+ * existe pra sanitizar contra IDs duplicados/invalidos.
+ */
+export const BOTTOM_NAV_MAX = MOBILE_MODULES.length;
 
 export interface MobileLayoutConfigDto {
   bottomNav: MobileModuleId[];
@@ -220,4 +239,20 @@ export function sanitizeModuleIds(
 
 export function serializeModuleIds(ids: MobileModuleId[]): string {
   return ids.join(",");
+}
+
+/**
+ * Módulos com `allowedRoles` só aparecem pra papéis permitidos
+ * (superAdmin sempre vê tudo). Usado pelo MobileBottomNav e
+ * MobileMoreSheet pra esconder módulos restritos (ex.: Distribuição)
+ * de operadores MEMBER.
+ */
+export function isModuleAllowedForRole(
+  m: MobileModuleDescriptor,
+  role: "ADMIN" | "MANAGER" | "MEMBER" | null,
+  isSuperAdmin: boolean,
+): boolean {
+  if (!m.allowedRoles) return true;
+  if (isSuperAdmin) return true;
+  return role !== null && m.allowedRoles.includes(role);
 }

@@ -42,8 +42,9 @@ import { cn } from "@/lib/utils";
  *     funcionam perfeitamente em mobile e teclado, sao acessiveis
  *     por padrao e mantem bundle leve. Se o usuario pedir DnD
  *     "real" depois, refatoramos.
- *   - Limite de 4 modulos no bottom nav (BOTTOM_NAV_MAX) imposto
- *     visualmente: 5o toggle aparece desabilitado com tooltip.
+ *   - Sem limite fixo de modulos no bottom nav: o admin pode pinar
+ *     todo o catalogo habilitado. Se os icones nao couberem na largura
+ *     da tela, a barra do app faz scroll horizontal (nao corta itens).
  *   - Inbox e `required` -> toggle bloqueado (cadeado).
  */
 
@@ -235,7 +236,8 @@ export function MobileLayoutClientPage() {
                   Barra inferior do app
                 </h2>
                 <p className="text-sm text-[var(--text-muted)]">
-                  Até {BOTTOM_NAV_MAX} módulos · usados {bottomNavCount}
+                  {bottomNavCount} módulo{bottomNavCount === 1 ? "" : "s"} na barra · role
+                  horizontalmente se não couberem todos na tela
                 </p>
               </div>
               <ButtonGlass
@@ -371,7 +373,7 @@ export function MobileLayoutClientPage() {
                           type="button"
                           onClick={() => toggleBottomNav(d.id)}
                           disabled={!canPromote}
-                          title={!canPromote ? `Limite de ${BOTTOM_NAV_MAX} no menu inferior` : ""}
+                          title={!canPromote ? "Limite de módulos do catálogo atingido" : ""}
                           className={cn(
                             "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors",
                             canPromote

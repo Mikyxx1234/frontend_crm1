@@ -3,11 +3,13 @@
   "appName": "EduIT CRM",
   "webDir": "www",
   "server": {
-    "url": "https://banco-frontend-crm.6tqx2r.easypanel.host",
-    "hostname": "banco-frontend-crm.6tqx2r.easypanel.host",
+    "url": "https://frontend-front.v74knz.easypanel.host",
+    "hostname": "frontend-front.v74knz.easypanel.host",
     "cleartext": false,
     "androidScheme": "https",
     "allowNavigation": [
+      "frontend-front.v74knz.easypanel.host",
+      "*.v74knz.easypanel.host",
       "banco-frontend-crm.6tqx2r.easypanel.host",
       "*.6tqx2r.easypanel.host",
       "crm-dev-frontend.ca31ey.easypanel.host",

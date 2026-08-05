@@ -2048,3 +2048,8 @@ aplicada com SQL aditivo idempotente em
 - Modelo: GPT-5.6 (não confirmado; decisão) / cursor grok 4.5 (implementação)
 - Decisão: o frontend responsivo de produção é a fonte única da UI mobile. O APK Capacitor não mantém fork visual nem páginas próprias; diferenças de aparência são tratadas por revisão de build pública, limpeza do service worker/cache e preferências de tema persistidas por usuário em `UserPreference.appearance`. A navegação mobile continua configurada por `mobile-layout`.
 - Alternativas descartadas: copiar componentes para `mobile/`; apontar o APK permanentemente para DEV; reintroduzir o `DashboardShell`/`MobileTopBar` legado (o Dashboard atual já tem paridade de código entre DEV e `main`, e o visual divergente foi identificado como build antigo).
+
+### 2026-08-05 — APK aponta para produção `frontend-front.v74knz`
+- Modelo: Opus / cursor grok 4.5 (implementação)
+- Decisão: `capacitor.config.json` (`server.url` / `hostname`) e fallback de `resolvePostLoginOrigin` devem apontar para `https://frontend-front.v74knz.easypanel.host` (produção correta). Não usar `banco-frontend-crm.6tqx2r.easypanel.host` (host legado com UI antiga "Olá, Admin"/PresetBar). UI única = frontend responsivo; o visual legado no APK vinha do host errado embutido no build (e `app-revision` no host antigo devolvia HTML de login, por isso o APK não pediu atualização). Mudar `server.url` exige novo APK + sync.
+- Alternativas descartadas: manter o host legado; apontar o APK permanentemente para DEV (`crm-dev-frontend.ca31ey`).

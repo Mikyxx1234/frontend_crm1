@@ -12,6 +12,7 @@
  */
 
 export type MobileModuleId =
+  | "dashboard"
   | "inbox"
   | "pipeline"
   | "tasks"
@@ -41,6 +42,14 @@ export interface MobileModuleDescriptor {
 }
 
 export const MOBILE_MODULES: MobileModuleDescriptor[] = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    href: "/dashboard",
+    iconName: "LayoutDashboard",
+    description: "Painel principal e métricas",
+    category: "core",
+  },
   {
     id: "inbox",
     label: "Inbox",
@@ -139,18 +148,19 @@ export const MOBILE_MODULES: MobileModuleDescriptor[] = [
 export const MOBILE_MODULE_IDS = MOBILE_MODULES.map((m) => m.id) as MobileModuleId[];
 
 export const DEFAULT_BOTTOM_NAV: MobileModuleId[] = [
-  "inbox",
+  "dashboard",
   "pipeline",
-  "tasks",
   "contacts",
+  "inbox",
 ];
 
 export const DEFAULT_ENABLED: MobileModuleId[] = [
-  "inbox",
+  "dashboard",
   "pipeline",
-  "tasks",
   "contacts",
+  "inbox",
   "companies",
+  "tasks",
   "settings",
   "profile",
 ];

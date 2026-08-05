@@ -28,7 +28,7 @@ async function fetchMobileLayout(): Promise<MobileLayoutConfigDto> {
     return {
       bottomNav: DEFAULT_BOTTOM_NAV,
       enabled: DEFAULT_ENABLED,
-      startRoute: "/inbox",
+      startRoute: "/dashboard",
       brandColor: null,
       version: 0,
     };
@@ -40,7 +40,7 @@ async function fetchMobileLayout(): Promise<MobileLayoutConfigDto> {
       maxItems: BOTTOM_NAV_MAX,
     }),
     enabled: sanitizeModuleIds(json.enabled, { ensureRequired: true }),
-    startRoute: json.startRoute || "/inbox",
+    startRoute: json.startRoute || "/dashboard",
     brandColor: json.brandColor ?? null,
     version: json.version ?? 0,
   };
@@ -58,7 +58,7 @@ export function useMobileLayout() {
     config: query.data ?? {
       bottomNav: DEFAULT_BOTTOM_NAV,
       enabled: DEFAULT_ENABLED,
-      startRoute: "/inbox",
+      startRoute: "/dashboard",
       brandColor: null,
       version: 0,
     },

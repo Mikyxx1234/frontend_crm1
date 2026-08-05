@@ -20,8 +20,11 @@ npm install
 ```
 
 1. `capacitor.config.json` → `server.url` aponta pra produção
-   (`https://banco-frontend-crm.6tqx2r.easypanel.host`). Para testar DEV,
-   troque temporariamente e rode `npm run sync`.
+   (`https://frontend-front.v74knz.easypanel.host`). Para testar DEV
+   (`https://crm-dev-frontend.ca31ey.easypanel.host`), troque
+   temporariamente e rode `npm run sync`.
+   **Importante:** mudar `server.url` / `hostname` exige **novo APK** +
+   `npm run sync` — deploy web sozinho não atualiza o host embutido no APK.
 2. Sincronize:
 
 ```bash

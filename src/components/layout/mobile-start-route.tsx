@@ -2,7 +2,7 @@
 
 /**
  * Redireciona cold start mobile/APK de `/` ou `/dashboard` para
- * `config.startRoute` (default `/inbox`), uma vez por sessão.
+ * `config.startRoute` (default `/dashboard`), uma vez por sessão.
  */
 
 import { usePathname, useRouter } from "next/navigation";
@@ -37,7 +37,9 @@ export function MobileStartRoute() {
       return;
     }
 
-    const startRoute = config.startRoute || "/inbox";
+    const startRoute = config.startRoute || "/dashboard";
+    // `/` e `/dashboard` são rotas de entrada do app (redirect raiz → dashboard).
+    // Só redirecionamos a partir delas; se já estamos na startRoute, fica.
     const onEntry = pathname === "/" || pathname === "/dashboard";
     if (!onEntry) {
       try {

@@ -40,7 +40,7 @@ function resolvePostLoginOrigin(): string {
     origin.startsWith("capacitor://") ||
     origin.startsWith("ionic://")
   ) {
-    return "https://banco-frontend-crm.6tqx2r.easypanel.host";
+    return "https://frontend-front.v74knz.easypanel.host";
   }
   return origin;
 }

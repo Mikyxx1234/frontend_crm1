@@ -1,7 +1,7 @@
 {
-  "versionCode": 2,
-  "versionName": "1.0.1",
-  "apkUrl": "https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.1.apk",
+  "versionCode": 3,
+  "versionName": "1.0.2",
+  "apkUrl": "https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.2.apk",
   "force": true,
-  "notes": "Atualização disponível — toque para baixar e instalar."
+  "notes": "Aponta o app para a produção correta (frontend-front) — visual alinhado ao DEV."
 }

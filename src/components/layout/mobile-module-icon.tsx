@@ -1,6 +1,6 @@
 "use client";
 
-import { IconActivity as Activity, IconChartBar as BarChart3, IconBuilding as Building2, IconSquareCheck as CheckSquare, IconLayoutKanban as Kanban, IconSpeakerphone as Megaphone, IconMessage as MessageSquare, IconSettings as Settings, IconUserCircle as UserCircle2, IconUsers as Users, IconBolt as Zap } from "@tabler/icons-react"
+import { IconActivity as Activity, IconChartBar as BarChart3, IconBuilding as Building2, IconSquareCheck as CheckSquare, IconLayoutDashboard as LayoutDashboard, IconLayoutKanban as Kanban, IconSpeakerphone as Megaphone, IconMessage as MessageSquare, IconSettings as Settings, IconUserCircle as UserCircle2, IconUsers as Users, IconBolt as Zap } from "@tabler/icons-react"
 import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 /**
@@ -11,6 +11,7 @@ import type { Icon as LucideIcon } from "@tabler/icons-react";
  * Adicionar modulo novo: adicionar entrada aqui + no MOBILE_MODULES.
  */
 const REGISTRY: Record<string, LucideIcon> = {
+  LayoutDashboard,
   MessageSquare,
   Kanban,
   CheckSquare,

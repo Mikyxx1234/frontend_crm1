@@ -1,13 +1,11 @@
 /**
- * Manifesto de versão do APK (Camada B — serviço EasyPanel separado).
+ * Manifesto de versão do APK (serviço EasyPanel separado).
  *
- * O CRM de produção NÃO hospeda o .apk. O serviço `crm-mobile-releases`
- * serve `/mobile-release.json` + `/releases/*.apk`.
- *
- * Override opcional: NEXT_PUBLIC_MOBILE_RELEASE_MANIFEST_URL
+ * Host real do serviço de releases (EasyPanel → Domínios).
+ * Override: NEXT_PUBLIC_MOBILE_RELEASE_MANIFEST_URL
  */
 export const DEFAULT_MOBILE_RELEASE_MANIFEST_URL =
-  "https://crm-mobile-releases.6tqx2r.easypanel.host/mobile-release.json";
+  "https://frontend-app.v74knz.easypanel.host/mobile-release.json";
 
 export function resolveMobileReleaseManifestUrl(): string {
   const fromEnv =

@@ -7,16 +7,22 @@ Serviço **estático** (nginx) separado do frontend CRM. Hospeda:
 
 O CRM de produção **não** rebuilda quando só o APK muda.
 
-## URL esperada (ajuste se o hostname no EasyPanel for outro)
+## URL do serviço (EasyPanel → Domínios)
 
 ```
-https://crm-mobile-releases.6tqx2r.easypanel.host
+https://frontend-app.v74knz.easypanel.host
 ```
 
-APK 1.0.0:
+APK atual:
 
 ```
-https://crm-mobile-releases.6tqx2r.easypanel.host/releases/eduit-crm-1.0.0.apk
+https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.1.apk
+```
+
+Manifesto:
+
+```
+https://frontend-app.v74knz.easypanel.host/mobile-release.json
 ```
 
 ## Criar no EasyPanel

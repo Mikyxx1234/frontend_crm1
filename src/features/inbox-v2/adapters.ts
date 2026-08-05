@@ -422,6 +422,15 @@ export function toMessageBubble(
     dto.sender?.kind === "BOT" ||
     (!isInbound && dto.senderName === "Automação");
 
+  // Campanha (TEMPLATE/TEXT): backend grava `authorType: "bot"` +
+  // `senderName: "Campanha: {nome}"`. Extraímos o nome pra a bolha
+  // destacar com estilo próprio (não reutilizar AUTOMATION_BG).
+  const campaignMatch = !isInbound
+    ? /^Campanha:\s*(.+)$/i.exec((dto.senderName ?? "").trim())
+    : null;
+  const isCampaign = !!campaignMatch;
+  const campaignName = campaignMatch?.[1]?.trim() || undefined;
+
   // Disparo manual de automação (colab): a mensagem REAL enviada pelos steps
   // vem tagueada com `triggeredByName` (nome do agente que acionou). O inbox
   // exibe o selo "Manual" + o avatar (iniciais) do agente ao lado do robô,
@@ -463,10 +472,14 @@ export function toMessageBubble(
         : undefined,
     // Nome completo do remetente — exibido como tooltip no avatar e rótulo
     // abaixo da bolha outgoing para identificar agente ou automação.
+    // Campanha: mantém o valor original ("Campanha: {nome}"); a UI usa
+    // `campaignName` no destaque.
     senderName: !isInbound && dto.senderName ? dto.senderName : undefined,
     // Foto do agente remetente (resolvida no backend). Só outbound humano.
     senderImageUrl: !isInbound && !isBot ? (dto.senderImageUrl ?? undefined) : undefined,
-    isBot: isBot || isAutomationRun || undefined,
+    isBot: isBot || isAutomationRun || isCampaign || undefined,
+    isCampaign: isCampaign || undefined,
+    campaignName,
     isAutomationRun: isAutomationRun || undefined,
     automationAgentName: manualAutomationAgent ?? undefined,
     automationAgentInitials: manualAutomationAgent

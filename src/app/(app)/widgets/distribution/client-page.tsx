@@ -934,6 +934,11 @@ function ResponsibleMobileCard({
   const statusMut = useSetAgentStatus();
   const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
   const canTogglePresence = isCurrentUser || canManage;
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const togglePresence = () => {
     statusMut.mutate(
@@ -942,15 +947,38 @@ function ResponsibleMobileCard({
     );
   };
 
+  const deptLabel =
+    r.departments && r.departments.length > 0
+      ? r.departments.map((d) => d.name).join(", ")
+      : "Sem departamento";
+  const metaLine = [r.email ?? "—", r.role, deptLabel].filter(Boolean).join(" · ");
+
+  const blockedText =
+    !r.eligible && r.blockedReasons.length > 0
+      ? r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")
+      : null;
+  const scheduleAlert = r.schedule
+    ? resolveSchedulePresenceAlert({
+        schedule: r.schedule,
+        preMinutes: r.preLunchStopMinutes ?? 30,
+        now,
+      })
+    : null;
+  const hintParts = [blockedText, scheduleAlert?.label].filter(Boolean) as string[];
+  const hintTitle = [blockedText, scheduleAlert?.title].filter(Boolean).join(" · ");
+
+  const toggleLabel = isOnline ? "Offline" : "Online";
+  const toggleAria = isOnline ? "Ficar offline" : "Ficar online";
+
   return (
-    <li className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      {/* Responsável */}
-      <div className="flex min-w-0 items-start gap-2.5">
+    <li className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-2 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      {/* Cabeçalho: identidade + presença */}
+      <div className="flex min-w-0 items-center gap-1.5">
         <span className="relative isolate shrink-0">
           <UserAvatar
             name={r.name ?? r.email}
             imageUrl={r.avatarUrl ?? (isCurrentUser ? currentUserImage : null)}
-            size={38}
+            size={28}
           />
           <AgentStatusDot
             status={
@@ -962,14 +990,14 @@ function ResponsibleMobileCard({
                     ? "ONLINE"
                     : "OFFLINE") satisfies AgentOnlineStatus
             }
-            size={12}
+            size={9}
             borderWidth={2}
             borderColor="var(--glass-bg-base)"
           />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <p className="truncate font-display text-[13.5px] font-bold leading-tight text-[var(--text-primary)]">
+          <div className="flex min-w-0 items-center gap-1">
+            <p className="min-w-0 truncate font-display text-[12px] font-bold leading-tight text-[var(--text-primary)]">
               {r.name ?? "Sem nome"}
             </p>
             <SystemPresenceIndicator
@@ -977,118 +1005,105 @@ function ResponsibleMobileCard({
               lastSeenAt={r.lastSeenAt}
             />
             {isCurrentUser && (
-              <span className="shrink-0 rounded-full bg-[var(--color-primary-soft)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+              <span className="shrink-0 rounded-full bg-[var(--color-primary-soft)] px-1 py-px font-display text-[8px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
                 Você
               </span>
             )}
           </div>
-          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[10.5px] leading-tight">
-            <span className="min-w-0 truncate font-body text-[var(--text-muted)]">
-              {r.email ?? "—"}
-            </span>
-            <span className="shrink-0 font-mono text-[9.5px] text-[var(--text-secondary)]">
-              · {r.role}
-            </span>
-          </div>
           <p
-            className="mt-0.5 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]"
-            title={
-              r.departments && r.departments.length > 0
-                ? r.departments.map((d) => d.name).join(", ")
-                : "Sem departamento"
-            }
+            className="mt-px truncate font-body text-[9px] leading-tight text-[var(--text-muted)]"
+            title={metaLine}
           >
-            {r.departments && r.departments.length > 0
-              ? r.departments.map((d) => d.name).join(", ")
-              : "Sem departamento"}
+            {metaLine}
           </p>
         </div>
-      </div>
-
-      {/* Presença + expediente */}
-      <div className="mt-2.5 flex flex-col gap-1 border-t border-[var(--glass-border)] pt-2.5">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
+        <div className="flex shrink-0 items-center gap-1">
+          <span className="scale-90 origin-right">
+            <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
+          </span>
           {canTogglePresence && r.participates && (
             <button
               type="button"
               onClick={togglePresence}
               disabled={statusMut.isPending}
-              className="touch-target shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+              title={toggleAria}
+              aria-label={toggleAria}
+              className="touch-target shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[9px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
             >
-              {statusMut.isPending ? "…" : isOnline ? "Ficar offline" : "Ficar online"}
+              {statusMut.isPending ? "…" : toggleLabel}
             </button>
           )}
         </div>
-        <SchedulePresenceHint schedule={r.schedule} preLunchStopMinutes={r.preLunchStopMinutes} />
       </div>
 
-      {/* Fila, volume e elegibilidade */}
-      <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-[var(--glass-border)] pt-2.5">
-        <div>
-          <p className="text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-            Fila
-          </p>
-          <p className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
-            {r.queueCount}
-          </p>
-        </div>
-        <div>
-          <p className="text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-            Volume
-          </p>
-          <p className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
-            {r.queueLimit > 0 ? r.queueLimit : "∞"}
-          </p>
-        </div>
-        <div className="col-span-2 min-w-0">
-          <p className="text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-            Elegibilidade
-          </p>
-          {r.eligible ? (
-            <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-success-dark,#0f7a5a)]">
-              <IconCircleCheck size={13} /> Elegível
-            </span>
-          ) : (
-            <>
-              <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
-                <IconAlertTriangle size={13} /> Indisponível
+      {hintParts.length > 0 && (
+        <p
+          className="mt-1 truncate font-body text-[8.5px] leading-tight text-[var(--text-muted)]"
+          title={hintTitle}
+        >
+          {hintParts.join(" · ")}
+        </p>
+      )}
+
+      {/* Métricas + ações */}
+      <div className="mt-1.5 flex min-w-0 items-center gap-1.5 border-t border-[var(--glass-border)] pt-1.5">
+        <div className="grid min-w-0 flex-1 grid-cols-3 gap-x-1.5">
+          <div className="min-w-0">
+            <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              Fila
+            </p>
+            <p className="font-display text-[12px] font-extrabold leading-none text-[var(--text-primary)]">
+              {r.queueCount}
+            </p>
+          </div>
+          <div className="min-w-0">
+            <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              Volume
+            </p>
+            <p className="font-display text-[12px] font-extrabold leading-none text-[var(--text-primary)]">
+              {r.queueLimit > 0 ? r.queueLimit : "∞"}
+            </p>
+          </div>
+          <div className="min-w-0">
+            <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              Elegibilidade
+            </p>
+            {r.eligible ? (
+              <span className="inline-flex max-w-full items-center gap-0.5 truncate font-display text-[11.5px] font-bold leading-none text-[var(--color-success-dark,#0f7a5a)]">
+                <IconCircleCheck size={12} className="shrink-0" /> Elegível
               </span>
-              {r.blockedReasons.length > 0 && (
-                <p
-                  className="mt-1 truncate font-body text-[10.5px] leading-tight text-[var(--text-muted)]"
-                  title={r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
-                >
-                  {r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
-                </p>
-              )}
-            </>
-          )}
+            ) : (
+              <span className="inline-flex max-w-full items-center gap-0.5 truncate font-display text-[11.5px] font-bold leading-none text-[var(--color-danger-text)]">
+                <IconAlertTriangle size={12} className="shrink-0" /> Indisp.
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* Ações */}
-      {canManage && (
-        <div className="mt-2.5 flex justify-end gap-1.5 border-t border-[var(--glass-border)] pt-2.5">
-          {r.queueCount > 0 && (
+        {canManage && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            {r.queueCount > 0 && (
+              <button
+                type="button"
+                onClick={() => onRedistribute(r)}
+                className="touch-target inline-flex size-8 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+                title="Redistribuir fila deste consultor"
+                aria-label="Redistribuir fila deste consultor"
+              >
+                <IconArrowsShuffle size={14} />
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => onRedistribute(r)}
-              className="touch-target inline-flex cursor-pointer items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-              title="Redistribuir fila deste consultor"
+              onClick={() => onEdit(r)}
+              className="touch-target inline-flex size-8 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+              title="Editar responsável"
+              aria-label="Editar responsável"
             >
-              <IconArrowsShuffle size={13} /> Redistribuir
+              <IconPencil size={14} />
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => onEdit(r)}
-            className="touch-target inline-flex cursor-pointer items-center gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-          >
-            <IconPencil size={13} /> Editar
-          </button>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </li>
   );
 }

@@ -2279,9 +2279,18 @@ export function ChatWindow({
 
             const out = m.direction === "out";
             const isNote = out && m.isPrivate === true;
+            // Campanha: `senderName: "Campanha: {nome}"` — trata como bot
+            // e aplica estilo teal (alinhar com MessageBubble do inbox-v2).
+            const campaignMatch = out
+              ? /^Campanha:\s*(.+)$/i.exec((m.senderName ?? "").trim())
+              : null;
+            const isCampaign = !!campaignMatch;
+            const campaignName = campaignMatch?.[1]?.trim() || null;
             const isBot =
               out &&
-              (m.senderName === "Automação" || m.senderName === "Sistema");
+              (m.senderName === "Automação" ||
+                m.senderName === "Sistema" ||
+                isCampaign);
             const msgId = String(m.id);
             const grouped = groupReactions(m.reactions ?? []);
             const showSenderName =
@@ -2416,6 +2425,12 @@ export function ChatWindow({
                       style={
                         isNote && !isPinned
                           ? { background: "var(--chat-bubble-note-bg)" }
+                          : !isNote && out && isCampaign
+                            ? {
+                                background: "var(--chat-bubble-campaign-bg)",
+                                color: "var(--chat-bubble-campaign-text)",
+                                borderColor: "var(--chat-bubble-campaign-border)",
+                              }
                           : !isNote && out
                             ? {
                                 background: "var(--chat-bubble-sent-bg)",
@@ -2623,15 +2638,42 @@ export function ChatWindow({
                           // que cria contraste real (branco vs cyan claro)
                           // sem virar alerta competindo com cores semanticas.
                           isBot && !isAudioOnly ? (
-                            <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 ring-1 ring-black/10">
-                              <Bot
-                                className="size-3 text-[var(--color-ink-soft)]"
-                                strokeWidth={2.4}
-                              />
-                              <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground">
-                                {m.senderName ?? "Automação"}
-                              </span>
-                            </div>
+                            isCampaign ? (
+                              <div className="mb-1.5 flex flex-col gap-0.5">
+                                <div
+                                  className="inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5"
+                                  style={{
+                                    background:
+                                      "var(--chat-bubble-campaign-badge-bg)",
+                                    color:
+                                      "var(--chat-bubble-campaign-badge-text)",
+                                  }}
+                                >
+                                  <Megaphone
+                                    className="size-3"
+                                    strokeWidth={2.4}
+                                  />
+                                  <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em]">
+                                    Campanha
+                                  </span>
+                                </div>
+                                {campaignName ? (
+                                  <span className="font-display text-[11.5px] font-semibold leading-snug">
+                                    {campaignName}
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 ring-1 ring-black/10">
+                                <Bot
+                                  className="size-3 text-[var(--color-ink-soft)]"
+                                  strokeWidth={2.4}
+                                />
+                                <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground">
+                                  {m.senderName ?? "Automação"}
+                                </span>
+                              </div>
+                            )
                           ) : null
                         ) : showSenderName && !isAudioOnly && !compactChrome ? (
                           // Label do remetente (contato): preserva o case cadastrado

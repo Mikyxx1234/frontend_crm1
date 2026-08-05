@@ -39,6 +39,7 @@ import {
   IconMoodPlus,
   IconStar,
   IconStarFilled,
+  IconSpeakerphone,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -164,6 +165,13 @@ export interface Message {
   senderName?: string
   /** Mensagem enviada por bot/automação — exibe badge "AUTOMAÇÃO" */
   isBot?: boolean
+  /**
+   * Mensagem de campanha (TEMPLATE/TEXT). Bolha teal + pill "Campanha" e
+   * `campaignName` no topo. Mantém `isBot` para caminho de avatar/bot.
+   */
+  isCampaign?: boolean
+  /** Nome da campanha (sem o prefixo "Campanha:"). */
+  campaignName?: string
   /**
    * Confirmação de automação disparada MANUALMENTE pela conversa. Renderiza
    * o cartão de automação com badge "Manual" e o avatar (iniciais) do agente
@@ -397,6 +405,8 @@ const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as co
 const AUTOMATION_BG = "#374151"
 const AUTOMATION_TEXT = "#f3f4f6"
 const AUTOMATION_ACCENT = "#6c5ce7"
+/** Accent do avatar de campanha (teal) — distinto do violeta de automação. */
+const CAMPAIGN_ACCENT = "#0d9488"
 
 /**
  * Botões de resposta rápida (interactive/template) — replicam o visual do
@@ -1297,6 +1307,7 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
+  const isCampaign = message.isCampaign === true
   const isNote = message.isNote === true
   const hasForm = !!(message.formFields && message.formFields.length > 0)
   const hasButtons = !!(message.buttons && message.buttons.length > 0)
@@ -1505,7 +1516,11 @@ export function MessageBubble({
                     "flex h-9 w-9 shrink-0 cursor-default items-center justify-center overflow-hidden rounded-full font-display text-[11px] font-bold text-white",
                     !isBot && "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
                   )}
-                  style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
+                  style={
+                    isBot
+                      ? { background: isCampaign ? CAMPAIGN_ACCENT : AUTOMATION_ACCENT }
+                      : undefined
+                  }
                 >
                   {(() => {
                     // Prioridade: foto do remetente resolvida no backend
@@ -1535,7 +1550,11 @@ export function MessageBubble({
                         : null
                     const photo = message.senderImageUrl || byName || selfPhoto
                     if (isBot) {
-                      return <IconRobot size={19} aria-label="Automação" />
+                      return isCampaign ? (
+                        <IconSpeakerphone size={18} aria-label="Campanha" />
+                      ) : (
+                        <IconRobot size={19} aria-label="Automação" />
+                      )
                     }
                     if (photo) {
                       return (
@@ -1564,7 +1583,9 @@ export function MessageBubble({
           className={cn(
             "relative min-w-0 rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
             isOutgoing
-              ? isBot
+              ? isCampaign
+                ? "rounded-br border shadow-[0_3px_12px_rgba(13,148,136,0.18)]"
+                : isBot
                 // Bolha de AUTOMAÇÃO: cinza escuro com texto claro.
                 // Cores hardcoded (não usar --text-primary) porque em v2-dark
                 // o token flipa e some contra o fundo fixo desta bolha.
@@ -1574,7 +1595,13 @@ export function MessageBubble({
           )}
           style={
             isOutgoing
-              ? isBot
+              ? isCampaign
+                ? {
+                    background: "var(--chat-bubble-campaign-bg)",
+                    color: "var(--chat-bubble-campaign-text)",
+                    borderColor: "var(--chat-bubble-campaign-border)",
+                  }
+                : isBot
                 ? {
                     // Lavanda com texto violeta-escuro fixo — invariante ao
                     // data-chat-theme e ao modo dark/light (ref. V0).
@@ -1600,10 +1627,32 @@ export function MessageBubble({
               <IconPinFilled size={10} className="text-[var(--brand-primary)]" />
             </span>
           )}
+          {/* Badge CAMPANHA — pill + nome da campanha (sem duplicar
+              "Campanha: …" no pill genérico de bot). */}
+          {isCampaign && (
+            <div className="mb-1.5 flex flex-col gap-0.5">
+              <span
+                className="inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest"
+                style={{
+                  background: "var(--chat-bubble-campaign-badge-bg)",
+                  color: "var(--chat-bubble-campaign-badge-text)",
+                }}
+                title={senderName || "Campanha"}
+              >
+                <IconSpeakerphone size={11} />
+                Campanha
+              </span>
+              {message.campaignName ? (
+                <span className="font-display text-[11.5px] font-semibold leading-snug">
+                  {message.campaignName}
+                </span>
+              ) : null}
+            </div>
+          )}
           {/* Badge AUTOMAÇÃO — pill escuro em cima do card claro tintado.
               Exibe o nome da automação (senderName) quando o backend envia;
               caso contrário cai no rótulo genérico "Automação". */}
-          {isBot && (
+          {isBot && !isCampaign && (
             <div className="mb-1.5 flex items-center gap-1.5">
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest"
@@ -1683,11 +1732,12 @@ export function MessageBubble({
                 : "absolute bottom-1.5 right-2.5 inline-flex",
               timeOverMedia &&
                 "rounded px-1 py-0.5 text-white shadow-[0_1px_2px_rgba(0,0,0,0.55)] [text-shadow:0_1px_2px_rgba(0,0,0,0.75)] bg-black/35",
-              !timeOverMedia && isOutgoing && isBot && "text-white/70",
+              !timeOverMedia && isOutgoing && isBot && !isCampaign && "text-white/70",
+              !timeOverMedia && isOutgoing && isCampaign && "opacity-65",
               !timeOverMedia && !isOutgoing && "text-[var(--text-muted)]",
             )}
             style={
-              !timeOverMedia && isOutgoing && !isBot
+              !timeOverMedia && isOutgoing && !isBot && !isCampaign
                 ? { color: "var(--chat-bubble-sent-time)" }
                 : undefined
             }

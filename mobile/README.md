@@ -19,7 +19,9 @@ cd mobile
 npm install
 ```
 
-1. Edite `capacitor.config.json` → `server.url` com a URL HTTPS pública do CRM.
+1. `capacitor.config.json` → `server.url` aponta pra produção
+   (`https://banco-frontend-crm.6tqx2r.easypanel.host`). Para testar DEV,
+   troque temporariamente e rode `npm run sync`.
 2. Sincronize:
 
 ```bash
@@ -35,61 +37,39 @@ npm run sync           # copia www + sync plugins → android/
 npm run open:android   # abre Android Studio (requer JDK + SDK)
 ```
 
-Plataforma Android já foi adicionada (`mobile/android/`).
-
 ## Modelo de atualização
 
-- **UI / features do CRM** → deploy do frontend (sem novo APK).
-- **Casca nativa** (permissões, plugins, domínio) → novo APK.
+- **UI / features do CRM** → deploy do frontend CRM (sem novo APK).
+- **Casca nativa** (plugins, permissões, ícone) → novo APK no serviço
+  **`crm-mobile-releases`** (EasyPanel separado — ver `deploy/mobile-releases/README.md`).
 
-## Permissões (ver AGENT.md § Permissões Android do APK)
+## Assinatura (release)
 
-Manifesto declara RECORD_AUDIO, CAMERA, READ_MEDIA_*, POST_NOTIFICATIONS e
-MODIFY_AUDIO_SETTINGS. Os grants em runtime passam pelo
-`BridgeWebChromeClient` do Capacitor — nenhum plugin nativo extra é
-necessário para mic/câmera.
+A keystore **não** entra no Git. Fica em:
 
-## Web Push no APK
+- Arquivo: `%USERPROFILE%\eduit-crm-release.keystore`
+- Alias: `eduit-crm`
+- Credenciais locais: `mobile/android/keystore.properties` (gitignored; use `keystore.properties.example` como modelo)
 
-Nesta fase o Web Push continua usando Notification API + Service Worker
-(mesmo caminho do browser), com POST_NOTIFICATIONS habilitando o prompt
-nativo no Android 13+. Se a entrega em background falhar dentro do
-WebView (limitação conhecida de Service Worker push em WebView), o
-próximo passo é migrar para `@capacitor/push-notifications` + Firebase
-Cloud Messaging — não implementado nesta fase.
+```bash
+cd mobile/android
+.\gradlew.bat assembleRelease
+```
 
-## Atualizar sem APK
+APK: `app/build/outputs/apk/release/app-release.apk`
 
-Fluxo interno (fora da Play Store) pra distribuir uma casca nativa nova
-sem reenviar o APK manualmente pra cada operador (ver AGENT.md § Atualizar
-sem APK):
+## Publicar APK (serviço separado)
 
-- **Camada A** (a maioria das mudanças): deploy do frontend web — zero APK,
-  cobre UI/features. O `MobileAppUpdateDialog` já avisa quando o bundle
-  mudou.
-- **Camada B** (só quando a casca nativa muda — plugins, permissões,
-  ícone): o app compara `public/mobile-release.json` com a versão nativa
-  instalada (plugin `AppUpdate`) e, se houver uma versão mais nova com
-  `apkUrl` preenchido, mostra o diálogo **"Atualizar sem APK"** oferecendo
-  baixar e instalar o APK direto, sem Play Store.
+1. Bump `versionCode` / `versionName` em `mobile/android/app/build.gradle`
+2. `assembleRelease` (mesma keystore)
+3. Copiar APK → `deploy/mobile-releases/public/releases/eduit-crm-<ver>.apk`
+4. Atualizar `deploy/mobile-releases/public/mobile-release.json` e o espelho
+   `public/mobile-release.json`
+5. Push na `CRM_MOBILE` → rebuild **só** do serviço `crm-mobile-releases`
+6. (Opcional) Deploy leve do CRM se ainda usar o espelho em `/mobile-release.json`
 
-### Checklist pra publicar um build nativo novo
-
-1. Bump `versionCode` (inteiro, sempre crescente) e `versionName` em
-   `mobile/android/app/build.gradle`.
-2. Gerar o APK **assinado** com a mesma keystore de sempre (trocar de
-   keystore quebra updates — o Android rejeita instalar um APK assinado
-   por outra chave sobre um app já instalado).
-3. Subir o APK assinado em algum storage HTTPS acessível pelos celulares
-   (ex.: EasyPanel, S3, bucket estático).
-4. Atualizar `public/mobile-release.json` no repo do frontend com o novo
-   `versionCode`, `versionName`, `apkUrl` (link direto pro `.apk`) e
-   `notes` (texto exibido no diálogo). Usar `force: true` só se o build
-   antigo não puder mais funcionar (ex.: quebra de contrato com o
-   backend).
-5. Deploy do frontend — o JSON é servido estático em `/mobile-release.json`.
-
-Sem Capgo/live-update nesta fase — apenas download + instalador nativo.
+O app consulta primeiro:
+`https://crm-mobile-releases.6tqx2r.easypanel.host/mobile-release.json`
 
 ## iOS
 

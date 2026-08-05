@@ -1,6 +1,7 @@
 package br.com.eduit.crm;
 
 import android.os.Bundle;
+import android.webkit.CookieManager;
 
 import com.getcapacitor.BridgeActivity;
 
@@ -17,5 +18,15 @@ public class MainActivity extends BridgeActivity {
     // (ver AGENT.md § Atualizar sem APK).
     registerPlugin(AppUpdatePlugin.class);
     super.onCreate(savedInstanceState);
+
+    // NextAuth (cookies Secure + SameSite=Lax) no WebView remoto: sem isto
+    // o login "parece" OK e a sessão some no próximo navigation → volta
+    // pra /login. Aceitar cookies (incl. 3rd-party no WebView) é requisito
+    // do Chromium embutido no Android.
+    CookieManager cookieManager = CookieManager.getInstance();
+    cookieManager.setAcceptCookie(true);
+    if (this.bridge != null && this.bridge.getWebView() != null) {
+      cookieManager.setAcceptThirdPartyCookies(this.bridge.getWebView(), true);
+    }
   }
 }

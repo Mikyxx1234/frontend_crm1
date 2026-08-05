@@ -14,6 +14,7 @@
  */
 
 import { getAppUpdatePlugin, isNativePlatform } from "@/lib/native/capacitor";
+import { resolveMobileReleaseManifestUrl } from "@/lib/native/mobile-release-config";
 
 const THROTTLE_KEY = "crm_native_update_checked_at";
 const THROTTLE_MS = 12 * 60 * 60 * 1000; // 12h
@@ -51,25 +52,40 @@ function writeThrottleTimestamp(): void {
   }
 }
 
-/** Busca `public/mobile-release.json` sempre fresco (sem cache do browser/SW). */
+function parseMobileRelease(data: Partial<MobileReleaseInfo>): MobileReleaseInfo | null {
+  if (typeof data.versionCode !== "number") return null;
+  return {
+    versionCode: data.versionCode,
+    versionName: typeof data.versionName === "string" ? data.versionName : "",
+    apkUrl: typeof data.apkUrl === "string" ? data.apkUrl.trim() : "",
+    force: Boolean(data.force),
+    notes: typeof data.notes === "string" ? data.notes : "",
+  };
+}
+
+/**
+ * Busca o manifesto no serviço de releases (EasyPanel separado).
+ * Fallback: `/mobile-release.json` no host do CRM (compat).
+ */
 export async function fetchMobileRelease(): Promise<MobileReleaseInfo | null> {
-  try {
-    const res = await fetch(`/mobile-release.json?t=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) return null;
+  const bust = `t=${Date.now()}`;
+  const candidates = [
+    `${resolveMobileReleaseManifestUrl()}?${bust}`,
+    `/mobile-release.json?${bust}`,
+  ];
 
-    const data = (await res.json()) as Partial<MobileReleaseInfo>;
-    if (typeof data.versionCode !== "number") return null;
-
-    return {
-      versionCode: data.versionCode,
-      versionName: typeof data.versionName === "string" ? data.versionName : "",
-      apkUrl: typeof data.apkUrl === "string" ? data.apkUrl.trim() : "",
-      force: Boolean(data.force),
-      notes: typeof data.notes === "string" ? data.notes : "",
-    };
-  } catch {
-    return null;
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) continue;
+      const data = (await res.json()) as Partial<MobileReleaseInfo>;
+      const parsed = parseMobileRelease(data);
+      if (parsed) return parsed;
+    } catch {
+      // tenta o próximo candidato
+    }
   }
+  return null;
 }
 
 /**

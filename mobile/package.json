@@ -25,8 +25,7 @@
     "@capacitor/keyboard": "^7.0.6",
     "@capacitor/network": "^7.0.4",
     "@capacitor/splash-screen": "^7.0.5",
-    "@capacitor/status-bar": "^7.0.6",
-    "@capgo/capacitor-native-biometric": "^7.6.0"
+    "@capacitor/status-bar": "^7.0.6"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.6.8"

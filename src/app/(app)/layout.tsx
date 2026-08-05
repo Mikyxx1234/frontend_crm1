@@ -23,6 +23,7 @@ import { ChatThemeApplier } from "@/components/providers/chat-theme-applier";
 import { MobileBottomNav } from "@/components/crm/mobile-bottom-nav";
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RouteTransition } from "@/components/crm/route-transition";
+import { MobileStartRoute } from "@/components/layout/mobile-start-route";
 import { SystemPresenceHeartbeat } from "@/components/layout/system-presence-heartbeat";
 
 // O TooltipProvider (Radix) é provido uma única vez na raiz (app/providers.tsx),
@@ -56,7 +57,9 @@ export default function AppLayout({
         <MobileAppUpdateDialog />
         <NativeApkUpdateDialog />
         <SoftphoneWidget />
-        {/* Teste mobile: barra inferior global (hide-on-scroll). md+ não renderiza. */}
+        {/* Cold start mobile/APK: respeita startRoute do Layout Builder. */}
+        <MobileStartRoute />
+        {/* Barra inferior mobile (mobile-layout + Mais). md+ não renderiza. */}
         <MobileBottomNav />
       </div>
       <BiometricLockGate />

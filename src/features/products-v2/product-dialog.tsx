@@ -333,13 +333,27 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
           }),
         });
         const created = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(created?.message ?? "Erro ao criar");
+        if (!res.ok) {
+          throw new Error(
+            (typeof created?.message === "string" && created.message) ||
+              (typeof created?.error === "string" && created.error) ||
+              `Erro ao criar (${res.status})`,
+          );
+        }
         const newId: string = created.product?.id;
-        await fetch(apiUrl(`/api/products/${newId}`), {
+        if (!newId) throw new Error("Erro ao criar: resposta sem id do produto.");
+        const putRes = await fetch(apiUrl(`/api/products/${newId}`), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(buildBlocks()),
         });
+        if (!putRes.ok) {
+          const putBody = await putRes.json().catch(() => ({}));
+          throw new Error(
+            (typeof putBody?.message === "string" && putBody.message) ||
+              `Produto criado, mas falhou ao salvar detalhes (${putRes.status}).`,
+          );
+        }
         toast.success("Produto criado. Configure ofertas e alocação.");
         onCreated?.(newId);
       }

@@ -26,6 +26,7 @@ export type AutomationTriggerType =
   | "call_made"
   | "conversation_tabulated"
   | "whatsapp_session_expiring"
+  | "lead_distributed"
   | "manual";
 
 export type AutomationStep = {
@@ -51,6 +52,7 @@ export const AUTOMATION_TRIGGER_TYPES: AutomationTriggerType[] = [
   "call_made",
   "conversation_tabulated",
   "whatsapp_session_expiring",
+  "lead_distributed",
   "manual",
 ];
 
@@ -109,6 +111,7 @@ export function triggerTypeLabel(t: string): string {
     call_made: "Ligação realizada",
     conversation_tabulated: "Conversa encerrada",
     whatsapp_session_expiring: "Sessão do WhatsApp prestes a encerrar",
+    lead_distributed: "Lead distribuído (consultor humano)",
     manual: "Manual (executar pela conversa)",
   };
   return map[t] ?? t;
@@ -261,6 +264,10 @@ export function summarizeTriggerConfig(
         parts.push(statusLabels[raw] ?? `Status: ${raw}`);
       }
       return parts.length ? parts.join(" · ") : "Qualquer canal";
+    }
+    case "lead_distributed": {
+      if (c.departmentId) return `Departamento: ${String(c.departmentId).slice(0, 8)}…`;
+      return "Quando um consultor humano assume o lead";
     }
     case "manual":
       return "Disparada manualmente da conversa";
@@ -743,6 +750,8 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
     case "call_received":
     case "call_made":
       return { status: "" };
+    case "lead_distributed":
+      return { departmentId: "" };
     case "manual":
       return {};
     case "conversation_tabulated":

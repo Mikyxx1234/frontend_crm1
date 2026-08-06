@@ -182,7 +182,7 @@ const ASIDE_STORAGE_KEY = "crm:contact-aside:section-order-v4"
  *  (SectionHeader) e o conteúdo ficam DENTRO do mesmo card. Antes o
  *  título flutuava sobre o fundo do painel, acima do card. */
 const SECTION_CARD_CLASS =
-  "mx-3 mb-3 min-w-0 max-w-full overflow-x-hidden rounded-[var(--radius-xl)] border border-slate-100 bg-white p-3 shadow-sm"
+  "mx-3 mb-3 min-w-0 max-w-full rounded-[var(--radius-xl)] border border-slate-100 bg-white p-3 shadow-sm"
 
 // ── Abas Perfil / Produto ─────────────────────────────────────────
 // O hero do negócio (secao `negocios`) fica FIXO no topo. As demais
@@ -856,7 +856,7 @@ export function ContactAside({
   return (
     <aside
       aria-label="Detalhes do contato"
-      className={cn("relative flex h-full flex-col pr-0.5 overflow-visible", className)}
+      className={cn("relative flex h-full min-h-0 flex-col overflow-hidden", className)}
     >
       {/* Botao recolher — MESMA abinha do botao de abrir (estado recolhido),
           apenas espelhada: colada na borda esquerda do painel (border-l-0),
@@ -873,7 +873,7 @@ export function ContactAside({
           </button>
         </TooltipGlass>
       )}
-      <div className="aside-scrollbar relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
 
         {/* Header de acoes do contato (IB4 do questionario):
             DealCallButton entra aqui via `headerActionsNode`. Antes ficava
@@ -891,7 +891,7 @@ export function ContactAside({
             Com 2+ negócios: lista retraída (# + etapa); atendente expande
             só o que for atender. Com 1 negócio: sempre expandido. */}
         {deals.length > 0 && !sectionHiddenMap["negocios"] && (
-          <div className="space-y-0.5 border-b border-[var(--glass-border-subtle)] pb-2">
+          <div className="shrink-0 space-y-0.5 border-b border-[var(--glass-border-subtle)] pb-2">
             {multiDeal && (
               <p className="px-3 pt-2 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                 {deals.length} negócios — toque para expandir
@@ -919,7 +919,7 @@ export function ContactAside({
         )}
 
         {/* ── Abas: Perfil / Produto + toggle de visão (ref. Stitch) ── */}
-        <nav className="flex items-center gap-2 p-4" aria-label="Alternar entre Perfil e Produto">
+        <nav className="flex shrink-0 items-center gap-2 p-4" aria-label="Alternar entre Perfil e Produto">
           {ASIDE_TAB_ITEMS.map((item) => {
             const active = activeTab === item.value
             return (
@@ -944,6 +944,8 @@ export function ContactAside({
           </div>
         </nav>
 
+        {/* Scroll só no conteúdo das abas — hero + nav ficam fixos acima. */}
+        <div className="aside-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-8">
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="aside-sections">
             {(droppableProvided) => (
@@ -1431,6 +1433,7 @@ export function ContactAside({
             </p>
           </div>
         )}
+        </div>
       </div>
     </aside>
   )

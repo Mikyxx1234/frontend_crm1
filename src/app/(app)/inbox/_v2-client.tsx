@@ -1725,13 +1725,16 @@ export default function InboxV2ClientPage({
     // ── Desktop: layout original de 3 colunas ─────────────────────
     return (
       <div
-        className="v2-screen relative grid gap-4 p-4"
-        style={{ gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)" }}
+        className="v2-screen relative grid h-full min-h-0 gap-4 overflow-hidden p-4"
+        style={{
+          gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)",
+          gridTemplateRows: "minmax(0, 1fr)",
+        }}
       >
         {navRailNode}
         <div
           className={cn(
-            "relative flex min-w-0 flex-col overflow-hidden",
+            "relative flex min-h-0 min-w-0 flex-col overflow-hidden",
             headerCollapsed ? "gap-0" : "gap-4",
           )}
         >
@@ -1749,7 +1752,7 @@ export default function InboxV2ClientPage({
           >
             {conversationColumnNode}
             {chatNode}
-            <div className="relative min-h-0 overflow-visible">
+            <div className="relative h-full min-h-0 overflow-hidden">
               {!effectiveAsideCollapsed && (
                 <ColumnResizer
                   direction="left"
@@ -1841,16 +1844,17 @@ export default function InboxV2ClientPage({
   // ── Desktop: layout original de 4 colunas ─────────────────────
   return (
     <div
-      className="v2-screen grid gap-4 p-4"
+      className="v2-screen grid h-full min-h-0 gap-4 overflow-hidden p-4"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
         gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${effectiveAsideCollapsed ? "0px" : `${asideWidth}px`}`,
+        gridTemplateRows: "minmax(0, 1fr)",
       }}
     >
       {navRailNode}
       {conversationColumnNode}
       {chatNode}
-      <div className="relative min-h-0 overflow-visible">
+      <div className="relative h-full min-h-0 overflow-hidden">
         {!effectiveAsideCollapsed && (
           <ColumnResizer
             direction="left"

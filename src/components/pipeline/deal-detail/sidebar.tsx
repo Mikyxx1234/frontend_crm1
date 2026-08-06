@@ -262,12 +262,15 @@ export function DealSidebar({
 export function DealProductsSection({
   dealId,
   compact: _compact = false,
-  hideTitle: _hideTitle = false,
+  hideTitle = false,
 }: {
   dealId: string;
   /** @deprecated sem efeito — layout unificado. */
   compact?: boolean;
-  /** @deprecated sem efeito — layout unificado. */
+  /**
+   * Quando true (ContactAside): omite o título "Produtos" e o card chrome
+   * pesado — o SectionHeader do pai já fornece ambos. Mantém badge + Adicionar.
+   */
   hideTitle?: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -277,20 +280,6 @@ export function DealProductsSection({
   const [editingItem, setEditingItem] = React.useState<string | null>(null);
   const [editQty, setEditQty] = React.useState("");
   const [editDiscount, setEditDiscount] = React.useState("");
-  const [openMenu, setOpenMenu] = React.useState<string | null>(null);
-  const menuRef = React.useRef<HTMLDivElement>(null);
-
-  // Fecha menu ao clicar fora
-  React.useEffect(() => {
-    if (!openMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpenMenu(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [openMenu]);
 
   const itemsKey = ["deal-products", dealId] as const;
 
@@ -375,7 +364,6 @@ export function DealProductsSection({
     setEditingItem(item.id);
     setEditQty(String(item.quantity));
     setEditDiscount(String(item.discount));
-    setOpenMenu(null);
   };
 
   const saveEdit = (itemId: string) => {
@@ -386,10 +374,24 @@ export function DealProductsSection({
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
-      {/* ── Cabeçalho ── */}
-      <div className="flex items-center gap-2 px-4 py-3">
-        <span className="text-sm font-bold text-foreground">Produtos</span>
+    <div
+      className={
+        hideTitle
+          ? "min-w-0"
+          : "overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
+      }
+    >
+      {/* ── Cabeçalho ──
+          hideTitle: só badge + Adicionar (SectionHeader já mostra "Produtos"). */}
+      <div
+        className={cn(
+          "flex items-center gap-2",
+          hideTitle ? "py-1" : "px-4 py-3",
+        )}
+      >
+        {!hideTitle && (
+          <span className="text-sm font-bold text-foreground">Produtos</span>
+        )}
         {items.length > 0 && (
           <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--brand-primary)]">
             {items.length}
@@ -398,7 +400,7 @@ export function DealProductsSection({
         <div className="flex-1" />
         <button
           type="button"
-          onClick={() => { setShowAdd((v) => !v); setOpenMenu(null); }}
+          onClick={() => setShowAdd((v) => !v)}
           aria-label={showAdd ? "Fechar busca de produto" : "Adicionar produto"}
           className="flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1 text-[12px] font-semibold text-white transition-all hover:brightness-110 active:scale-95"
         >
@@ -459,7 +461,6 @@ export function DealProductsSection({
         </div>
       ) : (
         <>
-          <div ref={menuRef}>
           {items.map((item, idx) => (
             <div
               key={item.id}
@@ -559,64 +560,48 @@ export function DealProductsSection({
                     <ProductCustomFieldsInline productId={item.productId} />
                   </div>
 
-                  {/* Preço + menu kebab */}
+                  {/* Preço + ações inline (sem popup — evita clip em overflow) */}
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <span className="text-sm font-semibold tabular-nums text-foreground">
                       {formatCurrency(item.total)}
                     </span>
-                    {/* Menu ... */}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setOpenMenu((prev) => (prev === item.id ? null : item.id))
-                        }
-                        aria-label="Opções do item"
-                        className="rounded px-1 py-0.5 text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-foreground"
-                      >
-                        <span className="text-[13px] font-bold leading-none tracking-widest">
-                          ···
-                        </span>
-                      </button>
-                      {openMenu === item.id && (
-                        <div className="absolute right-0 top-full z-50 mt-1 min-w-[120px] overflow-hidden rounded-xl border border-border bg-white shadow-lg">
-                          {item.productType !== "SERVICE" && (
-                            <button
-                              type="button"
-                              onClick={() => startEdit(item)}
-                              className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]"
-                            >
-                              <Pencil className="size-3.5 text-ink-muted" />
-                              Editar
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              setOpenMenu(null);
-                              const ok = await confirmDialog({
-                                title: "Remover produto",
-                                description: "Remover este produto do negócio?",
-                                confirmLabel: "Remover",
-                                variant: "destructive",
-                              });
-                              if (ok) removeMutation.mutate(item.id);
-                            }}
-                            className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/5"
-                          >
-                            <X className="size-3.5" />
-                            Remover
-                          </button>
-                        </div>
+                    <div className="flex items-center gap-0.5">
+                      {item.productType !== "SERVICE" && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 rounded-lg text-ink-muted hover:text-foreground"
+                          aria-label="Editar item"
+                          onClick={() => startEdit(item)}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
                       )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 rounded-lg text-ink-muted hover:text-destructive"
+                        aria-label="Remover item"
+                        onClick={async () => {
+                          const ok = await confirmDialog({
+                            title: "Remover produto",
+                            description: "Remover este produto do negócio?",
+                            confirmLabel: "Remover",
+                            variant: "destructive",
+                          });
+                          if (ok) removeMutation.mutate(item.id);
+                        }}
+                      >
+                        <X className="size-3.5" />
+                      </Button>
                     </div>
                   </div>
                 </div>
               )}
             </div>
           ))}
-
-          </div>
 
           {/* ── Rodapé Total ── */}
           {showTotal && (

@@ -229,11 +229,11 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
         </HubSubHeader>
       ) : null}
 
-      <HubStatGrid>
-        <HubStat tone="brand" icon={<FileText className="size-5" />} value={templates.length} label="Modelos internos" />
-        <HubStat tone="violet" icon={<Layers className="size-5" />} value={categories.length} label="Categorias" />
-        <HubStat tone="warn" icon={<Variable className="size-5" />} value={withVariables} label="Com variáveis" />
-        <HubStat tone="success" icon={<MessageSquare className="size-5" />} value={distinctChannels} label="Canais usados" />
+      <HubStatGrid mobileCompact>
+        <HubStat mobileCompact tone="brand" icon={<FileText className="size-5" />} value={templates.length} label="Modelos internos" />
+        <HubStat mobileCompact tone="violet" icon={<Layers className="size-5" />} value={categories.length} label="Categorias" />
+        <HubStat mobileCompact tone="warn" icon={<Variable className="size-5" />} value={withVariables} label="Com variáveis" />
+        <HubStat mobileCompact tone="success" icon={<MessageSquare className="size-5" />} value={distinctChannels} label="Canais usados" />
       </HubStatGrid>
 
       <HubPanel>

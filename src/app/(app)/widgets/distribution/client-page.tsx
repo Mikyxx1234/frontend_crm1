@@ -971,10 +971,10 @@ function ResponsibleMobileCard({
   const toggleAria = isOnline ? "Ficar offline" : "Ficar online";
 
   return (
-    <li className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-2 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      {/* Cabeçalho: identidade + presença */}
-      <div className="flex min-w-0 items-center gap-1.5">
-        <span className="relative isolate shrink-0">
+    <li className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-2 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-colors hover:bg-[var(--glass-bg-overlay)] active:bg-[var(--glass-bg-overlay)]">
+      {/* Cabeçalho: identidade + presença/toggle + ações */}
+      <div className="flex min-w-0 items-start gap-1.5">
+        <span className="relative isolate mt-0.5 shrink-0">
           <UserAvatar
             name={r.name ?? r.email}
             imageUrl={r.avatarUrl ?? (isCurrentUser ? currentUserImage : null)}
@@ -1016,66 +1016,21 @@ function ResponsibleMobileCard({
           >
             {metaLine}
           </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <span className="scale-90 origin-right">
-            <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
-          </span>
-          {canTogglePresence && r.participates && (
-            <button
-              type="button"
-              onClick={togglePresence}
-              disabled={statusMut.isPending}
-              title={toggleAria}
-              aria-label={toggleAria}
-              className="touch-target shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[9px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
-            >
-              {statusMut.isPending ? "…" : toggleLabel}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {hintParts.length > 0 && (
-        <p
-          className="mt-1 truncate font-body text-[8.5px] leading-tight text-[var(--text-muted)]"
-          title={hintTitle}
-        >
-          {hintParts.join(" · ")}
-        </p>
-      )}
-
-      {/* Métricas + ações */}
-      <div className="mt-1.5 flex min-w-0 items-center gap-1.5 border-t border-[var(--glass-border)] pt-1.5">
-        <div className="grid min-w-0 flex-1 grid-cols-3 gap-x-1.5">
-          <div className="min-w-0">
-            <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-              Fila
-            </p>
-            <p className="font-display text-[12px] font-extrabold leading-none text-[var(--text-primary)]">
-              {r.queueCount}
-            </p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-              Volume
-            </p>
-            <p className="font-display text-[12px] font-extrabold leading-none text-[var(--text-primary)]">
-              {r.queueLimit > 0 ? r.queueLimit : "∞"}
-            </p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-              Elegibilidade
-            </p>
-            {r.eligible ? (
-              <span className="inline-flex max-w-full items-center gap-0.5 truncate font-display text-[11.5px] font-bold leading-none text-[var(--color-success-dark,#0f7a5a)]">
-                <IconCircleCheck size={12} className="shrink-0" /> Elegível
-              </span>
-            ) : (
-              <span className="inline-flex max-w-full items-center gap-0.5 truncate font-display text-[11.5px] font-bold leading-none text-[var(--color-danger-text)]">
-                <IconAlertTriangle size={12} className="shrink-0" /> Indisp.
-              </span>
+          <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1">
+            <span className="origin-left scale-90">
+              <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
+            </span>
+            {canTogglePresence && r.participates && (
+              <button
+                type="button"
+                onClick={togglePresence}
+                disabled={statusMut.isPending}
+                title={toggleAria}
+                aria-label={toggleAria}
+                className="touch-target shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[9px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+              >
+                {statusMut.isPending ? "…" : toggleLabel}
+              </button>
             )}
           </div>
         </div>
@@ -1103,6 +1058,51 @@ function ResponsibleMobileCard({
             </button>
           </div>
         )}
+      </div>
+
+      {hintParts.length > 0 && (
+        <p
+          className="mt-1 truncate font-body text-[8.5px] leading-tight text-[var(--text-muted)]"
+          title={hintTitle}
+        >
+          {hintParts.join(" · ")}
+        </p>
+      )}
+
+      {/* Métricas — faixa full-width centralizada */}
+      <div className="mt-1.5 grid w-full grid-cols-3 divide-x divide-[var(--glass-border)] rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-1.5">
+        <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-center">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Fila
+          </p>
+          <p className="font-display text-[12px] font-extrabold leading-none text-[var(--text-primary)]">
+            {r.queueCount}
+          </p>
+        </div>
+        <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-center">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Volume
+          </p>
+          <p className="font-display text-[12px] font-extrabold leading-none text-[var(--text-primary)]">
+            {r.queueLimit > 0 ? r.queueLimit : "∞"}
+          </p>
+        </div>
+        <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-center">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Elegibilidade
+          </p>
+          {r.eligible ? (
+            <span className="inline-flex max-w-full items-center justify-center gap-0.5 font-display text-[12px] font-bold leading-none text-[var(--color-success-dark,#0f7a5a)]">
+              <IconCircleCheck size={12} className="shrink-0" />
+              <span className="truncate">Elegível</span>
+            </span>
+          ) : (
+            <span className="inline-flex max-w-full items-center justify-center gap-0.5 font-display text-[12px] font-bold leading-none text-[var(--color-danger-text)]">
+              <IconAlertTriangle size={12} className="shrink-0" />
+              <span className="truncate">Indisp.</span>
+            </span>
+          )}
+        </div>
       </div>
     </li>
   );

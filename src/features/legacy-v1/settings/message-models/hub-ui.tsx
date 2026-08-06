@@ -23,9 +23,22 @@ const STAT_TONE: Record<StatTone, string> = {
   warn: "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
 };
 
-export function HubStatGrid({ children }: { children: React.ReactNode }) {
+export function HubStatGrid({
+  children,
+  mobileCompact = false,
+}: {
+  children: React.ReactNode;
+  /** Mobile/tablet: faixa h-scroll de cards quadrados (padrão Distribuição). Desktop lg+ inalterado. */
+  mobileCompact?: boolean;
+}) {
   return (
-    <section className="grid min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3.5 lg:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
+    <section
+      className={cn(
+        mobileCompact
+          ? "-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:grid lg:min-w-0 lg:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] lg:gap-3.5 lg:overflow-visible lg:px-0 lg:pb-0"
+          : "grid min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3.5 lg:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]",
+      )}
+    >
       {children}
     </section>
   );
@@ -36,22 +49,52 @@ export function HubStat({
   icon,
   value,
   label,
+  mobileCompact = false,
 }: {
   tone: StatTone;
   icon: React.ReactNode;
   value: React.ReactNode;
   label: string;
+  /** Mobile/tablet: card quadrado compacto. Desktop lg+ layout horizontal atual. */
+  mobileCompact?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]", STAT_TONE[tone])}>
+    <div
+      className={cn(
+        "border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
+        mobileCompact
+          ? "flex aspect-square w-[104px] shrink-0 flex-col justify-between rounded-[var(--radius-xl)] p-2.5 [&_svg]:size-4 lg:aspect-auto lg:w-auto lg:flex-row lg:items-center lg:gap-3 lg:rounded-[var(--radius-lg)] lg:px-4 lg:py-3.5 lg:[&_svg]:size-5"
+          : "flex items-center gap-3 rounded-[var(--radius-lg)] px-4 py-3.5",
+      )}
+    >
+      <span
+        className={cn(
+          "flex shrink-0 items-center justify-center",
+          STAT_TONE[tone],
+          mobileCompact
+            ? "size-7 rounded-full lg:size-10 lg:rounded-[var(--radius-md)]"
+            : "size-10 rounded-[var(--radius-md)]",
+        )}
+      >
         {icon}
       </span>
       <div className="min-w-0">
-        <div className="text-[21px] font-extrabold leading-none tracking-tight text-[var(--text-primary)]">
+        <div
+          className={cn(
+            "font-extrabold leading-none tracking-tight text-[var(--text-primary)]",
+            mobileCompact ? "text-[20px] lg:text-[21px]" : "text-[21px]",
+          )}
+        >
           {value}
         </div>
-        <div className="mt-1 text-[11.5px] font-semibold text-[var(--text-muted)]">{label}</div>
+        <div
+          className={cn(
+            "mt-1 font-semibold text-[var(--text-muted)]",
+            mobileCompact ? "truncate text-[10px] leading-tight lg:text-[11.5px] lg:leading-normal" : "text-[11.5px]",
+          )}
+        >
+          {label}
+        </div>
       </div>
     </div>
   );

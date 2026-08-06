@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO, subDays } from "date-fns";
+import { endOfDay, format, parseISO, startOfDay, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   IconChartBar,
@@ -68,8 +68,12 @@ export function TabulationsDashboard() {
     staleTime: 60_000,
   });
 
-  const fromIso = range.from?.toISOString() ?? "";
-  const toIso = range.to?.toISOString() ?? "";
+  // O seletor devolve os dois extremos à meia-noite (todos os presets usam
+  // startOfDay, e clicar num dia no calendário também). Mandando o `to` cru,
+  // o backend filtra `occurredAt <= dia 00:00` e o último dia do período fica
+  // de fora — em "Hoje" isso zerava o painel inteiro.
+  const fromIso = range.from ? startOfDay(range.from).toISOString() : "";
+  const toIso = range.to ? endOfDay(range.to).toISOString() : "";
 
   const analyticsQuery = useQuery({
     queryKey: [

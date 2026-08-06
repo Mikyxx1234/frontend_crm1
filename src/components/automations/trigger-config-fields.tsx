@@ -676,6 +676,8 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
           </div>
         </div>
       );
+    case "lead_distributed":
+      return <LeadDistributedFields value={value} patch={patch} />;
     case "manual":
       return (
         <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 text-sm text-foreground">
@@ -719,6 +721,59 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
         <p className="text-sm text-muted-foreground">Selecione um tipo de gatilho.</p>
       );
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// lead_distributed — filtro opcional por departamento
+// ─────────────────────────────────────────────────────────────
+
+function LeadDistributedFields({
+  value,
+  patch,
+}: {
+  value: Record<string, unknown>;
+  patch: (n: Record<string, unknown>) => void;
+}) {
+  const departmentId = String(value.departmentId ?? "");
+  const departmentsQuery = useQuery({
+    queryKey: ["automation-trigger-departments"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<{ id: string; name: string; icon?: string }[]> => {
+      const res = await fetch(apiUrl("/api/settings/departments"));
+      if (!res.ok) return [];
+      return (await res.json()) as { id: string; name: string; icon?: string }[];
+    },
+  });
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Disparado automaticamente quando a distribuição inteligente atribui um
+        consultor humano pela primeira vez (ainda sem resposta humana no chat).
+        Use a mensagem WhatsApp com{" "}
+        <span className="font-medium text-foreground">Enviar como → Responsável</span>{" "}
+        e tokens{" "}
+        <code className="text-[11px]">{"{{contact.name}}"}</code> /{" "}
+        <code className="text-[11px]">{"{{assignee.name}}"}</code>.
+      </p>
+      <div className="space-y-2">
+        <Label htmlFor="tc-lead-dist-dept">Departamento (opcional)</Label>
+        <DropdownGlass
+          triggerClassName="w-full"
+          placeholder="Qualquer departamento"
+          value={departmentId}
+          options={[
+            { value: "", label: "Qualquer departamento" },
+            ...(departmentsQuery.data ?? []).map((d) => ({
+              value: d.id,
+              label: d.icon ? `${d.icon} ${d.name}` : d.name,
+            })),
+          ]}
+          onValueChange={(v) => patch({ departmentId: v })}
+        />
+      </div>
+    </div>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────

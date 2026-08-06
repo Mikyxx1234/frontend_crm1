@@ -2053,3 +2053,18 @@ aplicada com SQL aditivo idempotente em
 - Modelo: Opus / cursor grok 4.5 (implementação)
 - Decisão: `capacitor.config.json` (`server.url` / `hostname`) e fallback de `resolvePostLoginOrigin` devem apontar para `https://frontend-front.v74knz.easypanel.host` (produção correta). Não usar `banco-frontend-crm.6tqx2r.easypanel.host` (host legado com UI antiga "Olá, Admin"/PresetBar). UI única = frontend responsivo; o visual legado no APK vinha do host errado embutido no build (e `app-revision` no host antigo devolvia HTML de login, por isso o APK não pediu atualização). Mudar `server.url` exige novo APK + sync.
 - Alternativas descartadas: manter o host legado; apontar o APK permanentemente para DEV (`crm-dev-frontend.ca31ey`).
+
+### 2026-08-06 — Layout mobile é por organização (fim do singleton `default`)
+- Modelo: GPT-5.6 (decisão) / claude-sonnet-5-thinking-high (implementação)
+- Decisão: `/api/mobile-layout` passa a ler e gravar pela organização do contexto (`findFirst` + `upsert` em `where: { organizationId }`), sem `id` fixo. O modelo já era uma linha por org (`organizationId @unique`), mas a rota ainda usava `id: "default"` — só a org dona daquela linha (EduIT) conseguia salvar; nas demais o upsert caía no create e violava a PK, e o botão "Salvar layout" não tinha efeito.
+- Alternativas descartadas: voltar o modelo a singleton global (quebra multi-tenant); criar a row `default` por org com sufixo (mantém acoplamento a id mágico).
+
+### 2026-08-06 — Visual Chrome descontinuado
+- Modelo: GPT-5.6 (decisão) / claude-sonnet-5-thinking-high (implementação)
+- Decisão: remover a feature (toggle no Perfil/App Mobile, `MobileBottomNavChrome` e leitura/escrita de `visualChrome` na API). A coluna permanece no schema, sem uso — a API usa `select` explícito para não tocá-la, já que a migration `20260805180000` nunca foi aplicada em produção (EasyPanel com `SKIP_PRISMA_MIGRATE=1`).
+- Alternativas descartadas: manter a feature e aplicar a migration em produção; dropar a coluna agora (drift entre ambientes).
+
+### 2026-08-06 — Biometria: plugin nativo registrado na casca Capacitor
+- Modelo: GPT-5.6 (decisão) / cursor grok 4.5 (implementação)
+- Decisão: declarar `@capgo/capacitor-native-biometric@7.6.0` em `mobile/package.json` e rodar `cap sync android`. O pacote existia só em `node_modules`, fora do `package.json` e dos gradle gerados, então o APK saía sem o plugin: `Capacitor.Plugins.NativeBiometric` era `undefined`, `isBiometricAvailable()` devolvia `false` e o toggle "Desbloquear com biometria" ficava desativado mesmo em aparelho com digital cadastrada. Release 1.0.3 (versionCode 4), mesma keystore (SHA-256 `993dd0e4…4b96`).
+- Alternativas descartadas: implementar biometria via WebAuthn no WebView (suporte irregular em WebView Android); manter só o cadeado por PIN da aplicação.

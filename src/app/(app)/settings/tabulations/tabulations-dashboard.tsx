@@ -96,9 +96,14 @@ export function TabulationsDashboard() {
         credentials: "include",
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
+        const err = (await res.json().catch(() => ({}))) as {
+          message?: string;
+          detail?: string;
+        };
         throw new Error(
-          (err as { message?: string }).message ?? "Erro ao carregar dashboard",
+          [err.message ?? `Erro ao carregar dashboard (HTTP ${res.status})`, err.detail]
+            .filter(Boolean)
+            .join(" — "),
         );
       }
       return res.json();

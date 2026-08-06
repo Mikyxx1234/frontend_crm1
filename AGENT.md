@@ -2068,3 +2068,8 @@ aplicada com SQL aditivo idempotente em
 - Modelo: GPT-5.6 (decisão) / cursor grok 4.5 (implementação)
 - Decisão: declarar `@capgo/capacitor-native-biometric@7.6.0` em `mobile/package.json` e rodar `cap sync android`. O pacote existia só em `node_modules`, fora do `package.json` e dos gradle gerados, então o APK saía sem o plugin: `Capacitor.Plugins.NativeBiometric` era `undefined`, `isBiometricAvailable()` devolvia `false` e o toggle "Desbloquear com biometria" ficava desativado mesmo em aparelho com digital cadastrada. Release 1.0.3 (versionCode 4), mesma keystore (SHA-256 `993dd0e4…4b96`).
 - Alternativas descartadas: implementar biometria via WebAuthn no WebView (suporte irregular em WebView Android); manter só o cadeado por PIN da aplicação.
+
+### 2026-08-06 — Curso: Canal, Desconto e Valor com desconto
+- Modelo: Cursor Grok 4.5 (decisão + orquestração) / claude-sonnet-5-thinking-high (implementação)
+- Decisão: no modal de produto com kind COURSE, a linha Dados gerais ganha Canal (texto), Desconto (%) e Valor com desconto (R$, derivado). Persistência em `CourseConfig.channel` e `CourseConfig.discountPercent` (não em ProductOffer). Valor com desconto não é coluna — recalcula a partir de preço base × (1 − %).
+- Alternativas descartadas: só UI sem persistir; reutilizar ProductOffer.discountPct (oferta é por unidade/org e não cobre “canal”); campos custom genéricos.

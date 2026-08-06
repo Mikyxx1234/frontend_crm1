@@ -30,10 +30,12 @@ import { InventoryPanel } from "./inventory-panel";
 import { OffersSection } from "./offers-section";
 import { StakeholdersSection } from "./stakeholders-section";
 import {
+  COURSE_LEVEL_LABEL,
   COURSE_MODE_LABEL,
   KIND_LABEL,
   PLAN_INTERVAL_LABEL,
   type CourseClass,
+  type CourseLevel,
   type CourseMode,
   type PlanInterval,
   type ProductKind,
@@ -65,6 +67,39 @@ const CREATE_TYPES: { kind: ProductKind; label: string }[] = [
   { kind: "SERVICE", label: "Serviço" },
   { kind: "COURSE", label: "Curso" },
 ];
+
+type PricingRow = {
+  key: string;
+  price: string;
+  channel: string;
+  discount: string;
+  priceWithDiscount: string;
+};
+
+function newPricingRow(partial?: Partial<PricingRow>): PricingRow {
+  return {
+    key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    price: "",
+    channel: "",
+    discount: "",
+    priceWithDiscount: "",
+    ...partial,
+  };
+}
+
+function discountedFrom(price: string, discount: string): string {
+  const p = Number(price) || 0;
+  const d = Number(discount);
+  if (discount === "" || !Number.isFinite(d) || p <= 0) return "";
+  return (p * (1 - d / 100)).toFixed(2);
+}
+
+function discountFrom(price: string, valor: string): string {
+  const p = Number(price) || 0;
+  const v = Number(valor);
+  if (valor === "" || !Number.isFinite(v) || p <= 0) return "";
+  return ((1 - v / p) * 100).toFixed(2);
+}
 
 type Props = {
   open: boolean;
@@ -104,11 +139,33 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
   // Serviço
   const [plans, setPlans] = React.useState<ProductPlan[]>([]);
   // Curso
+  const [courseLevel, setCourseLevel] = React.useState<CourseLevel | "">("");
+  const [courseGrau, setCourseGrau] = React.useState("");
+  const [courseSemester, setCourseSemester] = React.useState("");
   const [courseMode, setCourseMode] = React.useState<CourseMode>("EAD");
   const [postSalePipelineId, setPostSalePipelineId] = React.useState("");
   const [classes, setClasses] = React.useState<CourseClass[]>([]);
+  const [pricingRows, setPricingRows] = React.useState<PricingRow[]>([newPricingRow()]);
 
   const [saving, setSaving] = React.useState(false);
+
+  const updatePricingRow = React.useCallback(
+    (key: string, patch: Partial<PricingRow>) => {
+      setPricingRows((rows) =>
+        rows.map((r) => {
+          if (r.key !== key) return r;
+          const next = { ...r, ...patch };
+          if ("price" in patch || "discount" in patch) {
+            next.priceWithDiscount = discountedFrom(next.price, next.discount);
+          } else if ("priceWithDiscount" in patch) {
+            next.discount = discountFrom(next.price, next.priceWithDiscount);
+          }
+          return next;
+        }),
+      );
+    },
+    [],
+  );
 
   // Reset/seed ao abrir
   React.useEffect(() => {
@@ -124,9 +181,13 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
       setCatalogId(initialCatalogId ?? "");
       setWeightGrams("");
       setPlans([]);
+      setCourseLevel("");
+      setCourseGrau("");
+      setCourseSemester("");
       setCourseMode("EAD");
       setPostSalePipelineId("");
       setClasses([]);
+      setPricingRows([newPricingRow()]);
     }
   }, [open, isEdit, initialCatalogId]);
 
@@ -142,17 +203,55 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
     setCatalogId(detail.catalogId ?? "");
     setWeightGrams(detail.shipping?.weightGrams != null ? String(detail.shipping.weightGrams) : "");
     setPlans(detail.plans ?? []);
+    setCourseLevel(detail.courseConfig?.level ?? "");
+    setCourseGrau(detail.courseConfig?.grau ?? "");
+    setCourseSemester(
+      detail.courseConfig?.semester != null ? String(detail.courseConfig.semester) : "",
+    );
     setCourseMode(detail.courseConfig?.mode ?? "EAD");
     setPostSalePipelineId(detail.courseConfig?.postSalePipelineId ?? "");
     setClasses(detail.courseConfig?.classes ?? []);
+    const opts = Array.isArray(detail.courseConfig?.pricingOptions)
+      ? detail.courseConfig!.pricingOptions!
+      : [];
+    if (opts.length > 0) {
+      setPricingRows(
+        opts.map((o) => {
+          const p = String(Number(o.price) || 0);
+          const d = o.discountPercent != null ? String(Number(o.discountPercent)) : "";
+          return newPricingRow({
+            price: p,
+            channel: o.channel ?? "",
+            discount: d,
+            priceWithDiscount: discountedFrom(p, d),
+          });
+        }),
+      );
+      setPrice(String(Number(opts[0].price) || 0));
+    } else {
+      const basePrice = String(Number(detail.price) || 0);
+      const discount =
+        detail.courseConfig?.discountPercent != null
+          ? String(Number(detail.courseConfig.discountPercent))
+          : "";
+      setPricingRows([
+        newPricingRow({
+          price: basePrice,
+          channel: detail.courseConfig?.channel ?? "",
+          discount,
+          priceWithDiscount: discountedFrom(basePrice, discount),
+        }),
+      ]);
+    }
   }, [detail]);
 
   const buildBlocks = (): Record<string, unknown> => {
+    const coursePrice = Number(pricingRows[0]?.price) || Number(price) || 0;
     const body: Record<string, unknown> = {
       name: name.trim(),
       description: description.trim() || null,
       sku: sku.trim() || null,
-      price: Number(price) || 0,
+      price: kind === "COURSE" ? coursePrice : Number(price) || 0,
       unit: kind === "SERVICE" ? "serviço" : unit.trim() || "un",
       type: kind === "SERVICE" ? "SERVICE" : "PRODUCT",
       kind,
@@ -171,7 +270,16 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
       }));
     }
     if (kind === "COURSE") {
+      const pricingOptions = pricingRows.map((r) => ({
+        price: Number(r.price) || 0,
+        channel: r.channel.trim() || null,
+        discountPercent: r.discount === "" ? null : Number(r.discount),
+      }));
+      const first = pricingOptions[0];
       body.course = {
+        level: courseLevel || null,
+        grau: courseGrau.trim() || null,
+        semester: courseSemester === "" ? null : Number(courseSemester),
         mode: courseMode,
         postSalePipelineId: postSalePipelineId || null,
         classes: classes.map((c) => ({
@@ -180,6 +288,9 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
           endsAt: c.endsAt || null,
           location: c.location || null,
         })),
+        pricingOptions,
+        channel: first?.channel ?? null,
+        discountPercent: first?.discountPercent ?? null,
       };
     }
     return body;
@@ -205,7 +316,10 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
             name: name.trim(),
             kind,
             type: kind === "SERVICE" ? "SERVICE" : "PRODUCT",
-            price: Number(price) || 0,
+            price:
+              kind === "COURSE"
+                ? Number(pricingRows[0]?.price) || 0
+                : Number(price) || 0,
             unit:
               kind === "SERVICE"
                 ? "serviço"
@@ -323,11 +437,26 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
           {/* Campos base */}
           <div className={sectionClass}>
             <p className={sectionTitleClass}>Dados gerais</p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div
+              className={[
+                "grid gap-3",
+                kind === "COURSE" ? "sm:grid-cols-3" : "sm:grid-cols-2",
+              ].join(" ")}
+            >
               <div>
                 <Label>Nome *</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" />
               </div>
+              {kind === "COURSE" && (
+                <div>
+                  <Label>Grau</Label>
+                  <Input
+                    value={courseGrau}
+                    onChange={(e) => setCourseGrau(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              )}
               <div>
                 <Label>SKU / código</Label>
                 <Input value={sku} onChange={(e) => setSku(e.target.value)} className="mt-1" />
@@ -342,36 +471,132 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
                 className="mt-1"
               />
             </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
-              <div>
-                <Label>{kind === "SERVICE" ? "Valor base (R$)" : "Preço base (R$)"}</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              {kind === "PHYSICAL" && (
-                <div>
-                  <Label>Unidade</Label>
-                  <Input value={unit} onChange={(e) => setUnit(e.target.value)} className="mt-1" />
+            {kind === "COURSE" ? (
+              <div className="mt-3 space-y-3">
+                {pricingRows.map((row, idx) => (
+                  <div key={row.key} className="space-y-2">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+                      <div className="min-w-0">
+                        {idx === 0 && <Label>Preço base (R$)</Label>}
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={row.price}
+                          onChange={(e) => updatePricingRow(row.key, { price: e.target.value })}
+                          className={idx === 0 ? "mt-1" : undefined}
+                          aria-label={`Preço base linha ${idx + 1}`}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        {idx === 0 && <Label>Canal</Label>}
+                        <Input
+                          value={row.channel}
+                          onChange={(e) => updatePricingRow(row.key, { channel: e.target.value })}
+                          className={idx === 0 ? "mt-1" : undefined}
+                          placeholder="ex.: WhatsApp"
+                          aria-label={`Canal linha ${idx + 1}`}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        {idx === 0 && <Label>Desconto (%)</Label>}
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={row.discount}
+                          onChange={(e) => updatePricingRow(row.key, { discount: e.target.value })}
+                          className={idx === 0 ? "mt-1" : undefined}
+                          aria-label={`Desconto linha ${idx + 1}`}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        {idx === 0 && <Label>Valor com desconto (R$)</Label>}
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={row.priceWithDiscount}
+                          onChange={(e) =>
+                            updatePricingRow(row.key, { priceWithDiscount: e.target.value })
+                          }
+                          className={idx === 0 ? "mt-1" : undefined}
+                          aria-label={`Valor com desconto linha ${idx + 1}`}
+                        />
+                      </div>
+                      <div className={idx === 0 ? "flex items-end" : "flex items-center"}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={pricingRows.length <= 1}
+                          onClick={() =>
+                            setPricingRows((rows) => rows.filter((r) => r.key !== row.key))
+                          }
+                          aria-label={`Remover opção de preço ${idx + 1}`}
+                          className="size-9 shrink-0 text-[var(--text-muted)] hover:text-[var(--color-danger)]"
+                        >
+                          <IconTrash size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => setPricingRows((rows) => [...rows, newPricingRow()])}
+                  >
+                    <IconPlus size={14} />
+                    Adicionar preço / canal
+                  </Button>
+                  <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
+                    <input
+                      type="checkbox"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                      className="size-4 rounded accent-[var(--brand-primary)]"
+                    />
+                    Ativo
+                  </label>
                 </div>
-              )}
-              <div className="flex items-end">
-                <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
-                  <input
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    className="size-4 rounded accent-[var(--brand-primary)]"
-                  />
-                  Ativo
-                </label>
               </div>
-            </div>
+            ) : (
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <Label>{kind === "SERVICE" ? "Valor base (R$)" : "Preço base (R$)"}</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                {kind === "PHYSICAL" && (
+                  <div>
+                    <Label>Unidade</Label>
+                    <Input value={unit} onChange={(e) => setUnit(e.target.value)} className="mt-1" />
+                  </div>
+                )}
+                <div className="flex items-end justify-end sm:col-start-3">
+                  <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
+                    <input
+                      type="checkbox"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                      className="size-4 rounded accent-[var(--brand-primary)]"
+                    />
+                    Ativo
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Catálogo (capacidades herdadas) */}
@@ -539,7 +764,22 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
               <p className={sectionTitleClass}>
                 <IconSchool size={14} /> Curso
               </p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <Label>Nível</Label>
+                  <DropdownGlass
+                    options={[
+                      { value: "", label: "— Selecione —" } as DropdownOption,
+                      ...(Object.keys(COURSE_LEVEL_LABEL) as CourseLevel[]).map((l) => ({
+                        value: l,
+                        label: COURSE_LEVEL_LABEL[l],
+                      })),
+                    ]}
+                    value={courseLevel}
+                    onValueChange={(v) => setCourseLevel((v as CourseLevel) || "")}
+                    triggerClassName="mt-1 h-9 w-full"
+                  />
+                </div>
                 <div>
                   <Label>Modalidade</Label>
                   <DropdownGlass
@@ -550,6 +790,22 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
                     value={courseMode}
                     onValueChange={(v) => setCourseMode(v as CourseMode)}
                     triggerClassName="mt-1 h-9 w-full"
+                  />
+                </div>
+                <div>
+                  <Label>Semestre</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    step={1}
+                    value={courseSemester}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "" || /^\d+$/.test(v)) setCourseSemester(v);
+                    }}
+                    className="mt-1"
+                    placeholder="ex.: 1"
                   />
                 </div>
                 <div>

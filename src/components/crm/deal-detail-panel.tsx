@@ -401,12 +401,19 @@ export function DealDetailPanel({
     })
   }, [])
 
-  // Detecção de viewport: < 768px (phone) empilha aside + chat verticalmente,
-  // ambos sempre visíveis (sem switcher). Desktop/tablet mantém o grid
-  // 2-colunas com resize.
+  // Detecção de viewport: < 768px (phone) usa switcher Chat | Negócio (só um
+  // painel por vez, paridade com o Inbox) — empilhar aside + chat cortava as
+  // mensagens. Desktop/tablet mantém o grid 2-colunas com resize.
   const isMobile = useIsMobile()
   // Mobile: esconde bottom nav global enquanto o chat do deal estiver aberto.
   useMobileChatChrome(Boolean(isOpen && (messagesSlot || composerSlot || sessionAlertSlot)))
+
+  // Switcher mobile Chat/Negócio — default Chat, resetado a cada novo deal
+  // ou reabertura do painel.
+  const [mobilePaneTab, setMobilePaneTab] = useState<"chat" | "negocio">("chat")
+  useEffect(() => {
+    if (isOpen) setMobilePaneTab("chat")
+  }, [deal?.id, isOpen])
 
   // DD8 do questionario: respeitar visibilidade de blocos configurada via
   // FieldConfigPanel admin (PUT /api/field-layout, context=deal_panel_v2).
@@ -734,9 +741,50 @@ export function DealDetailPanel({
             editar contato, chip de conexão) foram realocados para o hero. */}
 
         {/* 2 COLS (desktop/tablet ≥768px): SIDEBAR + CONTENT com resize
-            horizontal. Phone (< 768px): pilha vertical, aside + chat SEMPRE
-            visíveis juntos (sem switcher) — campos ficam a um scroll de
-            distância em vez de escondidos numa aba "Detalhes". */}
+            horizontal. Phone (< 768px): switcher Chat | Negócio — só um
+            painel por vez (paridade com o Inbox), já que empilhar aside +
+            chat cortava as mensagens em telas pequenas. */}
+        {isMobile && (
+          <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-1.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-1.5 py-1 text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+            >
+              <IconArrowLeft size={14} stroke={2} />
+              Voltar
+            </button>
+            <div className="min-w-0 flex-1" />
+            <div className="flex shrink-0 items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+              <button
+                type="button"
+                onClick={() => setMobilePaneTab("chat")}
+                className={cn(
+                  "flex items-center gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 py-1 text-[11px] font-semibold transition-colors",
+                  mobilePaneTab === "chat"
+                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                )}
+              >
+                <IconMessageCircle size={13} stroke={2} />
+                Chat
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobilePaneTab("negocio")}
+                className={cn(
+                  "flex items-center gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 py-1 text-[11px] font-semibold transition-colors",
+                  mobilePaneTab === "negocio"
+                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                )}
+              >
+                <IconBriefcase size={13} stroke={2} />
+                Negócio
+              </button>
+            </div>
+          </div>
+        )}
         <div
           className={cn(
             "min-h-0 flex-1 overflow-hidden",
@@ -751,11 +799,12 @@ export function DealDetailPanel({
               : undefined
           }
         >
+          {(!isMobile || mobilePaneTab === "negocio") && (
           <aside
             aria-label="Detalhes do negócio"
             className={cn(
               "flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
-              isMobile && "max-h-[42vh] h-auto shrink-0",
+              isMobile && "flex-1",
             )}
           >
             {/* Cabeçalho fixo: hero do negócio — paridade visual com o
@@ -1348,6 +1397,7 @@ export function DealDetailPanel({
                   ContactAside do inbox, que ja tinha produtos arrastaveis. */}
             </div>
           </aside>
+          )}
 
           {/* Handle de resize — desktop/tablet only */}
           {!isMobile && (
@@ -1405,8 +1455,10 @@ export function DealDetailPanel({
           </div>
           )}
 
-          {/* CONTENT — chat, sempre visível junto com o aside */}
-          {tabContentOverride?.[activeTab] ? (
+          {/* CONTENT — chat. Desktop: sempre visível junto com o aside.
+              Mobile: só quando a aba "Chat" do switcher está ativa. */}
+          {(!isMobile || mobilePaneTab === "chat") && (
+          tabContentOverride?.[activeTab] ? (
             <main
               aria-label={activeTab}
               className={cn(
@@ -1505,6 +1557,7 @@ export function DealDetailPanel({
                 />
               </div>
             </main>
+          )
           )}
         </div>
       </div>

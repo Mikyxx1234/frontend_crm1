@@ -23,6 +23,19 @@ export const COURSE_MODE_LABEL: Record<CourseMode, string> = {
   HYBRID: "Híbrido",
 };
 
+export type CourseLevel = "GRADUATION" | "POSTGRADUATE";
+export const COURSE_LEVEL_LABEL: Record<CourseLevel, string> = {
+  GRADUATION: "Graduação",
+  POSTGRADUATE: "Pós-Graduação",
+};
+
+/** Uma opção de preço/canal do curso (várias por produto). */
+export type CoursePricingOption = {
+  price: number;
+  channel: string | null;
+  discountPercent: number | null;
+};
+
 export type StakeholderChannel = "WHATSAPP" | "EMAIL";
 
 export type OrgUnit = {
@@ -123,7 +136,13 @@ export type ProductDetail = {
   courseConfig: {
     id: string;
     mode: CourseMode;
+    level: CourseLevel | null;
+    grau: string | null;
+    semester: number | null;
     postSalePipelineId: string | null;
+    channel: string | null;
+    discountPercent: number | string | null;
+    pricingOptions?: CoursePricingOption[] | null;
     classes: CourseClass[];
   } | null;
   stakeholders: Stakeholder[];

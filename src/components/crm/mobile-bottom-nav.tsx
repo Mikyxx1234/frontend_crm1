@@ -21,7 +21,6 @@ import {
   useAgentStatus,
   useAgentStatusAutoPrompt,
 } from "@/components/crm/agent-status";
-import { MobileBottomNavChrome } from "@/components/crm/mobile-bottom-nav-chrome";
 import { MobileMoreSheet } from "@/components/crm/mobile-more-sheet";
 import { MobileModuleIcon } from "@/components/layout/mobile-module-icon";
 import { useMobileLayout } from "@/hooks/use-mobile-layout";
@@ -65,13 +64,6 @@ function computeActiveHrefs(pathname: string, hrefs: readonly string[]): Set<str
 }
 
 export function MobileBottomNav() {
-  const { config } = useMobileLayout();
-  const { isManagerUp } = useUserRole();
-
-  if (config.visualChrome && isManagerUp) {
-    return <MobileBottomNavChrome />;
-  }
-
   return <MobileBottomNavClassic />;
 }
 

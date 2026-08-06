@@ -971,6 +971,27 @@ export default function InboxV2ClientPage({
     />
   );
 
+  // Variante compacta para a barra mobile (Voltar | busca | Chat/Negócio).
+  // Instância separada — estado de busca/filtros vive no pai; não montar
+  // junto com `inboxSearchFilterNode` na mesma branch visual.
+  const compactInboxSearchFilterNode = (
+    <InboxSearchFilterBar
+      search={searchInput}
+      onSearch={setSearchInput}
+      filters={filters}
+      onChangeFilters={setFilters}
+      placeholder="Buscar..."
+      className={cn(
+        "min-w-0",
+        "[&_input]:h-8 [&_input]:pl-7 [&_input]:pr-8 [&_input]:text-[10px] [&_input]:leading-none [&_input]:shadow-none",
+        "[&>svg]:left-2 [&>svg]:size-[13px]",
+        // w-auto libera espaço para o badge de contagem de filtros ativos
+        "[&_button]:right-0.5 [&_button]:h-6 [&_button]:min-w-6 [&_button]:w-auto [&_button]:gap-0 [&_button]:px-1",
+        "[&_button_svg]:size-[13px]",
+      )}
+    />
+  );
+
   // Aviso sonoro por mensagem recebida — o botão só (des)liga a preferência
   // (persistida no localStorage). O ping em si toca no useInboxRealtime.
   const [soundMuted, setSoundMuted] = useInboxSoundMuted();
@@ -1637,8 +1658,7 @@ export default function InboxV2ClientPage({
               <PageHeader
                 icon={pageHeader.icon}
                 title={pageHeader.title}
-                center={inboxSearchFilterNode}
-                actions={collapseHeaderBtn}
+                center={activeId ? undefined : inboxSearchFilterNode}
               />,
             )}
             {!activeId ? (
@@ -1647,41 +1667,44 @@ export default function InboxV2ClientPage({
               </div>
             ) : (
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
-                <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
+                {/* Barra compacta: Voltar | busca/filtro | Chat | Negócio */}
+                <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-1.5">
                   <button
                     type="button"
                     onClick={() => setActiveId(null)}
-                    className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                    className="flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-1.5 py-1 text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
                   >
-                    <IconArrowLeft size={16} stroke={2} />
+                    <IconArrowLeft size={14} stroke={2} />
                     Voltar
                   </button>
-                  <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+                  <div className="min-w-0 flex-1">
+                    {compactInboxSearchFilterNode}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
                     <button
                       type="button"
                       onClick={() => setMobilePaneTab("chat")}
                       className={cn(
-                        "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                        "flex items-center gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 py-1 text-[11px] font-semibold transition-colors",
                         mobilePaneTab === "chat"
                           ? "bg-[var(--brand-primary)] text-white shadow-sm"
                           : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
                       )}
                     >
-                      <IconMessageCircle size={14} stroke={2} />
+                      <IconMessageCircle size={13} stroke={2} />
                       Chat
                     </button>
                     <button
                       type="button"
                       onClick={() => setMobilePaneTab("negocio")}
                       className={cn(
-                        "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                        "flex items-center gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 py-1 text-[11px] font-semibold transition-colors",
                         mobilePaneTab === "negocio"
                           ? "bg-[var(--brand-primary)] text-white shadow-sm"
                           : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
                       )}
                     >
-                      <IconBriefcase size={14} stroke={2} />
+                      <IconBriefcase size={13} stroke={2} />
                       Negócio
                     </button>
                   </div>
@@ -1761,41 +1784,44 @@ export default function InboxV2ClientPage({
             </div>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
-              <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
+              {/* Barra compacta: Voltar | busca/filtro | Chat | Negócio */}
+              <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-1.5">
                 <button
                   type="button"
                   onClick={() => setActiveId(null)}
-                  className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                  className="flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-1.5 py-1 text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
                 >
-                  <IconArrowLeft size={16} stroke={2} />
+                  <IconArrowLeft size={14} stroke={2} />
                   Voltar
                 </button>
-                <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+                <div className="min-w-0 flex-1">
+                  {compactInboxSearchFilterNode}
+                </div>
+                <div className="flex shrink-0 items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
                   <button
                     type="button"
                     onClick={() => setMobilePaneTab("chat")}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                      "flex items-center gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 py-1 text-[11px] font-semibold transition-colors",
                       mobilePaneTab === "chat"
                         ? "bg-[var(--brand-primary)] text-white shadow-sm"
                         : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
                     )}
                   >
-                    <IconMessageCircle size={14} stroke={2} />
+                    <IconMessageCircle size={13} stroke={2} />
                     Chat
                   </button>
                   <button
                     type="button"
                     onClick={() => setMobilePaneTab("negocio")}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                      "flex items-center gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 py-1 text-[11px] font-semibold transition-colors",
                       mobilePaneTab === "negocio"
                         ? "bg-[var(--brand-primary)] text-white shadow-sm"
                         : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
                     )}
                   >
-                    <IconBriefcase size={14} stroke={2} />
+                    <IconBriefcase size={13} stroke={2} />
                     Negócio
                   </button>
                 </div>

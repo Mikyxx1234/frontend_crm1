@@ -1,6 +1,6 @@
 "use client";
 
-import { IconActivity as Activity, IconChartBar as BarChart3, IconBuilding as Building2, IconSquareCheck as CheckSquare, IconLayoutDashboard as LayoutDashboard, IconLayoutKanban as Kanban, IconSpeakerphone as Megaphone, IconMessage as MessageSquare, IconSettings as Settings, IconUserCircle as UserCircle2, IconUsers as Users, IconBolt as Zap } from "@tabler/icons-react"
+import { IconActivity as Activity, IconChartBar as BarChart3, IconBuilding as Building2, IconSquareCheck as CheckSquare, IconLayoutDashboard as LayoutDashboard, IconLayoutKanban as Kanban, IconSpeakerphone as Megaphone, IconMessage as MessageSquare, IconArrowsShuffle as Shuffle, IconSettings as Settings, IconUserCircle as UserCircle2, IconUsers as Users, IconBolt as Zap } from "@tabler/icons-react"
 import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 /**
@@ -19,6 +19,7 @@ const REGISTRY: Record<string, LucideIcon> = {
   Building2,
   Megaphone,
   Zap,
+  Shuffle,
   BarChart3,
   Activity,
   Settings,

@@ -700,18 +700,11 @@ function ResponsiblesCardList({
   }
 
   return (
-    <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-      <div className="flex min-w-[1040px] flex-col gap-1.5">
-        <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-2.5 border border-transparent px-3 py-1.5"))}>
-          <ListColumnLabel>Responsável</ListColumnLabel>
-          <ListColumnLabel>Presença</ListColumnLabel>
-          <ListColumnLabel className="text-center">Fila</ListColumnLabel>
-          <ListColumnLabel className="text-center">Volume</ListColumnLabel>
-          <ListColumnLabel>Elegibilidade</ListColumnLabel>
-          <ListColumnLabel align="right">Ações</ListColumnLabel>
-        </div>
+    <>
+      {/* Mobile / APK: lista de cards empilhados — sem scroll horizontal forçado. */}
+      <ul className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] md:hidden">
         {responsibles.map((r) => (
-          <ResponsibleCard
+          <ResponsibleMobileCard
             key={r.userId}
             r={r}
             isCurrentUser={r.userId === currentUserId}
@@ -721,8 +714,33 @@ function ResponsiblesCardList({
             onRedistribute={onRedistribute}
           />
         ))}
+      </ul>
+
+      {/* Desktop: grid tabular com scroll horizontal se necessário. */}
+      <div className="scrollbar-thin hidden min-h-0 flex-1 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch] md:flex md:flex-col">
+        <div className="flex min-w-[1040px] flex-col gap-1.5">
+          <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-2.5 border border-transparent px-3 py-1.5"))}>
+            <ListColumnLabel>Responsável</ListColumnLabel>
+            <ListColumnLabel>Presença</ListColumnLabel>
+            <ListColumnLabel className="text-center">Fila</ListColumnLabel>
+            <ListColumnLabel className="text-center">Volume</ListColumnLabel>
+            <ListColumnLabel>Elegibilidade</ListColumnLabel>
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
+          </div>
+          {responsibles.map((r) => (
+            <ResponsibleCard
+              key={r.userId}
+              r={r}
+              isCurrentUser={r.userId === currentUserId}
+              currentUserImage={currentUserImage}
+              canManage={canManage}
+              onEdit={onEdit}
+              onRedistribute={onRedistribute}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -895,6 +913,198 @@ function ResponsibleCard({
         )}
       </div>
     </div>
+  );
+}
+
+function ResponsibleMobileCard({
+  r,
+  isCurrentUser,
+  currentUserImage,
+  canManage,
+  onEdit,
+  onRedistribute,
+}: {
+  r: DistributionResponsibleDto;
+  isCurrentUser: boolean;
+  currentUserImage: string | null;
+  canManage: boolean;
+  onEdit: (r: DistributionResponsibleDto) => void;
+  onRedistribute: (r: DistributionResponsibleDto) => void;
+}) {
+  const statusMut = useSetAgentStatus();
+  const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
+  const canTogglePresence = isCurrentUser || canManage;
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const togglePresence = () => {
+    statusMut.mutate(
+      { userId: r.userId, status: isOnline ? "OFFLINE" : "ONLINE" },
+      { onError: (e) => toast.error(e.message || "Erro ao alterar status.") },
+    );
+  };
+
+  const deptLabel =
+    r.departments && r.departments.length > 0
+      ? r.departments.map((d) => d.name).join(", ")
+      : "Sem departamento";
+  const metaLine = [r.email ?? "—", r.role, deptLabel].filter(Boolean).join(" · ");
+
+  const blockedText =
+    !r.eligible && r.blockedReasons.length > 0
+      ? r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")
+      : null;
+  const scheduleAlert = r.schedule
+    ? resolveSchedulePresenceAlert({
+        schedule: r.schedule,
+        preMinutes: r.preLunchStopMinutes ?? 30,
+        now,
+      })
+    : null;
+  const hintParts = [blockedText, scheduleAlert?.label].filter(Boolean) as string[];
+  const hintTitle = [blockedText, scheduleAlert?.title].filter(Boolean).join(" · ");
+
+  const toggleLabel = isOnline ? "Offline" : "Online";
+  const toggleAria = isOnline ? "Ficar offline" : "Ficar online";
+
+  return (
+    <li className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-2 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-colors hover:bg-[var(--glass-bg-overlay)] active:bg-[var(--glass-bg-overlay)]">
+      {/* Cabeçalho: identidade + presença/toggle + ações */}
+      <div className="flex min-w-0 items-start gap-1.5">
+        <span className="relative isolate mt-0.5 shrink-0">
+          <UserAvatar
+            name={r.name ?? r.email}
+            imageUrl={r.avatarUrl ?? (isCurrentUser ? currentUserImage : null)}
+            size={28}
+          />
+          <AgentStatusDot
+            status={
+              (!r.participates
+                ? "OFFLINE"
+                : r.paused || r.status === "AWAY"
+                  ? "AWAY"
+                  : isOnline
+                    ? "ONLINE"
+                    : "OFFLINE") satisfies AgentOnlineStatus
+            }
+            size={9}
+            borderWidth={2}
+            borderColor="var(--glass-bg-base)"
+          />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1">
+            <p className="min-w-0 truncate font-display text-[12px] font-bold leading-tight text-[var(--text-primary)]">
+              {r.name ?? "Sem nome"}
+            </p>
+            <SystemPresenceIndicator
+              systemOnline={r.systemOnline}
+              lastSeenAt={r.lastSeenAt}
+            />
+            {isCurrentUser && (
+              <span className="shrink-0 rounded-full bg-[var(--color-primary-soft)] px-1 py-px font-display text-[8px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                Você
+              </span>
+            )}
+          </div>
+          <p
+            className="mt-px truncate font-body text-[9px] leading-tight text-[var(--text-muted)]"
+            title={metaLine}
+          >
+            {metaLine}
+          </p>
+          <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1">
+            <span className="origin-left scale-90">
+              <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
+            </span>
+            {canTogglePresence && r.participates && (
+              <button
+                type="button"
+                onClick={togglePresence}
+                disabled={statusMut.isPending}
+                title={toggleAria}
+                aria-label={toggleAria}
+                className="touch-target shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[9px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+              >
+                {statusMut.isPending ? "…" : toggleLabel}
+              </button>
+            )}
+          </div>
+        </div>
+        {canManage && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            {r.queueCount > 0 && (
+              <button
+                type="button"
+                onClick={() => onRedistribute(r)}
+                className="touch-target inline-flex size-8 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+                title="Redistribuir fila deste consultor"
+                aria-label="Redistribuir fila deste consultor"
+              >
+                <IconArrowsShuffle size={14} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => onEdit(r)}
+              className="touch-target inline-flex size-8 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+              title="Editar responsável"
+              aria-label="Editar responsável"
+            >
+              <IconPencil size={14} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {hintParts.length > 0 && (
+        <p
+          className="mt-1 truncate font-body text-[8.5px] leading-tight text-[var(--text-muted)]"
+          title={hintTitle}
+        >
+          {hintParts.join(" · ")}
+        </p>
+      )}
+
+      {/* Métricas — faixa full-width centralizada */}
+      <div className="mt-1.5 grid w-full grid-cols-3 divide-x divide-[var(--glass-border)] rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-1.5">
+        <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-center">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Fila
+          </p>
+          <p className="font-display text-[12px] font-extrabold leading-none text-[var(--text-primary)]">
+            {r.queueCount}
+          </p>
+        </div>
+        <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-center">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Volume
+          </p>
+          <p className="font-display text-[12px] font-extrabold leading-none text-[var(--text-primary)]">
+            {r.queueLimit > 0 ? r.queueLimit : "∞"}
+          </p>
+        </div>
+        <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-center">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Elegibilidade
+          </p>
+          {r.eligible ? (
+            <span className="inline-flex max-w-full items-center justify-center gap-0.5 font-display text-[12px] font-bold leading-none text-[var(--color-success-dark,#0f7a5a)]">
+              <IconCircleCheck size={12} className="shrink-0" />
+              <span className="truncate">Elegível</span>
+            </span>
+          ) : (
+            <span className="inline-flex max-w-full items-center justify-center gap-0.5 font-display text-[12px] font-bold leading-none text-[var(--color-danger-text)]">
+              <IconAlertTriangle size={12} className="shrink-0" />
+              <span className="truncate">Indisp.</span>
+            </span>
+          )}
+        </div>
+      </div>
+    </li>
   );
 }
 

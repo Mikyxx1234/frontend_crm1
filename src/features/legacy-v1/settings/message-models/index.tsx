@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
-import { KpiCard } from "@/components/crm/kpi-card";
+import { KpiCard, KpiSquareScroll } from "@/components/crm/kpi-card";
 import {
   Dialog,
   DialogContent,
@@ -502,6 +502,75 @@ export default function MessageModelsHubPage() {
     };
   }, [headerSlots, searchNode, actionsNode]);
 
+  const overviewKpis = [
+    {
+      key: "total",
+      label: "Total modelos",
+      value: totalCount.toLocaleString("pt-BR"),
+      icon: <LayoutTemplate className="size-5" />,
+      tone: "brand" as const,
+    },
+    {
+      key: "internal",
+      label: "Internos",
+      value: internalCount.toLocaleString("pt-BR"),
+      icon: <FileText className="size-5" />,
+      tone: "violet" as const,
+    },
+    {
+      key: "wa-approved",
+      label: "WhatsApp aprovados",
+      value: metaApproved.toLocaleString("pt-BR"),
+      icon: <CheckCircle2 className="size-5" />,
+      tone: "success" as const,
+    },
+    {
+      key: "wa-pending",
+      label: "Aguardando Meta",
+      value: metaPending.toLocaleString("pt-BR"),
+      icon: <Clock className="size-5" />,
+      tone: "warning" as const,
+    },
+    {
+      key: "flows-pub",
+      label: "Flows publicados",
+      value: flowPublished.toLocaleString("pt-BR"),
+      icon: <Workflow className="size-5" />,
+      tone: "neutral" as const,
+    },
+  ];
+
+  const flowKpis = [
+    {
+      key: "total",
+      label: "Flows no total",
+      value: flowCount.toLocaleString("pt-BR"),
+      icon: <Workflow className="size-5" />,
+      tone: "brand" as const,
+    },
+    {
+      key: "published",
+      label: "Publicados",
+      value: flowPublished.toLocaleString("pt-BR"),
+      icon: <CheckCircle2 className="size-5" />,
+      tone: "success" as const,
+    },
+    {
+      key: "draft",
+      label: "Rascunhos",
+      value: flowDraft.toLocaleString("pt-BR"),
+      icon: <FileText className="size-5" />,
+      tone: "warning" as const,
+    },
+    {
+      key: "meta-id",
+      label: "Com Meta flow id",
+      value: flowWithMeta.toLocaleString("pt-BR"),
+      icon: <LayoutTemplate className="size-5" />,
+      tone: "violet" as const,
+    },
+  ];
+
   return (
     <div className="min-w-0 w-full max-w-full space-y-3 sm:space-y-4">
       {!headerSlots ? (
@@ -526,40 +595,19 @@ export default function MessageModelsHubPage() {
 
       {safeTab === "overview" && (
         <div className="space-y-4">
-          <section
-            className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
-            aria-label="Indicadores de modelos de mensagem"
-          >
-            <KpiCard
-              label="Total modelos"
-              value={totalCount.toLocaleString("pt-BR")}
-              icon={<LayoutTemplate className="size-5" />}
-              tone="brand"
-            />
-            <KpiCard
-              label="Internos"
-              value={internalCount.toLocaleString("pt-BR")}
-              icon={<FileText className="size-5" />}
-              tone="violet"
-            />
-            <KpiCard
-              label="WhatsApp aprovados"
-              value={metaApproved.toLocaleString("pt-BR")}
-              icon={<CheckCircle2 className="size-5" />}
-              tone="success"
-            />
-            <KpiCard
-              label="Aguardando Meta"
-              value={metaPending.toLocaleString("pt-BR")}
-              icon={<Clock className="size-5" />}
-              tone="warning"
-            />
-            <KpiCard
-              label="Flows publicados"
-              value={flowPublished.toLocaleString("pt-BR")}
-              icon={<Workflow className="size-5" />}
-              tone="neutral"
-            />
+          <section className="shrink-0" aria-label="Indicadores de modelos de mensagem">
+            <KpiSquareScroll items={overviewKpis} />
+            <div className="hidden gap-2.5 sm:gap-3.5 lg:grid lg:grid-cols-5">
+              {overviewKpis.map((kpi) => (
+                <KpiCard
+                  key={kpi.key}
+                  label={kpi.label}
+                  value={kpi.value}
+                  icon={kpi.icon}
+                  tone={kpi.tone}
+                />
+              ))}
+            </div>
           </section>
 
           {loadingInt || loadingMeta || loadingFlows ? (
@@ -674,34 +722,19 @@ export default function MessageModelsHubPage() {
             nos templates da Meta.
           </HubSubHeader>
 
-          <section
-            className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-5"
-            aria-label="Indicadores de flows"
-          >
-            <KpiCard
-              label="Flows no total"
-              value={flowCount.toLocaleString("pt-BR")}
-              icon={<Workflow className="size-5" />}
-              tone="brand"
-            />
-            <KpiCard
-              label="Publicados"
-              value={flowPublished.toLocaleString("pt-BR")}
-              icon={<CheckCircle2 className="size-5" />}
-              tone="success"
-            />
-            <KpiCard
-              label="Rascunhos"
-              value={flowDraft.toLocaleString("pt-BR")}
-              icon={<FileText className="size-5" />}
-              tone="warning"
-            />
-            <KpiCard
-              label="Com Meta flow id"
-              value={flowWithMeta.toLocaleString("pt-BR")}
-              icon={<LayoutTemplate className="size-5" />}
-              tone="violet"
-            />
+          <section className="shrink-0" aria-label="Indicadores de flows">
+            <KpiSquareScroll items={flowKpis} />
+            <div className="hidden gap-2.5 sm:gap-3.5 lg:grid lg:grid-cols-5">
+              {flowKpis.map((kpi) => (
+                <KpiCard
+                  key={kpi.key}
+                  label={kpi.label}
+                  value={kpi.value}
+                  icon={kpi.icon}
+                  tone={kpi.tone}
+                />
+              ))}
+            </div>
           </section>
 
           <HubCallout tone="info" icon={<Info className="size-[18px]" />}>

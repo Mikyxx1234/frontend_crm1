@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 import { MobileModuleIcon } from "@/components/layout/mobile-module-icon";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
-import { Switch } from "@/components/ui/switch";
 import {
   MOBILE_LAYOUT_QUERY_KEY,
   useMobileLayout,
@@ -42,8 +41,9 @@ import { cn } from "@/lib/utils";
  *     funcionam perfeitamente em mobile e teclado, sao acessiveis
  *     por padrao e mantem bundle leve. Se o usuario pedir DnD
  *     "real" depois, refatoramos.
- *   - Limite de 4 modulos no bottom nav (BOTTOM_NAV_MAX) imposto
- *     visualmente: 5o toggle aparece desabilitado com tooltip.
+ *   - Sem limite fixo de modulos no bottom nav: o admin pode pinar
+ *     todo o catalogo habilitado. Se os icones nao couberem na largura
+ *     da tela, a barra do app faz scroll horizontal (nao corta itens).
  *   - Inbox e `required` -> toggle bloqueado (cadeado).
  */
 
@@ -58,7 +58,6 @@ export function MobileLayoutClientPage() {
   const { config, isLoading } = useMobileLayout();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<ModuleState[]>([]);
-  const [visualChrome, setVisualChrome] = useState(false);
   const [saved, setSaved] = useState(false);
 
   // Sincroniza draft quando config carrega/refetcha. Usamos
@@ -76,14 +75,12 @@ export function MobileLayoutClientPage() {
         bottomNavOrder: navOrder.get(m.id) ?? -1,
       })),
     );
-    setVisualChrome(config.visualChrome ?? false);
-  }, [config.version, isLoading, config.bottomNav, config.enabled, config.visualChrome]);
+  }, [config.version, isLoading, config.bottomNav, config.enabled]);
 
   const saveMutation = useMutation({
     mutationFn: async (payload: {
       bottomNav: MobileModuleId[];
       enabled: MobileModuleId[];
-      visualChrome: boolean;
     }) => {
       const res = await fetch(apiUrl("/api/mobile-layout"), {
         method: "PUT",
@@ -180,25 +177,22 @@ export function MobileLayoutClientPage() {
         bottomNavOrder: navSet.has(m.id) ? DEFAULT_BOTTOM_NAV.indexOf(m.id) : -1,
       })),
     );
-    setVisualChrome(false);
   }
 
   function save() {
     const enabled = draft.filter((d) => d.enabled).map((d) => d.id);
     const bottomNav = orderedBottomNav.map((d) => d.id);
-    saveMutation.mutate({ bottomNav, enabled, visualChrome });
+    saveMutation.mutate({ bottomNav, enabled });
   }
 
   const dirty =
     JSON.stringify({
       e: draft.filter((d) => d.enabled).map((d) => d.id).sort(),
       b: orderedBottomNav.map((d) => d.id),
-      c: visualChrome,
     }) !==
     JSON.stringify({
       e: [...config.enabled].sort(),
       b: config.bottomNav,
-      c: config.visualChrome ?? false,
     });
 
   return (
@@ -207,26 +201,6 @@ export function MobileLayoutClientPage() {
       <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-[1fr_360px]">
         {/* COLUNA ESQUERDA — Catalogo de modulos */}
         <div className="space-y-6">
-          <GlassCard variant="overlay" className="min-w-0 p-4 sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
-                  Visual Chrome
-                </h2>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Barra horizontal com todos os módulos do CRM (como no desktop).
-                  Disponível para administradores e gestores no app.
-                </p>
-              </div>
-              <Switch
-                checked={visualChrome}
-                onCheckedChange={setVisualChrome}
-                aria-label="Ativar Visual Chrome"
-                className="mt-1 shrink-0"
-              />
-            </div>
-          </GlassCard>
-
           {/* Bottom nav editor */}
           <GlassCard variant="overlay" className="min-w-0 p-4 sm:p-6">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -235,7 +209,8 @@ export function MobileLayoutClientPage() {
                   Barra inferior do app
                 </h2>
                 <p className="text-sm text-[var(--text-muted)]">
-                  Até {BOTTOM_NAV_MAX} módulos · usados {bottomNavCount}
+                  {bottomNavCount} módulo{bottomNavCount === 1 ? "" : "s"} na barra · role
+                  horizontalmente se não couberem todos na tela
                 </p>
               </div>
               <ButtonGlass
@@ -371,7 +346,7 @@ export function MobileLayoutClientPage() {
                           type="button"
                           onClick={() => toggleBottomNav(d.id)}
                           disabled={!canPromote}
-                          title={!canPromote ? `Limite de ${BOTTOM_NAV_MAX} no menu inferior` : ""}
+                          title={!canPromote ? "Limite de módulos do catálogo atingido" : ""}
                           className={cn(
                             "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors",
                             canPromote

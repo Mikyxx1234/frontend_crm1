@@ -421,6 +421,22 @@
   --chat-bg: transparent;
   --chat-bubble-received-text: #1e2a3b;
   --chat-bubble-received-time: #4b5563;
+  /* Campanha — teal/emerald, distinto da bolha enviada e da automação cinza */
+  --chat-bubble-campaign-bg: #d1fae5;
+  --chat-bubble-campaign-text: #064e3b;
+  --chat-bubble-campaign-border: #6ee7b7;
+  --chat-bubble-campaign-badge-bg: rgba(6, 78, 59, 0.12);
+  --chat-bubble-campaign-badge-text: #047857;
+}
+
+/* Dark: `.dark` (next-themes) e `.v2-dark` (tema CRM v2) */
+.dark,
+.v2-dark {
+  --chat-bubble-campaign-bg: #134e4a;
+  --chat-bubble-campaign-text: #ecfdf5;
+  --chat-bubble-campaign-border: rgba(45, 212, 191, 0.35);
+  --chat-bubble-campaign-badge-bg: rgba(236, 253, 245, 0.14);
+  --chat-bubble-campaign-badge-text: #99f6e4;
 }
 
 [data-chat-theme="whatsapp"] {

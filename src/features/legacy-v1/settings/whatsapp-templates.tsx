@@ -563,11 +563,11 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
         </div>
       </HubSubHeader>
 
-      <HubStatGrid>
-        <HubStat tone="success" icon={<CheckCircle2 className="size-5" />} value={countApproved} label="Aprovados pela Meta" />
-        <HubStat tone="warn" icon={<Clock className="size-5" />} value={countPending} label="Em revisão" />
-        <HubStat tone="brand" icon={<MessageSquare className="size-5" />} value={rows.length} label="Templates na WABA" />
-        <HubStat tone="violet" icon={<UserCheck className="size-5" />} value={countAgent} label="Habilitados p/ Agente" />
+      <HubStatGrid mobileCompact>
+        <HubStat mobileCompact tone="success" icon={<CheckCircle2 className="size-5" />} value={countApproved} label="Aprovados pela Meta" />
+        <HubStat mobileCompact tone="warn" icon={<Clock className="size-5" />} value={countPending} label="Em revisão" />
+        <HubStat mobileCompact tone="brand" icon={<MessageSquare className="size-5" />} value={rows.length} label="Templates na WABA" />
+        <HubStat mobileCompact tone="violet" icon={<UserCheck className="size-5" />} value={countAgent} label="Habilitados p/ Agente" />
       </HubStatGrid>
 
       {isError ? (

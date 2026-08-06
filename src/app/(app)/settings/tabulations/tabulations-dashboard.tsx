@@ -115,7 +115,10 @@ export function TabulationsDashboard() {
 
   return (
     <div className="flex flex-col gap-4">
-      <GlassCard className="flex flex-wrap items-end gap-3 p-3.5">
+      {/* z-30: o calendário do período é absolute dentro deste card, e o
+          backdrop-blur do card cria um contexto de empilhamento — sem isso a
+          faixa de KPIs (irmã seguinte) desenha por cima do popover. */}
+      <GlassCard className="relative z-30 flex flex-wrap items-end gap-3 p-3.5">
         <div className="flex min-w-[220px] flex-col gap-1">
           <span className="text-[11px] font-medium text-[var(--text-muted)]">
             Período
@@ -184,6 +187,15 @@ export function TabulationsDashboard() {
           Atualizar
         </ButtonGlass>
       </GlassCard>
+
+      {/* Sem isto uma falha na API fica idêntica a "período sem tabulação":
+          os KPIs caem no traço e as listas mostram estado vazio. */}
+      {analyticsQuery.isError && (
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/8 px-3.5 py-2.5 font-body text-[12.5px] text-[var(--color-danger)]">
+          {(analyticsQuery.error as Error).message} — os números abaixo não
+          refletem o período.
+        </div>
+      )}
 
       <KpiStrip aria-label="Indicadores de tabulações">
         <KpiCard

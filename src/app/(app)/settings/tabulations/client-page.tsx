@@ -65,8 +65,25 @@ type TabulationNode = {
 type TabulationsResponse = {
   departmentId: string;
   requireTabulationOnClose: boolean;
+  /** Folha aplicada quando quem encerra é a IA / uma automação. */
+  autoCloseTabulationId: string | null;
   tree: TabulationNode[];
 };
+
+/** Folhas achatadas com o caminho completo — opções do encerramento automático. */
+function leafOptions(
+  nodes: TabulationNode[],
+  parentPath: string[] = [],
+): { id: string; path: string }[] {
+  const out: { id: string; path: string }[] = [];
+  for (const n of nodes) {
+    if (!n.active) continue;
+    const path = [...parentPath, n.name];
+    if (n.children.length === 0) out.push({ id: n.id, path: path.join(" › ") });
+    else out.push(...leafOptions(n.children, path));
+  }
+  return out;
+}
 
 function tabulationsQueryKey(departmentId: string | null) {
   return ["settings", "tabulations", departmentId ?? ""] as const;
@@ -290,7 +307,9 @@ function TabulationsBody() {
   });
 
   const requireOnClose = treeQuery.data?.requireTabulationOnClose ?? false;
+  const autoCloseTabulationId = treeQuery.data?.autoCloseTabulationId ?? "";
   const tree = useMemo(() => treeQuery.data?.tree ?? [], [treeQuery.data?.tree]);
+  const leaves = useMemo(() => leafOptions(tree), [tree]);
   const nodeCount = useMemo(() => countNodes(tree), [tree]);
   const activeCount = useMemo(() => countActiveNodes(tree), [tree]);
   const leafCount = useMemo(() => countLeafNodes(tree), [tree]);
@@ -313,6 +332,30 @@ function TabulationsBody() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: tabulationsQueryKey(effectiveDeptId) });
     },
+  });
+
+  const setAutoClose = useMutation({
+    mutationFn: async (next: string | null) => {
+      if (!effectiveDeptId) throw new Error("Sem departamento");
+      const res = await fetch(apiUrl(`/api/settings/departments/${effectiveDeptId}`), {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoCloseTabulationId: next }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(
+          (err as { message?: string }).message ?? "Falha ao definir a tabulação",
+        );
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: tabulationsQueryKey(effectiveDeptId) });
+      qc.invalidateQueries({ queryKey: ["settings", "departments"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao salvar."),
   });
 
   const createNode = useMutation({
@@ -647,6 +690,40 @@ function TabulationsBody() {
               size="list"
               aria-label="Exigir tabulação ao encerrar"
             />
+          </div>
+
+          {/* Encerramento automático (IA / automação) não passa pelo modal do
+              agente. Sem esta folha, ele fecha sem tabular e some do
+              dashboard, mesmo com a exigência acima ligada. */}
+          <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+            <div className="font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
+              Tabulação no encerramento automático
+            </div>
+            <div className="mt-0.5 font-body text-[12px] text-[var(--text-muted)]">
+              Aplicada quando quem encerra é a IA ou uma automação, que não veem
+              o modal do agente. Sem definir, esses encerramentos ficam sem
+              tabulação e fora do dashboard.
+            </div>
+            <select
+              value={autoCloseTabulationId}
+              onChange={(e) => setAutoClose.mutate(e.target.value || null)}
+              disabled={setAutoClose.isPending || leaves.length === 0}
+              aria-label="Tabulação no encerramento automático"
+              className="mt-2.5 h-9 w-full max-w-[420px] rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 text-[12.5px] text-[var(--text-primary)] disabled:opacity-50"
+            >
+              <option value="">Não tabular</option>
+              {leaves.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.path}
+                </option>
+              ))}
+            </select>
+            {leaves.length === 0 ? (
+              <p className="mt-1.5 font-body text-[11.5px] text-[var(--text-muted)]">
+                Crie ao menos um nível final na árvore abaixo para poder
+                escolher.
+              </p>
+            ) : null}
           </div>
         </GlassCard>
       ) : null}

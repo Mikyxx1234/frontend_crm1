@@ -14,6 +14,7 @@ import {
 import { DealsDashboard } from "@/components/crm/dashboard/deals-dashboard";
 import { DashboardLayoutEditor } from "@/components/crm/dashboard/dashboard-layout-editor";
 import { ServiceOverview } from "@/components/crm/dashboard/service-overview";
+import { TabulationsDashboard } from "@/app/(app)/settings/tabulations/tabulations-dashboard";
 import { AgentsOnlineWidget } from "@/components/dashboard/widgets/agents-online-widget";
 import { useUserRole } from "@/hooks/use-user-role";
 import { IconUsers } from "@tabler/icons-react";
@@ -39,7 +40,16 @@ import { resolveDashboardBlocks } from "@/lib/dashboard-blocks-catalog";
  * segmento `/v2/*` (que injeta `<NavRailV2 />` com hrefs novos). Sem
  * nada passado, mantém o `<NavRail />` legado.
  */
-const DASHBOARD_TABS = ["Negócios", "Atendimento"] as const;
+const DASHBOARD_TABS = [
+  { key: "deals", label: "Negócios" },
+  { key: "service", label: "Atendimento" },
+  // Motivos de encerramento. Reaproveita a tela de settings inteira — ela já
+  // traz período/usuário/departamento próprios, por isso escondemos o filtro
+  // global nesta aba.
+  { key: "tabulations", label: "Tabulações" },
+] as const;
+
+type DashboardTabKey = (typeof DASHBOARD_TABS)[number]["key"];
 
 interface DashboardV2ClientPageProps {
   navRail?: React.ReactNode;
@@ -52,8 +62,15 @@ export default function DashboardV2ClientPage({
   const isAuthenticated = sessionStatus === "authenticated";
   const { isManagerUp } = useUserRole();
 
-  const [activeTab, setActiveTab] = useState(0);
-  const isDeals = activeTab === 0;
+  const [activeTab, setActiveTab] = useState<DashboardTabKey>("deals");
+  const isDeals = activeTab === "deals";
+  const isService = activeTab === "service";
+  const isTabulations = activeTab === "tabulations";
+
+  const visibleTabs = useMemo(
+    () => DASHBOARD_TABS.filter((t) => t.key !== "tabulations" || isManagerUp),
+    [isManagerUp],
+  );
 
   const [editing, setEditing] = useState(false);
 
@@ -73,7 +90,7 @@ export default function DashboardV2ClientPage({
   const period = useMemo(() => periodToRangeISO(filters), [filters]);
   const serviceQuery = useServiceOverview({
     period,
-    enabled: isAuthenticated && !isDeals,
+    enabled: isAuthenticated && isService,
   });
 
   // Pipeline em uso: o explicitamente selecionado ou o resolvido pelo
@@ -94,13 +111,13 @@ export default function DashboardV2ClientPage({
               <PageSegmentedControl
                 size="compact"
                 aria-label="Visão do dashboard"
-                items={DASHBOARD_TABS.map((label, index) => ({
-                  value: String(index),
-                  label,
+                items={visibleTabs.map((tab) => ({
+                  value: tab.key,
+                  label: tab.label,
                 }))}
-                value={String(activeTab)}
+                value={activeTab}
                 onChange={(v) => {
-                  setActiveTab(Number(v));
+                  setActiveTab(v as DashboardTabKey);
                   setEditing(false);
                 }}
               />
@@ -114,7 +131,7 @@ export default function DashboardV2ClientPage({
         />
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
-        {!editing && (
+        {!editing && !isTabulations && (
           <DashboardFilters
             filters={filters}
             onPatch={patch}
@@ -125,7 +142,7 @@ export default function DashboardV2ClientPage({
           />
         )}
 
-        {isManagerUp && !editing && (
+        {isManagerUp && !editing && !isTabulations && (
           <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-5 shadow-[var(--glass-shadow)] backdrop-blur-md">
             <div className="mb-4 flex items-center gap-2">
               <span className="flex size-8 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
@@ -175,7 +192,7 @@ export default function DashboardV2ClientPage({
               )}
             </QueryState>
           )
-        ) : (
+        ) : isService ? (
           <QueryState
             isLoading={serviceQuery.isLoading}
             error={serviceQuery.error}
@@ -183,6 +200,8 @@ export default function DashboardV2ClientPage({
           >
             {serviceQuery.data && <ServiceOverview data={serviceQuery.data} />}
           </QueryState>
+        ) : (
+          <TabulationsDashboard />
         )}
         </div>
       </main>

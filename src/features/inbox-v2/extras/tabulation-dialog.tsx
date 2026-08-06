@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   IconChevronRight as ChevronRight,
   IconChevronLeft as ChevronLeft,
@@ -75,6 +75,13 @@ export function TabulationDialog({
   const isLeafSelected =
     path.length > 0 && path[path.length - 1].children.length === 0;
 
+  // Cada nível volta ao topo da lista: sem isso, ao entrar num submotivo a
+  // lista curta herda o scroll do nível anterior e parece vazia/cortada.
+  const listRef = useRef<HTMLUListElement | null>(null);
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: 0 });
+  }, [path.length]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md">
@@ -128,7 +135,12 @@ export function TabulationDialog({
                 : "Fim do ramo — selecione esta opção para confirmar."}
             </div>
           ) : (
-            <ul className="flex flex-col gap-2">
+            // A lista rola sozinha: o scroll do corpo da modal empurrava os
+            // botões do rodapé pra fora da tela em árvores com muitos motivos.
+            <ul
+              ref={listRef}
+              className="flex max-h-[min(52vh,360px)] flex-col gap-2 overflow-y-auto overscroll-contain pr-1"
+            >
               {currentChildren.map((n) => {
                 const hasChildren = n.children.length > 0;
                 const selected =

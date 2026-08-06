@@ -28,6 +28,9 @@ type AnalyticsResponse = {
   total: number;
   page: number;
   perPage: number;
+  // Cardinalidade real — byTabulation/byUser são rankings top 20.
+  distinctTabulations: number;
+  distinctUsers: number;
   byTabulation: Array<{
     tabulationId: string;
     name: string;
@@ -190,12 +193,12 @@ export function TabulationsDashboard() {
         />
         <KpiCard
           label="Motivos distintos"
-          value={data?.byTabulation.length ?? loadingValue}
+          value={data?.distinctTabulations ?? loadingValue}
           icon={<IconChartBar size={20} stroke={2.2} />}
         />
         <KpiCard
           label="Agentes que tabularam"
-          value={data?.byUser.length ?? loadingValue}
+          value={data?.distinctUsers ?? loadingValue}
           icon={<IconUsers size={20} stroke={2.2} />}
         />
         <KpiCard

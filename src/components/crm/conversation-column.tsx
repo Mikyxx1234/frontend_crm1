@@ -515,9 +515,9 @@ export function ConversationColumn({
       })()}
 
       {/* Lista */}
-      {/* px-1.5: o card ativo usa ring-2 (fora da caixa); overflow-y-auto
-          clipa o anel — sem padding esquerdo a borda sumia no lado left. */}
-      <div className="flex flex-1 min-h-0 flex-col gap-1.5 overflow-y-auto overscroll-contain px-1.5 [-webkit-overflow-scrolling:touch]">
+      {/* p-1.5: o card ativo usa ring-2 (fora da caixa); overflow-y-auto
+          clipa o anel no topo/lados — sem padding o 1º card perde a borda. */}
+      <div className="flex flex-1 min-h-0 flex-col gap-1.5 overflow-y-auto overscroll-contain p-1.5 [-webkit-overflow-scrolling:touch]">
         {isLoading ? (
           Array.from({ length: 6 }, (_, i) => (
             <div

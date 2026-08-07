@@ -131,6 +131,7 @@ export function TemplateComposePanel({
       return sendTemplate(conversationId, {
         templateName: template.name,
         bodyPreview: renderedPreview || template.content,
+        languageCode: template.language ?? "pt_BR",
         components,
         templateGraphId: template.metaTemplateId ?? null,
       });

@@ -671,27 +671,38 @@ export function ChatWindow({
     mutationFn: async (vars: {
       templateName: string;
       bodyPreview?: string;
+      languageCode?: string | null;
       components?: unknown[];
       flowToken?: string | null;
       flowActionData?: Record<string, unknown> | null;
       templateGraphId?: string | null;
     }) => {
-      const res = await fetch(apiUrl(`/api/conversations/${conversationId}/template`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          templateName: vars.templateName,
-          bodyPreview: vars.bodyPreview,
-          ...(vars.components ? { components: vars.components } : {}),
-          ...(vars.flowToken ? { flowToken: vars.flowToken } : {}),
-          ...(vars.flowActionData && Object.keys(vars.flowActionData).length > 0
-            ? { flowActionData: vars.flowActionData }
-            : {}),
-          ...(vars.templateGraphId
-            ? { templateGraphId: vars.templateGraphId }
-            : {}),
-        }),
+      const payload = JSON.stringify({
+        templateName: vars.templateName,
+        bodyPreview: vars.bodyPreview,
+        ...(vars.languageCode?.trim()
+          ? { languageCode: vars.languageCode.trim() }
+          : {}),
+        ...(vars.components ? { components: vars.components } : {}),
+        ...(vars.flowToken ? { flowToken: vars.flowToken } : {}),
+        ...(vars.flowActionData && Object.keys(vars.flowActionData).length > 0
+          ? { flowActionData: vars.flowActionData }
+          : {}),
+        ...(vars.templateGraphId
+          ? { templateGraphId: vars.templateGraphId }
+          : {}),
       });
+      const postOnce = () =>
+        fetch(apiUrl(`/api/conversations/${conversationId}/template`), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+        });
+      let res = await postOnce();
+      if (res.status === 502 || res.status === 503 || res.status === 504) {
+        await new Promise((r) => setTimeout(r, 800));
+        res = await postOnce();
+      }
       const data = await res.json().catch(() => ({}));
       if (!res.ok)
         throw new Error(
@@ -3752,6 +3763,7 @@ export function ChatWindow({
                             bodyPreview:
                               renderedTemplatePreview ||
                               pendingTemplate.content,
+                            languageCode: pendingTemplate.language ?? "pt_BR",
                             components,
                             flowToken,
                             flowActionData,

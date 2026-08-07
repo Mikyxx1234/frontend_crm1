@@ -180,26 +180,42 @@ export async function sendTemplate(
   vars: {
     templateName: string;
     bodyPreview?: string;
+    /** Idioma WABA (ex.: pt_BR). Evita listagem Meta no backend. */
+    languageCode?: string | null;
     components?: unknown[];
     flowToken?: string | null;
     flowActionData?: Record<string, unknown> | null;
     templateGraphId?: string | null;
   },
 ): Promise<{ message: InboxMessageDto; reopenedConversationId?: string }> {
-  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/template`), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      templateName: vars.templateName,
-      ...(vars.bodyPreview != null ? { bodyPreview: vars.bodyPreview } : {}),
-      ...(vars.components ? { components: vars.components } : {}),
-      ...(vars.flowToken ? { flowToken: vars.flowToken } : {}),
-      ...(vars.flowActionData && Object.keys(vars.flowActionData).length > 0
-        ? { flowActionData: vars.flowActionData }
-        : {}),
-      ...(vars.templateGraphId ? { templateGraphId: vars.templateGraphId } : {}),
-    }),
+  const body = JSON.stringify({
+    templateName: vars.templateName,
+    ...(vars.bodyPreview != null ? { bodyPreview: vars.bodyPreview } : {}),
+    ...(vars.languageCode?.trim()
+      ? { languageCode: vars.languageCode.trim() }
+      : {}),
+    ...(vars.components ? { components: vars.components } : {}),
+    ...(vars.flowToken ? { flowToken: vars.flowToken } : {}),
+    ...(vars.flowActionData && Object.keys(vars.flowActionData).length > 0
+      ? { flowActionData: vars.flowActionData }
+      : {}),
+    ...(vars.templateGraphId ? { templateGraphId: vars.templateGraphId } : {}),
   });
+
+  const postOnce = () =>
+    fetch(apiUrl(`/api/conversations/${conversationId}/template`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+
+  // 1 retry em 502/503/504 — cobre janela de redeploy do backend (proxy HTML).
+  let res = await postOnce();
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    await new Promise((r) => setTimeout(r, 800));
+    res = await postOnce();
+  }
+
   return parseApiResponse<{ message: InboxMessageDto; reopenedConversationId?: string }>(
     res,
     "Erro ao enviar template",

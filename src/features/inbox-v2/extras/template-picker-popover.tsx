@@ -474,6 +474,7 @@ export function TemplatePickerList({
         // exibição e não casa com o template aprovado na Graph.
         templateName: tpl.metaTemplateName ?? tpl.name,
         bodyPreview: tpl.body,
+        languageCode: tpl.language ?? "pt_BR",
         // Garante que o backend mapeie pro template correto na Graph
         // mesmo quando há ambiguidade de nome entre orgs.
         templateGraphId: tpl.metaTemplateId ?? null,

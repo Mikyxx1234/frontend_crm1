@@ -218,14 +218,14 @@ export function ConversationCard({
         // pra contrastar com o card selecionado. Hover intensifica levemente.
         "bg-[color-mix(in_srgb,var(--glass-bg-overlay)_60%,rgba(148,163,184,0.10))]",
         "hover:bg-[var(--glass-bg-overlay)]",
-        // Selecionado: fundo BRANCO puro + anel do brand + sombra suave —
-        // vira o card "flutuante" do print, evidente sem ser agressivo.
+        // Selecionado: fundo branco + ring inset (ring externo era clipado
+        // pelo overflow-y-auto da lista — 1º card perdia a borda de cima).
         conversation.active &&
-          "bg-white border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/20 shadow-[0_6px_18px_rgba(91,111,245,0.15)] hover:bg-white",
+          "bg-white border-[var(--brand-primary)]/55 ring-2 ring-inset ring-[var(--brand-primary)]/30 shadow-[0_2px_8px_rgba(91,111,245,0.12)] hover:bg-white",
         conversation.inactive && "opacity-70",
         // Marcada (modo seleção): mesmo anel do brand, sem exigir foco/hover.
         selectionMode && selected &&
-          "bg-white border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/20 hover:bg-white",
+          "bg-white border-[var(--brand-primary)]/55 ring-2 ring-inset ring-[var(--brand-primary)]/30 hover:bg-white",
       )}
     >
       {/* Linha 1: checkbox (modo seleção) + avatar + (nome + tempo + preview ao lado).

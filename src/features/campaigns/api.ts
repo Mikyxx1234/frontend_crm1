@@ -225,7 +225,7 @@ export function fetchSegments(): Promise<SegmentRow[]> {
   ).then((d) => d.segments ?? []);
 }
 
-export async function fetchTemplates(): Promise<TemplateRow[]> {
+export async function fetchTemplates(channelId?: string | null): Promise<TemplateRow[]> {
   if (isPageMockMode()) {
     return Promise.resolve(MOCK_TEMPLATES);
   }
@@ -233,12 +233,14 @@ export async function fetchTemplates(): Promise<TemplateRow[]> {
   // A resposta da Meta tem o formato { data: [...], paging: { cursors: { after } } }.
   // Percorremos TODAS as páginas de cursor — sem isso a lista ficava presa na
   // primeira página (até 100) e campanhas não viam o total real da conta.
+  // Com channelId, lista a WABA do canal da campanha (não misturar números).
   const all: TemplateRow[] = [];
   let after: string | undefined;
   for (let guard = 0; guard < 200; guard++) {
     const q = new URLSearchParams();
     q.set("limit", "500");
     if (after) q.set("after", after);
+    if (channelId?.trim()) q.set("channelId", channelId.trim());
     const page = await getJson<{
       templates?: TemplateRow[];
       data?: TemplateRow[];

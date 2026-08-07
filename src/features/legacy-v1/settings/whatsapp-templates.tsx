@@ -5,19 +5,25 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconAlertTriangle as AlertTriangle, IconArrowLeft as ArrowLeft, IconBook2 as BookOpen, IconCheck as Check, IconCircleCheck as CheckCircle2, IconClipboard as ClipboardCopy, IconClock as Clock, IconEye as Eye, IconStack as Layers, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconRefresh as RefreshCw, IconSearch as Search, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
+import { IconAlertTriangle as AlertTriangle, IconArrowLeft as ArrowLeft, IconBook2 as BookOpen, IconCheck as Check, IconCircleCheck as CheckCircle2, IconClipboard as ClipboardCopy, IconClock as Clock, IconCopy as Copy, IconEye as Eye, IconStack as Layers, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconRefresh as RefreshCw, IconSearch as Search, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import type { ApiChannel } from "@/components/channels/types";
 import { useConfirm } from "@/hooks/use-confirm";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { FormDialog } from "@/components/ui/form-dialog";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { analyzeTemplateComponents } from "@/lib/meta-whatsapp/analyze-template-components";
+import {
+  fetchMetaCloudWhatsAppChannels,
+  formatMetaChannelLabel,
+} from "@/lib/meta-whatsapp/meta-cloud-channels";
 import { mergeOperatorVariables, type OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 import { cn } from "@/lib/utils";
 import { ListHScroll } from "@/components/crm/list-hscroll";
@@ -126,8 +132,9 @@ function meaningfulRejectedReason(status: string, reason: string | undefined): s
  * Busca TODOS os templates da WABA percorrendo todas as páginas de cursor da
  * Graph API. A Meta lista no máximo 500 por página; sem esse loop, o CRM ficava
  * preso na primeira página (até 100) e não exibia o total real da conta.
+ * Com `channelId`, lista a WABA daquele canal (necessário com 2+ Cloud API).
  */
-async function fetchAllTemplates(): Promise<MetaTemplateRow[]> {
+async function fetchAllTemplates(channelId?: string | null): Promise<MetaTemplateRow[]> {
   const all: MetaTemplateRow[] = [];
   let after: string | undefined;
   // Guarda de segurança contra loop infinito (500 * 200 = 100k templates).
@@ -135,6 +142,7 @@ async function fetchAllTemplates(): Promise<MetaTemplateRow[]> {
     const q = new URLSearchParams();
     q.set("limit", "500");
     if (after) q.set("after", after);
+    if (channelId?.trim()) q.set("channelId", channelId.trim());
     const res = await fetch(apiUrl(`/api/meta/whatsapp/message-templates?${q.toString()}`));
     const data = (await res.json().catch(() => ({}))) as ListResponse & { message?: string };
     if (!res.ok) {
@@ -147,6 +155,15 @@ async function fetchAllTemplates(): Promise<MetaTemplateRow[]> {
   }
   return all;
 }
+
+type CloneReport = {
+  created?: Array<{ name: string; language: string; id?: string }>;
+  skipped?: Array<{ name: string; language: string; reason: string }>;
+  failed?: Array<{ name: string; language: string; error: string }>;
+  sourceWabaId?: string;
+  targetWabaId?: string;
+  message?: string;
+};
 
 async function fetchTemplateConfigs(): Promise<TemplateConfig[]> {
   const res = await fetch(apiUrl("/api/whatsapp-template-configs"));
@@ -261,12 +278,33 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
   const confirmDialog = useConfirm();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const { data: metaChannels = [] } = useQuery({
+    queryKey: ["meta-cloud-whatsapp-channels"],
+    queryFn: fetchMetaCloudWhatsAppChannels,
+    staleTime: 60_000,
+  });
+
+  const [channelId, setChannelId] = React.useState<string>("");
+  React.useEffect(() => {
+    if (!metaChannels.length) return;
+    if (channelId && metaChannels.some((c) => c.id === channelId)) return;
+    const connected = metaChannels.find((c) => c.status === "CONNECTED");
+    setChannelId((connected ?? metaChannels[0]).id);
+  }, [metaChannels, channelId]);
+
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["meta-whatsapp-templates", "all"],
-    queryFn: fetchAllTemplates,
+    queryKey: ["meta-whatsapp-templates", "all", channelId || "none"],
+    queryFn: () => fetchAllTemplates(channelId),
+    enabled: Boolean(channelId),
   });
 
   const rows = data ?? [];
+
+  const [cloneOpen, setCloneOpen] = React.useState(false);
+  const [cloneSourceId, setCloneSourceId] = React.useState("");
+  const [cloneTargetId, setCloneTargetId] = React.useState("");
+  const [cloneReport, setCloneReport] = React.useState<CloneReport | null>(null);
 
   const { data: templateConfigs = [] } = useQuery({
     queryKey: ["whatsapp-template-configs"],
@@ -371,10 +409,15 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
 
   const createMutation = useMutation({
     mutationFn: async (payload: Record<string, unknown> | { raw: true; payload: Record<string, unknown> }) => {
-      const res = await fetch(apiUrl("/api/meta/whatsapp/message-templates"), {
+      const body =
+        channelId && typeof payload === "object"
+          ? { ...payload, channelId }
+          : payload;
+      const q = channelId ? `?channelId=${encodeURIComponent(channelId)}` : "";
+      const res = await fetch(apiUrl(`/api/meta/whatsapp/message-templates${q}`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof j?.message === "string" ? j.message : "Erro ao criar");
@@ -391,9 +434,11 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(apiUrl(`/api/meta/whatsapp/message-templates/${encodeURIComponent(id)}`), {
-        method: "DELETE",
-      });
+      const q = channelId ? `?channelId=${encodeURIComponent(channelId)}` : "";
+      const res = await fetch(
+        apiUrl(`/api/meta/whatsapp/message-templates/${encodeURIComponent(id)}${q}`),
+        { method: "DELETE" },
+      );
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof j?.message === "string" ? j.message : "Erro ao excluir");
       return j;
@@ -404,6 +449,45 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const cloneMutation = useMutation({
+    mutationFn: async (vars: { sourceChannelId: string; targetChannelId: string }) => {
+      const res = await fetch(apiUrl("/api/meta/whatsapp/message-templates/clone"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceChannelId: vars.sourceChannelId,
+          targetChannelId: vars.targetChannelId,
+          skipNames: ["hello_world"],
+        }),
+      });
+      const j = (await res.json().catch(() => ({}))) as CloneReport;
+      if (!res.ok) {
+        throw new Error(typeof j?.message === "string" ? j.message : "Erro ao clonar templates");
+      }
+      return j;
+    },
+    onSuccess: (report) => {
+      setCloneReport(report);
+      const n = report.created?.length ?? 0;
+      const f = report.failed?.length ?? 0;
+      toast.success(
+        `Clone concluído: ${n} criado(s)${f ? `, ${f} falha(s)` : ""}. A Meta ainda precisa aprovar.`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["meta-whatsapp-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["automation-whatsapp-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["editor-wa-templates"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function openCloneDialog() {
+    const others = metaChannels.filter((c) => c.id !== channelId);
+    setCloneSourceId(channelId || metaChannels[0]?.id || "");
+    setCloneTargetId(others[0]?.id || "");
+    setCloneReport(null);
+    setCloneOpen(true);
+  }
 
   function resetForm() {
     setName("");
@@ -514,11 +598,29 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
         title="Templates WhatsApp (Meta)"
         actions={
           <>
-            <ButtonGlass type="button" variant="glass" size="sm" onClick={() => void refetch()} disabled={isFetching}>
+            {metaChannels.length > 1 ? (
+              <ButtonGlass
+                type="button"
+                variant="glass"
+                size="sm"
+                onClick={openCloneDialog}
+                disabled={metaChannels.length < 2}
+              >
+                <Copy className="size-4" />
+                <span className="ml-2">Clonar entre canais</span>
+              </ButtonGlass>
+            ) : null}
+            <ButtonGlass type="button" variant="glass" size="sm" onClick={() => void refetch()} disabled={isFetching || !channelId}>
               {isFetching ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
               <span className="ml-2">Atualizar</span>
             </ButtonGlass>
-            <ButtonGlass type="button" variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+            <ButtonGlass
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => setCreateOpen(true)}
+              disabled={!channelId}
+            >
               <Plus className="size-4" />
               <span className="ml-2">Novo template</span>
             </ButtonGlass>
@@ -586,6 +688,30 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
       ) : null}
 
       <HubPanel>
+        {metaChannels.length > 0 ? (
+          <div className="flex flex-col gap-2 border-b border-[var(--glass-border-subtle)] px-[18px] py-3 sm:flex-row sm:items-end sm:gap-3">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Label className="text-[11px] font-semibold text-[var(--text-muted)]">
+                Canal / número (WABA)
+              </Label>
+              <DropdownGlass
+                triggerClassName="w-full"
+                placeholder="Selecione o canal…"
+                value={channelId}
+                options={metaChannels.map((c: ApiChannel) => ({
+                  value: c.id,
+                  label: formatMetaChannelLabel(c),
+                  description: c.status === "CONNECTED" ? "Conectado" : c.status,
+                }))}
+                onValueChange={(v) => setChannelId(v)}
+              />
+            </div>
+            <p className="pb-1 text-[11px] text-[var(--text-muted)] sm:max-w-[280px]">
+              Cada canal Cloud API tem sua própria lista de templates na Meta.
+            </p>
+          </div>
+        ) : null}
+
         <HubToolbar
           searchValue={query}
           onSearchChange={setQuery}
@@ -606,7 +732,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
         </HubToolbar>
 
         <p className="px-[18px] pt-3 text-[12px] text-[var(--text-muted)]">
-          Com a lista a carregar, o token no servidor já tem acesso à WABA.{" "}
+          Com a lista a carregar, o token no servidor já tem acesso à WABA do canal selecionado.{" "}
           <strong className="font-bold text-[var(--text-secondary)]">Dica:</strong> não reutilize o mesmo nome de template
           enquanto outro com esse nome estiver pendente na Meta.
         </p>
@@ -1249,6 +1375,111 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
               Fechar
             </ButtonGlass>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={cloneOpen}
+        onOpenChange={(open) => {
+          setCloneOpen(open);
+          if (!open) setCloneReport(null);
+        }}
+      >
+        <DialogContent size="lg" panelClassName="max-h-[min(88vh,720px)]">
+          <DialogHeader>
+            <DialogTitle>Clonar templates entre canais</DialogTitle>
+            <DialogDescription>
+              Copia os message templates da WABA de origem para a de destino. Cada cópia entra em
+              análise na Meta (não herda o status Aprovado).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Canal origem (tem os templates)</Label>
+              <DropdownGlass
+                triggerClassName="w-full"
+                placeholder="Origem…"
+                value={cloneSourceId}
+                options={metaChannels.map((c) => ({
+                  value: c.id,
+                  label: formatMetaChannelLabel(c),
+                }))}
+                onValueChange={setCloneSourceId}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Canal destino (receber clones)</Label>
+              <DropdownGlass
+                triggerClassName="w-full"
+                placeholder="Destino…"
+                value={cloneTargetId}
+                options={metaChannels
+                  .filter((c) => c.id !== cloneSourceId)
+                  .map((c) => ({
+                    value: c.id,
+                    label: formatMetaChannelLabel(c),
+                  }))}
+                onValueChange={setCloneTargetId}
+              />
+            </div>
+            {cloneReport ? (
+              <div className="max-h-64 space-y-2 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_3%,transparent)] p-3 text-xs">
+                <p className="font-semibold text-[var(--text-secondary)]">
+                  Criados: {cloneReport.created?.length ?? 0} · Ignorados:{" "}
+                  {cloneReport.skipped?.length ?? 0} · Falhas: {cloneReport.failed?.length ?? 0}
+                </p>
+                {(cloneReport.failed?.length ?? 0) > 0 ? (
+                  <ul className="space-y-1 text-[var(--color-danger)]">
+                    {cloneReport.failed!.map((f) => (
+                      <li key={`${f.name}-${f.language}`}>
+                        <span className="font-mono">{f.name}</span> ({f.language}): {f.error}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {(cloneReport.created?.length ?? 0) > 0 ? (
+                  <ul className="space-y-0.5 text-[var(--color-success-text)]">
+                    {cloneReport.created!.slice(0, 40).map((c) => (
+                      <li key={`${c.name}-${c.language}`} className="font-mono">
+                        {c.name} · {c.language}
+                      </li>
+                    ))}
+                    {(cloneReport.created!.length ?? 0) > 40 ? (
+                      <li>… e mais {cloneReport.created!.length - 40}</li>
+                    ) : null}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <ButtonGlass type="button" variant="glass" onClick={() => setCloneOpen(false)}>
+              Fechar
+            </ButtonGlass>
+            <ButtonGlass
+              type="button"
+              variant="primary"
+              disabled={
+                cloneMutation.isPending ||
+                !cloneSourceId ||
+                !cloneTargetId ||
+                cloneSourceId === cloneTargetId
+              }
+              onClick={() =>
+                cloneMutation.mutate({
+                  sourceChannelId: cloneSourceId,
+                  targetChannelId: cloneTargetId,
+                })
+              }
+            >
+              {cloneMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Copy className="size-4" />
+              )}
+              <span className="ml-2">Clonar agora</span>
+            </ButtonGlass>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

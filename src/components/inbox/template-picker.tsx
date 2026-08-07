@@ -42,8 +42,11 @@ type WabaConfig = {
   operatorVariables?: OperatorVariableMeta[] | null;
 };
 
-async function fetchAgentTemplates(): Promise<InboxTemplatePick[]> {
-  const res = await fetch(apiUrl("/api/whatsapp-template-configs/agent-enabled"));
+async function fetchAgentTemplates(channelId?: string | null): Promise<InboxTemplatePick[]> {
+  const qs = channelId?.trim()
+    ? `?channelId=${encodeURIComponent(channelId.trim())}`
+    : "";
+  const res = await fetch(apiUrl(`/api/whatsapp-template-configs/agent-enabled${qs}`));
   if (!res.ok) return [];
   const data: WabaConfig[] = await res.json();
   return data.map((c) => ({
@@ -76,18 +79,21 @@ export function TemplatePicker({
   onPick,
   onClose,
   className,
+  channelId,
 }: {
   open: boolean;
   onPick: (template: InboxTemplatePick) => void;
   onClose?: () => void;
   className?: string;
+  /** Filtra templates da WABA deste canal Cloud API. */
+  channelId?: string | null;
 }) {
   const [search, setSearch] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const { data: templates = [], isLoading } = useQuery({
-    queryKey: ["agent-templates-picker"],
-    queryFn: fetchAgentTemplates,
+    queryKey: ["agent-templates-picker", channelId ?? "default"],
+    queryFn: () => fetchAgentTemplates(channelId),
     enabled: open,
     staleTime: 2 * 60_000,
   });

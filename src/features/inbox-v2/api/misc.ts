@@ -399,9 +399,14 @@ interface AgentEnabledTemplateRaw {
   operatorVariables?: OperatorVariableMeta[] | null;
 }
 
-/** GET /api/whatsapp-template-configs/agent-enabled */
-export async function listAgentEnabledTemplates(): Promise<WhatsappTemplate[]> {
-  const res = await fetch(apiUrl("/api/whatsapp-template-configs/agent-enabled"));
+/** GET /api/whatsapp-template-configs/agent-enabled — opcional `channelId` (WABA do canal). */
+export async function listAgentEnabledTemplates(
+  channelId?: string | null,
+): Promise<WhatsappTemplate[]> {
+  const qs = channelId?.trim()
+    ? `?channelId=${encodeURIComponent(channelId.trim())}`
+    : "";
+  const res = await fetch(apiUrl(`/api/whatsapp-template-configs/agent-enabled${qs}`));
   if (!res.ok) throw new Error("Erro ao carregar templates");
   const data = await res.json();
   const rows: AgentEnabledTemplateRaw[] = Array.isArray(data)

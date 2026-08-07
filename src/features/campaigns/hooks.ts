@@ -147,11 +147,11 @@ export function useSegments(enabled = true) {
   });
 }
 
-export function useTemplates(enabled = true) {
+export function useTemplates(enabled = true, channelId?: string | null) {
   return useQuery({
-    queryKey: ["campaigns", "templates"],
-    queryFn: fetchTemplates,
-    enabled: resolveEnabled(enabled),
+    queryKey: ["campaigns", "templates", channelId ?? "default"],
+    queryFn: () => fetchTemplates(channelId),
+    enabled: resolveEnabled(enabled) && (Boolean(channelId?.trim()) || channelId === undefined),
     staleTime: 60_000,
   });
 }

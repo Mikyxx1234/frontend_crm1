@@ -3766,16 +3766,46 @@ function TemplateStepConfig({
   setDraft: Dispatch<SetStateAction<Record<string, unknown>>>;
   otherSteps: AutomationStep[];
 }) {
+  const { data: metaChannels = [] } = useQuery({
+    queryKey: ["meta-cloud-whatsapp-channels"],
+    queryFn: async () => {
+      const { fetchMetaCloudWhatsAppChannels } = await import(
+        "@/lib/meta-whatsapp/meta-cloud-channels"
+      );
+      return fetchMetaCloudWhatsAppChannels();
+    },
+    staleTime: 60_000,
+  });
+
+  const draftChannelId =
+    typeof draft.channelId === "string" && draft.channelId.trim()
+      ? draft.channelId.trim()
+      : "";
+
+  useEffect(() => {
+    if (!metaChannels.length) return;
+    if (draftChannelId && metaChannels.some((c) => c.id === draftChannelId)) return;
+    const connected = metaChannels.find((c) => c.status === "CONNECTED");
+    const fallback = (connected ?? metaChannels[0])?.id;
+    if (fallback) setDraft((d) => ({ ...d, channelId: fallback }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metaChannels, draftChannelId]);
+
+  const channelId = draftChannelId;
+
   const { data: templates = [], isLoading } = useQuery({
-    queryKey: ["automation-whatsapp-templates"],
+    queryKey: ["automation-whatsapp-templates", channelId || "none"],
     queryFn: async (): Promise<TemplateOption[]> => {
-      // Automação usa TODOS os templates APROVADOS da WABA da org (não depende
-      // do toggle "Agente"). Ver backend /api/whatsapp-template-configs/approved.
-      const res = await fetch(apiUrl("/api/whatsapp-template-configs/approved"));
+      // Automação usa templates APROVADOS da WABA do canal selecionado.
+      const qs = channelId
+        ? `?channelId=${encodeURIComponent(channelId)}`
+        : "";
+      const res = await fetch(apiUrl(`/api/whatsapp-template-configs/approved${qs}`));
       if (!res.ok) return [];
       return res.json();
     },
     staleTime: 120_000,
+    enabled: Boolean(channelId) || metaChannels.length === 0,
   });
 
   const selectedName = String(draft.templateName ?? "");
@@ -3805,18 +3835,50 @@ function TemplateStepConfig({
       );
     if (!same) setDraft((d) => ({ ...d, buttons: merged }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedName, templates.length]);
+  }, [selectedName, templates.length, channelId]);
 
   return (
     <>
+      {metaChannels.length > 0 ? (
+        <div className="space-y-2">
+          <Label htmlFor="sc-tpl-channel">Canal / número</Label>
+          <DropdownGlass
+            triggerClassName="w-full"
+            placeholder="Selecione o canal…"
+            value={channelId}
+            options={metaChannels.map((c) => ({
+              value: c.id,
+              label: `${c.name}${c.phoneNumber ? ` · ${c.phoneNumber}` : ""}`,
+              description: c.status === "CONNECTED" ? "Conectado" : c.status,
+            }))}
+            onValueChange={(v) => {
+              setDraft((d) => ({
+                ...d,
+                channelId: v,
+                // Trocar de WABA invalida a seleção anterior de template.
+                templateName: "",
+                templateLabel: "",
+                buttons: [],
+                headerMediaUrl: "",
+                headerMediaType: "",
+                headerUploadedFileName: "",
+              }));
+            }}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Templates listados são os da WABA deste canal (número antigo vs novo).
+          </p>
+        </div>
+      ) : null}
+
       <div className="space-y-2">
         <Label htmlFor="sc-tpl-select">Template</Label>
         {isLoading ? (
           <p className="text-xs text-muted-foreground">Carregando templates…</p>
         ) : templates.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            Nenhum template aprovado nesta organização. Aprove um template do WhatsApp
-            (Meta) em Configurações → Modelos de mensagem.
+            Nenhum template aprovado neste canal. Aprove um template do WhatsApp
+            (Meta) em Configurações → Modelos de mensagem, ou selecione outro canal.
           </p>
         ) : (
           <DropdownGlass

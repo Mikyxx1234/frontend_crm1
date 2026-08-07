@@ -158,13 +158,17 @@ export function useChannelOptions() {
 
 type RawTemplate = { metaTemplateName?: string; name?: string; label?: string; languageCode?: string }
 
-export function useTemplateOptions() {
+/** Templates aprovados da WABA. Com `channelId`, filtra pelo canal Cloud API. */
+export function useTemplateOptions(channelId?: string | null) {
   const q = useQuery({
-    queryKey: ["editor-wa-templates"],
+    queryKey: ["editor-wa-templates", channelId ?? "default"],
     staleTime: STALE,
     queryFn: async (): Promise<Opt[]> => {
+      const qs = channelId?.trim()
+        ? `?channelId=${encodeURIComponent(channelId.trim())}`
+        : ""
       const list = asArray(
-        await getJson("/api/whatsapp-template-configs/approved"),
+        await getJson(`/api/whatsapp-template-configs/approved${qs}`),
       ) as RawTemplate[]
       return list.map((t) => {
         const v = t.metaTemplateName ?? t.name ?? ""
@@ -195,13 +199,16 @@ export type TemplateDetail = {
  * rápida (roteamento). Reusa a MESMA query de useTemplateOptions (cache
  * compartilhado) para não duplicar fetch.
  */
-export function useTemplateDetailsMap() {
+export function useTemplateDetailsMap(channelId?: string | null) {
   const q = useQuery({
-    queryKey: ["editor-wa-templates-detail"],
+    queryKey: ["editor-wa-templates-detail", channelId ?? "default"],
     staleTime: STALE,
     queryFn: async (): Promise<Map<string, TemplateDetail>> => {
+      const qs = channelId?.trim()
+        ? `?channelId=${encodeURIComponent(channelId.trim())}`
+        : ""
       const list = asArray(
-        await getJson("/api/whatsapp-template-configs/approved"),
+        await getJson(`/api/whatsapp-template-configs/approved${qs}`),
       ) as RawTemplateDetail[]
       const map = new Map<string, TemplateDetail>()
       for (const t of list) {

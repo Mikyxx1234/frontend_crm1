@@ -1548,6 +1548,7 @@ export default function InboxV2ClientPage({
         <div onClick={(e) => e.stopPropagation()}>
           <TemplatePickerList
             conversationId={activeId}
+            channelId={selectedChannelId}
             onClose={() => setTemplateOpen(false)}
             onPick={(tpl) => {
               setExternalTemplate(whatsappTemplateToPending(tpl));

@@ -79,7 +79,10 @@ export default function NewCampaignClientPage() {
   const channelsQuery = useChannels(isAuth);
   const segmentsQuery = useSegments(isAuth);
   const optionsQuery = useAudienceOptions(isAuth);
-  const templatesQuery = useTemplates(isAuth && type === "TEMPLATE");
+  const templatesQuery = useTemplates(
+    isAuth && type === "TEMPLATE" && Boolean(channelId),
+    channelId || null,
+  );
   const preview = usePreviewAudience();
   const createMutation = useCreateCampaign();
 

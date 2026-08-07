@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 import { HeroGeometric } from "@/components/ui/hero-geometric";
+import { isNativePlatform } from "@/lib/native/capacitor";
 import { isPreviewMode, isV0PreviewHost } from "@/lib/preview-mode";
 
 function LoginShellFallback() {
@@ -29,18 +30,25 @@ function safeInternalPath(raw: string | null, fallback: string): string {
   return t;
 }
 
-/** Origem pós-login: no APK Capacitor evita `https://localhost` (androidScheme). */
+/**
+ * Origem pós-login.
+ * No APK Capacitor o `window.location.origin` vira `https://localhost`
+ * (androidScheme) e redirecionar pra lá perde o cookie do CRM — nesse
+ * caso usamos o host web. No browser (incl. localhost local) permanece
+ * na origem atual para não expulsar o dev para produção.
+ */
 function resolvePostLoginOrigin(): string {
   if (typeof window === "undefined") return "";
   const origin = window.location.origin;
-  const host = window.location.hostname;
   if (
-    host === "localhost" ||
-    host === "127.0.0.1" ||
+    isNativePlatform() ||
     origin.startsWith("capacitor://") ||
     origin.startsWith("ionic://")
   ) {
-    return "https://frontend-front.v74knz.easypanel.host";
+    return (
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+      "https://frontend-front.v74knz.easypanel.host"
+    );
   }
   return origin;
 }

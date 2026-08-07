@@ -40,6 +40,8 @@ export type EditorField =
   | { kind: "templatePreview" }
   /** Construtor visual completo do step webhook (URL, método, headers, body). */
   | { kind: "webhookConfig" }
+  /** Seletor de produto (+ preço/canal) do passo send_product. */
+  | { kind: "sendProductConfig" }
   | { kind: "builder"; key: string; builder: "buttons" | "buttonsTitle" | "condition" | "schedule" | "headers" }
 
 const ACTIVITY_TYPES: Opt[] = [
@@ -162,6 +164,19 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "media", key: "mediaUrl", label: "Arquivo" },
     { kind: "text", key: "caption", label: "Legenda", optional: true },
     ...META_FAILURE_FIELDS,
+  ],
+  // Sem esta entrada o canvas não monta o seletor (StepConfigPanel não é
+  // mais o caminho principal — edição é inline via STEP_FIELDS).
+  send_product: [
+    { kind: "sendProductConfig" },
+    {
+      kind: "textarea",
+      key: "content",
+      label: "Mensagem (opcional)",
+      optional: true,
+      hint: "Use {{produto.nome}}, {{produto.preco}}, {{produto.canal}}. Vazio = resumo padrão.",
+      placeholder: "Olá! Separei este produto: {{produto.nome}} por {{produto.preco}}.",
+    },
   ],
   send_whatsapp_interactive: [
     { kind: "textarea", key: "body", label: "Texto da mensagem" },

@@ -114,6 +114,7 @@ export type DealProductItem = {
   productSku: string | null;
   unit: string;
   productType?: "PRODUCT" | "SERVICE";
+  productKind?: "PHYSICAL" | "SERVICE" | "COURSE" | "JOB_OPENING" | null;
   quantity: number;
   unitPrice: number;
   discount: number;

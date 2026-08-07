@@ -6,7 +6,7 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { IconCheck as Check, IconChevronDown as ChevronDown, IconPackage as Package, IconPencil as Pencil, IconPlus as Plus, IconX as X } from "@tabler/icons-react";
+import { IconCheck as Check, IconChevronDown as ChevronDown, IconPackage as Package, IconPencil as Pencil, IconPlus as Plus, IconSend as Send, IconX as X } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { useConfirm } from "@/hooks/use-confirm";
@@ -16,8 +16,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { insertComposerText } from "@/lib/composer-insert";
 import { dt } from "@/lib/design-tokens";
 import { AvailabilityBadge } from "@/features/products-v2/availability-badge";
+import {
+  COURSE_LEVEL_LABEL,
+  COURSE_MODE_LABEL,
+  type CourseLevel,
+  type CourseMode,
+} from "@/features/products-v2/types";
 import { cn, formatCurrency, getInitials, tagPillStyle } from "@/lib/utils";
 
 import {
@@ -259,6 +266,90 @@ export function DealSidebar({
   );
 }
 
+type CoursePricingPick = {
+  price: number;
+  channel: string | null;
+  discountPercent: number | null;
+};
+
+function normalizeCoursePricingOptions(product: {
+  price?: unknown;
+  courseConfig?: {
+    channel?: string | null;
+    discountPercent?: unknown;
+    pricingOptions?: Array<{
+      price?: unknown;
+      channel?: string | null;
+      discountPercent?: unknown;
+    }> | null;
+  } | null;
+}): CoursePricingPick[] {
+  const cc = product.courseConfig;
+  if (!cc) return [];
+  const raw = Array.isArray(cc.pricingOptions) ? cc.pricingOptions : [];
+  if (raw.length > 0) {
+    return raw.map((o) => ({
+      price: Number(o.price) || 0,
+      channel: typeof o.channel === "string" && o.channel.trim() ? o.channel.trim() : null,
+      discountPercent:
+        o.discountPercent === null || o.discountPercent === undefined || o.discountPercent === ""
+          ? null
+          : Number(o.discountPercent),
+    }));
+  }
+  // Compat: campos legados espelham a 1ª opção
+  if (cc.channel != null || cc.discountPercent != null) {
+    return [
+      {
+        price: Number(product.price) || 0,
+        channel: typeof cc.channel === "string" && cc.channel.trim() ? cc.channel.trim() : null,
+        discountPercent:
+          cc.discountPercent === null || cc.discountPercent === undefined || cc.discountPercent === ""
+            ? null
+            : Number(cc.discountPercent),
+      },
+    ];
+  }
+  return [];
+}
+
+function pricingOptionFinal(option: CoursePricingPick): number {
+  const disc = option.discountPercent ?? 0;
+  return option.price * (1 - Math.min(100, Math.max(0, disc)) / 100);
+}
+
+function formatMoneyPlain(value: number): string {
+  return value.toFixed(2).replace(".", ",");
+}
+
+function buildCourseOfferMessage(input: {
+  name: string;
+  levelLabel: string;
+  grau: string;
+  modeLabel: string;
+  semesterLabel: string;
+  basePrice: number;
+  promoPrice: number;
+}): string {
+  return [
+    `🎓 Conheça o curso de ${input.name}!`,
+    "",
+    "Confira as principais informações:",
+    "",
+    `📚 Nível: ${input.levelLabel}`,
+    `🎓 Grau: ${input.grau}`,
+    `💻 Modalidade: ${input.modeLabel}`,
+    `⏳ Duração: ${input.semesterLabel}`,
+    "",
+    `💰 Valor original: ~R$ ${formatMoneyPlain(input.basePrice)}~`,
+    `🔥 Valor promocional: R$ ${formatMoneyPlain(input.promoPrice)}`,
+    "",
+    "Essa é uma condição especial disponível para sua inscrição. 😊",
+    "",
+    "Se tiver interesse, me avise por aqui que te explico os próximos passos para garantir sua vaga e aproveitar o desconto! 🎓",
+  ].join("\n");
+}
+
 export function DealProductsSection({
   dealId,
   compact: _compact = false,
@@ -280,6 +371,20 @@ export function DealProductsSection({
   const [editingItem, setEditingItem] = React.useState<string | null>(null);
   const [editQty, setEditQty] = React.useState("");
   const [editDiscount, setEditDiscount] = React.useState("");
+  const [pendingPricing, setPendingPricing] = React.useState<{
+    productId: string;
+    productName: string;
+    options: CoursePricingPick[];
+  } | null>(null);
+  const [editPricing, setEditPricing] = React.useState<{
+    itemId: string;
+    productId: string;
+    productName: string;
+    options: CoursePricingPick[];
+  } | null>(null);
+  const [loadingCatalogId, setLoadingCatalogId] = React.useState<string | null>(null);
+  const [loadingEditId, setLoadingEditId] = React.useState<string | null>(null);
+  const [sendingCourseOffer, setSendingCourseOffer] = React.useState(false);
 
   const itemsKey = ["deal-products", dealId] as const;
 
@@ -303,7 +408,7 @@ export function DealProductsSection({
       const data = await res.json();
       return (data.products ?? []) as CatalogProduct[];
     },
-    enabled: showAdd,
+    enabled: showAdd && !pendingPricing,
   });
 
   const invalidate = () => {
@@ -321,18 +426,76 @@ export function DealProductsSection({
     return fallback;
   }
 
+  type AddProductPayload = {
+    productId: string;
+    unitPrice?: number;
+    discount?: number;
+    channel?: string | null;
+  };
+
   const addMutation = useMutation({
-    mutationFn: async (productId: string) => {
+    mutationFn: async (payload: AddProductPayload) => {
+      const body: Record<string, unknown> = { productId: payload.productId };
+      if (payload.unitPrice !== undefined) body.unitPrice = payload.unitPrice;
+      if (payload.discount !== undefined) body.discount = payload.discount;
+      if (payload.channel !== undefined) body.channel = payload.channel;
       const res = await fetch(apiUrl(`/api/deals/${dealId}/products`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(await readErrorMessage(res, "Falha ao adicionar produto."));
     },
-    onSuccess: () => { invalidate(); setShowAdd(false); setSearch(""); },
+    onSuccess: () => {
+      invalidate();
+      setShowAdd(false);
+      setSearch("");
+      setPendingPricing(null);
+    },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  async function handleCatalogProductClick(p: CatalogProduct) {
+    if (addMutation.isPending || loadingCatalogId) return;
+    setLoadingCatalogId(p.id);
+    try {
+      const res = await fetch(apiUrl(`/api/products/${p.id}`));
+      if (!res.ok) {
+        addMutation.mutate({ productId: p.id });
+        return;
+      }
+      const data = (await res.json()) as { product?: Parameters<typeof normalizeCoursePricingOptions>[0] & { kind?: string; name?: string } };
+      const product = data.product;
+      if (!product) {
+        addMutation.mutate({ productId: p.id });
+        return;
+      }
+      const options = normalizeCoursePricingOptions(product);
+      if (options.length > 1) {
+        setPendingPricing({
+          productId: p.id,
+          productName: product.name ?? p.name,
+          options,
+        });
+        return;
+      }
+      if (options.length === 1) {
+        const option = options[0];
+        addMutation.mutate({
+          productId: p.id,
+          unitPrice: option.price,
+          discount: option.discountPercent ?? 0,
+          channel: option.channel,
+        });
+        return;
+      }
+      addMutation.mutate({ productId: p.id });
+    } catch {
+      addMutation.mutate({ productId: p.id });
+    } finally {
+      setLoadingCatalogId(null);
+    }
+  }
 
   const updateMutation = useMutation({
     mutationFn: async ({ itemId, data }: { itemId: string; data: Record<string, unknown> }) => {
@@ -343,7 +506,11 @@ export function DealProductsSection({
       });
       if (!res.ok) throw new Error(await readErrorMessage(res, "Falha ao atualizar item."));
     },
-    onSuccess: () => { invalidate(); setEditingItem(null); },
+    onSuccess: () => {
+      invalidate();
+      setEditingItem(null);
+      setEditPricing(null);
+    },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -360,11 +527,41 @@ export function DealProductsSection({
   const showTotal =
     items.length > 1 || items.some((i) => i.quantity !== 1 || i.discount > 0);
 
-  const startEdit = (item: DealProductItem) => {
+  const startQtyDiscountEdit = (item: DealProductItem) => {
+    setEditPricing(null);
     setEditingItem(item.id);
     setEditQty(String(item.quantity));
     setEditDiscount(String(item.discount));
   };
+
+  async function startEdit(item: DealProductItem) {
+    if (item.productType === "SERVICE" || loadingEditId || updateMutation.isPending) return;
+    setLoadingEditId(item.id);
+    try {
+      const res = await fetch(apiUrl(`/api/products/${item.productId}`));
+      if (res.ok) {
+        const data = (await res.json()) as {
+          product?: Parameters<typeof normalizeCoursePricingOptions>[0] & { name?: string };
+        };
+        const options = data.product ? normalizeCoursePricingOptions(data.product) : [];
+        if (options.length > 1) {
+          setEditingItem(null);
+          setEditPricing({
+            itemId: item.id,
+            productId: item.productId,
+            productName: data.product?.name ?? item.productName,
+            options,
+          });
+          return;
+        }
+      }
+      startQtyDiscountEdit(item);
+    } catch {
+      startQtyDiscountEdit(item);
+    } finally {
+      setLoadingEditId(null);
+    }
+  }
 
   const saveEdit = (itemId: string) => {
     updateMutation.mutate({
@@ -372,6 +569,76 @@ export function DealProductsSection({
       data: { quantity: parseFloat(editQty) || 1, discount: parseFloat(editDiscount) || 0 },
     });
   };
+
+  const applyEditPricingOption = (option: CoursePricingPick) => {
+    if (!editPricing) return;
+    updateMutation.mutate({
+      itemId: editPricing.itemId,
+      data: {
+        quantity: 1,
+        unitPrice: option.price,
+        discount: option.discountPercent ?? 0,
+      },
+    });
+  };
+
+  const courseItems = items.filter((i) => i.productKind === "COURSE");
+
+  async function handleSendCourseOffer() {
+    const item = courseItems[0];
+    if (!item || sendingCourseOffer) return;
+    setSendingCourseOffer(true);
+    try {
+      const res = await fetch(apiUrl(`/api/products/${item.productId}`));
+      if (!res.ok) {
+        toast.error("Não foi possível carregar os dados do curso.");
+        return;
+      }
+      const data = (await res.json()) as {
+        product?: {
+          name?: string;
+          courseConfig?: {
+            level?: CourseLevel | null;
+            grau?: string | null;
+            mode?: CourseMode | null;
+            semester?: number | null;
+          } | null;
+        };
+      };
+      const product = data.product;
+      if (!product?.courseConfig) {
+        toast.error("Este produto não tem configuração de curso.");
+        return;
+      }
+      const cc = product.courseConfig;
+      const level = cc.level ? COURSE_LEVEL_LABEL[cc.level] : "—";
+      const mode = cc.mode ? COURSE_MODE_LABEL[cc.mode] : "—";
+      const grau = cc.grau?.trim() || "—";
+      const semesterLabel =
+        cc.semester != null && Number.isFinite(Number(cc.semester))
+          ? `${cc.semester}º semestre`
+          : "—";
+      const basePrice = Number(item.unitPrice) || 0;
+      const promoPrice =
+        basePrice * (1 - Math.min(100, Math.max(0, Number(item.discount) || 0)) / 100);
+
+      const message = buildCourseOfferMessage({
+        name: product.name ?? item.productName,
+        levelLabel: level,
+        grau,
+        modeLabel: mode,
+        semesterLabel,
+        basePrice,
+        promoPrice,
+      });
+      insertComposerText(message);
+      toast.success("Mensagem do curso pronta no chat — confira e envie.");
+    } catch {
+      toast.error("Falha ao preparar a mensagem do curso.");
+    } finally {
+      setSendingCourseOffer(false);
+    }
+  }
 
   return (
     <div
@@ -400,7 +667,10 @@ export function DealProductsSection({
         <div className="flex-1" />
         <button
           type="button"
-          onClick={() => setShowAdd((v) => !v)}
+          onClick={() => {
+            setShowAdd((v) => !v);
+            setPendingPricing(null);
+          }}
           aria-label={showAdd ? "Fechar busca de produto" : "Adicionar produto"}
           className="flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1 text-[12px] font-semibold text-white transition-all hover:brightness-110 active:scale-95"
         >
@@ -412,45 +682,104 @@ export function DealProductsSection({
       {/* ── Painel de busca / adicionar ── */}
       {showAdd && (
         <div className="space-y-2 border-t border-border px-4 pb-3 pt-2">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar produto…"
-            className="h-9 rounded-xl border-border bg-[var(--color-bg-subtle)] text-sm"
-            autoFocus
-          />
-          <div className="max-h-44 overflow-y-auto rounded-xl border border-border bg-white shadow-sm">
-            {catalog.length === 0 ? (
-              <p className="px-3 py-3 text-center text-xs text-muted-foreground">
-                Nenhum produto encontrado
-              </p>
-            ) : (
-              catalog.map((p) => (
+          {pendingPricing ? (
+            <>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
+                    Escolha o preço / canal
+                  </p>
+                  <p className="truncate text-sm font-semibold text-foreground" title={pendingPricing.productName}>
+                    {pendingPricing.productName}
+                  </p>
+                </div>
                 <button
-                  key={p.id}
                   type="button"
-                  onClick={() => addMutation.mutate(p.id)}
-                  disabled={addMutation.isPending}
-                  className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)]"
+                  onClick={() => setPendingPricing(null)}
+                  className="shrink-0 text-xs font-medium text-[var(--brand-primary)] hover:underline"
                 >
-                  <div className="min-w-0 flex-1">
-                    <span className="font-medium">{p.name}</span>
-                    {p.sku && (
-                      <span className="ml-1 text-muted-foreground">({p.sku})</span>
-                    )}
-                    {p.type === "SERVICE" && (
-                      <span className="ml-1.5 rounded bg-lavender-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">
-                        Serviço
-                      </span>
-                    )}
-                  </div>
-                  <span className="shrink-0 font-semibold tabular-nums text-success">
-                    {formatCurrency(Number(p.price))}
-                  </span>
+                  Voltar
                 </button>
-              ))
-            )}
-          </div>
+              </div>
+              <div className="max-h-56 overflow-y-auto rounded-xl border border-border bg-white shadow-sm">
+                {pendingPricing.options.map((option, idx) => {
+                  const disc = option.discountPercent ?? 0;
+                  const finalPrice = pricingOptionFinal(option);
+                  return (
+                    <button
+                      key={`${option.channel ?? "canal"}-${option.price}-${idx}`}
+                      type="button"
+                      disabled={addMutation.isPending}
+                      onClick={() =>
+                        addMutation.mutate({
+                          productId: pendingPricing.productId,
+                          unitPrice: option.price,
+                          discount: disc,
+                          channel: option.channel,
+                        })
+                      }
+                      className="flex w-full items-center justify-between gap-3 border-b border-border/60 px-3.5 py-2.5 text-left text-sm last:border-b-0 transition-colors hover:bg-[var(--color-bg-subtle)] disabled:opacity-60"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium text-foreground">
+                          {option.channel || "Sem canal"}
+                        </div>
+                        <div className="mt-0.5 text-[11.5px] text-[var(--color-ink-soft)]">
+                          Base {formatCurrency(option.price)}
+                          {disc > 0 ? ` · -${disc}%` : ""}
+                        </div>
+                      </div>
+                      <span className="shrink-0 font-semibold tabular-nums text-success">
+                        {formatCurrency(finalPrice)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar produto…"
+                className="h-9 rounded-xl border-border bg-[var(--color-bg-subtle)] text-sm"
+                autoFocus
+              />
+              <div className="max-h-44 overflow-y-auto rounded-xl border border-border bg-white shadow-sm">
+                {catalog.length === 0 ? (
+                  <p className="px-3 py-3 text-center text-xs text-muted-foreground">
+                    Nenhum produto encontrado
+                  </p>
+                ) : (
+                  catalog.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleCatalogProductClick(p)}
+                      disabled={addMutation.isPending || loadingCatalogId === p.id}
+                      className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)] disabled:opacity-60"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium">{p.name}</span>
+                        {p.sku && (
+                          <span className="ml-1 text-muted-foreground">({p.sku})</span>
+                        )}
+                        {p.type === "SERVICE" && (
+                          <span className="ml-1.5 rounded bg-lavender-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">
+                            Serviço
+                          </span>
+                        )}
+                      </div>
+                      <span className="shrink-0 font-semibold tabular-nums text-success">
+                        {loadingCatalogId === p.id ? "…" : formatCurrency(Number(p.price))}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -470,8 +799,71 @@ export function DealProductsSection({
                 idx < items.length - 1 && "border-b border-border/60",
               )}
             >
-              {/* Modo edição inline */}
-              {editingItem === item.id && item.productType !== "SERVICE" ? (
+              {/* Modo edição: picker de preço/canal (curso com 2+ opções) */}
+              {editPricing?.itemId === item.id ? (
+                <div className="space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
+                        Escolha o preço / canal
+                      </p>
+                      <p className="truncate text-sm font-semibold text-foreground" title={editPricing.productName}>
+                        {editPricing.productName}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 shrink-0 rounded-lg"
+                      aria-label="Cancelar edição"
+                      onClick={() => setEditPricing(null)}
+                    >
+                      <X className="size-3" />
+                    </Button>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto rounded-xl border border-border bg-white shadow-sm">
+                    {editPricing.options.map((option, optIdx) => {
+                      const disc = option.discountPercent ?? 0;
+                      const finalPrice = pricingOptionFinal(option);
+                      const isCurrent =
+                        Number(item.unitPrice) === option.price &&
+                        Number(item.discount) === disc;
+                      return (
+                        <button
+                          key={`edit-${option.channel ?? "canal"}-${option.price}-${optIdx}`}
+                          type="button"
+                          disabled={updateMutation.isPending}
+                          onClick={() => applyEditPricingOption(option)}
+                          className={cn(
+                            "flex w-full items-center justify-between gap-3 border-b border-border/60 px-3.5 py-2.5 text-left text-sm last:border-b-0 transition-colors hover:bg-[var(--color-bg-subtle)] disabled:opacity-60",
+                            isCurrent && "bg-[var(--color-enterprise-bg)]",
+                          )}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-medium text-foreground">
+                              {option.channel || "Sem canal"}
+                              {isCurrent ? (
+                                <span className="ml-1.5 text-[11px] font-semibold text-[var(--brand-primary)]">
+                                  atual
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="mt-0.5 text-[11.5px] text-[var(--color-ink-soft)]">
+                              Base {formatCurrency(option.price)}
+                              {disc > 0 ? ` · -${disc}%` : ""}
+                            </div>
+                          </div>
+                          <span className="shrink-0 font-semibold tabular-nums text-success">
+                            {formatCurrency(finalPrice)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : editingItem === item.id && item.productType !== "SERVICE" ? (
+                /* Modo edição inline (qtd / desc) */
                 <div className="space-y-2.5">
                   <div className="text-sm font-semibold text-foreground">{item.productName}</div>
                   <div className="grid grid-cols-2 gap-2.5">
@@ -573,7 +965,8 @@ export function DealProductsSection({
                           size="icon"
                           className="size-7 rounded-lg text-ink-muted hover:text-foreground"
                           aria-label="Editar item"
-                          onClick={() => startEdit(item)}
+                          disabled={loadingEditId === item.id || updateMutation.isPending}
+                          onClick={() => void startEdit(item)}
                         >
                           <Pencil className="size-3.5" />
                         </Button>
@@ -610,6 +1003,26 @@ export function DealProductsSection({
               <span className="text-sm font-bold tabular-nums text-foreground">
                 {formatCurrency(totalValue)}
               </span>
+            </div>
+          )}
+
+          {/* Enviar oferta do curso → preenche o composer (só kind=COURSE) */}
+          {courseItems.length > 0 && (
+            <div className="border-t border-border px-4 py-3">
+              <button
+                type="button"
+                disabled={sendingCourseOffer}
+                onClick={() => void handleSendCourseOffer()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-[13px] font-semibold text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+              >
+                <Send className="size-3.5" strokeWidth={2.4} />
+                {sendingCourseOffer ? "Preparando…" : "Enviar produto"}
+              </button>
+              {courseItems.length > 1 ? (
+                <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+                  Usa o curso “{courseItems[0].productName}”
+                </p>
+              ) : null}
             </div>
           )}
         </>

@@ -391,6 +391,8 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
       return "Resolver conversas abertas";
     case "send_product": {
       const name = c.productName ? String(c.productName) : "";
+      const channel = c.channel ? String(c.channel) : "";
+      if (name && channel) return `${name} · ${channel}`;
       if (name) return `Produto: ${name}`;
       return c.productId ? `Produto: ${String(c.productId).slice(0, 8)}…` : "Selecionar produto";
     }
@@ -502,7 +504,14 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
         timeoutGotoStepId: "",
       };
     case "send_product":
-      return { productId: "", productName: "", content: "" };
+      return {
+        productId: "",
+        productName: "",
+        content: "",
+        unitPrice: "",
+        discountPercent: "",
+        channel: "",
+      };
     case "send_whatsapp_template":
       return {
         templateName: "",

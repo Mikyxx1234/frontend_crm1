@@ -38,6 +38,7 @@ import { getContact } from "@/features/inbox-v2/api/misc";
 import { sendAttachment, sendInternalTemplateSequence } from "@/features/inbox-v2/api";
 import { messagesKey } from "@/features/inbox-v2/hooks";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
+import { COMPOSER_INSERT_EVENT } from "@/lib/composer-insert";
 
 import { ActiveBotsButton } from "./active-bots-button";
 import { AudioRecorderButton, type AudioRecordState } from "./audio-recorder-button";
@@ -460,6 +461,23 @@ export function Composer({
       el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
     });
   }
+
+  // Ponte: botões da lateral (ex. "Enviar produto" de curso) empurram texto
+  // pra cá sem prop-drilling pelo ContactAside.
+  const insertTemplateTextRef = useRef(insertTemplateText);
+  insertTemplateTextRef.current = insertTemplateText;
+  useEffect(() => {
+    function onInsert(e: Event) {
+      const detail = (e as CustomEvent<{ text?: string }>).detail;
+      const text = typeof detail?.text === "string" ? detail.text : "";
+      if (!text.trim()) return;
+      insertTemplateTextRef.current(text);
+    }
+    window.addEventListener(COMPOSER_INSERT_EVENT, onInsert as EventListener);
+    return () => {
+      window.removeEventListener(COMPOSER_INSERT_EVENT, onInsert as EventListener);
+    };
+  }, []);
 
   // ── Slash command (/modelos) ────────────────────────────────────
   // Modelo interno → o hook insere o texto interpolado no campo (editável).

@@ -5,6 +5,32 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-08-07 — Seleção de preço/canal ao adicionar curso no negócio
+
+**Modelo usado.** Cursor Grok 4.5 (orquestração) + exploração do código em DEV_BRANCH.
+
+**Decisão.** Na aba Produtos do negócio (inbox/pipeline), ao clicar em um
+produto do catálogo, se `courseConfig.pricingOptions` tiver **mais de uma**
+linha (preço base + canal + desconto), a UI troca a busca por uma lista de
+opções com canal visível. A escolha envia `unitPrice` + `discount` (+ `channel`
+no evento) no `POST /api/deals/:id/products`. Com 0 ou 1 opção, segue o fluxo
+direto (1 opção já aplica preço/desconto da linha).
+
+**Contexto.** Cursos passam a ter várias tabelas de preço por canal no
+cadastro; o aside só enviava `productId` e o backend usava `product.price`
+(espelho da 1ª opção), impedindo o operador de escolher o canal correto.
+
+**Alternativas descartadas.**
+
+- Persistência de `channel` em `DealProduct` (migração): adiada — o valor
+  registrado no item já é preço/desconto; canal fica no evento e na escolha.
+- Picker só no editar: o fluxo pedido é na escolha do produto ao adicionar.
+
+**Impacto.** `DealProductsSection` em `deal-detail/sidebar.tsx`; backend já
+aceitava `unitPrice`/`discount` no POST.
+
+---
+
 ### 2026-08-03 — Saída visual "Falha ao enviar" nos nodes Meta
 
 **Modelos usados.** GPT-5.6 Sol (decisão principal) e Opus 4.7 isolado

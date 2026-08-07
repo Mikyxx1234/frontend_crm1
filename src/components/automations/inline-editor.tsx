@@ -45,6 +45,7 @@ import {
   type Opt,
 } from "./editor-data"
 import { WebhookStepConfig } from "./webhook-step-config"
+import { SendProductInlineConfig } from "./send-product-config"
 import {
   showsUpdateFieldVariableHint,
   UpdateFieldValueControl,
@@ -265,6 +266,9 @@ function Field({
 
     case "webhookConfig":
       return <InlineWebhookConfig config={config} onChange={onChange} />
+
+    case "sendProductConfig":
+      return <SendProductInlineConfig config={config} onChange={onChange} />
 
     case "builder":
       switch (field.builder) {

@@ -30,6 +30,7 @@ import {
   type ConditionRule,
 } from "@/lib/automation-condition";
 import { WebhookStepConfig } from "@/components/automations/webhook-step-config";
+import { ProductPicker } from "@/components/automations/send-product-config";
 import { useCustomFieldConditionMeta } from "@/components/automations/editor-data";
 import {
   showsUpdateFieldVariableHint,
@@ -126,100 +127,6 @@ function VariableShortcutHint() {
       Atalho: digite <span className="font-mono">{"{"}</span> ou{" "}
       <span className="font-mono">[</span> para abrir campos e variáveis.
     </p>
-  );
-}
-
-type ProductOption = { id: string; name: string; sku?: string | null; price?: number };
-
-/**
- * Seletor de produto do catálogo (busca server-side em /api/products).
- * Usado pelo passo "Enviar produto". Mantém o nome selecionado no draft
- * pra exibir o rótulo mesmo antes de a busca retornar.
- */
-function ProductPicker({
-  value,
-  valueName,
-  onChange,
-}: {
-  value: string;
-  valueName: string;
-  onChange: (id: string, name: string) => void;
-}) {
-  const [search, setSearch] = useState("");
-
-  const productsQuery = useQuery({
-    queryKey: ["products-for-automation", search],
-    staleTime: 30_000,
-    queryFn: async () => {
-      const qs = new URLSearchParams({ perPage: "20", active: "true" });
-      if (search.trim()) qs.set("search", search.trim());
-      const res = await fetch(apiUrl(`/api/products?${qs.toString()}`));
-      if (!res.ok) return [] as ProductOption[];
-      const data = await res.json();
-      const list = Array.isArray(data?.products) ? data.products : [];
-      return list.map((p: Record<string, unknown>) => ({
-        id: String(p.id),
-        name: String(p.name ?? ""),
-        sku: (p.sku as string | null) ?? null,
-        price: typeof p.price === "number" ? p.price : Number(p.price ?? 0),
-      })) as ProductOption[];
-    },
-  });
-
-  const options = productsQuery.data ?? [];
-
-  return (
-    <div className="space-y-2">
-      {value ? (
-        <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
-          <span className="text-[13px] font-medium">
-            {valueName || "Produto selecionado"}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 text-[12px]"
-            onClick={() => onChange("", "")}
-          >
-            Trocar
-          </Button>
-        </div>
-      ) : (
-        <>
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar produto pelo nome ou SKU…"
-          />
-          <div className="max-h-48 overflow-auto rounded-md border border-border">
-            {productsQuery.isLoading ? (
-              <p className="px-3 py-2 text-[12px] text-muted-foreground">Carregando…</p>
-            ) : options.length === 0 ? (
-              <p className="px-3 py-2 text-[12px] text-muted-foreground">
-                Nenhum produto encontrado.
-              </p>
-            ) : (
-              options.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => onChange(p.id, p.name)}
-                  className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-muted"
-                >
-                  <span className="truncate">{p.name}</span>
-                  {p.sku ? (
-                    <span className="ml-2 shrink-0 text-[11px] text-muted-foreground">
-                      {p.sku}
-                    </span>
-                  ) : null}
-                </button>
-              ))
-            )}
-          </div>
-        </>
-      )}
-    </div>
   );
 }
 
@@ -1101,8 +1008,32 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 <ProductPicker
                   value={String(draft.productId ?? "")}
                   valueName={String(draft.productName ?? "")}
-                  onChange={(id, name) =>
-                    setDraft((d) => ({ ...d, productId: id, productName: name }))
+                  valueChannel={
+                    typeof draft.channel === "string" ? draft.channel : undefined
+                  }
+                  valueUnitPrice={
+                    typeof draft.unitPrice === "number"
+                      ? draft.unitPrice
+                      : draft.unitPrice != null
+                        ? Number(draft.unitPrice)
+                        : undefined
+                  }
+                  valueDiscountPercent={
+                    typeof draft.discountPercent === "number"
+                      ? draft.discountPercent
+                      : draft.discountPercent != null
+                        ? Number(draft.discountPercent)
+                        : undefined
+                  }
+                  onChange={(sel) =>
+                    setDraft((d) => ({
+                      ...d,
+                      productId: sel.id,
+                      productName: sel.name,
+                      unitPrice: sel.unitPrice ?? "",
+                      discountPercent: sel.discountPercent ?? "",
+                      channel: sel.channel ?? "",
+                    }))
                   }
                 />
               </div>

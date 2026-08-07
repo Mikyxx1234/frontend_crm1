@@ -42,7 +42,7 @@ export type EditorField =
   | { kind: "webhookConfig" }
   /** Seletor de produto (+ preço/canal) do passo send_product. */
   | { kind: "sendProductConfig" }
-  | { kind: "builder"; key: string; builder: "buttons" | "buttonsTitle" | "condition" | "schedule" | "headers" }
+  | { kind: "builder"; key: string; builder: "buttons" | "buttonsTitle" | "listRows" | "condition" | "schedule" | "headers" }
 
 const ACTIVITY_TYPES: Opt[] = [
   { value: "TASK", label: "Tarefa" },
@@ -183,6 +183,46 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "text", key: "header", label: "Cabeçalho", optional: true },
     { kind: "text", key: "footer", label: "Rodapé", optional: true },
     { kind: "builder", builder: "buttonsTitle", key: "buttons", label: "Botões (máx. 3)" },
+    { kind: "step", key: "elseGotoStepId", label: "Se resposta não bater → ir para", optional: true },
+    { kind: "text", key: "saveToVariable", label: "Salvar resposta em variável", optional: true },
+    { kind: "duration", key: "timeoutMs", label: "Sem resposta em" },
+    {
+      kind: "select",
+      key: "timeoutAction",
+      label: "Se ninguém responder",
+      options: [
+        { value: "continue", label: "Continuar fluxo (próximo passo)" },
+        { value: "stop", label: "Encerrar automação" },
+        { value: "goto", label: "Ir para passo" },
+      ],
+    },
+    { kind: "step", key: "timeoutGotoStepId", label: "Ir para (no timeout)", optional: true },
+    ...META_FAILURE_FIELDS,
+  ],
+  send_whatsapp_list: [
+    { kind: "textarea", key: "body", label: "Texto da mensagem" },
+    {
+      kind: "text",
+      key: "button",
+      label: "Botão que abre a lista",
+      placeholder: "Ver opções",
+      hint: "Máx. 20 caracteres (limite da Meta).",
+    },
+    {
+      kind: "text",
+      key: "sectionTitle",
+      label: "Título da seção",
+      optional: true,
+      placeholder: "Opções",
+    },
+    { kind: "text", key: "header", label: "Cabeçalho", optional: true },
+    { kind: "text", key: "footer", label: "Rodapé", optional: true },
+    {
+      kind: "builder",
+      builder: "listRows",
+      key: "rows",
+      label: "Itens da lista (máx. 10)",
+    },
     { kind: "step", key: "elseGotoStepId", label: "Se resposta não bater → ir para", optional: true },
     { kind: "text", key: "saveToVariable", label: "Salvar resposta em variável", optional: true },
     { kind: "duration", key: "timeoutMs", label: "Sem resposta em" },

@@ -109,6 +109,7 @@ function rfNodeType(stepType: string): keyof typeof nodeTypes {
   if (stepType === "delay") return "delay";
   if (stepType === "question") return "interactive";
   if (stepType === "send_whatsapp_interactive") return "interactive";
+  if (stepType === "send_whatsapp_list") return "interactive";
   if (stepType === "wait_for_reply") return "wait";
   if (stepType === "set_variable") return "variable";
   if (stepType === "goto") return "goto";
@@ -119,7 +120,13 @@ function rfNodeType(stepType: string): keyof typeof nodeTypes {
 
 function isInteractiveStep(step: { type: string; config?: unknown }): boolean {
   const t = step.type;
-  if (t === "question" || t === "send_whatsapp_interactive") return true;
+  if (
+    t === "question" ||
+    t === "send_whatsapp_interactive" ||
+    t === "send_whatsapp_list"
+  ) {
+    return true;
+  }
   // Template WhatsApp vira nó interativo (1 handle por botão, arraste pra
   // conectar — estilo Kommo) SÓ quando tem botões de resposta rápida. Sem
   // botões, segue como envio linear simples.
@@ -128,6 +135,21 @@ function isInteractiveStep(step: { type: string; config?: unknown }): boolean {
     return Array.isArray(cfg?.buttons) && (cfg!.buttons as unknown[]).length > 0;
   }
   return false;
+}
+
+/** Botões (interactive/question) ou rows (lista WhatsApp). */
+function interactiveChoiceItems(
+  stepType: string,
+  cfg: Record<string, unknown>,
+): Record<string, unknown>[] {
+  if (stepType === "send_whatsapp_list") {
+    return Array.isArray(cfg.rows) ? (cfg.rows as Record<string, unknown>[]) : [];
+  }
+  return Array.isArray(cfg.buttons) ? (cfg.buttons as Record<string, unknown>[]) : [];
+}
+
+function interactiveChoiceKey(stepType: string): "buttons" | "rows" {
+  return stepType === "send_whatsapp_list" ? "rows" : "buttons";
 }
 
 const ADD_STEP_ID = "__addStep__";
@@ -156,6 +178,7 @@ const BRANCHING_STEP_TYPES = new Set([
   "business_hours",
   "question",
   "send_whatsapp_interactive",
+  "send_whatsapp_list",
 ]);
 
 function isAddStepNodeId(id: string | null | undefined): boolean {
@@ -183,9 +206,9 @@ function collectLeafStepIds(steps: AutomationStep[]): Set<string> {
     if (TERMINAL_STEP_TYPES.has(step.type)) continue;
     if (isInteractiveStep(step)) {
       const cfg = step.config as Record<string, unknown>;
-      const buttons = Array.isArray(cfg.buttons)
-        ? (cfg.buttons as { gotoStepId?: string }[])
-        : [];
+      const buttons = interactiveChoiceItems(step.type, cfg) as {
+        gotoStepId?: string;
+      }[];
       const hasAnyValidGoto = buttons.some(
         (b) => b.gotoStepId && b.gotoStepId !== "__none__" && stepIds.has(b.gotoStepId)
       );
@@ -226,6 +249,7 @@ const META_SEND_FAILURE_TYPES = new Set([
   "send_whatsapp_template",
   "send_whatsapp_media",
   "send_whatsapp_interactive",
+  "send_whatsapp_list",
   "question",
 ]);
 
@@ -739,7 +763,7 @@ function WorkflowCanvasInner({
         // garante que o clique de seleção não vire micro-drag.
         if (isInteractiveStep(step)) {
           const cfg = step.config as Record<string, unknown>;
-          const buttons = Array.isArray(cfg.buttons) ? cfg.buttons : [];
+          const buttons = interactiveChoiceItems(step.type, cfg);
           return {
             id: step.id,
             type: "interactive" as const,
@@ -902,7 +926,7 @@ function WorkflowCanvasInner({
             incomplete: isStepIncomplete(step.type, next),
           };
           if (isInteractiveStep({ type: step.type, config: next })) {
-            data.buttons = Array.isArray(next.buttons) ? next.buttons : [];
+            data.buttons = interactiveChoiceItems(step.type, next);
           }
           if (step.type === "condition") {
             data.branches = normalizeConditionConfig(next).branches;
@@ -962,6 +986,14 @@ function WorkflowCanvasInner({
           cfg.buttons = btns;
           changed = true;
         }
+        if (Array.isArray(cfg.rows)) {
+          const rows = (cfg.rows as Record<string, unknown>[]).map((r) => {
+            if (r.gotoStepId === id) return { ...r, gotoStepId: undefined };
+            return r;
+          });
+          cfg.rows = rows;
+          changed = true;
+        }
 
         if (s.type === "condition" && Array.isArray(cfg.branches)) {
           const nextBranches = (cfg.branches as Record<string, unknown>[]).map((b) => {
@@ -1011,6 +1043,12 @@ function WorkflowCanvasInner({
       if (Array.isArray(cfg.buttons)) {
         cfg.buttons = (cfg.buttons as Record<string, unknown>[]).map((b) => ({
           ...b,
+          gotoStepId: undefined,
+        }));
+      }
+      if (Array.isArray(cfg.rows)) {
+        cfg.rows = (cfg.rows as Record<string, unknown>[]).map((r) => ({
+          ...r,
           gotoStepId: undefined,
         }));
       }
@@ -1165,12 +1203,11 @@ function WorkflowCanvasInner({
         if (btnMatch && isInteractiveStep(srcStep)) {
           const idx = Number(btnMatch[1]);
           const cfg = { ...srcStep.config } as Record<string, unknown>;
-          const buttons = Array.isArray(cfg.buttons)
-            ? [...(cfg.buttons as Record<string, unknown>[])]
-            : [];
+          const key = interactiveChoiceKey(srcStep.type);
+          const buttons = [...interactiveChoiceItems(srcStep.type, cfg)];
           if (buttons[idx]) {
             buttons[idx] = { ...buttons[idx], gotoStepId: target };
-            cfg.buttons = buttons;
+            cfg[key] = buttons;
             onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
             return;
           }
@@ -1355,12 +1392,11 @@ function WorkflowCanvasInner({
         if (btnMatch && isInteractiveStep(srcStep)) {
           const idx = Number(btnMatch[1]);
           const cfg = { ...srcStep.config } as Record<string, unknown>;
-          const buttons = Array.isArray(cfg.buttons)
-            ? [...(cfg.buttons as Record<string, unknown>[])]
-            : [];
+          const key = interactiveChoiceKey(srcStep.type);
+          const buttons = [...interactiveChoiceItems(srcStep.type, cfg)];
           if (buttons[idx]) {
             buttons[idx] = { ...buttons[idx], gotoStepId: id };
-            cfg.buttons = buttons;
+            cfg[key] = buttons;
             const updated = cur.map((s) =>
               s.id === sourceId ? { ...s, config: cfg } : s
             );
@@ -1640,12 +1676,11 @@ function WorkflowCanvasInner({
       if (btnMatch && isInteractiveStep(srcStep)) {
         const idx = Number(btnMatch[1]);
         const cfg = { ...srcStep.config } as Record<string, unknown>;
-        const buttons = Array.isArray(cfg.buttons)
-          ? [...(cfg.buttons as Record<string, unknown>[])]
-          : [];
+        const key = interactiveChoiceKey(srcStep.type);
+        const buttons = [...interactiveChoiceItems(srcStep.type, cfg)];
         if (buttons[idx]) {
           buttons[idx] = { ...buttons[idx], gotoStepId: undefined };
-          cfg.buttons = buttons;
+          cfg[key] = buttons;
           onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
           return;
         }

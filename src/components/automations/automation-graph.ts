@@ -71,7 +71,13 @@ function readNextStepId(config: unknown): string | null {
 }
 
 function isInteractiveStep(step: { type: string; config?: Record<string, unknown> }): boolean {
-  if (step.type === "question" || step.type === "send_whatsapp_interactive") return true
+  if (
+    step.type === "question" ||
+    step.type === "send_whatsapp_interactive" ||
+    step.type === "send_whatsapp_list"
+  ) {
+    return true
+  }
   // Template só é interativo com botões de resposta rápida (espelha workflow-canvas).
   if (step.type === "send_whatsapp_template") {
     return Array.isArray(step.config?.buttons) && (step.config!.buttons as unknown[]).length > 0
@@ -79,11 +85,22 @@ function isInteractiveStep(step: { type: string; config?: Record<string, unknown
   return false
 }
 
+function interactiveChoiceItems(
+  stepType: string,
+  cfg: Record<string, unknown>,
+): { gotoStepId?: string }[] {
+  if (stepType === "send_whatsapp_list") {
+    return Array.isArray(cfg.rows) ? (cfg.rows as { gotoStepId?: string }[]) : []
+  }
+  return Array.isArray(cfg.buttons) ? (cfg.buttons as { gotoStepId?: string }[]) : []
+}
+
 const META_SEND_FAILURE_TYPES = new Set([
   "send_whatsapp_message",
   "send_whatsapp_template",
   "send_whatsapp_media",
   "send_whatsapp_interactive",
+  "send_whatsapp_list",
   "question",
 ])
 
@@ -115,7 +132,7 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
     const cfg = a.config
 
     if (isInteractiveStep(a)) {
-      const buttons = Array.isArray(cfg.buttons) ? (cfg.buttons as { gotoStepId?: string }[]) : []
+      const buttons = interactiveChoiceItems(a.type, cfg)
       buttons.forEach((btn, idx) => {
         const gotoId = btn.gotoStepId && btn.gotoStepId !== NONE ? btn.gotoStepId : undefined
         if (!gotoId || !stepIds.has(gotoId)) return

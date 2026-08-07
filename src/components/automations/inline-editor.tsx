@@ -276,6 +276,15 @@ function Field({
           return <ButtonsBuilder label={field.label} variant="text" items={asArr(config[field.key])} steps={steps} onChange={(v) => set(field.key, v)} />
         case "buttonsTitle":
           return <ButtonsBuilder label={field.label} variant="title" max={3} items={asArr(config[field.key])} steps={steps} onChange={(v) => set(field.key, v)} />
+        case "listRows":
+          return (
+            <ListRowsBuilder
+              label={field.label}
+              items={asArr(config[field.key])}
+              steps={steps}
+              onChange={(v) => set(field.key, v)}
+            />
+          )
         case "headers":
           return <HeadersBuilder items={asArr(config[field.key])} onChange={(v) => set(field.key, v)} />
         case "schedule":
@@ -1236,6 +1245,73 @@ function ButtonsBuilder({
       {!full && (
         <button className="cfg-add nodrag" onClick={add}>
           + Adicionar botão
+        </button>
+      )}
+    </div>
+  )
+}
+
+type ListRowItem = {
+  id?: string
+  title?: string
+  description?: string
+  gotoStepId?: string
+}
+
+function ListRowsBuilder({
+  label,
+  items,
+  steps,
+  onChange,
+}: {
+  label: string
+  items: ListRowItem[]
+  steps: StepOpt[]
+  onChange: (v: ListRowItem[]) => void
+}) {
+  const update = (i: number, patch: Partial<ListRowItem>) =>
+    onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
+  const add = () => onChange([...items, { id: rid("row"), title: "", description: "" }])
+  const remove = (i: number) => onChange(items.filter((_, idx) => idx !== i))
+  const full = items.length >= 10
+  return (
+    <div className="cfg-field">
+      <span className="cfg-label">{label}</span>
+      <span className="cfg-hint">Título ≤ 24 caracteres · descrição ≤ 72 (opcional).</span>
+      <div className="cfg-list">
+        {items.map((it, i) => (
+          <div className="cfg-item" key={it.id ?? i}>
+            <div className="cfg-item-head">
+              <InputGlass
+                className="nodrag"
+                placeholder={`Item ${i + 1}`}
+                value={str(it.title)}
+                maxLength={24}
+                onChange={(e) => update(i, { title: e.target.value })}
+              />
+              <button className="cfg-x nodrag" title="Remover" onClick={() => remove(i)}>
+                ×
+              </button>
+            </div>
+            <InputGlass
+              className="nodrag"
+              placeholder="Descrição (opcional)"
+              value={str(it.description)}
+              maxLength={72}
+              onChange={(e) => update(i, { description: e.target.value })}
+            />
+            <ConfigSelect
+              value={str(it.gotoStepId)}
+              options={steps}
+              placeholder="Ir para passo…"
+              onChange={(v) => update(i, { gotoStepId: v })}
+            />
+          </div>
+        ))}
+      </div>
+      {!full && (
+        <button className="cfg-add nodrag" onClick={add}>
+          + Adicionar item
         </button>
       )}
     </div>

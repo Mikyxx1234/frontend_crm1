@@ -253,6 +253,7 @@ function VariableShortcutTextarea({
 const MESSAGING_STEP_TYPES = new Set([
   "send_whatsapp_message",
   "send_whatsapp_interactive",
+  "send_whatsapp_list",
   "send_product",
   "question",
 ]);

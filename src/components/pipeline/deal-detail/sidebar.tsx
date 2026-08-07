@@ -687,7 +687,7 @@ export function DealProductsSection({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
-                    Escolha o preço / canal
+                    Escolha o preço / cota
                   </p>
                   <p className="truncate text-sm font-semibold text-foreground" title={pendingPricing.productName}>
                     {pendingPricing.productName}
@@ -722,7 +722,7 @@ export function DealProductsSection({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-medium text-foreground">
-                          {option.channel || "Sem canal"}
+                          {option.channel || "Sem cota"}
                         </div>
                         <div className="mt-0.5 text-[11.5px] text-[var(--color-ink-soft)]">
                           Base {formatCurrency(option.price)}
@@ -805,7 +805,7 @@ export function DealProductsSection({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
-                        Escolha o preço / canal
+                        Escolha o preço / cota
                       </p>
                       <p className="truncate text-sm font-semibold text-foreground" title={editPricing.productName}>
                         {editPricing.productName}
@@ -842,7 +842,7 @@ export function DealProductsSection({
                         >
                           <div className="min-w-0 flex-1">
                             <div className="truncate font-medium text-foreground">
-                              {option.channel || "Sem canal"}
+                              {option.channel || "Sem cota"}
                               {isCurrent ? (
                                 <span className="ml-1.5 text-[11px] font-semibold text-[var(--brand-primary)]">
                                   atual

@@ -5,6 +5,30 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-08-07 — Node `send_whatsapp_list` (Lista / menu interativo)
+
+**Modelo usado.** Cursor Grok 4.5.
+
+**Decisão.** Novo passo de automação `send_whatsapp_list` (“Lista WhatsApp”),
+espelhando `send_whatsapp_interactive`: config inline com `body`, `button`,
+`rows[]` (até 10, título/descrição/`gotoStepId`), timeout e falha. Canvas
+reutiliza `InteractiveNode` com handles `btn_*` sobre `rows`. Runtime no
+backend chama `MetaWhatsAppClient.sendInteractiveList` e pausa; o match de
+resposta reusa `list_reply` já parseado no webhook + matching por
+`title`/`id` em `rows` (como botões).
+
+**Contexto.** A API Meta de lista já existia no outbound; faltava o bloco no
+fluxo. Botões Meta limitam a 3 opções — a lista cobre menus maiores.
+
+**Alternativas descartadas.** Estender o passo de botões (mistura limites UX);
+usar só webhook genérico (sem handles no canvas).
+
+**Impacto.** FE: automation-workflow, editor-fields, inline-editor, palette,
+canvas/graph, auditor. BE: automation-workflow, executor, automation-context,
+auditor.
+
+---
+
 ### 2026-08-07 — Seleção de preço/canal ao adicionar curso no negócio
 
 **Modelo usado.** Cursor Grok 4.5 (orquestração) + exploração do código em DEV_BRANCH.

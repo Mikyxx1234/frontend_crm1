@@ -60,6 +60,7 @@ const GROUPS: { title: string; items: PaletteItem[] }[] = [
       { type: "send_whatsapp_template" },
       { type: "send_whatsapp_media" },
       { type: "send_whatsapp_interactive" },
+      { type: "send_whatsapp_list" },
       { type: "send_product" },
     ],
   },

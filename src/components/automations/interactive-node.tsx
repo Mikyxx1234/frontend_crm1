@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconCircleOff as CircleSlash, IconClock as Clock, IconHelpCircle as HelpCircle, IconMessageQuestion as MessageCircleQuestion, IconClick as MousePointerClick, IconTrash as Trash2 } from "@tabler/icons-react";
+import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconCircleOff as CircleSlash, IconClock as Clock, IconHelpCircle as HelpCircle, IconListDetails as ListDetails, IconMessageQuestion as MessageCircleQuestion, IconClick as MousePointerClick, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -45,13 +45,15 @@ function buttonLabel(btn: InteractiveButton, idx: number): string {
  * Cor accent muda conforme `stepType`:
  *  - "question"                          → violet (família salesbot)
  *  - "send_whatsapp_interactive"         → violet (botões WhatsApp)
+ *  - "send_whatsapp_list"                → violet (lista WhatsApp)
  */
 export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeData>) {
   const buttons = data.buttons ?? [];
   const s = data.stats;
   const hasStats = s && (s.success > 0 || s.failed > 0);
   const isQuestion = data.stepType === "question";
-  const Icon = isQuestion ? MessageCircleQuestion : MousePointerClick;
+  const isList = data.stepType === "send_whatsapp_list";
+  const Icon = isQuestion ? MessageCircleQuestion : isList ? ListDetails : MousePointerClick;
 
   // Ambos usam violet, mas mantemos a estrutura caso queiramos
   // distinguir no futuro (ex.: question = blue, interactive = violet).

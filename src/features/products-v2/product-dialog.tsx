@@ -503,13 +503,13 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
                         />
                       </div>
                       <div className="min-w-0">
-                        {idx === 0 && <Label>Canal</Label>}
+                        {idx === 0 && <Label>Cota</Label>}
                         <Input
                           value={row.channel}
                           onChange={(e) => updatePricingRow(row.key, { channel: e.target.value })}
                           className={idx === 0 ? "mt-1" : undefined}
                           placeholder="ex.: WhatsApp"
-                          aria-label={`Canal linha ${idx + 1}`}
+                          aria-label={`Cota linha ${idx + 1}`}
                         />
                       </div>
                       <div className="min-w-0">
@@ -566,7 +566,7 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
                     onClick={() => setPricingRows((rows) => [...rows, newPricingRow()])}
                   >
                     <IconPlus size={14} />
-                    Adicionar preço / canal
+                    Adicionar preço / cota
                   </Button>
                   <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
                     <input

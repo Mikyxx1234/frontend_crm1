@@ -431,10 +431,13 @@ export function InternalTemplatePickerList({
  */
 export function TemplatePickerList({
   conversationId,
+  channelId,
   onClose,
   onPick,
 }: {
   conversationId: string;
+  /** Canal Cloud API de envio — filtra templates da WABA correta. */
+  channelId?: string | null;
   onClose?: () => void;
   /**
    * Quando fornecido, clicar no template ABRE o painel de validação no
@@ -444,9 +447,9 @@ export function TemplatePickerList({
 }) {
   const qc = useQueryClient();
   const { data, isLoading, error, isError } = useQuery<WhatsappTemplate[]>({
-    queryKey: ["whatsapp-templates", "agent-enabled"],
+    queryKey: ["whatsapp-templates", "agent-enabled", channelId ?? "default"],
     queryFn: async () => {
-      const items = await listAgentEnabledTemplates();
+      const items = await listAgentEnabledTemplates(channelId);
       // Diagnóstico: logamos quantos templates voltaram. Útil quando o
       // operador relata "modal vazia": confirma se backend retornou lista
       // (sinal de `agentEnabled=false` em todos) ou se a chamada falhou

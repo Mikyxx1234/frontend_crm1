@@ -220,8 +220,11 @@ async function fetchInternalTemplates(): Promise<InternalRow[]> {
   return Array.isArray(data) ? data : [];
 }
 
-async function fetchMetaTemplates(): Promise<MetaRow[]> {
-  const r = await fetch(apiUrl("/api/whatsapp-template-configs/agent-enabled"));
+async function fetchMetaTemplates(channelId?: string | null): Promise<MetaRow[]> {
+  const qs = channelId?.trim()
+    ? `?channelId=${encodeURIComponent(channelId.trim())}`
+    : "";
+  const r = await fetch(apiUrl(`/api/whatsapp-template-configs/agent-enabled${qs}`));
   if (!r.ok) return [];
   const data = await r.json().catch(() => []);
   return Array.isArray(data) ? data : [];
@@ -383,6 +386,8 @@ export type UseSlashMenuOptions = {
    */
   conversationId?: string | null;
   contactId?: string | null;
+  /** Canal Cloud API — filtra templates Meta da WABA correta. */
+  channelId?: string | null;
   /** Desliga totalmente o atalho (ex.: modo nota, anexo pendente). */
   disabled?: boolean;
 };
@@ -397,6 +402,7 @@ export function useSlashMenu({
   onInsertMedia,
   conversationId,
   contactId,
+  channelId,
   disabled = false,
 }: UseSlashMenuOptions) {
   const [open, setOpen] = React.useState(false);
@@ -419,8 +425,8 @@ export function useSlashMenu({
     staleTime: 60_000,
   });
   const metasQ = useQuery({
-    queryKey: ["slash-meta-templates"],
-    queryFn: fetchMetaTemplates,
+    queryKey: ["slash-meta-templates", channelId ?? "default"],
+    queryFn: () => fetchMetaTemplates(channelId),
     enabled: queriesEnabled,
     staleTime: 60_000,
   });

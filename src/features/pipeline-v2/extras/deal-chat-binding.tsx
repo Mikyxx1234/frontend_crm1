@@ -709,6 +709,7 @@ export function useDealChatBinding(params: {
           <div onClick={(e) => e.stopPropagation()}>
             <TemplatePickerList
               conversationId={effectiveConversationId}
+              channelId={selectedChannelId}
               onClose={() => setTemplateOpen(false)}
               onPick={(tpl) => {
                 setExternalTemplate(whatsappTemplateToPending(tpl));

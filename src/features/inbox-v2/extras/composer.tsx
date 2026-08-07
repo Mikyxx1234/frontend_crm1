@@ -482,6 +482,7 @@ export function Composer({
     // Conversa/contato atuais — habilitam a seção "Automações" no menu "/".
     conversationId,
     contactId,
+    channelId: selectedChannelId ?? conversationChannelId ?? null,
     // Desabilita o atalho em modo nota (não faz sentido inserir templates ali)
     disabled: disabled || noteMode,
     // Modelo/mensagem rápida com anexo — 1 anexo sem messageBefore encosta
@@ -1010,6 +1011,7 @@ export function Composer({
           <>
             <ComposerMenu
               conversationId={conversationId}
+              channelId={selectedChannelId ?? conversationChannelId ?? null}
               className="h-9 w-9 shrink-0"
               noteMode={noteMode}
               onToggleNote={onSendNote ? () => setNoteMode((v) => !v) : undefined}

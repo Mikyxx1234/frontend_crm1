@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { KpiCard, KpiSquareScroll } from "@/components/crm/kpi-card";
 import {
   Dialog,
@@ -17,7 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatMetaChannelLabel } from "@/lib/meta-whatsapp/meta-cloud-channels";
 import { cn } from "@/lib/utils";
 
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
@@ -135,18 +138,39 @@ export default function MessageModelsHubPage() {
     },
   });
 
+  const { data: hubMetaChannels = [] } = useQuery({
+    queryKey: ["meta-cloud-whatsapp-channels"],
+    queryFn: async () => {
+      const { fetchMetaCloudWhatsAppChannels } = await import(
+        "@/lib/meta-whatsapp/meta-cloud-channels"
+      );
+      return fetchMetaCloudWhatsAppChannels();
+    },
+    staleTime: 60_000,
+    enabled: safeTab === "overview",
+  });
+  const [hubChannelId, setHubChannelId] = React.useState("");
+  React.useEffect(() => {
+    if (!hubMetaChannels.length) return;
+    if (hubChannelId && hubMetaChannels.some((c) => c.id === hubChannelId)) return;
+    const connected = hubMetaChannels.find((c) => c.status === "CONNECTED");
+    setHubChannelId((connected ?? hubMetaChannels[0]).id);
+  }, [hubMetaChannels, hubChannelId]);
+
   const { data: metaPage, isLoading: loadingMeta } = useQuery({
-    queryKey: ["meta-whatsapp-templates", "hub-first"],
+    queryKey: ["meta-whatsapp-templates", "hub-first", hubChannelId || "none"],
     queryFn: async () => {
       // limit=500 pega todos os templates da WABA (padrão da Graph é 100 e o
       // hub não pagina). Alinha os contadores da Visão geral / WhatsApp (Meta)
       // com a aba detalhada, que já usa limit=500.
-      const r = await fetch(apiUrl("/api/meta/whatsapp/message-templates?limit=500"));
+      const q = new URLSearchParams({ limit: "500" });
+      if (hubChannelId) q.set("channelId", hubChannelId);
+      const r = await fetch(apiUrl(`/api/meta/whatsapp/message-templates?${q.toString()}`));
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return { data: [] as MetaRow[] };
       return j as { data?: MetaRow[] };
     },
-    enabled: safeTab === "overview",
+    enabled: safeTab === "overview" && (Boolean(hubChannelId) || hubMetaChannels.length === 0),
   });
 
   const { data: flows = [], isLoading: loadingFlows } = useQuery({
@@ -595,6 +619,23 @@ export default function MessageModelsHubPage() {
 
       {safeTab === "overview" && (
         <div className="space-y-4">
+          {hubMetaChannels.length > 1 ? (
+            <div className="max-w-md space-y-1.5">
+              <Label className="text-[11px] font-semibold text-[var(--text-muted)]">
+                Contadores WhatsApp por canal
+              </Label>
+              <DropdownGlass
+                triggerClassName="w-full"
+                placeholder="Canal…"
+                value={hubChannelId}
+                options={hubMetaChannels.map((c) => ({
+                  value: c.id,
+                  label: formatMetaChannelLabel(c),
+                }))}
+                onValueChange={setHubChannelId}
+              />
+            </div>
+          ) : null}
           <section className="shrink-0" aria-label="Indicadores de modelos de mensagem">
             <KpiSquareScroll items={overviewKpis} />
             <div className="hidden gap-2.5 sm:gap-3.5 lg:grid lg:grid-cols-5">

@@ -39,6 +39,7 @@ import { TabulationDialog } from "./tabulation-dialog";
  */
 export function ComposerMenu({
   conversationId,
+  channelId,
   className,
   noteMode,
   onToggleNote,
@@ -53,6 +54,8 @@ export function ComposerMenu({
   requireTabulationOnClose,
 }: {
   conversationId: string | null;
+  /** Canal de envio atual — filtra templates WhatsApp da WABA correta. */
+  channelId?: string | null;
   className?: string;
   noteMode?: boolean;
   onToggleNote?: () => void;
@@ -283,6 +286,7 @@ export function ComposerMenu({
           ) : (
             <TemplatePickerList
               conversationId={conversationId}
+              channelId={channelId}
               onClose={closeMenu}
               onPick={onPickTemplate}
             />

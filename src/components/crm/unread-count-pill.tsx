@@ -1,3 +1,4 @@
+import { IconMessageCircle } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
 
 interface UnreadCountPillProps {
@@ -8,7 +9,7 @@ interface UnreadCountPillProps {
 }
 
 /**
- * Contador de mensagens não lidas — círculo vermelho sólido + número branco.
+ * Contador de mensagens não lidas — pílula lilás com ícone de balão + número.
  * Esconde quando `count` é 0 / inválido.
  */
 export function UnreadCountPill({
@@ -23,11 +24,12 @@ export function UnreadCountPill({
   return (
     <span
       className={cn(
-        "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-danger)] px-1 font-display text-[11px] font-bold leading-none text-white tabular-nums",
+        "inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_16%,white)] px-2 py-0.5 font-display text-[11px] font-bold leading-none text-[var(--brand-primary)] tabular-nums",
         className,
       )}
       aria-label={ariaLabel ?? `${count} mensagens não lidas`}
     >
+      <IconMessageCircle size={12} stroke={2} className="shrink-0" aria-hidden />
       {label}
     </span>
   )

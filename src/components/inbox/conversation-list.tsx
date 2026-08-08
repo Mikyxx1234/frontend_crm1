@@ -19,6 +19,7 @@ import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avat
 import { PresenceDashboard } from "@/components/inbox/presence-dashboard";
 import { SwipeRow } from "@/components/inbox/swipe-row";
 import { TagChip } from "@/components/crm/tag-chip";
+import { AwaitingReplyFooter } from "@/components/crm/awaiting-reply-footer";
 import { UnreadCountPill } from "@/components/crm/unread-count-pill";
 import { cn } from "@/lib/utils";
 // InboxFilters type moved here (inbox-filters.tsx é código morto — DS-010/DS-012)
@@ -1025,15 +1026,15 @@ function ConversationItem({
       {...staggerItem}
       layout
       className={cn(
-        "group relative flex w-full cursor-pointer gap-2 border-b border-[var(--glass-border)] px-3 py-2.5 transition-all duration-150 hover:bg-[var(--glass-bg-panel)] dark:border-[var(--glass-border-subtle)] dark:hover:bg-[var(--glass-bg-subtle)]",
+        "group relative w-full cursor-pointer overflow-hidden border-b border-[var(--glass-border)] transition-all duration-150 hover:bg-[var(--glass-bg-panel)] dark:border-[var(--glass-border-subtle)] dark:hover:bg-[var(--glass-bg-subtle)]",
         active && "border-l-2 border-l-primary bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)] dark:bg-[var(--glass-bg-subtle)]",
-        !active && unreplied && "border-l-2 border-l-[var(--color-danger)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-danger)_14%,transparent)]",
-        !active && !unreplied && unread && "bg-primary/8 hover:bg-primary/12 dark:bg-primary/15 dark:hover:bg-primary/20",
-        !active && !unreplied && !unread && "bg-transparent",
+        !active && unread && "bg-primary/8 hover:bg-primary/12 dark:bg-primary/15 dark:hover:bg-primary/20",
+        !active && !unread && "bg-transparent",
       )}
       onClick={() => !selectionMode && onSelect(row)}
       aria-label={unread ? `${row.contact.name || "Conversa"} — ${row.unreadCount} mensagens não lidas` : undefined}
     >
+      <div className="flex w-full gap-2 px-3 py-2.5">
       {selectionMode && (
         <button
           type="button"
@@ -1196,6 +1197,9 @@ function ConversationItem({
           </TooltipHost>
         )}
       </div>
+      </div>
+
+      {unreplied ? <AwaitingReplyFooter unreadCount={row.unreadCount ?? 0} /> : null}
     </MotionDiv>
   );
 

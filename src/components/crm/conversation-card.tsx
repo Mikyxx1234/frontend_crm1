@@ -29,6 +29,7 @@ import {
   StatusTicks,
   type DeliveryTickStatus,
 } from "@/components/crm/status-ticks"
+import { AwaitingReplyFooter } from "@/components/crm/awaiting-reply-footer"
 import { UnreadCountPill } from "@/components/crm/unread-count-pill"
 import { Chip } from "./chip"
 import { CheckboxGlass } from "./checkbox-glass"
@@ -228,31 +229,22 @@ export function ConversationCard({
         // Borda trocada para `--glass-border-subtle` (0.30 alpha vs 0.55):
         // alinha com a referência v0 que tem cards "flutuando" sem
         // contorno explícito.
-        "relative cursor-pointer rounded-[var(--radius-lg)] border px-3 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-200",
-        unreplied
-          ? "border-[var(--color-danger)] bg-[color-mix(in_srgb,var(--color-danger)_12%,white)] hover:bg-[color-mix(in_srgb,var(--color-danger)_16%,white)]"
-          : [
-              "border-transparent",
-              // Nao-selecionado: fundo cinza clarinho (mais opaco / menos "branco puro")
-              // pra contrastar com o card selecionado. Hover intensifica levemente.
-              "bg-[color-mix(in_srgb,var(--glass-bg-overlay)_60%,rgba(148,163,184,0.10))]",
-              "hover:bg-[var(--glass-bg-overlay)]",
-            ],
+        "relative cursor-pointer overflow-hidden rounded-[var(--radius-lg)] border border-transparent shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-200",
+        // Nao-selecionado: fundo cinza clarinho (mais opaco / menos "branco puro")
+        // pra contrastar com o card selecionado. Hover intensifica levemente.
+        "bg-[color-mix(in_srgb,var(--glass-bg-overlay)_60%,rgba(148,163,184,0.10))]",
+        "hover:bg-[var(--glass-bg-overlay)]",
         // Selecionado: fundo branco + ring inset (ring externo era clipado
         // pelo overflow-y-auto da lista — 1º card perdia a borda de cima).
-        // Unreplied mantém tint vermelho; só reforça o ring de seleção.
-        conversation.active && !unreplied &&
+        conversation.active &&
           "bg-white border-[var(--brand-primary)]/55 ring-2 ring-inset ring-[var(--brand-primary)]/30 shadow-[0_2px_8px_rgba(91,111,245,0.12)] hover:bg-white",
-        conversation.active && unreplied &&
-          "ring-2 ring-inset ring-[var(--brand-primary)]/30 shadow-[0_2px_8px_rgba(91,111,245,0.12)]",
         conversation.inactive && "opacity-70",
         // Marcada (modo seleção): mesmo anel do brand, sem exigir foco/hover.
-        selectionMode && selected && !unreplied &&
+        selectionMode && selected &&
           "bg-white border-[var(--brand-primary)]/55 ring-2 ring-inset ring-[var(--brand-primary)]/30 hover:bg-white",
-        selectionMode && selected && unreplied &&
-          "ring-2 ring-inset ring-[var(--brand-primary)]/30",
       )}
     >
+      <div className="px-3 py-2">
       {/* Linha 1: checkbox (modo seleção) + avatar + (nome + tempo + preview ao lado).
           items-start alinha o nome no topo do avatar; o preview de 2
           linhas ocupa o espaço ao lado da metade inferior do avatar —
@@ -441,6 +433,9 @@ export function ConversationCard({
           Conversa Nº {conversation.number}
         </div>
       )}
+      </div>
+
+      {unreplied ? <AwaitingReplyFooter unreadCount={unread} /> : null}
     </article>
   )
 }

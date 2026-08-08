@@ -277,7 +277,7 @@ export function toConversationCard(
     time: formatRelative(lastActivity),
     preview: previewText,
     assignee: row.assignedTo?.name,
-    // unreadCount alimenta o UnreadCountPill (círculo vermelho).
+    // unreadCount alimenta o UnreadCountPill (pílula lilás) + rodapé "aguardando resposta".
     // `urgent` permanece para filtros/tabs (ex.: coluna "urgentes").
     unreadCount: row.unreadCount ?? 0,
     urgent: !!(row.unreadCount && row.unreadCount > 0),

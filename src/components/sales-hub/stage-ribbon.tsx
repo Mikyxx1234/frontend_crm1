@@ -2,8 +2,7 @@
 
 /**
  * StageRibbon — abas de etapa do Sales Hub.
- * Contorno arredondado (mesmo idioma dos painéis) + abas pill.
- * Largura total com flex-1 — achatam quando há mais etapas.
+ * Estilo “pasta”: só o topo arredondado, alinhadas à largura dos painéis abaixo.
  */
 
 import { cn } from "@/lib/utils";
@@ -48,13 +47,15 @@ function StageTab({
       title={label}
       onClick={onClick}
       className={cn(
-        "relative flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-1.5 font-display font-semibold tracking-tight transition-colors sm:gap-2 sm:px-2.5",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
+        "relative flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 px-1.5 font-display font-semibold tracking-tight transition-colors sm:gap-2 sm:px-2.5",
+        /* Contorno superior só — aba “sentada” na linha de base */
+        "rounded-t-[var(--radius-md)] rounded-b-none",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0",
         compact
           ? "h-8 text-[12px] sm:h-9 sm:text-[12.5px]"
           : "h-9 text-[12.5px] sm:h-10 sm:text-[13px]",
         active
-          ? "bg-[var(--glass-bg-strong)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] ring-1 ring-[var(--glass-border-subtle)]"
+          ? "z-[1] bg-[var(--glass-bg)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
           : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]",
       )}
       style={active ? { color } : undefined}
@@ -62,7 +63,7 @@ function StageTab({
       {active ? (
         <span
           aria-hidden
-          className="absolute inset-x-2 top-1 h-[2.5px] rounded-full"
+          className="absolute inset-x-2 top-0 h-[2.5px] rounded-b-full"
           style={{ backgroundColor: color }}
         />
       ) : null}
@@ -101,13 +102,13 @@ export function StageRibbon({
     <div
       className={cn(
         "relative w-full min-w-0 shrink-0",
-        compact ? "mb-2 px-0" : "mb-3 px-0.5",
+        compact ? "mb-2" : "mb-3",
       )}
     >
       <div
         className={cn(
-          "flex w-full min-w-0 items-center gap-0.5 rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
-          compact ? "p-1" : "p-1.5",
+          "flex w-full min-w-0 items-end gap-0.5 border-b border-[var(--glass-border-subtle)]",
+          compact ? "pb-0" : "pb-0",
         )}
         role="tablist"
         aria-label="Filtrar por etapa"

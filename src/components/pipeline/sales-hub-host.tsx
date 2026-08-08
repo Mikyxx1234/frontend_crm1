@@ -202,7 +202,9 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     };
   }, [isAuthenticated]);
 
-  const status = "OPEN" as const;
+  // Flow inclui abas Ganho/Perdido — precisa de ALL, senão WON/LOST
+  // nunca entram no board e as contagens ficam em 0.
+  const status = "ALL" as const;
 
   const boardSort = useMemo<BoardSortParam | undefined>(() => {
     if (sortKey === "created_newest")

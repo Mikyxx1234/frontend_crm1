@@ -7,7 +7,9 @@ import {
   useMemo,
   useEffect,
   useRef,
+  type ComponentProps,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -145,6 +147,14 @@ export type SalesHubViewProps = {
   onActiveDealChange: (dealId: string | null, dealNumber?: number | null) => void;
   /** VM do DealDetailPanel (coluna CRM inline). */
   detailDeal?: DealDetail | null;
+  /**
+   * Campos personalizados (contato + negócio) — mesma carga do kanban
+   * (`customFieldsSlot` no DealDetailPanel). Sem isso, crmOnly só mostra
+   * nativos de contato e omite "Informações do Negócio".
+   */
+  customFieldsSlot?: ComponentProps<typeof DealDetailPanel>["customFieldsSlot"];
+  contactFieldConfigSlot?: ReactNode;
+  dealFieldConfigSlot?: ReactNode;
 };
 
 export function SalesHubView({
@@ -164,6 +174,9 @@ export function SalesHubView({
   activeDealId,
   onActiveDealChange,
   detailDeal = null,
+  customFieldsSlot,
+  contactFieldConfigSlot,
+  dealFieldConfigSlot,
 }: SalesHubViewProps) {
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [recentlyMovedDealId, setRecentlyMovedDealId] = useState<string | null>(
@@ -796,6 +809,9 @@ export function SalesHubView({
                 isOpen={detailsOpen}
                 onClose={() => setDetailsOpen(false)}
                 deal={detailDeal}
+                customFieldsSlot={customFieldsSlot}
+                contactFieldConfigSlot={contactFieldConfigSlot}
+                dealFieldConfigSlot={dealFieldConfigSlot}
               />
             </div>
           </aside>

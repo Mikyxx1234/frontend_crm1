@@ -4,13 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
+import { RequirePermission } from "@/components/auth/require-permission";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import type { DealDetail } from "@/components/crm/deal-detail-panel";
+import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
+import { PageLoading } from "@/components/crm/page-loading";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { SalesHubView } from "@/components/pipeline/sales-hub-view";
 import type { DealQueueSortMode } from "@/components/sales-hub/deal-queue";
 import { avatarInitials } from "@/features/inbox-v2/adapters";
+import { useContactSidebar } from "@/features/inbox-v2/hooks";
+import type { BoardSortParam } from "@/features/pipeline-v2/api";
 import {
   useBoard,
   useBoardFiltered,
@@ -18,10 +23,8 @@ import {
   useDealDetail,
   usePipelines,
 } from "@/features/pipeline-v2/hooks";
-import type { BoardSortParam } from "@/features/pipeline-v2/api";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
 import { personNameFromDealTitle, sanitizeContactName } from "@/lib/display-name";
-import { PageLoading } from "@/components/crm/page-loading";
 import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import type { PipelineSortKey } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
@@ -318,6 +321,58 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const resolvedDealId =
     dealDetail?.id ?? boardDealSeed?.id ?? activeDealId;
 
+  // Mesma fonte do kanban (`_v2-client`): contact panel + dealPanelFields.
+  const dealContactId =
+    dealDetail?.contact?.id ?? boardDealSeed?.contact?.id ?? null;
+  const { data: dealContact } = useContactSidebar(dealContactId);
+
+  const customFieldsSlot = useMemo(() => {
+    const contactFields = dealContact?.inboxLeadPanelFields ?? [];
+    const dealPanelFields = dealDetail?.dealPanelFields ?? [];
+    const seen = new Set<string>();
+    type CFEntry = {
+      fieldId: string;
+      label?: string;
+      name?: string;
+      value: string | null;
+      type: string;
+      options?: string[];
+      highlightRules?: unknown[] | null;
+      highlight?: { severity: string; label: string } | null;
+      _et: "contact" | "deal";
+      _eid: string;
+    };
+    const tagged: CFEntry[] = [
+      ...contactFields.map((f) => ({
+        ...f,
+        _et: "contact" as const,
+        _eid: dealContactId ?? "",
+      })),
+      ...dealPanelFields.map((f) => ({
+        ...f,
+        _et: "deal" as const,
+        _eid: resolvedDealId ?? "",
+      })),
+    ];
+    return tagged
+      .filter((f) => {
+        if (seen.has(f.fieldId)) return false;
+        seen.add(f.fieldId);
+        return true;
+      })
+      .map((f) => ({
+        fieldId: f.fieldId,
+        label: f.label || f.name || f.fieldId,
+        value: f.value,
+        type: f.type,
+        options: f.options ?? [],
+        entityType: f._et,
+        entityId: f._eid,
+        highlightRules: f.highlightRules ?? null,
+        highlight: f.highlight ?? null,
+      }));
+  }, [dealContact, dealDetail?.dealPanelFields, dealContactId, resolvedDealId]);
+
   const activeDealStageName = useMemo(() => {
     if (!resolvedDealId) return undefined;
     return board.find((s) =>
@@ -515,6 +570,17 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
             activeDealId={resolvedDealId}
             onActiveDealChange={setActiveDeal}
             detailDeal={detailDeal}
+            customFieldsSlot={customFieldsSlot}
+            contactFieldConfigSlot={
+              <RequirePermission permission="settings:custom_fields">
+                <FieldConfigPanel entities={["contact"]} context="deal_panel_v2" />
+              </RequirePermission>
+            }
+            dealFieldConfigSlot={
+              <RequirePermission permission="settings:custom_fields">
+                <FieldConfigPanel entities={["deal"]} context="deal_panel_v2" />
+              </RequirePermission>
+            }
             onOpenFullDeal={(dealId) => {
               const d = dealById.get(dealId);
               const param =

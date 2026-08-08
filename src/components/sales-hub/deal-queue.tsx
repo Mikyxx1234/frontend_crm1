@@ -13,7 +13,8 @@
  * DealDetailPanel da Sheet à direita — nunca na coluna da fila.
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   IconArrowsUpDown as ArrowUpDown,
@@ -29,6 +30,10 @@ import { TagChip } from "@/components/crm/tag-chip";
 import { toDealCard } from "@/features/pipeline-v2/adapters";
 import type { BoardDealDto } from "@/features/pipeline-v2/api";
 import { TooltipHost } from "@/components/ui/tooltip";
+import {
+  computePopoverPosition,
+  usePortalPopover,
+} from "@/features/pipeline-v2/extras/use-portal-popover";
 
 type StatusFilter = "OPEN" | "WON" | "LOST" | "ALL";
 export type DealQueueSortMode =
@@ -85,127 +90,138 @@ export function DealQueueSortMenu({
   compact?: boolean;
   iconOnly?: boolean;
 }) {
-  const [sortOpen, setSortOpen] = useState(false);
-  const sortButtonRef = useRef<HTMLButtonElement | null>(null);
-  const sortMenuRef = useRef<HTMLDivElement | null>(null);
+  const { open, rect, triggerRef, popoverRef, toggle, close } =
+    usePortalPopover();
+  const position = computePopoverPosition(rect, 220, 240);
 
   useEffect(() => {
-    if (!sortOpen) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (sortButtonRef.current?.contains(target)) return;
-      if (sortMenuRef.current?.contains(target)) return;
-      setSortOpen(false);
-    };
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSortOpen(false);
+      if (e.key === "Escape") close();
     };
-    document.addEventListener("mousedown", handler);
     document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", handler);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [sortOpen]);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, close]);
 
   return (
     <div className="relative shrink-0">
-        <TooltipHost label={`Ordenar — ${SORT_LABELS[sortMode]}`} side="top">
-          <button
-            ref={sortButtonRef}
-            type="button"
-            onClick={() => setSortOpen((v) => !v)}
-            aria-haspopup="listbox"
-            aria-expanded={sortOpen}
-            aria-label={`Ordenar fila: ${SORT_LABELS[sortMode]}`}
+      <TooltipHost label={`Ordenar — ${SORT_LABELS[sortMode]}`} side="top">
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={toggle}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={`Ordenar fila: ${SORT_LABELS[sortMode]}`}
+          className={cn(
+            "inline-flex items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] font-semibold tracking-tight text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]",
+            iconOnly
+              ? "size-8 shrink-0 p-0"
+              : cn(
+                  compact
+                    ? "gap-1 px-2 py-1 text-[10px]"
+                    : "gap-1.5 px-2.5 py-1.5 text-[12px]",
+                ),
+            open &&
+              "border-[var(--brand-primary)]/40 ring-[3px] ring-[var(--brand-primary)]/15",
+          )}
+        >
+          <ArrowUpDown
             className={cn(
-              "inline-flex items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] font-semibold tracking-tight text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]",
-              iconOnly
-                ? "size-8 shrink-0 p-0"
-                : cn(
-                    compact ? "gap-1 px-2 py-1 text-[10px]" : "gap-1.5 px-2.5 py-1.5 text-[12px]",
-                  ),
-              sortOpen && "border-[var(--brand-primary)]/40 ring-[3px] ring-[var(--brand-primary)]/15",
+              "text-[var(--text-muted)]",
+              iconOnly ? "size-3.5" : compact ? "size-3" : "size-3.5",
             )}
-          >
-            <ArrowUpDown
-              className={cn(
-                "text-[var(--text-muted)]",
-                iconOnly ? "size-3.5" : compact ? "size-3" : "size-3.5",
-              )}
-              strokeWidth={2.2}
-            />
-            {!iconOnly ? (
-              <>
-                <span
-                  className={cn(
-                    "truncate",
-                    compact ? "max-w-[120px] sm:max-w-[160px]" : "max-w-[160px] sm:max-w-[200px]",
-                  )}
-                >
-                  {SORT_LABELS[sortMode]}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "size-3 text-[var(--text-muted)] transition-transform",
-                    sortOpen && "rotate-180",
-                  )}
-                  strokeWidth={2.5}
-                />
-              </>
-            ) : null}
-          </button>
-        </TooltipHost>
-        {sortOpen ? (
-          <div
-            ref={sortMenuRef}
-            role="listbox"
-            className="absolute right-0 z-30 mt-1 w-[240px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-xl"
-          >
-            {(Object.keys(SORT_LABELS) as DealQueueSortMode[]).map((mode) => {
-              const isActive = mode === sortMode;
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  role="option"
-                  aria-selected={isActive}
-                  onClick={() => {
-                    onSortModeChange(mode);
-                    setSortOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-start gap-2 px-3 py-2 text-left transition-colors",
-                    isActive
-                      ? "bg-[var(--color-enterprise-bg)]"
-                      : "hover:bg-[var(--glass-bg-strong)]",
-                  )}
-                >
-                  <Check
+            strokeWidth={2.2}
+          />
+          {!iconOnly ? (
+            <>
+              <span
+                className={cn(
+                  "truncate",
+                  compact
+                    ? "max-w-[120px] sm:max-w-[160px]"
+                    : "max-w-[160px] sm:max-w-[200px]",
+                )}
+              >
+                {SORT_LABELS[sortMode]}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "size-3 text-[var(--text-muted)] transition-transform",
+                  open && "rotate-180",
+                )}
+                strokeWidth={2.5}
+              />
+            </>
+          ) : null}
+        </button>
+      </TooltipHost>
+      {open && rect && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={popoverRef}
+              role="listbox"
+              className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white shadow-[0_12px_32px_rgba(15,23,42,0.18)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
+              style={{
+                position: "fixed",
+                top: position.top,
+                left: position.left,
+                width: 240,
+                zIndex: "var(--z-popover)",
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {(Object.keys(SORT_LABELS) as DealQueueSortMode[]).map((mode) => {
+                const isActive = mode === sortMode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="option"
+                    aria-selected={isActive}
+                    onClick={() => {
+                      onSortModeChange(mode);
+                      close();
+                    }}
                     className={cn(
-                      "mt-0.5 size-3.5 shrink-0",
-                      isActive ? "text-[var(--brand-primary)]" : "text-transparent",
+                      "flex w-full items-start gap-2 px-3 py-2 text-left transition-colors",
+                      isActive
+                        ? "bg-[var(--color-enterprise-bg)]"
+                        : "hover:bg-[var(--glass-bg-strong)]",
                     )}
-                    strokeWidth={2.5}
-                  />
-                  <div className="min-w-0">
-                    <div
+                  >
+                    <Check
                       className={cn(
-                        "truncate font-display text-[13px] font-semibold tracking-tight",
+                        "mt-0.5 size-3.5 shrink-0",
                         isActive
                           ? "text-[var(--brand-primary)]"
-                          : "text-[var(--text-primary)]",
+                          : "text-transparent",
                       )}
-                    >
-                      {SORT_LABELS[mode]}
+                      strokeWidth={2.5}
+                    />
+                    <div className="min-w-0">
+                      <div
+                        className={cn(
+                          "truncate font-display text-[13px] font-semibold tracking-tight",
+                          isActive
+                            ? "text-[var(--brand-primary)]"
+                            : "text-[var(--text-primary)]",
+                        )}
+                      >
+                        {SORT_LABELS[mode]}
+                      </div>
+                      <div className="text-[10px] text-[var(--text-muted)]">
+                        {SORT_HINTS[mode]}
+                      </div>
                     </div>
-                    <div className="text-[10px] text-[var(--text-muted)]">{SORT_HINTS[mode]}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
+                  </button>
+                );
+              })}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -289,7 +305,7 @@ function DealQueueItem({
         deal={vm}
         isSelected={isActive}
         onClick={toggleSelection}
-        tagsWrap
+        tagsWrap="two-col"
         tagsSlot={
           tagList.length > 0 ? (
             <>
@@ -298,11 +314,11 @@ function DealQueueItem({
                   key={t.id}
                   name={t.name}
                   color={t.color}
-                  className="max-w-[7.5rem] whitespace-nowrap"
+                  className="w-full max-w-full truncate whitespace-nowrap"
                 />
               ))}
               {tagList.length > 3 ? (
-                <span className="shrink-0 text-[10px] font-semibold text-[var(--text-muted)]">
+                <span className="inline-flex min-w-0 items-center text-[10px] font-semibold text-[var(--text-muted)]">
                   +{tagList.length - 3}
                 </span>
               ) : null}

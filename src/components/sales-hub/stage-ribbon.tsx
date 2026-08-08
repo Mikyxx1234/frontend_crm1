@@ -25,6 +25,9 @@ type StageRibbonProps = {
   compact?: boolean;
 };
 
+const chipBase =
+  "inline-flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 overflow-hidden rounded-[var(--radius-sm)] border px-2 font-display text-[11px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25";
+
 export function StageRibbon({
   stages,
   totalDeals,
@@ -35,12 +38,12 @@ export function StageRibbon({
   return (
     <div
       className={cn(
-        "relative shrink-0 bg-transparent",
+        "relative w-full shrink-0 bg-transparent",
         compact ? "px-0.5 py-1.5" : "px-0.5 py-2",
       )}
     >
       <div
-        className="scrollbar-none flex items-center gap-1 overflow-x-auto"
+        className="scrollbar-none flex w-full items-stretch gap-1 overflow-x-auto"
         role="tablist"
         aria-label="Filtrar por etapa"
       >
@@ -51,17 +54,19 @@ export function StageRibbon({
           aria-pressed={selectedStageId === null}
           onClick={() => onSelectStage(null)}
           className={cn(
-            "inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 font-display text-[11px] font-semibold whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
+            chipBase,
             compact ? "h-7" : "h-8",
+            // min width only as scroll fallback on very narrow viewports
+            "min-w-[4.5rem]",
             selectedStageId === null
               ? "border-[var(--brand-primary)]/25 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
               : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]",
           )}
         >
-          <span>Todos</span>
+          <span className="min-w-0 truncate">Todos</span>
           <span
             className={cn(
-              "rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
+              "shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
               selectedStageId === null
                 ? "bg-[var(--brand-primary)] text-white"
                 : "bg-black/[0.06] text-[var(--text-muted)] dark:bg-white/10",
@@ -82,8 +87,9 @@ export function StageRibbon({
               aria-pressed={isActive}
               onClick={() => onSelectStage(isActive ? null : stage.id)}
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 font-display text-[11px] font-semibold whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
+                chipBase,
                 compact ? "h-7" : "h-8",
+                "min-w-[4.5rem]",
                 isActive
                   ? "shadow-[var(--glass-shadow-sm)]"
                   : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]",
@@ -103,10 +109,10 @@ export function StageRibbon({
                 style={{ backgroundColor: stage.color }}
                 aria-hidden
               />
-              <span className="max-w-[140px] truncate">{stage.name}</span>
+              <span className="min-w-0 truncate">{stage.name}</span>
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
+                  "shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
                   isActive
                     ? "bg-black/[0.08] dark:bg-white/15"
                     : "bg-black/[0.06] text-[var(--text-muted)] dark:bg-white/10",

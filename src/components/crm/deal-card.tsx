@@ -82,11 +82,12 @@ interface DealCardProps {
    */
   selectionMode?: boolean
   /**
-   * Quando `true`, a linha de tags usa `flex-wrap` (igual kanban) em vez
-   * de `nowrap` + `overflow-hidden` — evita cortar pills no meio na fila
-   * estreita do Flow (~320px).
+   * Layout da linha de tags:
+   * - `true` — `flex-wrap` livre (igual kanban)
+   * - `"two-col"` — no máximo 2 pills por linha (fila Flow)
+   * - `false`/omitido — `nowrap` + `overflow-hidden`
    */
-  tagsWrap?: boolean
+  tagsWrap?: boolean | "two-col"
 }
 
 function dealOpenHref(deal: Deal): string {
@@ -221,10 +222,12 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           ou iniciar drag ao interagir com popovers injetados. */}
       <div
         className={cn(
-          "mb-1 mt-1 flex min-w-0 items-center gap-1",
-          tagsWrap
-            ? "flex-wrap"
-            : "flex-nowrap overflow-hidden",
+          "mb-1 mt-1 min-w-0 items-center gap-1",
+          tagsWrap === "two-col"
+            ? "grid grid-cols-2 [&>*]:min-w-0 [&>*]:max-w-full"
+            : tagsWrap
+              ? "flex flex-wrap"
+              : "flex flex-nowrap overflow-hidden",
         )}
         onClick={tagsSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
         onMouseDown={tagsSlot ? (e) => e.stopPropagation() : undefined}

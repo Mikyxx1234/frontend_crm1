@@ -41,7 +41,12 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { TooltipHost } from "@/components/ui/tooltip";
-import { cn, pipelineDealMatchesSearch } from "@/lib/utils";
+import {
+  cn,
+  dealNumericValue,
+  formatCurrency,
+  pipelineDealMatchesSearch,
+} from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 /**
@@ -427,6 +432,35 @@ export function SalesHubView({
     [filteredStages],
   );
 
+  /** Header da fila — espelha o header de coluna do kanban CRM. */
+  const queueStageHeader = useMemo(() => {
+    if (selectedStageId) {
+      const stage = filteredStages.find((s) => s.id === selectedStageId);
+      if (stage) {
+        return {
+          name: stage.name,
+          color: stage.color || "var(--brand-primary)",
+          count: stage.deals.length,
+          totalValue: stage.deals.reduce(
+            (sum, d) => sum + dealNumericValue(d.value),
+            0,
+          ),
+        };
+      }
+    }
+    return {
+      name: "Todos",
+      color: "var(--brand-primary)",
+      count: totalDeals,
+      totalValue: filteredStages.reduce(
+        (sum, s) =>
+          sum +
+          s.deals.reduce((a, d) => a + dealNumericValue(d.value), 0),
+        0,
+      ),
+    };
+  }, [filteredStages, selectedStageId, totalDeals]);
+
   // ────────────────────────────────────────────────────────────────────
   // Navegacao por teclado — faz o Sales Hub ser 100% navegavel sem sair
   // da tela:
@@ -549,13 +583,34 @@ export function SalesHubView({
               : "w-full",
           )}
         >
-          <div className="flex shrink-0 items-center justify-end border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2 backdrop-blur">
-            <DealQueueSortMenu
-              sortMode={sortMode}
-              onSortModeChange={onSortModeChange}
-              iconOnly
+          <header className="relative shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2.5 backdrop-blur">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <h3 className="min-w-0 truncate font-display text-[14px] font-bold tracking-tight text-[var(--text-primary)]">
+                  {queueStageHeader.name}
+                </h3>
+                <span
+                  className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 font-display text-[11px] font-bold text-white"
+                  style={{ background: queueStageHeader.color }}
+                >
+                  {queueStageHeader.count}
+                </span>
+              </div>
+              <DealQueueSortMenu
+                sortMode={sortMode}
+                onSortModeChange={onSortModeChange}
+                iconOnly
+              />
+            </div>
+            <div
+              className="mt-1.5 h-[2px] w-full rounded-full opacity-90"
+              style={{ backgroundColor: queueStageHeader.color }}
+              aria-hidden
             />
-          </div>
+            <p className="mt-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">
+              {formatCurrency(queueStageHeader.totalValue)}
+            </p>
+          </header>
 
           <DealQueue
             deals={sortedDeals}

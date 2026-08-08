@@ -553,10 +553,10 @@ function DealInline({
             {deal.dealTagsNode !== undefined && (
               <>
                 <span className="text-slate-400">Tags</span>
-                {/* Uma linha só (jul/26): nowrap + overflow-hidden. Os chips
-                    truncam quando falta espaço; `+N` e o botão "+" ficam
-                    fixados (shrink-0) dentro do próprio DealTagsTray. */}
-                <span className="flex min-w-0 flex-nowrap items-center justify-end gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white">
+                {/* Uma linha só: os chips truncam quando falta espaço e o
+                    botão "+" fica ancorado no canto direito pelo próprio
+                    DealTagsTray (w-full + ml-auto). */}
+                <span className="flex w-full min-w-0 flex-nowrap items-center justify-start gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white">
                   {deal.dealTagsNode}
                 </span>
               </>
@@ -977,7 +977,7 @@ export function ContactAside({
                                 onToggle={() => setContactSectionOpen((v) => !v)}
                                 meta={
                                   contact.contactNumber != null ? (
-                                    <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                    <span className="rounded-full bg-orange-500/15 px-1.5 py-px font-mono text-[10px] font-semibold tabular-nums text-orange-600">
                                       #{contact.contactNumber}
                                     </span>
                                   ) : undefined

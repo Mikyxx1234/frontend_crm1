@@ -18,6 +18,7 @@ import {
   IconMessages as MessagesIcon,
   IconPin as Pin,
   IconPinFilled as PinFilled,
+  IconPlus as Plus,
   IconX as X,
 } from "@tabler/icons-react";
 
@@ -32,7 +33,9 @@ import {
 } from "@/components/sales-hub/deal-queue";
 import { SalesHubChat } from "@/components/sales-hub/sales-hub-chat";
 import { ConversationActionsMenu } from "@/features/inbox-v2/extras";
-import { DealMoveStageButton } from "@/components/sales-hub/deal-actions";
+import { TagsPopover } from "@/features/pipeline-v2/extras";
+import { TagChip } from "@/components/crm/tag-chip";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
   DealDetailPanel,
   type DealDetail,
@@ -730,13 +733,6 @@ export function SalesHubView({
                   onSortModeChange={onSortModeChange}
                   iconOnly
                 />
-                <DealMoveStageButton
-                  deal={activeDeal}
-                  stages={stages}
-                  pipelineId={pipelineId}
-                  statusFilter={statusFilter}
-                  onMoved={handleDealMoved}
-                />
               </div>
             </div>
             <div
@@ -887,6 +883,38 @@ export function SalesHubView({
                 isOpen={detailsOpen}
                 onClose={() => setDetailsOpen(false)}
                 deal={detailDeal}
+                // Paridade com o aside do Kanban: chips + "+" no canto
+                // direito, para gerenciar tags sem sair do Flow.
+                tagsSlot={(() => {
+                  const allTags = activeDeal.tags ?? [];
+                  return (
+                    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5">
+                      {allTags.slice(0, 2).map((t) => (
+                        <TooltipGlass key={t.id} label={t.name} side="top">
+                          <TagChip
+                            name={t.name}
+                            color={t.color}
+                            className="max-w-[9rem] min-w-0 shrink"
+                          />
+                        </TooltipGlass>
+                      ))}
+                      <span className="ml-auto shrink-0 pl-1">
+                        <TagsPopover
+                          dealId={activeDeal.id}
+                          currentTags={allTags}
+                          pipelineId={pipelineId}
+                          statusFilter={statusFilter}
+                          trigger={
+                            <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-white/35 px-2.5 py-0.5 font-display text-[11px] font-semibold text-white/70 transition-colors hover:border-white hover:text-white">
+                              <Plus size={10} />
+                              {allTags.length === 0 ? "Adicionar" : ""}
+                            </span>
+                          }
+                        />
+                      </span>
+                    </div>
+                  );
+                })()}
                 customFieldsSlot={customFieldsSlot}
                 contactFieldConfigSlot={contactFieldConfigSlot}
                 dealFieldConfigSlot={dealFieldConfigSlot}

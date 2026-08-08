@@ -241,11 +241,13 @@ function WorkspaceReferenceHeader({
         <span className="text-slate-400">Origem</span>
         <span className="truncate text-right font-medium">{contact.source ?? "—"}</span>
         <span className="text-slate-400">Tags</span>
-        <span className="flex flex-wrap items-center justify-end gap-1">
+        {/* "+" ancorado à direita: as chips usam toda a linha antes de truncar. */}
+        <span className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
           {dealTags.slice(0, 3).map(({ tag }) => (
             <span
               key={tag.id}
-              className="max-w-full truncate rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[10px] font-semibold"
+              title={tag.name}
+              className="min-w-0 shrink truncate rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[10px] font-semibold"
             >
               {tag.name}
             </span>
@@ -254,7 +256,7 @@ function WorkspaceReferenceHeader({
             type="button"
             onClick={onAddTagClick}
             aria-label="Adicionar tag"
-            className="rounded-full bg-white/10 p-1 transition-colors hover:bg-white/20"
+            className="ml-auto shrink-0 rounded-full bg-white/10 p-1 transition-colors hover:bg-white/20"
           >
             <Plus className="size-3" strokeWidth={2.4} />
           </button>

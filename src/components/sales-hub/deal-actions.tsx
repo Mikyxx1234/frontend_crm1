@@ -257,16 +257,14 @@ export function DealMoveStageButton({
             toggle();
           }}
           className={cn(
-            "inline-flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0 text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]",
-            open &&
-              "border-[var(--brand-primary)]/40 ring-[3px] ring-[var(--brand-primary)]/15",
-            disabled && "cursor-not-allowed opacity-50 hover:bg-[var(--glass-bg-overlay)]",
+            // Mesma linguagem do botão de transferência de conversa no inbox:
+            // pílula ciano sólida — ação "viva", não um ícone fantasma.
+            "inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-cyan-500 p-0 text-white shadow-[0_2px_8px_rgba(6,182,212,0.35)] transition-all hover:bg-cyan-600",
+            open && "bg-cyan-600 ring-[3px] ring-cyan-500/25",
+            disabled && "cursor-not-allowed opacity-50 hover:bg-cyan-500",
           )}
         >
-          <ArrowsExchange
-            className="size-3.5 text-[var(--text-muted)]"
-            strokeWidth={2.2}
-          />
+          <ArrowsExchange className="size-3.5" strokeWidth={2.2} />
         </button>
       </TooltipHost>
       {open && deal && rect && typeof document !== "undefined"

@@ -1259,45 +1259,37 @@ export default function KanbanV2ClientPage({
         tagsSlot={
           activeDealId ? (() => {
             const allTags = dealDetail?.tags ?? [];
+            // Sem chip "+N": as demais tags aparecem em "Selecionadas",
+            // dentro do popover de gerenciar tags.
             const MAX_VISIBLE = 2;
             const visibleTags = allTags.slice(0, MAX_VISIBLE);
-            const hiddenTags = allTags.slice(MAX_VISIBLE);
             return (
-              <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
+              // "+" ancorado no canto direito (ml-auto): as chips ficam com
+              // toda a largura restante da linha antes de truncar.
+              <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5">
                 {visibleTags.map((t) => (
-                  // Linha única no grid do hero: chips truncam (max-w) e o
-                  // container não quebra — "+N" e "+" ficam sempre visíveis
-                  // na mesma linha.
                   <TooltipGlass key={t.id} label={t.name} side="top">
                     <TagChip
                       name={t.name}
                       color={t.color}
-                      className="max-w-[7.5rem] min-w-0 shrink"
+                      className="max-w-[9rem] min-w-0 shrink"
                     />
                   </TooltipGlass>
                 ))}
-                {hiddenTags.length > 0 && (
-                  <TooltipGlass
-                    label={hiddenTags.map((t) => t.name).join(", ")}
-                    side="top"
-                  >
-                    <span className="inline-flex shrink-0 cursor-default items-center rounded-[6px] border border-white/25 bg-white/15 px-1.5 py-0.5 font-display text-[10.5px] font-bold text-white/85">
-                      +{hiddenTags.length}
-                    </span>
-                  </TooltipGlass>
-                )}
-                <TagsPopover
-                  dealId={activeDealId}
-                  currentTags={allTags}
-                  pipelineId={pipelineId}
-                  statusFilter={status}
-                  trigger={
-                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-white/35 px-2.5 py-0.5 font-display text-[11px] font-semibold text-white/70 transition-colors hover:border-white hover:text-white">
-                      <IconPlus size={10} />
-                      {allTags.length === 0 ? "Adicionar" : ""}
-                    </span>
-                  }
-                />
+                <span className="ml-auto shrink-0 pl-1">
+                  <TagsPopover
+                    dealId={activeDealId}
+                    currentTags={allTags}
+                    pipelineId={pipelineId}
+                    statusFilter={status}
+                    trigger={
+                      <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-white/35 px-2.5 py-0.5 font-display text-[11px] font-semibold text-white/70 transition-colors hover:border-white hover:text-white">
+                        <IconPlus size={10} />
+                        {allTags.length === 0 ? "Adicionar" : ""}
+                      </span>
+                    }
+                  />
+                </span>
               </div>
             );
           })() : undefined
@@ -1646,9 +1638,11 @@ function CardMoveDropdown({
           disabled={isPending}
           aria-label="Mover de fase"
           onClick={handleOpen}
-          className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:cursor-wait disabled:opacity-50"
+          // Espelha o botão de transferência de conversa (inbox): pílula
+          // ciano sólida, para a ação não passar despercebida no rodapé.
+          className="flex size-7 items-center justify-center rounded-full bg-cyan-500 text-white shadow-[0_2px_8px_rgba(6,182,212,0.35)] transition-all hover:bg-cyan-600 disabled:cursor-wait disabled:opacity-50"
         >
-          <IconArrowsExchange size={15} />
+          <IconArrowsExchange size={15} stroke={2.2} />
         </button>
       </TooltipGlass>
       {menu}
@@ -1773,14 +1767,16 @@ function DroppableColumn({
                       tagsSlot={(() => {
                         const allTags = raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>);
                         if (allTags.length === 0) return undefined;
+                        // Excedente não vira mais chip "+N": a lista completa
+                        // (e a remoção) vive na seção "Selecionadas" do
+                        // popover "Gerenciar tags".
                         const MAX_VISIBLE = 2;
                         const visibleTags = allTags.slice(0, MAX_VISIBLE);
-                        const hiddenTags = allTags.slice(MAX_VISIBLE);
                         return (
                           <>
                             {visibleTags.map((t) => (
                               // Linha única: chips truncam (max-w + min-w-0)
-                              // e "+N"/trigger ficam shrink-0 na mesma linha.
+                              // e o trigger fica shrink-0 na mesma linha.
                               <TooltipGlass key={t.id} label={t.name} side="top">
                                 <TagChip
                                   name={t.name}
@@ -1789,16 +1785,6 @@ function DroppableColumn({
                                 />
                               </TooltipGlass>
                             ))}
-                            {hiddenTags.length > 0 && (
-                              <TooltipGlass
-                                label={hiddenTags.map((t) => t.name).join(", ")}
-                                side="top"
-                              >
-                                <span className="inline-flex shrink-0 cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--text-muted)]">
-                                  +{hiddenTags.length}
-                                </span>
-                              </TooltipGlass>
-                            )}
                           </>
                         );
                       })()}

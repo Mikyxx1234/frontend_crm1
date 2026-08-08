@@ -103,7 +103,7 @@ import { DealNotesTab } from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
 // ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover.
-// Mostra ate 2 tags mais recentes; excedente vira `+N` com tooltip listando o resto.
+// Mostra as 2 primeiras; a lista completa fica no popover ("Selecionadas").
 function DealTagsTray({
   dealId,
   currentTags,
@@ -113,7 +113,6 @@ function DealTagsTray({
 }) {
   const MAX_VISIBLE = 2;
   const visible = currentTags.slice(0, MAX_VISIBLE);
-  const overflow = currentTags.slice(MAX_VISIBLE);
 
   function chip(t: { id: string; name: string; color: string | null }) {
     return (
@@ -126,19 +125,13 @@ function DealTagsTray({
     );
   }
 
-  // Uma linha só (jul/26): nowrap + overflow-hidden. Chips truncam se faltar
-  // espaço; `+N` e o botão "+" ficam fixos (shrink-0) sempre visíveis.
+  // Uma linha só: chips truncam se faltar espaço e o "+" fica ancorado no
+  // canto direito (ml-auto). O excedente aparece em "Selecionadas", dentro
+  // do popover — não há mais chip "+N" consumindo a linha.
   return (
-    <div className="flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
       {visible.map(chip)}
-      {overflow.length > 0 && (
-        <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
-          <span className="inline-flex h-5 shrink-0 items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
-            +{overflow.length}
-          </span>
-        </TooltipGlass>
-      )}
-      <span className="shrink-0">
+      <span className="ml-auto shrink-0 pl-1">
         <DealTagsPopover dealId={dealId} currentTags={currentTags} />
       </span>
     </div>
@@ -155,7 +148,6 @@ function ContactTagsTray({
 }) {
   const MAX_VISIBLE = 2;
   const visible = currentTags.slice(0, MAX_VISIBLE);
-  const overflow = currentTags.slice(MAX_VISIBLE);
 
   function chip(t: { id: string; name: string; color: string | null }) {
     return (
@@ -168,19 +160,11 @@ function ContactTagsTray({
     );
   }
 
-  // Uma linha só (jul/26): nowrap + overflow-hidden. Chips truncam se faltar
-  // espaço; `+N` e o botão "+" ficam fixos (shrink-0) sempre visíveis.
+  // Mesmo layout do DealTagsTray: "+" no canto direito, sem chip "+N".
   return (
-    <div className="flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
       {visible.map(chip)}
-      {overflow.length > 0 && (
-        <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
-          <span className="inline-flex h-5 shrink-0 items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
-            +{overflow.length}
-          </span>
-        </TooltipGlass>
-      )}
-      <span className="shrink-0">
+      <span className="ml-auto shrink-0 pl-1">
         <ContactTagsPopover contactId={contactId} currentTags={currentTags} triggerVariant="icon" />
       </span>
     </div>

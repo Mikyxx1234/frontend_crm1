@@ -300,21 +300,22 @@ function DealQueueItem({
         deal={vm}
         isSelected={isActive}
         onClick={toggleSelection}
-        tagsWrap="two-col"
+        // Flow: uma linha só (nowrap). Nunca `two-col` — grid cria 2 linhas e infla o card.
+        tagsWrap={false}
         tagsSlot={
           tagList.length > 0 ? (
             <>
-              {tagList.slice(0, 3).map((t) => (
+              {tagList.slice(0, 2).map((t) => (
                 <TagChip
                   key={t.id}
                   name={t.name}
                   color={t.color}
-                  className="w-full max-w-full truncate whitespace-nowrap"
+                  className="min-w-0 max-w-[46%] shrink truncate whitespace-nowrap"
                 />
               ))}
-              {tagList.length > 3 ? (
-                <span className="inline-flex min-w-0 items-center text-[10px] font-semibold text-[var(--text-muted)]">
-                  +{tagList.length - 3}
+              {tagList.length > 2 ? (
+                <span className="inline-flex shrink-0 items-center whitespace-nowrap text-[10px] font-semibold text-[var(--text-muted)]">
+                  +{tagList.length - 2}
                 </span>
               ) : null}
             </>

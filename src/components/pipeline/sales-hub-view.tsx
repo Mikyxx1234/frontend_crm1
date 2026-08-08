@@ -696,7 +696,7 @@ export function SalesHubView({
           // abrir/fechar chat ou aside — sem thrash nos cards da fila.
           // Sempre split no desktop (fila ~300px + chat): evita cards
           // “gigantes” na 1ª abertura / sem deal selecionado.
-          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-300 md:ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-500 md:ease-[cubic-bezier(0.25,0.46,0.45,0.94)] md:motion-reduce:transition-none",
           // 3 tracks sempre no md (3ª = 0fr fechada) p/ interpolar
           // grid-template-columns no open/close do aside sem thrash.
           detailsOpen && activeDeal
@@ -865,10 +865,12 @@ export function SalesHubView({
           <aside
             className={cn(
               "min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--glass-bg-modal)] backdrop-blur-md",
-              "md:transition-[transform,opacity,border-color,box-shadow,min-width] md:duration-300 md:ease-[cubic-bezier(0.32,0.72,0,1)]",
+              // Mesma curva/duração da gaveta de Configurações: entrada e
+              // saída simétricas, deslizando 100px.
+              "md:transition-[transform,opacity,border-color,box-shadow,min-width] md:duration-500 md:ease-[cubic-bezier(0.25,0.46,0.45,0.94)] md:motion-reduce:transition-none",
               detailsOpen
                 ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:min-w-[280px] md:translate-x-0 md:opacity-100"
-                : "pointer-events-none hidden border-transparent shadow-none md:flex md:min-w-0 md:translate-x-3 md:opacity-0",
+                : "pointer-events-none hidden border-transparent shadow-none md:flex md:min-w-0 md:translate-x-[100px] md:opacity-0",
             )}
             aria-label="Detalhes do negócio"
             aria-hidden={!detailsOpen}

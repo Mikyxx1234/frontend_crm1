@@ -866,15 +866,9 @@
   from { opacity: 0; transform: translateX(-20px); }
   to { opacity: 1; transform: translateX(0); }
 }
-/* Sidebar de /settings — entrada deslizando para a direita até a posição
-   (adaptado do "slide-right" da Animista; cubic-bezier .25,.46,.45,.94). */
-@keyframes settings-sidebar-slide-in {
-  0% { opacity: 0; transform: translateX(-100px); }
-  100% { opacity: 1; transform: translateX(0); }
-}
-.settings-sidebar-slide-in {
-  animation: settings-sidebar-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-}
+/* Gavetas laterais (sidebar de /settings, aside CRM do Flow) usam
+   transition — e não keyframes — para que a saída espelhe a entrada.
+   Curva/duração compartilhadas ficam nos próprios componentes. */
 /* Transição de página (rotas abertas pela NavRail).
    A NavRail é SEMPRE o primeiro filho de `.v2-screen`; animamos apenas o
    "recheio" (demais colunas: conteúdo/sidebar/painel), deixando a rail

@@ -10,6 +10,7 @@
  * A sidebar é uma gaveta: abre no hover da engrenagem (NavRail) e fecha
  * ao sair, salvo se pinada. O layout anima a largura via
  * grid-template-columns; aqui só translate/opacity + o pin no header.
+ * A transição (em vez de keyframes) garante que a saída espelhe a entrada.
  */
 
 import Link from "next/link";
@@ -149,9 +150,10 @@ export function SettingsSidebar({
       aria-hidden={!open}
       className={cn(
         "flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm",
+        "transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] motion-reduce:transition-none",
         open
-          ? "settings-sidebar-slide-in"
-          : "-translate-x-3 opacity-0 transition-[transform,opacity] duration-300 ease-out",
+          ? "translate-x-0 opacity-100"
+          : "-translate-x-[100px] opacity-0",
       )}
     >
       {/* Header do card — pin mantém a gaveta aberta sem hover. */}

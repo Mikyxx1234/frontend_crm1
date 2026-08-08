@@ -603,14 +603,14 @@ export function SalesHubView({
       <div
         className={cn(
           "min-h-0 flex-1 overflow-hidden",
+          // Grid estável (evita flex↔grid) + transition de colunas ao
+          // abrir/fechar chat ou aside — sem thrash nos cards da fila.
+          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-300 md:ease-[cubic-bezier(0.32,0.72,0,1)]",
           activeDeal
-            ? cn(
-                "grid grid-cols-1 gap-3 md:grid-rows-1",
-                detailsOpen
-                  ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)]"
-                  : "md:grid-cols-[300px_minmax(0,1fr)]",
-              )
-            : "flex",
+            ? detailsOpen
+              ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)]"
+              : "md:grid-cols-[300px_minmax(0,1fr)]"
+            : "md:grid-cols-[minmax(0,1fr)]",
         )}
       >
         {/* Coluna 1 — Fila: superfície igual `KanbanColumn`
@@ -619,8 +619,8 @@ export function SalesHubView({
           className={cn(
             "flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
             activeDeal
-              ? "hidden w-[300px] min-w-[300px] max-w-[300px] shrink-0 md:flex"
-              : "w-full",
+              ? "hidden min-w-0 md:flex"
+              : "min-w-0",
           )}
         >
           <header className="relative shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2.5 backdrop-blur">
@@ -674,7 +674,7 @@ export function SalesHubView({
         <div
           onMouseLeave={handleChatPaneMouseLeave}
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
+            "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
             !activeDeal && "hidden",
           )}
         >
@@ -778,7 +778,7 @@ export function SalesHubView({
             sem Sheet/scrim. Abre via briefcase ou mouse leave na borda direita. */}
         {activeDeal && detailsOpen ? (
           <aside
-            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md md:min-w-[280px]"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md md:min-w-[280px] md:animate-in md:fade-in-0 md:slide-in-from-right-2 md:duration-300"
             aria-label="Detalhes do negócio"
           >
             <header className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 py-3 text-left">

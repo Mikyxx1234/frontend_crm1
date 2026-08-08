@@ -1,5 +1,6 @@
 "use client"
 
+import { AnimatePresence, motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { IconCircleX, IconClock, IconMessage } from "@tabler/icons-react"
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar"
@@ -87,6 +88,11 @@ interface DealCardProps {
    * - `false`/omitido — `nowrap` + `overflow-hidden` (Flow: 1 linha + chips truncados + `+N`)
    */
   tagsWrap?: boolean
+  /**
+   * Flow: card recolhido — só a linha do contato (avatar/nome/#).
+   * Preview, tags e responsável animam para fora sem desmontar a seleção.
+   */
+  compact?: boolean
 }
 
 function dealOpenHref(deal: Deal): string {
@@ -95,7 +101,12 @@ function dealOpenHref(deal: Deal): string {
   return `/pipeline?deal=${encodeURIComponent(param)}`
 }
 
-export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode, tagsWrap = false }: DealCardProps) {
+const COMPACT_SECTION_TRANSITION = {
+  duration: 0.2,
+  ease: [0.32, 0.72, 0, 1] as const,
+}
+
+export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode, tagsWrap = false, compact = false }: DealCardProps) {
   // O checkbox SÓ aparece quando o "modo seleção" global está ativo
   // (acionado pelo kebab "Selecionar..."). Removemos o antigo
   // comportamento de "aparecer no hover" para que entrada e saída
@@ -106,6 +117,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
       href={dealOpenHref(deal)}
       draggable={false}
       aria-label={`Abrir negócio ${deal.dealNumber} — ${deal.name}`}
+      aria-expanded={!compact}
       onClick={(e) => {
         if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
           e.preventDefault()
@@ -115,8 +127,9 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
       className={cn(
         // `block` preserva o comportamento de caixa do antigo <article>
         // (a <a> é inline por padrão e quebraria a largura/altura do card).
-        "group relative block cursor-pointer rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] py-1.5 backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-all",
-        "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
+        "group relative block cursor-pointer rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] py-1.5 backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-[border-color,box-shadow,background-color] duration-200",
+        // Sem translate no selecionado: evita briga com height animation / coluna do chat.
+        !isSelected && "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
         isSelected && "border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/40",
         "active:cursor-grabbing",
         // Em modo seleção o conteúdo desloca para a direita para abrir
@@ -177,115 +190,128 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
         </div>
       </div>
 
-      {/* Message preview */}
-      {deal.message && (
-        <div className="mt-1 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 text-[11.5px] italic leading-[1.35] text-[var(--text-secondary)]">
-          {/* Ícone de conversa com borda azul — mesmo do card de
-              conversa do inbox, para padronizar a leitura visual. */}
-          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
-            <IconMessage size={9} />
-          </span>
-          <span className="line-clamp-2 flex-1 overflow-hidden">{deal.message.text}</span>
-          <span className="shrink-0 text-[10px] not-italic text-[var(--text-muted)]">
-            {deal.message.time}
-          </span>
-        </div>
-      )}
-
-      {!deal.message && deal.timeAgo && (
-        <div className="mt-1 inline-flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-          <IconClock size={11} />
-          {deal.timeAgo}
-        </div>
-      )}
-
-      {/* Motivo da perda — destaque vermelho suave em deals perdidos,
-          permite bater o olho e saber por que o negócio foi perdido. */}
-      {deal.lostReason && (
-        <div className="mt-1 flex items-start gap-1.5 rounded-[var(--radius-md)] border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.08)] px-2.5 py-1 text-[11px] leading-[1.35]">
-          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[var(--color-danger-dark)]">
-            <IconCircleX size={12} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="font-display text-[9.5px] font-bold uppercase tracking-wide text-[var(--color-danger-dark)]">
-              Motivo da perda
-            </span>
-            <span className="line-clamp-2 block text-[var(--color-danger-text)]">{deal.lostReason}</span>
-          </span>
-        </div>
-      )}
-
-      {/* Tags — slot tem prioridade. Sem slot, mantemos fallback v0
-          (tags estaticas + botao "+" decorativo).
-          stopPropagation em multiplos eventos para nao abrir o deal
-          ou iniciar drag ao interagir com popovers injetados. */}
-      <div
-        className={cn(
-          "mb-1 mt-1 flex min-w-0 items-center gap-1",
-          tagsWrap ? "flex-wrap" : "flex-nowrap overflow-hidden",
-        )}
-        onClick={tagsSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
-        onMouseDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
-        onPointerDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
-        onTouchStart={tagsSlot ? (e) => e.stopPropagation() : undefined}
-      >
-        {tagsSlot ?? (
-          <>
-            {deal.tags?.map((tag, i) => (
-              <TagChip
-                key={i}
-                name={tag.label}
-                color={
-                  tag.type === "hot"
-                    ? "#ef4444"
-                    : tag.type === "warm"
-                      ? "#f59e0b"
-                      : tag.type === "cold"
-                        ? "#5b6ff5"
-                        : tag.type === "vip"
-                          ? "#a855f7"
-                          : tag.type === "partner"
-                            ? "#0d9488"
-                            : "#64748b"
-                }
-              />
-            ))}
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              className="inline-flex cursor-pointer items-center rounded-[6px] border border-dashed border-[var(--glass-border)] bg-transparent px-2 py-0.5 font-display text-[9.5px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
-            >
-              +
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Owner — slot tem prioridade. */}
-      <div
-        className="flex items-center gap-1.5 border-t border-[var(--glass-border-subtle)] pt-1"
-        onClick={ownerSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
-        onMouseDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
-        onPointerDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
-        onTouchStart={ownerSlot ? (e) => e.stopPropagation() : undefined}
-      >
-        {ownerSlot ?? (
-          <Chip variant="brand" className="cursor-pointer transition-colors hover:bg-[rgba(91,111,245,0.22)]">
-            {deal.owner.name}
-          </Chip>
-        )}
-        {moveMenuSlot && (
-          <div
-            className="ml-auto"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            onMouseDown={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
+      <AnimatePresence initial={false}>
+        {!compact ? (
+          <motion.div
+            key="deal-card-details"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={COMPACT_SECTION_TRANSITION}
+            className="overflow-hidden"
           >
-            {moveMenuSlot}
-          </div>
-        )}
-      </div>
+            {/* Message preview */}
+            {deal.message && (
+              <div className="mt-1 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 text-[11.5px] italic leading-[1.35] text-[var(--text-secondary)]">
+                {/* Ícone de conversa com borda azul — mesmo do card de
+                    conversa do inbox, para padronizar a leitura visual. */}
+                <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
+                  <IconMessage size={9} />
+                </span>
+                <span className="line-clamp-2 flex-1 overflow-hidden">{deal.message.text}</span>
+                <span className="shrink-0 text-[10px] not-italic text-[var(--text-muted)]">
+                  {deal.message.time}
+                </span>
+              </div>
+            )}
+
+            {!deal.message && deal.timeAgo && (
+              <div className="mt-1 inline-flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                <IconClock size={11} />
+                {deal.timeAgo}
+              </div>
+            )}
+
+            {/* Motivo da perda — destaque vermelho suave em deals perdidos,
+                permite bater o olho e saber por que o negócio foi perdido. */}
+            {deal.lostReason && (
+              <div className="mt-1 flex items-start gap-1.5 rounded-[var(--radius-md)] border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.08)] px-2.5 py-1 text-[11px] leading-[1.35]">
+                <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[var(--color-danger-dark)]">
+                  <IconCircleX size={12} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="font-display text-[9.5px] font-bold uppercase tracking-wide text-[var(--color-danger-dark)]">
+                    Motivo da perda
+                  </span>
+                  <span className="line-clamp-2 block text-[var(--color-danger-text)]">{deal.lostReason}</span>
+                </span>
+              </div>
+            )}
+
+            {/* Tags — slot tem prioridade. Sem slot, mantemos fallback v0
+                (tags estaticas + botao "+" decorativo).
+                stopPropagation em multiplos eventos para nao abrir o deal
+                ou iniciar drag ao interagir com popovers injetados. */}
+            <div
+              className={cn(
+                "mb-1 mt-1 flex min-w-0 items-center gap-1",
+                tagsWrap ? "flex-wrap" : "flex-nowrap overflow-hidden",
+              )}
+              onClick={tagsSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
+              onMouseDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
+              onPointerDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
+              onTouchStart={tagsSlot ? (e) => e.stopPropagation() : undefined}
+            >
+              {tagsSlot ?? (
+                <>
+                  {deal.tags?.map((tag, i) => (
+                    <TagChip
+                      key={i}
+                      name={tag.label}
+                      color={
+                        tag.type === "hot"
+                          ? "#ef4444"
+                          : tag.type === "warm"
+                            ? "#f59e0b"
+                            : tag.type === "cold"
+                              ? "#5b6ff5"
+                              : tag.type === "vip"
+                                ? "#a855f7"
+                                : tag.type === "partner"
+                                  ? "#0d9488"
+                                  : "#64748b"
+                      }
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    className="inline-flex cursor-pointer items-center rounded-[6px] border border-dashed border-[var(--glass-border)] bg-transparent px-2 py-0.5 font-display text-[9.5px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+                  >
+                    +
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Owner — slot tem prioridade. */}
+            <div
+              className="flex items-center gap-1.5 border-t border-[var(--glass-border-subtle)] pt-1"
+              onClick={ownerSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
+              onMouseDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
+              onPointerDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
+              onTouchStart={ownerSlot ? (e) => e.stopPropagation() : undefined}
+            >
+              {ownerSlot ?? (
+                <Chip variant="brand" className="cursor-pointer transition-colors hover:bg-[rgba(91,111,245,0.22)]">
+                  {deal.owner.name}
+                </Chip>
+              )}
+              {moveMenuSlot && (
+                <div
+                  className="ml-auto"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
+                  {moveMenuSlot}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </a>
   )
 }

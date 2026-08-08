@@ -8,12 +8,13 @@
  * (`toDealCard`). Antes a fila desenhava um card próprio, minimalista,
  * que destoava visualmente dos cards de negócio.
  *
- * Seleção = highlight visual apenas (`isSelected` do próprio DealCard).
- * Tags e responsável usam os mesmos popovers do kanban (`tagsSlot` /
- * `ownerSlot`). Demais campos CRM moram no DealDetailPanel / Sheet.
+ * Seleção = deal em foco no chat (`isSelected`). Expandir/recolher o
+ * chrome do card é independente: 1º clique seleciona + amplia; 2º clique
+ * no mesmo card reduz o chrome sem fechar o chat. Tags/responsável usam
+ * os popovers do kanban; demais campos CRM ficam no DealDetailPanel.
  */
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -236,9 +237,8 @@ type DealQueueProps = {
   activeDealId: string | null;
   onSelectDeal: (dealId: string) => void;
   /**
-   * Callback disparado ao clicar de novo no card ativo —
-   * desmarca a seleção. Em `SalesHubView` isso volta ao estado
-   * "nenhum deal em foco" (a área do chat mostra o placeholder).
+   * Fecha o deal em foco (chat). O 2º clique no card agora só recolhe
+   * o chrome; quem chama `onDeselect` é o botão Fechar / atalhos do host.
    */
   onDeselect?: () => void;
   /**
@@ -269,25 +269,20 @@ type DealQueueProps = {
 function DealQueueItem({
   deal,
   isActive,
-  onSelectDeal,
-  onDeselect,
+  isExpanded,
+  onToggle,
   wasRecentlyMoved,
   pipelineId,
   statusFilter = "OPEN",
 }: {
   deal: BoardDeal & { stageId: string };
   isActive: boolean;
-  onSelectDeal: (dealId: string) => void;
-  onDeselect?: () => void;
+  isExpanded: boolean;
+  onToggle: (dealId: string) => void;
   wasRecentlyMoved: boolean;
   pipelineId: string;
   statusFilter?: StatusFilter;
 }) {
-  const toggleSelection = () => {
-    if (isActive) onDeselect?.();
-    else onSelectDeal(deal.id);
-  };
-
   const vm = toDealCard(deal as unknown as BoardDealDto);
   const allTags = deal.tags ?? [];
   const unread = deal.unreadCount ?? 0;
@@ -295,17 +290,14 @@ function DealQueueItem({
   const visibleTags = allTags.slice(0, MAX_VISIBLE);
   const hiddenTags = allTags.slice(MAX_VISIBLE);
 
-  // Não scrollIntoView aqui: com AnimatePresence/popLayout a reordenação
-  // remonta o item ativo e o effect rodaria de novo, pulando a fila para
-  // o card selecionado em vez de mostrar o topo da nova ordem. O scroll
-  // intencional fica em DealQueue (só quando activeDealId muda).
+  // Sem `layout` / popLayout: ao abrir o chat a coluna estreita e o
+  // layout animation da fila brigava com height do card (jank).
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
+      exit={{ opacity: 0 }}
       transition={SUBTLE_SPRING}
       className={cn(
         "relative rounded-xl",
@@ -315,7 +307,8 @@ function DealQueueItem({
       <DealCard
         deal={vm}
         isSelected={isActive}
-        onClick={toggleSelection}
+        compact={isActive && !isExpanded}
+        onClick={() => onToggle(deal.id)}
         // Flow: uma linha só (nowrap). Nunca `two-col` — grid cria 2 linhas e infla o card.
         tagsWrap={false}
         // Mesmo padrão do kanban: chips + "+N" + TagsPopover `+` na mesma linha.
@@ -406,7 +399,6 @@ export function DealQueue({
   deals,
   activeDealId,
   onSelectDeal,
-  onDeselect,
   recentlyMovedDealId,
   sortMode,
   selectedStageId,
@@ -421,6 +413,29 @@ export function DealQueue({
   // fila ordenada). scrollIntoView nesse caso pula pro card — às vezes
   // o último após sort. Skip uma vez e mostra o topo.
   const skipScrollIntoViewRef = useRef(false);
+  // Chrome expandido do card — separado do deal em foco no chat.
+  const [expandedDealId, setExpandedDealId] = useState<string | null>(
+    () => activeDealId,
+  );
+  const prevActiveDealIdRef = useRef<string | null>(activeDealId);
+
+  // Novo deal selecionado (ou limpo via X): sincroniza expansão.
+  // Não forçar expand em todo render — o 2º clique só recolhe o chrome.
+  useEffect(() => {
+    if (activeDealId === prevActiveDealIdRef.current) return;
+    prevActiveDealIdRef.current = activeDealId;
+    setExpandedDealId(activeDealId);
+  }, [activeDealId]);
+
+  const handleToggleDeal = (dealId: string) => {
+    if (activeDealId !== dealId) {
+      onSelectDeal(dealId);
+      setExpandedDealId(dealId);
+      return;
+    }
+    // Mesmo deal com chat aberto: amplia ↔ reduz o card (chat permanece).
+    setExpandedDealId((cur) => (cur === dealId ? null : dealId));
+  };
 
   // Troca de ordenação: lista do topo (ordem nova), sem pular pro deal ativo.
   useEffect(() => {
@@ -458,9 +473,10 @@ export function DealQueue({
         className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
       >
         <div className="flex flex-col gap-2">
-          <AnimatePresence initial={false} mode="popLayout">
+          <AnimatePresence initial={false}>
             {deals.map((deal) => {
               const isActive = activeDealId === deal.id;
+              const isExpanded = expandedDealId === deal.id;
               const wasRecentlyMoved = recentlyMovedDealId === deal.id;
 
               return (
@@ -474,8 +490,8 @@ export function DealQueue({
                   <DealQueueItem
                     deal={deal}
                     isActive={isActive}
-                    onSelectDeal={onSelectDeal}
-                    onDeselect={onDeselect}
+                    isExpanded={isExpanded}
+                    onToggle={handleToggleDeal}
                     wasRecentlyMoved={wasRecentlyMoved}
                     pipelineId={pipelineId}
                     statusFilter={statusFilter}

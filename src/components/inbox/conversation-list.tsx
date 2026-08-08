@@ -19,7 +19,6 @@ import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avat
 import { PresenceDashboard } from "@/components/inbox/presence-dashboard";
 import { SwipeRow } from "@/components/inbox/swipe-row";
 import { TagChip } from "@/components/crm/tag-chip";
-import { AwaitingReplyFooter } from "@/components/crm/awaiting-reply-footer";
 import { UnreadCountPill } from "@/components/crm/unread-count-pill";
 import { cn } from "@/lib/utils";
 // InboxFilters type moved here (inbox-filters.tsx é código morto — DS-010/DS-012)
@@ -984,9 +983,6 @@ function ConversationItem({
   onResolve?: () => void;
 }) {
   const unread = (row.unreadCount ?? 0) > 0;
-  const dir = String(row.lastMessageDirection ?? "").toLowerCase();
-  // Cliente ainda não respondido — última msg inbound (aguarda reply do agente).
-  const unreplied = dir === "in" || dir === "inbound";
   const timeSource = row.lastMessageAt ?? row.updatedAt;
   const time = timeSource ? shortTime(timeSource) : "";
   const timer = getSessionTimer(row.lastInboundAt);
@@ -1206,8 +1202,6 @@ function ConversationItem({
         )}
       </div>
       </div>
-
-      {unreplied ? <AwaitingReplyFooter unreadCount={row.unreadCount ?? 0} /> : null}
     </MotionDiv>
   );
 

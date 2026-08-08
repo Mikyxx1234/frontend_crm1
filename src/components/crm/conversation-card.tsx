@@ -29,7 +29,6 @@ import {
   StatusTicks,
   type DeliveryTickStatus,
 } from "@/components/crm/status-ticks"
-import { AwaitingReplyFooter } from "@/components/crm/awaiting-reply-footer"
 import { UnreadCountPill } from "@/components/crm/unread-count-pill"
 import { Chip } from "./chip"
 import { CheckboxGlass } from "./checkbox-glass"
@@ -215,10 +214,6 @@ export function ConversationCard({
   const typeLabel =
     rawType && rawType !== "text" ? typeLabelMap[rawType] ?? null : null
   const isOutgoing = conversation.lastMessageDirection === "out"
-  // Cliente ainda não respondido — última msg inbound (aguarda reply do agente).
-  // Notas internas não devem sinalizar "aguardando" (só chat real in/out).
-  const unreplied =
-    conversation.lastMessageDirection === "in" && rawType !== "note"
   const unread = Number(conversation.unreadCount) || 0
   const hasChannel = Boolean(String(conversation.channel ?? "").trim())
 
@@ -436,8 +431,6 @@ export function ConversationCard({
         </div>
       )}
       </div>
-
-      {unreplied ? <AwaitingReplyFooter unreadCount={unread} /> : null}
     </article>
   )
 }

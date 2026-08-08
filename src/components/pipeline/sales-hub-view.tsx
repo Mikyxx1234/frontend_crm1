@@ -820,11 +820,12 @@ export function SalesHubView({
             onMouseEnter={handleAsideMouseEnter}
             onMouseLeave={handleAsideMouseLeave}
           >
-            <header className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 py-3 text-left">
-              <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">
+            {/* Chrome flush no topo (paridade com header da fila / chat). */}
+            <header className="flex h-11 shrink-0 flex-row items-center gap-2 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 backdrop-blur">
+              <h2 className="min-w-0 flex-1 truncate font-display text-[14px] font-bold tracking-tight text-[var(--text-primary)]">
                 Detalhes do negócio
               </h2>
-              <div className="ml-auto flex items-center gap-0.5">
+              <div className="flex shrink-0 items-center gap-0.5">
                 <TooltipHost
                   label={
                     asidePinned

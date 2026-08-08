@@ -1086,6 +1086,7 @@ export function DealDetailPanel({
                                   {sectionId === "contato" && (
                                     <FieldCard
                                       title="Informações do Contato"
+                                      compactTitle={crmOnly}
                                       titleMeta={
                                         deal.contactNumber != null ? (
                                           <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
@@ -1212,6 +1213,7 @@ export function DealDetailPanel({
                                       resolvedDealConfig) && (
                                     <FieldCard
                                       title="Informações do Negócio"
+                                      compactTitle={crmOnly}
                                       plain={viewMode !== "compact"}
                                       titleMeta={
                                         deal.number != null ? (
@@ -1930,6 +1932,7 @@ function FieldCard({
   dragHandleProps,
   titleActions,
   plain,
+  compactTitle,
   children,
 }: {
   title?: string
@@ -1942,6 +1945,8 @@ function FieldCard({
   titleActions?: React.ReactNode
   /** Sem o card branco ao redor (ex.: grid de pills do modo foco). */
   plain?: boolean
+  /** Título numa linha (aside estreito / crmOnly Flow). */
+  compactTitle?: boolean
   children: React.ReactNode
 }) {
   return (
@@ -1949,31 +1954,38 @@ function FieldCard({
       {/* Header com título + alça — agora DENTRO do card branco, para que
           título e conteúdo fiquem no MESMO container (igual ao hero e ao
           aside do inbox). Antes o título flutuava acima do card. */}
-      <div className="flex items-center gap-1 px-3 pt-3 pb-2">
+      <div className="flex min-w-0 items-center gap-1 px-3 pt-3 pb-2">
         {dragHandleProps && (
           <span
             {...dragHandleProps}
-            className="flex cursor-grab items-center rounded p-0.5 text-[var(--text-muted)] opacity-0 transition-opacity group-hover/section:opacity-50 hover:opacity-100 active:cursor-grabbing"
+            className="flex shrink-0 cursor-grab items-center rounded p-0.5 text-[var(--text-muted)] opacity-0 transition-opacity group-hover/section:opacity-50 hover:opacity-100 active:cursor-grabbing"
             aria-label={dragLabel ?? `Arrastar bloco ${title ?? ""}`}
           >
             <IconGripVertical size={12} />
           </span>
         )}
         {title && (
-          <span className="flex items-center gap-2 text-slate-600">
+          <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-600">
             {title === "Informações do Contato" ? (
               <IconUser size={16} className="shrink-0 text-orange-500" />
             ) : (
               <IconBriefcase size={16} className="shrink-0 text-[var(--brand-primary)]" />
             )}
-            <span className="flex items-baseline gap-1.5 text-sm font-bold">
+            <span
+              className={cn(
+                "min-w-0 truncate font-bold whitespace-nowrap",
+                compactTitle ? "text-[12.5px]" : "text-sm",
+              )}
+            >
               {title}
-              {titleMeta ? <span className="font-normal opacity-60">{titleMeta}</span> : null}
             </span>
+            {titleMeta ? (
+              <span className="shrink-0 font-normal opacity-60">{titleMeta}</span>
+            ) : null}
           </span>
         )}
         {titleActions && (
-          <div className="ml-auto flex items-center gap-1 [&_button]:text-slate-400 [&_button:hover]:text-blue-500">
+          <div className="ml-auto flex shrink-0 items-center gap-1 [&_button]:text-slate-400 [&_button:hover]:text-blue-500">
             {titleActions}
           </div>
         )}

@@ -26,6 +26,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import type { AutomationStats } from "@/lib/automation-stats-types";
 import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome";
@@ -66,11 +67,32 @@ import {
   type AutomationStep,
   apiStepsToWorkflow,
   defaultTriggerConfig,
+  findFirstMessageStepIndex,
   stepTypeLabel,
+  validateFirstMessageChannel,
   workflowStepsToPayload,
 } from "@/lib/automation-workflow";
 import { autoAlignWorkflowSteps } from "@/lib/automation-layout";
+import { useConnectedStepChannels } from "@/components/automations/step-channel-picker";
 import { cn, formatDateTime } from "@/lib/utils";
+
+/** Mensagem amigável para o único código de erro de validação de canal (ver `automations.ts`). */
+const CHANNEL_VALIDATION_MESSAGES: Record<string, string> = {
+  MISSING_CHANNEL_ON_FIRST_MESSAGE_STEP:
+    "Selecione o canal do primeiro passo de mensagem — a organização tem mais de um canal conectado.",
+};
+
+function firstMessageChannelError(
+  steps: AutomationStep[],
+  connectedWaCount: number,
+  connectedEmailCount: number,
+): string | null {
+  const idx = findFirstMessageStepIndex(steps);
+  if (idx < 0) return null;
+  const count = steps[idx].type === "send_email" ? connectedEmailCount : connectedWaCount;
+  const code = validateFirstMessageChannel(steps, count);
+  return code ? (CHANNEL_VALIDATION_MESSAGES[code] ?? code) : null;
+}
 
 type AutomationDetail = {
   id: string;
@@ -812,6 +834,9 @@ export default function AutomationDetailPage() {
     []
   );
 
+  const { options: connectedWaChannels } = useConnectedStepChannels("send_whatsapp_message");
+  const { options: connectedEmailChannels } = useConnectedStepChannels("send_email");
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(apiUrl(`/api/automations/${id}`), {
@@ -870,6 +895,28 @@ export default function AutomationDetailPage() {
       router.push(listHref);
     },
   });
+
+  const handleSaveClick = useCallback(() => {
+    if (active) {
+      const err = firstMessageChannelError(steps, connectedWaChannels.length, connectedEmailChannels.length);
+      if (err) {
+        toast.error(err);
+        return;
+      }
+    }
+    saveMutation.mutate();
+  }, [active, steps, connectedWaChannels, connectedEmailChannels, saveMutation]);
+
+  const handleToggleClick = useCallback(() => {
+    if (!active) {
+      const err = firstMessageChannelError(steps, connectedWaChannels.length, connectedEmailChannels.length);
+      if (err) {
+        toast.error(err);
+        return;
+      }
+    }
+    toggleMutation.mutate();
+  }, [active, steps, connectedWaChannels, connectedEmailChannels, toggleMutation]);
 
   const openNameEdit = () => {
     setNameDraft(name);
@@ -1010,7 +1057,7 @@ export default function AutomationDetailPage() {
             <ActiveSwitch
               active={active}
               disabled={toggleMutation.isPending}
-              onToggle={() => toggleMutation.mutate()}
+              onToggle={handleToggleClick}
             />
           </div>
 
@@ -1067,7 +1114,7 @@ export default function AutomationDetailPage() {
           <button
             type="button"
             disabled={!hydrated || saveMutation.isPending || !name.trim()}
-            onClick={() => saveMutation.mutate()}
+            onClick={handleSaveClick}
             className={cn(
               "flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-extrabold tracking-tight text-white shadow-[var(--shadow-indigo-glow)] transition-all",
               !hydrated || saveMutation.isPending || !name.trim()

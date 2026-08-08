@@ -9,6 +9,13 @@ import { cn } from "@/lib/utils";
 
 import { stepColor } from "./add-step-node";
 import { NodeInlineConfig } from "./node-inline-config";
+import {
+  channelLabelFromOptions,
+  StepChannelBadge,
+  StepChannelKebabMenu,
+  useConnectedStepChannels,
+} from "./step-channel-picker";
+import { isMessageChannelStep } from "@/lib/automation-workflow";
 
 export type ActionNodeData = {
   stepType: string;
@@ -24,6 +31,8 @@ export type ActionNodeData = {
   config?: Record<string, unknown>;
   stepOptions?: Array<{ value: string; label: string }>;
   onConfigChange?: (next: Record<string, unknown>) => void;
+  /** 1º passo de mensagem do fluxo — canal obrigatório (sem "herdar"). */
+  isFirstMessageStep?: boolean;
 };
 
 const iconMap: Record<string, ComponentType<{ className?: string; strokeWidth?: number }>> = {
@@ -91,6 +100,13 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
   const iconBg = iconBgMap[data.stepType] ?? "bg-primary/10 ring-primary/15";
   const hasFailureOutput = META_LINEAR_FAILURE_TYPES.has(data.stepType);
   const hasTimeoutOutput = META_WAIT_TIMEOUT_TYPES.has(data.stepType);
+  const isChannelStep = isMessageChannelStep(data.stepType);
+  const channelId =
+    isChannelStep && data.config && typeof data.config.channelId === "string"
+      ? (data.config.channelId as string)
+      : "";
+  const { options: channelOptions } = useConnectedStepChannels(data.stepType, { enabled: isChannelStep });
+  const channelBadgeLabel = channelLabelFromOptions(channelOptions, channelId);
 
   return (
     <div
@@ -148,7 +164,20 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
           <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
             {data.summary}
           </p>
+          {channelBadgeLabel && (
+            <div className="mt-1">
+              <StepChannelBadge label={channelBadgeLabel} />
+            </div>
+          )}
         </div>
+        {isChannelStep && (
+          <StepChannelKebabMenu
+            stepType={data.stepType}
+            channelId={channelId}
+            isFirstMessageStep={!!data.isFirstMessageStep}
+            onChange={(v) => data.onConfigChange?.({ ...(data.config ?? {}), channelId: v })}
+          />
+        )}
         {data.onDelete && (
           <TooltipHost label="Remover passo" side="top">
             <button
@@ -245,6 +274,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
         stepType={data.stepType}
         config={data.config}
         stepOptions={data.stepOptions ?? []}
+        isFirstMessageStep={data.isFirstMessageStep}
         onChange={(next) => data.onConfigChange?.(next)}
       />
     </div>

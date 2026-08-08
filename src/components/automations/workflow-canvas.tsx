@@ -23,6 +23,7 @@ import { AnimatedEdge, AnimatedEdgeDefs, type AnimatedEdgeData } from "./animate
 import {
   type AutomationStep,
   defaultStepConfig,
+  findFirstMessageStepIndex,
   isStepIncomplete,
   newStepId,
   stepTypeLabel,
@@ -30,6 +31,7 @@ import {
   summarizeTriggerConfig,
   triggerTypeLabel,
 } from "@/lib/automation-workflow";
+import { useConnectedStepChannels } from "./step-channel-picker";
 import {
   normalizeConditionConfig,
   type ConditionConfig,
@@ -679,6 +681,15 @@ function WorkflowCanvasInner({
   const EMPTY_STAGE_MAP: Record<string, string> = useMemo(() => ({}), []);
   const stageNameLookup = stageNamesQuery.data ?? EMPTY_STAGE_MAP;
 
+  // Contagem de canais conectados (WhatsApp Meta Cloud API / e-mail) — usada
+  // pra decidir se o 1º passo de mensagem do fluxo exige `channelId`
+  // explícito (regra: só quando a org tem 2+ conectados do tipo certo).
+  // Usar `.length` (número) nas deps de buildNodes — NÃO o array inteiro.
+  const { options: connectedWaChannels } = useConnectedStepChannels("send_whatsapp_message");
+  const { options: connectedEmailChannels } = useConnectedStepChannels("send_email");
+  const connectedWaCount = connectedWaChannels.length;
+  const connectedEmailCount = connectedEmailChannels.length;
+
   const onAddStepRef = useRef<(type: ActionStepType, afterId: string | null) => void>(null!);
 
   const buildNodes = useCallback(
@@ -727,6 +738,15 @@ function WorkflowCanvasInner({
           .filter((s) => s.id !== currentId)
           .map((s, i) => ({ value: s.id, label: `${i + 1}. ${stepTypeLabel(s.type)}` }));
 
+      // 1º passo de mensagem do fluxo — só exige `channelId` explícito
+      // quando a org tem 2+ canais conectados do tipo certo (WA/e-mail).
+      const firstMsgIdx = findFirstMessageStepIndex(list);
+      const firstMsgConnectedCount =
+        firstMsgIdx >= 0 && list[firstMsgIdx].type === "send_email"
+          ? connectedEmailCount
+          : connectedWaCount;
+      const firstMsgRequiresChannel = firstMsgIdx >= 0 && firstMsgConnectedCount > 1;
+
       const stepNodes: Node[] = list.map((step, index) => {
         const saved = readRfPos(step.config);
         const pos = saved ?? { x: START_X + index * GAP_X, y: NODE_Y };
@@ -740,12 +760,16 @@ function WorkflowCanvasInner({
           summary = tgtIdx != null ? `Ir para: passo ${tgtIdx}` : summary;
         }
 
+        const isFirstMessageStep = index === firstMsgIdx;
         const baseData = {
           label: stepTypeLabel(step.type),
           summary,
           stepType: step.type,
           stepIndex: index + 1,
-          incomplete: isStepIncomplete(step.type, step.config),
+          incomplete: isStepIncomplete(step.type, step.config, {
+            requireChannel: isFirstMessageStep && firstMsgRequiresChannel,
+          }),
+          isFirstMessageStep,
           onDelete: () => onDelete(step.id),
           stats: ss ? { success: ss.success, failed: ss.failed, skipped: ss.skipped } : undefined,
           onStatsClick: () => onStepLogsOpenRef.current?.(step.id),
@@ -883,7 +907,7 @@ function WorkflowCanvasInner({
 
       return [triggerNode, ...stepNodes, ...addStepNodes];
     },
-    [triggerConfig, triggerType, stats, stageNameLookup]
+    [triggerConfig, triggerType, stats, stageNameLookup, connectedWaCount, connectedEmailCount]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -919,11 +943,17 @@ function WorkflowCanvasInner({
       setNodes((nds) =>
         nds.map((n) => {
           if (n.id !== stepId) return n;
+          const prevData = n.data as Record<string, unknown>;
+          const isFirstMessageStep = !!prevData.isFirstMessageStep;
+          const connectedCount =
+            step.type === "send_email" ? connectedEmailCount : connectedWaCount;
           const data: Record<string, unknown> = {
-            ...(n.data as Record<string, unknown>),
+            ...prevData,
             config: next,
             summary,
-            incomplete: isStepIncomplete(step.type, next),
+            incomplete: isStepIncomplete(step.type, next, {
+              requireChannel: isFirstMessageStep && connectedCount > 1,
+            }),
           };
           if (isInteractiveStep({ type: step.type, config: next })) {
             data.buttons = interactiveChoiceItems(step.type, next);
@@ -955,7 +985,7 @@ function WorkflowCanvasInner({
         })
       );
     },
-    [onStepsChange, setNodes, stageNameLookup]
+    [onStepsChange, setNodes, stageNameLookup, connectedWaCount, connectedEmailCount]
   );
   patchStepConfigRef.current = patchStepConfig;
 

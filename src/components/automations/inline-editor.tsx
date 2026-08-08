@@ -50,6 +50,7 @@ import {
   showsUpdateFieldVariableHint,
   UpdateFieldValueControl,
 } from "./update-field-value"
+import { INHERIT_CHANNEL_VALUE, useConnectedStepChannels } from "./step-channel-picker"
 
 const CUSTOM_FIELD_SENTINEL = "__custom__"
 
@@ -67,11 +68,14 @@ export function NodeConfigEditor({
   stepType,
   config,
   steps,
+  isFirstMessageStep,
   onChange,
 }: {
   stepType: string
   config: Cfg
   steps: StepOpt[]
+  /** 1º passo de mensagem do fluxo — exige `channelId` explícito (sem "herdar"). */
+  isFirstMessageStep?: boolean
   onChange: (next: Cfg) => void
 }) {
   const fields = STEP_FIELDS[stepType]
@@ -94,7 +98,16 @@ export function NodeConfigEditor({
       onDoubleClick={(e) => e.stopPropagation()}
     >
       {fields.map((f, i) => (
-        <Field key={"key" in f ? f.key : `f${i}`} field={f} config={config} steps={steps} set={set} onChange={onChange} />
+        <Field
+          key={"key" in f ? f.key : `f${i}`}
+          field={f}
+          config={config}
+          steps={steps}
+          set={set}
+          onChange={onChange}
+          stepType={stepType}
+          isFirstMessageStep={isFirstMessageStep}
+        />
       ))}
     </div>
   )
@@ -108,12 +121,16 @@ function Field({
   steps,
   set,
   onChange,
+  stepType,
+  isFirstMessageStep,
 }: {
   field: EditorField
   config: Cfg
   steps: StepOpt[]
   set: (k: string, v: unknown) => void
   onChange: (next: Cfg) => void
+  stepType: string
+  isFirstMessageStep?: boolean
 }) {
   switch (field.kind) {
     case "info":
@@ -269,6 +286,16 @@ function Field({
 
     case "sendProductConfig":
       return <SendProductInlineConfig config={config} onChange={onChange} />
+
+    case "channelPicker":
+      return (
+        <ChannelPickerField
+          stepType={stepType}
+          channelId={str(config.channelId)}
+          isFirstMessageStep={!!isFirstMessageStep}
+          onChange={(v) => set("channelId", v)}
+        />
+      )
 
     case "builder":
       switch (field.builder) {
@@ -603,6 +630,54 @@ function ConfigSelect({
         triggerClassName="!w-full"
       />
     </div>
+  )
+}
+
+/**
+ * Campo "Canal" — só aparece com 2+ canais conectados do tipo certo
+ * (WhatsApp Meta Cloud API ou e-mail, conforme `stepType`). 1º passo de
+ * mensagem do fluxo exige seleção explícita; demais herdam do fluxo
+ * (`channelId` vazio) quando não selecionam nada.
+ */
+function ChannelPickerField({
+  stepType,
+  channelId,
+  isFirstMessageStep,
+  onChange,
+}: {
+  stepType: string
+  channelId: string
+  isFirstMessageStep: boolean
+  onChange: (v: string) => void
+}) {
+  const { options, isLoading } = useConnectedStepChannels(stepType)
+  if (isLoading || options.length <= 1) return null
+
+  const value = channelId || (isFirstMessageStep ? "" : INHERIT_CHANNEL_VALUE)
+  const selectOptions: Opt[] = [
+    ...(isFirstMessageStep
+      ? []
+      : [{ value: INHERIT_CHANNEL_VALUE, label: "Usar canal do fluxo (herdar)" }]),
+    ...options.map((o) => ({ value: o.id, label: o.label })),
+  ]
+
+  return (
+    <Labeled
+      label="Canal"
+      hint={
+        isFirstMessageStep
+          ? "1º passo de mensagem do fluxo — obrigatório (a organização tem mais de um canal conectado)."
+          : "Sem seleção, este passo usa o mesmo canal do passo anterior no fluxo."
+      }
+    >
+      <ConfigSelect
+        value={value}
+        options={selectOptions}
+        placeholder="Selecione o canal…"
+        allowEmpty={false}
+        onChange={(v) => onChange(v === INHERIT_CHANNEL_VALUE ? "" : v)}
+      />
+    </Labeled>
   )
 }
 

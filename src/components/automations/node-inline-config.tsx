@@ -26,12 +26,15 @@ export function NodeInlineConfig({
   stepType,
   config,
   stepOptions,
+  isFirstMessageStep,
   onChange,
 }: {
   selected: boolean | undefined;
   stepType: string;
   config: Record<string, unknown> | undefined;
   stepOptions: StepOpt[];
+  /** 1º passo de mensagem do fluxo — exige `channelId` explícito. */
+  isFirstMessageStep?: boolean;
   onChange: (next: Record<string, unknown>) => void;
 }) {
   if (!selected) return null;
@@ -51,6 +54,7 @@ export function NodeInlineConfig({
         stepType={stepType}
         config={config ?? {}}
         steps={stepOptions}
+        isFirstMessageStep={isFirstMessageStep}
         onChange={onChange}
       />
     </div>

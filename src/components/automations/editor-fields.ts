@@ -38,6 +38,8 @@ export type EditorField =
   | { kind: "info"; text: string }
   | { kind: "updateField" }
   | { kind: "templatePreview" }
+  /** Seletor de canal (WhatsApp/e-mail) — só aparece com 2+ canais conectados. */
+  | { kind: "channelPicker" }
   /** Construtor visual completo do step webhook (URL, método, headers, body). */
   | { kind: "webhookConfig" }
   /** Seletor de produto (+ preço/canal) do passo send_product. */
@@ -92,6 +94,7 @@ const META_FAILURE_FIELDS: EditorField[] = [
 
 export const STEP_FIELDS: Record<string, EditorField[]> = {
   send_email: [
+    { kind: "channelPicker" },
     { kind: "text", key: "to", label: "Para", placeholder: "email@cliente.com ou {{campo}}" },
     { kind: "text", key: "subject", label: "Assunto" },
     { kind: "textarea", key: "body", label: "Corpo" },
@@ -115,6 +118,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "textarea", key: "description", label: "Descrição", optional: true },
   ],
   send_whatsapp_message: [
+    { kind: "channelPicker" },
     { kind: "textarea", key: "content", label: "Conteúdo da mensagem", hint: "Use {{campo}} para variáveis." },
     {
       kind: "select",
@@ -142,6 +146,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     ...META_FAILURE_FIELDS,
   ],
   send_whatsapp_template: [
+    { kind: "channelPicker" },
     { kind: "source", source: "template", key: "templateName", label: "Template" },
     { kind: "text", key: "languageCode", label: "Idioma", placeholder: "pt_BR" },
     { kind: "templatePreview" },
@@ -160,6 +165,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     ...META_FAILURE_FIELDS,
   ],
   send_whatsapp_media: [
+    { kind: "channelPicker" },
     { kind: "select", key: "mediaType", label: "Tipo de mídia", options: MEDIA_TYPES },
     { kind: "media", key: "mediaUrl", label: "Arquivo" },
     { kind: "text", key: "caption", label: "Legenda", optional: true },
@@ -168,6 +174,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   // Sem esta entrada o canvas não monta o seletor (StepConfigPanel não é
   // mais o caminho principal — edição é inline via STEP_FIELDS).
   send_product: [
+    { kind: "channelPicker" },
     { kind: "sendProductConfig" },
     {
       kind: "textarea",
@@ -179,6 +186,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     },
   ],
   send_whatsapp_interactive: [
+    { kind: "channelPicker" },
     { kind: "textarea", key: "body", label: "Texto da mensagem" },
     { kind: "text", key: "header", label: "Cabeçalho", optional: true },
     { kind: "text", key: "footer", label: "Rodapé", optional: true },
@@ -200,6 +208,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     ...META_FAILURE_FIELDS,
   ],
   send_whatsapp_list: [
+    { kind: "channelPicker" },
     { kind: "textarea", key: "body", label: "Texto da mensagem" },
     {
       kind: "text",
@@ -247,6 +256,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   condition: [{ kind: "builder", builder: "condition", key: "branches", label: "Condições" }],
   update_lead_score: [{ kind: "info", text: "Recalcula o Lead Score do contato no contexto. Sem configuração." }],
   question: [
+    { kind: "channelPicker" },
     { kind: "textarea", key: "message", label: "Mensagem enviada ao lead" },
     { kind: "builder", builder: "buttons", key: "buttons", label: "Botões de resposta" },
     { kind: "text", key: "saveToVariable", label: "Salvar resposta em variável", optional: true },

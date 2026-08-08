@@ -5,7 +5,14 @@ import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, Ic
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { isMessageChannelStep } from "@/lib/automation-workflow";
 import { NodeInlineConfig } from "./node-inline-config";
+import {
+  channelLabelFromOptions,
+  StepChannelBadge,
+  StepChannelKebabMenu,
+  useConnectedStepChannels,
+} from "./step-channel-picker";
 
 export type InteractiveButton = {
   text?: string;
@@ -30,6 +37,8 @@ export type InteractiveNodeData = {
   config?: Record<string, unknown>;
   stepOptions?: Array<{ value: string; label: string }>;
   onConfigChange?: (next: Record<string, unknown>) => void;
+  /** 1º passo de mensagem do fluxo — canal obrigatório (sem "herdar"). */
+  isFirstMessageStep?: boolean;
 };
 
 function buttonLabel(btn: InteractiveButton, idx: number): string {
@@ -54,6 +63,13 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
   const isQuestion = data.stepType === "question";
   const isList = data.stepType === "send_whatsapp_list";
   const Icon = isQuestion ? MessageCircleQuestion : isList ? ListDetails : MousePointerClick;
+  const isChannelStep = isMessageChannelStep(data.stepType);
+  const channelId =
+    isChannelStep && data.config && typeof data.config.channelId === "string"
+      ? (data.config.channelId as string)
+      : "";
+  const { options: channelOptions } = useConnectedStepChannels(data.stepType, { enabled: isChannelStep });
+  const channelBadgeLabel = channelLabelFromOptions(channelOptions, channelId);
 
   // Ambos usam violet, mas mantemos a estrutura caso queiramos
   // distinguir no futuro (ex.: question = blue, interactive = violet).
@@ -114,7 +130,20 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
             {data.summary}
           </p>
+          {channelBadgeLabel && (
+            <div className="mt-1">
+              <StepChannelBadge label={channelBadgeLabel} />
+            </div>
+          )}
         </div>
+        {isChannelStep && (
+          <StepChannelKebabMenu
+            stepType={data.stepType}
+            channelId={channelId}
+            isFirstMessageStep={!!data.isFirstMessageStep}
+            onChange={(v) => data.onConfigChange?.({ ...(data.config ?? {}), channelId: v })}
+          />
+        )}
         {data.onDelete && (
           <TooltipHost label="Remover passo" side="top">
             <button
@@ -242,6 +271,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
         stepType={data.stepType}
         config={data.config}
         stepOptions={data.stepOptions ?? []}
+        isFirstMessageStep={data.isFirstMessageStep}
         onChange={(next) => data.onConfigChange?.(next)}
       />
     </div>

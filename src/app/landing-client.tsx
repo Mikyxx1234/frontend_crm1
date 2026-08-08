@@ -2,7 +2,6 @@
 
 import { apiUrl } from "@/lib/api";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import * as React from "react";
 import { IconArrowRight as ArrowRight, IconCircleCheck as CheckCircle2, IconLayoutKanban as KanbanSquare, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconSparkles as Sparkles, IconUsers as Users } from "@tabler/icons-react";
@@ -12,13 +11,18 @@ import { Button } from "@/components/ui/button";
 import { HeroGeometric } from "@/components/ui/hero-geometric";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  buildTenantUrl,
+  getTenantBaseDomain,
+  tenantHostPreview,
+} from "@/lib/tenant-url";
 import { cn } from "@/lib/utils";
 
 /**
  * Landing publica. Hero + features + form de signup na mesma tela.
  * Ao submeter, chama POST /api/signup (cria Org + User ADMIN em
  * transacao), depois signIn(credentials) pra estabelecer a session, e
- * redireciona pro wizard /onboarding pros passos restantes.
+ * faz redirect completo para `{tenantUrl}/onboarding` (subdomínio da org).
  */
 export function LandingClient() {
   return (
@@ -143,7 +147,6 @@ function slugify(s: string) {
 }
 
 function SignupCard() {
-  const router = useRouter();
   const [organizationName, setOrganizationName] = React.useState("");
   const [slug, setSlug] = React.useState("");
   const [slugTouched, setSlugTouched] = React.useState(false);
@@ -197,10 +200,21 @@ function SignupCard() {
           password,
         }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        slug?: string;
+        tenantUrl?: string;
+        organizationSlug?: string;
+      };
       if (!res.ok) {
         throw new Error(data?.message ?? "Erro ao criar conta.");
       }
+
+      const resolvedSlug =
+        data.slug ?? data.organizationSlug ?? slug;
+      const destinationBase =
+        (typeof data.tenantUrl === "string" && data.tenantUrl) ||
+        buildTenantUrl(resolvedSlug);
 
       const signInRes = await signIn("credentials", {
         email: adminEmail.trim().toLowerCase(),
@@ -208,13 +222,17 @@ function SignupCard() {
         redirect: false,
       });
       if (!signInRes || signInRes.error) {
-        // Conta criada mas signin falhou — manda pro /login pra ele entrar manual.
-        router.push("/login?registered=1");
+        // Conta criada mas signin falhou — manda pro login no tenant.
+        window.location.assign(
+          `${destinationBase.replace(/\/$/, "")}/login?registered=1`,
+        );
         return;
       }
 
-      router.push("/onboarding");
-      router.refresh();
+      // Full navigation: cookie Domain=`.base` precisa ir no próximo host.
+      window.location.assign(
+        `${destinationBase.replace(/\/$/, "")}/onboarding`,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro inesperado.");
     } finally {
@@ -258,11 +276,10 @@ function SignupCard() {
           <Label htmlFor="slug">
             URL da sua conta
             <span className="ml-2 text-xs font-normal text-muted-foreground">
-              (usado em futuras URLs)
+              (subdomínio do workspace)
             </span>
           </Label>
           <div className="flex items-center gap-2 rounded-lg border border-input bg-transparent px-3 focus-within:ring-2 focus-within:ring-ring">
-            <span className="text-xs text-muted-foreground">crm.eduit.com.br/</span>
             <input
               id="slug"
               value={slug}
@@ -276,12 +293,21 @@ function SignupCard() {
                 );
               }}
               className={cn(
-                "flex-1 bg-transparent py-2 text-sm outline-none",
+                "min-w-0 flex-1 bg-transparent py-2 text-sm outline-none",
               )}
               placeholder="acme"
               autoComplete="off"
             />
+            <span className="shrink-0 text-xs text-muted-foreground">
+              .{getTenantBaseDomain()}
+            </span>
           </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Seu CRM ficará em{" "}
+            <span className="font-medium text-foreground">
+              {tenantHostPreview(slug)}
+            </span>
+          </p>
         </div>
 
         <div>

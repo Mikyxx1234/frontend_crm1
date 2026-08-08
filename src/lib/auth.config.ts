@@ -3,8 +3,9 @@ import type { NextAuthConfig } from "next-auth";
 import type { AppUserRole } from "./auth-types";
 
 /**
- * Config compartilhada (sem Prisma) para uso no middleware Edge.
- * Os providers com credenciais ficam em `auth.ts`.
+ * Config compartilhada (sem Prisma) para uso no middleware Edge / RSC.
+ * Cookies de sessão são emitidos pelo backend (rewrite /api/auth/*);
+ * o Domain=`.{TENANT_BASE_DOMAIN}` fica na config do BE.
  */
 const nextAuthUrl = process.env.NEXTAUTH_URL ?? "";
 
@@ -39,6 +40,9 @@ export default {
         token.role = (user as { role?: AppUserRole | null }).role ?? undefined;
         token.organizationId =
           (user as { organizationId?: string | null }).organizationId ?? null;
+        token.organizationSlug =
+          (user as { organizationSlug?: string | null }).organizationSlug ??
+          null;
         token.isSuperAdmin = Boolean(
           (user as { isSuperAdmin?: boolean }).isSuperAdmin,
         );
@@ -51,6 +55,8 @@ export default {
         (session.user as { role?: unknown }).role = token.role;
         (session.user as { organizationId?: string | null }).organizationId =
           (token.organizationId as string | null | undefined) ?? null;
+        (session.user as { organizationSlug?: string | null }).organizationSlug =
+          (token.organizationSlug as string | null | undefined) ?? null;
         (session.user as { isSuperAdmin?: boolean }).isSuperAdmin = Boolean(
           token.isSuperAdmin,
         );

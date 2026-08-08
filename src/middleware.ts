@@ -3,6 +3,12 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 import { isPreviewMode } from "@/lib/preview-mode";
+import {
+  resolveTenantFromRequest,
+  TENANT_SLUG_COOKIE,
+  TENANT_SLUG_HEADER,
+} from "@/lib/tenant-host";
+import { getTenantBaseDomain, getTenantProtocol } from "@/lib/tenant-url";
 
 /**
  * Middleware do FRONTEND separado.
@@ -11,7 +17,11 @@ import { isPreviewMode } from "@/lib/preview-mode";
  * super-leve). Tudo de /api/* é repassado via `rewrites()` no next.config.ts
  * pro backend. Por isso este middleware é enxuto:
  *
+ *  - Resolve tenant pelo Host (`{slug}.crm.eduit.com.br`) ou override de
+ *    dev (`x-tenant-slug` / `{slug}.localhost`).
  *  - Lê o JWT do cookie direto (Edge-friendly, sem `NextAuth(authConfig)`).
+ *  - Em subdomínio de org: exige que a sessão pertença ao mesmo slug
+ *    (exceto super-admin).
  *  - Aplica headers de segurança em todas as respostas.
  *  - Redireciona pra /login se a sessão estiver vazia em rotas privadas.
  *  - Bloqueia /admin pra quem não é super-admin (esse flag fica no JWT).
@@ -32,9 +42,17 @@ function secureCookieFromEnv(): boolean {
 
 const AUTH_SECRET = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
 
+type AuthFromCookie = {
+  user?: {
+    id: string;
+    isSuperAdmin?: boolean;
+    organizationSlug?: string | null;
+  };
+} | null;
+
 async function readAuthFromRequestCookie(
   req: NextRequest,
-): Promise<{ user?: { id: string; isSuperAdmin?: boolean } } | null> {
+): Promise<AuthFromCookie> {
   if (!AUTH_SECRET) return null;
   try {
     const token = await getToken({
@@ -51,6 +69,10 @@ async function readAuthFromRequestCookie(
       user: {
         id,
         isSuperAdmin: Boolean(rec.isSuperAdmin),
+        organizationSlug:
+          typeof rec.organizationSlug === "string"
+            ? rec.organizationSlug
+            : null,
       },
     };
   } catch {
@@ -71,6 +93,80 @@ function withSecurityHeaders(res: NextResponse): NextResponse {
   res.headers.set("X-Frame-Options", "SAMEORIGIN");
   res.headers.set("X-DNS-Prefetch-Control", "on");
   return res;
+}
+
+function apexOrigin(req: NextRequest): string {
+  const proto = getTenantProtocol();
+  const base = getTenantBaseDomain();
+  // Em localhost (dev sem wildcard), volta pra mesma origem da request.
+  const host = (req.headers.get("host") ?? "").toLowerCase();
+  const hostname = host.split(":")[0] ?? "";
+  if (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname === "127.0.0.1"
+  ) {
+    return req.nextUrl.origin;
+  }
+  return `${proto}://${base}`;
+}
+
+function unknownTenantResponse(req: NextRequest, slug: string): NextResponse {
+  const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Organização não encontrada</title>
+  <style>
+    body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0b1220;color:#e8eefc}
+    main{max-width:28rem;padding:2rem;text-align:center}
+    a{color:#7dd3fc}
+    code{background:#1e293b;padding:.1rem .35rem;border-radius:.25rem}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Organização não encontrada</h1>
+    <p>O endereço <code>${slug}</code> não é um workspace válido.</p>
+    <p><a href="${apexOrigin(req)}/">Voltar para o início</a></p>
+  </main>
+</body>
+</html>`;
+  return withSecurityHeaders(
+    new NextResponse(html, {
+      status: 404,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    }),
+  );
+}
+
+function withTenantContext(
+  req: NextRequest,
+  slug: string | null,
+): { requestHeaders: Headers; applyCookies: (res: NextResponse) => NextResponse } {
+  const requestHeaders = new Headers(req.headers);
+  if (slug) {
+    requestHeaders.set(TENANT_SLUG_HEADER, slug);
+  } else {
+    requestHeaders.delete(TENANT_SLUG_HEADER);
+  }
+  return {
+    requestHeaders,
+    applyCookies(res) {
+      if (slug) {
+        res.cookies.set(TENANT_SLUG_COOKIE, slug, {
+          path: "/",
+          sameSite: "lax",
+          httpOnly: false,
+          secure: secureCookieFromEnv(),
+        });
+      } else {
+        res.cookies.delete(TENANT_SLUG_COOKIE);
+      }
+      return res;
+    },
+  };
 }
 
 const PUBLIC_PATHS = new Set([
@@ -122,11 +218,33 @@ export async function middleware(req: NextRequest) {
       return withSecurityHeaders(NextResponse.next());
     }
 
+    // Dev fallback (apex/localhost): header `x-tenant-slug`.
+    // Cookie `tenant-slug` NÃO é usado como override — só ecoa o Host atual.
+    const tenant = resolveTenantFromRequest({
+      hostHeader: req.headers.get("host"),
+      overrideSlug: req.headers.get(TENANT_SLUG_HEADER),
+    });
+
+    // Slug inválido / multi-label → 404 amigável.
+    if (tenant.kind === "unknown") {
+      return unknownTenantResponse(req, tenant.slug);
+    }
+
+    const tenantSlug = tenant.kind === "tenant" ? tenant.slug : null;
+    const { requestHeaders, applyCookies } = withTenantContext(req, tenantSlug);
+
+    const nextWithTenant = () =>
+      applyCookies(
+        withSecurityHeaders(
+          NextResponse.next({ request: { headers: requestHeaders } }),
+        ),
+      );
+
     // Rotas /v2/* são redirecionadas por next.config.ts (redirects) para
     // o path canônico. Liberamos aqui para que o redirect ocorra sem
     // loop de auth — o destino final já exige autenticação normalmente.
     if (pathname.startsWith("/v2") || pathname.startsWith("/old")) {
-      return withSecurityHeaders(NextResponse.next());
+      return nextWithTenant();
     }
 
     // Rotas de auth + assets do Next + webhooks + uploads não passam por auth.
@@ -140,11 +258,11 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/_next") ||
       pathname.startsWith("/favicon.ico")
     ) {
-      return withSecurityHeaders(NextResponse.next());
+      return nextWithTenant();
     }
 
     if (/\.(?:svg|png|jpg|jpeg|gif|webp|ico)$/i.test(pathname)) {
-      return withSecurityHeaders(NextResponse.next());
+      return nextWithTenant();
     }
 
     if (
@@ -152,14 +270,42 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/swe-worker-") ||
       pathname.startsWith("/workbox-")
     ) {
-      return withSecurityHeaders(NextResponse.next());
+      return nextWithTenant();
     }
 
     if (PUBLIC_PATHS.has(pathname) || PUBLIC_API_PATHS.has(pathname)) {
-      return withSecurityHeaders(NextResponse.next());
+      return nextWithTenant();
     }
 
     const reqAuth = await readAuthFromRequestCookie(req);
+
+    // Sessão logada em subdomínio de outra org → rejeita (exceto super-admin).
+    if (
+      tenantSlug &&
+      reqAuth?.user &&
+      !reqAuth.user.isSuperAdmin &&
+      reqAuth.user.organizationSlug &&
+      reqAuth.user.organizationSlug !== tenantSlug
+    ) {
+      if (pathname.startsWith("/api/")) {
+        return applyCookies(
+          withSecurityHeaders(
+            NextResponse.json(
+              {
+                message: "Sessão não pertence a esta organização.",
+                code: "TENANT_MISMATCH",
+              },
+              { status: 403 },
+            ),
+          ),
+        );
+      }
+      const loginUrl = new URL("/login", req.nextUrl.origin);
+      loginUrl.searchParams.set("error", "tenant_mismatch");
+      return applyCookies(
+        withSecurityHeaders(NextResponse.redirect(loginUrl)),
+      );
+    }
 
     // Para /api/* (rotas que vão pro backend), permite Bearer token mesmo sem sessão.
     if (
@@ -169,7 +315,7 @@ export async function middleware(req: NextRequest) {
     ) {
       const authHeader = req.headers.get("authorization") ?? "";
       if (/^Bearer\s+.+/i.test(authHeader)) {
-        return withSecurityHeaders(NextResponse.next());
+        return nextWithTenant();
       }
     }
 
@@ -180,17 +326,21 @@ export async function middleware(req: NextRequest) {
       // `Unexpected token '<', "<!doctype "... is not valid JSON`. Devolver 401
       // JSON deixa o React Query ir direto pro estado de erro com payload tratável.
       if (pathname.startsWith("/api/")) {
-        return withSecurityHeaders(
-          NextResponse.json(
-            { message: "Unauthorized", code: "AUTH_REQUIRED" },
-            { status: 401 },
+        return applyCookies(
+          withSecurityHeaders(
+            NextResponse.json(
+              { message: "Unauthorized", code: "AUTH_REQUIRED" },
+              { status: 401 },
+            ),
           ),
         );
       }
       const loginUrl = new URL("/login", req.nextUrl.origin);
       const fullPath = pathname + (req.nextUrl.search ?? "");
       loginUrl.searchParams.set("callbackUrl", fullPath);
-      return withSecurityHeaders(NextResponse.redirect(loginUrl));
+      return applyCookies(
+        withSecurityHeaders(NextResponse.redirect(loginUrl)),
+      );
     }
 
     const isSuperAdmin = Boolean(reqAuth.user?.isSuperAdmin);
@@ -200,19 +350,23 @@ export async function middleware(req: NextRequest) {
       !isSuperAdmin
     ) {
       if (pathname.startsWith("/api/admin")) {
-        return withSecurityHeaders(
-          NextResponse.json(
-            { message: "Acesso restrito a administradores da plataforma." },
-            { status: 403 },
+        return applyCookies(
+          withSecurityHeaders(
+            NextResponse.json(
+              { message: "Acesso restrito a administradores da plataforma." },
+              { status: 403 },
+            ),
           ),
         );
       }
-      return withSecurityHeaders(
-        NextResponse.redirect(new URL("/", req.nextUrl.origin)),
+      return applyCookies(
+        withSecurityHeaders(
+          NextResponse.redirect(new URL("/", req.nextUrl.origin)),
+        ),
       );
     }
 
-    return withSecurityHeaders(NextResponse.next());
+    return nextWithTenant();
   } catch {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     return withSecurityHeaders(NextResponse.redirect(loginUrl));

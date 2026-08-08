@@ -92,15 +92,15 @@ function SalesHubChatEmptyState({
   // Surface neutra usando tokens do tema — `bg-white` virava placa
   // branca destoante em dark mode. Agora segue o background do app.
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-[var(--color-bg-card)] p-8 dark:bg-[var(--glass-bg-modal)]">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-[var(--color-chat-bg)] p-8">
       <MessageSquareOff
-        className="size-7 text-[var(--text-faint)] dark:text-[var(--text-secondary)]"
+        className="size-7 text-[var(--text-muted)]"
         strokeWidth={1.5}
       />
-      <p className="text-[16px] font-semibold tracking-tight text-foreground">
+      <p className="font-display text-[15px] font-bold tracking-tight text-[var(--text-primary)]">
         {title}
       </p>
-      <p className="max-w-xs text-center text-[13px] text-[var(--color-ink-muted)]">
+      <p className="max-w-xs text-center text-[13px] text-[var(--text-muted)]">
         {subtitle}
       </p>
     </div>
@@ -600,10 +600,13 @@ export function SalesHubView({
   const hubChromeCompact = false;
 
   return (
-    // Root usa `bg-white dark:bg-[var(--glass-bg-modal)]` em vez de `bg-white` cravado —
-    // antes o Sales Hub continuava claro mesmo com tema dark ativo.
+    // Root / colunas usam tokens glass do Inbox — não `--color-bg-card` isolado.
     // Estrutura "split view" preservada (sidebar | chat).
-    <div ref={rootRef} className="flex h-full flex-col bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]" tabIndex={-1}>
+    <div
+      ref={rootRef}
+      className="flex h-full flex-col bg-[var(--glass-bg)]"
+      tabIndex={-1}
+    >
       <StageRibbon
         stages={funnelStages}
         selectedStageId={selectedStageId}
@@ -626,17 +629,17 @@ export function SalesHubView({
             Sem expansão inline — seleção = highlight. */}
         <div
           className={cn(
-            "flex min-h-0 flex-col overflow-hidden bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]",
+            "flex min-h-0 flex-col overflow-hidden bg-[var(--glass-bg)]",
             activeDeal
-              ? "hidden w-[280px] min-w-[280px] max-w-[280px] shrink-0 border-r border-border md:flex"
+              ? "hidden w-[280px] min-w-[280px] max-w-[280px] shrink-0 border-r border-[var(--glass-border)] md:flex"
               : "w-full",
           )}
         >
-          <div className="shrink-0 border-b border-border px-3 py-2">
+          <div className="shrink-0 border-b border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-2 backdrop-blur dark:bg-[var(--glass-bg-subtle)]">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-[var(--color-bg-subtle)] px-2.5">
+              <div className="flex h-9 min-w-0 flex-1 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 backdrop-blur transition-all focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15">
                 <Search
-                  className="size-3 shrink-0 text-[var(--color-ink-muted)]"
+                  className="size-3.5 shrink-0 text-[var(--text-muted)]"
                   strokeWidth={2}
                   aria-hidden
                 />
@@ -646,14 +649,14 @@ export function SalesHubView({
                   onChange={(e) => onQueueSearchChange(e.target.value)}
                   placeholder="Buscar deal..."
                   autoComplete="off"
-                  className="min-w-0 flex-1 bg-transparent text-[12px] text-foreground placeholder:text-[var(--color-ink-muted)] outline-none"
+                  className="min-w-0 flex-1 bg-transparent text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
                   aria-label="Buscar deal na fila"
                 />
                 {queueSearch ? (
                   <button
                     type="button"
                     onClick={() => onQueueSearchChange("")}
-                    className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink-soft)]"
+                    className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                     aria-label="Limpar busca"
                   >
                     <X className="size-3" />
@@ -688,7 +691,7 @@ export function SalesHubView({
             o grid acima vira [fila estreita | chat]. */}
         <div
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]",
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--glass-bg)]",
             !activeDeal && "hidden",
           )}
         >
@@ -741,10 +744,10 @@ export function SalesHubView({
                       aria-pressed={detailsOpen}
                       onClick={() => setDetailsOpen((v) => !v)}
                       className={cn(
-                        "flex size-8 items-center justify-center rounded-lg transition-colors",
+                        "flex size-8 items-center justify-center rounded-[var(--radius-md)] transition-colors",
                         detailsOpen
-                          ? "bg-primary/15 text-primary"
-                          : "text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)]",
+                          ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                          : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]",
                       )}
                     >
                       <Briefcase className="size-4" strokeWidth={1.5} />
@@ -829,7 +832,7 @@ export function SalesHubView({
                   subtitle={`${activeDeal.contact?.name ?? "Este contato"} ainda nao tem nenhuma conversa. Abra uma nova a partir do Inbox.`}
                 />
               ) : activeTab !== "conversations" ? (
-                <div className="flex flex-1 items-center justify-center bg-[var(--color-chat-bg)] px-6 text-center text-[13px] text-[var(--color-ink-muted)]">
+                <div className="flex flex-1 items-center justify-center bg-[var(--color-chat-bg)] px-6 text-center text-[13px] text-[var(--text-muted)]">
                   Em breve
                 </div>
               ) : (
@@ -860,9 +863,9 @@ export function SalesHubView({
                 <button
                   type="button"
                   className={cn(
-                    "w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)]",
+                    "w-full rounded-[var(--radius-md)] px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--glass-bg-strong)]",
                     c.id === activeConversation?.id &&
-                      "bg-primary/10 font-medium text-primary",
+                      "bg-[var(--color-enterprise-bg)] font-medium text-[var(--brand-primary)]",
                   )}
                   onClick={() => {
                     setPickedConversationId(c.id);
@@ -870,11 +873,11 @@ export function SalesHubView({
                   }}
                 >
                   <span className="font-medium capitalize">{c.channel}</span>
-                  <span className="text-[var(--color-ink-muted)]">
+                  <span className="text-[var(--text-muted)]">
                     {" "}
                     · {c.status}
                   </span>
-                  <span className="mt-0.5 block text-xs text-[var(--color-ink-muted)]">
+                  <span className="mt-0.5 block text-xs text-[var(--text-muted)]">
                     {new Date(c.updatedAt).toLocaleString("pt-BR")}
                   </span>
                 </button>
@@ -887,20 +890,20 @@ export function SalesHubView({
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent
           side="right"
-          className="flex w-full max-w-[360px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[360px]"
+          className="flex w-full max-w-[360px] flex-col gap-0 overflow-hidden border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-0 shadow-[var(--glass-shadow)] backdrop-blur-md sm:max-w-[360px]"
         >
-          <SheetHeader className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-[var(--glass-border)] px-4 py-3 text-left">
-            <SheetTitle className="text-[14px] font-semibold">
+          <SheetHeader className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 py-3 text-left">
+            <SheetTitle className="font-display text-[14px] font-bold text-[var(--text-primary)]">
               Detalhes do negócio
             </SheetTitle>
             <SheetClose
               aria-label="Fechar"
-              className="flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+              className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
             >
               <X className="size-4" />
             </SheetClose>
           </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden bg-[var(--glass-bg)]">
             <DealDetailPanel
               crmOnly
               isOpen={detailsOpen}

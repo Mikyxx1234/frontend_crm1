@@ -318,7 +318,7 @@ export default function SalesHubClientPage() {
           }
         />
 
-        <div className="min-h-0 flex-1 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)]">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow)] backdrop-blur-md">
           <SalesHubView
             pipelineId={pipelineId}
             stages={stages}

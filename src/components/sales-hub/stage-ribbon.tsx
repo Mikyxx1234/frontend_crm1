@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * StageRibbon — Funil no Pipeline Ágil: segmentos em chevron (clip-path)
- * apontando para o próximo. "Todos" = primeiro segmento sem recorte à esquerda.
+ * StageRibbon — filtro de etapas do Sales Hub.
+ * Visual alinhado aos chips/segmented controls do Inbox/CRM
+ * (`PageSegmentedControl` + `Chip`), não a um funil analytics.
  */
 
 import { cn } from "@/lib/utils";
@@ -24,13 +25,6 @@ type StageRibbonProps = {
   compact?: boolean;
 };
 
-/** Primeiro segmento: borda reta à esquerda. */
-const CLIP_FIRST =
-  "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)";
-/** Demais: entalhe à esquerda (encaixa no chevron anterior). */
-const CLIP_CHEVRON =
-  "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)";
-
 export function StageRibbon({
   stages,
   totalDeals,
@@ -41,39 +35,36 @@ export function StageRibbon({
   return (
     <div
       className={cn(
-        "relative shrink-0 border-b border-border bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]",
-        compact ? "shadow-none" : "shadow-[0_1px_0_rgba(15,23,42,0.03)]",
+        "relative shrink-0 border-b border-[var(--glass-border)] bg-[var(--glass-bg)]",
+        compact ? "px-2 py-1.5" : "px-3 py-2",
       )}
     >
       <div
-        className={cn(
-          "scrollbar-none flex items-stretch overflow-x-scroll gap-0.5",
-          compact ? "px-1.5 py-1 pr-8" : "px-2 py-2 pr-8",
-        )}
+        className="scrollbar-none flex items-center gap-1 overflow-x-auto"
+        role="tablist"
+        aria-label="Filtrar por etapa"
       >
         <button
           type="button"
+          role="tab"
+          aria-selected={selectedStageId === null}
           aria-pressed={selectedStageId === null}
           onClick={() => onSelectStage(null)}
-          style={{
-            clipPath: CLIP_FIRST,
-            minWidth: compact ? 72 : 90,
-          }}
           className={cn(
-            "relative flex shrink-0 flex-col items-center justify-center px-5 text-[11.5px] font-medium whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
-            compact ? "h-8 min-h-8" : "h-9 min-h-9",
+            "inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 font-display text-[11px] font-semibold whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
+            compact ? "h-7" : "h-8",
             selectedStageId === null
-              ? "bg-primary text-[var(--color-primary-foreground)]"
-              : "bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:bg-[var(--color-border)] dark:bg-[var(--glass-bg-base)] dark:text-[var(--text-faint)] dark:hover:bg-slate-700",
+              ? "border-[var(--brand-primary)]/25 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+              : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]",
           )}
         >
           <span>Todos</span>
           <span
             className={cn(
-              "mt-px text-[9px] font-bold tabular-nums",
+              "rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
               selectedStageId === null
-                ? "text-[var(--color-primary-foreground)]/80"
-                : "text-[var(--text-muted)] dark:text-[var(--text-muted)]",
+                ? "bg-[var(--brand-primary)] text-white"
+                : "bg-black/[0.06] text-[var(--text-muted)] dark:bg-white/10",
             )}
           >
             {totalDeals}
@@ -86,29 +77,54 @@ export function StageRibbon({
             <button
               key={stage.id}
               type="button"
+              role="tab"
+              aria-selected={isActive}
               aria-pressed={isActive}
               onClick={() => onSelectStage(isActive ? null : stage.id)}
-              style={{
-                clipPath: CLIP_CHEVRON,
-                minWidth: compact ? 72 : 90,
-                backgroundColor: isActive ? stage.color : `${stage.color}22`,
-                color: isActive ? "#ffffff" : stage.color,
-              }}
               className={cn(
-                "relative flex shrink-0 flex-col items-center justify-center px-5 text-[11.5px] font-medium whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2",
-                compact ? "h-8 min-h-8" : "h-9 min-h-9",
-                isActive ? "text-white" : "text-[var(--text-muted)] hover:opacity-90 dark:text-[var(--color-text-muted)]",
+                "inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 font-display text-[11px] font-semibold whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
+                compact ? "h-7" : "h-8",
+                isActive
+                  ? "shadow-[var(--glass-shadow-sm)]"
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]",
               )}
+              style={
+                isActive
+                  ? {
+                      color: stage.color,
+                      borderColor: `color-mix(in srgb, ${stage.color} 30%, transparent)`,
+                      background: `color-mix(in srgb, ${stage.color} 12%, transparent)`,
+                    }
+                  : undefined
+              }
             >
-              <span className="max-w-[160px] truncate">{stage.name}</span>
-              <span className="mt-px text-[9px] font-bold tabular-nums opacity-75">
+              <span
+                className="size-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: stage.color }}
+                aria-hidden
+              />
+              <span className="max-w-[140px] truncate">{stage.name}</span>
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
+                  isActive
+                    ? "bg-black/[0.08] dark:bg-white/15"
+                    : "bg-black/[0.06] text-[var(--text-muted)] dark:bg-white/10",
+                )}
+                style={isActive ? { color: stage.color } : undefined}
+              >
                 {stage.count}
               </span>
+              {stage.hasUrgent && !isActive ? (
+                <span
+                  className="size-1.5 shrink-0 rounded-full bg-[var(--color-danger)]"
+                  aria-label="Há deals urgentes"
+                />
+              ) : null}
             </button>
           );
         })}
       </div>
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent dark:from-slate-900" />
     </div>
   );
 }

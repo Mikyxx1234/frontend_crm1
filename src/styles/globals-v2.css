@@ -70,7 +70,9 @@
      entrega nunca era marcada como lida mesmo quando a Meta entregava
      o evento read via webhook. */
   --wa-tick-read:    #38bdf8;   /* ticks azuis = lido (ciano vivo p/ contrastar na bolha indigo) */
-  --wa-tick-fail:    #fca5a5;   /* ícone de falha = rosa */
+  /* Falha = danger sólido (red-500). Rosa lavado (#fca5a5) sumia na bolha
+     azul e no card claro — precisa contrastar em ambos os fundos. */
+  --wa-tick-fail:    var(--color-danger);
 
   /* Toggle unchecked */
   --toggle-bg-off:   #cbd5e1;   /* slate-300 */

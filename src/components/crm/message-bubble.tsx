@@ -20,7 +20,6 @@ import {
   IconDownload,
   IconCheck,
   IconCopy,
-  IconAlertCircle,
   IconPlayerPlay,
   IconPlayerPause,
   IconLock,
@@ -281,7 +280,7 @@ function StatusIndicator({
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="pointer-events-auto inline-flex cursor-help items-center">
-          <IconAlertCircle size={13} className="shrink-0 text-[var(--wa-tick-fail)]" aria-label="Falha no envio" />
+          <StatusTicks status="failed" onLightBg={onLightBg} />
         </span>
       </TooltipTrigger>
       <TooltipContent

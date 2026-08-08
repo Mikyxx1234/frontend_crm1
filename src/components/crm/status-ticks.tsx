@@ -6,7 +6,7 @@
  */
 import { cn } from "@/lib/utils"
 import {
-  IconAlertCircle,
+  IconAlertCircleFilled,
   IconCheck,
   IconChecks,
   IconClock,
@@ -48,8 +48,10 @@ export function StatusTicks({
     )
   }
   if (status === "failed") {
+    // Ícone preenchido + danger: alto contraste na bolha azul e no card claro.
+    // `onLightBg` não altera a cor — falha sempre é vermelho de erro.
     return (
-      <IconAlertCircle
+      <IconAlertCircleFilled
         size={fail}
         className="shrink-0 text-[var(--wa-tick-fail)]"
         aria-label="Falha no envio"

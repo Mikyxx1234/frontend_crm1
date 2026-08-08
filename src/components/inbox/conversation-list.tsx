@@ -19,6 +19,7 @@ import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avat
 import { PresenceDashboard } from "@/components/inbox/presence-dashboard";
 import { SwipeRow } from "@/components/inbox/swipe-row";
 import { TagChip } from "@/components/crm/tag-chip";
+import { UnreadCountPill } from "@/components/crm/unread-count-pill";
 import { cn } from "@/lib/utils";
 // InboxFilters type moved here (inbox-filters.tsx é código morto — DS-010/DS-012)
 export type InboxFilters = {
@@ -1101,12 +1102,7 @@ function ConversationItem({
                 label={`${row.unreadCount} nova${row.unreadCount === 1 ? "" : "s"} mensage${row.unreadCount === 1 ? "m" : "ns"}`}
                 side="left"
               >
-                <span
-                  className="inline-flex min-w-[16px] items-center justify-center rounded bg-primary px-1 py-0.5 text-[9px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums"
-                  aria-label={`${row.unreadCount} mensagens não lidas`}
-                >
-                  {row.unreadCount! > 99 ? "99+" : row.unreadCount}
-                </span>
+                <UnreadCountPill count={row.unreadCount ?? 0} />
               </TooltipHost>
             ) : null}
           </div>

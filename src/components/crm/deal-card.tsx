@@ -11,6 +11,7 @@ import {
   type DeliveryTickStatus,
 } from "@/components/crm/status-ticks"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
+import { UnreadCountPill } from "@/components/crm/unread-count-pill"
 import { Chip } from "./chip"
 import { TagChip } from "./tag-chip"
 
@@ -199,15 +200,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5">
           <div className="flex items-center gap-1">
-            {/* Mesmo pill do inbox (`conversation-list`): primary, rounded, 9px. */}
-            {unread > 0 ? (
-              <span
-                className="inline-flex min-w-[16px] items-center justify-center rounded bg-primary px-1 py-0.5 text-[9px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums"
-                aria-label={`${unread} mensagens não lidas`}
-              >
-                {unread > 99 ? "99+" : unread}
-              </span>
-            ) : null}
+            <UnreadCountPill count={unread} />
             <span className="rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] px-1.5 py-px font-display text-[10px] font-bold text-[var(--brand-primary)]">
               {deal.dealNumber}
             </span>

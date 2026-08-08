@@ -2136,3 +2136,13 @@ aplicada com SQL aditivo idempotente em
 
 **Impacto.** Frontend builder + utomation-executor + validação em update/toggle. Template já tinha channelId — unificado com o restante. ConnectionDivider existente passa a receber channelId das mensagens de automação.
 
+
+### 2026-08-08 - Nodes de automacao "Ganho" e "Perda"
+
+**Decisao.** Dois novos steps de acao no builder: `mark_deal_won` ("Ganho", config `{ pipelineId, pipelineName? }`) e `mark_deal_lost` ("Perda", config `{ pipelineId, pipelineName?, lostReason }`). Picker de funil reusa `usePipelineOptions`; o motivo da perda usa um novo hook `usePipelineLossReasonOptions(pipelineId)` que busca `GET /api/pipelines/{id}/loss-reasons` e so mostra o catalogo daquele pipeline (sem opcao "Outro"). Trocar o funil no node Perda zera `lostReason` (catalogo depende do funil). Icones: Trofeu (sucesso) e CircleX (perigo).
+
+**Contexto.** Faltava fechar negocio (ganho/perdido) direto de um fluxo de automacao visual - so existia "Mover estagio" generico, sem UI para motivo de perda por funil.
+
+**Alternativas descartadas.** Campo de motivo livre (foge do padrao "catalogo por pipeline" ja usado no dialog de perda do kanban); reusar o SourceSelect generico sem tratamento especial (perderia o `pipelineName` no summary do card e o clear de `lostReason` ao trocar funil).
+
+**Impacto.** `lib/automation-workflow.ts` (ACTION_STEP_TYPES/labels/default/summary/isStepIncomplete), `components/automations/editor-fields.ts` (novo SourceKey "pipeline" + kind "pipelineLossReason"), `editor-data.ts` (novo hook), `inline-editor.tsx` (PipelineSelect + PipelineLossReasonSelect), `node-palette.tsx` + `add-step-node.tsx` (icones/cores/grupo "Acoes"), `action-node.tsx` (icone/cor de fundo). Nao confundir com os triggers `deal_won`/`deal_lost` (permanecem gatilhos, inalterados).

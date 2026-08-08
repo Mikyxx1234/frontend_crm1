@@ -61,6 +61,30 @@ export function usePipelineOptions() {
   return { options: q.data ?? [], isLoading: q.isLoading }
 }
 
+type RawPipelineLossReasonMeta = { reasons?: { id: string; label: string }[] }
+
+/**
+ * Motivos de perda cadastrados NO FUNIL (catálogo restrito daquele
+ * pipeline, sem "Outro"). Usado pelo node de automação "Perda"
+ * (`mark_deal_lost`), que só aceita motivos catalogados. `value` é o
+ * `label` — `Deal.lostReason` grava o texto, não o id (mesmo padrão do
+ * `LossReasonDialog` do kanban).
+ */
+export function usePipelineLossReasonOptions(pipelineId?: string | null) {
+  const id = pipelineId?.trim() || ""
+  const q = useQuery({
+    queryKey: ["editor-pipeline-loss-reasons", id],
+    staleTime: STALE,
+    enabled: !!id,
+    queryFn: async (): Promise<Opt[]> => {
+      const meta = (await getJson(`/api/pipelines/${id}/loss-reasons`)) as RawPipelineLossReasonMeta
+      const reasons = Array.isArray(meta.reasons) ? meta.reasons : []
+      return reasons.map((r) => ({ value: r.label, label: r.label }))
+    },
+  })
+  return { options: id ? q.data ?? [] : [], isLoading: id ? q.isLoading : false }
+}
+
 type RawDepartment = { id: string; name: string; icon?: string }
 
 /** Departamentos da org → value: departmentId. Para `conversation.departmentId`

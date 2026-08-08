@@ -27,6 +27,8 @@ const GROUPS: { title: string; items: PaletteItem[] }[] = [
     items: [
       { type: "send_email" },
       { type: "move_stage" },
+      { type: "mark_deal_won" },
+      { type: "mark_deal_lost" },
       { type: "assign_owner" },
       { type: "transfer_department" },
       { type: "add_tag" },

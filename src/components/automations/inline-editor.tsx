@@ -36,6 +36,7 @@ import {
   useCustomFieldTokens,
   useDepartmentOptions,
   useFieldOptions,
+  usePipelineLossReasonOptions,
   usePipelineOptions,
   useStageOptions,
   useTagOptions,
@@ -221,10 +222,41 @@ function Field({
           </Labeled>
         )
       }
+      // Funil (Ganho/Perda): grava `pipelineName` (summary + executor) e,
+      // no node Perda, zera `lostReason` — o catálogo de motivos depende
+      // do funil selecionado.
+      if (field.source === "pipeline") {
+        return (
+          <Labeled label={field.label} optional={field.optional} hint={field.hint}>
+            <PipelineSelect
+              value={str(config[field.key])}
+              onPick={(id, name) =>
+                onChange({
+                  ...config,
+                  pipelineId: id,
+                  pipelineName: name,
+                  ...(stepType === "mark_deal_lost" ? { lostReason: "" } : {}),
+                })
+              }
+            />
+          </Labeled>
+        )
+      }
       return (
         <Labeled label={field.label} optional={field.optional} hint={field.hint}>
           <SourceSelect
             source={field.source}
+            value={str(config[field.key])}
+            onChange={(v) => set(field.key, v)}
+          />
+        </Labeled>
+      )
+
+    case "pipelineLossReason":
+      return (
+        <Labeled label={field.label} optional={field.optional} hint={field.hint}>
+          <PipelineLossReasonSelect
+            pipelineId={str(config.pipelineId)}
             value={str(config[field.key])}
             onChange={(v) => set(field.key, v)}
           />
@@ -761,6 +793,61 @@ function DepartmentSelect({
         const opt = options.find((o) => o.value === id)
         onPick(id, opt?.label ?? "")
       }}
+    />
+  )
+}
+
+function PipelineSelect({
+  value,
+  onPick,
+}: {
+  value: string
+  onPick: (id: string, name: string) => void
+}) {
+  const { options, isLoading } = usePipelineOptions()
+  return (
+    <ConfigSelect
+      value={value}
+      options={options}
+      loading={isLoading}
+      placeholder="Selecione um funil…"
+      onChange={(id) => {
+        const opt = options.find((o) => o.value === id)
+        onPick(id, opt?.label ?? "")
+      }}
+    />
+  )
+}
+
+/** Motivo da perda (node "Perda") — catálogo restrito ao funil escolhido. */
+function PipelineLossReasonSelect({
+  pipelineId,
+  value,
+  onChange,
+}: {
+  pipelineId: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  const { options, isLoading } = usePipelineLossReasonOptions(pipelineId)
+  if (!pipelineId) {
+    return <p className="cfg-info">Selecione um funil primeiro.</p>
+  }
+  if (!isLoading && options.length === 0) {
+    return (
+      <p className="cfg-info">
+        Este funil não tem motivos de perda cadastrados. Configure em
+        Configurações → Pipeline → etapa Perdido.
+      </p>
+    )
+  }
+  return (
+    <ConfigSelect
+      value={value}
+      options={options}
+      loading={isLoading}
+      placeholder="Selecione o motivo…"
+      onChange={onChange}
     />
   )
 }

@@ -9,6 +9,7 @@ export type SourceKey =
   | "stage"
   | "owner"
   | "department"
+  | "pipeline"
   | "aiAgentId"
   | "aiAgentUserId"
   | "template"
@@ -31,6 +32,8 @@ export type EditorField =
   | (Common & { kind: "select"; options: Opt[] })
   | (Common & { kind: "source"; source: SourceKey })
   | (Common & { kind: "departmentMulti" })
+  /** Select de motivo de perda dinâmico, dependente de `config.pipelineId`. */
+  | (Common & { kind: "pipelineLossReason" })
   | (Common & { kind: "step" })
   | (Common & { kind: "duration" })
   | (Common & { kind: "delay" })
@@ -100,6 +103,13 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "textarea", key: "body", label: "Corpo" },
   ],
   move_stage: [{ kind: "source", source: "stage", key: "stageId", label: "Mover para estágio" }],
+  mark_deal_won: [
+    { kind: "source", source: "pipeline", key: "pipelineId", label: "Funil" },
+  ],
+  mark_deal_lost: [
+    { kind: "source", source: "pipeline", key: "pipelineId", label: "Funil" },
+    { kind: "pipelineLossReason", key: "lostReason", label: "Motivo da perda" },
+  ],
   assign_owner: [
     { kind: "source", source: "owner", key: "userId", label: "Responsável" },
     { kind: "select", key: "target", label: "Aplicar em", options: ASSIGN_TARGET_OPTS },

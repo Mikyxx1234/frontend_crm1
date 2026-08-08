@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { IconActivity as Activity, IconAlertTriangle as AlertTriangle, IconArrowsLeftRight as ArrowRightLeft, IconRobotFace as BotMessageSquare, IconCircleCheck as CheckCircle2, IconCircleOff as CircleSlash, IconClock as Clock, IconPhoto as Image, IconMail as Mail, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPencil as Pencil, IconTag as Tag, IconTrash as Trash2, IconUserPlus as UserPlus, IconWebhook as Webhook } from "@tabler/icons-react";
+import { IconActivity as Activity, IconAlertTriangle as AlertTriangle, IconArrowsLeftRight as ArrowRightLeft, IconRobotFace as BotMessageSquare, IconCircleCheck as CheckCircle2, IconCircleOff as CircleSlash, IconCircleX as CircleX, IconClock as Clock, IconPhoto as Image, IconMail as Mail, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPencil as Pencil, IconTag as Tag, IconTrash as Trash2, IconTrophy as Trophy, IconUserPlus as UserPlus, IconWebhook as Webhook } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,8 @@ export type ActionNodeData = {
 const iconMap: Record<string, ComponentType<{ className?: string; strokeWidth?: number }>> = {
   send_email: Mail,
   move_stage: ArrowRightLeft,
+  mark_deal_won: Trophy,
+  mark_deal_lost: CircleX,
   assign_owner: UserPlus,
   add_tag: Tag,
   remove_tag: Tag,
@@ -61,6 +63,8 @@ const iconMap: Record<string, ComponentType<{ className?: string; strokeWidth?: 
 const iconBgMap: Record<string, string> = {
   send_email: "bg-[var(--brand-primary)]/10 ring-[var(--brand-primary)]/15",
   move_stage: "bg-[var(--brand-primary)]/10 ring-[var(--brand-primary)]/15",
+  mark_deal_won: "bg-[var(--color-success-bg)] ring-[var(--color-success)]/15",
+  mark_deal_lost: "bg-[var(--color-danger-bg)] ring-[var(--color-danger)]/15",
   assign_owner: "bg-teal-50 ring-teal-100",
   add_tag: "bg-[var(--color-success-bg)] ring-[var(--color-success)]/15",
   remove_tag: "bg-[var(--color-danger-bg)] ring-[var(--color-danger)]/15",

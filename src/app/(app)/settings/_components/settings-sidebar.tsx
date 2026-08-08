@@ -7,10 +7,9 @@
  * permissão via `filterSettingsNav`. Itens são achatados numa única lista
  * ordenada alfabeticamente — sem cabeçalhos de grupo, mais limpo.
  *
- * A sidebar é retrátil: a abinha (chevron) na costura, renderizada pelo
- * layout, alterna `open`; o layout cuida da animação de largura via
- * grid-template-columns. Este componente também aplica translate/opacity
- * próprios para casar com o movimento.
+ * A sidebar é uma gaveta: abre no hover da engrenagem (NavRail) e fecha
+ * ao sair, salvo se pinada. O layout anima a largura via
+ * grid-template-columns; aqui só translate/opacity + o pin no header.
  */
 
 import Link from "next/link";
@@ -25,9 +24,13 @@ import {
 import {
   IconAdjustments as Settings2,
   IconGripVertical,
+  IconPin,
+  IconPinFilled,
 } from "@tabler/icons-react";
 
 import { PageSearchBar } from "@/components/crm/page-toolbar";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { useSettingsDrawer } from "@/features/settings/settings-drawer-context";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { useUserRole } from "@/hooks/use-user-role";
 import { cn } from "@/lib/utils";
@@ -50,6 +53,7 @@ export function SettingsSidebar({
   open,
 }: SettingsSidebarProps) {
   const pathname = usePathname();
+  const { pinned, togglePinned } = useSettingsDrawer();
   const { role, isSuperAdmin } = useUserRole();
   const { data: myPerms } = useMyPermissions();
 
@@ -150,7 +154,7 @@ export function SettingsSidebar({
           : "-translate-x-3 opacity-0 transition-[transform,opacity] duration-300 ease-out",
       )}
     >
-      {/* Header do card */}
+      {/* Header do card — pin mantém a gaveta aberta sem hover. */}
       <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-3 sm:px-4">
         <span
           className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
@@ -162,11 +166,38 @@ export function SettingsSidebar({
           <Settings2 className="size-[18px]" />
         </span>
         <h2
-          className="flex-1 truncate font-display text-[15px] font-bold leading-tight"
+          className="min-w-0 flex-1 truncate font-display text-[15px] font-bold leading-tight"
           style={{ color: "var(--text-primary)" }}
         >
           Configurações
         </h2>
+        <TooltipGlass
+          label={
+            pinned
+              ? "Desafixar menu (fecha ao sair)"
+              : "Fixar menu (permanece aberto)"
+          }
+          side="bottom"
+        >
+          <button
+            type="button"
+            aria-label={pinned ? "Desafixar menu" : "Fixar menu"}
+            aria-pressed={pinned}
+            onClick={togglePinned}
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-colors",
+              pinned
+                ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]",
+            )}
+          >
+            {pinned ? (
+              <IconPinFilled size={16} stroke={1.7} />
+            ) : (
+              <IconPin size={16} stroke={1.7} />
+            )}
+          </button>
+        </TooltipGlass>
       </div>
 
       {/* Busca */}

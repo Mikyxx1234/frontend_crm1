@@ -35,8 +35,8 @@ export function StageRibbon({
   return (
     <div
       className={cn(
-        "relative shrink-0 border-b border-[var(--glass-border)] bg-[var(--glass-bg)]",
-        compact ? "px-2 py-1.5" : "px-3 py-2",
+        "relative shrink-0 bg-transparent",
+        compact ? "px-0.5 py-1.5" : "px-0.5 py-2",
       )}
     >
       <div

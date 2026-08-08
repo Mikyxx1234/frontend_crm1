@@ -81,6 +81,12 @@ interface DealCardProps {
    * abrir espaço (estilo Kommo).
    */
   selectionMode?: boolean
+  /**
+   * Quando `true`, a linha de tags usa `flex-wrap` (igual kanban) em vez
+   * de `nowrap` + `overflow-hidden` — evita cortar pills no meio na fila
+   * estreita do Flow (~320px).
+   */
+  tagsWrap?: boolean
 }
 
 function dealOpenHref(deal: Deal): string {
@@ -89,7 +95,7 @@ function dealOpenHref(deal: Deal): string {
   return `/pipeline?deal=${encodeURIComponent(param)}`
 }
 
-export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode }: DealCardProps) {
+export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode, tagsWrap = false }: DealCardProps) {
   // O checkbox SÓ aparece quando o "modo seleção" global está ativo
   // (acionado pelo kebab "Selecionar..."). Removemos o antigo
   // comportamento de "aparecer no hover" para que entrada e saída
@@ -214,7 +220,12 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           stopPropagation em multiplos eventos para nao abrir o deal
           ou iniciar drag ao interagir com popovers injetados. */}
       <div
-        className="mb-1 mt-1 flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden"
+        className={cn(
+          "mb-1 mt-1 flex min-w-0 items-center gap-1",
+          tagsWrap
+            ? "flex-wrap"
+            : "flex-nowrap overflow-hidden",
+        )}
         onClick={tagsSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
         onMouseDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
         onPointerDown={tagsSlot ? (e) => e.stopPropagation() : undefined}

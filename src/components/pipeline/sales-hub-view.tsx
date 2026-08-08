@@ -8,7 +8,6 @@ import {
   IconBriefcase as Briefcase,
   IconMessageOff as MessageSquareOff,
   IconMessages as MessagesIcon,
-  IconSearch as Search,
   IconTrash as Trash,
   IconX as X,
 } from "@tabler/icons-react";
@@ -19,7 +18,6 @@ import { StageRibbon } from "@/components/sales-hub/stage-ribbon";
 import {
   DealQueue,
   DealQueueSortMenu,
-  filterDealsForQueueSearch,
   type DealQueueSortMode,
 } from "@/components/sales-hub/deal-queue";
 import { SalesHubChat } from "@/components/sales-hub/sales-hub-chat";
@@ -112,7 +110,8 @@ type StatusFilter = "OPEN" | "WON" | "LOST" | "ALL";
  * Modo controlado (obrigatório no host `/saleshub`): `activeDealId` +
  * `onActiveDealChange` espelham `useDealDeepLink` (`?deal=`). O host
  * também passa `detailDeal` (VM do `DealDetailPanel` na gaveta CRM).
- * Busca/sort da fila ficam no host (`queueSearch` / `sortMode`).
+ * Busca/filtros vêm do header (`PipelineSearchFilterBar` no host);
+ * a fila só expõe ordenação local (`sortMode`).
  */
 export type SalesHubViewProps = {
   pipelineId: string;
@@ -126,6 +125,7 @@ export type SalesHubViewProps = {
   statusFilter?: StatusFilter;
   filter?: "mine" | "urgent" | "vip" | null;
   currentUserId?: string;
+  /** Busca curta client-side (host usa server search quando ≥2 chars). */
   searchQuery?: string;
   filterAgent?: string;
   filterStage?: string;
@@ -133,9 +133,6 @@ export type SalesHubViewProps = {
   filterOverdue?: boolean;
   /** Abre o `DealWorkspace` (ex.: link “deal completo” na fila). */
   onOpenFullDeal?: (dealId: string) => void;
-  /** Busca da fila (campo acima dos cards). */
-  queueSearch: string;
-  onQueueSearchChange: (value: string) => void;
   sortMode: DealQueueSortMode;
   onSortModeChange: (mode: DealQueueSortMode) => void;
   /** Seleção controlada pelo host (`useDealDeepLink` em `/saleshub`). */
@@ -157,8 +154,6 @@ export function SalesHubView({
   filterMsg = "all",
   filterOverdue = false,
   onOpenFullDeal,
-  queueSearch,
-  onQueueSearchChange,
   sortMode,
   onSortModeChange,
   activeDealId,
@@ -294,11 +289,6 @@ export function SalesHubView({
       }
     });
   }, [filteredStages, selectedStageId, sortMode]);
-
-  const visibleDeals = useMemo(
-    () => filterDealsForQueueSearch(sortedDeals, queueSearch),
-    [sortedDeals, queueSearch],
-  );
 
   const totalDeals = filteredStages.reduce(
     (sum, s) => sum + s.deals.length,
@@ -480,17 +470,17 @@ export function SalesHubView({
 
       // ↑ / ↓ — navega entre cards da fila
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        if (visibleDeals.length === 0) return;
+        if (sortedDeals.length === 0) return;
         e.preventDefault();
-        const curIdx = visibleDeals.findIndex((d) => d.id === activeDealId);
+        const curIdx = sortedDeals.findIndex((d) => d.id === activeDealId);
         const step = e.key === "ArrowDown" ? 1 : -1;
         const nextIdx =
           curIdx < 0
             ? e.key === "ArrowDown"
               ? 0
-              : visibleDeals.length - 1
-            : Math.max(0, Math.min(visibleDeals.length - 1, curIdx + step));
-        const nextDeal = visibleDeals[nextIdx];
+              : sortedDeals.length - 1
+            : Math.max(0, Math.min(sortedDeals.length - 1, curIdx + step));
+        const nextDeal = sortedDeals[nextIdx];
         if (nextDeal) handleSelectDeal(nextDeal.id);
         return;
       }
@@ -518,7 +508,7 @@ export function SalesHubView({
     handleDeselectDeal,
     handleSelectDeal,
     handleSelectStage,
-    visibleDeals,
+    sortedDeals,
     filteredStages,
     selectedStageId,
   ]);
@@ -526,11 +516,11 @@ export function SalesHubView({
   const hubChromeCompact = false;
 
   return (
-    // Root / colunas usam tokens glass do Inbox — não `--color-bg-card` isolado.
-    // Estrutura "split view" preservada (sidebar | chat).
+    // Root transparente: deixa o mesh lavanda do v2-screen aparecer
+    // (mesmo contraste coluna/card do kanban). Estrutura split preservada.
     <div
       ref={rootRef}
-      className="flex h-full flex-col bg-[var(--glass-bg)]"
+      className="flex h-full flex-col bg-transparent"
       tabIndex={-1}
     >
       <StageRibbon
@@ -545,62 +535,30 @@ export function SalesHubView({
         className={cn(
           "min-h-0 flex-1 overflow-hidden",
           activeDeal
-            ? "grid grid-cols-1 md:grid-cols-[320px_minmax(0,1fr)] md:grid-rows-1"
+            ? "grid grid-cols-1 gap-3 md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-1"
             : "flex",
         )}
       >
-        {/* Coluna 1 — Fila (só DealQueue: busca + itens).
-            • SEM deal ativo: ocupa 100% da largura.
-            • COM deal ativo: coluna fixa 320px — mesma largura útil das
-              colunas do kanban (300px + padding), pra o `DealCard` real
-              respirar. CRM fica na Sheet à direita.
-            Sem expansão inline — seleção = highlight. */}
+        {/* Coluna 1 — Fila: superfície igual `KanbanColumn`
+            (`glass-bg` semitransparente sobre lavanda + cards `glass-bg-strong`). */}
         <div
           className={cn(
-            "flex min-h-0 flex-col overflow-hidden bg-[var(--glass-bg)]",
+            "flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
             activeDeal
-              ? "hidden w-[320px] min-w-[320px] max-w-[320px] shrink-0 border-r border-[var(--glass-border)] md:flex"
+              ? "hidden w-[300px] min-w-[300px] max-w-[300px] shrink-0 md:flex"
               : "w-full",
           )}
         >
-          <div className="shrink-0 border-b border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-2 backdrop-blur dark:bg-[var(--glass-bg-subtle)]">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 min-w-0 flex-1 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 backdrop-blur transition-all focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15">
-                <Search
-                  className="size-3.5 shrink-0 text-[var(--text-muted)]"
-                  strokeWidth={2}
-                  aria-hidden
-                />
-                <input
-                  type="text"
-                  value={queueSearch}
-                  onChange={(e) => onQueueSearchChange(e.target.value)}
-                  placeholder="Buscar deal..."
-                  autoComplete="off"
-                  className="min-w-0 flex-1 bg-transparent text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
-                  aria-label="Buscar deal na fila"
-                />
-                {queueSearch ? (
-                  <button
-                    type="button"
-                    onClick={() => onQueueSearchChange("")}
-                    className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                    aria-label="Limpar busca"
-                  >
-                    <X className="size-3" />
-                  </button>
-                ) : null}
-              </div>
-              <DealQueueSortMenu
-                sortMode={sortMode}
-                onSortModeChange={onSortModeChange}
-                iconOnly
-              />
-            </div>
+          <div className="flex shrink-0 items-center justify-end border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2 backdrop-blur">
+            <DealQueueSortMenu
+              sortMode={sortMode}
+              onSortModeChange={onSortModeChange}
+              iconOnly
+            />
           </div>
 
           <DealQueue
-            deals={visibleDeals}
+            deals={sortedDeals}
             stages={filteredStages}
             activeDealId={activeDealId}
             onSelectDeal={handleSelectDeal}
@@ -619,7 +577,7 @@ export function SalesHubView({
             o grid acima vira [fila estreita | chat]. */}
         <div
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--glass-bg)]",
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
             !activeDeal && "hidden",
           )}
         >

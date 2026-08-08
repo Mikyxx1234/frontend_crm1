@@ -1,5 +1,4 @@
 import {
-  IconBriefcase,
   IconBuilding,
   IconChecklist,
   IconClipboardList,
@@ -81,15 +80,8 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     locked: false,
     requiredPermission: "nav:pipeline",
   },
-  {
-    key: "saleshub",
-    title: "Sales Hub",
-    href: "/pipeline/flow",
-    icon: IconBriefcase,
-    description: "Fila de deals com chat e CRM lado a lado.",
-    locked: false,
-    requiredPermission: "nav:pipeline",
-  },
+  // Sales Hub / Flow: acesso só via Pipeline → aba Flow (`/pipeline/flow`).
+  // Não listar maleta na nav rail.
   {
     key: "contacts",
     title: "Contatos",

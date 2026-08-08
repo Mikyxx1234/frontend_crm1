@@ -13,17 +13,32 @@ import type { DealQueueSortMode } from "@/components/sales-hub/deal-queue";
 import { avatarInitials } from "@/features/inbox-v2/adapters";
 import {
   useBoard,
-  useBoardSearch,
+  useBoardFiltered,
   useDealDeepLink,
   useDealDetail,
   usePipelines,
 } from "@/features/pipeline-v2/hooks";
+import type { BoardSortParam } from "@/features/pipeline-v2/api";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
 import { personNameFromDealTitle, sanitizeContactName } from "@/lib/display-name";
 import { PageLoading } from "@/components/crm/page-loading";
+import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
+import type { PipelineSortKey } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
+import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
+import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
+import { useKanbanFilters } from "@/components/pipeline/kanban-filters/use-kanban-filters";
+import {
+  isEmptyFilters,
+  hasServerSideFilters,
+  type AdvancedDealFilters,
+  type FilterOptionsResponse,
+} from "@/components/pipeline/kanban-filters/types";
 
 const PIPELINE_STORAGE_KEY = "crm:pipeline:last-selected:v1";
 const SALESHUB_QUEUE_SORT_LS = "saleshub-queue-sort:v1";
+/** Mesma chave do kanban — busca compartilha entre views. */
+const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
+const PIPELINE_SORT_LS = "kanban-pipeline-sort:v1";
 
 const AVATAR_SLUGS = [
   "blue",
@@ -70,6 +85,27 @@ function readQueueSort(): DealQueueSortMode {
   return "message_new";
 }
 
+function readPipelineSort(): PipelineSortKey {
+  if (typeof window === "undefined") return "default";
+  try {
+    const raw = localStorage.getItem(PIPELINE_SORT_LS);
+    if (
+      raw === "default" ||
+      raw === "interaction_newest" ||
+      raw === "interaction_oldest" ||
+      raw === "name_az" ||
+      raw === "name_za" ||
+      raw === "created_newest" ||
+      raw === "created_oldest"
+    ) {
+      return raw;
+    }
+  } catch {
+    /* noop */
+  }
+  return "default";
+}
+
 export type SalesHubHostProps = {
   /**
    * Quando true, mostra o rótulo "Sales Hub" na faixa secundária
@@ -81,6 +117,7 @@ export type SalesHubHostProps = {
 /**
  * Host compartilhado do Sales Hub — usado em `/saleshub` e `/pipeline/flow`.
  * Preserva deep-link `?deal=` via `useDealDeepLink`.
+ * Busca + filtros avançados espelham o kanban (`PipelineSearchFilterBar`).
  */
 export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {}) {
   const router = useRouter();
@@ -88,10 +125,21 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const isAuthenticated = sessionStatus === "authenticated";
 
   const [pipelineId, setPipelineId] = useState<string | null>(null);
-  const [boardSearch, setBoardSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [queueSearch, setQueueSearch] = useState("");
+  const [search, setSearch] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return localStorage.getItem(PIPELINE_SEARCH_LS) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [sortKey, setSortKey] = useState<PipelineSortKey>(readPipelineSort);
   const [sortMode, setSortMode] = useState<DealQueueSortMode>(readQueueSort);
+  const { filters, setFilters, patch: patchFilters, clear: clearFilters } =
+    useKanbanFilters();
+  const [filterOptions, setFilterOptions] =
+    useState<FilterOptionsResponse | null>(null);
+  const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
 
   const { activeDealId, setActiveDeal, normalizeDealId } = useDealDeepLink();
 
@@ -128,9 +176,20 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   }, [pipelineId]);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(boardSearch.trim()), 300);
-    return () => clearTimeout(t);
-  }, [boardSearch]);
+    try {
+      localStorage.setItem(PIPELINE_SEARCH_LS, search);
+    } catch {
+      /* noop */
+    }
+  }, [search]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PIPELINE_SORT_LS, sortKey);
+    } catch {
+      /* noop */
+    }
+  }, [sortKey]);
 
   useEffect(() => {
     try {
@@ -140,24 +199,89 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     }
   }, [sortMode]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    setFilterOptionsLoading(true);
+    fetchFilterOptions()
+      .then((opts) => {
+        if (!cancelled) setFilterOptions(opts);
+      })
+      .catch(() => {
+        /* mantém opções já carregadas */
+      })
+      .finally(() => {
+        if (!cancelled) setFilterOptionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
   const status = "OPEN" as const;
-  const hasSearch = debouncedSearch.length >= 2;
+
+  const boardSort = useMemo<BoardSortParam | undefined>(() => {
+    if (sortKey === "created_newest")
+      return { field: "createdAt", direction: "desc" };
+    if (sortKey === "created_oldest")
+      return { field: "createdAt", direction: "asc" };
+    if (sortKey === "interaction_newest")
+      return { field: "lastInteraction", direction: "desc" };
+    if (sortKey === "interaction_oldest")
+      return { field: "lastInteraction", direction: "asc" };
+    return undefined;
+  }, [sortKey]);
+
+  const rawSearch = (filters.search ?? search).trim();
+  const [debouncedSearch, setDebouncedSearch] = useState(rawSearch);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(rawSearch), 300);
+    return () => clearTimeout(t);
+  }, [rawSearch]);
+
+  const mergedFilters = useMemo(() => {
+    const f: AdvancedDealFilters = { ...filters };
+    if (debouncedSearch.length >= 2) f.search = debouncedSearch;
+    return f;
+  }, [filters, debouncedSearch]);
+
+  const hasServerBoard = hasServerSideFilters(mergedFilters);
 
   const boardNormal = useBoard({
     pipelineId,
     status,
-    enabled: isAuthenticated && !hasSearch,
+    sort: boardSort,
+    enabled: isAuthenticated && !hasServerBoard,
   });
-  const boardSearchQuery = useBoardSearch({
+  const boardFiltered = useBoardFiltered({
     pipelineId,
     status,
-    search: debouncedSearch,
-    enabled: isAuthenticated && hasSearch,
+    filters: mergedFilters,
+    sort: boardSort,
+    enabled: isAuthenticated && hasServerBoard,
   });
 
-  const board = hasSearch
-    ? (boardSearchQuery.data ?? boardNormal.data ?? [])
+  const boardRaw = hasServerBoard
+    ? (boardFiltered.data ?? [])
     : (boardNormal.data ?? []);
+
+  // Faixa de valor é cliente-only (igual kanban).
+  const board = useMemo(() => {
+    const vMin =
+      filters.valueFrom != null ? Number(filters.valueFrom) : null;
+    const vMax = filters.valueTo != null ? Number(filters.valueTo) : null;
+    const hasValue = vMin !== null || vMax !== null;
+    if (!hasValue) return boardRaw;
+    return boardRaw.map((stage) => {
+      const deals = stage.deals.filter((d) => {
+        const val = Number(d.value) || 0;
+        if (vMin !== null && val < vMin) return false;
+        if (vMax !== null && val > vMax) return false;
+        return true;
+      });
+      return { ...stage, deals, totalCount: deals.length };
+    });
+  }, [boardRaw, filters.valueFrom, filters.valueTo]);
 
   const stages = board as BoardStage[];
 
@@ -290,6 +414,8 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     return null;
   }
 
+  const hasActiveFilters = !isEmptyFilters(filters) || !!search.trim();
+
   return (
     <div
       className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4"
@@ -317,16 +443,21 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
             />
           }
           searchSlot={
-            <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3">
-              <input
-                type="search"
-                value={boardSearch}
-                onChange={(e) => setBoardSearch(e.target.value)}
-                placeholder="Buscar no funil…"
-                className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
-                aria-label="Buscar negócios no funil"
-              />
-            </div>
+            <PipelineSearchFilterBar
+              search={search}
+              onSearch={setSearch}
+              filters={filters}
+              onApplyFilters={setFilters}
+              onClearFilters={() => {
+                clearFilters();
+                setSearch("");
+              }}
+              options={filterOptions}
+              optionsLoading={filterOptionsLoading}
+              sortKey={sortKey}
+              onSortKeyChange={setSortKey}
+              placeholder="Buscar no funil…"
+            />
           }
           pipelineNameSlot={
             showPipelineName ? (
@@ -337,14 +468,48 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
           }
         />
 
-        <div className="min-h-0 flex-1 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow)] backdrop-blur-md">
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2 px-0.5">
+            <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+              Filtros ativos
+            </span>
+            {!isEmptyFilters(filters) && (
+              <FilterChips
+                filters={filters}
+                options={filterOptions}
+                onPatch={patchFilters}
+              />
+            )}
+            {search.trim() && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-[var(--color-primary-soft)] px-2.5 py-0.5 text-[11px] font-medium text-primary"
+              >
+                Busca: {search.trim()}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                clearFilters();
+                setSearch("");
+              }}
+              className="font-display text-[11px] font-semibold text-[var(--text-muted)] underline-offset-2 hover:text-[var(--brand-primary)] hover:underline"
+            >
+              Limpar todos
+            </button>
+          </div>
+        )}
+
+        {/* Sem wrapper glass opaco — board do Flow senta no mesh lavanda
+            como o kanban (colunas `glass-bg` contrastam com cards). */}
+        <div className="min-h-0 flex-1 overflow-hidden">
           <SalesHubView
             pipelineId={pipelineId}
             stages={stages}
             statusFilter={status}
-            searchQuery={hasSearch ? "" : boardSearch}
-            queueSearch={queueSearch}
-            onQueueSearchChange={setQueueSearch}
+            searchQuery={hasServerBoard ? "" : search}
             sortMode={sortMode}
             onSortModeChange={setSortMode}
             activeDealId={resolvedDealId}

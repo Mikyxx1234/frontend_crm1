@@ -289,20 +289,21 @@ function DealQueueItem({
         deal={vm}
         isSelected={isActive}
         onClick={toggleSelection}
+        tagsWrap
         tagsSlot={
           tagList.length > 0 ? (
             <>
-              {tagList.slice(0, 2).map((t) => (
+              {tagList.slice(0, 3).map((t) => (
                 <TagChip
                   key={t.id}
                   name={t.name}
                   color={t.color}
-                  className="max-w-[7rem]"
+                  className="max-w-[7.5rem] whitespace-nowrap"
                 />
               ))}
-              {tagList.length > 2 ? (
+              {tagList.length > 3 ? (
                 <span className="shrink-0 text-[10px] font-semibold text-[var(--text-muted)]">
-                  +{tagList.length - 2}
+                  +{tagList.length - 3}
                 </span>
               ) : null}
             </>
@@ -343,7 +344,7 @@ export function DealQueue({
   }, [activeDealId]);
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-[var(--glass-bg)]">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-transparent">
       <div
         ref={scrollerRef}
         className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"

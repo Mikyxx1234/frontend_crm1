@@ -211,6 +211,21 @@ interface UpdateDealVars {
   payload: UpdateDealPayload;
 }
 
+type BoardOwner = BoardDealDto["owner"];
+
+/**
+ * PUT /api/deals/:id responde com o deal na RAIZ (`NextResponse.json(deal)`),
+ * não envelopado em `{ deal }`. O tipo do client diz `{ deal }` por legado,
+ * então normalizamos aqui antes de ler o `owner`.
+ */
+function ownerFromUpdateResponse(data: unknown): BoardOwner | undefined {
+  const root = data as { owner?: BoardOwner; deal?: { owner?: BoardOwner } } | null;
+  if (!root) return undefined;
+  if (root.deal && "owner" in root.deal) return root.deal.owner ?? null;
+  if ("owner" in root) return root.owner ?? null;
+  return undefined;
+}
+
 export function useUpdateDeal(pipelineId: string | null, status: StatusFilter = "OPEN") {
   const qc = useQueryClient();
   const key = boardKey(pipelineId, status);
@@ -220,52 +235,87 @@ export function useUpdateDeal(pipelineId: string | null, status: StatusFilter = 
     "pipeline-board-search",
   ] as const;
 
-  return useMutation<{ deal: BoardDealDto }, Error, UpdateDealVars>({
+  function isBoardKey(k: readonly unknown[]): boolean {
+    return (
+      typeof k[0] === "string" &&
+      (BOARD_KEY_PREFIXES as readonly string[]).includes(k[0] as string)
+    );
+  }
+
+  /** Escreve o owner do deal em TODAS as variantes de board em cache. */
+  function patchOwnerInBoards(
+    dealId: string,
+    owner: BoardOwner,
+  ): Array<{ queryKey: readonly unknown[]; data: BoardStageDto[] }> {
+    const snapshots: Array<{ queryKey: readonly unknown[]; data: BoardStageDto[] }> = [];
+    const boards = qc.getQueriesData<BoardStageDto[]>({
+      predicate: (q) => isBoardKey(q.queryKey),
+    });
+    for (const [queryKey, data] of boards) {
+      if (!Array.isArray(data)) continue;
+      let touched = false;
+      const next = data.map((stage) => ({
+        ...stage,
+        deals: stage.deals.map((d) => {
+          if (d.id !== dealId) return d;
+          touched = true;
+          return { ...d, owner };
+        }),
+      }));
+      if (!touched) continue;
+      snapshots.push({ queryKey, data });
+      qc.setQueryData(queryKey, next);
+    }
+    return snapshots;
+  }
+
+  return useMutation<
+    { deal: BoardDealDto },
+    Error,
+    UpdateDealVars,
+    { snapshots: Array<{ queryKey: readonly unknown[]; data: BoardStageDto[] }> }
+  >({
     mutationFn: ({ dealId, payload }) => updateDeal(dealId, payload),
     onMutate: async (vars) => {
-      if (vars.payload.ownerId === undefined) return;
-      await qc.cancelQueries({
-        predicate: (q) =>
-          typeof q.queryKey[0] === "string" &&
-          (BOARD_KEY_PREFIXES as readonly string[]).includes(q.queryKey[0] as string),
-      });
+      if (vars.payload.ownerId === undefined) return { snapshots: [] };
+      await qc.cancelQueries({ predicate: (q) => isBoardKey(q.queryKey) });
       const nextOwner =
         vars.payload.ownerId === null
           ? null
           : { id: vars.payload.ownerId, name: "…", avatarUrl: null as string | null };
-      const boards = qc.getQueriesData<BoardStageDto[]>({
-        predicate: (q) =>
-          typeof q.queryKey[0] === "string" &&
-          (BOARD_KEY_PREFIXES as readonly string[]).includes(q.queryKey[0] as string),
-      });
-      for (const [queryKey, data] of boards) {
-        if (!data) continue;
-        qc.setQueryData(
-          queryKey,
-          data.map((stage) => ({
-            ...stage,
-            deals: stage.deals.map((d) =>
-              d.id === vars.dealId
-                ? {
-                    ...d,
-                    owner: nextOwner,
-                  }
-                : d,
-            ),
-          })),
+      return { snapshots: patchOwnerInBoards(vars.dealId, nextOwner) };
+    },
+    onSuccess: (data, vars) => {
+      // Escreve o owner REAL (com nome/avatar) vindo da resposta antes de
+      // qualquer refetch. Sem isso o card dependia só do GET /board, que
+      // pode voltar de cache-aside e reverter a troca de responsável.
+      if (vars.payload.ownerId !== undefined) {
+        const owner = ownerFromUpdateResponse(data);
+        if (owner !== undefined) patchOwnerInBoards(vars.dealId, owner);
+        toast.success(
+          vars.payload.ownerId === null
+            ? "Responsável removido"
+            : `Responsável: ${owner?.name ?? "atualizado"}`,
         );
       }
-    },
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({
-        predicate: (q) =>
-          typeof q.queryKey[0] === "string" &&
-          (BOARD_KEY_PREFIXES as readonly string[]).includes(q.queryKey[0] as string),
-      });
       qc.invalidateQueries({ queryKey: key });
       qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
     },
-    onError: (err) => toast.error(err.message || "Falha ao atualizar negocio"),
+    onError: (err, _vars, ctx) => {
+      // Rollback exato — invalidar aqui refetcharia o board e reintroduziria
+      // a race que o otimista tenta evitar.
+      if (ctx?.snapshots) {
+        for (const s of ctx.snapshots) qc.setQueryData(s.queryKey, s.data);
+      }
+      toast.error(err.message || "Falha ao atualizar negocio");
+    },
+    onSettled: (_data, _err, vars) => {
+      // Reconciliação: refetch das variantes ATIVAS (invalidate sozinho só
+      // marca stale nas inativas e deixava a visível sem atualizar).
+      qc.refetchQueries({ type: "active", predicate: (q) => isBoardKey(q.queryKey) });
+      qc.invalidateQueries({ type: "inactive", predicate: (q) => isBoardKey(q.queryKey) });
+      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
+    },
   });
 }
 

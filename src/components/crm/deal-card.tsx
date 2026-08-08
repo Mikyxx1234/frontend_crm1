@@ -76,8 +76,8 @@ interface DealCardProps {
    */
   tagsSlot?: React.ReactNode
   /**
-   * Trigger do TagsPopover (+ / Gerenciar). Sem tags: fica ao lado do
-   * responsável (economiza uma linha). Com tags: na linha das chips.
+   * Trigger do TagsPopover (`+`). Sem tags: ao lado do responsável;
+   * com tags: canto direito da linha das chips.
    */
   tagsAddSlot?: React.ReactNode
   /**
@@ -118,8 +118,11 @@ interface DealCardProps {
 
 function dealOpenHref(deal: Deal): string {
   const raw = deal.dealNumber.replace(/^#/, "")
-  const param = /^\d+$/.test(raw) ? raw : deal.id
-  return `/pipeline?deal=${encodeURIComponent(param)}`
+  // Só número na URL — sem número conhecido, abre o board sem ?deal=.
+  if (/^\d+$/.test(raw)) {
+    return `/pipeline?deal=${encodeURIComponent(raw)}`
+  }
+  return "/pipeline"
 }
 
 const COMPACT_SECTION_TRANSITION = {
@@ -136,8 +139,8 @@ function truncatePreviewText(text: string, max = PREVIEW_MSG_MAX): string {
 }
 
 /**
- * Preview estilo chat (claro), compacto — 1 balão por msg.
- * Evita o painel escuro gigante que cobria o card.
+ * Preview estilo chat compacto — painel próprio (TooltipGlass `plain`
+ * não traz chrome). Balões inbound contidos, scroll discreto.
  */
 function AwaitingMessagesTooltip({ texts }: { texts: string[] }) {
   const unique = texts.map((t) => t.trim()).filter(Boolean)
@@ -145,18 +148,32 @@ function AwaitingMessagesTooltip({ texts }: { texts: string[] }) {
   return (
     <div
       className={cn(
-        "flex max-h-[140px] w-[220px] flex-col gap-1 overflow-y-auto p-0.5",
-        unique.length > 1 && "pr-0.5",
+        "w-[240px] overflow-hidden rounded-xl border border-black/8",
+        "bg-[#f4f5f8] p-2 shadow-[0_10px_28px_rgba(15,20,40,0.18)]",
       )}
     >
-      {unique.map((text, i) => (
-        <div
-          key={`${i}-${text.slice(0, 20)}`}
-          className="rounded-2xl rounded-bl-sm border border-black/5 bg-white px-2.5 py-1.5 text-left text-[11px] font-normal not-italic leading-snug text-slate-700 shadow-[0_4px_14px_rgba(15,20,40,0.12)]"
-        >
-          {truncatePreviewText(text)}
-        </div>
-      ))}
+      <div
+        className={cn(
+          "flex max-h-[132px] flex-col gap-1 overflow-y-auto overscroll-contain",
+          "[scrollbar-width:thin] [scrollbar-color:rgba(15,20,40,0.22)_transparent]",
+          "[&::-webkit-scrollbar]:w-1",
+          "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-black/20",
+          "[&::-webkit-scrollbar-track]:bg-transparent",
+        )}
+      >
+        {unique.map((text, i) => (
+          <div
+            key={`${i}-${text.slice(0, 20)}`}
+            className={cn(
+              "max-w-[92%] self-start rounded-lg rounded-bl-sm",
+              "border border-black/6 bg-white px-2 py-1",
+              "text-left text-[11px] font-normal not-italic leading-snug text-slate-700",
+            )}
+          >
+            {truncatePreviewText(text)}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -305,8 +322,8 @@ export function DealCard({ deal, onClick, tagsSlot, tagsAddSlot, ownerSlot, move
                     />
                   }
                   side="top"
-                  align="start"
-                  sideOffset={6}
+                  align="center"
+                  sideOffset={8}
                 >
                   <span className="line-clamp-2 min-w-0 flex-1 cursor-default overflow-hidden">
                     {deal.message.text}
@@ -368,30 +385,39 @@ export function DealCard({ deal, onClick, tagsSlot, tagsAddSlot, ownerSlot, move
                 tagsSlot || tagsAddSlot ? (e) => e.stopPropagation() : undefined
               }
             >
-              {tagsSlot ?? (
-                <>
-                  {deal.tags?.map((tag, i) => (
-                    <TagChip
-                      key={i}
-                      name={tag.label}
-                      color={
-                        tag.type === "hot"
-                          ? "#ef4444"
-                          : tag.type === "warm"
-                            ? "#f59e0b"
-                            : tag.type === "cold"
-                              ? "#5b6ff5"
-                              : tag.type === "vip"
-                                ? "#a855f7"
-                                : tag.type === "partner"
-                                  ? "#0d9488"
-                                  : "#64748b"
-                      }
-                    />
-                  ))}
-                </>
-              )}
-              {tagsAddSlot}
+              <div
+                className={cn(
+                  "flex min-w-0 items-center gap-1",
+                  tagsWrap ? "flex-wrap" : "min-w-0 flex-1 flex-nowrap overflow-hidden",
+                )}
+              >
+                {tagsSlot ?? (
+                  <>
+                    {deal.tags?.map((tag, i) => (
+                      <TagChip
+                        key={i}
+                        name={tag.label}
+                        color={
+                          tag.type === "hot"
+                            ? "#ef4444"
+                            : tag.type === "warm"
+                              ? "#f59e0b"
+                              : tag.type === "cold"
+                                ? "#5b6ff5"
+                                : tag.type === "vip"
+                                  ? "#a855f7"
+                                  : tag.type === "partner"
+                                    ? "#0d9488"
+                                    : "#64748b"
+                        }
+                      />
+                    ))}
+                  </>
+                )}
+              </div>
+              {tagsAddSlot ? (
+                <div className="ml-auto shrink-0">{tagsAddSlot}</div>
+              ) : null}
             </div>
             )}
 

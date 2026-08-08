@@ -23,6 +23,7 @@ import {
   useBoardFiltered,
   useDealDeepLink,
   useDealDetail,
+  usePipelineUrlSync,
   usePipelines,
 } from "@/features/pipeline-v2/hooks";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
@@ -39,7 +40,6 @@ import {
   type FilterOptionsResponse,
 } from "@/components/pipeline/kanban-filters/types";
 
-const PIPELINE_STORAGE_KEY = "crm:pipeline:last-selected:v1";
 const SALESHUB_QUEUE_SORT_LS = "saleshub-queue-sort:v1";
 /** Mesma chave do kanban — busca compartilha entre views. */
 const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
@@ -129,7 +129,6 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
-  const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [search, setSearch] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
@@ -146,39 +145,11 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     useState<FilterOptionsResponse | null>(null);
   const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
 
-  const { activeDealId, setActiveDeal, normalizeDealId } = useDealDeepLink();
+  const { activeDealId, setActiveDeal, normalizeDealId, syncDealNumber } =
+    useDealDeepLink();
 
   const { data: pipelines } = usePipelines(isAuthenticated);
-
-  useEffect(() => {
-    if (pipelineId || !pipelines?.length) return;
-    let saved: string | null = null;
-    try {
-      saved =
-        typeof window !== "undefined"
-          ? localStorage.getItem(PIPELINE_STORAGE_KEY)
-          : null;
-    } catch {
-      saved = null;
-    }
-    if (saved && pipelines.some((p) => p.id === saved)) {
-      setPipelineId(saved);
-      return;
-    }
-    const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
-    setPipelineId(def.id);
-  }, [pipelines, pipelineId]);
-
-  useEffect(() => {
-    if (!pipelineId) return;
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(PIPELINE_STORAGE_KEY, pipelineId);
-      }
-    } catch {
-      /* localStorage indisponível */
-    }
-  }, [pipelineId]);
+  const { pipelineId, setPipelineId } = usePipelineUrlSync(pipelines);
 
   useEffect(() => {
     try {
@@ -305,14 +276,18 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   useEffect(() => {
     if (!activeDealId || !/^\d+$/.test(activeDealId)) return;
     const hit = dealById.get(activeDealId);
-    if (hit) normalizeDealId(hit.id);
-  }, [activeDealId, dealById, normalizeDealId]);
+    if (hit) {
+      normalizeDealId(hit.id);
+      syncDealNumber(hit.number);
+    }
+  }, [activeDealId, dealById, normalizeDealId, syncDealNumber]);
 
   const { data: dealDetail } = useDealDetail(activeDealId);
 
   useEffect(() => {
     normalizeDealId(dealDetail?.id);
-  }, [dealDetail?.id, normalizeDealId]);
+    syncDealNumber((dealDetail as { number?: number } | undefined)?.number);
+  }, [dealDetail, normalizeDealId, syncDealNumber]);
 
   const boardDealSeed = useMemo(() => {
     if (!activeDealId) return null;
@@ -575,6 +550,7 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
             como o kanban (colunas `glass-bg` contrastam com cards). */}
         <div className="min-h-0 flex-1 overflow-hidden">
           <SalesHubView
+            key={pipelineId}
             pipelineId={pipelineId}
             stages={stages}
             statusFilter={status}
@@ -597,9 +573,13 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
             }
             onOpenFullDeal={(dealId) => {
               const d = dealById.get(dealId);
-              const param =
-                d?.number != null ? String(d.number) : dealId;
-              router.push(`/pipeline?deal=${encodeURIComponent(param)}`);
+              if (d?.number != null) {
+                router.push(
+                  `/pipeline?deal=${encodeURIComponent(String(d.number))}`,
+                );
+                return;
+              }
+              router.push("/pipeline");
             }}
           />
         </div>

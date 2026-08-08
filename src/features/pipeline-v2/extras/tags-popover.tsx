@@ -27,8 +27,7 @@ import { computePopoverPosition, usePortalPopover } from "./use-portal-popover";
 
 /**
  * Trigger compacto do TagsPopover nos DealCards (kanban / Flow).
- * Sem tags: `+` + tooltip "Adicionar tag".
- * Com tags: botão "Gerenciar" + tooltip "Gerenciar tags".
+ * Sempre `+` (canto direito da linha de tags); tooltip muda se já há tags.
  */
 export function DealCardTagsTrigger({ hasTags }: { hasTags: boolean }) {
   return (
@@ -38,13 +37,13 @@ export function DealCardTagsTrigger({ hasTags }: { hasTags: boolean }) {
     >
       <span
         className={cn(
-          "inline-flex h-5 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] font-display font-bold leading-none text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)]",
-          hasTags
-            ? "gap-0.5 px-1.5 text-[9.5px] tracking-tight"
-            : "w-5 text-[12px]",
+          "inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center",
+          "rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]",
+          "font-display text-[12px] font-bold leading-none text-[var(--text-muted)]",
+          "transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)]",
         )}
       >
-        {hasTags ? "Gerenciar" : "+"}
+        +
       </span>
     </TooltipGlass>
   );

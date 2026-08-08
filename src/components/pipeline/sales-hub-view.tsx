@@ -23,6 +23,7 @@ import {
 
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
+import { useStageUrlSync } from "@/features/pipeline-v2/hooks";
 import { StageRibbon } from "@/components/sales-hub/stage-ribbon";
 import {
   DealQueue,
@@ -192,6 +193,13 @@ export function SalesHubView({
   /** Só sobe em troca explícita de etapa (ribbon/atalho) — limpa a fila. */
   const [stageSwitchToken, setStageSwitchToken] = useState(0);
   const selectedStageIdRef = useRef<string | null>(null);
+
+  const setStageFromUrl = useCallback((id: string | null) => {
+    selectedStageIdRef.current = id;
+    setSelectedStageId(id);
+  }, []);
+
+  useStageUrlSync(stages, selectedStageId, setStageFromUrl, pipelineId);
   const [recentlyMovedDealId, setRecentlyMovedDealId] = useState<string | null>(
     null,
   );

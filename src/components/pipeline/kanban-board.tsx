@@ -27,6 +27,7 @@ const DELETE_DROPPABLE_ID = "__delete_zone__";
 export type BoardStage = {
   id: string;
   name: string;
+  slug?: string;
   color: string;
   position: number;
   winProbability: number;

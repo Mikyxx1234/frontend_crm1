@@ -11,6 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { StatusTicks } from "@/components/crm/status-ticks"
 import {
   IconRobot,
   IconClipboardList,
@@ -18,8 +19,6 @@ import {
   IconFile,
   IconDownload,
   IconCheck,
-  IconChecks,
-  IconClock,
   IconCopy,
   IconAlertCircle,
   IconPlayerPlay,
@@ -260,37 +259,6 @@ export interface Message {
   }
 }
 
-
-/** Ticks de status estilo WhatsApp, exibidos ao lado do horário (outgoing).
- *  `onLightBg` = true quando a bolha tem fundo claro (ex.: bolha de
- *  automação com tint indigo sobre branco). Sem isso os ticks brancos
- *  ficam invisíveis. */
-function StatusTicks({
-  status,
-  onLightBg,
-}: {
-  status: NonNullable<Message["status"]>
-  onLightBg?: boolean
-}) {
-  const dim = onLightBg ? "text-[var(--text-muted)]" : "text-white/70"
-  const solid = onLightBg ? "text-[var(--text-secondary)]" : "text-white/75"
-  if (status === "pending") {
-    return <IconClock size={12} className={cn("shrink-0", dim)} aria-label="Enviando" />
-  }
-  if (status === "failed") {
-    return <IconAlertCircle size={13} className="shrink-0 text-[var(--wa-tick-fail)]" aria-label="Falha no envio" />
-  }
-  if (status === "sent") {
-    return <IconCheck size={14} className={cn("shrink-0", solid)} aria-label="Enviada" />
-  }
-  return (
-    <IconChecks
-      size={15}
-      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read,#38bdf8)]" : solid)}
-      aria-label={status === "read" ? "Lida" : "Entregue"}
-    />
-  )
-}
 
 /**
  * Indicador de status com tooltip de erro. Para `failed`, envolve o ícone

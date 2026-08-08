@@ -95,6 +95,10 @@ export interface ConversationListRow {
     messageType: string;
     mediaUrl: string | null;
     direction: string;
+    /** Ack de entrega (pending|sent|delivered|read|failed) — só out. */
+    sendStatus?: string | null;
+    /** Motivo quando sendStatus=failed. */
+    sendError?: string | null;
   } | null;
   unreadCount?: number;
   tags?: { id: string; name: string; color: string | null }[];

@@ -13,6 +13,7 @@ import {
   IconCornerUpLeft,
   IconCircleCheck,
   IconRobot,
+  IconAlertCircle,
   IconRefresh,
   type Icon as TablerIcon,
 } from "@tabler/icons-react"
@@ -167,6 +168,12 @@ function statusVisual(label: string | undefined): {
       Icon: IconCircleCheck,
       bg: "var(--color-success-bg)",
       fg: "var(--color-success)",
+    }
+  if (l.includes("erro") || l.includes("error") || l.includes("falha"))
+    return {
+      Icon: IconAlertCircle,
+      bg: "var(--color-danger-bg)",
+      fg: "var(--color-danger)",
     }
   return { Icon: IconClock, bg: "var(--color-lead-bg)", fg: "var(--color-lead)" }
 }

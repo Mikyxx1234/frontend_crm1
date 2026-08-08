@@ -11,6 +11,7 @@
 
 import type { Conversation, LastMessageType } from "@/components/crm/conversation-card";
 import type { Message, FormField } from "@/components/crm/message-bubble";
+import { normalizeDeliveryStatus } from "@/components/crm/status-ticks";
 import { avatarInitials as avatarInitialsFromLib } from "@/lib/avatar";
 import type { ConnectionRef } from "@/lib/connection-label";
 import { sanitizeContactName } from "@/lib/display-name";
@@ -254,6 +255,17 @@ export function toConversationCard(
       : dir === "in" || dir === "inbound"
         ? "in"
         : undefined;
+  // Prefer sendStatus do preview (batch atual); fallback lastMessage.status.
+  const lastMessageStatus =
+    lastMessageDirection === "out"
+      ? normalizeDeliveryStatus(
+          row.lastMessagePreview?.sendStatus ?? row.lastMessage?.status,
+        )
+      : undefined;
+  const lastMessageSendError =
+    lastMessageDirection === "out"
+      ? row.lastMessagePreview?.sendError ?? null
+      : null;
 
   return {
     id: row.id,
@@ -286,6 +298,8 @@ export function toConversationCard(
     sessionExpired: sess.expired,
     lastMessageType,
     lastMessageDirection,
+    lastMessageStatus,
+    lastMessageSendError,
     // Conversas encerradas/finalizadas — badge visual "Encerrada" no card.
     resolved: row.status === "RESOLVED",
     // Canal de origem — substitui o status dot pelo logo da plataforma

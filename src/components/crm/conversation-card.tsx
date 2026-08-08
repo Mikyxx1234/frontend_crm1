@@ -14,7 +14,6 @@ import {
   IconMapPin,
   IconUser,
   IconTemplate,
-  IconCheck,
   IconMessage,
   IconBrandWhatsapp,
   IconBrandInstagram,
@@ -24,6 +23,11 @@ import {
   IconMail,
   IconForms,
 } from "@tabler/icons-react"
+import { summarizeSendError } from "@/lib/meta-error-catalog"
+import {
+  StatusTicks,
+  type DeliveryTickStatus,
+} from "@/components/crm/status-ticks"
 import { Chip } from "./chip"
 import { CheckboxGlass } from "./checkbox-glass"
 import { TagChip } from "./tag-chip"
@@ -88,6 +92,10 @@ export interface Conversation {
   lastMessageType?: LastMessageType
   /** Direcao da ultima mensagem — quando "out", prefixa "Você:". */
   lastMessageDirection?: "in" | "out"
+  /** Ack de entrega da ultima msg outbound (ticks no preview). */
+  lastMessageStatus?: DeliveryTickStatus
+  /** Motivo quando lastMessageStatus=failed. */
+  lastMessageSendError?: string | null
   /** Conversa finalizada/resolvida — exibe badge visual no card. */
   resolved?: boolean
 }
@@ -282,13 +290,29 @@ export function ConversationCard({
               Texto => ícone de conversa com borda azul; mídia => ícone
               do tipo + label padronizado (sem itálico). */}
           <div className="mt-0.5 flex items-center gap-1 text-[11px] italic leading-[1.35] text-[var(--text-muted)]">
-            {isOutgoing && (
-              <IconCheck
-                size={11}
-                className="shrink-0 not-italic text-[var(--color-success)]"
-                aria-label="Você"
-              />
-            )}
+            {isOutgoing && conversation.lastMessageStatus === "failed" ? (
+              <TooltipGlass
+                label={
+                  summarizeSendError(conversation.lastMessageSendError) ||
+                  "Falha no envio"
+                }
+                side="top"
+              >
+                <span className="inline-flex shrink-0 not-italic">
+                  <StatusTicks status="failed" onLightBg size="card" />
+                </span>
+              </TooltipGlass>
+            ) : isOutgoing && conversation.lastMessageStatus ? (
+              <span className="inline-flex shrink-0 not-italic">
+                <StatusTicks
+                  status={conversation.lastMessageStatus}
+                  onLightBg
+                  size="card"
+                />
+              </span>
+            ) : isOutgoing ? (
+              <StatusTicks status="sent" onLightBg size="card" />
+            ) : null}
             {TypeIcon ? (
               <TypeIcon size={12} className="shrink-0 text-[var(--brand-primary)]" />
             ) : (

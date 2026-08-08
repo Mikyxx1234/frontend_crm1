@@ -227,7 +227,7 @@ function writeStoredInboxFilters(filters: InboxFilters) {
 
 // Ordem das tabs alinhada ao legado (`conversation-list.tsx`
 // TAB_ORDER). "Automação" lista conversas cujo contato tem automação
-// RUNNING (fila de automação). "erro" volta depois se houver demanda.
+// RUNNING (fila de automação). "Erro" = hasError=true (webhook/send).
 const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "todos", label: "Todas" },
   { id: "entrada", label: "Entrada" },
@@ -235,6 +235,7 @@ const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "respondidas", label: "Respondidas" },
   { id: "automacao", label: "Automação" },
   { id: "finalizados", label: "Encerradas" },
+  { id: "erro", label: "Erro" },
 ];
 
 // Tab selecionada persiste em localStorage — sobrevive F5/navegação.

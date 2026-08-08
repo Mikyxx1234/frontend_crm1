@@ -80,23 +80,31 @@ export function extractMetaErrorCode(raw: string | null | undefined): number | n
  * para copiar), aqui devolvemos só o motivo PT-BR + código. A mensagem da Meta
  * costuma ser enorme (ex.: link do Billing Hub) e polui a UI.
  */
-export function summarizeSendError(raw: string | null | undefined): string {
+/**
+ * Corpo do erro sem o sufixo de código (o balão de UI mostra `cód. N` à parte).
+ */
+export function summarizeSendErrorBody(raw: string | null | undefined): string {
   const text = (raw ?? "").trim();
   if (!text) return "Falha no envio — sem detalhes da Meta.";
 
   const code = extractMetaErrorCode(text);
   const reason = metaErrorReasonPtBr(code);
-  if (reason) {
-    return code != null ? `${reason} (cód. ${code})` : reason;
-  }
+  if (reason) return reason;
 
-  // Sem catálogo: usa só o trecho antes do texto cru da Meta e trunca.
   const beforeMeta = text.split("(Meta:")[0].trim();
-  const base = beforeMeta || text;
-  const short = base.length > 160 ? `${base.slice(0, 157).trim()}…` : base;
-  return code != null && !/\bc(?:ode|ód\.)\s/i.test(short)
-    ? `${short} (cód. ${code})`
-    : short;
+  const base = (beforeMeta || text)
+    .replace(/\s*\((?:code|c[oó]d\.)\s*\d+[^)]*\)\s*$/i, "")
+    .trim();
+  return base.length > 180 ? `${base.slice(0, 177).trim()}…` : base || text;
+}
+
+export function summarizeSendError(raw: string | null | undefined): string {
+  const body = summarizeSendErrorBody(raw);
+  const code = extractMetaErrorCode(raw);
+  if (code != null && !/\bc(?:ode|ód\.)\s/i.test(body)) {
+    return `${body} (cód. ${code})`;
+  }
+  return body;
 }
 
 /**

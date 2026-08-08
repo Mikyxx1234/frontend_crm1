@@ -46,6 +46,8 @@ export interface Deal {
     status?: DeliveryTickStatus
     /** Motivo quando status=failed. */
     sendError?: string | null
+    /** Textos das msgs inbound aguardando — tooltip em balões separados. */
+    awaitingTexts?: string[]
   }
   timeAgo?: string
   tags?: { label: string; type: TagType }[]
@@ -119,6 +121,24 @@ function dealOpenHref(deal: Deal): string {
 const COMPACT_SECTION_TRANSITION = {
   duration: 0.2,
   ease: [0.32, 0.72, 0, 1] as const,
+}
+
+/** Tooltip: cada msg aguardando em um balão (ordem cronológica). */
+function AwaitingMessagesTooltip({ texts }: { texts: string[] }) {
+  const unique = texts.map((t) => t.trim()).filter(Boolean)
+  if (unique.length === 0) return null
+  return (
+    <div className="flex max-h-56 w-full min-w-[12rem] flex-col gap-1.5 overflow-y-auto py-0.5">
+      {unique.map((text, i) => (
+        <div
+          key={`${i}-${text.slice(0, 24)}`}
+          className="rounded-2xl rounded-bl-md bg-white/14 px-2.5 py-1.5 text-left text-[11px] font-normal not-italic leading-snug whitespace-pre-wrap break-words shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
+        >
+          {text}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode, tagsWrap = false, compact = false }: DealCardProps) {
@@ -253,9 +273,14 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
                   ))}
                 <TooltipGlass
                   label={
-                    <span className="block max-h-40 overflow-y-auto whitespace-pre-wrap break-words font-normal not-italic">
-                      {deal.message.text}
-                    </span>
+                    <AwaitingMessagesTooltip
+                      texts={
+                        deal.message.awaitingTexts &&
+                        deal.message.awaitingTexts.length > 0
+                          ? deal.message.awaitingTexts
+                          : [deal.message.text]
+                      }
+                    />
                   }
                   side="top"
                   align="start"
@@ -295,9 +320,8 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
             )}
 
             {/* Tags — slot tem prioridade. Sem slot, fallback estático.
-                Sem tags e sem slot: não renderiza a linha (evita `+` sozinho
-                ocupando altura no kanban/Flow). Callers devem omitir
-                tagsSlot quando a lista estiver vazia.
+                Sem tags e sem slot: não renderiza a linha. Com slot (mesmo
+                só o `+` / Gerenciar), a linha aparece.
                 stopPropagation em multiplos eventos para nao abrir o deal
                 ou iniciar drag ao interagir com popovers injetados. */}
             {(tagsSlot != null || (deal.tags?.length ?? 0) > 0) && (

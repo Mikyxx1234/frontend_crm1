@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
 import {
   useAddDealTag,
@@ -20,8 +21,34 @@ import {
   useRemoveDealTag,
 } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
+import { cn } from "@/lib/utils";
 
 import { computePopoverPosition, usePortalPopover } from "./use-portal-popover";
+
+/**
+ * Trigger compacto do TagsPopover nos DealCards (kanban / Flow).
+ * Sem tags: `+` + tooltip "Adicionar tag".
+ * Com tags: botão "Gerenciar" + tooltip "Gerenciar tags".
+ */
+export function DealCardTagsTrigger({ hasTags }: { hasTags: boolean }) {
+  return (
+    <TooltipGlass
+      label={hasTags ? "Gerenciar tags" : "Adicionar tag"}
+      side="top"
+    >
+      <span
+        className={cn(
+          "inline-flex h-5 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] font-display font-bold leading-none text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)]",
+          hasTags
+            ? "gap-0.5 px-1.5 text-[9.5px] tracking-tight"
+            : "w-5 text-[12px]",
+        )}
+      >
+        {hasTags ? "Gerenciar" : "+"}
+      </span>
+    </TooltipGlass>
+  );
+}
 
 interface TagsPopoverProps {
   dealId: string | null;

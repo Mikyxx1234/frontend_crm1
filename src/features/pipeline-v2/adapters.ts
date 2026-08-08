@@ -169,6 +169,9 @@ export function toDealCard(deal: BoardDealDto): Deal {
           status: messageStatus,
           sendError:
             messageDirection === "out" ? lastMessage.sendError ?? null : null,
+          awaitingTexts: (deal.awaitingMessages ?? [])
+            .map((m) => (m.content ?? "").trim())
+            .filter(Boolean),
         }
       : undefined,
     tags: (deal.tags ?? []).map((t) => ({

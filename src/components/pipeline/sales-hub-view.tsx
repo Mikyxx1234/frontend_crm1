@@ -501,6 +501,21 @@ export function SalesHubView({
     onActiveDealChange(null);
   }, [onActiveDealChange]);
 
+  // 1ª abertura do Flow (sem ?deal=): seleciona o 1º da fila para já
+  // entrar no layout split (fila + chat), em vez de cards em largura total.
+  const didInitialSelectRef = useRef(false);
+  useEffect(() => {
+    if (didInitialSelectRef.current) return;
+    if (activeDealId) {
+      didInitialSelectRef.current = true;
+      return;
+    }
+    const first = sortedDeals[0];
+    if (!first) return;
+    didInitialSelectRef.current = true;
+    onActiveDealChange(first.id, first.number ?? null);
+  }, [activeDealId, sortedDeals, onActiveDealChange]);
+
   const handleDealMoved = useCallback((dealId: string) => {
     // Highlight visual por 1.5s pra sinalizar o "salto" entre etapas.
     setRecentlyMovedDealId(dealId);
@@ -660,14 +675,14 @@ export function SalesHubView({
           "min-h-0 flex-1 overflow-hidden",
           // Grid estável (evita flex↔grid) + transition de colunas ao
           // abrir/fechar chat ou aside — sem thrash nos cards da fila.
+          // Sempre split no desktop (fila ~300px + chat): evita cards
+          // “gigantes” na 1ª abertura / sem deal selecionado.
           "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-300 md:ease-[cubic-bezier(0.32,0.72,0,1)]",
-          // Com deal: 3 tracks sempre (3ª = 0fr fechada) p/ interpolar
-          // grid-template-columns no open/close sem thrash / jump.
-          activeDeal
-            ? detailsOpen
-              ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)]"
-              : "md:grid-cols-[300px_minmax(0,1fr)_0fr]"
-            : "md:grid-cols-[minmax(0,1fr)]",
+          // 3 tracks sempre no md (3ª = 0fr fechada) p/ interpolar
+          // grid-template-columns no open/close do aside sem thrash.
+          detailsOpen && activeDeal
+            ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)]"
+            : "md:grid-cols-[300px_minmax(0,1fr)_0fr]",
         )}
       >
         {/* Coluna 1 — Fila: superfície igual `KanbanColumn`
@@ -735,17 +750,22 @@ export function SalesHubView({
           />
         </div>
 
-        {/* Coluna 2 — Chat compacto (compactChrome) + barra mínima de ações.
-            Sem deal ativo: a coluna inteira fica oculta (a fila ocupa
-            100%). Com deal: [fila | chat]; com CRM aberto: [fila | chat | aside]. */}
+        {/* Coluna 2 — Chat. Sem deal: empty state (fila continua ~300px).
+            Com deal: conversa; com CRM: [fila | chat | aside]. */}
         <div
           onMouseLeave={handleChatPaneMouseLeave}
           className={cn(
             "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
-            !activeDeal && "hidden",
+            // Mobile: sem deal a fila ocupa a tela; com deal o chat entra.
+            !activeDeal && "hidden md:flex",
           )}
         >
-          {!activeDeal ? null : !activeContactId ? (
+          {!activeDeal ? (
+            <SalesHubChatEmptyState
+              title="Selecione um negócio"
+              subtitle="Escolha um card na fila à esquerda para abrir a conversa."
+            />
+          ) : !activeContactId ? (
             <SalesHubChatEmptyState
               title="Deal sem contato"
               subtitle="Este deal nao tem contato vinculado — atribua um contato para iniciar a conversa."

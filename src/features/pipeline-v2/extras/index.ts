@@ -1,5 +1,5 @@
 export { AssigneePopover } from "./assignee-popover";
-export { TagsPopover } from "./tags-popover";
+export { TagsPopover, DealCardTagsTrigger } from "./tags-popover";
 export { StagePicker } from "./stage-picker";
 export { MoveToStageMenu } from "./move-to-stage-menu";
 export type { MoveToStageMenuStage } from "./move-to-stage-menu";

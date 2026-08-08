@@ -90,6 +90,7 @@ import {
   AddDealDialog,
   AssigneePopover,
   DealActionsMenu,
+  DealCardTagsTrigger,
   DealNotesTab,
   DealTimelineTab,
   InlineEditText,
@@ -1783,8 +1784,6 @@ function DroppableColumn({
                       onToggleSelect={() => onToggleSelect(deal.id)}
                       tagsSlot={(() => {
                         const allTags = raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>);
-                        // Sem tags: omite o slot — DealCard não reserva linha vazia com `+`.
-                        if (allTags.length === 0) return undefined;
                         const MAX_VISIBLE = 2;
                         const visibleTags = allTags.slice(0, MAX_VISIBLE);
                         const hiddenTags = allTags.slice(MAX_VISIBLE);
@@ -1817,9 +1816,9 @@ function DroppableColumn({
                               pipelineId={pipelineId}
                               statusFilter={statusFilter}
                               trigger={
-                                <span className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
-                                  +
-                                </span>
+                                <DealCardTagsTrigger
+                                  hasTags={allTags.length > 0}
+                                />
                               }
                             />
                           </>

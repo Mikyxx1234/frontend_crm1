@@ -40,6 +40,11 @@ export interface BoardDealDto {
     /** Motivo quando sendStatus=failed. */
     sendError?: string | null;
   } | null;
+  /**
+   * Inbounds aguardando resposta (até 5), ordem cronológica.
+   * Alimenta o tooltip em balões no DealCard quando unread > 1.
+   */
+  awaitingMessages?: Array<{ content: string; createdAt: string }> | null;
   channel?: string | null;
   productName?: string | null;
   productType?: "PRODUCT" | "SERVICE" | null;

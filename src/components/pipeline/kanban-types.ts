@@ -32,6 +32,8 @@ export type BoardDeal = {
     sendStatus?: string | null;
     sendError?: string | null;
   } | null;
+  /** Inbounds aguardando resposta (preview em balões no tooltip). */
+  awaitingMessages?: Array<{ content: string; createdAt: string }> | null;
   /**
    * Canal da conversa "ativa" do contato (ex.: "whatsapp", "instagram").
    * Usado pelo `ChatAvatar` no card pra exibir o badge correto. `null`

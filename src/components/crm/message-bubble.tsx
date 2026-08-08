@@ -2,8 +2,8 @@ import { useState, useRef, useEffect, useCallback, useLayoutEffect, type ReactNo
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog"
 import { ImageLightbox } from "@/components/crm/image-lightbox"
+import { MetaSendErrorBalloon } from "@/components/crm/meta-send-error-balloon"
 import { AudioWaveform } from "@/components/inbox/audio-waveform"
 import { AutomationBotIcon } from "@/components/icons/automation-bot-icon"
 import {
@@ -18,7 +18,6 @@ import {
   IconChevronDown,
   IconFile,
   IconDownload,
-  IconCheck,
   IconCopy,
   IconPlayerPlay,
   IconPlayerPause,
@@ -258,68 +257,6 @@ export interface Message {
   }
 }
 
-
-/**
- * Indicador de status com tooltip de erro. Para `failed`, envolve o ícone
- * num tooltip que mostra o texto do erro de envio (traduzido do Meta).
- * Demais status delegam ao `StatusTicks`.
- */
-function StatusIndicator({
-  status,
-  sendError,
-  onLightBg,
-}: {
-  status: NonNullable<Message["status"]>
-  sendError?: string
-  onLightBg?: boolean
-}) {
-  if (status !== "failed") {
-    return <StatusTicks status={status} onLightBg={onLightBg} />
-  }
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="pointer-events-auto inline-flex cursor-help items-center">
-          <StatusTicks status="failed" onLightBg={onLightBg} />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent
-        side="top"
-        align="end"
-        className="w-max max-w-[300px] whitespace-normal [overflow-wrap:anywhere] border border-[color:var(--color-danger)]/30 bg-white px-3 py-2 text-left text-[11px] font-medium normal-case leading-snug text-[var(--color-danger-text)] v2-dark:bg-[var(--glass-bg-modal)]"
-      >
-        <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide">
-          Erro no envio (Meta)
-        </span>
-        <span className="block">
-          {summarizeSendError(sendError)}
-        </span>
-        <CopyErrorButton text={translateSendError(sendError)} />
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
-/** Botão "Copiar" o texto COMPLETO do erro (com a mensagem original da Meta). */
-function CopyErrorButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <button
-      type="button"
-      className="pointer-events-auto mt-1.5 inline-flex items-center gap-1 rounded-md border border-[color:var(--color-danger)]/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors hover:bg-[color:var(--color-danger)]/10"
-      onClick={(e) => {
-        e.stopPropagation()
-        void navigator.clipboard.writeText(text).then(() => {
-          setCopied(true)
-          setTimeout(() => setCopied(false), 1500)
-        })
-      }}
-    >
-      {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
-      {copied ? "Copiado" : "Copiar erro"}
-    </button>
-  )
-}
 
 export interface MessageBubbleProps {
   message: Message
@@ -1714,11 +1651,7 @@ export function MessageBubble({
             )}
             {message.time}
             {isOutgoing && message.status && (
-              <StatusIndicator
-                status={message.status}
-                sendError={message.sendError}
-                onLightBg={false}
-              />
+              <StatusTicks status={message.status} onLightBg={false} />
             )}
           </span>
           {/* Badge de reação flutuante: emoji do cliente sobre o canto
@@ -1732,6 +1665,10 @@ export function MessageBubble({
           )}
         </div>
       </div>
+
+      {isOutgoing && message.status === "failed" ? (
+        <MetaSendErrorBalloon sendError={message.sendError} className="mt-1" />
+      ) : null}
 
       {/* Nome do remetente apenas no tooltip do avatar (acima) */}
     </div>

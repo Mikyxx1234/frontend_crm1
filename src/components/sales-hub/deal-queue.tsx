@@ -3,12 +3,14 @@
 /**
  * DealQueue — Fila unificada de deals (Sales Hub).
  * ───────────────────────────────────────────────────────────────
- * Cards ultra-compactos (~44px). Seleção = highlight visual apenas.
- * Campos CRM (produto / responsável / contato / etapa / layout)
- * moram no DealDetailPanel da Sheet à direita — nunca na coluna da fila.
+ * Os itens da fila são o MESMO `DealCard` do kanban do `/pipeline`
+ * (`components/crm/deal-card`), alimentado pelo mesmo adapter
+ * (`toDealCard`). Antes a fila desenhava um card próprio, minimalista,
+ * que destoava visualmente dos cards de negócio.
  *
- * Ganho/Perdido só na barra do chat (`DealOutcomeButtons`).
- * Clique no card seleciona o deal (foco do chat).
+ * Seleção = highlight visual apenas (`isSelected` do próprio DealCard).
+ * Campos CRM (produto / responsável / contato / etapa / layout) moram no
+ * DealDetailPanel da Sheet à direita — nunca na coluna da fila.
  */
 
 import { useState, useRef, useEffect } from "react";
@@ -17,19 +19,15 @@ import {
   IconArrowsUpDown as ArrowUpDown,
   IconCheck as Check,
   IconChevronDown as ChevronDown,
-  IconMicrophone as Mic,
-  IconPhoto as ImageIcon,
-  IconFileText as FileText,
-  IconPaperclip as Paperclip,
-  IconVideo as Video,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { SUBTLE_SPRING } from "@/lib/design-system";
-import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
-import { AvatarGlass } from "@/components/crm/avatar-glass";
+import { DealCard } from "@/components/crm/deal-card";
 import { TagChip } from "@/components/crm/tag-chip";
+import { toDealCard } from "@/features/pipeline-v2/adapters";
+import type { BoardDealDto } from "@/features/pipeline-v2/api";
 import { TooltipHost } from "@/components/ui/tooltip";
 
 type StatusFilter = "OPEN" | "WON" | "LOST" | "ALL";
@@ -236,100 +234,12 @@ type DealQueueProps = {
   onOpenFullDeal?: (dealId: string) => void;
 };
 
-/**
- * Tempo relativo curto pt-BR — "agora", "há 5 min", "há 2 h", "há 3 d".
- */
-function formatRelativeShort(iso: string): string {
-  const date = new Date(iso);
-  const diffMs = Date.now() - date.getTime();
-  if (diffMs < 0) return "agora";
-  const sec = Math.floor(diffMs / 1000);
-  if (sec < 60) return "agora";
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `há ${min} min`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `há ${h} h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `há ${d} d`;
-  const w = Math.floor(d / 7);
-  if (w < 4) return `há ${w} sem`;
-  const mo = Math.floor(d / 30);
-  return `há ${mo} mês${mo > 1 ? "es" : ""}`;
-}
-
-function PreviewLastMessage({ deal }: { deal: BoardDeal }) {
-  const m = deal.lastMessage;
-
-  if (!m?.content?.trim()) {
-    return <span className="italic text-[var(--text-muted)]">Sem mensagens</span>;
-  }
-
-  const content = m.content.trim();
-  const isOut = m.direction === "out";
-  const prefix = isOut ? "Você: " : "";
-
-  if (/\.(ogg|mp3|m4a|aac|opus|wav|amr)$/i.test(content) || content === "🎵" || content.toLowerCase().includes("audio")) {
-    return (
-      <span className="flex items-center gap-1 text-[var(--text-muted)]">
-        {isOut ? <span className="text-[var(--text-muted)]">Você: </span> : null}
-        <Mic className="size-3 shrink-0 text-[var(--brand-secondary)]" />
-        <span>Áudio</span>
-      </span>
-    );
-  }
-
-  if (/\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(content) || content === "📷" || content.toLowerCase() === "[imagem]") {
-    return (
-      <span className="flex items-center gap-1 text-[var(--text-muted)]">
-        {isOut ? <span className="text-[var(--text-muted)]">Você: </span> : null}
-        <ImageIcon className="size-3 shrink-0 text-[var(--brand-primary)]" />
-        <span>Imagem</span>
-      </span>
-    );
-  }
-
-  if (/\.(mp4|mov|avi|mkv|webm)$/i.test(content)) {
-    return (
-      <span className="flex items-center gap-1 text-[var(--text-muted)]">
-        {isOut ? <span className="text-[var(--text-muted)]">Você: </span> : null}
-        <Video className="size-3 shrink-0 text-[var(--brand-accent)]" />
-        <span>Vídeo</span>
-      </span>
-    );
-  }
-
-  if (/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|csv|txt)$/i.test(content)) {
-    return (
-      <span className="flex items-center gap-1 text-[var(--text-muted)]">
-        {isOut ? <span className="text-[var(--text-muted)]">Você: </span> : null}
-        <FileText className="size-3 shrink-0 text-[var(--color-warning)]" />
-        <span>Documento</span>
-      </span>
-    );
-  }
-
-  if (/\.\w{2,5}$/.test(content) && !content.includes(" ")) {
-    return (
-      <span className="flex items-center gap-1 text-[var(--text-muted)]">
-        {isOut ? <span className="text-[var(--text-muted)]">Você: </span> : null}
-        <Paperclip className="size-3 shrink-0 text-[var(--text-muted)]" />
-        <span>Arquivo</span>
-      </span>
-    );
-  }
-
-  const line = content.split("\n")[0].slice(0, 120);
-  return (
-    <span className="text-[var(--text-muted)]">
-      {prefix}
-      {line}
-    </span>
-  );
-}
-
-// ── DealCard ────────────────────────────────────────────────────
-// Card compacto (~44px). Seleção = highlight; sem expansão inline.
-function DealCard({
+// ── Item da fila ────────────────────────────────────────────────
+// Wrapper fino em volta do `DealCard` real do kanban: adiciona só a
+// animação de entrada/saída da fila, o realce de "recém-movido" e o
+// badge de não-lidas (que no kanban vive no header da coluna, não no
+// card).
+function DealQueueItem({
   deal,
   isActive,
   onSelectDeal,
@@ -349,12 +259,9 @@ function DealCard({
     else onSelectDeal(deal.id);
   };
 
-  const contactTitle = deal.contact?.name ?? `#${deal.number ?? "—"}`;
-  const headline = deal.contact?.name ?? deal.title;
-  const contactAvatarColor =
-    (deal.contact as { avatarColor?: string } | null | undefined)?.avatarColor ?? "var(--brand-primary)";
-  const timeLabel = formatRelativeShort(deal.lastMessage?.createdAt ?? deal.createdAt);
+  const vm = toDealCard(deal as unknown as BoardDealDto);
   const tagList = deal.tags ?? [];
+  const unread = deal.unreadCount ?? 0;
 
   useEffect(() => {
     if (isActive && cardRef.current) {
@@ -373,101 +280,43 @@ function DealCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={SUBTLE_SPRING}
-      onClick={toggleSelection}
-      onKeyDown={(ev) => {
-        if (ev.key === "Enter" || ev.key === " ") {
-          ev.preventDefault();
-          toggleSelection();
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-pressed={isActive}
-      aria-label={
-        isActive
-          ? `Desmarcar ${contactTitle}`
-          : `Selecionar ${contactTitle}`
-      }
       className={cn(
-        // Espelha `ConversationCard` (Inbox v2): cards glass com ring de seleção.
-        "group relative cursor-pointer select-none rounded-[var(--radius-lg)] border border-transparent px-3 py-2 text-left shadow-[0_1px_3px_rgba(15,23,42,0.04)] outline-none transition-all duration-200",
-        "bg-[color-mix(in_srgb,var(--glass-bg-overlay)_60%,rgba(148,163,184,0.10))]",
-        "hover:bg-[var(--glass-bg-overlay)]",
-        "focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
-        isActive &&
-          "border-[var(--brand-primary)]/55 bg-white ring-2 ring-inset ring-[var(--brand-primary)]/30 shadow-[0_2px_8px_rgba(91,111,245,0.12)] hover:bg-white",
-        wasRecentlyMoved &&
-          !isActive &&
-          "ring-2 ring-inset ring-[var(--brand-primary)]/25",
+        "relative rounded-xl",
+        wasRecentlyMoved && !isActive && "ring-2 ring-[var(--brand-primary)]/25",
       )}
     >
-      <div className="flex items-start gap-2">
-        <div className="relative shrink-0">
-          {deal.contact ? (
-            <ChatAvatar
-              user={{
-                id: deal.contact.id,
-                name: deal.contact.name,
-                imageUrl: deal.contact.avatarUrl ?? null,
-              }}
-              phone={deal.contact.phone ?? undefined}
-              unreadCount={deal.unreadCount ?? 0}
-              channel={(deal.channel as ChatAvatarChannel) ?? "whatsapp"}
-              size={28}
-            />
-          ) : (
-            <div
-              className="flex size-7 items-center justify-center rounded-full text-[11px] font-bold text-white ring-2 ring-[var(--avatar-ring,white)]"
-              style={{ background: contactAvatarColor }}
-              aria-hidden
-            >
-              {(deal.title ?? "?").slice(0, 2).toUpperCase()}
-            </div>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="min-w-0 flex-1 truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
-              {headline}
-            </p>
-            <span className="shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">
-              {timeLabel}
-            </span>
-            {deal.owner ? (
-              <AvatarGlass
-                name={deal.owner.name}
-                seed={deal.owner.id}
-                imageUrl={deal.owner.avatarUrl ?? null}
-                size="sm"
-                className="!h-5 !w-5 !text-[9px]"
-              />
-            ) : null}
-          </div>
-
-          <p className="mt-0.5 truncate text-[12px] text-[var(--text-muted)]">
-            <PreviewLastMessage deal={deal} />
-          </p>
-
-          {tagList.length > 0 ? (
-            <div className="mt-1 flex flex-wrap items-center gap-1">
+      <DealCard
+        deal={vm}
+        isSelected={isActive}
+        onClick={toggleSelection}
+        tagsSlot={
+          tagList.length > 0 ? (
+            <>
               {tagList.slice(0, 2).map((t) => (
                 <TagChip
                   key={t.id}
                   name={t.name}
                   color={t.color}
-                  className="h-5 max-w-[7rem]"
+                  className="max-w-[7rem]"
                 />
               ))}
               {tagList.length > 2 ? (
-                <span className="text-[10px] font-semibold text-[var(--text-muted)]">
+                <span className="shrink-0 text-[10px] font-semibold text-[var(--text-muted)]">
                   +{tagList.length - 2}
                 </span>
               ) : null}
-            </div>
-          ) : null}
-        </div>
-      </div>
+            </>
+          ) : undefined
+        }
+      />
+      {unread > 0 ? (
+        <span
+          className="pointer-events-none absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-primary px-1 py-0.5 text-[10px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums"
+          aria-label={`${unread} mensagens não lidas`}
+        >
+          {unread > 99 ? "99+" : unread}
+        </span>
+      ) : null}
     </motion.div>
   );
 }
@@ -497,9 +346,9 @@ export function DealQueue({
     <div className="flex h-full min-h-0 flex-1 flex-col bg-[var(--glass-bg)]">
       <div
         ref={scrollerRef}
-        className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5"
+        className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
       >
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <AnimatePresence initial={false} mode="popLayout">
             {deals.map((deal) => {
               const isActive = activeDealId === deal.id;
@@ -513,7 +362,7 @@ export function DealQueue({
                     else itemRefs.current.delete(deal.id);
                   }}
                 >
-                  <DealCard
+                  <DealQueueItem
                     deal={deal}
                     isActive={isActive}
                     onSelectDeal={onSelectDeal}

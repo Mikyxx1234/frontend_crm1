@@ -12,12 +12,12 @@ import {
   type ReactNode,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import {
   IconBriefcase as Briefcase,
   IconMessageOff as MessageSquareOff,
   IconMessages as MessagesIcon,
-  IconTrash as Trash,
+  IconPin as Pin,
+  IconPinFilled as PinFilled,
   IconX as X,
 } from "@tabler/icons-react";
 
@@ -49,7 +49,17 @@ import {
   formatCurrency,
   pipelineDealMatchesSearch,
 } from "@/lib/utils";
-import { useConfirm } from "@/components/ui/confirm-dialog";
+
+const ASIDE_PINNED_KEY = "crm:saleshub:aside-pinned:v1";
+
+function readAsidePinned(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(ASIDE_PINNED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * ConversationItem mínimo que o SalesHub precisa pra resolver a conversa
@@ -183,11 +193,28 @@ export function SalesHubView({
     null,
   );
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [asidePinned, setAsidePinned] = useState(false);
 
   const [pickedConversationId, setPickedConversationId] = useState<
     string | null
   >(null);
   const [convListOpen, setConvListOpen] = useState(false);
+
+  useEffect(() => {
+    setAsidePinned(readAsidePinned());
+  }, []);
+
+  const toggleAsidePinned = useCallback(() => {
+    setAsidePinned((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(ASIDE_PINNED_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore quota / private mode */
+      }
+      return next;
+    });
+  }, []);
 
   /**
    * Experimento UX: ao sair do painel de chat pela borda direita, abre a
@@ -214,6 +241,14 @@ export function SalesHubView({
   useEffect(() => {
     setPickedConversationId(null);
   }, [activeDealId]);
+
+  // Troca de deal (card → chat): fecha a aside CRM, salvo se estiver pinada.
+  const prevActiveDealIdRef = useRef<string | null>(activeDealId);
+  useEffect(() => {
+    if (prevActiveDealIdRef.current === activeDealId) return;
+    prevActiveDealIdRef.current = activeDealId;
+    if (!asidePinned) setDetailsOpen(false);
+  }, [activeDealId, asidePinned]);
 
   // Deep-link / seleção externa: se o deal ativo está em outra etapa, foca a aba.
   useEffect(() => {
@@ -423,35 +458,6 @@ export function SalesHubView({
     const t = setTimeout(() => setRecentlyMovedDealId(null), 1500);
     return () => clearTimeout(t);
   }, []);
-
-  const { confirm: confirmDelete, dialog: confirmDeleteDialog } = useConfirm();
-
-  const handleDeleteDealFromHub = useCallback(async () => {
-    if (!activeDeal) return;
-    const ok = await confirmDelete({
-      title: "Excluir negócio?",
-      description: "Esta ação não pode ser desfeita.",
-      confirmLabel: "Excluir",
-      destructive: true,
-    });
-    if (!ok) return;
-    const res = await fetch(apiUrl(`/api/deals/${activeDeal.id}`), {
-      method: "DELETE",
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      toast.error(
-        typeof data?.message === "string"
-          ? data.message
-          : "Não foi possível excluir o negócio.",
-      );
-      return;
-    }
-    toast.success("Negócio excluído");
-    handleDeselectDeal();
-    queryClient.invalidateQueries({ queryKey: ["pipeline-board", pipelineId] });
-    queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-  }, [activeDeal, confirmDelete, handleDeselectDeal, pipelineId, queryClient]);
 
   const funnelStages = useMemo(
     () =>
@@ -758,16 +764,6 @@ export function SalesHubView({
                     }}
                     onReopenNewConversation={handleConversationReopened}
                   />
-                  <TooltipHost label="Fechar conversa" side="bottom">
-                    <button
-                      type="button"
-                      aria-label="Fechar conversa"
-                      onClick={handleDeselectDeal}
-                      className="flex size-8 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-                    >
-                      <X className="size-4" strokeWidth={1.7} />
-                    </button>
-                  </TooltipHost>
                 </>
               }
             />
@@ -785,24 +781,43 @@ export function SalesHubView({
               <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">
                 Detalhes do negócio
               </h2>
-              <TooltipHost label="Excluir negócio" side="bottom">
+              <div className="ml-auto flex items-center gap-0.5">
+                <TooltipHost
+                  label={
+                    asidePinned
+                      ? "Desafixar painel (fecha ao trocar de deal)"
+                      : "Fixar painel (permanece ao trocar de deal)"
+                  }
+                  side="bottom"
+                >
+                  <button
+                    type="button"
+                    aria-label={asidePinned ? "Desafixar painel" : "Fixar painel"}
+                    aria-pressed={asidePinned}
+                    onClick={toggleAsidePinned}
+                    className={cn(
+                      "flex size-8 items-center justify-center rounded-[var(--radius-md)] transition-colors",
+                      asidePinned
+                        ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                        : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]",
+                    )}
+                  >
+                    {asidePinned ? (
+                      <PinFilled className="size-4" strokeWidth={1.7} />
+                    ) : (
+                      <Pin className="size-4" strokeWidth={1.7} />
+                    )}
+                  </button>
+                </TooltipHost>
                 <button
                   type="button"
-                  aria-label="Excluir negócio"
-                  onClick={() => void handleDeleteDealFromHub()}
-                  className="ml-auto flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
+                  aria-label="Fechar"
+                  onClick={() => setDetailsOpen(false)}
+                  className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
                 >
-                  <Trash className="size-4" />
+                  <X className="size-4" />
                 </button>
-              </TooltipHost>
-              <button
-                type="button"
-                aria-label="Fechar"
-                onClick={() => setDetailsOpen(false)}
-                className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-              >
-                <X className="size-4" />
-              </button>
+              </div>
             </header>
             <div className="min-h-0 flex-1 overflow-hidden bg-[var(--glass-bg)]">
               <DealDetailPanel
@@ -853,8 +868,6 @@ export function SalesHubView({
           </ul>
         </DialogContent>
       </Dialog>
-
-      {confirmDeleteDialog}
     </div>
   );
 }

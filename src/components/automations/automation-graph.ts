@@ -269,6 +269,10 @@ function collectTargets(cfg: Record<string, unknown>): string[] {
   if (Array.isArray(cfg.buttons)) {
     for (const b of cfg.buttons as { gotoStepId?: string }[]) add(b.gotoStepId)
   }
+  // Lista WhatsApp (`send_whatsapp_list`) persiste destinos em `rows`.
+  if (Array.isArray(cfg.rows)) {
+    for (const r of cfg.rows as { gotoStepId?: string }[]) add(r.gotoStepId)
+  }
   if (Array.isArray(cfg.branches)) {
     for (const b of cfg.branches as { nextStepId?: string }[]) add(b.nextStepId)
   }

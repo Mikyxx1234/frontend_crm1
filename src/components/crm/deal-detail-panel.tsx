@@ -114,6 +114,7 @@ import { type Message } from "./message-bubble"
 import { resolveHighlight, SEVERITY_COLORS } from "@/lib/highlight"
 import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
 import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
+import { DealLostReasonField } from "@/components/crm/deal-lost-reason-field"
 
 interface DealOwner {
   initials: string
@@ -1224,10 +1225,7 @@ export function DealDetailPanel({
                                     </section>
                                   )}
 
-                                  {sectionId === "campos" &&
-                                    ((customFieldsSlot && customFieldsSlot.length > 0) ||
-                                      resolvedContactConfig ||
-                                      resolvedDealConfig) && (
+                                  {sectionId === "campos" && (
                                     <FieldCard
                                       title="Informações do Negócio"
                                       compactTitle={crmOnly}
@@ -1287,6 +1285,19 @@ export function DealDetailPanel({
                                           {resolvedDealConfig}
                                         </div>
                                       )}
+                                      {/* Motivo da perda — sempre visível; só grava o texto
+                                          (não muda status). Banner LOST no hero permanece. */}
+                                      <div
+                                        className={cn(
+                                          viewMode === "compact" ? "border-b border-slate-50 px-4" : "px-0 pb-2",
+                                        )}
+                                      >
+                                        <DealLostReasonField
+                                          dealId={deal.id}
+                                          value={deal.lostReason}
+                                          compact={viewMode === "compact"}
+                                        />
+                                      </div>
                                       {(() => {
                                         // Renderer de UMA linha compacta (label à esquerda + valor/editor).
                                         const renderCompactRow = (field: SlotItem, fieldIdx: number) => {

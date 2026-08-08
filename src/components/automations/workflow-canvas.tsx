@@ -313,9 +313,12 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
     const cfg = a.config as Record<string, unknown>;
 
     if (isInteractiveStep(a)) {
-      const buttons = Array.isArray(cfg.buttons)
-        ? (cfg.buttons as { gotoStepId?: string }[])
-        : [];
+      // Lista WhatsApp usa `rows`; question/botões/template usam `buttons`.
+      // Antes só lia `buttons` — conexões da lista gravavam gotoStepId em
+      // `rows` mas a aresta nunca era desenhada (parecia que "não conecta").
+      const buttons = interactiveChoiceItems(a.type, cfg) as {
+        gotoStepId?: string;
+      }[];
 
       buttons.forEach((btn, idx) => {
         const gotoId = btn.gotoStepId && btn.gotoStepId !== "__none__"

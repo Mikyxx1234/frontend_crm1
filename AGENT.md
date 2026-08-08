@@ -2146,3 +2146,13 @@ aplicada com SQL aditivo idempotente em
 **Alternativas descartadas.** Campo de motivo livre (foge do padrao "catalogo por pipeline" ja usado no dialog de perda do kanban); reusar o SourceSelect generico sem tratamento especial (perderia o `pipelineName` no summary do card e o clear de `lostReason` ao trocar funil).
 
 **Impacto.** `lib/automation-workflow.ts` (ACTION_STEP_TYPES/labels/default/summary/isStepIncomplete), `components/automations/editor-fields.ts` (novo SourceKey "pipeline" + kind "pipelineLossReason"), `editor-data.ts` (novo hook), `inline-editor.tsx` (PipelineSelect + PipelineLossReasonSelect), `node-palette.tsx` + `add-step-node.tsx` (icones/cores/grupo "Acoes"), `action-node.tsx` (icone/cor de fundo). Nao confundir com os triggers `deal_won`/`deal_lost` (permanecem gatilhos, inalterados).
+
+### 2026-08-08 — Campo Motivo da perda nas Informações do Negócio
+
+**Modelo usado.** Cursor Grok 4.5.
+
+**Decisão.** Campo editável em Informações do Negócio: clique abre funis (GET /api/pipelines, scoped por acesso) e depois motivos do funil. Persiste só `Deal.lostReason` via PUT deal — sem mudar status/estágio. Banner vermelho no hero permanece quando status=LOST.
+
+**Alternativas descartadas.** Marcar LOST ao escolher motivo; campo só quando LOST.
+
+**Impacto.** FE: deal-lost-reason-field + deal-detail-panel; UpdateDealPayload.lostReason.

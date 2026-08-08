@@ -103,6 +103,8 @@ export interface UpdateDealPayload {
   expectedCloseAt?: string | null;
   notes?: string | null;
   customFields?: Record<string, unknown> | null;
+  /** Só o texto do motivo — não altera status/estágio. */
+  lostReason?: string | null;
 }
 
 export async function updateDeal(

@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * StageRibbon — abas de etapa do Sales Hub (estilo browser tab).
- * Largura total: cada aba `flex-1` achata quando há mais etapas.
- * Ativa: fundo claro + barra superior na cor da fase + badge sólido.
+ * StageRibbon — abas de etapa do Sales Hub.
+ * Flutuam acima dos containers (não “coladas”); linha base contínua abaixo.
+ * Largura total com flex-1 — achatam quando há mais etapas.
  */
 
 import { cn } from "@/lib/utils";
@@ -51,17 +51,26 @@ function StageTab({
       title={label}
       onClick={onClick}
       className={cn(
-        "relative flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 border-t-[3px] px-1.5 font-display font-semibold tracking-tight transition-colors sm:gap-2 sm:px-2.5",
+        "relative flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 px-1.5 font-display font-semibold tracking-tight transition-colors sm:gap-2 sm:px-2.5",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
         compact
           ? "h-9 text-[12px] sm:text-[12.5px]"
           : "h-10 text-[12.5px] sm:h-11 sm:text-[13px]",
         active
-          ? "z-[1] -mb-px rounded-t-lg border-x border-b-0 border-[var(--glass-border-subtle)] bg-[var(--surface-elevated,#f7f4ef)] text-[var(--text-primary)] shadow-[0_1px_0_var(--surface-elevated,#f7f4ef)] dark:bg-[#ebe6df]"
-          : "border-transparent text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]",
+          ? "rounded-t-md bg-[var(--glass-bg-overlay)] text-[var(--text-primary)]"
+          : "text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]",
       )}
-      style={active ? { borderTopColor: color, color } : undefined}
+      style={active ? { color } : undefined}
     >
+      {/* Indicador ativo no topo — não cola no painel de baixo */}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-x-1 top-0 h-[3px] rounded-b-full transition-opacity",
+          active ? "opacity-100" : "opacity-0",
+        )}
+        style={{ backgroundColor: color }}
+      />
       <span className="min-w-0 truncate">{label}</span>
       <span
         className={cn(
@@ -102,8 +111,9 @@ export function StageRibbon({
   return (
     <div
       className={cn(
-        "relative w-full min-w-0 shrink-0 border-b border-[var(--glass-border-subtle)]",
-        compact ? "px-0" : "px-0.5",
+        "relative w-full min-w-0 shrink-0",
+        // Espaço abaixo da linha base → descola dos containers do split
+        compact ? "mb-2 px-0" : "mb-3 px-0.5",
       )}
     >
       <div
@@ -136,6 +146,11 @@ export function StageRibbon({
           );
         })}
       </div>
+      {/* Linha base sob todas as abas */}
+      <div
+        className="mt-0.5 h-px w-full bg-[var(--glass-border)]"
+        aria-hidden
+      />
     </div>
   );
 }

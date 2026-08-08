@@ -697,11 +697,13 @@ export function SalesHubView({
           // Sempre split no desktop (fila ~300px + chat): evita cards
           // “gigantes” na 1ª abertura / sem deal selecionado.
           "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-[var(--drawer-duration)] md:motion-reduce:transition-none",
-          // 3 tracks sempre no md (3ª = 0fr fechada) p/ interpolar
-          // grid-template-columns no open/close do aside sem thrash.
+          // 3 tracks sempre no md p/ interpolar grid-template-columns no
+          // open/close do aside sem thrash. A 3ª fechada é `minmax(0px,0px)`
+          // e não `0fr`: track de tipo diferente da aberta não interpola —
+          // o browser anima discreto e a coluna salta na metade do tempo.
           detailsOpen && activeDeal
             ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)] md:ease-[var(--ease-drawer-open)]"
-            : "md:grid-cols-[300px_minmax(0,1fr)_0fr] md:ease-[var(--ease-drawer-close)]",
+            : "md:grid-cols-[300px_minmax(0,1fr)_minmax(0px,0px)] md:ease-[var(--ease-drawer-close)]",
         )}
       >
         {/* Coluna 1 — Fila: superfície igual `KanbanColumn`
@@ -859,18 +861,21 @@ export function SalesHubView({
 
         {/* Coluna 3 — CRM inline (DealDetailPanel crmOnly): comprime o chat,
             sem Sheet/scrim. Abre via briefcase ou mouse leave na borda direita.
-            Mantida montada com deal ativo p/ slide-out (grid 0fr + transform)
+            Mantida montada com deal ativo p/ slide-out (track 0 + transform)
             antes do colapso; no mobile some do fluxo quando fechada. */}
         {activeDeal ? (
           <aside
             className={cn(
               "min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--glass-bg-modal)] backdrop-blur-md",
               // Mesmos tokens da gaveta de Configurações: desliza 100px,
-              // abre com power3.out e fecha com power3.in.
-              "md:transition-[transform,opacity,border-color,box-shadow,min-width] md:duration-[var(--drawer-duration)] md:motion-reduce:transition-none",
+              // abre com power3.out e fecha com power3.in. `border-color`
+              // e `box-shadow` ficam FORA da lista de transição: repintar
+              // sombra a cada frame de um painel com backdrop-blur é o que
+              // mais custa aqui, e a troca instantânea some no movimento.
+              "md:transition-[transform,opacity,min-width] md:duration-[var(--drawer-duration)] md:motion-reduce:transition-none",
               detailsOpen
-                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:min-w-[280px] md:translate-x-0 md:scale-100 md:opacity-100 md:ease-[var(--ease-drawer-open)]"
-                : "pointer-events-none hidden border-transparent shadow-none md:flex md:min-w-0 md:translate-x-[100px] md:scale-[0.98] md:opacity-0 md:ease-[var(--ease-drawer-close)]",
+                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:min-w-[280px] md:translate-x-0 md:opacity-100 md:ease-[var(--ease-drawer-open)]"
+                : "pointer-events-none hidden border-transparent shadow-none md:flex md:min-w-0 md:translate-x-[100px] md:opacity-0 md:ease-[var(--ease-drawer-close)]",
             )}
             aria-label="Detalhes do negócio"
             aria-hidden={!detailsOpen}

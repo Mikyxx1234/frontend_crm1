@@ -9,7 +9,7 @@
  *
  * A sidebar é uma gaveta: abre no hover da engrenagem (NavRail) e fecha
  * ao sair, salvo se pinada. O layout anima a largura via
- * grid-template-columns; aqui só translate/scale/opacity + o pin no header.
+ * grid-template-columns; aqui só translate/opacity + o pin no header.
  * Transição (em vez de keyframes) para que fechar também anime; as curvas
  * `--ease-drawer-open/close` (power3) ficam em globals.css.
  */
@@ -151,10 +151,13 @@ export function SettingsSidebar({
       aria-hidden={!open}
       className={cn(
         "flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm",
+        // Sem `scale`: o painel tem backdrop-blur e escalar obriga o
+        // browser a re-rasterizar o desfoque a cada frame — o translate
+        // sozinho fica no compositor e é o que mantém o movimento liso.
         "transition-[transform,opacity] duration-[var(--drawer-duration)] motion-reduce:transition-none",
         open
-          ? "translate-x-0 scale-100 opacity-100 ease-[var(--ease-drawer-open)]"
-          : "-translate-x-[100px] scale-[0.98] opacity-0 ease-[var(--ease-drawer-close)]",
+          ? "translate-x-0 opacity-100 ease-[var(--ease-drawer-open)]"
+          : "-translate-x-[100px] opacity-0 ease-[var(--ease-drawer-close)]",
       )}
     >
       {/* Header do card — pin mantém a gaveta aberta sem hover. */}

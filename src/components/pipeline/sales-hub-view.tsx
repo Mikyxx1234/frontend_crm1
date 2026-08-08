@@ -238,6 +238,47 @@ export function SalesHubView({
     [activeDealId, detailsOpen],
   );
 
+  /** Fecha a aside CRM ao sair com o mouse, salvo se estiver pinada. */
+  const ASIDE_LEAVE_CLOSE_MS = 150;
+  const asideLeaveCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const clearAsideLeaveCloseTimer = useCallback(() => {
+    if (asideLeaveCloseTimerRef.current != null) {
+      clearTimeout(asideLeaveCloseTimerRef.current);
+      asideLeaveCloseTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => clearAsideLeaveCloseTimer(), [clearAsideLeaveCloseTimer]);
+
+  const handleAsideMouseEnter = useCallback(() => {
+    clearAsideLeaveCloseTimer();
+  }, [clearAsideLeaveCloseTimer]);
+
+  const handleAsideMouseLeave = useCallback(
+    (e: ReactMouseEvent<HTMLElement>) => {
+      if (asidePinned) return;
+      const related = e.relatedTarget;
+      if (related instanceof Node && e.currentTarget.contains(related)) return;
+      // Dropdowns/tooltips portaled (Radix) ainda "pertencem" à aside.
+      if (
+        related instanceof Element &&
+        related.closest("[data-radix-portal], [data-radix-popper-content-wrapper]")
+      ) {
+        return;
+      }
+
+      clearAsideLeaveCloseTimer();
+      asideLeaveCloseTimerRef.current = setTimeout(() => {
+        asideLeaveCloseTimerRef.current = null;
+        setDetailsOpen(false);
+      }, ASIDE_LEAVE_CLOSE_MS);
+    },
+    [asidePinned, clearAsideLeaveCloseTimer],
+  );
+
   useEffect(() => {
     setPickedConversationId(null);
   }, [activeDealId]);
@@ -776,6 +817,8 @@ export function SalesHubView({
           <aside
             className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md md:min-w-[280px] md:animate-in md:fade-in-0 md:slide-in-from-right-2 md:duration-300"
             aria-label="Detalhes do negócio"
+            onMouseEnter={handleAsideMouseEnter}
+            onMouseLeave={handleAsideMouseLeave}
           >
             <header className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 py-3 text-left">
               <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">

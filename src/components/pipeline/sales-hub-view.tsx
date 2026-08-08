@@ -852,49 +852,7 @@ export function SalesHubView({
             onMouseEnter={handleAsideMouseEnter}
             onMouseLeave={handleAsideMouseLeave}
           >
-            {/* Chrome flush no topo (paridade com header da fila / chat). */}
-            <header className="flex h-11 shrink-0 flex-row items-center gap-2 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 backdrop-blur">
-              <h2 className="min-w-0 flex-1 truncate font-display text-[14px] font-bold tracking-tight text-[var(--text-primary)]">
-                Detalhes do negócio
-              </h2>
-              <div className="flex shrink-0 items-center gap-0.5">
-                <TooltipHost
-                  label={
-                    asidePinned
-                      ? "Desafixar painel (fecha ao trocar de deal)"
-                      : "Fixar painel (permanece ao trocar de deal)"
-                  }
-                  side="bottom"
-                >
-                  <button
-                    type="button"
-                    aria-label={asidePinned ? "Desafixar painel" : "Fixar painel"}
-                    aria-pressed={asidePinned}
-                    onClick={toggleAsidePinned}
-                    className={cn(
-                      "flex size-8 items-center justify-center rounded-[var(--radius-md)] transition-colors",
-                      asidePinned
-                        ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                        : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]",
-                    )}
-                  >
-                    {asidePinned ? (
-                      <PinFilled className="size-4" strokeWidth={1.7} />
-                    ) : (
-                      <Pin className="size-4" strokeWidth={1.7} />
-                    )}
-                  </button>
-                </TooltipHost>
-                <button
-                  type="button"
-                  aria-label="Fechar"
-                  onClick={() => setDetailsOpen(false)}
-                  className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-            </header>
+            {/* Sem chrome branco: pin/X vão no hero azul do DealDetailPanel. */}
             <div className="min-h-0 flex-1 overflow-hidden bg-[var(--glass-bg)]">
               <DealDetailPanel
                 crmOnly
@@ -904,6 +862,47 @@ export function SalesHubView({
                 customFieldsSlot={customFieldsSlot}
                 contactFieldConfigSlot={contactFieldConfigSlot}
                 dealFieldConfigSlot={dealFieldConfigSlot}
+                headerActionsSlot={
+                  <>
+                    <TooltipHost
+                      label={
+                        asidePinned
+                          ? "Desafixar painel (fecha ao trocar de deal)"
+                          : "Fixar painel (permanece ao trocar de deal)"
+                      }
+                      side="bottom"
+                    >
+                      <button
+                        type="button"
+                        aria-label={
+                          asidePinned ? "Desafixar painel" : "Fixar painel"
+                        }
+                        aria-pressed={asidePinned}
+                        onClick={toggleAsidePinned}
+                        className={cn(
+                          "flex size-8 items-center justify-center rounded-[var(--radius-md)] transition-colors",
+                          asidePinned
+                            ? "bg-sky-400/20 text-sky-300"
+                            : "text-sky-300/90 hover:bg-white/10 hover:text-sky-200",
+                        )}
+                      >
+                        {asidePinned ? (
+                          <PinFilled className="size-4" strokeWidth={1.7} />
+                        ) : (
+                          <Pin className="size-4" strokeWidth={1.7} />
+                        )}
+                      </button>
+                    </TooltipHost>
+                    <button
+                      type="button"
+                      aria-label="Fechar"
+                      onClick={() => setDetailsOpen(false)}
+                      className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </>
+                }
               />
             </div>
           </aside>

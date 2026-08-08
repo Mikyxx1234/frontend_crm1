@@ -174,6 +174,11 @@ interface DealDetailPanelProps {
   /** Botão "Ligar" do softphone — posicionado no header, antes do moreActions. */
   callButtonSlot?: React.ReactNode
   moreActionsSlot?: React.ReactNode
+  /**
+   * Controles extras no hero azul (ex.: pin/fechar do SalesHub Flow).
+   * Renderizado à direita da linha Voltar — não afeta o kanban se omitido.
+   */
+  headerActionsSlot?: React.ReactNode
   /** Botão dedicado de excluir negócio (atalho visível no header). */
   deleteSlot?: React.ReactNode
   /** Botão de edição do contato (ex.: ContactEditDialog), ao lado do nome. */
@@ -324,6 +329,7 @@ export function DealDetailPanel({
   callButtonSlot,
   contactTagsSlot,
   moreActionsSlot,
+  headerActionsSlot,
   deleteSlot: _deleteSlot,
   contactEditSlot,
   ownerSlot,
@@ -624,7 +630,7 @@ export function DealDetailPanel({
           crmOnly && "rounded-none border-0 shadow-none",
         )}
       >
-        <div className="shrink-0 px-3 pt-2">
+        <div className={cn("shrink-0 px-3", crmOnly ? "pt-1.5" : "pt-2")}>
           <header className="relative isolate mb-2 rounded-xl border border-white/10 bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-[var(--glass-shadow-sm)]">
             <div className="relative flex items-center gap-1.5">
               <button
@@ -636,6 +642,12 @@ export function DealDetailPanel({
                 <IconArrowLeft size={13} strokeWidth={2.5} />
                 <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
               </button>
+              <div className="flex-1" />
+              {headerActionsSlot ? (
+                <div className="flex shrink-0 items-center gap-0.5">
+                  {headerActionsSlot}
+                </div>
+              ) : null}
             </div>
             <div className="relative mt-3 flex items-center gap-3">
               <div className="size-11 animate-pulse rounded-full bg-white/20" />
@@ -842,12 +854,12 @@ export function DealDetailPanel({
             {/* Cabeçalho fixo: hero do negócio — paridade visual com o
                 contact-aside do inbox (fundo brand + anel de progresso).
                 Pill "Negócio" removida (redundante, pedido do operador). */}
-            <div className="shrink-0 px-3 pt-2">
+            <div className={cn("shrink-0 px-3", crmOnly ? "pt-1.5" : "pt-2")}>
               {/* ── Hero header (ref. Stitch): card escuro #2e3b6e, edge-to-edge
                   no topo do container via margens negativas, cantos inferiores
                   grandes (rounded-b-3xl) e sombra. ── */}
               <header className="relative isolate mb-2 rounded-xl border border-white/10 bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-[var(--glass-shadow-sm)]">
-                {/* Linha de controles: Voltar (esq) + spacer + etapa + kebab. */}
+                {/* Linha de controles: Voltar (esq) + spacer + actions/kebab. */}
                 <div className="relative flex items-center gap-1.5">
                   <button
                     type="button"
@@ -861,6 +873,11 @@ export function DealDetailPanel({
                   <div className="flex-1" />
                   {/* Pill de etapa REMOVIDA do topo (jul/26): a fase virou o
                       destaque da linha base e é ela quem abre o dropdown. */}
+                  {headerActionsSlot ? (
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      {headerActionsSlot}
+                    </div>
+                  ) : null}
                   {moreActionsSlot && (
                     <div className="[&_button]:!text-white [&_button:hover]:!bg-white/15 [&_button]:!rounded-[var(--radius-sm)]">
                       {moreActionsSlot}

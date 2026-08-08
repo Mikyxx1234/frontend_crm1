@@ -1,22 +1,22 @@
 /**
- * /v2/pipeline — visão Kanban (reaproveita o KanbanV2ClientPage do
- * route group `(v2)/pipeline/kanban-v2`).
- *
- * Para alternar entre Kanban e Lista, ver `/v2/pipeline/list`.
+ * /pipeline — entrada do funil.
+ * Redireciona para a última view (lista/flow) salvo em localStorage,
+ * exceto deep-link `?deal=` (sempre abre no kanban/workspace).
  */
 
 import { Suspense } from "react";
 
-import KanbanV2ClientPage from "./_v2-client";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageLoading } from "@/components/crm/page-loading";
+
+import { PipelineEntryClient } from "./_entry-client";
 
 export const dynamic = "force-dynamic";
 
 export default function V2PipelinePage() {
   return (
     <Suspense fallback={<PageLoading />}>
-      <KanbanV2ClientPage navRail={<NavRailSpacer />} listHref="/pipeline/list" />
+      <PipelineEntryClient navRail={<NavRailSpacer />} />
     </Suspense>
   );
 }

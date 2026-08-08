@@ -53,7 +53,7 @@ export function AssigneePopover({
   }, [users, filter]);
 
   function handleSelect(userId: string | null) {
-    if (!dealId) return;
+    if (!dealId || update.isPending) return;
     update.mutate(
       { dealId, payload: { ownerId: userId } },
       {
@@ -74,7 +74,12 @@ export function AssigneePopover({
           ref={triggerRef}
           type="button"
           disabled={disabled || !dealId}
-          onClick={toggle}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggle();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
           className="inline-flex"
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -87,6 +92,8 @@ export function AssigneePopover({
         createPortal(
           <div
             ref={popoverRef}
+            role="listbox"
+            data-assignee-popover=""
             className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-2 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
             style={{
               position: "fixed",
@@ -106,15 +113,22 @@ export function AssigneePopover({
               placeholder="Buscar pessoa…"
               className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             />
-            <ul role="listbox" className="max-h-56 overflow-y-auto">
+            <ul className="max-h-56 overflow-y-auto">
               {currentOwnerId && (
                 <li>
                   <button
                     type="button"
-                    onClick={() => handleSelect(null)}
-                    className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--color-warning)] hover:bg-[var(--glass-bg-strong)]"
+                    disabled={update.isPending}
+                    // pointerdown: evita race com mousedown(capture) do
+                    // click-outside que desmontava o portal antes do click.
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSelect(null);
+                    }}
+                    className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--color-warning)] hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
                   >
-                    <span>Remover responsavel</span>
+                    <span>Remover responsável</span>
                   </button>
                 </li>
               )}
@@ -125,7 +139,7 @@ export function AssigneePopover({
               )}
               {!isLoading && filtered.length === 0 && (
                 <li className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                  Ninguem encontrado.
+                  Ninguém encontrado.
                 </li>
               )}
               {filtered.map((u) => {
@@ -135,8 +149,12 @@ export function AssigneePopover({
                     <button
                       type="button"
                       disabled={update.isPending}
-                      onClick={() => handleSelect(u.id)}
-                      className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] hover:bg-[var(--glass-bg-strong)] ${
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSelect(u.id);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] hover:bg-[var(--glass-bg-strong)] disabled:opacity-50 ${
                         isActive
                           ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
                           : "text-[var(--text-primary)]"

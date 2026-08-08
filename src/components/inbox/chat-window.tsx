@@ -2993,14 +2993,10 @@ export function ChatWindow({
                       {m.sendStatus === "failed" && (
                         <div
                           className={cn(
-                            "mt-1.5 flex flex-col gap-1.5",
-                            out ? "items-end" : "items-start",
+                            "mt-1 flex",
+                            out ? "justify-end" : "justify-start",
                           )}
                         >
-                          <MetaSendErrorBalloon
-                            sendError={m.sendError}
-                            onCopied={() => toast.success("Erro copiado")}
-                          />
                           <button
                             type="button"
                             onClick={(e) => {

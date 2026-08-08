@@ -28,6 +28,10 @@ import {
 } from "@/features/pipeline-v2/hooks";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
 import { personNameFromDealTitle, sanitizeContactName } from "@/lib/display-name";
+import {
+  pathForPipelineView,
+  writePipelineViewPreference,
+} from "@/lib/pipeline-view-preference";
 import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import type { PipelineSortKey } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
@@ -128,6 +132,10 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const router = useRouter();
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
+
+  useEffect(() => {
+    writePipelineViewPreference("flow");
+  }, []);
 
   const [search, setSearch] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -460,9 +468,9 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
           tabsOverride={<></>}
           activeView="flow"
           onViewChange={(view) => {
-            if (view === "kanban") router.push("/pipeline");
-            if (view === "list") router.push("/pipeline/list");
-            if (view === "flow") router.push("/pipeline/flow");
+            writePipelineViewPreference(view);
+            if (view === "flow") return;
+            router.push(pathForPipelineView(view));
           }}
           titleAccessory={
             <PipelineSwitcher

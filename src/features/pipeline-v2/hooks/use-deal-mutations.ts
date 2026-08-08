@@ -214,10 +214,54 @@ interface UpdateDealVars {
 export function useUpdateDeal(pipelineId: string | null, status: StatusFilter = "OPEN") {
   const qc = useQueryClient();
   const key = boardKey(pipelineId, status);
+  const BOARD_KEY_PREFIXES = [
+    "pipeline-board",
+    "pipeline-board-filtered",
+    "pipeline-board-search",
+  ] as const;
 
   return useMutation<{ deal: BoardDealDto }, Error, UpdateDealVars>({
     mutationFn: ({ dealId, payload }) => updateDeal(dealId, payload),
+    onMutate: async (vars) => {
+      if (vars.payload.ownerId === undefined) return;
+      await qc.cancelQueries({
+        predicate: (q) =>
+          typeof q.queryKey[0] === "string" &&
+          (BOARD_KEY_PREFIXES as readonly string[]).includes(q.queryKey[0] as string),
+      });
+      const nextOwner =
+        vars.payload.ownerId === null
+          ? null
+          : { id: vars.payload.ownerId, name: "…", avatarUrl: null as string | null };
+      const boards = qc.getQueriesData<BoardStageDto[]>({
+        predicate: (q) =>
+          typeof q.queryKey[0] === "string" &&
+          (BOARD_KEY_PREFIXES as readonly string[]).includes(q.queryKey[0] as string),
+      });
+      for (const [queryKey, data] of boards) {
+        if (!data) continue;
+        qc.setQueryData(
+          queryKey,
+          data.map((stage) => ({
+            ...stage,
+            deals: stage.deals.map((d) =>
+              d.id === vars.dealId
+                ? {
+                    ...d,
+                    owner: nextOwner,
+                  }
+                : d,
+            ),
+          })),
+        );
+      }
+    },
     onSuccess: (_data, vars) => {
+      qc.invalidateQueries({
+        predicate: (q) =>
+          typeof q.queryKey[0] === "string" &&
+          (BOARD_KEY_PREFIXES as readonly string[]).includes(q.queryKey[0] as string),
+      });
       qc.invalidateQueries({ queryKey: key });
       qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
     },

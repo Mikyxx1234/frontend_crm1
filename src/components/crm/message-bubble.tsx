@@ -1668,9 +1668,24 @@ export function MessageBubble({
               <IconStarFilled size={10} className="text-amber-400" aria-label="Favoritada" />
             )}
             {message.time}
-            {isOutgoing && message.status && (
+            {isOutgoing && message.status === "failed" ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="pointer-events-auto inline-flex cursor-help">
+                    <StatusTicks status="failed" onLightBg={false} />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  align="end"
+                  className="border-0 bg-transparent p-0 shadow-none"
+                >
+                  <MetaSendErrorBalloon sendError={message.sendError} />
+                </TooltipContent>
+              </Tooltip>
+            ) : isOutgoing && message.status ? (
               <StatusTicks status={message.status} onLightBg={false} />
-            )}
+            ) : null}
           </span>
           {/* Badge de reação flutuante: emoji do cliente sobre o canto
               inferior da bolha (padrão WhatsApp Web). Quando há múltiplas
@@ -1683,10 +1698,6 @@ export function MessageBubble({
           )}
         </div>
       </div>
-
-      {isOutgoing && message.status === "failed" ? (
-        <MetaSendErrorBalloon sendError={message.sendError} className="mt-1" />
-      ) : null}
 
       {/* Nome do remetente apenas no tooltip do avatar (acima) */}
     </div>

@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * StageRibbon — filtro de etapas do Sales Hub.
- * Visual alinhado aos chips/segmented controls do Inbox/CRM
- * (`PageSegmentedControl` + `Chip`), não a um funil analytics.
+ * StageRibbon — abas de etapa do Sales Hub (estilo browser tab).
+ * Ativa: fundo claro + barra superior na cor da fase + badge sólido.
+ * Inativas: label + pill tintada, sem “chip” bordado.
  */
 
 import { cn } from "@/lib/utils";
@@ -25,8 +25,66 @@ type StageRibbonProps = {
   compact?: boolean;
 };
 
-const chipBase =
-  "inline-flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 overflow-hidden rounded-[var(--radius-sm)] border px-2 font-display text-[11px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25";
+function StageTab({
+  label,
+  count,
+  color,
+  active,
+  compact,
+  hasUrgent,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  color: string;
+  active: boolean;
+  compact: boolean;
+  hasUrgent?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "relative inline-flex shrink-0 items-center gap-2 border-t-[3px] px-3 font-display text-[12px] font-semibold tracking-tight transition-colors",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
+        compact ? "h-8 pb-0.5 pt-1" : "h-9 pb-1 pt-1.5",
+        active
+          ? "z-[1] -mb-px rounded-t-lg border-[var(--glass-border-subtle)] border-x border-b-0 bg-[var(--surface-elevated,#f7f4ef)] text-[var(--text-primary)] shadow-[0_1px_0_var(--surface-elevated,#f7f4ef)] dark:bg-[#ebe6df]"
+          : "border-transparent text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]",
+      )}
+      style={active ? { borderTopColor: color, color } : undefined}
+    >
+      <span className="max-w-[11rem] truncate">{label}</span>
+      <span
+        className={cn(
+          "inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums leading-none",
+          !active && "text-[var(--text-primary)]",
+        )}
+        style={
+          active
+            ? { backgroundColor: color, color: "#fff" }
+            : {
+                backgroundColor: `color-mix(in srgb, ${color} 28%, #ffffff)`,
+                color: `color-mix(in srgb, ${color} 75%, #1a1a1a)`,
+              }
+        }
+      >
+        {count}
+      </span>
+      {hasUrgent && !active ? (
+        <span
+          className="absolute right-1 top-1 size-1.5 rounded-full bg-[var(--color-danger)]"
+          aria-label="Há deals urgentes"
+        />
+      ) : null}
+    </button>
+  );
+}
 
 export function StageRibbon({
   stages,
@@ -35,99 +93,49 @@ export function StageRibbon({
   onSelectStage,
   compact = false,
 }: StageRibbonProps) {
+  const allActive = selectedStageId === null;
+  const allColor = "var(--brand-primary, #5b6ff5)";
+
   return (
     <div
       className={cn(
-        "relative w-full shrink-0 bg-transparent",
-        compact ? "px-0.5 py-1.5" : "px-0.5 py-2",
+        "relative w-full shrink-0 border-b border-[var(--glass-border-subtle)]",
+        compact ? "px-0.5" : "px-1",
       )}
     >
       <div
-        className="scrollbar-none flex w-full items-stretch gap-1 overflow-x-auto"
+        className={cn(
+          "flex w-full items-end gap-0.5 overflow-x-auto",
+          "[scrollbar-width:thin] [scrollbar-color:rgba(128,128,128,0.35)_transparent]",
+          "[&::-webkit-scrollbar]:h-1.5",
+          "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-black/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/20",
+          "[&::-webkit-scrollbar-track]:bg-transparent",
+        )}
         role="tablist"
         aria-label="Filtrar por etapa"
       >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={selectedStageId === null}
-          aria-pressed={selectedStageId === null}
+        <StageTab
+          label="Todos"
+          count={totalDeals}
+          color={allColor}
+          active={allActive}
+          compact={compact}
           onClick={() => onSelectStage(null)}
-          className={cn(
-            chipBase,
-            compact ? "h-7" : "h-8",
-            // min width only as scroll fallback on very narrow viewports
-            "min-w-[4.5rem]",
-            selectedStageId === null
-              ? "border-[var(--brand-primary)]/25 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-              : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]",
-          )}
-        >
-          <span className="min-w-0 truncate">Todos</span>
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
-              selectedStageId === null
-                ? "bg-[var(--brand-primary)] text-white"
-                : "bg-black/[0.06] text-[var(--text-muted)] dark:bg-white/10",
-            )}
-          >
-            {totalDeals}
-          </span>
-        </button>
+        />
 
         {stages.map((stage) => {
           const isActive = stage.id === selectedStageId;
           return (
-            <button
+            <StageTab
               key={stage.id}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              aria-pressed={isActive}
+              label={stage.name}
+              count={stage.count}
+              color={stage.color || "#64748b"}
+              active={isActive}
+              compact={compact}
+              hasUrgent={stage.hasUrgent}
               onClick={() => onSelectStage(isActive ? null : stage.id)}
-              className={cn(
-                chipBase,
-                compact ? "h-7" : "h-8",
-                "min-w-[4.5rem]",
-                isActive
-                  ? "shadow-[var(--glass-shadow-sm)]"
-                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]",
-              )}
-              style={
-                isActive
-                  ? {
-                      color: stage.color,
-                      borderColor: `color-mix(in srgb, ${stage.color} 30%, transparent)`,
-                      background: `color-mix(in srgb, ${stage.color} 12%, transparent)`,
-                    }
-                  : undefined
-              }
-            >
-              <span
-                className="size-1.5 shrink-0 rounded-full"
-                style={{ backgroundColor: stage.color }}
-                aria-hidden
-              />
-              <span className="min-w-0 truncate">{stage.name}</span>
-              <span
-                className={cn(
-                  "shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
-                  isActive
-                    ? "bg-black/[0.08] dark:bg-white/15"
-                    : "bg-black/[0.06] text-[var(--text-muted)] dark:bg-white/10",
-                )}
-                style={isActive ? { color: stage.color } : undefined}
-              >
-                {stage.count}
-              </span>
-              {stage.hasUrgent && !isActive ? (
-                <span
-                  className="size-1.5 shrink-0 rounded-full bg-[var(--color-danger)]"
-                  aria-label="Há deals urgentes"
-                />
-              ) : null}
-            </button>
+            />
           );
         })}
       </div>

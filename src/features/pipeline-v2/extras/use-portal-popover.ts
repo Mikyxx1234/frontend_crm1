@@ -80,6 +80,7 @@ export function usePortalPopover(): PortalPopoverState {
           el.closest("[data-radix-popper-content-wrapper]") ||
           el.closest("[data-radix-select-viewport]") ||
           el.closest("[data-radix-dropdown-menu-content]") ||
+          el.closest("[data-assignee-popover]") ||
           el.closest("[role='listbox']") ||
           el.closest("[role='menu']")
         ) {

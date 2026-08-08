@@ -27,6 +27,10 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import {
+  pathForPipelineView,
+  writePipelineViewPreference,
+} from "@/lib/pipeline-view-preference";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
@@ -158,6 +162,10 @@ export default function KanbanV2ClientPage({
   const router = useRouter();
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
+
+  useEffect(() => {
+    writePipelineViewPreference("kanban");
+  }, []);
 
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
 
@@ -813,8 +821,13 @@ export default function KanbanV2ClientPage({
           tabsOverride={<></>}
           activeView="kanban"
           onViewChange={(view) => {
-            if (view === "list" && listHref) router.push(listHref);
-            if (view === "flow") router.push("/pipeline/flow");
+            writePipelineViewPreference(view);
+            if (view === "kanban") return;
+            router.push(
+              view === "list" && listHref
+                ? listHref
+                : pathForPipelineView(view),
+            );
           }}
           titleAccessory={
             <PipelineSwitcher

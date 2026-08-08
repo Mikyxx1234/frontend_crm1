@@ -57,10 +57,14 @@ export default function SettingsLayout({
         // contra um `0px` cru não é interpolável e o browser cai em
         // animação discreta, trocando a largura de uma vez na metade do
         // tempo. Era isso que fazia a gaveta "pular" em vez de deslizar.
-        "transition-[grid-template-columns] duration-[var(--drawer-duration)] motion-reduce:transition-none",
+        //
+        // Track aberta é 288px fixo (e não uma faixa): a sidebar tem a
+        // MESMA largura fixa, então a coluna encolhendo apenas a clipa em
+        // vez de re-layoutar o conteúdo dela a cada frame.
+        "transition-[grid-template-columns] motion-reduce:transition-none",
         open
-          ? "grid-cols-[var(--nav-rail-w,72px)_minmax(240px,288px)_minmax(0,1fr)] ease-[var(--ease-drawer-open)]"
-          : "grid-cols-[var(--nav-rail-w,72px)_minmax(0px,0px)_minmax(0,1fr)] ease-[var(--ease-drawer-close)]",
+          ? "grid-cols-[var(--nav-rail-w,72px)_minmax(288px,288px)_minmax(0,1fr)] duration-[var(--drawer-duration)] ease-[var(--ease-drawer-open)]"
+          : "grid-cols-[var(--nav-rail-w,72px)_minmax(0px,0px)_minmax(0,1fr)] duration-[var(--drawer-duration-close)] ease-[var(--ease-drawer-close)]",
       )}
     >
       <NavRailSpacer />

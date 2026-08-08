@@ -696,14 +696,16 @@ export function SalesHubView({
           // abrir/fechar chat ou aside — sem thrash nos cards da fila.
           // Sempre split no desktop (fila ~300px + chat): evita cards
           // “gigantes” na 1ª abertura / sem deal selecionado.
-          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-[var(--drawer-duration)] md:motion-reduce:transition-none",
+          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:motion-reduce:transition-none",
           // 3 tracks sempre no md p/ interpolar grid-template-columns no
           // open/close do aside sem thrash. A 3ª fechada é `minmax(0px,0px)`
           // e não `0fr`: track de tipo diferente da aberta não interpola —
           // o browser anima discreto e a coluna salta na metade do tempo.
+          // Aberta é 360px fixo (mesma largura fixa do aside) para que o
+          // fechamento só clipe a coluna, sem re-layoutar o CRM inteiro.
           detailsOpen && activeDeal
-            ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)] md:ease-[var(--ease-drawer-open)]"
-            : "md:grid-cols-[300px_minmax(0,1fr)_minmax(0px,0px)] md:ease-[var(--ease-drawer-close)]",
+            ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(360px,360px)] md:duration-[var(--drawer-duration)] md:ease-[var(--ease-drawer-open)]"
+            : "md:grid-cols-[300px_minmax(0,1fr)_minmax(0px,0px)] md:duration-[var(--drawer-duration-close)] md:ease-[var(--ease-drawer-close)]",
         )}
       >
         {/* Coluna 1 — Fila: superfície igual `KanbanColumn`
@@ -868,14 +870,17 @@ export function SalesHubView({
             className={cn(
               "min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--glass-bg-modal)] backdrop-blur-md",
               // Mesmos tokens da gaveta de Configurações: desliza 100px,
-              // abre com power3.out e fecha com power3.in. `border-color`
+              // abre com power3.out e fecha mais curto. `border-color`
               // e `box-shadow` ficam FORA da lista de transição: repintar
               // sombra a cada frame de um painel com backdrop-blur é o que
               // mais custa aqui, e a troca instantânea some no movimento.
-              "md:transition-[transform,opacity,min-width] md:duration-[var(--drawer-duration)] md:motion-reduce:transition-none",
+              // Largura fixa em vez de `min-width` animada: a coluna que
+              // encolhe passa a só clipar o painel, sem reflow do CRM.
+              "md:w-[360px] md:shrink-0",
+              "md:transition-[transform,opacity] md:motion-reduce:transition-none",
               detailsOpen
-                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:min-w-[280px] md:translate-x-0 md:opacity-100 md:ease-[var(--ease-drawer-open)]"
-                : "pointer-events-none hidden border-transparent shadow-none md:flex md:min-w-0 md:translate-x-[100px] md:opacity-0 md:ease-[var(--ease-drawer-close)]",
+                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:translate-x-0 md:opacity-100 md:duration-[var(--drawer-duration)] md:ease-[var(--ease-drawer-open)]"
+                : "pointer-events-none hidden border-transparent shadow-none md:flex md:translate-x-[100px] md:opacity-0 md:duration-[var(--drawer-duration-close)] md:ease-[var(--ease-drawer-close)]",
             )}
             aria-label="Detalhes do negócio"
             aria-hidden={!detailsOpen}
@@ -894,13 +899,13 @@ export function SalesHubView({
                 tagsSlot={(() => {
                   const allTags = activeDeal.tags ?? [];
                   return (
-                    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5">
+                    <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
                       {allTags.slice(0, 2).map((t) => (
                         <TooltipGlass key={t.id} label={t.name} side="top">
                           <TagChip
                             name={t.name}
                             color={t.color}
-                            className="max-w-[9.5rem] min-w-0 shrink"
+                            className="min-w-0 max-w-full shrink"
                           />
                         </TooltipGlass>
                       ))}

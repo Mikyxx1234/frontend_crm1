@@ -10,8 +10,8 @@
  * A sidebar é uma gaveta: abre no hover da engrenagem (NavRail) e fecha
  * ao sair, salvo se pinada. O layout anima a largura via
  * grid-template-columns; aqui só translate/opacity + o pin no header.
- * Transição (em vez de keyframes) para que fechar também anime; as curvas
- * `--ease-drawer-open/close` (power3) ficam em globals.css.
+ * Transição (em vez de keyframes) para que fechar também anime; curvas e
+ * durações ficam nos tokens `--drawer-*` em globals.css.
  */
 
 import Link from "next/link";
@@ -150,14 +150,19 @@ export function SettingsSidebar({
       aria-label="Menu de configurações"
       aria-hidden={!open}
       className={cn(
-        "flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm",
+        "flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm",
+        // Largura fixa (a mesma da track aberta no layout): sem isso a
+        // aside estica junto com a coluna e o conteúdo inteiro é
+        // re-layoutado a cada frame do fechamento — trunca texto, refaz
+        // flex e re-rasteriza o backdrop-blur. Fixa, a coluna só clipa.
+        "w-full md:w-[288px] md:shrink-0",
         // Sem `scale`: o painel tem backdrop-blur e escalar obriga o
         // browser a re-rasterizar o desfoque a cada frame — o translate
         // sozinho fica no compositor e é o que mantém o movimento liso.
-        "transition-[transform,opacity] duration-[var(--drawer-duration)] motion-reduce:transition-none",
+        "transition-[transform,opacity] motion-reduce:transition-none",
         open
-          ? "translate-x-0 opacity-100 ease-[var(--ease-drawer-open)]"
-          : "-translate-x-[100px] opacity-0 ease-[var(--ease-drawer-close)]",
+          ? "translate-x-0 opacity-100 duration-[var(--drawer-duration)] ease-[var(--ease-drawer-open)]"
+          : "-translate-x-[100px] opacity-0 duration-[var(--drawer-duration-close)] ease-[var(--ease-drawer-close)]",
       )}
     >
       {/* Header do card — pin mantém a gaveta aberta sem hover. */}

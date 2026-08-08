@@ -128,6 +128,8 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
   // do modo sejam explícitas e previsíveis.
   const showCheckbox = !!selectionMode && !!onToggleSelect
   const unread = deal.unreadCount ?? 0
+  // Cliente ainda não respondido — última msg inbound (aguarda reply do agente).
+  const unreplied = deal.message?.direction === "in"
   return (
     <a
       href={dealOpenHref(deal)}
@@ -143,9 +145,13 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
       className={cn(
         // `block` preserva o comportamento de caixa do antigo <article>
         // (a <a> é inline por padrão e quebraria a largura/altura do card).
-        "group relative block cursor-pointer rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] py-1.5 backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-[border-color,box-shadow,background-color] duration-200",
+        "group relative block cursor-pointer rounded-xl border py-1.5 backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-[border-color,box-shadow,background-color] duration-200",
+        unreplied
+          ? "border-[var(--color-danger)] bg-[color-mix(in_srgb,var(--color-danger)_12%,var(--glass-bg-strong))]"
+          : "border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)]",
         // Sem translate no selecionado: evita briga com height animation / coluna do chat.
-        !isSelected && "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
+        !isSelected && !unreplied && "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
+        !isSelected && unreplied && "hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--color-danger)_16%,var(--glass-bg-strong))] hover:shadow-[var(--glass-shadow)]",
         isSelected && "border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/40",
         "active:cursor-grabbing",
         // Em modo seleção o conteúdo desloca para a direita para abrir

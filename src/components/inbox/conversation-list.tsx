@@ -983,6 +983,9 @@ function ConversationItem({
   onResolve?: () => void;
 }) {
   const unread = (row.unreadCount ?? 0) > 0;
+  const dir = String(row.lastMessageDirection ?? "").toLowerCase();
+  // Cliente ainda não respondido — última msg inbound (aguarda reply do agente).
+  const unreplied = dir === "in" || dir === "inbound";
   const timeSource = row.lastMessageAt ?? row.updatedAt;
   const time = timeSource ? shortTime(timeSource) : "";
   const timer = getSessionTimer(row.lastInboundAt);
@@ -1024,8 +1027,9 @@ function ConversationItem({
       className={cn(
         "group relative flex w-full cursor-pointer gap-2 border-b border-[var(--glass-border)] px-3 py-2.5 transition-all duration-150 hover:bg-[var(--glass-bg-panel)] dark:border-[var(--glass-border-subtle)] dark:hover:bg-[var(--glass-bg-subtle)]",
         active && "border-l-2 border-l-primary bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)] dark:bg-[var(--glass-bg-subtle)]",
-        !active && unread && "bg-primary/8 hover:bg-primary/12 dark:bg-primary/15 dark:hover:bg-primary/20",
-        !active && !unread && "bg-transparent",
+        !active && unreplied && "border-l-2 border-l-[var(--color-danger)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-danger)_14%,transparent)]",
+        !active && !unreplied && unread && "bg-primary/8 hover:bg-primary/12 dark:bg-primary/15 dark:hover:bg-primary/20",
+        !active && !unreplied && !unread && "bg-transparent",
       )}
       onClick={() => !selectionMode && onSelect(row)}
       aria-label={unread ? `${row.contact.name || "Conversa"} — ${row.unreadCount} mensagens não lidas` : undefined}

@@ -29,6 +29,7 @@ import {
   StatusTicks,
   type DeliveryTickStatus,
 } from "@/components/crm/status-ticks"
+import { UnreadCountPill } from "@/components/crm/unread-count-pill"
 import { Chip } from "./chip"
 import { CheckboxGlass } from "./checkbox-glass"
 import { TagChip } from "./tag-chip"
@@ -61,6 +62,8 @@ export interface Conversation {
   active?: boolean
   inactive?: boolean
   urgent?: boolean
+  /** Mensagens não lidas — badge numérico no card. */
+  unreadCount?: number
 
   /**
    * @deprecated use `tags` (lista completa) — mantido para compat com
@@ -213,6 +216,9 @@ export function ConversationCard({
       ? typeLabelMap[conversation.lastMessageType]
       : null
   const isOutgoing = conversation.lastMessageDirection === "out"
+  // Cliente ainda não respondido — última msg inbound (aguarda reply do agente).
+  const unreplied = conversation.lastMessageDirection === "in"
+  const unread = conversation.unreadCount ?? 0
   const hasChannel = Boolean((conversation.channel ?? "").trim())
 
   return (
@@ -222,19 +228,29 @@ export function ConversationCard({
         // Borda trocada para `--glass-border-subtle` (0.30 alpha vs 0.55):
         // alinha com a referência v0 que tem cards "flutuando" sem
         // contorno explícito.
-        "relative cursor-pointer rounded-[var(--radius-lg)] border border-transparent px-3 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-200",
-        // Nao-selecionado: fundo cinza clarinho (mais opaco / menos "branco puro")
-        // pra contrastar com o card selecionado. Hover intensifica levemente.
-        "bg-[color-mix(in_srgb,var(--glass-bg-overlay)_60%,rgba(148,163,184,0.10))]",
-        "hover:bg-[var(--glass-bg-overlay)]",
+        "relative cursor-pointer rounded-[var(--radius-lg)] border px-3 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-200",
+        unreplied
+          ? "border-[var(--color-danger)] bg-[color-mix(in_srgb,var(--color-danger)_12%,white)] hover:bg-[color-mix(in_srgb,var(--color-danger)_16%,white)]"
+          : [
+              "border-transparent",
+              // Nao-selecionado: fundo cinza clarinho (mais opaco / menos "branco puro")
+              // pra contrastar com o card selecionado. Hover intensifica levemente.
+              "bg-[color-mix(in_srgb,var(--glass-bg-overlay)_60%,rgba(148,163,184,0.10))]",
+              "hover:bg-[var(--glass-bg-overlay)]",
+            ],
         // Selecionado: fundo branco + ring inset (ring externo era clipado
         // pelo overflow-y-auto da lista — 1º card perdia a borda de cima).
-        conversation.active &&
+        // Unreplied mantém tint vermelho; só reforça o ring de seleção.
+        conversation.active && !unreplied &&
           "bg-white border-[var(--brand-primary)]/55 ring-2 ring-inset ring-[var(--brand-primary)]/30 shadow-[0_2px_8px_rgba(91,111,245,0.12)] hover:bg-white",
+        conversation.active && unreplied &&
+          "ring-2 ring-inset ring-[var(--brand-primary)]/30 shadow-[0_2px_8px_rgba(91,111,245,0.12)]",
         conversation.inactive && "opacity-70",
         // Marcada (modo seleção): mesmo anel do brand, sem exigir foco/hover.
-        selectionMode && selected &&
+        selectionMode && selected && !unreplied &&
           "bg-white border-[var(--brand-primary)]/55 ring-2 ring-inset ring-[var(--brand-primary)]/30 hover:bg-white",
+        selectionMode && selected && unreplied &&
+          "ring-2 ring-inset ring-[var(--brand-primary)]/30",
       )}
     >
       {/* Linha 1: checkbox (modo seleção) + avatar + (nome + tempo + preview ao lado).
@@ -279,7 +295,8 @@ export function ConversationCard({
             </span>
             <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] text-[var(--text-muted)]">
               {conversation.time}
-              {conversation.urgent && (
+              <UnreadCountPill count={unread} />
+              {unread <= 0 && conversation.urgent && (
                 <span className="flex h-3 w-3 items-center justify-center rounded-full bg-[var(--color-danger)] text-white">
                   <IconClock size={7} stroke={3} />
                 </span>

@@ -277,9 +277,9 @@ export function toConversationCard(
     time: formatRelative(lastActivity),
     preview: previewText,
     assignee: row.assignedTo?.name,
-    // O card novo nao tem mais contador. Mapeamos unread > 0 para o
-    // marcador visual `urgent` (relogio vermelho) — preserva o sinal
-    // de "atencao necessaria" sem badge numerico.
+    // unreadCount alimenta o UnreadCountPill (círculo vermelho).
+    // `urgent` permanece para filtros/tabs (ex.: coluna "urgentes").
+    unreadCount: row.unreadCount ?? 0,
     urgent: !!(row.unreadCount && row.unreadCount > 0),
     active: options?.active,
     inactive: row.status !== "OPEN",

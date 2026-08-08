@@ -1,40 +1,36 @@
 "use client";
 
-import { apiUrl } from "@/lib/api";
 /**
  * DealQueue — Fila unificada de deals (Sales Hub).
  * ───────────────────────────────────────────────────────────────
- * Cards ultra-compactos (~44px) com expansão inline ao clicar:
+ * Cards ultra-compactos (~44px). Seleção = highlight visual apenas.
+ * Campos CRM (produto / responsável / contato / etapa / layout)
+ * moram no DealDetailPanel da Sheet à direita — nunca na coluna da fila.
  *
- *   ▸ Colapsado: avatar 36px, nome, até 3 tags (+N), preview 12px,
- *     tempo relativo, badge de não lidas.
- *   ▸ Expandido: dois cards compactos (estágio + produto; contato +
- *     responsável), fundo sutil; `StageInlinePicker`, `DealProductLine`,
- *     popover de responsável; ícone para abrir deal completo.
- *
- * Ganho/Perdido só na barra do chat (`DealChatActionBar`).
- * Clique no card alterna seleção (foco do chat) e o estado expandido.
+ * Ganho/Perdido só na barra do chat (`DealOutcomeButtons`).
+ * Clique no card seleciona o deal (foco do chat).
  */
 
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconSearch as Search, IconPackage as Package, IconPlus as Plus, IconLoader2 as Loader2, IconX as X, IconChevronDown as ChevronDown, IconPhone as Phone, IconCheck as Check, IconUserMinus as UserMinus, IconArrowsUpDown as ArrowUpDown, IconMicrophone as Mic, IconPhoto as ImageIcon, IconFileText as FileText, IconPaperclip as Paperclip, IconVideo as Video, IconExternalLink as ExternalLink, IconAdjustments as Settings2, IconEye as Eye, IconEyeOff as EyeOff } from "@tabler/icons-react";
-import { toast } from "sonner";
-import { cn, formatCurrency } from "@/lib/utils";
+import {
+  IconArrowsUpDown as ArrowUpDown,
+  IconCheck as Check,
+  IconChevronDown as ChevronDown,
+  IconMicrophone as Mic,
+  IconPhoto as ImageIcon,
+  IconFileText as FileText,
+  IconPaperclip as Paperclip,
+  IconVideo as Video,
+} from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
-import { useMoveMutation } from "@/components/sales-hub/deal-actions";
-import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
 import { SUBTLE_SPRING } from "@/lib/design-system";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
 import { AvatarGlass } from "@/components/crm/avatar-glass";
 import { TagChip } from "@/components/crm/tag-chip";
-import { SidebarField } from "@/components/ui/sidebar-field";
 import { TooltipHost } from "@/components/ui/tooltip";
-import { dt } from "@/lib/design-tokens";
-import { useFieldLayout } from "@/hooks/use-field-layout";
 
 type StatusFilter = "OPEN" | "WON" | "LOST" | "ALL";
 export type DealQueueSortMode =
@@ -212,27 +208,13 @@ export function DealQueueSortMenu({
   );
 }
 
-/** Linha do `/api/users` usada apenas para o popover de troca de
- *  responsável dentro do `DealCard`. Mantém só os campos que o popover
- *  realmente renderiza — não derivamos do tipo do `kanban-board` para
- *  evitar acoplamento entre os dois módulos. */
-type OwnerCandidate = {
-  id: string;
-  name: string;
-  email?: string | null;
-  avatarUrl?: string | null;
-  agentStatus?: {
-    status: "ONLINE" | "OFFLINE" | "AWAY";
-  } | null;
-};
-
 type DealQueueProps = {
   deals: (BoardDeal & { stageId: string })[];
   stages: BoardStage[];
   activeDealId: string | null;
   onSelectDeal: (dealId: string) => void;
   /**
-   * Callback disparado ao clicar em "Recolher" no card ativo —
+   * Callback disparado ao clicar de novo no card ativo —
    * desmarca a seleção. Em `SalesHubView` isso volta ao estado
    * "nenhum deal em foco" (a área do chat mostra o placeholder).
    */
@@ -243,40 +225,15 @@ type DealQueueProps = {
    * "pulou" de etapa quando o quick-move é disparado dos botões.
    */
   recentlyMovedDealId?: string | null;
-  /**
-   * Props necessários para o `StageInlinePicker` (linha de etapa
-   * clicável) e o `DealProductLine` (linha de produto/valor). Ambos
-   * moram dentro de TODOS os cards (não só do ativo). `pipelineId`
-   * é a chave do cache otimista `pipeline-board`; `statusFilter`
-   * invalida só a view atual; `onMoved` dispara o highlight
-   * temporário do card recém-movido.
-   */
+  /** Mantidos na API pública (host / SalesHubView); CRM vive na Sheet. */
   pipelineId: string;
   statusFilter?: StatusFilter;
   onMoved?: (dealId: string) => void;
-  /** Abre o workspace / deal completo (Pipeline). */
   onOpenFullDeal?: (dealId: string) => void;
 };
 
-function dealValue(deal: BoardDeal): number {
-  if (typeof deal.value === "number") return deal.value;
-  const n = Number(deal.value);
-  return Number.isNaN(n) ? 0 : n;
-}
-
-/**
- * Temperatura do deal (FRIO/MORNO/QUENTE) foi REMOVIDA do card por
- * decisão de produto: a heurística inicial (rotting/priority/overdue)
- * exibia um critério antes de ele estar formalizado. A regra real
- * será definida por workspace (`WorkspaceUrgencyRule` no Prisma +
- * UI em /settings/automations). Quando voltar, o badge entra de
- * novo no header do card — até lá, sem indicador.
- */
-
 /**
  * Tempo relativo curto pt-BR — "agora", "há 5 min", "há 2 h", "há 3 d".
- * Usado pela dica "Você respondeu há…" quando a última mensagem do
- * deal é outbound (agente). Sem dependência externa pra evitar bundle.
  */
 function formatRelativeShort(iso: string): string {
   const date = new Date(iso);
@@ -366,521 +323,26 @@ function PreviewLastMessage({ deal }: { deal: BoardDeal }) {
   );
 }
 
-// ── useAnchoredPopover ─────────────────────────────────────────
-// Hook compartilhado pelos popovers do card (etapa, produto,
-// responsável). Encapsula o problema do "popover cortado pelo
-// scroller pai":
-//
-// O `DealQueue` usa `overflow-y-auto` pra rolar a lista de cards;
-// se o popover for posicionado com `absolute` dentro do card, ele
-// vira filho desse scroller e qualquer parte que extravase é
-// cortada (foi exatamente o que aconteceu com `MOVER PARA` na
-// imagem do operador — a lista de etapas ficava parcialmente
-// escondida pelo card de baixo).
-//
-// Solução: renderizar o popover via `createPortal` no `<body>`
-// com `position: fixed`, calculando `top/left/width` a partir do
-// `getBoundingClientRect()` do botão âncora. O hook recalcula em
-// scroll/resize pra manter o popover "grudado" no botão, e
-// fecha em click-outside ou Esc.
-//
-// Retorna o estado, refs e helpers necessários para um popover
-// ancorado, e quem usa só precisa renderizar o conteúdo dentro
-// do `createPortal(...)` quando `open` estiver true.
-function useAnchoredPopover() {
-  const [open, setOpen] = useState(false);
-  const anchorRef = useRef<HTMLButtonElement | null>(null);
-  const popoverRef = useRef<HTMLDivElement | null>(null);
-  const [pos, setPos] = useState<{
-    top: number;
-    left: number;
-    width: number;
-  } | null>(null);
-
-  useLayoutEffect(() => {
-    // Sem `setPos(null)` ao fechar: evita setState síncrono no effect (eslint)
-    // e o portal só renderiza com `open && pos`; ao reabrir, `update()` reposiciona.
-    if (!open) return;
-    const update = () => {
-      const r = anchorRef.current?.getBoundingClientRect();
-      if (!r) return;
-      setPos({ top: r.bottom + 6, left: r.left, width: r.width });
-    };
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (anchorRef.current?.contains(target)) return;
-      if (popoverRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  return { open, setOpen, anchorRef, popoverRef, pos };
-}
-
-// ── DealProductLine ─────────────────────────────────────────────────
-// Linha "Produto" do card — sempre presente. Dois estados:
-//   • Com produto vinculado → ícone Package + nome do produto à
-//     esquerda + valor formatado à direita (consolidação que
-//     SUBSTITUI a antiga caixa "VALOR DO NEGÓCIO" separada).
-//   • Sem produto → CTA inline "+ Adicionar produto" que abre um
-//     popover com busca no catálogo (`/api/products`).
-type CatalogProduct = {
-  id: string;
-  name: string;
-  sku: string | null;
-  type: "PRODUCT" | "SERVICE";
-  price: number;
-};
-
-function DealProductLine({
-  deal,
-  pipelineId,
-  compactCta = false,
-}: {
-  deal: BoardDeal & { stageId: string };
-  pipelineId: string;
-  /** CTA “Adicionar produto” em linha única compacta (card expandido). */
-  compactCta?: boolean;
-}) {
-  const queryClient = useQueryClient();
-  const { open, setOpen, anchorRef, popoverRef, pos } = useAnchoredPopover();
-  const [search, setSearch] = useState("");
-
-  const { data: catalog = [], isLoading: catalogLoading } = useQuery({
-    queryKey: ["products-catalog-sh", search],
-    queryFn: async () => {
-      const params = new URLSearchParams({ perPage: "12" });
-      if (search) params.set("search", search);
-      const res = await fetch(apiUrl(`/api/products?${params}`));
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.products ?? []) as CatalogProduct[];
-    },
-    enabled: open,
-  });
-
-  const addMutation = useMutation({
-    mutationFn: async (productId: string) => {
-      const res = await fetch(apiUrl(`/api/deals/${deal.id}/products`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.message ?? "Erro ao adicionar produto");
-      }
-    },
-    onSuccess: () => {
-      toast.success("Produto adicionado", { duration: 1800 });
-      queryClient.invalidateQueries({ queryKey: ["pipeline-board", pipelineId] });
-      queryClient.invalidateQueries({ queryKey: ["deal-products", deal.id] });
-      setOpen(false);
-      setSearch("");
-    },
-    onError: (e) => {
-      toast.error(e instanceof Error ? e.message : "Erro ao adicionar produto");
-    },
-  });
-
-  // Estado: produto vinculado — só texto 12px, sem ícone de caixa.
-  if (deal.productName) {
-    return (
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <span className="min-w-0 flex-1 truncate text-[13px] font-normal text-[var(--color-ink-soft)]">
-          {deal.productName}
-        </span>
-        <span className="shrink-0 text-[13px] font-normal tabular-nums text-[var(--color-ink-soft)]">
-          {formatCurrency(dealValue(deal))}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div onClick={(e) => e.stopPropagation()}>
-      <button
-        ref={anchorRef}
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={cn(
-          "group flex w-full items-center gap-2 rounded-xl border border-dashed border-[var(--glass-border)] bg-white px-3 py-2 text-left transition-all hover:border-[var(--glass-border)]",
-          compactCta &&
-            "inline-flex w-auto max-w-full justify-end border-0 bg-transparent px-0 py-0 shadow-none hover:border-0",
-          open &&
-            "border-solid border-[var(--brand-primary)] shadow-[0_0_0_3px_rgba(37,99,235,0.12)]",
-          compactCta &&
-            open &&
-            "rounded-md border border-dashed border-[var(--glass-border)] px-2 py-1",
-        )}
-      >
-        <Plus
-          className={cn(
-            "shrink-0 text-[var(--color-ink-muted)] transition-colors group-hover:text-[var(--color-ink-soft)]",
-            compactCta ? "size-3" : "size-3.5",
-          )}
-          strokeWidth={2.5}
-        />
-        <span
-          className={cn(
-            "transition-colors group-hover:text-[var(--color-ink-soft)]",
-            compactCta
-              ? "text-[12px] font-normal text-[var(--color-ink-muted)] group-hover:text-[var(--color-info)]"
-              : "text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]",
-          )}
-        >
-          Adicionar produto
-        </span>
-      </button>
-
-      {/* Popover renderizado via Portal — escapa do `overflow-y-auto`
-          do scroller pai (DealQueue) que cortava a lista quando ela
-          extravasava o card. Posição calculada pelo hook a partir
-          do `getBoundingClientRect()` do âncora e atualizada em
-          scroll/resize. `width` segue a do botão (mín. 280px pra
-          comportar nomes de produto sem truncar feio). */}
-      {open && pos && typeof window !== "undefined" &&
-        createPortal(
-          <div
-            ref={popoverRef}
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: "fixed",
-              top: pos.top,
-              left: pos.left,
-              width: Math.max(pos.width, 280),
-              zIndex: "var(--z-popover)",
-            }}
-            className="overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)]"
-          >
-            <div className="flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-2">
-              <Search
-                className="size-3.5 shrink-0 text-[var(--color-ink-muted)]"
-                strokeWidth={2.5}
-              />
-              <input
-                type="text"
-                autoFocus
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar produto..."
-                className="w-full bg-transparent text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--color-ink-muted)]"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                  className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink-soft)]"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-            </div>
-            <ul className="scrollbar-thin max-h-[240px] overflow-y-auto py-1">
-              {catalogLoading && catalog.length === 0 ? (
-                <li className="flex items-center justify-center gap-2 px-3 py-4 text-[12px] font-semibold text-[var(--color-ink-muted)]">
-                  <Loader2 className="size-3 animate-spin" />
-                  Carregando...
-                </li>
-              ) : catalog.length === 0 ? (
-                <li className="px-3 py-4 text-center text-[12px] font-semibold text-[var(--color-ink-muted)]">
-                  Nenhum produto encontrado
-                </li>
-              ) : (
-                catalog.map((product) => (
-                  <li key={product.id}>
-                    <button
-                      type="button"
-                      disabled={addMutation.isPending}
-                      onClick={() => addMutation.mutate(product.id)}
-                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-[var(--color-bg-subtle)] disabled:opacity-60"
-                    >
-                      <Package
-                        className="size-3.5 shrink-0 text-[var(--color-ink-muted)]"
-                        strokeWidth={2.5}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[13px] font-bold tracking-tight text-[var(--text-primary)]">
-                          {product.name}
-                        </div>
-                        {product.sku && (
-                          <div className="truncate font-mono text-[10px] text-[var(--color-ink-muted)]">
-                            {product.sku}
-                          </div>
-                        )}
-                      </div>
-                      <span className="shrink-0 text-[12px] font-bold tabular-nums text-[var(--color-ink-soft)]">
-                        {formatCurrency(product.price)}
-                      </span>
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          </div>,
-          document.body,
-        )}
-    </div>
-  );
-}
-
-// ── StageInlinePicker ───────────────────────────────────────────────
-// Trigger: ● cor da etapa + nome truncado + chevron (sem ícone de funil).
-function StageInlinePicker({
-  deal,
-  stages,
-  pipelineId,
-  statusFilter,
-  onMoved,
-  triggerClassName,
-  pill,
-}: {
-  deal: BoardDeal & { stageId: string };
-  stages: BoardStage[];
-  pipelineId: string;
-  statusFilter: StatusFilter;
-  onMoved?: (dealId: string) => void;
-  /** Estilo do botão (ex.: pill azul na tabela expandida). */
-  triggerClassName?: string;
-  /** Trigger compacto estilo pílula (ícone menor, tipografia reduzida). */
-  pill?: boolean;
-}) {
-  const { open, setOpen, anchorRef, popoverRef, pos } = useAnchoredPopover();
-  const moveMutation = useMoveMutation({
-    pipelineId,
-    statusFilter,
-    stages,
-    onMoved,
-  });
-
-  const currentStage = stages.find((s) => s.id === deal.stageId) ?? null;
-  const stageColor = currentStage?.color ?? "var(--text-muted)";
-
-  return (
-    <div onClick={(e) => e.stopPropagation()}>
-      <button
-        ref={anchorRef}
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen(!open);
-        }}
-        disabled={moveMutation.isPending}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        className={cn(
-          "group flex w-full items-center gap-1.5 rounded-lg border border-transparent px-1 py-1 text-left transition-all hover:border-border hover:bg-[var(--color-bg-subtle)]",
-          pill &&
-            "border border-[var(--color-primary-soft)] bg-[var(--color-primary-soft)] px-2 py-1 shadow-none hover:brightness-[0.98]",
-          open && "border-primary bg-white ring-[3px] ring-primary/15",
-          pill && open && "border-primary bg-white ring-[3px] ring-primary/15",
-          moveMutation.isPending && "cursor-wait opacity-60",
-          triggerClassName,
-        )}
-      >
-        <span
-          className={cn("shrink-0 rounded-full", pill ? "size-2" : "size-1.5")}
-          style={{ backgroundColor: stageColor }}
-          aria-hidden
-        />
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate font-semibold",
-            pill ? "text-[13px] text-[var(--color-primary)]" : "text-[12px]",
-          )}
-          style={pill ? undefined : { color: stageColor }}
-        >
-          {currentStage?.name ?? "—"}
-        </span>
-        <ChevronDown
-          className={cn(
-            "shrink-0 text-[var(--color-ink-muted)] transition-transform group-hover:text-[var(--color-ink-soft)]",
-            pill ? "size-3" : "size-3.5",
-            open && "rotate-180 text-[var(--brand-primary)]",
-          )}
-          strokeWidth={2.5}
-        />
-      </button>
-
-      {/* Popover renderizado via Portal — escapa do `overflow-y-auto`
-          do scroller pai (DealQueue) que cortava a lista de etapas
-          quando o card focado estava no fundo da fila. Posição fixa
-          calculada pelo hook a partir do `getBoundingClientRect()`
-          do âncora (botão da etapa atual). Largura mínima de 280px
-          pra não truncar nomes de etapa longos. */}
-      {open && pos && typeof window !== "undefined" &&
-        createPortal(
-          <div
-            ref={popoverRef}
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: "fixed",
-              top: pos.top,
-              left: pos.left,
-              width: Math.max(pos.width, 280),
-              zIndex: "var(--z-popover)",
-            }}
-            className="overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)]"
-          >
-              <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
-                Mover para
-              </span>
-              <span className="text-[10px] font-bold tabular-nums text-[var(--color-ink-muted)]">
-                {stages.length} etapas
-              </span>
-            </div>
-            <MoveToStageMenu
-              stages={stages}
-              currentStageId={deal.stageId}
-              currentPipelineId={pipelineId}
-              isPending={moveMutation.isPending}
-              onSelect={(stageId, toPipelineId) => {
-                moveMutation.mutate({
-                  dealId: deal.id,
-                  fromStageId: deal.stageId,
-                  toStageId: stageId,
-                  toPipelineId,
-                });
-                setOpen(false);
-              }}
-            />
-          </div>,
-          document.body,
-        )}
-    </div>
-  );
-}
-
 // ── DealCard ────────────────────────────────────────────────────
-// Card compacto (~44px) com expansão inline (cards compactos); clique
-// alterna seleção (chat) e o estado expandido.
+// Card compacto (~44px). Seleção = highlight; sem expansão inline.
 function DealCard({
   deal,
-  stages,
   isActive,
   onSelectDeal,
   onDeselect,
   wasRecentlyMoved,
-  pipelineId,
-  statusFilter,
-  onMoved,
-  onOpenFullDeal,
 }: {
   deal: BoardDeal & { stageId: string };
-  stages: BoardStage[];
   isActive: boolean;
   onSelectDeal: (dealId: string) => void;
   onDeselect?: () => void;
   wasRecentlyMoved: boolean;
-  pipelineId: string;
-  statusFilter: StatusFilter;
-  onMoved?: (dealId: string) => void;
-  /** Abre workspace / modal do deal completo. */
-  onOpenFullDeal?: (dealId: string) => void;
 }) {
-  /** Acordeão acompanha o deal em foco: ativo = expandido (sem effect de sync). */
-  const expanded = isActive;
-  const [contactOpen, setContactOpen] = useState(false);
-  const [layoutMode, setLayoutMode] = useState(false);
-  const { sections, isAdmin, hasAgentOverride, saveAdmin, saveAdminPending, saveAgent, resetAgent } =
-    useFieldLayout("deal_workspace");
-
-  // Popover de troca de responsável — usa o hook compartilhado
-  // `useAnchoredPopover` (mesmo padrão do StageInlinePicker e
-  // DealProductLine). Renderizado via Portal pra escapar do
-  // `overflow-y-auto` do scroller pai. Posição/scroll/resize/Esc/
-  // click-outside já cuidados dentro do hook.
-  const {
-    open: ownerPickerOpen,
-    setOpen: setOwnerPickerOpen,
-    anchorRef: ownerAnchorRef,
-    popoverRef: ownerPopoverRef,
-    pos: ownerPopoverPos,
-  } = useAnchoredPopover();
-
-  useEffect(() => {
-    if (!isActive) {
-      setOwnerPickerOpen(false);
-      setContactOpen(false);
-    }
-  }, [isActive, setOwnerPickerOpen]);
-
   const cardRef = useRef<HTMLDivElement | null>(null);
-
-  const ownerQueryClient = useQueryClient();
-  // `users` só é buscado quando o popover abre — `enabled: ownerPickerOpen`.
-  // Cache de 60s evita uma chamada por card aberto na fila. `staleTime`
-  // alinhado com `sales-hub-view.tsx` e `kanban-board.tsx`.
-  const { data: ownerCandidates = [], isLoading: ownerCandidatesLoading } = useQuery<OwnerCandidate[]>({
-    queryKey: ["users", "deal-owner-picker"],
-    queryFn: async () => {
-      const res = await fetch(apiUrl("/api/users"));
-      const data = await res.json().catch(() => []);
-      if (!res.ok) {
-        throw new Error(typeof data?.message === "string" ? data.message : "Erro ao listar equipe");
-      }
-      return Array.isArray(data) ? data : [];
-    },
-    enabled: ownerPickerOpen,
-    staleTime: 60_000,
-  });
-
-  const ownerMutation = useMutation({
-    mutationFn: async (ownerId: string | null) => {
-      const res = await fetch(apiUrl(`/api/deals/${deal.id}`), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerId }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null) as { message?: string } | null;
-        throw new Error(data?.message ?? "Erro ao alterar responsável");
-      }
-    },
-    onSuccess: () => {
-      // Invalida tudo que renderiza owner — Sales Hub, Kanban, deals API.
-      ownerQueryClient.invalidateQueries({ queryKey: ["sales-hub"] });
-      ownerQueryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
-      ownerQueryClient.invalidateQueries({ queryKey: ["deal", deal.id] });
-      setOwnerPickerOpen(false);
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Erro ao alterar responsável");
-    },
-  });
 
   const toggleSelection = () => {
     if (isActive) onDeselect?.();
     else onSelectDeal(deal.id);
-  };
-
-  const handleCardClick = () => {
-    if (ownerPickerOpen) {
-      setOwnerPickerOpen(false);
-      return;
-    }
-    toggleSelection();
   };
 
   const contactTitle = deal.contact?.name ?? `#${deal.number ?? "—"}`;
@@ -888,12 +350,6 @@ function DealCard({
   const contactAvatarColor =
     (deal.contact as { avatarColor?: string } | null | undefined)?.avatarColor ?? "var(--brand-primary)";
   const timeLabel = formatRelativeShort(deal.lastMessage?.createdAt ?? deal.createdAt);
-  const stageRawIdx = stages.findIndex((s) => s.id === deal.stageId);
-  const stageProgressPct =
-    stages.length > 0 && stageRawIdx >= 0
-      ? Math.round(((stageRawIdx + 1) / stages.length) * 100)
-      : 0;
-  const stageBarColor = stageRawIdx >= 0 ? stages[stageRawIdx].color : "var(--color-primary)";
   const tagList = deal.tags ?? [];
 
   useEffect(() => {
@@ -913,27 +369,22 @@ function DealCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={SUBTLE_SPRING}
-      onClick={handleCardClick}
+      onClick={toggleSelection}
       onKeyDown={(ev) => {
         if (ev.key === "Enter" || ev.key === " ") {
           ev.preventDefault();
-          handleCardClick();
+          toggleSelection();
         }
       }}
       role="button"
       tabIndex={0}
       aria-pressed={isActive}
-      aria-expanded={expanded}
       aria-label={
-        expanded
-          ? `Recolher detalhes de ${contactTitle}`
-          : isActive
-            ? `Recolher card de ${contactTitle}`
-            : `Abrir card de ${contactTitle}`
+        isActive
+          ? `Desmarcar ${contactTitle}`
+          : `Selecionar ${contactTitle}`
       }
       className={cn(
-        // NÃO usar `overflow-hidden`: o popover de responsável precisa
-        // escapar do card. Ativo = rail azul + fundo blue-50 (WhatsApp refinado).
         "group relative cursor-pointer select-none bg-white text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40 dark:bg-[var(--glass-bg-panel)]",
         isActive
           ? "border-l-2 border-l-[var(--brand-primary)] bg-[var(--brand-primary)]/10"
@@ -941,7 +392,6 @@ function DealCard({
         wasRecentlyMoved && "ring-2 ring-inset ring-cyan-400/45",
       )}
     >
-      {/* ── Card colapsado — sempre visível ── */}
       <div className="flex gap-3 px-3 py-2.5">
         <div className="relative mt-0.5 shrink-0 self-start">
           {deal.contact ? (
@@ -973,13 +423,11 @@ function DealCard({
             <span className="shrink-0 text-[10px] tabular-nums text-[var(--color-ink-muted)]">{timeLabel}</span>
           </div>
 
-          {!expanded ? (
-            <p className="mt-0.5 truncate text-[12px] text-[var(--color-ink-muted)]">
-              <PreviewLastMessage deal={deal} />
-            </p>
-          ) : null}
+          <p className="mt-0.5 truncate text-[12px] text-[var(--color-ink-muted)]">
+            <PreviewLastMessage deal={deal} />
+          </p>
 
-          {!expanded && tagList.length > 0 ? (
+          {tagList.length > 0 ? (
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
               {tagList.slice(0, 3).map((t) => (
                 <TagChip
@@ -1008,356 +456,6 @@ function DealCard({
           </div>
         ) : null}
       </div>
-
-      {/* ── Expansão inline — acordeão com motion ── */}
-      <AnimatePresence initial={false}>
-        {expanded ? (
-          <motion.div
-            key="expanded"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-            className="overflow-hidden"
-          >
-            <div
-              className="border-t border-[var(--glass-border-subtle)] bg-white dark:border-[var(--glass-border)] dark:bg-[var(--glass-bg-panel)]"
-              onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
-            >
-              <div className="border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-3 py-2 dark:border-[var(--glass-border)] dark:bg-[var(--glass-bg-overlay)]">
-                <div className="flex items-center gap-2">
-                  <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-overlay)]">
-                    <div
-                      className="absolute inset-y-0 left-0 rounded-full transition-all"
-                      style={{ width: `${stageProgressPct}%`, backgroundColor: stageBarColor }}
-                    />
-                  </div>
-                  <StageInlinePicker
-                    deal={deal}
-                    stages={stages}
-                    pipelineId={pipelineId}
-                    statusFilter={statusFilter}
-                    onMoved={onMoved}
-                    triggerClassName="whitespace-nowrap shrink-0 border-0 bg-transparent px-0 py-0 text-[12px] font-semibold shadow-none hover:bg-transparent"
-                  />
-                </div>
-              </div>
-
-              <div className="relative">
-                {onOpenFullDeal ? (
-                  <div className="absolute right-2 top-2 z-10">
-                    <TooltipHost label="Abrir deal completo" side="left">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenFullDeal(deal.id);
-                        }}
-                        className="inline-flex size-6 items-center justify-center rounded text-[var(--text-faint)] transition-colors hover:text-[var(--brand-primary)]"
-                        aria-label="Abrir deal completo"
-                      >
-                        <ExternalLink className="size-3" strokeWidth={2.25} />
-                      </button>
-                    </TooltipHost>
-                  </div>
-                ) : null}
-
-                {/* Botão Layout */}
-                <div className="flex items-center justify-end px-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setLayoutMode((v) => !v); }}
-                    className={cn(
-                      "flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors",
-                      hasAgentOverride ? "text-primary/70 hover:text-primary" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                      "hover:bg-[var(--glass-bg-subtle)]",
-                    )}
-                  >
-                    <Settings2 className="size-3" />
-                    Layout
-                  </button>
-                </div>
-
-                {layoutMode ? (
-                  <div className="flex flex-col gap-1 px-3 py-2">
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
-                        {isAdmin ? "Padrão da org" : "Meu layout"}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        {hasAgentOverride ? (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); resetAgent(); setLayoutMode(false); }}
-                            className="rounded-md px-2 py-0.5 text-[10px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)]"
-                          >
-                            Resetar
-                          </button>
-                        ) : null}
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); saveAdmin(sections); setLayoutMode(false); }}
-                            disabled={saveAdminPending}
-                            className="rounded-md border border-primary/30 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
-                          >
-                            Salvar padrão
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); saveAgent(sections); setLayoutMode(false); }}
-                          className="rounded-md bg-primary px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-primary/90"
-                        >
-                          Salvar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); setLayoutMode(false); }}
-                          className="rounded-md px-2 py-0.5 text-[10px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)]"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                    {sections.filter((s) => !s.fixed).map((section) => (
-                      <div
-                        key={section.id}
-                        className={cn(
-                          "flex items-center gap-2 rounded-lg border border-[var(--glass-border-subtle)] bg-white px-3 py-2",
-                          section.hidden && "opacity-40",
-                        )}
-                      >
-                        <span className="flex-1 text-[12px] font-medium text-[var(--text-secondary)]">{section.label}</span>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); }}
-                          className="flex size-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)]"
-                        >
-                          {section.hidden
-                            ? <EyeOff className="size-3" />
-                            : <Eye className="size-3" />
-                          }
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-
-                {deal.productName ? (
-                  <SidebarField
-                    label="Produto"
-                    icon="ShoppingBag"
-                    size="sm"
-                    className={onOpenFullDeal ? "pr-8" : undefined}
-                    value={`${deal.productName}${dealValue(deal) > 0 ? ` · ${formatCurrency(dealValue(deal))}` : ""}`}
-                  />
-                ) : (
-                  <SidebarField
-                    label="Produto"
-                    icon="ShoppingBag"
-                    size="sm"
-                    className={onOpenFullDeal ? "pr-8" : undefined}
-                  >
-                    <div className="flex min-w-0 flex-1 justify-end" onClick={(e) => e.stopPropagation()}>
-                      <DealProductLine deal={deal} pipelineId={pipelineId} compactCta />
-                    </div>
-                  </SidebarField>
-                )}
-
-                <SidebarField label="Responsável" icon="User" size="sm" className={onOpenFullDeal ? "pr-8" : undefined}>
-                  <button
-                    ref={ownerAnchorRef}
-                    type="button"
-                    aria-haspopup="menu"
-                    aria-expanded={ownerPickerOpen}
-                    aria-label={
-                      deal.owner ? `Trocar responsável (atual: ${deal.owner.name})` : "Atribuir responsável"
-                    }
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOwnerPickerOpen((v) => !v);
-                    }}
-                    disabled={ownerMutation.isPending}
-                    className={cn(
-                      "flex items-center gap-1.5 text-left transition-opacity",
-                      ownerMutation.isPending && "opacity-60",
-                    )}
-                  >
-                    {ownerMutation.isPending ? (
-                      <Loader2 className="size-3.5 shrink-0 animate-spin text-[var(--text-muted)]" />
-                    ) : deal.owner ? (
-                      <>
-                        <AvatarGlass
-                          name={deal.owner.name}
-                          seed={deal.owner.id}
-                          imageUrl={deal.owner.avatarUrl ?? null}
-                          size="sm"
-                          className="!h-5 !w-5 !text-[9px]"
-                        />
-                        <span className="text-[11px] font-medium text-[var(--text-secondary)]">{deal.owner.name}</span>
-                      </>
-                    ) : (
-                      <span className="text-[11px] italic text-[var(--text-faint)]">Sem responsável</span>
-                    )}
-                    <ChevronDown className="size-3 shrink-0 text-[var(--text-faint)]" strokeWidth={2.5} />
-                  </button>
-                </SidebarField>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setContactOpen((v) => !v);
-                  }}
-                  className={cn(dt.card.rowSm, "w-full")}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="size-3 text-[var(--text-muted)]" aria-hidden />
-                    <span className="text-[11px] text-[var(--text-muted)]">Contato</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {!contactOpen && deal.contact?.phone ? (
-                      <span className="text-[10px] text-[var(--text-faint)] tabular-nums">
-                        {deal.contact.phone.length > 9
-                          ? `${deal.contact.phone.slice(0, 9)}···`
-                          : deal.contact.phone}
-                      </span>
-                    ) : null}
-                    <ChevronDown
-                      className={cn("size-3 text-[var(--text-faint)] transition-transform", contactOpen && "rotate-180")}
-                      aria-hidden
-                    />
-                  </div>
-                </button>
-
-                {contactOpen ? (
-                  <>
-                    {deal.contact?.phone ? (
-                      <SidebarField
-                        label="Telefone"
-                        icon="Phone"
-                        size="sm"
-                        value={deal.contact.phone}
-                        href={`tel:${String(deal.contact.phone).replace(/\s/g, "")}`}
-                      />
-                    ) : null}
-                    {deal.contact?.email ? (
-                      <TooltipHost label={deal.contact.email} side="top">
-                        <SidebarField
-                          label="E-mail"
-                          icon="Mail"
-                          size="sm"
-                          value={deal.contact.email}
-                          href={`mailto:${deal.contact.email}`}
-                        />
-                      </TooltipHost>
-                    ) : null}
-                  </>
-                ) : null}
-              </div>
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-
-      {ownerPickerOpen && ownerPopoverPos && typeof window !== "undefined" &&
-        createPortal(
-          <div
-            ref={ownerPopoverRef}
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: "fixed",
-              top: ownerPopoverPos.top,
-              left: ownerPopoverPos.left,
-              width: Math.max(ownerPopoverPos.width, 280),
-              zIndex: "var(--z-popover)",
-            }}
-            className="max-h-72 overflow-hidden rounded-2xl border border-border bg-white shadow-[var(--shadow-lg)]"
-          >
-            <div className="flex items-center justify-between border-b border-border px-3 py-2">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
-                Responsável
-              </span>
-              {deal.owner && (
-                <button
-                  type="button"
-                  onClick={() => ownerMutation.mutate(null)}
-                  disabled={ownerMutation.isPending}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-foreground"
-                >
-                  <UserMinus className="size-3" strokeWidth={2.5} />
-                  Remover
-                </button>
-              )}
-            </div>
-            <div className="max-h-56 overflow-y-auto py-1">
-              {ownerCandidatesLoading ? (
-                <div className="flex items-center gap-2 px-3 py-3 text-[13px] text-[var(--color-ink-muted)]">
-                  <Loader2 className="size-3.5 animate-spin" />
-                  Carregando equipe…
-                </div>
-              ) : ownerCandidates.length === 0 ? (
-                <div className="px-3 py-3 text-[13px] text-[var(--color-ink-muted)]">
-                  Nenhum agente disponível.
-                </div>
-              ) : (
-                ownerCandidates.map((u) => {
-                  const isCurrent = u.id === deal.owner?.id;
-                  const status = u.agentStatus?.status ?? "OFFLINE";
-                  const dotBg =
-                    status === "ONLINE"
-                      ? "var(--color-success)"
-                      : status === "AWAY"
-                        ? "var(--color-warning)"
-                        : "var(--color-ink-muted)";
-                  return (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => {
-                        if (!isCurrent) ownerMutation.mutate(u.id);
-                        else setOwnerPickerOpen(false);
-                      }}
-                      disabled={ownerMutation.isPending}
-                      className={cn(
-                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] transition-colors",
-                        isCurrent ? "bg-primary/10" : "hover:bg-[var(--color-bg-subtle)]",
-                      )}
-                    >
-                      <div className="relative">
-                        <AvatarGlass
-                          name={u.name}
-                          seed={u.id}
-                          imageUrl={u.avatarUrl ?? null}
-                          size="sm"
-                          className="!h-6 !w-6 !text-[10px]"
-                        />
-                        <span
-                          className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-[var(--avatar-ring)]"
-                          style={{ backgroundColor: dotBg }}
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-semibold tracking-tight text-[var(--color-ink-soft)]">
-                          {u.name}
-                        </p>
-                        {u.email && (
-                          <p className="truncate text-[12px] text-[var(--color-ink-muted)]">{u.email}</p>
-                        )}
-                      </div>
-                      {isCurrent && (
-                        <Check className="size-4 shrink-0 text-primary" strokeWidth={2.5} />
-                      )}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>,
-          document.body,
-        )}
     </motion.div>
   );
 }
@@ -1366,15 +464,10 @@ function DealCard({
 
 export function DealQueue({
   deals,
-  stages,
   activeDealId,
   onSelectDeal,
   onDeselect,
   recentlyMovedDealId,
-  pipelineId,
-  statusFilter = "OPEN",
-  onMoved,
-  onOpenFullDeal,
 }: DealQueueProps) {
   // Mantem o card ativo sempre visivel na fila — quando a selecao
   // muda, rola suave pro card novo ficar no viewport.
@@ -1410,15 +503,10 @@ export function DealQueue({
                 >
                   <DealCard
                     deal={deal}
-                    stages={stages}
                     isActive={isActive}
                     onSelectDeal={onSelectDeal}
                     onDeselect={onDeselect}
                     wasRecentlyMoved={wasRecentlyMoved}
-                    pipelineId={pipelineId}
-                    statusFilter={statusFilter}
-                    onMoved={onMoved}
-                    onOpenFullDeal={onOpenFullDeal}
                   />
                 </div>
               );

@@ -540,6 +540,11 @@ export function SalesHubView({
       if (!rootRef.current) return;
 
       if (e.key === "Escape") {
+        if (detailsOpen) {
+          e.preventDefault();
+          setDetailsOpen(false);
+          return;
+        }
         if (activeDealId) {
           e.preventDefault();
           handleDeselectDeal();
@@ -583,6 +588,7 @@ export function SalesHubView({
     return () => window.removeEventListener("keydown", onKey);
   }, [
     activeDealId,
+    detailsOpen,
     handleDeselectDeal,
     handleSelectDeal,
     handleSelectStage,
@@ -610,21 +616,19 @@ export function SalesHubView({
         className={cn(
           "min-h-0 flex-1 overflow-hidden",
           activeDeal
-            ? "grid grid-cols-1 md:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)] md:grid-rows-1"
+            ? "grid grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] md:grid-rows-1"
             : "flex",
         )}
       >
-        {/* Coluna 1 — Fila.
-            • SEM deal ativo: ocupa 100% da largura (a fila vira a tela
-              inteira — não fica espremida 300px com o resto preto).
-            • COM deal ativo: vira coluna estreita (300/340px) à esquerda
-              do chat, igual ao DealWorkspace.
-            Mobile: idem em ambos os modos. */}
+        {/* Coluna 1 — Fila (só DealQueue: busca + itens).
+            • SEM deal ativo: ocupa 100% da largura.
+            • COM deal ativo: coluna fixa ~280px; CRM fica na Sheet à direita.
+            Sem expansão inline — seleção = highlight. */}
         <div
           className={cn(
             "flex min-h-0 flex-col overflow-hidden bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]",
             activeDeal
-              ? "hidden min-w-0 shrink-0 border-r border-border md:flex"
+              ? "hidden w-[280px] min-w-[280px] max-w-[280px] shrink-0 border-r border-border md:flex"
               : "w-full",
           )}
         >
@@ -842,11 +846,7 @@ export function SalesHubView({
           )}
         </div>
 
-        {/* Coluna 3 (REMOVIDA)
-            O antigo DealCrmPanel foi migrado pra dentro do card ativo
-            na Fila (esquerda) via <DealActions>. Contato = pessoa com
-            telefone + e-mail + tags. Ganho/Perdido e mudar etapa moram
-            no próprio card agora. */}
+        {/* CRM: Sheet à direita (DealDetailPanel), não na fila. */}
       </div>
 
       <Dialog open={convListOpen} onOpenChange={setConvListOpen}>
@@ -887,7 +887,7 @@ export function SalesHubView({
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent
           side="right"
-          className="flex w-full max-w-[420px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[420px]"
+          className="flex w-full max-w-[360px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[360px]"
         >
           <SheetHeader className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-[var(--glass-border)] px-4 py-3 text-left">
             <SheetTitle className="text-[14px] font-semibold">

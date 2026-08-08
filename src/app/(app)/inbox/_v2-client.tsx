@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -22,6 +29,8 @@ import {
   IconMessageCircle,
   IconRotateClockwise,
   IconSquareCheck,
+  IconUser,
+  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -120,17 +129,17 @@ function DealTagsTray({
         <TagChip
           name={t.name}
           color={t.color}
-          className="h-5 min-w-0 max-w-[8.5rem] shrink"
+          className="h-5 min-w-0 max-w-full shrink"
         />
       </TooltipGlass>
     );
   }
 
-  // Uma linha só: chips truncam se faltar espaço e o "+" fica ancorado no
-  // canto direito (ml-auto). O excedente aparece em "Selecionadas", dentro
-  // do popover — não há mais chip "+N" consumindo a linha.
+  // Quebra linha: no aside estreito duas chips na mesma linha truncavam em
+  // duas letras. O "+" segue ancorado à direita (ml-auto) na última linha e
+  // o excedente aparece em "Selecionadas", dentro do popover.
   return (
-    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-1">
       {visible.map(chip)}
       <span className="ml-auto shrink-0 pl-1">
         <DealTagsPopover dealId={dealId} currentTags={currentTags} />
@@ -156,15 +165,15 @@ function ContactTagsTray({
         <TagChip
           name={t.name}
           color={t.color}
-          className="h-5 min-w-0 max-w-[8.5rem] shrink"
+          className="h-5 min-w-0 max-w-full shrink"
         />
       </TooltipGlass>
     );
   }
 
-  // Mesmo layout do DealTagsTray: "+" no canto direito, sem chip "+N".
+  // Mesmo layout do DealTagsTray: quebra linha, "+" à direita, sem "+N".
   return (
-    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-1">
       {visible.map(chip)}
       <span className="ml-auto shrink-0 pl-1">
         <ContactTagsPopover contactId={contactId} currentTags={currentTags} triggerVariant="icon" />
@@ -246,6 +255,33 @@ function readStoredInboxTab(): InboxTab {
 function writeStoredInboxTab(tab: InboxTab) {
   try {
     window.localStorage.setItem(INBOX_TAB_STORAGE_KEY, tab);
+  } catch {
+    /* localStorage indisponível */
+  }
+}
+
+// Recorte "Minhas × Todas" — vale para qualquer aba. Existe porque filas
+// como Entrada juntam conversas sem dono (a distribuir) e conversas já
+// atribuídas mas ainda sem atendimento humano: sem o recorte, o operador
+// perde as dele no meio da fila inteira.
+const ONLY_MINE_STORAGE_KEY = "inbox-v2:only-mine";
+
+/** `null` = nunca escolheu; o default por papel decide. */
+function readStoredOnlyMine(): boolean | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(ONLY_MINE_STORAGE_KEY);
+    if (raw === "1") return true;
+    if (raw === "0") return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredOnlyMine(value: boolean) {
+  try {
+    window.localStorage.setItem(ONLY_MINE_STORAGE_KEY, value ? "1" : "0");
   } catch {
     /* localStorage indisponível */
   }
@@ -336,6 +372,25 @@ export default function InboxV2ClientPage({
       setTab(visibleTabs[0]?.id ?? DEFAULT_INBOX_TAB);
     }
   }, [tabHydrated, visibleTabs, tab]);
+
+  // Recorte "Minhas × Todas". Sem escolha salva, o default vem do papel:
+  // operador abre nas dele; quem coordena a fila abre vendo tudo. Espera o
+  // papel chegar antes de liberar o fetch (senão o operador buscaria a fila
+  // inteira e refetcharia logo em seguida).
+  const [onlyMine, setOnlyMine] = useState(false);
+  const [onlyMineHydrated, setOnlyMineHydrated] = useState(false);
+  useEffect(() => {
+    if (onlyMineHydrated || sessionStatus === "loading") return;
+    const stored = readStoredOnlyMine();
+    setOnlyMine(stored ?? (sessionRole === "MEMBER"));
+    setOnlyMineHydrated(true);
+  }, [onlyMineHydrated, sessionStatus, sessionRole]);
+  const toggleOnlyMine = useCallback(() => {
+    setOnlyMine((prev) => {
+      writeStoredOnlyMine(!prev);
+      return !prev;
+    });
+  }, []);
   // Filtros do painel persistem em localStorage — sobrevive navegação
   // para outras páginas do CRM e refresh. Lê no effect (SSR-safe).
   const [filters, setFilters] = useState<InboxFilters>(DEFAULT_FILTERS);
@@ -487,10 +542,12 @@ export default function InboxV2ClientPage({
     tab,
     filters: serverFilters,
     search: debouncedSearch,
+    mine: onlyMine,
     // Só busca depois da sessão + prefs (tab/filtros do localStorage).
     // Sem isso: (1) query disabled → isLoading=false → empty flash;
     // (2) fetch com tab default "esperando" antes de hidratar a aba salva.
-    enabled: isAuthenticated && tabHydrated && filtersHydrated,
+    enabled:
+      isAuthenticated && tabHydrated && filtersHydrated && onlyMineHydrated,
   });
   const rawRows = (listData?.items ?? []).filter(Boolean);
 
@@ -501,6 +558,7 @@ export default function InboxV2ClientPage({
     sessionStatus === "loading" ||
     !tabHydrated ||
     !filtersHydrated ||
+    !onlyMineHydrated ||
     (isAuthenticated && !listData && !isListError);
 
   // Ordena (default: última atividade primeiro) e filtra a janela de 24h.
@@ -546,9 +604,10 @@ export default function InboxV2ClientPage({
   }, [rawRows, windowState, lastMessageDirection, sortBy, sortOrder]);
 
   const { data: tabCounts } = useTabCounts(
-    isAuthenticated && filtersHydrated,
+    isAuthenticated && filtersHydrated && onlyMineHydrated,
     filters,
     debouncedSearch,
+    onlyMine,
   );
 
   // ── Sticky activeRow ────────────────────────────────────────────
@@ -787,7 +846,12 @@ export default function InboxV2ClientPage({
             allInFilter: true,
             tab,
             search: debouncedSearch,
-            filters: serverFilters as Record<string, unknown>,
+            // `mine` viaja junto: "todas do filtro" precisa casar com o
+            // recorte visível, senão encerraria conversas fora da lista.
+            filters: { ...serverFilters, mine: onlyMine } as Record<
+              string,
+              unknown
+            >,
           }
         : { ids, action },
       {
@@ -1036,6 +1100,34 @@ export default function InboxV2ClientPage({
     </TooltipGlass>
   );
 
+  // Recorte "Minhas × Todas" da fila atual. Não é um filtro do painel
+  // (não entra no badge do botão "Filtrar"): é o modo de visualização.
+  const onlyMineToggleNode = (
+    <TooltipGlass
+      label={
+        onlyMine
+          ? "Mostrando só as conversas atribuídas a você — ver a fila inteira"
+          : "Mostrando a fila inteira — ver só as atribuídas a você"
+      }
+      side="bottom"
+    >
+      <button
+        type="button"
+        aria-label={onlyMine ? "Ver a fila inteira" : "Ver só as minhas conversas"}
+        onClick={toggleOnlyMine}
+        aria-pressed={onlyMine}
+        className={cn(
+          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
+          onlyMine
+            ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]",
+        )}
+      >
+        {onlyMine ? <IconUser size={17} stroke={2} /> : <IconUsers size={17} stroke={2} />}
+      </button>
+    </TooltipGlass>
+  );
+
   // Botão que entra/sai do modo de seleção — vive ao lado do filtro, na
   // mesma linha do dropdown de status.
   const selectionToggleNode = (
@@ -1117,6 +1209,7 @@ export default function InboxV2ClientPage({
       // sobe junto da busca, como botão irmão (fora do input).
       filterSlot={
         <>
+          {onlyMineToggleNode}
           {soundToggleNode}
           {selectionToggleNode}
           {!searchInHeader && (

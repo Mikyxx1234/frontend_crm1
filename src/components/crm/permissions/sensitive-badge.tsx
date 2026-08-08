@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { IconAlertTriangle, IconShield } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 
 /**
- * SensitiveBadge — selo padronizado para ações sensíveis/destrutivas
- * (ex.: excluir funil, excluir contato). Substitui os spans "sensível"
- * duplicados nos editores de papel e grupo.
+ * SensitiveBadge — selo padronizado para ações sensíveis/destrutivas.
+ * Tom `warn` (âmbar + escudo) segue o DS de permissions; `danger` mantém
+ * o vermelho legado.
  */
 export function SensitiveBadge({
   children = "Sensível",
@@ -21,17 +21,18 @@ export function SensitiveBadge({
   withIcon?: boolean;
   className?: string;
 }) {
+  const Icon = tone === "warn" ? IconShield : IconAlertTriangle;
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-px font-display text-[9px] font-bold uppercase tracking-wide",
+        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wide",
         tone === "danger"
           ? "bg-[var(--color-danger-bg)] text-[var(--color-danger)]"
-          : "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
+          : "bg-amber-100 text-amber-700 v2-dark:bg-amber-500/20 v2-dark:text-amber-300",
         className,
       )}
     >
-      {withIcon && <IconAlertTriangle size={9} stroke={2.5} />}
+      {withIcon && <Icon size={11} stroke={2.5} />}
       {children}
     </span>
   );

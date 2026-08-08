@@ -22,12 +22,17 @@ const PIN_KEY = "crm:settings:drawer-pinned:v1";
 /** Folga pro ponteiro cruzar o spacer entre a NavRail e a coluna da gaveta. */
 const CLOSE_DELAY_MS = 320;
 
+/**
+ * Pin do menu de Configurações. Default = fixado: sem preferência salva
+ * (primeiro acesso) a gaveta sobe aberta e presa. Só respeita o valor
+ * salvo quando o usuário já mexeu no pin (chave presente = "0" ou "1").
+ */
 function readPinned(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined") return true;
   try {
-    return window.localStorage.getItem(PIN_KEY) === "1";
+    return window.localStorage.getItem(PIN_KEY) !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
 

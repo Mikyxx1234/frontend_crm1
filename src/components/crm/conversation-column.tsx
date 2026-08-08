@@ -524,12 +524,15 @@ export function ConversationColumn({
       {/* Lista */}
       {/* p-1.5: o card ativo usa ring-2 (fora da caixa); overflow-y-auto
           clipa o anel no topo/lados — sem padding o 1º card perde a borda. */}
-      <div className="flex flex-1 min-h-0 flex-col gap-1.5 overflow-y-auto overscroll-contain p-1.5 [-webkit-overflow-scrolling:touch]">
+      {/* Scroller NÃO é flex-col: filhos diretos em flex-col + overflow-y
+          encolhem (flex-shrink:1) e viram barras cinza. Espelho do DealQueue. */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5 [-webkit-overflow-scrolling:touch]">
+        <div className="flex flex-col gap-1.5">
         {isLoading ? (
           Array.from({ length: 6 }, (_, i) => (
             <div
               key={i}
-              className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-3"
+              className="flex shrink-0 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-3"
             >
               <Skeleton className="size-10 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1 space-y-2">
@@ -575,13 +578,14 @@ export function ConversationColumn({
             )}
 
             {isLoadingMore && (
-              <div className="flex items-center justify-center py-3 text-[11.5px] text-[var(--text-muted)]">
+              <div className="flex shrink-0 items-center justify-center py-3 text-[11.5px] text-[var(--text-muted)]">
                 <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-transparent" />
                 <span className="ml-2">Carregando mais...</span>
               </div>
             )}
           </>
         )}
+        </div>
       </div>
     </section>
   )

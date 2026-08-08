@@ -229,7 +229,9 @@ export function ConversationCard({
         // Borda trocada para `--glass-border-subtle` (0.30 alpha vs 0.55):
         // alinha com a referência v0 que tem cards "flutuando" sem
         // contorno explícito.
-        "relative cursor-pointer overflow-hidden rounded-[var(--radius-lg)] border border-transparent shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-200",
+        // shrink-0: a lista é flex-col + overflow-y-auto — sem isso, N cards
+        // comprimem (flex-shrink:1) em barras cinza uniformes.
+        "relative shrink-0 cursor-pointer overflow-hidden rounded-[var(--radius-lg)] border border-transparent shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-200",
         // Nao-selecionado: fundo cinza clarinho (mais opaco / menos "branco puro")
         // pra contrastar com o card selecionado. Hover intensifica levemente.
         "bg-[color-mix(in_srgb,var(--glass-bg-overlay)_60%,rgba(148,163,184,0.10))]",

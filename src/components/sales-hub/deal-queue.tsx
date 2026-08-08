@@ -247,6 +247,11 @@ type DealQueueProps = {
   recentlyMovedDealId?: string | null;
   /** Quando muda, a fila volta ao topo para a nova ordem ficar visível. */
   sortMode?: DealQueueSortMode;
+  /**
+   * Etapa filtrada (`null` = Todos). Quando muda, a fila volta ao topo
+   * e o auto-select do primeiro lead não dispara scrollIntoView.
+   */
+  selectedStageId?: string | null;
   /** Mantidos na API pública (host / SalesHubView); CRM vive na Sheet. */
   pipelineId: string;
   statusFilter?: StatusFilter;
@@ -368,6 +373,7 @@ export function DealQueue({
   onDeselect,
   recentlyMovedDealId,
   sortMode,
+  selectedStageId,
   pipelineId,
   statusFilter = "OPEN",
 }: DealQueueProps) {
@@ -375,6 +381,10 @@ export function DealQueue({
   // muda, rola suave pro card novo ficar no viewport.
   const scrollerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef(new Map<string, HTMLElement>());
+  // Troca de etapa auto-seleciona o 1º lead (ordem do board, não a
+  // fila ordenada). scrollIntoView nesse caso pula pro card — às vezes
+  // o último após sort. Skip uma vez e mostra o topo.
+  const skipScrollIntoViewRef = useRef(false);
 
   // Troca de ordenação: lista do topo (ordem nova), sem pular pro deal ativo.
   useEffect(() => {
@@ -382,8 +392,24 @@ export function DealQueue({
     if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
   }, [sortMode]);
 
+  // Troca de etapa / Todos: topo da fila; não scrollIntoView no auto-select.
+  useEffect(() => {
+    if (selectedStageId === undefined) return;
+    skipScrollIntoViewRef.current = true;
+    if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+    // Se activeDealId não mudou, o effect abaixo não consome o flag.
+    queueMicrotask(() => {
+      skipScrollIntoViewRef.current = false;
+    });
+  }, [selectedStageId]);
+
   useEffect(() => {
     if (!activeDealId) return;
+    if (skipScrollIntoViewRef.current) {
+      skipScrollIntoViewRef.current = false;
+      if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+      return;
+    }
     const el = itemRefs.current.get(activeDealId);
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "nearest" });

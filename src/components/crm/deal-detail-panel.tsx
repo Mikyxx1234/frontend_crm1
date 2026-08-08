@@ -160,6 +160,12 @@ interface DealDetailPanelProps {
   isOpen: boolean
   onClose: () => void
   deal?: DealDetail | null
+  /**
+   * SalesHub / gaveta: renderiza só a coluna CRM (Perfil/Produto), sem
+   * chat e sem overlay fullscreen. Default `false` preserva o painel
+   * duas-colunas do kanban.
+   */
+  crmOnly?: boolean
   // Slots opcionais — quando ausentes, mantém o visual default do v0.
   stageRibbonSlot?: React.ReactNode
   /** Presença "quem está vendo" — pilha de avatares no header (estilo Kommo). */
@@ -313,6 +319,7 @@ export function DealDetailPanel({
   isOpen,
   onClose,
   deal,
+  crmOnly = false,
   viewersSlot,
   callButtonSlot,
   contactTagsSlot,
@@ -406,7 +413,9 @@ export function DealDetailPanel({
   // mensagens. Desktop/tablet mantém o grid 2-colunas com resize.
   const isMobile = useIsMobile()
   // Mobile: esconde bottom nav global enquanto o chat do deal estiver aberto.
-  useMobileChatChrome(Boolean(isOpen && (messagesSlot || composerSlot || sessionAlertSlot)))
+  useMobileChatChrome(
+    Boolean(!crmOnly && isOpen && (messagesSlot || composerSlot || sessionAlertSlot)),
+  )
 
   // Switcher mobile Chat/Negócio — default Chat, resetado a cada novo deal
   // ou reabertura do painel.
@@ -605,6 +614,51 @@ export function DealDetailPanel({
   // "layout legado" a cada clique.
   if (!deal) {
     if (!isOpen) return null;
+    const loadingAside = (
+      <aside
+        aria-label="Carregando detalhes do negócio"
+        aria-busy="true"
+        className={cn(
+          "flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+          !crmOnly && isMobile && "max-h-[42vh] h-auto shrink-0",
+          crmOnly && "rounded-none border-0 shadow-none",
+        )}
+      >
+        <div className="shrink-0 px-3 pt-2">
+          <header className="relative isolate mb-2 rounded-xl border border-white/10 bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-[var(--glass-shadow-sm)]">
+            <div className="relative flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Voltar"
+                className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-white backdrop-blur-sm transition-all hover:bg-white/25 hover:border-white/40"
+              >
+                <IconArrowLeft size={13} strokeWidth={2.5} />
+                <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
+              </button>
+            </div>
+            <div className="relative mt-3 flex items-center gap-3">
+              <div className="size-11 animate-pulse rounded-full bg-white/20" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-4 w-36 animate-pulse rounded bg-white/25" />
+                <div className="h-3 w-20 animate-pulse rounded bg-white/15" />
+              </div>
+            </div>
+          </header>
+        </div>
+        <div className="aside-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3.5 pb-4 pt-1">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="space-y-1.5">
+              <div className="h-2.5 w-16 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
+              <div className="h-8 w-full animate-pulse rounded-lg bg-[var(--glass-bg-strong)]" />
+            </div>
+          ))}
+        </div>
+      </aside>
+    );
+    if (crmOnly) {
+      return <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">{loadingAside}</div>;
+    }
     return (
       <div
         className="fixed inset-0 z-50 translate-x-0 transition-transform duration-300 ease-out"
@@ -629,45 +683,7 @@ export function DealDetailPanel({
                 : undefined
             }
           >
-            <aside
-              aria-label="Carregando detalhes do negócio"
-              aria-busy="true"
-              className={cn(
-                "flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
-                isMobile && "max-h-[42vh] h-auto shrink-0",
-              )}
-            >
-              <div className="shrink-0 px-3 pt-2">
-                <header className="relative isolate mb-2 rounded-xl border border-white/10 bg-[#2e3b6e] px-4 pb-3 pt-3 text-white shadow-[var(--glass-shadow-sm)]">
-                  <div className="relative flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      aria-label="Voltar"
-                      className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-white backdrop-blur-sm transition-all hover:bg-white/25 hover:border-white/40"
-                    >
-                      <IconArrowLeft size={13} strokeWidth={2.5} />
-                      <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
-                    </button>
-                  </div>
-                  <div className="relative mt-3 flex items-center gap-3">
-                    <div className="size-11 animate-pulse rounded-full bg-white/20" />
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="h-4 w-36 animate-pulse rounded bg-white/25" />
-                      <div className="h-3 w-20 animate-pulse rounded bg-white/15" />
-                    </div>
-                  </div>
-                </header>
-              </div>
-              <div className="aside-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3.5 pb-4 pt-1">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="space-y-1.5">
-                    <div className="h-2.5 w-16 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
-                    <div className="h-8 w-full animate-pulse rounded-lg bg-[var(--glass-bg-strong)]" />
-                  </div>
-                ))}
-              </div>
-            </aside>
+            {loadingAside}
             {!isMobile && <div aria-hidden className="w-2" />}
             <div
               className={cn(
@@ -722,19 +738,32 @@ export function DealDetailPanel({
     },
   ]
 
+  if (crmOnly && !isOpen) return null;
+
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 transition-transform duration-300 ease-out",
-        isOpen ? "translate-x-0" : "translate-x-full",
+        crmOnly
+          ? "relative flex h-full min-h-0 w-full flex-col overflow-hidden"
+          : "fixed inset-0 z-50 transition-transform duration-300 ease-out",
+        !crmOnly && (isOpen ? "translate-x-0" : "translate-x-full"),
       )}
-      style={{
-        background:
-          "linear-gradient(135deg, var(--bg-base, #dde8f5) 0%, var(--bg-mesh-1, #b8cfec) 40%, var(--bg-mesh-2, #e8d5f0) 70%, var(--bg-base, #dde8f5) 100%)",
-        backgroundAttachment: "fixed",
-      }}
+      style={
+        crmOnly
+          ? undefined
+          : {
+              background:
+                "linear-gradient(135deg, var(--bg-base, #dde8f5) 0%, var(--bg-mesh-1, #b8cfec) 40%, var(--bg-mesh-2, #e8d5f0) 70%, var(--bg-base, #dde8f5) 100%)",
+              backgroundAttachment: "fixed",
+            }
+      }
     >
-      <div className="flex h-full flex-col gap-3.5 overflow-hidden p-4">
+      <div
+        className={cn(
+          "flex h-full flex-col overflow-hidden",
+          crmOnly ? "gap-0 p-0" : "gap-3.5 p-4",
+        )}
+      >
         {/* Barra de topo REMOVIDA (jul/26): duplicava nome/#id/telefone que já
             aparecem no hero roxo e em "Detalhes de contato", além de um badge
             "ENTERPRISE" hardcoded (dado falso). Os controles essenciais (voltar,
@@ -744,7 +773,7 @@ export function DealDetailPanel({
             horizontal. Phone (< 768px): switcher Chat | Negócio — só um
             painel por vez (paridade com o Inbox), já que empilhar aside +
             chat cortava as mensagens em telas pequenas. */}
-        {isMobile && (
+        {!crmOnly && isMobile && (
           <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-1.5">
             <button
               type="button"
@@ -788,10 +817,10 @@ export function DealDetailPanel({
         <div
           className={cn(
             "min-h-0 flex-1 overflow-hidden",
-            isMobile ? "flex flex-col gap-2" : "grid gap-1",
+            crmOnly ? "flex" : isMobile ? "flex flex-col gap-2" : "grid gap-1",
           )}
           style={
-            !isMobile
+            !crmOnly && !isMobile
               ? {
                   gridTemplateColumns: `${sidebarWidth}px 8px minmax(0, 1fr)`,
                   gridTemplateRows: "minmax(0, 1fr)",
@@ -799,12 +828,15 @@ export function DealDetailPanel({
               : undefined
           }
         >
-          {(!isMobile || mobilePaneTab === "negocio") && (
+          {(crmOnly || !isMobile || mobilePaneTab === "negocio") && (
           <aside
             aria-label="Detalhes do negócio"
             className={cn(
-              "flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
-              isMobile && "flex-1",
+              "flex h-full min-h-0 flex-col overflow-hidden bg-[var(--glass-bg-overlay)] backdrop-blur-md",
+              crmOnly
+                ? "w-full rounded-none border-0 shadow-none"
+                : "rounded-[var(--radius-xl)] border border-[var(--glass-border)] shadow-[var(--glass-shadow)]",
+              !crmOnly && isMobile && "flex-1",
             )}
           >
             {/* Cabeçalho fixo: hero do negócio — paridade visual com o
@@ -1399,8 +1431,8 @@ export function DealDetailPanel({
           </aside>
           )}
 
-          {/* Handle de resize — desktop/tablet only */}
-          {!isMobile && (
+          {/* Handle de resize — desktop/tablet only (oculto em crmOnly / gaveta) */}
+          {!crmOnly && !isMobile && (
           <div
             role="separator"
             aria-label="Redimensionar painel de detalhes"
@@ -1456,8 +1488,9 @@ export function DealDetailPanel({
           )}
 
           {/* CONTENT — chat. Desktop: sempre visível junto com o aside.
-              Mobile: só quando a aba "Chat" do switcher está ativa. */}
-          {(!isMobile || mobilePaneTab === "chat") && (
+              Mobile: só quando a aba "Chat" do switcher está ativa.
+              crmOnly (gaveta SalesHub): só a coluna CRM. */}
+          {!crmOnly && (!isMobile || mobilePaneTab === "chat") && (
           tabContentOverride?.[activeTab] ? (
             <main
               aria-label={activeTab}

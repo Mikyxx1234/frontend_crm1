@@ -1,4 +1,5 @@
 import {
+  IconBriefcase,
   IconBuilding,
   IconChecklist,
   IconClipboardList,
@@ -77,6 +78,15 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     href: "/pipeline",
     icon: IconLayoutKanban,
     description: "Funil de vendas e oportunidades.",
+    locked: false,
+    requiredPermission: "nav:pipeline",
+  },
+  {
+    key: "saleshub",
+    title: "Sales Hub",
+    href: "/saleshub",
+    icon: IconBriefcase,
+    description: "Fila de deals com chat e CRM lado a lado.",
     locked: false,
     requiredPermission: "nav:pipeline",
   },

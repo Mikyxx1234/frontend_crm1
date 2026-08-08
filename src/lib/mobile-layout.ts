@@ -15,6 +15,7 @@ export type MobileModuleId =
   | "dashboard"
   | "inbox"
   | "pipeline"
+  | "saleshub"
   | "tasks"
   | "contacts"
   | "companies"
@@ -68,6 +69,14 @@ export const MOBILE_MODULES: MobileModuleDescriptor[] = [
     href: "/pipeline",
     iconName: "Kanban",
     description: "Funil de vendas (Kanban)",
+    category: "core",
+  },
+  {
+    id: "saleshub",
+    label: "Sales Hub",
+    href: "/saleshub",
+    iconName: "Briefcase",
+    description: "Fila de deals com chat e CRM",
     category: "core",
   },
   {
@@ -162,6 +171,7 @@ export const MOBILE_MODULE_IDS = MOBILE_MODULES.map((m) => m.id) as MobileModule
 export const DEFAULT_BOTTOM_NAV: MobileModuleId[] = [
   "dashboard",
   "pipeline",
+  "saleshub",
   "contacts",
   "inbox",
   "distribution",
@@ -170,6 +180,7 @@ export const DEFAULT_BOTTOM_NAV: MobileModuleId[] = [
 export const DEFAULT_ENABLED: MobileModuleId[] = [
   "dashboard",
   "pipeline",
+  "saleshub",
   "contacts",
   "inbox",
   "companies",

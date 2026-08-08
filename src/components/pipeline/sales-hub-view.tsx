@@ -2,11 +2,15 @@
 
 import { apiUrl } from "@/lib/api";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { IconMessageOff as MessageSquareOff, IconSearch as Search, IconX as X } from "@tabler/icons-react";
+import {
+  IconBriefcase as Briefcase,
+  IconMessageOff as MessageSquareOff,
+  IconSearch as Search,
+  IconX as X,
+} from "@tabler/icons-react";
 
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
@@ -23,11 +27,23 @@ import type { TransferControlUser } from "@/components/inbox/transfer-control";
 import { DealOutcomeButtons } from "@/components/sales-hub/deal-actions";
 import { DealWorkspaceToolbarMenuItems } from "@/components/pipeline/deal-workspace/header";
 import {
+  DealDetailPanel,
+  type DealDetail,
+} from "@/components/crm/deal-detail-panel";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { TooltipHost } from "@/components/ui/tooltip";
 import { cn, pipelineDealMatchesSearch } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
@@ -93,7 +109,15 @@ function SalesHubChatEmptyState({
 
 type StatusFilter = "OPEN" | "WON" | "LOST" | "ALL";
 
-type SalesHubViewProps = {
+/**
+ * Props do Sales Hub.
+ *
+ * Modo controlado (obrigatório no host `/saleshub`): `activeDealId` +
+ * `onActiveDealChange` espelham `useDealDeepLink` (`?deal=`). O host
+ * também passa `detailDeal` (VM do `DealDetailPanel` na gaveta CRM).
+ * Busca/sort da fila ficam no host (`queueSearch` / `sortMode`).
+ */
+export type SalesHubViewProps = {
   pipelineId: string;
   stages: BoardStage[];
   /**
@@ -117,6 +141,11 @@ type SalesHubViewProps = {
   onQueueSearchChange: (value: string) => void;
   sortMode: DealQueueSortMode;
   onSortModeChange: (mode: DealQueueSortMode) => void;
+  /** Seleção controlada pelo host (`useDealDeepLink` em `/saleshub`). */
+  activeDealId: string | null;
+  onActiveDealChange: (dealId: string | null, dealNumber?: number | null) => void;
+  /** VM do DealDetailPanel (gaveta CRM). */
+  detailDeal?: DealDetail | null;
 };
 
 export function SalesHubView({
@@ -135,39 +164,15 @@ export function SalesHubView({
   onQueueSearchChange,
   sortMode,
   onSortModeChange,
+  activeDealId,
+  onActiveDealChange,
+  detailDeal = null,
 }: SalesHubViewProps) {
-  // IMPORTANTE: NAO usar o searchParam "?deal=" aqui.
-  //
-  // O `client-page.tsx` (pai) monitora `?deal=` e abre o <DealDetail>
-  // sheet em cima da tela sempre que esse param muda. Se o Sales Hub
-  // tambem gravasse `?deal=` na URL, clicar em qualquer card dispararia
-  // o modal de DealDetail, causando o bug relatado pelo operador
-  // ("outra pagina e chamada quando clico no card"). Por isso toda a
-  // selecao aqui vive APENAS em estado local — sem tocar no router
-  // e sem `window.history.replaceState` ou `pushState`.
-  //
-  // Trade-off conhecido: o deal ativo no Sales Hub nao e compartilhavel
-  // via URL (diferente do Kanban). Se for necessario no futuro, a forma
-  // correta e adotar um param proprio (ex: `?shdeal=`) e filtrar no
-  // `client-page.tsx` pra nao abrir o DealDetail nesse caso.
-  const searchParams = useSearchParams();
-
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [recentlyMovedDealId, setRecentlyMovedDealId] = useState<string | null>(
     null,
   );
-  // Seleção inicial: apenas no primeiro mount, se houver `?deal=` na URL
-  // (ex: deep link vindo de uma mensagem de notificação), usamos pra
-  // pre-selecionar o deal. Depois disso, nunca mais olhamos a URL.
-  const [activeDealId, setActiveDealId] = useState<string | null>(() => {
-    const dealParam = searchParams.get("deal");
-    if (!dealParam) return null;
-    const allDeals = stages.flatMap((s) => s.deals);
-    const match = allDeals.find(
-      (d) => d.id === dealParam || String(d.number) === dealParam,
-    );
-    return match?.id ?? null;
-  });
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const [pickedConversationId, setPickedConversationId] = useState<
     string | null
@@ -183,6 +188,21 @@ export function SalesHubView({
   useEffect(() => {
     setActiveTab("conversations");
   }, [activeDealId, pickedConversationId]);
+
+  // Deep-link / seleção externa: se o deal ativo está em outra etapa, foca a aba.
+  useEffect(() => {
+    if (!activeDealId) return;
+    const stage = stages.find((s) =>
+      s.deals.some(
+        (d) => d.id === activeDealId || String(d.number) === activeDealId,
+      ),
+    );
+    if (stage && selectedStageId !== stage.id) {
+      setSelectedStageId(stage.id);
+    }
+    // Só reage a mudança de deal (não a selectedStageId) pra não loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDealId, stages]);
 
   const filteredStages = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -294,7 +314,12 @@ export function SalesHubView({
     0,
   );
 
-  const activeDeal = sortedDeals.find((d) => d.id === activeDealId) ?? null;
+  const activeDeal =
+    sortedDeals.find(
+      (d) =>
+        d.id === activeDealId ||
+        (activeDealId != null && String(d.number) === activeDealId),
+    ) ?? null;
 
   // Resolve a conversa do contato do deal ativo. Usa o mesmo endpoint
   // que o inbox/deal-detail consome — garante que a conversa carregada
@@ -399,19 +424,42 @@ export function SalesHubView({
     [activeConversation, activeContactId, pipelineId, queryClient],
   );
 
-  const handleSelectDeal = useCallback((dealId: string) => {
-    // Estado puramente local — vide comentario no top do componente
-    // sobre o motivo de NAO mexer na URL aqui.
-    setActiveDealId(dealId);
-  }, []);
+  const resolveDealNumber = useCallback(
+    (dealId: string) => {
+      const d = stages
+        .flatMap((s) => s.deals)
+        .find((x) => x.id === dealId);
+      return d?.number ?? null;
+    },
+    [stages],
+  );
 
-  const handleSelectStage = useCallback((stageId: string | null) => {
-    setSelectedStageId(stageId);
-  }, []);
+  const handleSelectDeal = useCallback(
+    (dealId: string) => {
+      onActiveDealChange(dealId, resolveDealNumber(dealId));
+    },
+    [onActiveDealChange, resolveDealNumber],
+  );
+
+  const handleSelectStage = useCallback(
+    (stageId: string | null) => {
+      setSelectedStageId(stageId);
+      const source = stageId
+        ? filteredStages.filter((s) => s.id === stageId)
+        : filteredStages;
+      const first = source.flatMap((s) => s.deals)[0];
+      if (first) {
+        onActiveDealChange(first.id, first.number ?? null);
+      } else {
+        onActiveDealChange(null);
+      }
+    },
+    [filteredStages, onActiveDealChange],
+  );
 
   const handleDeselectDeal = useCallback(() => {
-    setActiveDealId(null);
-  }, []);
+    onActiveDealChange(null);
+  }, [onActiveDealChange]);
 
   const handleDealMoved = useCallback((dealId: string) => {
     // Highlight visual por 1.5s pra sinalizar o "salto" entre etapas.
@@ -527,7 +575,7 @@ export function SalesHubView({
         const nextIdx = Math.max(0, Math.min(ids.length - 1, curIdx + step));
         if (nextIdx === curIdx) return;
         e.preventDefault();
-        setSelectedStageId(ids[nextIdx] ?? null);
+        handleSelectStage(ids[nextIdx] ?? null);
       }
     }
 
@@ -537,6 +585,7 @@ export function SalesHubView({
     activeDealId,
     handleDeselectDeal,
     handleSelectDeal,
+    handleSelectStage,
     visibleDeals,
     filteredStages,
     selectedStageId,
@@ -680,6 +729,24 @@ export function SalesHubView({
                     queryKey: ["inbox-conversations"],
                   });
                 }}
+                toolbarActions={
+                  <TooltipHost label="Detalhes do negócio" side="bottom">
+                    <button
+                      type="button"
+                      aria-label="Detalhes do negócio"
+                      aria-pressed={detailsOpen}
+                      onClick={() => setDetailsOpen((v) => !v)}
+                      className={cn(
+                        "flex size-8 items-center justify-center rounded-lg transition-colors",
+                        detailsOpen
+                          ? "bg-primary/15 text-primary"
+                          : "text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)]",
+                      )}
+                    >
+                      <Briefcase className="size-4" strokeWidth={1.5} />
+                    </button>
+                  </TooltipHost>
+                }
                 actionsSlot={
                   <DealOutcomeButtons
                     deal={activeDeal}
@@ -724,7 +791,10 @@ export function SalesHubView({
                         queryKey: ["inbox-conversations"],
                       });
                     }}
-                    onEdit={() => onOpenFullDeal?.(activeDeal.id)}
+                    onEdit={() => {
+                      setDetailsOpen(true);
+                      onOpenFullDeal?.(activeDeal.id);
+                    }}
                     onDelete={handleDeleteDealFromHub}
                   />
                 }
@@ -813,6 +883,34 @@ export function SalesHubView({
           </ul>
         </DialogContent>
       </Dialog>
+
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <SheetContent
+          side="right"
+          className="flex w-full max-w-[420px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[420px]"
+        >
+          <SheetHeader className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-[var(--glass-border)] px-4 py-3 text-left">
+            <SheetTitle className="text-[14px] font-semibold">
+              Detalhes do negócio
+            </SheetTitle>
+            <SheetClose
+              aria-label="Fechar"
+              className="flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+            >
+              <X className="size-4" />
+            </SheetClose>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <DealDetailPanel
+              crmOnly
+              isOpen={detailsOpen}
+              onClose={() => setDetailsOpen(false)}
+              deal={detailDeal}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {confirmDeleteDialog}
     </div>
   );

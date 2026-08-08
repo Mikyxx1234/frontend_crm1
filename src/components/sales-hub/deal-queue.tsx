@@ -254,6 +254,11 @@ type DealQueueProps = {
    * e o auto-select do primeiro lead não dispara scrollIntoView.
    */
   selectedStageId?: string | null;
+  /**
+   * Incrementado só em troca explícita de etapa (ribbon / atalho).
+   * Dispara limpeza → cards novos; sync automático de etapa não usa.
+   */
+  stageSwitchToken?: number;
   /** Mantidos na API pública (host / SalesHubView); CRM vive na Sheet. */
   pipelineId: string;
   statusFilter?: StatusFilter;
@@ -274,6 +279,8 @@ function DealQueueItem({
   wasRecentlyMoved,
   pipelineId,
   statusFilter = "OPEN",
+  /** Troca de etapa: só fade, sem y — evita flash “sujo” na remount. */
+  softEnter = false,
 }: {
   deal: BoardDeal & { stageId: string };
   isActive: boolean;
@@ -282,6 +289,7 @@ function DealQueueItem({
   wasRecentlyMoved: boolean;
   pipelineId: string;
   statusFilter?: StatusFilter;
+  softEnter?: boolean;
 }) {
   const vm = toDealCard(deal as unknown as BoardDealDto);
   const allTags = deal.tags ?? [];
@@ -295,10 +303,14 @@ function DealQueueItem({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -4 }}
+      initial={softEnter ? { opacity: 0 } : { opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={SUBTLE_SPRING}
+      exit={softEnter ? undefined : { opacity: 0 }}
+      transition={
+        softEnter
+          ? { duration: 0.18, ease: [0.32, 0.72, 0, 1] }
+          : SUBTLE_SPRING
+      }
       className={cn(
         "relative rounded-xl",
         wasRecentlyMoved && !isActive && "ring-2 ring-[var(--brand-primary)]/25",
@@ -328,7 +340,7 @@ function DealQueueItem({
                 label={hiddenTags.map((t) => t.name).join(", ")}
                 side="top"
               >
-                <span className="inline-flex shrink-0 cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--text-muted)]">
+                <span className="inline-flex h-5 shrink-0 cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 font-display text-[10px] font-bold leading-none text-[var(--text-muted)]">
                   +{hiddenTags.length}
                 </span>
               </TooltipGlass>
@@ -402,6 +414,7 @@ export function DealQueue({
   recentlyMovedDealId,
   sortMode,
   selectedStageId,
+  stageSwitchToken = 0,
   pipelineId,
   statusFilter = "OPEN",
 }: DealQueueProps) {
@@ -418,6 +431,12 @@ export function DealQueue({
     () => activeDealId,
   );
   const prevActiveDealIdRef = useRef<string | null>(activeDealId);
+  // Token “commitado” na UI — enquanto divergir do prop, fila fica limpa
+  // (síncrono no render; sem 1 frame de cards antigos).
+  const [renderedSwitchToken, setRenderedSwitchToken] = useState(stageSwitchToken);
+  const [softEnterWave, setSoftEnterWave] = useState(false);
+  const isStageSwitching = renderedSwitchToken !== stageSwitchToken;
+  const stageListKey = `${selectedStageId ?? "all"}:${renderedSwitchToken}`;
 
   // Novo deal selecionado (ou limpo via X): sincroniza expansão.
   // Não forçar expand em todo render — o 2º clique só recolhe o chrome.
@@ -443,16 +462,41 @@ export function DealQueue({
     if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
   }, [sortMode]);
 
-  // Troca de etapa / Todos: topo da fila; não scrollIntoView no auto-select.
+  // Troca de etapa / Todos (ribbon): topo da fila; não scrollIntoView no auto-select.
   useEffect(() => {
     if (selectedStageId === undefined) return;
     skipScrollIntoViewRef.current = true;
     if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
-    // Se activeDealId não mudou, o effect abaixo não consome o flag.
     queueMicrotask(() => {
       skipScrollIntoViewRef.current = false;
     });
   }, [selectedStageId]);
+
+  // Só limpa→recarrega em troca explícita (token), não no sync automático.
+  useEffect(() => {
+    if (!isStageSwitching) return;
+
+    skipScrollIntoViewRef.current = true;
+    setSoftEnterWave(true);
+    if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+
+    const showTimer = window.setTimeout(() => {
+      setRenderedSwitchToken(stageSwitchToken);
+      if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+      queueMicrotask(() => {
+        skipScrollIntoViewRef.current = false;
+      });
+    }, 70);
+
+    const softTimer = window.setTimeout(() => {
+      setSoftEnterWave(false);
+    }, 320);
+
+    return () => {
+      window.clearTimeout(showTimer);
+      window.clearTimeout(softTimer);
+    };
+  }, [isStageSwitching, stageSwitchToken]);
 
   useEffect(() => {
     if (!activeDealId) return;
@@ -466,41 +510,59 @@ export function DealQueue({
     el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [activeDealId]);
 
+  const visibleDeals = isStageSwitching ? [] : deals;
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-transparent">
       <div
         ref={scrollerRef}
         className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
       >
-        <div className="flex flex-col gap-2">
-          <AnimatePresence initial={false}>
-            {deals.map((deal) => {
-              const isActive = activeDealId === deal.id;
-              const isExpanded = expandedDealId === deal.id;
-              const wasRecentlyMoved = recentlyMovedDealId === deal.id;
-
-              return (
+        <div className="flex flex-col gap-2" key={stageListKey}>
+          {isStageSwitching ? (
+            <div
+              className="flex flex-col gap-2 py-1"
+              aria-busy="true"
+              aria-label="Carregando etapa"
+            >
+              {Array.from({ length: 4 }).map((_, i) => (
                 <div
-                  key={deal.id}
-                  ref={(el) => {
-                    if (el) itemRefs.current.set(deal.id, el);
-                    else itemRefs.current.delete(deal.id);
-                  }}
-                >
-                  <DealQueueItem
-                    deal={deal}
-                    isActive={isActive}
-                    isExpanded={isExpanded}
-                    onToggle={handleToggleDeal}
-                    wasRecentlyMoved={wasRecentlyMoved}
-                    pipelineId={pipelineId}
-                    statusFilter={statusFilter}
-                  />
-                </div>
-              );
-            })}
-          </AnimatePresence>
-          {deals.length === 0 && (
+                  key={i}
+                  className="h-[72px] animate-pulse rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]"
+                />
+              ))}
+            </div>
+          ) : (
+            <AnimatePresence initial={softEnterWave}>
+              {visibleDeals.map((deal) => {
+                const isActive = activeDealId === deal.id;
+                const isExpanded = expandedDealId === deal.id;
+                const wasRecentlyMoved = recentlyMovedDealId === deal.id;
+
+                return (
+                  <div
+                    key={deal.id}
+                    ref={(el) => {
+                      if (el) itemRefs.current.set(deal.id, el);
+                      else itemRefs.current.delete(deal.id);
+                    }}
+                  >
+                    <DealQueueItem
+                      deal={deal}
+                      isActive={isActive}
+                      isExpanded={isExpanded}
+                      onToggle={handleToggleDeal}
+                      wasRecentlyMoved={wasRecentlyMoved}
+                      pipelineId={pipelineId}
+                      statusFilter={statusFilter}
+                      softEnter={softEnterWave}
+                    />
+                  </div>
+                );
+              })}
+            </AnimatePresence>
+          )}
+          {!isStageSwitching && visibleDeals.length === 0 && (
             <p className="px-2 py-8 text-center text-xs text-[var(--text-muted)]">
               Nenhum deal encontrado
             </p>

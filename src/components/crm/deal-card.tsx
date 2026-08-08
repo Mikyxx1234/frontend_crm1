@@ -244,8 +244,12 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
                 ou iniciar drag ao interagir com popovers injetados. */}
             <div
               className={cn(
-                "mb-1 mt-1 flex min-w-0 items-center gap-1",
-                tagsWrap ? "flex-wrap" : "flex-nowrap overflow-hidden",
+                // py + -my: overflow clipa na padding-edge — sem isso, bordas
+                // das pills (1px) + leading-tight ficam "raspadas" no Flow.
+                "mb-1 mt-1 flex min-w-0 items-center gap-1 py-0.5 -my-0.5",
+                tagsWrap
+                  ? "flex-wrap"
+                  : "flex-nowrap overflow-x-clip overflow-y-visible",
               )}
               onClick={tagsSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
               onMouseDown={tagsSlot ? (e) => e.stopPropagation() : undefined}

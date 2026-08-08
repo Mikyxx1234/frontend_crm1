@@ -189,6 +189,9 @@ export function SalesHubView({
   dealFieldConfigSlot,
 }: SalesHubViewProps) {
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  /** Só sobe em troca explícita de etapa (ribbon/atalho) — limpa a fila. */
+  const [stageSwitchToken, setStageSwitchToken] = useState(0);
+  const selectedStageIdRef = useRef<string | null>(null);
   const [recentlyMovedDealId, setRecentlyMovedDealId] = useState<string | null>(
     null,
   );
@@ -300,6 +303,7 @@ export function SalesHubView({
       ),
     );
     if (stage && selectedStageId !== stage.id) {
+      selectedStageIdRef.current = stage.id;
       setSelectedStageId(stage.id);
     }
     // Só reage a mudança de deal (não a selectedStageId) pra não loop.
@@ -475,7 +479,11 @@ export function SalesHubView({
 
   const handleSelectStage = useCallback(
     (stageId: string | null) => {
-      setSelectedStageId(stageId);
+      if (selectedStageIdRef.current !== stageId) {
+        selectedStageIdRef.current = stageId;
+        setSelectedStageId(stageId);
+        setStageSwitchToken((t) => t + 1);
+      }
       const source = stageId
         ? filteredStages.filter((s) => s.id === stageId)
         : filteredStages;
@@ -653,10 +661,12 @@ export function SalesHubView({
           // Grid estável (evita flex↔grid) + transition de colunas ao
           // abrir/fechar chat ou aside — sem thrash nos cards da fila.
           "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-300 md:ease-[cubic-bezier(0.32,0.72,0,1)]",
+          // Com deal: 3 tracks sempre (3ª = 0fr fechada) p/ interpolar
+          // grid-template-columns no open/close sem thrash / jump.
           activeDeal
             ? detailsOpen
               ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)]"
-              : "md:grid-cols-[300px_minmax(0,1fr)]"
+              : "md:grid-cols-[300px_minmax(0,1fr)_0fr]"
             : "md:grid-cols-[minmax(0,1fr)]",
         )}
       >
@@ -708,6 +718,7 @@ export function SalesHubView({
             recentlyMovedDealId={recentlyMovedDealId}
             sortMode={sortMode}
             selectedStageId={selectedStageId}
+            stageSwitchToken={stageSwitchToken}
             pipelineId={pipelineId}
             statusFilter={statusFilter}
             onMoved={handleDealMoved}

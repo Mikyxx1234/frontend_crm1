@@ -47,10 +47,12 @@ export function TagChip({
       aria-pressed={ariaPressed ?? (onClick ? selected : undefined)}
       title={title ?? name}
       className={cn(
-        "inline-flex max-w-full items-center justify-center gap-1 border font-display font-semibold leading-tight transition-all",
+        // h fixa + leading-none: evita clip vertical em pais com overflow
+        // (fila Flow / nowrap). Truncate fica no <span> interno.
+        "inline-flex max-w-full min-w-0 items-center justify-center gap-1 border font-display font-semibold leading-none transition-all",
         size === "md"
-          ? "rounded-[8px] px-2.5 py-1 text-[12.5px]"
-          : "rounded-[6px] px-2 py-0.5 text-[11px]",
+          ? "h-7 rounded-[8px] px-2.5 text-[12.5px]"
+          : "h-5 rounded-[6px] px-2 text-[11px]",
         selected && "text-white shadow-sm",
         onClick && "cursor-pointer",
         className,

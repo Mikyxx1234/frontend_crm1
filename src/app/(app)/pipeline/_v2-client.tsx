@@ -1784,6 +1784,7 @@ function DroppableColumn({
                       onToggleSelect={() => onToggleSelect(deal.id)}
                       tagsSlot={(() => {
                         const allTags = raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>);
+                        if (allTags.length === 0) return undefined;
                         const MAX_VISIBLE = 2;
                         const visibleTags = allTags.slice(0, MAX_VISIBLE);
                         const hiddenTags = allTags.slice(MAX_VISIBLE);
@@ -1810,20 +1811,22 @@ function DroppableColumn({
                                 </span>
                               </TooltipGlass>
                             )}
-                            <TagsPopover
-                              dealId={deal.id}
-                              currentTags={raw?.tags ?? []}
-                              pipelineId={pipelineId}
-                              statusFilter={statusFilter}
-                              trigger={
-                                <DealCardTagsTrigger
-                                  hasTags={allTags.length > 0}
-                                />
-                              }
-                            />
                           </>
                         );
                       })()}
+                      tagsAddSlot={
+                        <TagsPopover
+                          dealId={deal.id}
+                          currentTags={raw?.tags ?? []}
+                          pipelineId={pipelineId}
+                          statusFilter={statusFilter}
+                          trigger={
+                            <DealCardTagsTrigger
+                              hasTags={(raw?.tags?.length ?? 0) > 0}
+                            />
+                          }
+                        />
+                      }
                       ownerSlot={
                         <AssigneePopover
                           dealId={deal.id}

@@ -41,6 +41,11 @@ interface TooltipGlassProps {
   /** Atraso antes de exibir (ms). */
   delay?: number;
   className?: string;
+  /**
+   * Sem chrome escuro / seta — o `label` traz a própria superfície
+   * (ex.: balões de preview de mensagem no DealCard).
+   */
+  plain?: boolean;
 }
 
 /**
@@ -72,6 +77,7 @@ export function TooltipGlass({
   align = "center",
   sideOffset = 8,
   className,
+  plain = false,
 }: TooltipGlassProps) {
   if (!label) return children;
 
@@ -84,18 +90,21 @@ export function TooltipGlass({
           align={align}
           sideOffset={sideOffset}
           className={cn(
-            "z-50 max-w-xs",
-            tooltipSurfaceClass,
-            tooltipMotionClass,
+            "z-50",
+            plain
+              ? cn("max-w-none border-0 bg-transparent p-0 shadow-none", tooltipMotionClass)
+              : cn("max-w-xs", tooltipSurfaceClass, tooltipMotionClass),
             className,
           )}
         >
           {label}
-          <TooltipPrimitive.Arrow
-            width={11}
-            height={6}
-            className="fill-[var(--tooltip-bg)]"
-          />
+          {!plain ? (
+            <TooltipPrimitive.Arrow
+              width={11}
+              height={6}
+              className="fill-[var(--tooltip-bg)]"
+            />
+          ) : null}
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

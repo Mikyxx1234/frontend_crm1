@@ -206,8 +206,10 @@ export function SalesHubChat({
   }
 
   function handleReactMessage(msg: { id: string }, emoji: string | null) {
+    // `null` = pedido de abrir o picker (não muta). `""` = remover reação.
+    if (emoji == null) return;
     reactMessage.mutate(
-      { messageId: msg.id, emoji: emoji ?? "" },
+      { messageId: msg.id, emoji },
       { onError: (err) => toast.error(err.message || "Falha ao reagir") },
     );
   }

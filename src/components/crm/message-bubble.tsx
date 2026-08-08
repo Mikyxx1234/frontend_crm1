@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ImageLightbox } from "@/components/crm/image-lightbox"
 import { MetaSendErrorBalloon } from "@/components/crm/meta-send-error-balloon"
+import { EmojiPicker } from "@/components/inbox/emoji-picker"
 import { AudioWaveform } from "@/components/inbox/audio-waveform"
 import { AutomationBotIcon } from "@/components/icons/automation-bot-icon"
 import {
@@ -919,6 +920,8 @@ function ReceivedMessageMenu({
   onFavorite?: (message: Message) => void
 }) {
   const [open, setOpen] = useState(false)
+  /** Expande o picker completo (ação "Reagir"), estilo WhatsApp. */
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -931,6 +934,7 @@ function ReceivedMessageMenu({
   useLayoutEffect(() => {
     if (!open) {
       setCoords(null)
+      setEmojiPickerOpen(false)
       return
     }
     const trigger = triggerRef.current
@@ -939,8 +943,8 @@ function ReceivedMessageMenu({
     const update = () => {
       const r = trigger.getBoundingClientRect()
       const content = contentRef.current
-      const ch = content?.offsetHeight ?? 280
-      const cw = content?.offsetWidth ?? 240
+      const ch = content?.offsetHeight ?? (emojiPickerOpen ? 420 : 280)
+      const cw = content?.offsetWidth ?? (emojiPickerOpen ? 288 : 240)
       const margin = 6
 
       const spaceBelow = window.innerHeight - r.bottom
@@ -966,7 +970,7 @@ function ReceivedMessageMenu({
       window.removeEventListener("resize", update)
       window.removeEventListener("scroll", update, true)
     }
-  }, [open])
+  }, [open, emojiPickerOpen])
 
   // Click fora / Esc fecham. O contentRef está no portal (fora do DOM
   // do trigger), então checamos os dois.
@@ -1006,6 +1010,7 @@ function ReceivedMessageMenu({
   const handleReact = useCallback(
     (emoji: string) => {
       onReact?.(message, emoji)
+      setEmojiPickerOpen(false)
       setOpen(false)
     },
     [message, onReact],
@@ -1055,7 +1060,10 @@ function ReceivedMessageMenu({
                 background: "#ffffff",
                 color: "#0f172a",
               }}
-              className="z-[100] w-[224px] max-w-[calc(100vw-16px)] overflow-hidden rounded-[var(--radius-lg)] border border-black/5 shadow-[0_12px_32px_rgba(15,20,40,0.22)]"
+              className={cn(
+                "z-[100] max-w-[calc(100vw-16px)] overflow-hidden rounded-[var(--radius-lg)] border border-black/5 shadow-[0_12px_32px_rgba(15,20,40,0.22)]",
+                emojiPickerOpen ? "w-[288px]" : "w-[224px]",
+              )}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Barra de reações rápidas — sempre visível. Se onReact
@@ -1078,7 +1086,17 @@ function ReceivedMessageMenu({
                 ))}
               </div>
 
-              <ul className="py-1">
+              {emojiPickerOpen ? (
+                <div className="max-h-[320px] overflow-y-auto p-1.5">
+                  <EmojiPicker
+                    open
+                    onPick={handleReact}
+                    className="border-0 shadow-none"
+                  />
+                </div>
+              ) : null}
+
+              <ul className={cn("py-1", emojiPickerOpen && "hidden")}>
                 <MenuItem
                   icon={<IconArrowBackUp size={15} />}
                   label="Responder"
@@ -1096,8 +1114,8 @@ function ReceivedMessageMenu({
                   label="Reagir"
                   onClick={() => {
                     if (onReact) {
-                      onReact(message, null)
-                      setOpen(false)
+                      // Abre o picker completo (não envia reação vazia).
+                      setEmojiPickerOpen(true)
                     } else {
                       stub("Reagir")
                     }

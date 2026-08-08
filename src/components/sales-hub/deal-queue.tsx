@@ -325,36 +325,41 @@ function DealQueueItem({
         onClick={() => onToggle(deal.id)}
         // Flow: uma linha só (nowrap). Nunca `two-col` — grid cria 2 linhas e infla o card.
         tagsWrap={false}
-        // Chips + "+N" + trigger (+ / Gerenciar) na mesma linha.
+        // Com tags: chips na linha própria + Gerenciar. Sem tags: + ao
+        // lado do responsável (tagsAddSlot).
         tagsSlot={
-          <>
-            {visibleTags.map((t) => (
-              <TooltipGlass key={t.id} label={t.name} side="top">
-                <TagChip
-                  name={t.name}
-                  color={t.color}
-                  className="max-w-[7.5rem] min-w-0 shrink"
-                />
-              </TooltipGlass>
-            ))}
-            {hiddenTags.length > 0 && (
-              <TooltipGlass
-                label={hiddenTags.map((t) => t.name).join(", ")}
-                side="top"
-              >
-                <span className="inline-flex h-5 shrink-0 cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 font-display text-[10px] font-bold leading-none text-[var(--text-muted)]">
-                  +{hiddenTags.length}
-                </span>
-              </TooltipGlass>
-            )}
-            <TagsPopover
-              dealId={deal.id}
-              currentTags={allTags}
-              pipelineId={pipelineId}
-              statusFilter={statusFilter}
-              trigger={<DealCardTagsTrigger hasTags={allTags.length > 0} />}
-            />
-          </>
+          allTags.length > 0 ? (
+            <>
+              {visibleTags.map((t) => (
+                <TooltipGlass key={t.id} label={t.name} side="top">
+                  <TagChip
+                    name={t.name}
+                    color={t.color}
+                    className="max-w-[7.5rem] min-w-0 shrink"
+                  />
+                </TooltipGlass>
+              ))}
+              {hiddenTags.length > 0 && (
+                <TooltipGlass
+                  label={hiddenTags.map((t) => t.name).join(", ")}
+                  side="top"
+                >
+                  <span className="inline-flex h-5 shrink-0 cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 font-display text-[10px] font-bold leading-none text-[var(--text-muted)]">
+                    +{hiddenTags.length}
+                  </span>
+                </TooltipGlass>
+              )}
+            </>
+          ) : undefined
+        }
+        tagsAddSlot={
+          <TagsPopover
+            dealId={deal.id}
+            currentTags={allTags}
+            pipelineId={pipelineId}
+            statusFilter={statusFilter}
+            trigger={<DealCardTagsTrigger hasTags={allTags.length > 0} />}
+          />
         }
         // Mesmo padrão do kanban: AssigneePopover + pill / avatar+nome.
         ownerSlot={

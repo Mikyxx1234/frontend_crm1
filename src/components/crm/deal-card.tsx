@@ -71,11 +71,15 @@ interface DealCardProps {
   deal: Deal
   onClick?: () => void
   /**
-   * Slot opcional que substitui o bloco padrao de tags.
-   * Usado pelo kanban-v2 / Flow para injetar o `TagsPopover` real.
-   * Omitir (undefined) quando não houver tags — a linha inteira some.
+   * Chips de tags (e “+N”). Sem chips: omitir — a linha de tags some.
+   * O botão +/Gerenciar vai em `tagsAddSlot`.
    */
   tagsSlot?: React.ReactNode
+  /**
+   * Trigger do TagsPopover (+ / Gerenciar). Sem tags: fica ao lado do
+   * responsável (economiza uma linha). Com tags: na linha das chips.
+   */
+  tagsAddSlot?: React.ReactNode
   /**
    * Slot opcional que substitui o Chip do responsavel no rodape
    * do card — permite plugar o `AssigneePopover` no kanban-v2.
@@ -123,25 +127,41 @@ const COMPACT_SECTION_TRANSITION = {
   ease: [0.32, 0.72, 0, 1] as const,
 }
 
-/** Tooltip: cada msg aguardando em um balão (ordem cronológica). */
+const PREVIEW_MSG_MAX = 160
+
+function truncatePreviewText(text: string, max = PREVIEW_MSG_MAX): string {
+  const t = text.replace(/\s+/g, " ").trim()
+  if (t.length <= max) return t
+  return `${t.slice(0, Math.max(0, max - 1)).trim()}…`
+}
+
+/**
+ * Preview estilo chat (claro), compacto — 1 balão por msg.
+ * Evita o painel escuro gigante que cobria o card.
+ */
 function AwaitingMessagesTooltip({ texts }: { texts: string[] }) {
   const unique = texts.map((t) => t.trim()).filter(Boolean)
   if (unique.length === 0) return null
   return (
-    <div className="flex max-h-56 w-full min-w-[12rem] flex-col gap-1.5 overflow-y-auto py-0.5">
+    <div
+      className={cn(
+        "flex max-h-[140px] w-[220px] flex-col gap-1 overflow-y-auto p-0.5",
+        unique.length > 1 && "pr-0.5",
+      )}
+    >
       {unique.map((text, i) => (
         <div
-          key={`${i}-${text.slice(0, 24)}`}
-          className="rounded-2xl rounded-bl-md bg-white/14 px-2.5 py-1.5 text-left text-[11px] font-normal not-italic leading-snug whitespace-pre-wrap break-words shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
+          key={`${i}-${text.slice(0, 20)}`}
+          className="rounded-2xl rounded-bl-sm border border-black/5 bg-white px-2.5 py-1.5 text-left text-[11px] font-normal not-italic leading-snug text-slate-700 shadow-[0_4px_14px_rgba(15,20,40,0.12)]"
         >
-          {text}
+          {truncatePreviewText(text)}
         </div>
       ))}
     </div>
   )
 }
 
-export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode, tagsWrap = false, compact = false }: DealCardProps) {
+export function DealCard({ deal, onClick, tagsSlot, tagsAddSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode, tagsWrap = false, compact = false }: DealCardProps) {
   // O checkbox SÓ aparece quando o "modo seleção" global está ativo
   // (acionado pelo kebab "Selecionar..."). Removemos o antigo
   // comportamento de "aparecer no hover" para que entrada e saída
@@ -150,6 +170,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
   const unread = deal.unreadCount ?? 0
   // Cliente ainda não respondido — última msg inbound (aguarda reply do agente).
   const unreplied = deal.message?.direction === "in"
+  const hasTagChips = tagsSlot != null || (deal.tags?.length ?? 0) > 0
   return (
     <a
       href={dealOpenHref(deal)}
@@ -272,6 +293,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
                     </span>
                   ))}
                 <TooltipGlass
+                  plain
                   label={
                     <AwaitingMessagesTooltip
                       texts={
@@ -284,7 +306,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
                   }
                   side="top"
                   align="start"
-                  className="max-w-sm font-normal"
+                  sideOffset={6}
                 >
                   <span className="line-clamp-2 min-w-0 flex-1 cursor-default overflow-hidden">
                     {deal.message.text}
@@ -319,12 +341,9 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
               </div>
             )}
 
-            {/* Tags — slot tem prioridade. Sem slot, fallback estático.
-                Sem tags e sem slot: não renderiza a linha. Com slot (mesmo
-                só o `+` / Gerenciar), a linha aparece.
-                stopPropagation em multiplos eventos para nao abrir o deal
-                ou iniciar drag ao interagir com popovers injetados. */}
-            {(tagsSlot != null || (deal.tags?.length ?? 0) > 0) && (
+            {/* Tags — só quando há chips. Sem tags, o + vai na linha do
+                responsável (`tagsAddSlot`) para economizar altura. */}
+            {hasTagChips && (
             <div
               className={cn(
                 // py + -my: overflow clipa na padding-edge — sem isso, bordas
@@ -334,10 +353,20 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
                   ? "flex-wrap"
                   : "flex-nowrap overflow-x-clip overflow-y-visible",
               )}
-              onClick={tagsSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
-              onMouseDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
-              onPointerDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
-              onTouchStart={tagsSlot ? (e) => e.stopPropagation() : undefined}
+              onClick={
+                tagsSlot || tagsAddSlot
+                  ? (e) => { e.preventDefault(); e.stopPropagation(); }
+                  : undefined
+              }
+              onMouseDown={
+                tagsSlot || tagsAddSlot ? (e) => e.stopPropagation() : undefined
+              }
+              onPointerDown={
+                tagsSlot || tagsAddSlot ? (e) => e.stopPropagation() : undefined
+              }
+              onTouchStart={
+                tagsSlot || tagsAddSlot ? (e) => e.stopPropagation() : undefined
+              }
             >
               {tagsSlot ?? (
                 <>
@@ -362,22 +391,40 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
                   ))}
                 </>
               )}
+              {tagsAddSlot}
             </div>
             )}
 
-            {/* Owner — slot tem prioridade. */}
+            {/* Owner — slot tem prioridade. Sem tags: + ao lado. */}
             <div
               className="flex items-center gap-1.5 border-t border-[var(--glass-border-subtle)] pt-1"
-              onClick={ownerSlot ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
-              onMouseDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
-              onPointerDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
-              onTouchStart={ownerSlot ? (e) => e.stopPropagation() : undefined}
+              onClick={
+                ownerSlot || (!hasTagChips && tagsAddSlot)
+                  ? (e) => { e.preventDefault(); e.stopPropagation(); }
+                  : undefined
+              }
+              onMouseDown={
+                ownerSlot || (!hasTagChips && tagsAddSlot)
+                  ? (e) => e.stopPropagation()
+                  : undefined
+              }
+              onPointerDown={
+                ownerSlot || (!hasTagChips && tagsAddSlot)
+                  ? (e) => e.stopPropagation()
+                  : undefined
+              }
+              onTouchStart={
+                ownerSlot || (!hasTagChips && tagsAddSlot)
+                  ? (e) => e.stopPropagation()
+                  : undefined
+              }
             >
               {ownerSlot ?? (
                 <Chip variant="brand" className="cursor-pointer transition-colors hover:bg-[rgba(91,111,245,0.22)]">
                   {deal.owner.name}
                 </Chip>
               )}
+              {!hasTagChips && tagsAddSlot ? tagsAddSlot : null}
               {moveMenuSlot && (
                 <div
                   className="ml-auto"

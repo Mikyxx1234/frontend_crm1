@@ -448,8 +448,10 @@ export function useDealChatBinding(params: {
   // `emoji` vazio = remocao (toggle-off).
   function handleReact(message: BubbleMessage, emoji: string | null) {
     if (!effectiveConversationId) return;
+    // `null` = abrir picker (UI); não POST. `""` = remover reação.
+    if (emoji == null) return;
     reactMutation.mutate(
-      { messageId: message.id, emoji: emoji ?? "" },
+      { messageId: message.id, emoji },
       {
         onError: (err) => toast.error(err.message || "Falha ao reagir"),
       },

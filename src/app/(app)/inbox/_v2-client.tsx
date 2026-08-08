@@ -697,8 +697,10 @@ export default function InboxV2ClientPage({
   // toggle-off + envia reaction vazia à Meta pra limpar no cliente).
   function handleReactMessage(msg: { id: string }, emoji: string | null) {
     if (!activeId) return;
+    // `null` = abrir picker (UI); não muta. `""` = remover reação.
+    if (emoji == null) return;
     reactMessage.mutate(
-      { messageId: msg.id, emoji: emoji ?? "" },
+      { messageId: msg.id, emoji },
       {
         onError: (err) => toast.error(err.message || "Falha ao reagir"),
       },

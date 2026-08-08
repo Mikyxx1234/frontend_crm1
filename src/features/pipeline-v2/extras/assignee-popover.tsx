@@ -6,7 +6,14 @@
  * stacking contexts criados por @hello-pangea/dnd em cada Draggable.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
@@ -52,8 +59,17 @@ export function AssigneePopover({
     return sortByPresence(list);
   }, [users, filter]);
 
+  // Dedupe: a seleção é disparada tanto no pointerdown quanto no click.
+  // Pointerdown cobre o caso em que o clique é engolido (dnd dos cards,
+  // re-render do board); o click cobre navegadores/interações em que o
+  // preventDefault do pointerdown cancela o evento seguinte.
+  const lastSelectAtRef = useRef(0);
+
   function handleSelect(userId: string | null) {
     if (!dealId || update.isPending) return;
+    const now = Date.now();
+    if (now - lastSelectAtRef.current < 500) return;
+    lastSelectAtRef.current = now;
     update.mutate(
       { dealId, payload: { ownerId: userId } },
       {
@@ -63,6 +79,20 @@ export function AssigneePopover({
         },
       },
     );
+  }
+
+  function selectHandlers(userId: string | null) {
+    return {
+      onPointerDown: (e: ReactPointerEvent) => {
+        e.stopPropagation();
+        handleSelect(userId);
+      },
+      onClick: (e: ReactMouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSelect(userId);
+      },
+    };
   }
 
   const position = computePopoverPosition(rect, 280, 256);
@@ -119,13 +149,7 @@ export function AssigneePopover({
                   <button
                     type="button"
                     disabled={update.isPending}
-                    // pointerdown: evita race com mousedown(capture) do
-                    // click-outside que desmontava o portal antes do click.
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleSelect(null);
-                    }}
+                    {...selectHandlers(null)}
                     className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--color-warning)] hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
                   >
                     <span>Remover responsável</span>
@@ -149,11 +173,7 @@ export function AssigneePopover({
                     <button
                       type="button"
                       disabled={update.isPending}
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleSelect(u.id);
-                      }}
+                      {...selectHandlers(u.id)}
                       className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] hover:bg-[var(--glass-bg-strong)] disabled:opacity-50 ${
                         isActive
                           ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"

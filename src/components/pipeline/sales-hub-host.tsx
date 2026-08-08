@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { IconSettings } from "@tabler/icons-react";
 
 import { RequirePermission } from "@/components/auth/require-permission";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
+import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import type { DealDetail } from "@/components/crm/deal-detail-panel";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { PageLoading } from "@/components/crm/page-loading";
@@ -520,6 +522,18 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
                 Sales Hub
               </span>
             ) : undefined
+          }
+          menuSlot={
+            <PageActionsMenu
+              aria-label="Ações do pipeline"
+              items={[
+                {
+                  icon: <IconSettings size={13} />,
+                  label: "Configurar pipeline",
+                  onClick: () => router.push("/settings/pipeline"),
+                },
+              ]}
+            />
           }
         />
 

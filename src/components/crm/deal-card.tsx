@@ -60,6 +60,8 @@ export interface Deal {
   contactId?: string | null
   avatarUrl?: string | null
   phone?: string | null
+  /** Mensagens não lidas do deal — badge no canto (mesmo visual do inbox). */
+  unreadCount?: number
 }
 
 interface DealCardProps {
@@ -124,6 +126,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
   // comportamento de "aparecer no hover" para que entrada e saída
   // do modo sejam explícitas e previsíveis.
   const showCheckbox = !!selectionMode && !!onToggleSelect
+  const unread = deal.unreadCount ?? 0
   return (
     <a
       href={dealOpenHref(deal)}
@@ -195,9 +198,20 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5">
-          <span className="rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] px-1.5 py-px font-display text-[10px] font-bold text-[var(--brand-primary)]">
-            {deal.dealNumber}
-          </span>
+          <div className="flex items-center gap-1">
+            {/* Mesmo pill do inbox (`conversation-list`): primary, rounded, 9px. */}
+            {unread > 0 ? (
+              <span
+                className="inline-flex min-w-[16px] items-center justify-center rounded bg-primary px-1 py-0.5 text-[9px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums"
+                aria-label={`${unread} mensagens não lidas`}
+              >
+                {unread > 99 ? "99+" : unread}
+              </span>
+            ) : null}
+            <span className="rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] px-1.5 py-px font-display text-[10px] font-bold text-[var(--brand-primary)]">
+              {deal.dealNumber}
+            </span>
+          </div>
           <span className="text-[10px] text-[var(--text-muted)]">{deal.date}</span>
         </div>
       </div>

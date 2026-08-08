@@ -171,6 +171,7 @@ export function toDealCard(deal: BoardDealDto): Deal {
     contactId: deal.contact?.id ?? null,
     avatarUrl: deal.contact?.avatarUrl ?? null,
     phone: deal.contact?.phone ?? null,
+    unreadCount: deal.unreadCount ?? 0,
   };
 }
 

@@ -268,9 +268,8 @@ type DealQueueProps = {
 
 // ── Item da fila ────────────────────────────────────────────────
 // Wrapper fino em volta do `DealCard` real do kanban: adiciona só a
-// animação de entrada/saída da fila, o realce de "recém-movido" e o
-// badge de não-lidas (que no kanban vive no header da coluna, não no
-// card).
+// animação de entrada/saída da fila e o realce de "recém-movido".
+// Unread fica no próprio DealCard (mesmo visual Kanban + Flow).
 function DealQueueItem({
   deal,
   isActive,
@@ -293,7 +292,6 @@ function DealQueueItem({
 }) {
   const vm = toDealCard(deal as unknown as BoardDealDto);
   const allTags = deal.tags ?? [];
-  const unread = deal.unreadCount ?? 0;
   const MAX_VISIBLE = 2;
   const visibleTags = allTags.slice(0, MAX_VISIBLE);
   const hiddenTags = allTags.slice(MAX_VISIBLE);
@@ -393,14 +391,6 @@ function DealQueueItem({
           />
         }
       />
-      {unread > 0 ? (
-        <span
-          className="pointer-events-none absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-primary px-1 py-0.5 text-[10px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums"
-          aria-label={`${unread} mensagens não lidas`}
-        >
-          {unread > 99 ? "99+" : unread}
-        </span>
-      ) : null}
     </motion.div>
   );
 }

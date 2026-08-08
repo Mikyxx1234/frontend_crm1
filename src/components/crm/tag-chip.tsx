@@ -47,7 +47,7 @@ export function TagChip({
         size === "md"
           ? "rounded-[8px] px-2.5 py-1 text-[12.5px]"
           : "rounded-[6px] px-2 py-0.5 text-[11px]",
-        selected ? "text-white shadow-sm" : "hover:-translate-y-px",
+        selected && "text-white shadow-sm",
         onClick && "cursor-pointer",
         className,
       )}

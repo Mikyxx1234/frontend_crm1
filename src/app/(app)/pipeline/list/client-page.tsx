@@ -338,6 +338,7 @@ export default function V2PipelineListClientPage() {
           activeView="list"
           onViewChange={(view) => {
             if (view === "kanban") router.push("/pipeline");
+            if (view === "flow") router.push("/pipeline/flow");
           }}
           titleAccessory={
             <PipelineSwitcher

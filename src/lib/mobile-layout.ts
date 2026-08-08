@@ -74,7 +74,7 @@ export const MOBILE_MODULES: MobileModuleDescriptor[] = [
   {
     id: "saleshub",
     label: "Sales Hub",
-    href: "/saleshub",
+    href: "/pipeline/flow",
     iconName: "Briefcase",
     description: "Fila de deals com chat e CRM",
     category: "core",

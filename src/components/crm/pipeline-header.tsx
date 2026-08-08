@@ -12,14 +12,16 @@ import {
   IconCircleCheck,
   IconCircleX,
   IconGridDots,
+  IconRoute,
 } from "@tabler/icons-react"
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos"
-type ViewType = "kanban" | "list"
+type ViewType = "kanban" | "flow" | "list"
 
 /**
  * Itens do seletor de visão — mesmo padrão do /contacts
  * (`PageSegmentedControl size="compact"` com ícone + rótulo).
+ * Ordem: Kanban · Flow · Lista (Flow ao lado do Kanban).
  */
 const VIEW_ITEMS = [
   {
@@ -28,6 +30,15 @@ const VIEW_ITEMS = [
       <span className="flex items-center gap-1.5">
         <IconLayoutKanban size={14} />
         Kanban
+      </span>
+    ),
+  },
+  {
+    value: "flow",
+    label: (
+      <span className="flex items-center gap-1.5">
+        <IconRoute size={14} />
+        Flow
       </span>
     ),
   },

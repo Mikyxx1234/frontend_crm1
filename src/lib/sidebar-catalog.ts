@@ -84,7 +84,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
   {
     key: "saleshub",
     title: "Sales Hub",
-    href: "/saleshub",
+    href: "/pipeline/flow",
     icon: IconBriefcase,
     description: "Fila de deals com chat e CRM lado a lado.",
     locked: false,

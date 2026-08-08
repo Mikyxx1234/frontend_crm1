@@ -70,9 +70,9 @@
      entrega nunca era marcada como lida mesmo quando a Meta entregava
      o evento read via webhook. */
   --wa-tick-read:    #38bdf8;   /* ticks azuis = lido (ciano vivo p/ contrastar na bolha indigo) */
-  /* Falha = danger sólido (red-500). Rosa lavado (#fca5a5) sumia na bolha
-     azul e no card claro — precisa contrastar em ambos os fundos. */
-  --wa-tick-fail:    var(--color-danger);
+  /* Literal #ef4444 — NÃO usar var(--color-danger) aqui: tokens só em
+     @theme às vezes não resolvem em class arbitrary e o ícone herda cinza. */
+  --wa-tick-fail:    #ef4444;
 
   /* Toggle unchecked */
   --toggle-bg-off:   #cbd5e1;   /* slate-300 */
@@ -295,6 +295,10 @@
   --chat-bubble-received-time:   #94a3b8;
   --chat-bubble-note-bg:         #f8fafc;
   --chat-bubble-note-border:     #e2e8f0;
+
+  /* Ticks de entrega — espelho @theme (inline/class var() precisa de :root) */
+  --wa-tick-read: #38bdf8;
+  --wa-tick-fail: #ef4444;
 
   /* WhatsApp — cores de marca do canal, ISOLADAS (mock/preview). Não usar
      fora do contexto do balão WhatsApp. Mantidas em paridade com globals.css. */

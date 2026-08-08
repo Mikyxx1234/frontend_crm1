@@ -48,14 +48,23 @@ export function StatusTicks({
     )
   }
   if (status === "failed") {
-    // Ícone preenchido + danger: alto contraste na bolha azul e no card claro.
-    // `onLightBg` não altera a cor — falha sempre é vermelho de erro.
+    // Hard #ef4444 — NÃO depender de var(--wa-tick-fail): o footer da bolha
+    // seta `color` inline (cinza) e o card herda text-muted. Se a var não
+    // resolve (token só em @theme), o ícone herda cinza. `color` do Tabler
+    // + style + !text vencem herança em bolha azul e card claro.
     return (
-      <IconAlertCircleFilled
-        size={fail}
-        className="shrink-0 text-[var(--wa-tick-fail)]"
+      <span
+        className="inline-flex shrink-0 !text-[#ef4444]"
+        style={{ color: "#ef4444" }}
         aria-label="Falha no envio"
-      />
+      >
+        <IconAlertCircleFilled
+          size={fail}
+          color="#ef4444"
+          className="shrink-0 !text-[#ef4444]"
+          style={{ color: "#ef4444" }}
+        />
+      </span>
     )
   }
   if (status === "sent") {

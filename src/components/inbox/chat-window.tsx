@@ -2799,7 +2799,16 @@ export function ChatWindow({
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <span className="inline-flex cursor-help items-center">
-                                      <AlertTriangle className="size-3 text-destructive" />
+                                      <span
+                                        className="inline-flex shrink-0 !text-[#ef4444]"
+                                        style={{ color: "#ef4444" }}
+                                      >
+                                        <AlertTriangle
+                                          color="#ef4444"
+                                          className="size-3 !text-[#ef4444]"
+                                          style={{ color: "#ef4444" }}
+                                        />
+                                      </span>
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent

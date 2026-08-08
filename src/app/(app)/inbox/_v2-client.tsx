@@ -1610,9 +1610,9 @@ export default function InboxV2ClientPage({
           setHeaderCollapsed(true);
         }}
         aria-label="Ocultar cabeçalho"
-        className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur transition-all hover:bg-[var(--glass-bg-base)] hover:text-[var(--brand-primary)] active:scale-95"
       >
-        <IconChevronsUp size={18} stroke={2.2} />
+        <IconChevronsUp size={16} stroke={2.2} />
       </button>
     </TooltipGlass>
   );

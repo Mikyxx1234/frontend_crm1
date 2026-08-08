@@ -69,9 +69,9 @@ interface DealCardProps {
   deal: Deal
   onClick?: () => void
   /**
-   * Slot opcional que substitui o bloco padrao de tags
-   * (tags estaticas + botao "+"). Usado pelo
-   * `/pipeline/kanban-v2` para injetar o `TagsPopover` real.
+   * Slot opcional que substitui o bloco padrao de tags.
+   * Usado pelo kanban-v2 / Flow para injetar o `TagsPopover` real.
+   * Omitir (undefined) quando não houver tags — a linha inteira some.
    */
   tagsSlot?: React.ReactNode
   /**
@@ -294,10 +294,13 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
               </div>
             )}
 
-            {/* Tags — slot tem prioridade. Sem slot, mantemos fallback v0
-                (tags estaticas + botao "+" decorativo).
+            {/* Tags — slot tem prioridade. Sem slot, fallback estático.
+                Sem tags e sem slot: não renderiza a linha (evita `+` sozinho
+                ocupando altura no kanban/Flow). Callers devem omitir
+                tagsSlot quando a lista estiver vazia.
                 stopPropagation em multiplos eventos para nao abrir o deal
                 ou iniciar drag ao interagir com popovers injetados. */}
+            {(tagsSlot != null || (deal.tags?.length ?? 0) > 0) && (
             <div
               className={cn(
                 // py + -my: overflow clipa na padding-edge — sem isso, bordas
@@ -333,16 +336,10 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
                       }
                     />
                   ))}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                    className="inline-flex cursor-pointer items-center rounded-[6px] border border-dashed border-[var(--glass-border)] bg-transparent px-2 py-0.5 font-display text-[9.5px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
-                  >
-                    +
-                  </button>
                 </>
               )}
             </div>
+            )}
 
             {/* Owner — slot tem prioridade. */}
             <div

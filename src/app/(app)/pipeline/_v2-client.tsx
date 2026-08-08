@@ -1783,6 +1783,8 @@ function DroppableColumn({
                       onToggleSelect={() => onToggleSelect(deal.id)}
                       tagsSlot={(() => {
                         const allTags = raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>);
+                        // Sem tags: omite o slot — DealCard não reserva linha vazia com `+`.
+                        if (allTags.length === 0) return undefined;
                         const MAX_VISIBLE = 2;
                         const visibleTags = allTags.slice(0, MAX_VISIBLE);
                         const hiddenTags = allTags.slice(MAX_VISIBLE);

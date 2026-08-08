@@ -338,6 +338,18 @@ export function SalesHubView({
 
   const queryClient = useQueryClient();
 
+  // Reabrir (envio em conversa encerrada / menu "+") gera um ticket novo:
+  // aponta o hub pro id novo e recarrega a lista de conversas do contato.
+  const handleConversationReopened = useCallback(
+    (newConversationId: string) => {
+      setPickedConversationId(newConversationId);
+      queryClient.invalidateQueries({
+        queryKey: ["saleshub-contact-conversations", activeContactId],
+      });
+    },
+    [activeContactId, queryClient],
+  );
+
   const resolveDealNumber = useCallback(
     (dealId: string) => {
       const d = stages
@@ -640,6 +652,7 @@ export function SalesHubView({
               dealId={activeDeal.id}
               pipelineId={pipelineId}
               currentAssigneeId={activeConversation.assignedToId ?? null}
+              onConversationReopened={handleConversationReopened}
               headerActionsSlot={
                 <>
                   <DealOutcomeButtons
@@ -688,9 +701,7 @@ export function SalesHubView({
                         ],
                       });
                     }}
-                    onReopenNewConversation={(id) =>
-                      setPickedConversationId(id)
-                    }
+                    onReopenNewConversation={handleConversationReopened}
                   />
                   <TooltipHost label="Fechar conversa" side="bottom">
                     <button

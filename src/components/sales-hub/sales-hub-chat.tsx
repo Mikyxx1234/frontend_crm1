@@ -62,8 +62,14 @@ export type SalesHubChatProps = {
   pipelineId?: string | null;
   /** Ações à direita do header (Ganho/Perdido, gaveta CRM, kebab…). */
   headerActionsSlot?: React.ReactNode;
-  /** Slot de transferência renderizado dentro do Composer, como no inbox. */
+  /** Responsável atual — destacado no TransferPopover do Composer. */
   currentAssigneeId?: string | null;
+  /**
+   * Enviar numa conversa encerrada reabre como NOVO ticket (id novo). O
+   * host precisa trocar a conversa ativa, senão a UI fica presa no
+   * ticket antigo e parece que o envio não funcionou.
+   */
+  onConversationReopened?: (newConversationId: string) => void;
 };
 
 export function SalesHubChat({
@@ -80,6 +86,7 @@ export function SalesHubChat({
   pipelineId,
   headerActionsSlot,
   currentAssigneeId,
+  onConversationReopened,
 }: SalesHubChatProps) {
   const [draft, setDraft] = useState("");
   const [replyTo, setReplyTo] = useState<{
@@ -161,7 +168,7 @@ export function SalesHubChat({
 
   async function handleSend(value: string) {
     try {
-      await sendMessage.mutateAsync({
+      const data = await sendMessage.mutateAsync({
         content: value,
         ...(replyTo ? { replyToId: replyTo.id } : {}),
         ...(selectedChannelId && selectedChannelId !== conversationChannelId
@@ -170,6 +177,9 @@ export function SalesHubChat({
       });
       setDraft("");
       setReplyTo(null);
+      if (data.reopenedConversationId) {
+        onConversationReopened?.(data.reopenedConversationId);
+      }
     } catch (err) {
       toast.error((err as Error)?.message || "Falha ao enviar");
       throw err;
@@ -310,6 +320,7 @@ export function SalesHubChat({
             onSelectChannel={setSelectedChannelId}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
+            onReopenNewConversation={onConversationReopened}
             conversationNumber={conversationNumber ?? null}
             transferSlot={
               <TransferPopover

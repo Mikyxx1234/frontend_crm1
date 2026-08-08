@@ -1,7 +1,14 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -175,6 +182,28 @@ export function SalesHubView({
     string | null
   >(null);
   const [convListOpen, setConvListOpen] = useState(false);
+
+  /**
+   * Experimento UX: ao sair do painel de chat pela borda direita, abre a
+   * gaveta CRM (DealDetailPanel — negócios + contatos). Saída à esquerda
+   * (fila) ou vertical não abre. `mouseleave` já ignora filhos; o threshold
+   * evita flicker ao cruzar bordas laterais / portais do header.
+   */
+  const CHAT_RIGHT_LEAVE_PX = 28;
+  const handleChatPaneMouseLeave = useCallback(
+    (e: ReactMouseEvent<HTMLDivElement>) => {
+      if (!activeDealId || detailsOpen) return;
+      const related = e.relatedTarget;
+      if (related instanceof Node && e.currentTarget.contains(related)) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const leavingRight = e.clientX >= rect.right - CHAT_RIGHT_LEAVE_PX;
+      if (!leavingRight) return;
+
+      setDetailsOpen(true);
+    },
+    [activeDealId, detailsOpen],
+  );
 
   useEffect(() => {
     setPickedConversationId(null);
@@ -632,6 +661,7 @@ export function SalesHubView({
             100%). Aparece só quando o operador escolhe um deal — aí
             o grid acima vira [fila estreita | chat]. */}
         <div
+          onMouseLeave={handleChatPaneMouseLeave}
           className={cn(
             "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
             !activeDeal && "hidden",

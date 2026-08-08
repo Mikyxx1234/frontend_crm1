@@ -2,8 +2,8 @@
 
 /**
  * StageRibbon — abas de etapa do Sales Hub (estilo browser tab).
+ * Largura total: cada aba `flex-1` achata quando há mais etapas.
  * Ativa: fundo claro + barra superior na cor da fase + badge sólido.
- * Inativas: label + pill tintada, sem “chip” bordado.
  */
 
 import { cn } from "@/lib/utils";
@@ -48,21 +48,24 @@ function StageTab({
       role="tab"
       aria-selected={active}
       aria-pressed={active}
+      title={label}
       onClick={onClick}
       className={cn(
-        "relative inline-flex shrink-0 items-center gap-2 border-t-[3px] px-3 font-display text-[12px] font-semibold tracking-tight transition-colors",
+        "relative flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 border-t-[3px] px-1.5 font-display font-semibold tracking-tight transition-colors sm:gap-2 sm:px-2.5",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
-        compact ? "h-8 pb-0.5 pt-1" : "h-9 pb-1 pt-1.5",
+        compact
+          ? "h-9 text-[12px] sm:text-[12.5px]"
+          : "h-10 text-[12.5px] sm:h-11 sm:text-[13px]",
         active
-          ? "z-[1] -mb-px rounded-t-lg border-[var(--glass-border-subtle)] border-x border-b-0 bg-[var(--surface-elevated,#f7f4ef)] text-[var(--text-primary)] shadow-[0_1px_0_var(--surface-elevated,#f7f4ef)] dark:bg-[#ebe6df]"
+          ? "z-[1] -mb-px rounded-t-lg border-x border-b-0 border-[var(--glass-border-subtle)] bg-[var(--surface-elevated,#f7f4ef)] text-[var(--text-primary)] shadow-[0_1px_0_var(--surface-elevated,#f7f4ef)] dark:bg-[#ebe6df]"
           : "border-transparent text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]",
       )}
       style={active ? { borderTopColor: color, color } : undefined}
     >
-      <span className="max-w-[11rem] truncate">{label}</span>
+      <span className="min-w-0 truncate">{label}</span>
       <span
         className={cn(
-          "inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums leading-none",
+          "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10.5px] font-bold tabular-nums leading-none sm:h-[22px] sm:min-w-[22px] sm:text-[11px]",
           !active && "text-[var(--text-primary)]",
         )}
         style={
@@ -99,18 +102,12 @@ export function StageRibbon({
   return (
     <div
       className={cn(
-        "relative w-full shrink-0 border-b border-[var(--glass-border-subtle)]",
-        compact ? "px-0.5" : "px-1",
+        "relative w-full min-w-0 shrink-0 border-b border-[var(--glass-border-subtle)]",
+        compact ? "px-0" : "px-0.5",
       )}
     >
       <div
-        className={cn(
-          "flex w-full items-end gap-0.5 overflow-x-auto",
-          "[scrollbar-width:thin] [scrollbar-color:rgba(128,128,128,0.35)_transparent]",
-          "[&::-webkit-scrollbar]:h-1.5",
-          "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-black/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/20",
-          "[&::-webkit-scrollbar-track]:bg-transparent",
-        )}
+        className="flex w-full min-w-0 items-stretch gap-0.5"
         role="tablist"
         aria-label="Filtrar por etapa"
       >

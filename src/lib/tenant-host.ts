@@ -10,6 +10,8 @@ import { getTenantBaseDomain } from "@/lib/tenant-url";
 
 export const TENANT_SLUG_HEADER = "x-tenant-slug";
 export const TENANT_SLUG_COOKIE = "tenant-slug";
+/** Cache de existência ACTIVE (setado pelo middleware após by-slug). */
+export const TENANT_VERIFIED_COOKIE = "tenant-slug-ok";
 
 /** Labels reservados — não são orgs; comportamento de apex/marketing. */
 export const RESERVED_TENANT_SLUGS = new Set([

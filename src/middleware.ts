@@ -7,6 +7,7 @@ import {
   resolveTenantFromRequest,
   TENANT_SLUG_COOKIE,
   TENANT_SLUG_HEADER,
+  TENANT_VERIFIED_COOKIE,
 } from "@/lib/tenant-host";
 import { getTenantBaseDomain, getTenantProtocol } from "@/lib/tenant-url";
 
@@ -163,6 +164,7 @@ function withTenantContext(
         });
       } else {
         res.cookies.delete(TENANT_SLUG_COOKIE);
+        res.cookies.delete(TENANT_VERIFIED_COOKIE);
       }
       return res;
     },
@@ -180,7 +182,11 @@ const PUBLIC_PATHS = new Set([
   "/cockpit-agente.html",
 ]);
 
-const PUBLIC_API_PATHS = new Set(["/api/signup", "/api/app-revision"]);
+const PUBLIC_API_PATHS = new Set([
+  "/api/signup",
+  "/api/app-revision",
+  "/api/organization/by-slug",
+]);
 
 const PWA_PUBLIC_PATHS = new Set([
   "/manifest.webmanifest",
@@ -195,6 +201,40 @@ const PWA_PUBLIC_PATHS = new Set([
   "/apple-icon",
   "/api/push/vapid-public",
 ]);
+
+/** Cookie curto: evita bater no BE a cada request do middleware. */
+const TENANT_VERIFIED_MAX_AGE_SEC = 600;
+
+async function verifyTenantSlugExists(
+  req: NextRequest,
+  slug: string,
+  sessionSlug: string | null | undefined,
+): Promise<"ok" | "missing" | "skip"> {
+  // Sessão da própria org já prova existência ACTIVE no login.
+  if (sessionSlug && sessionSlug === slug) return "ok";
+  if (req.cookies.get(TENANT_VERIFIED_COOKIE)?.value === slug) return "ok";
+
+  const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "")
+    .trim()
+    .replace(/\/$/, "");
+  // Sem backend configurado (sandbox/misconfig): só validação de formato.
+  if (!apiBase) return "skip";
+
+  try {
+    const url = `${apiBase}/api/organization/by-slug?slug=${encodeURIComponent(slug)}`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (res.status === 404) return "missing";
+    if (!res.ok) return "skip";
+    return "ok";
+  } catch {
+    // BE fora do ar: não derruba o app inteiro — auth/JWT ainda protege dados.
+    return "skip";
+  }
+}
 
 export async function middleware(req: NextRequest) {
   try {
@@ -233,12 +273,43 @@ export async function middleware(req: NextRequest) {
     const tenantSlug = tenant.kind === "tenant" ? tenant.slug : null;
     const { requestHeaders, applyCookies } = withTenantContext(req, tenantSlug);
 
-    const nextWithTenant = () =>
-      applyCookies(
-        withSecurityHeaders(
-          NextResponse.next({ request: { headers: requestHeaders } }),
-        ),
+    // Auth cedo: reutilizado na checagem de existência + mismatch.
+    const reqAuth = await readAuthFromRequestCookie(req);
+
+    let cacheTenantVerified = false;
+    if (
+      tenantSlug &&
+      pathname !== "/api/organization/by-slug" &&
+      !pathname.startsWith("/_next") &&
+      !pathname.startsWith("/api/health")
+    ) {
+      const existence = await verifyTenantSlugExists(
+        req,
+        tenantSlug,
+        reqAuth?.user?.organizationSlug,
       );
+      if (existence === "missing") {
+        return unknownTenantResponse(req, tenantSlug);
+      }
+      if (existence === "ok") cacheTenantVerified = true;
+    }
+
+    const finish = (res: NextResponse) => {
+      let out = applyCookies(withSecurityHeaders(res));
+      if (cacheTenantVerified && tenantSlug) {
+        out.cookies.set(TENANT_VERIFIED_COOKIE, tenantSlug, {
+          path: "/",
+          sameSite: "lax",
+          httpOnly: true,
+          secure: secureCookieFromEnv(),
+          maxAge: TENANT_VERIFIED_MAX_AGE_SEC,
+        });
+      }
+      return out;
+    };
+
+    const nextWithTenant = () =>
+      finish(NextResponse.next({ request: { headers: requestHeaders } }));
 
     // Rotas /v2/* são redirecionadas por next.config.ts (redirects) para
     // o path canônico. Liberamos aqui para que o redirect ocorra sem
@@ -277,8 +348,6 @@ export async function middleware(req: NextRequest) {
       return nextWithTenant();
     }
 
-    const reqAuth = await readAuthFromRequestCookie(req);
-
     // Sessão logada em subdomínio de outra org → rejeita (exceto super-admin).
     if (
       tenantSlug &&
@@ -288,23 +357,19 @@ export async function middleware(req: NextRequest) {
       reqAuth.user.organizationSlug !== tenantSlug
     ) {
       if (pathname.startsWith("/api/")) {
-        return applyCookies(
-          withSecurityHeaders(
-            NextResponse.json(
-              {
-                message: "Sessão não pertence a esta organização.",
-                code: "TENANT_MISMATCH",
-              },
-              { status: 403 },
-            ),
+        return finish(
+          NextResponse.json(
+            {
+              message: "Sessão não pertence a esta organização.",
+              code: "TENANT_MISMATCH",
+            },
+            { status: 403 },
           ),
         );
       }
       const loginUrl = new URL("/login", req.nextUrl.origin);
       loginUrl.searchParams.set("error", "tenant_mismatch");
-      return applyCookies(
-        withSecurityHeaders(NextResponse.redirect(loginUrl)),
-      );
+      return finish(NextResponse.redirect(loginUrl));
     }
 
     // Para /api/* (rotas que vão pro backend), permite Bearer token mesmo sem sessão.
@@ -326,21 +391,17 @@ export async function middleware(req: NextRequest) {
       // `Unexpected token '<', "<!doctype "... is not valid JSON`. Devolver 401
       // JSON deixa o React Query ir direto pro estado de erro com payload tratável.
       if (pathname.startsWith("/api/")) {
-        return applyCookies(
-          withSecurityHeaders(
-            NextResponse.json(
-              { message: "Unauthorized", code: "AUTH_REQUIRED" },
-              { status: 401 },
-            ),
+        return finish(
+          NextResponse.json(
+            { message: "Unauthorized", code: "AUTH_REQUIRED" },
+            { status: 401 },
           ),
         );
       }
       const loginUrl = new URL("/login", req.nextUrl.origin);
       const fullPath = pathname + (req.nextUrl.search ?? "");
       loginUrl.searchParams.set("callbackUrl", fullPath);
-      return applyCookies(
-        withSecurityHeaders(NextResponse.redirect(loginUrl)),
-      );
+      return finish(NextResponse.redirect(loginUrl));
     }
 
     const isSuperAdmin = Boolean(reqAuth.user?.isSuperAdmin);
@@ -350,20 +411,14 @@ export async function middleware(req: NextRequest) {
       !isSuperAdmin
     ) {
       if (pathname.startsWith("/api/admin")) {
-        return applyCookies(
-          withSecurityHeaders(
-            NextResponse.json(
-              { message: "Acesso restrito a administradores da plataforma." },
-              { status: 403 },
-            ),
+        return finish(
+          NextResponse.json(
+            { message: "Acesso restrito a administradores da plataforma." },
+            { status: 403 },
           ),
         );
       }
-      return applyCookies(
-        withSecurityHeaders(
-          NextResponse.redirect(new URL("/", req.nextUrl.origin)),
-        ),
-      );
+      return finish(NextResponse.redirect(new URL("/", req.nextUrl.origin)));
     }
 
     return nextWithTenant();

@@ -9,8 +9,8 @@
  * que destoava visualmente dos cards de negócio.
  *
  * Seleção = highlight visual apenas (`isSelected` do próprio DealCard).
- * Campos CRM (produto / responsável / contato / etapa / layout) moram no
- * DealDetailPanel da Sheet à direita — nunca na coluna da fila.
+ * Tags e responsável usam os mesmos popovers do kanban (`tagsSlot` /
+ * `ownerSlot`). Demais campos CRM moram no DealDetailPanel / Sheet.
  */
 
 import { useRef, useEffect } from "react";
@@ -25,12 +25,14 @@ import { cn } from "@/lib/utils";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { SUBTLE_SPRING } from "@/lib/design-system";
+import { Chip } from "@/components/crm/chip";
 import { DealCard } from "@/components/crm/deal-card";
 import { TagChip } from "@/components/crm/tag-chip";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import { toDealCard } from "@/features/pipeline-v2/adapters";
 import type { BoardDealDto } from "@/features/pipeline-v2/api";
-import { TagsPopover } from "@/features/pipeline-v2/extras";
+import { AssigneePopover, TagsPopover } from "@/features/pipeline-v2/extras";
 import { TooltipHost } from "@/components/ui/tooltip";
 import {
   computePopoverPosition,
@@ -350,6 +352,40 @@ function DealQueueItem({
               }
             />
           </>
+        }
+        // Mesmo padrão do kanban: AssigneePopover + pill / avatar+nome.
+        ownerSlot={
+          <AssigneePopover
+            dealId={deal.id}
+            currentOwnerId={deal.owner?.id ?? null}
+            currentOwnerName={deal.owner?.name ?? null}
+            pipelineId={pipelineId}
+            statusFilter={statusFilter}
+            trigger={
+              deal.owner?.name ? (
+                <span
+                  className="inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-px pl-px pr-2 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]"
+                  title={deal.owner.name}
+                >
+                  <UserAvatar
+                    name={deal.owner.name}
+                    imageUrl={deal.owner.avatarUrl ?? null}
+                    size={22}
+                  />
+                  <span className="min-w-0 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
+                    {deal.owner.name}
+                  </span>
+                </span>
+              ) : (
+                <Chip
+                  variant="ghost"
+                  className="cursor-pointer whitespace-nowrap transition-colors hover:text-[var(--brand-primary)]"
+                >
+                  +Responsável
+                </Chip>
+              )
+            }
+          />
         }
       />
       {unread > 0 ? (

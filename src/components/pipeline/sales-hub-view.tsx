@@ -31,7 +31,10 @@ import {
 } from "@/components/sales-hub/deal-queue";
 import { SalesHubChat } from "@/components/sales-hub/sales-hub-chat";
 import { ConversationActionsMenu } from "@/features/inbox-v2/extras";
-import { DealOutcomeButtons } from "@/components/sales-hub/deal-actions";
+import {
+  DealMoveStageButton,
+  DealOutcomeButtons,
+} from "@/components/sales-hub/deal-actions";
 import {
   DealDetailPanel,
   type DealDetail,
@@ -693,11 +696,20 @@ export function SalesHubView({
                   {queueStageHeader.count}
                 </span>
               </div>
-              <DealQueueSortMenu
-                sortMode={sortMode}
-                onSortModeChange={onSortModeChange}
-                iconOnly
-              />
+              <div className="flex shrink-0 items-center gap-1.5">
+                <DealQueueSortMenu
+                  sortMode={sortMode}
+                  onSortModeChange={onSortModeChange}
+                  iconOnly
+                />
+                <DealMoveStageButton
+                  deal={activeDeal}
+                  stages={stages}
+                  pipelineId={pipelineId}
+                  statusFilter={statusFilter}
+                  onMoved={handleDealMoved}
+                />
+              </div>
             </div>
             <div
               className="mt-1.5 h-[2px] w-full rounded-full opacity-90"

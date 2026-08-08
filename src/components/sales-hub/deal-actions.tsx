@@ -25,9 +25,16 @@ import { apiUrl } from "@/lib/api";
  */
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { IconCheck as Check, IconChevronDown as ChevronDown, IconTrophy as Trophy, IconCircleX as XCircle } from "@tabler/icons-react";
+import {
+  IconArrowsExchange as ArrowsExchange,
+  IconCheck as Check,
+  IconChevronDown as ChevronDown,
+  IconTrophy as Trophy,
+  IconCircleX as XCircle,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
@@ -35,6 +42,11 @@ import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SUBTLE_SPRING } from "@/lib/design-system";
 import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
+import {
+  computePopoverPosition,
+  usePortalPopover,
+} from "@/features/pipeline-v2/extras/use-portal-popover";
+import { TooltipHost } from "@/components/ui/tooltip";
 
 type StatusFilter = "OPEN" | "WON" | "LOST" | "ALL";
 
@@ -182,6 +194,123 @@ export function useMoveMutation({
       }
     },
   });
+}
+
+/**
+ * Botão compacto "Mover de fase" — mesmo corpo do kanban
+ * (`MoveToStageMenu` + `useMoveMutation`). Usado no header da fila
+ * Flow, ao lado do sort: age sobre o deal ativo; desabilitado se
+ * nenhum estiver selecionado.
+ */
+export function DealMoveStageButton({
+  deal,
+  stages,
+  pipelineId,
+  statusFilter,
+  onMoved,
+}: {
+  deal: (BoardDeal & { stageId: string }) | null;
+  stages: BoardStage[];
+  pipelineId: string;
+  statusFilter: StatusFilter;
+  onMoved?: (dealId: string) => void;
+}) {
+  const { open, rect, triggerRef, popoverRef, toggle, close } =
+    usePortalPopover();
+  const moveMutation = useMoveMutation({
+    pipelineId,
+    statusFilter,
+    stages,
+    onMoved,
+  });
+  const position = computePopoverPosition(rect, 320, 240);
+  const noDeal = !deal;
+  const disabled = noDeal || moveMutation.isPending;
+  const tooltip = noDeal ? "Selecione um negócio" : "Mover de fase";
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, close]);
+
+  // Fecha o popover se o deal ativo sumir (ex.: moveu de etapa).
+  React.useEffect(() => {
+    if (!deal && open) close();
+  }, [deal, open, close]);
+
+  return (
+    <div className="relative shrink-0">
+      <TooltipHost label={tooltip} side="top">
+        <button
+          ref={triggerRef}
+          type="button"
+          disabled={disabled}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={tooltip}
+          onClick={() => {
+            if (disabled) return;
+            toggle();
+          }}
+          className={cn(
+            "inline-flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0 text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]",
+            open &&
+              "border-[var(--brand-primary)]/40 ring-[3px] ring-[var(--brand-primary)]/15",
+            disabled && "cursor-not-allowed opacity-50 hover:bg-[var(--glass-bg-overlay)]",
+          )}
+        >
+          <ArrowsExchange
+            className="size-3.5 text-[var(--text-muted)]"
+            strokeWidth={2.2}
+          />
+        </button>
+      </TooltipHost>
+      {open && deal && rect && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={popoverRef}
+              role="listbox"
+              className="max-h-[320px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] py-1 shadow-[0_12px_32px_rgba(15,23,42,0.18)] v2-dark:shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
+              style={{
+                position: "fixed",
+                top: position.top,
+                left: position.left,
+                width: 240,
+                zIndex: "var(--z-popover)",
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoveToStageMenu
+                stages={stages}
+                currentStageId={deal.stageId}
+                currentPipelineId={pipelineId}
+                isPending={moveMutation.isPending}
+                header={
+                  <div className="px-3 py-1.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    Mover para
+                  </div>
+                }
+                onSelect={(stageId, toPipelineId) => {
+                  moveMutation.mutate({
+                    dealId: deal.id,
+                    fromStageId: deal.stageId,
+                    toStageId: stageId,
+                    toPipelineId,
+                  });
+                  close();
+                }}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
 }
 
 /**

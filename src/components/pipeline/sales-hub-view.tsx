@@ -823,11 +823,20 @@ export function SalesHubView({
         </div>
 
         {/* Coluna 3 — CRM inline (DealDetailPanel crmOnly): comprime o chat,
-            sem Sheet/scrim. Abre via briefcase ou mouse leave na borda direita. */}
-        {activeDeal && detailsOpen ? (
+            sem Sheet/scrim. Abre via briefcase ou mouse leave na borda direita.
+            Mantida montada com deal ativo p/ slide-out (grid 0fr + transform)
+            antes do colapso; no mobile some do fluxo quando fechada. */}
+        {activeDeal ? (
           <aside
-            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md md:min-w-[280px] md:animate-in md:fade-in-0 md:slide-in-from-right-2 md:duration-300"
+            className={cn(
+              "min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--glass-bg-modal)] backdrop-blur-md",
+              "md:transition-[transform,opacity,border-color,box-shadow,min-width] md:duration-300 md:ease-[cubic-bezier(0.32,0.72,0,1)]",
+              detailsOpen
+                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:min-w-[280px] md:translate-x-0 md:opacity-100"
+                : "pointer-events-none hidden border-transparent shadow-none md:flex md:min-w-0 md:translate-x-3 md:opacity-0",
+            )}
             aria-label="Detalhes do negócio"
+            aria-hidden={!detailsOpen}
             onMouseEnter={handleAsideMouseEnter}
             onMouseLeave={handleAsideMouseLeave}
           >

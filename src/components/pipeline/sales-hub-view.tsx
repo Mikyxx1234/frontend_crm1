@@ -619,6 +619,7 @@ export function SalesHubView({
             onSelectDeal={handleSelectDeal}
             onDeselect={handleDeselectDeal}
             recentlyMovedDealId={recentlyMovedDealId}
+            sortMode={sortMode}
             pipelineId={pipelineId}
             statusFilter={statusFilter}
             onMoved={handleDealMoved}

@@ -243,6 +243,8 @@ type DealQueueProps = {
    * "pulou" de etapa quando o quick-move é disparado dos botões.
    */
   recentlyMovedDealId?: string | null;
+  /** Quando muda, a fila volta ao topo para a nova ordem ficar visível. */
+  sortMode?: DealQueueSortMode;
   /** Mantidos na API pública (host / SalesHubView); CRM vive na Sheet. */
   pipelineId: string;
   statusFilter?: StatusFilter;
@@ -268,8 +270,6 @@ function DealQueueItem({
   onDeselect?: () => void;
   wasRecentlyMoved: boolean;
 }) {
-  const cardRef = useRef<HTMLDivElement | null>(null);
-
   const toggleSelection = () => {
     if (isActive) onDeselect?.();
     else onSelectDeal(deal.id);
@@ -279,19 +279,14 @@ function DealQueueItem({
   const tagList = deal.tags ?? [];
   const unread = deal.unreadCount ?? 0;
 
-  useEffect(() => {
-    if (isActive && cardRef.current) {
-      cardRef.current.scrollIntoView({
-        block: "nearest",
-        behavior: "smooth",
-      });
-    }
-  }, [isActive]);
+  // Não scrollIntoView aqui: com AnimatePresence/popLayout a reordenação
+  // remonta o item ativo e o effect rodaria de novo, pulando a fila para
+  // o card selecionado em vez de mostrar o topo da nova ordem. O scroll
+  // intencional fica em DealQueue (só quando activeDealId muda).
 
   return (
     <motion.div
       layout
-      ref={cardRef}
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
@@ -346,11 +341,18 @@ export function DealQueue({
   onSelectDeal,
   onDeselect,
   recentlyMovedDealId,
+  sortMode,
 }: DealQueueProps) {
   // Mantem o card ativo sempre visivel na fila — quando a selecao
   // muda, rola suave pro card novo ficar no viewport.
   const scrollerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef(new Map<string, HTMLElement>());
+
+  // Troca de ordenação: lista do topo (ordem nova), sem pular pro deal ativo.
+  useEffect(() => {
+    if (sortMode === undefined) return;
+    if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+  }, [sortMode]);
 
   useEffect(() => {
     if (!activeDealId) return;

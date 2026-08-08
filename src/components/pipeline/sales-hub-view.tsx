@@ -895,7 +895,7 @@ export function SalesHubView({
                           <TagChip
                             name={t.name}
                             color={t.color}
-                            className="max-w-[9rem] min-w-0 shrink"
+                            className="max-w-[9.5rem] min-w-0 shrink"
                           />
                         </TooltipGlass>
                       ))}

@@ -116,12 +116,13 @@ function DealTagsTray({
 
   function chip(t: { id: string; name: string; color: string | null }) {
     return (
-      <TagChip
-        key={t.id}
-        name={t.name}
-        color={t.color}
-        className="h-5 min-w-0 max-w-[7rem] shrink"
-      />
+      <TooltipGlass key={t.id} label={t.name} side="top">
+        <TagChip
+          name={t.name}
+          color={t.color}
+          className="h-5 min-w-0 max-w-[8.5rem] shrink"
+        />
+      </TooltipGlass>
     );
   }
 
@@ -151,12 +152,13 @@ function ContactTagsTray({
 
   function chip(t: { id: string; name: string; color: string | null }) {
     return (
-      <TagChip
-        key={t.id}
-        name={t.name}
-        color={t.color}
-        className="h-5 min-w-0 max-w-[7rem] shrink"
-      />
+      <TooltipGlass key={t.id} label={t.name} side="top">
+        <TagChip
+          name={t.name}
+          color={t.color}
+          className="h-5 min-w-0 max-w-[8.5rem] shrink"
+        />
+      </TooltipGlass>
     );
   }
 

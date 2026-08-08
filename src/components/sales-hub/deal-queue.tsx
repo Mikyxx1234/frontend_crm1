@@ -341,7 +341,7 @@ function DealQueueItem({
                   <TagChip
                     name={t.name}
                     color={t.color}
-                    className="max-w-[7.5rem] min-w-0 shrink"
+                    className="max-w-[9.5rem] min-w-0 shrink"
                   />
                 </TooltipGlass>
               ))}

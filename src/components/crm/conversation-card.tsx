@@ -343,12 +343,13 @@ export function ConversationCard({
       {conversation.tags && conversation.tags.length > 0 && (
         <div className="mt-1.5 flex flex-wrap items-center gap-1">
           {conversation.tags.slice(0, 2).map((t) => (
-            <TagChip
-              key={t.id}
-              name={t.name}
-              color={t.color}
-              className="max-w-[7.5rem]"
-            />
+            <TooltipGlass key={t.id} label={t.name} side="top">
+              <TagChip
+                name={t.name}
+                color={t.color}
+                className="max-w-[7.5rem]"
+              />
+            </TooltipGlass>
           ))}
           {conversation.tags.length > 2 && (
             <TooltipGlass

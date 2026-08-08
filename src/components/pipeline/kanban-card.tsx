@@ -442,7 +442,7 @@ export function KanbanCard({
                         <TagChip
                           name={tag.name}
                           color={tag.color}
-                          className="max-w-[7.5rem] whitespace-nowrap"
+                          className="max-w-[9.5rem] whitespace-nowrap"
                         />
                       </TooltipHost>
                     ))}

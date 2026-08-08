@@ -5,7 +5,10 @@ import { IconCheck } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 
-export type TagChipProps = {
+export type TagChipProps = Omit<
+  React.HTMLAttributes<HTMLElement>,
+  "color" | "title" | "onClick" | "children"
+> & {
   name: string;
   color?: string | null;
   /** Contador auxiliar (ex.: uso em deals) exibido à direita do nome. */
@@ -13,6 +16,11 @@ export type TagChipProps = {
   selected?: boolean;
   size?: "sm" | "md";
   className?: string;
+  /**
+   * Tooltip NATIVO do browser. Só passe onde o chip não estiver dentro de
+   * um tooltip do DS (`TooltipGlass`/`TooltipHost`) — os dois juntos
+   * mostram a caixa preta do Chrome por cima do balão glass.
+   */
   title?: string;
   onClick?: () => void;
   "aria-pressed"?: boolean;
@@ -21,8 +29,12 @@ export type TagChipProps = {
 /**
  * Chip canônico de tag — mesmo visual dos filtros do funil/inbox:
  * fundo suave da cor + borda; estado selecionado = preenchimento sólido.
+ *
+ * Encaminha `ref` e props extras para o elemento raiz: sem isso o
+ * `Trigger asChild` do Radix (TooltipGlass/TooltipHost) não consegue
+ * ancorar nem escutar o hover no chip.
  */
-export function TagChip({
+export const TagChip = React.forwardRef<HTMLElement, TagChipProps>(function TagChip({
   name,
   color,
   count,
@@ -32,9 +44,10 @@ export function TagChip({
   title,
   onClick,
   "aria-pressed": ariaPressed,
-}: TagChipProps) {
+  ...rest
+}, ref) {
   const chipColor = color || "#6366f1";
-  const Comp = onClick ? "button" : "span";
+  const Comp: React.ElementType = onClick ? "button" : "span";
   // Só reserva o check em chips interativos (filtros/listas). Em chips de
   // exibição (card/fila) o ícone invisível deslocava o rótulo e parecia
   // cortado/fora do centro.
@@ -42,10 +55,12 @@ export function TagChip({
 
   return (
     <Comp
+      {...rest}
+      ref={ref}
       type={onClick ? "button" : undefined}
       onClick={onClick}
       aria-pressed={ariaPressed ?? (onClick ? selected : undefined)}
-      title={title ?? name}
+      title={title}
       className={cn(
         // h fixa + leading-none: evita clip vertical em pais com overflow
         // (fila Flow / nowrap). Truncate fica no <span> interno.
@@ -94,4 +109,4 @@ export function TagChip({
       )}
     </Comp>
   );
-}
+});

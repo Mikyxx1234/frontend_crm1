@@ -23,6 +23,7 @@ import { KpiStrip } from "@/components/crm/kpi-strip";
 import { MobileTableScroll } from "@/components/crm/mobile-table-scroll";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import { TagChip } from "@/components/crm/tag-chip";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
   SettingsListFilterBar,
   type SettingsFilterGroup,
@@ -509,13 +510,15 @@ function TagsPage() {
 
                 {/* Nome */}
                 <div className="flex min-w-0 flex-col items-start gap-1">
-                  <TagChip
-                    name={tag.name}
-                    color={tag.color}
-                    size="md"
-                    selected={isSelected}
-                    className="max-w-full"
-                  />
+                  <TooltipGlass label={tag.name} side="top">
+                    <TagChip
+                      name={tag.name}
+                      color={tag.color}
+                      size="md"
+                      selected={isSelected}
+                      className="max-w-full"
+                    />
+                  </TooltipGlass>
                   {isUnused && (
                     <span className="inline-flex items-center rounded-full bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10px] font-semibold text-[var(--text-muted)]">
                       Sem uso

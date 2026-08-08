@@ -1272,7 +1272,7 @@ export default function KanbanV2ClientPage({
                     <TagChip
                       name={t.name}
                       color={t.color}
-                      className="max-w-[9rem] min-w-0 shrink"
+                      className="max-w-[9.5rem] min-w-0 shrink"
                     />
                   </TooltipGlass>
                 ))}
@@ -1781,7 +1781,7 @@ function DroppableColumn({
                                 <TagChip
                                   name={t.name}
                                   color={t.color}
-                                  className="max-w-[7.5rem] min-w-0 shrink"
+                                  className="max-w-[9.5rem] min-w-0 shrink"
                                 />
                               </TooltipGlass>
                             ))}

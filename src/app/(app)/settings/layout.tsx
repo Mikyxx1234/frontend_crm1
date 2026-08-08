@@ -51,10 +51,10 @@ export default function SettingsLayout({
         "v2-screen grid min-w-0 grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4",
         // Transição do grid: a coluna do meio anima entre 0 e 288px, no
         // mesmo tempo/curva do slide da sidebar (abrir e fechar).
-        "transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] motion-reduce:transition-none",
+        "transition-[grid-template-columns] duration-[var(--drawer-duration)] motion-reduce:transition-none",
         open
-          ? "grid-cols-[var(--nav-rail-w,72px)_minmax(240px,288px)_minmax(0,1fr)]"
-          : "grid-cols-[var(--nav-rail-w,72px)_0px_minmax(0,1fr)]",
+          ? "grid-cols-[var(--nav-rail-w,72px)_minmax(240px,288px)_minmax(0,1fr)] ease-[var(--ease-drawer-open)]"
+          : "grid-cols-[var(--nav-rail-w,72px)_0px_minmax(0,1fr)] ease-[var(--ease-drawer-close)]",
       )}
     >
       <NavRailSpacer />

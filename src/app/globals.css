@@ -868,7 +868,18 @@
 }
 /* Gavetas laterais (sidebar de /settings, aside CRM do Flow) usam
    transition — e não keyframes — para que a saída espelhe a entrada.
-   Curva/duração compartilhadas ficam nos próprios componentes. */
+   As curvas reproduzem o `power3` do GSAP (receita do AnimatedContent,
+   React Bits) sem trazer a lib: abre desacelerando até parar (out) e
+   fecha ganhando velocidade (in), na mesma duração nos dois sentidos.
+   O grid que anima a largura da coluna precisa usar os MESMOS tokens,
+   senão a moldura descola do painel no meio do trajeto. */
+:root {
+  --drawer-duration: 500ms;
+  /* power3.out */
+  --ease-drawer-open: cubic-bezier(0.165, 0.84, 0.44, 1);
+  /* power3.in */
+  --ease-drawer-close: cubic-bezier(0.895, 0.03, 0.685, 0.22);
+}
 /* Transição de página (rotas abertas pela NavRail).
    A NavRail é SEMPRE o primeiro filho de `.v2-screen`; animamos apenas o
    "recheio" (demais colunas: conteúdo/sidebar/painel), deixando a rail

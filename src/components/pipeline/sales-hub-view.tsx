@@ -696,12 +696,12 @@ export function SalesHubView({
           // abrir/fechar chat ou aside — sem thrash nos cards da fila.
           // Sempre split no desktop (fila ~300px + chat): evita cards
           // “gigantes” na 1ª abertura / sem deal selecionado.
-          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-500 md:ease-[cubic-bezier(0.25,0.46,0.45,0.94)] md:motion-reduce:transition-none",
+          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-[var(--drawer-duration)] md:motion-reduce:transition-none",
           // 3 tracks sempre no md (3ª = 0fr fechada) p/ interpolar
           // grid-template-columns no open/close do aside sem thrash.
           detailsOpen && activeDeal
-            ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)]"
-            : "md:grid-cols-[300px_minmax(0,1fr)_0fr]",
+            ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)] md:ease-[var(--ease-drawer-open)]"
+            : "md:grid-cols-[300px_minmax(0,1fr)_0fr] md:ease-[var(--ease-drawer-close)]",
         )}
       >
         {/* Coluna 1 — Fila: superfície igual `KanbanColumn`
@@ -865,12 +865,12 @@ export function SalesHubView({
           <aside
             className={cn(
               "min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--glass-bg-modal)] backdrop-blur-md",
-              // Mesma curva/duração da gaveta de Configurações: entrada e
-              // saída simétricas, deslizando 100px.
-              "md:transition-[transform,opacity,border-color,box-shadow,min-width] md:duration-500 md:ease-[cubic-bezier(0.25,0.46,0.45,0.94)] md:motion-reduce:transition-none",
+              // Mesmos tokens da gaveta de Configurações: desliza 100px,
+              // abre com power3.out e fecha com power3.in.
+              "md:transition-[transform,opacity,border-color,box-shadow,min-width] md:duration-[var(--drawer-duration)] md:motion-reduce:transition-none",
               detailsOpen
-                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:min-w-[280px] md:translate-x-0 md:opacity-100"
-                : "pointer-events-none hidden border-transparent shadow-none md:flex md:min-w-0 md:translate-x-[100px] md:opacity-0",
+                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:min-w-[280px] md:translate-x-0 md:scale-100 md:opacity-100 md:ease-[var(--ease-drawer-open)]"
+                : "pointer-events-none hidden border-transparent shadow-none md:flex md:min-w-0 md:translate-x-[100px] md:scale-[0.98] md:opacity-0 md:ease-[var(--ease-drawer-close)]",
             )}
             aria-label="Detalhes do negócio"
             aria-hidden={!detailsOpen}

@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useBulkOperation, isBulkOperationFinished } from "@/hooks/use-bulk-operation";
 import { RequirePermission } from "@/components/auth/require-permission";
+import { useMyPermissions } from "@/hooks/use-my-permissions";
+import { listAllowedInboxTabsForUser } from "@/lib/authz/scope-grants-shared";
 import { toast } from "sonner";
 import {
   IconArrowLeft,
@@ -290,9 +292,31 @@ export default function InboxV2ClientPage({
   navRail,
   pageHeader,
 }: InboxV2ClientPageProps = {}) {
-  const { status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
   const isDesktop = useIsDesktop();
+  const { data: myPermissions } = useMyPermissions();
+  const sessionRole = (session?.user as { role?: string } | undefined)?.role;
+
+  const visibleTabs = useMemo(() => {
+    const role = sessionRole ?? null;
+    if (role === "ADMIN" || role === "MANAGER") return TABS;
+    // Enquanto carrega permissions: default operacional (evita flash de Automação/Entrada).
+    if (!myPermissions) {
+      return TABS.filter(
+        (t) =>
+          t.id === "todos" || t.id === "esperando" || t.id === "respondidas",
+      );
+    }
+    const allowed = new Set(
+      listAllowedInboxTabsForUser({
+        grants: {},
+        role,
+        permissions: myPermissions.permissions,
+      }),
+    );
+    return TABS.filter((t) => allowed.has(t.id));
+  }, [sessionRole, myPermissions]);
 
   // ── Largura das colunas (persistidas) ─────────────────────────
   const [convWidth, setConvWidth] = usePersistentWidth(
@@ -319,6 +343,13 @@ export default function InboxV2ClientPage({
     if (!tabHydrated) return;
     writeStoredInboxTab(tab);
   }, [tab, tabHydrated]);
+  // Se a aba salva não for permitida para o papel, cai na primeira visível.
+  useEffect(() => {
+    if (!tabHydrated || visibleTabs.length === 0) return;
+    if (!visibleTabs.some((t) => t.id === tab)) {
+      setTab(visibleTabs[0]?.id ?? DEFAULT_INBOX_TAB);
+    }
+  }, [tabHydrated, visibleTabs, tab]);
   // Filtros do painel persistem em localStorage — sobrevive navegação
   // para outras páginas do CRM e refresh. Lê no effect (SSR-safe).
   const [filters, setFilters] = useState<InboxFilters>(DEFAULT_FILTERS);
@@ -1121,7 +1152,7 @@ export default function InboxV2ClientPage({
         if (v) setSelectedIds(new Set(conversationCards.map((c) => c.id)));
       }}
       bulkActionsSlot={bulkActionsNode}
-      tabsOverride={TABS.map((t) => {
+      tabsOverride={visibleTabs.map((t) => {
         const count = listBootstrapping
           ? undefined
           : tabCounts?.[t.id];
@@ -1133,9 +1164,9 @@ export default function InboxV2ClientPage({
           count: hideZeroBadge ? undefined : count,
         };
       })}
-      activeTabIndex={TABS.findIndex((t) => t.id === tab)}
+      activeTabIndex={visibleTabs.findIndex((t) => t.id === tab)}
       onTabChange={(idx) => {
-        const next = TABS[idx]?.id;
+        const next = visibleTabs[idx]?.id;
         if (next) setTab(next);
       }}
       onRefresh={() => {

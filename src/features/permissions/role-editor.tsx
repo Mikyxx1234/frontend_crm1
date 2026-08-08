@@ -423,7 +423,7 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
         <ExtraToggle
           icon={<IconMail size={16} />}
           title="Caixa de entrada compartilhada"
-          desc="Permite ler e responder conversas não atribuídas. Desmarque para restringir somente aos próprios atendimentos."
+          desc="Legado para gestores: lê conversas não atribuídas ligadas aos seus contatos. Para operadores (MEMBER), use as permissões «Filas da Inbox» (ex.: Entrada + Assumir conversa; Automação)."
           checked={sharedInbox}
           onChange={setSharedInbox}
         />

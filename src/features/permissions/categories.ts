@@ -44,7 +44,7 @@ export const PERMISSION_CATEGORIES: CategoryDef[] = [
   {
     id: "messaging",
     label: "Mensageria & Automação",
-    resources: ["automation", "ai_agent", "distribution"],
+    resources: ["automation", "ai_agent", "distribution", "inbox"],
   },
   {
     id: "catalog",

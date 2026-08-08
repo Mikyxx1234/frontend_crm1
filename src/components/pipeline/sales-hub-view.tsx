@@ -538,9 +538,6 @@ export function SalesHubView({
         name: s.name,
         color: s.color,
         count: s.deals.length,
-        hasUrgent: s.deals.some(
-          (d) => d.isRotting || d.priority === "HIGH",
-        ),
       })),
     [filteredStages],
   );

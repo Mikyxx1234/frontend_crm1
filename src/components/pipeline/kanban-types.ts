@@ -25,7 +25,13 @@ export type BoardDeal = {
    * `propagateOwnerToContactAndChat` no service.
    */
   owner: { id: string; name: string; avatarUrl?: string | null } | null;
-  lastMessage: { content: string; createdAt: string; direction: string } | null;
+  lastMessage: {
+    content: string;
+    createdAt: string;
+    direction: string;
+    sendStatus?: string | null;
+    sendError?: string | null;
+  } | null;
   /**
    * Canal da conversa "ativa" do contato (ex.: "whatsapp", "instagram").
    * Usado pelo `ChatAvatar` no card pra exibir o badge correto. `null`

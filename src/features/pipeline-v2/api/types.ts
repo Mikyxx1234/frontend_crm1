@@ -31,7 +31,15 @@ export interface BoardDealDto {
     avatarUrl?: string | null;
   } | null;
   owner: { id: string; name: string; avatarUrl?: string | null } | null;
-  lastMessage: { content: string; createdAt: string; direction: string } | null;
+  lastMessage: {
+    content: string;
+    createdAt: string;
+    direction: string;
+    /** Status de entrega (outbound). Espelha Message.sendStatus. */
+    sendStatus?: string | null;
+    /** Motivo quando sendStatus=failed. */
+    sendError?: string | null;
+  } | null;
   channel?: string | null;
   productName?: string | null;
   productType?: "PRODUCT" | "SERVICE" | null;

@@ -16,6 +16,7 @@ import {
   avatarInitials,
   formatRelative,
 } from "@/features/inbox-v2/adapters";
+import { normalizeDeliveryStatus } from "@/components/crm/status-ticks";
 import { personNameFromDealTitle, sanitizeContactName } from "@/lib/display-name";
 
 // ─────────────────────────────────────────────────────────────────
@@ -121,6 +122,17 @@ export function toDealCard(deal: BoardDealDto): Deal {
     "Sem nome";
   const ownerName = deal.owner?.name?.trim() || "Sem responsavel";
   const lastMessage = deal.lastMessage;
+  const dir = String(lastMessage?.direction ?? "").toLowerCase();
+  const messageDirection: "in" | "out" | undefined =
+    dir === "out" || dir === "outbound"
+      ? "out"
+      : dir === "in" || dir === "inbound"
+        ? "in"
+        : undefined;
+  const messageStatus =
+    messageDirection === "out"
+      ? normalizeDeliveryStatus(lastMessage?.sendStatus)
+      : undefined;
   return {
     id: deal.id,
     name: contactName,
@@ -135,6 +147,10 @@ export function toDealCard(deal: BoardDealDto): Deal {
       ? {
           text: lastMessage.content,
           time: formatRelative(lastMessage.createdAt),
+          direction: messageDirection,
+          status: messageStatus,
+          sendError:
+            messageDirection === "out" ? lastMessage.sendError ?? null : null,
         }
       : undefined,
     tags: (deal.tags ?? []).map((t) => ({

@@ -5,6 +5,12 @@ import { cn } from "@/lib/utils"
 import { IconCircleX, IconClock, IconMessage } from "@tabler/icons-react"
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar"
 import { AVATAR_SIZE } from "@/lib/avatar"
+import { summarizeSendError } from "@/lib/meta-error-catalog"
+import {
+  StatusTicks,
+  type DeliveryTickStatus,
+} from "@/components/crm/status-ticks"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { Chip } from "./chip"
 import { TagChip } from "./tag-chip"
 
@@ -33,6 +39,12 @@ export interface Deal {
   message?: {
     text: string
     time: string
+    /** Direção da última msg — ticks só quando `out`. */
+    direction?: "in" | "out"
+    /** Status de entrega (outbound), mesma semântica do inbox. */
+    status?: DeliveryTickStatus
+    /** Motivo quando status=failed. */
+    sendError?: string | null
   }
   timeAgo?: string
   tags?: { label: string; type: TagType }[]
@@ -208,6 +220,33 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
                 <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
                   <IconMessage size={9} />
                 </span>
+                {/* Ticks de entrega (outbound) — mesma linguagem do conversation-card. */}
+                {deal.message.direction === "out" &&
+                  (deal.message.status === "failed" ? (
+                    <TooltipGlass
+                      label={
+                        summarizeSendError(deal.message.sendError) ||
+                        "Falha no envio"
+                      }
+                      side="top"
+                    >
+                      <span className="mt-px inline-flex shrink-0 not-italic">
+                        <StatusTicks status="failed" onLightBg size="card" />
+                      </span>
+                    </TooltipGlass>
+                  ) : deal.message.status ? (
+                    <span className="mt-px inline-flex shrink-0 not-italic">
+                      <StatusTicks
+                        status={deal.message.status}
+                        onLightBg
+                        size="card"
+                      />
+                    </span>
+                  ) : (
+                    <span className="mt-px inline-flex shrink-0 not-italic">
+                      <StatusTicks status="sent" onLightBg size="card" />
+                    </span>
+                  ))}
                 <span className="line-clamp-2 flex-1 overflow-hidden">{deal.message.text}</span>
                 <span className="shrink-0 text-[10px] not-italic text-[var(--text-muted)]">
                   {deal.message.time}

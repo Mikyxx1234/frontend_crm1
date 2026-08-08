@@ -405,7 +405,7 @@ export function WorkspaceSidebar({
         case "negocio":
           return (
             <div key="negocio">
-              {refHeading("Informações do Negócio", <Briefcase className="size-4" />)}
+              {refHeading("Negócio", <Briefcase className="size-4" />)}
               <div className={sectionCard}>
                 <div className={kommoRow}>
                   <span className="font-medium text-slate-500">Previsão</span>
@@ -461,7 +461,7 @@ export function WorkspaceSidebar({
           return (
             <div key="contato">
               {refHeading(
-                "Informações do Contato",
+                "Contato",
                 <User className="size-4" />,
                 <button type="button" onClick={(e) => { e.stopPropagation(); editingBasic ? saveBasic() : startEdit(); }} aria-label={editingBasic ? "Salvar" : "Editar contato"} className="text-slate-400 transition-colors hover:text-blue-500">
                   {editingBasic ? <Check className="size-4" /> : <Pencil className="size-4" />}

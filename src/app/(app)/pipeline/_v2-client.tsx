@@ -67,6 +67,7 @@ import {
   useDealDetail,
   useEntityViewers,
   useMoveDeal,
+  usePipelineRealtime,
   usePipelineUrlSync,
   usePipelines,
   useTeamUsers,
@@ -319,6 +320,8 @@ export default function KanbanV2ClientPage({
     enabled: isAuthenticated && hasServerBoard,
   });
   const board = hasServerBoard ? boardFiltered.data ?? [] : boardNormal.data ?? [];
+
+  usePipelineRealtime(isAuthenticated);
 
   const moveDeal = useMoveDeal(pipelineId, status);
 

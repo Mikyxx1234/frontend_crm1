@@ -76,14 +76,29 @@ export function StatusTicks({
       />
     )
   }
+  // `read` em fundo claro: azul fixo (mesmo padrão do failed) — evita herdar
+  // text-muted do card italic e parecer "entregue" cinza.
+  if (status === "read") {
+    return (
+      <span
+        className="inline-flex shrink-0 !text-[#38bdf8]"
+        style={{ color: "#38bdf8" }}
+        aria-label="Lida"
+      >
+        <IconChecks
+          size={checks}
+          color="#38bdf8"
+          className="shrink-0 !text-[#38bdf8]"
+          style={{ color: "#38bdf8" }}
+        />
+      </span>
+    )
+  }
   return (
     <IconChecks
       size={checks}
-      className={cn(
-        "shrink-0",
-        status === "read" ? "text-[var(--wa-tick-read,#38bdf8)]" : solid,
-      )}
-      aria-label={status === "read" ? "Lida" : "Entregue"}
+      className={cn("shrink-0", solid)}
+      aria-label="Entregue"
     />
   )
 }

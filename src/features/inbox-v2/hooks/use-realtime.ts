@@ -133,6 +133,13 @@ export function useInboxRealtime(options: {
                 refetchType: "none",
               });
             }
+            // Leitura (ticks azuis): atualiza timeline do deal e feed /logs.
+            if ((data.status ?? "").toLowerCase() === "read") {
+              qc.invalidateQueries({ queryKey: ["deal-timeline-v2"] });
+              qc.invalidateQueries({ queryKey: ["deal-timeline"] });
+              qc.invalidateQueries({ queryKey: ["activity-feed"] });
+              qc.invalidateQueries({ queryKey: ["activity-feed-stats"] });
+            }
           }
           scheduleInboxRefresh();
         } catch {

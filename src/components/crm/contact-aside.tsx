@@ -589,7 +589,7 @@ function DealInline({
           <div className="mb-1 flex items-center gap-1.5 font-display text-[12px] font-bold text-[var(--text-primary)]">
             <IconBriefcase size={12} className="text-[var(--brand-primary)]" />
             <span className="flex items-baseline gap-1.5">
-              Informações do Negócio
+              Negócio
               {deal.number != null && (
                 <span className="font-mono text-[10px] font-normal text-[var(--text-muted)]">#{deal.number}</span>
               )}
@@ -1003,7 +1003,7 @@ export function ContactAside({
                                   </>
                                 }
                               >
-                                Informações do Contato
+                                Contato
                               </SectionHeader>
 
                               {contactSectionOpen && (
@@ -1256,7 +1256,7 @@ export function ContactAside({
                                     </>
                                   }
                                 >
-                                  Informações do Negócio
+                                  Negócio
                                 </SectionHeader>
 
                                 {dealFieldsSectionOpen && (

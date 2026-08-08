@@ -121,6 +121,10 @@ function writeSavedFlowStage(
 /**
  * Etapa do Flow: `?stage=<slug>`; ausente = Todos.
  * Init: URL → LS (por funil) → Todos. Troca grava URL + LS.
+ *
+ * Retorna `hydrated`: enquanto false, `selectedStageId` ainda pode mudar pela
+ * restauração. Quem depende da etapa para escolher um deal inicial deve
+ * esperar — senão abre o 1º deal do board e a etapa restaurada é sobrescrita.
  */
 export function useStageUrlSync(
   stages: Array<{ id: string; slug?: string }>,
@@ -173,4 +177,6 @@ export function useStageUrlSync(
       writeSavedFlowStage(resetKey, s.slug);
     }
   }, [selectedStageId, stages, hydrated, resetKey]);
+
+  return { hydrated };
 }

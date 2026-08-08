@@ -23,6 +23,7 @@ import {
   useBoardFiltered,
   useDealDeepLink,
   useDealDetail,
+  usePipelineRealtime,
   usePipelineUrlSync,
   usePipelines,
 } from "@/features/pipeline-v2/hooks";
@@ -246,6 +247,8 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     sort: boardSort,
     enabled: isAuthenticated && hasServerBoard,
   });
+
+  usePipelineRealtime(isAuthenticated);
 
   const boardRaw = hasServerBoard
     ? (boardFiltered.data ?? [])

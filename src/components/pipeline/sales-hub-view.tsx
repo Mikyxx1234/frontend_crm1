@@ -199,7 +199,12 @@ export function SalesHubView({
     setSelectedStageId(id);
   }, []);
 
-  useStageUrlSync(stages, selectedStageId, setStageFromUrl, pipelineId);
+  const { hydrated: stageHydrated } = useStageUrlSync(
+    stages,
+    selectedStageId,
+    setStageFromUrl,
+    pipelineId,
+  );
   const [recentlyMovedDealId, setRecentlyMovedDealId] = useState<string | null>(
     null,
   );
@@ -303,8 +308,11 @@ export function SalesHubView({
   }, [activeDealId, asidePinned]);
 
   // Deep-link / seleção externa: se o deal ativo está em outra etapa, foca a aba.
+  // Em "Todos" o deal já aparece na fila — focar a etapa dele aqui faria o
+  // clique em "Todos" (que abre o 1º deal) saltar para a primeira etapa.
   useEffect(() => {
     if (!activeDealId) return;
+    if (selectedStageIdRef.current === null) return;
     const stage = stages.find((s) =>
       s.deals.some(
         (d) => d.id === activeDealId || String(d.number) === activeDealId,
@@ -518,11 +526,14 @@ export function SalesHubView({
       didInitialSelectRef.current = true;
       return;
     }
+    // Espera a etapa salva ser restaurada — abrir o 1º deal do board antes
+    // disso joga a seleção para a etapa dele e perde a fase anterior.
+    if (!stageHydrated) return;
     const first = sortedDeals[0];
     if (!first) return;
     didInitialSelectRef.current = true;
     onActiveDealChange(first.id, first.number ?? null);
-  }, [activeDealId, sortedDeals, onActiveDealChange]);
+  }, [activeDealId, sortedDeals, onActiveDealChange, stageHydrated]);
 
   const handleDealMoved = useCallback((dealId: string) => {
     // Highlight visual por 1.5s pra sinalizar o "salto" entre etapas.

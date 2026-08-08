@@ -224,13 +224,13 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
 
     const groups: DealFieldGroup[] = [
       {
-        title: "Informações do Negócio",
+        title: "Negócio",
         meta: numberLabel,
         icon: "deal",
         fields: dealFields,
       },
       {
-        title: "Informações do Contato",
+        title: "Contato",
         icon: "contact",
         fields: contactFields,
       },

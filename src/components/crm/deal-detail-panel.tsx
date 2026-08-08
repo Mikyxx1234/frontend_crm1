@@ -1103,7 +1103,7 @@ export function DealDetailPanel({
 
                                   {sectionId === "contato" && (
                                     <FieldCard
-                                      title="Informações do Contato"
+                                      title="Contato"
                                       compactTitle={crmOnly}
                                       titleMeta={
                                         deal.contactNumber != null ? (
@@ -1227,7 +1227,7 @@ export function DealDetailPanel({
 
                                   {sectionId === "campos" && (
                                     <FieldCard
-                                      title="Informações do Negócio"
+                                      title="Negócio"
                                       compactTitle={crmOnly}
                                       plain={viewMode !== "compact"}
                                       titleMeta={
@@ -1994,7 +1994,7 @@ function FieldCard({
         )}
         {title && (
           <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-600">
-            {title === "Informações do Contato" ? (
+            {title === "Contato" ? (
               <IconUser size={16} className="shrink-0 text-orange-500" />
             ) : (
               <IconBriefcase size={16} className="shrink-0 text-[var(--brand-primary)]" />

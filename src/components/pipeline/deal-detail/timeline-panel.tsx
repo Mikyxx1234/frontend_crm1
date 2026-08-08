@@ -184,6 +184,12 @@ const EVENT_CONFIG: Record<
     bg: "bg-destructive-soft",
     label: "Falha no envio agendado",
   },
+  MESSAGE_READ: {
+    Icon: CheckCircle2,
+    ring: "ring-sky-500/30 text-sky-500",
+    bg: "bg-sky-500/10",
+    label: "Mensagem lida",
+  },
 };
 
 const FALLBACK_CONFIG = {
@@ -335,6 +341,13 @@ function eventDescription(ev: DealTimelineEvent): string {
     }
     case "SCHEDULED_MESSAGE_FAILED": {
       return String(m.reason ?? "Erro desconhecido");
+    }
+    case "MESSAGE_READ": {
+      const preview = String(m.preview ?? "").trim();
+      if (preview) {
+        return preview.length > 80 ? `"${preview.slice(0, 80)}…"` : `"${preview}"`;
+      }
+      return "Cliente leu a mensagem";
     }
     default:
       return "";

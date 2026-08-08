@@ -14,6 +14,7 @@ import {
   IconMapPin,
   IconUser,
   IconTemplate,
+  IconCheck,
   IconMessage,
   IconBrandWhatsapp,
   IconBrandInstagram,

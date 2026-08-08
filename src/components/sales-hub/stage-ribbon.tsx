@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * StageRibbon — abas de etapa do Sales Hub.
- * Estilo “pasta”: só o topo arredondado, alinhadas à largura dos painéis abaixo.
+ * StageRibbon — chevrons encadeados do funil no Flow.
+ * Preenchem a largura (flex-1); ativo = cor sólida; inativo = pastel.
  */
 
 import { cn } from "@/lib/utils";
@@ -19,15 +19,23 @@ type StageRibbonProps = {
   totalDeals: number;
   selectedStageId: string | null;
   onSelectStage: (stageId: string | null) => void;
-  /** Menos padding — com deal ativo no hub, libera altura para o chat. */
+  /** Menos altura — com deal ativo no hub, libera espaço para o chat. */
   compact?: boolean;
 };
 
-function StageTab({
+/** Primeiro segmento: borda reta à esquerda, ponta à direita. */
+const CLIP_FIRST =
+  "polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)";
+/** Demais: entalhe à esquerda (encaixa no chevron anterior). */
+const CLIP_CHEVRON =
+  "polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%)";
+
+function StageChevron({
   label,
   count,
   color,
   active,
+  first,
   compact,
   onClick,
 }: {
@@ -35,6 +43,7 @@ function StageTab({
   count: number;
   color: string;
   active: boolean;
+  first: boolean;
   compact: boolean;
   onClick: () => void;
 }) {
@@ -46,39 +55,31 @@ function StageTab({
       aria-pressed={active}
       title={label}
       onClick={onClick}
+      style={{
+        clipPath: first ? CLIP_FIRST : CLIP_CHEVRON,
+        backgroundColor: active
+          ? color
+          : `color-mix(in srgb, ${color} 16%, #ffffff)`,
+        color: active ? "#ffffff" : color,
+      }}
       className={cn(
-        "relative flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 px-1.5 font-display font-semibold tracking-tight transition-colors sm:gap-2 sm:px-2.5",
-        /* Contorno superior só — aba “sentada” na linha de base */
-        "rounded-t-[var(--radius-md)] rounded-b-none",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0",
-        compact
-          ? "h-8 text-[12px] sm:h-9 sm:text-[12.5px]"
-          : "h-9 text-[12.5px] sm:h-10 sm:text-[13px]",
-        active
-          ? "z-[1] bg-[var(--glass-bg)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
-          : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]",
+        "relative flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 font-display font-semibold tracking-tight transition-[filter,opacity] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1",
+        first ? "pl-2.5 pr-4 sm:pl-3 sm:pr-5" : "pl-4 pr-4 sm:pl-5 sm:pr-5",
+        compact ? "h-8 text-[11.5px] sm:h-9 sm:text-[12px]" : "h-9 text-[12px] sm:h-10 sm:text-[12.5px]",
+        active ? "z-[1]" : "hover:brightness-[0.97]",
       )}
-      style={active ? { color } : undefined}
     >
-      {active ? (
-        <span
-          aria-hidden
-          className="absolute inset-x-2 top-0 h-[2.5px] rounded-b-full"
-          style={{ backgroundColor: color }}
-        />
-      ) : null}
       <span className="min-w-0 truncate">{label}</span>
       <span
         className={cn(
           "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10.5px] font-bold tabular-nums leading-none sm:h-[22px] sm:min-w-[22px] sm:text-[11px]",
-          !active && "text-[var(--text-primary)]",
         )}
         style={
           active
-            ? { backgroundColor: color, color: "#fff" }
+            ? { backgroundColor: "rgba(255,255,255,0.28)", color: "#ffffff" }
             : {
-                backgroundColor: `color-mix(in srgb, ${color} 28%, #ffffff)`,
-                color: `color-mix(in srgb, ${color} 75%, #1a1a1a)`,
+                backgroundColor: `color-mix(in srgb, ${color} 22%, #ffffff)`,
+                color: `color-mix(in srgb, ${color} 82%, #1a1a1a)`,
               }
         }
       >
@@ -106,18 +107,16 @@ export function StageRibbon({
       )}
     >
       <div
-        className={cn(
-          "flex w-full min-w-0 items-end gap-0.5 border-b border-[var(--glass-border-subtle)]",
-          compact ? "pb-0" : "pb-0",
-        )}
+        className="flex w-full min-w-0 items-stretch gap-1"
         role="tablist"
         aria-label="Filtrar por etapa"
       >
-        <StageTab
+        <StageChevron
           label="Todos"
           count={totalDeals}
           color={allColor}
           active={allActive}
+          first
           compact={compact}
           onClick={() => onSelectStage(null)}
         />
@@ -125,12 +124,13 @@ export function StageRibbon({
         {stages.map((stage) => {
           const isActive = stage.id === selectedStageId;
           return (
-            <StageTab
+            <StageChevron
               key={stage.id}
               label={stage.name}
               count={stage.count}
               color={stage.color || "#64748b"}
               active={isActive}
+              first={false}
               compact={compact}
               onClick={() => onSelectStage(isActive ? null : stage.id)}
             />

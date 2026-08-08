@@ -40,13 +40,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetClose,
-} from "@/components/ui/sheet";
 import { TooltipHost } from "@/components/ui/tooltip";
 import {
   cn,
@@ -121,7 +114,7 @@ type StatusFilter = "OPEN" | "WON" | "LOST" | "ALL";
  *
  * Modo controlado (obrigatório no host `/saleshub`): `activeDealId` +
  * `onActiveDealChange` espelham `useDealDeepLink` (`?deal=`). O host
- * também passa `detailDeal` (VM do `DealDetailPanel` na gaveta CRM).
+ * também passa `detailDeal` (VM do `DealDetailPanel` na coluna CRM).
  * Busca/filtros vêm do header (`PipelineSearchFilterBar` no host);
  * a fila só expõe ordenação local (`sortMode`).
  */
@@ -150,7 +143,7 @@ export type SalesHubViewProps = {
   /** Seleção controlada pelo host (`useDealDeepLink` em `/saleshub`). */
   activeDealId: string | null;
   onActiveDealChange: (dealId: string | null, dealNumber?: number | null) => void;
-  /** VM do DealDetailPanel (gaveta CRM). */
+  /** VM do DealDetailPanel (coluna CRM inline). */
   detailDeal?: DealDetail | null;
 };
 
@@ -185,9 +178,9 @@ export function SalesHubView({
 
   /**
    * Experimento UX: ao sair do painel de chat pela borda direita, abre a
-   * gaveta CRM (DealDetailPanel — negócios + contatos). Saída à esquerda
-   * (fila) ou vertical não abre. `mouseleave` já ignora filhos; o threshold
-   * evita flicker ao cruzar bordas laterais / portais do header.
+   * coluna CRM inline (DealDetailPanel — negócios + contatos), comprimindo
+   * o chat. Saída à esquerda (fila) ou vertical não abre. `mouseleave` já
+   * ignora filhos; o threshold evita flicker ao cruzar bordas / portais.
    */
   const CHAT_RIGHT_LEAVE_PX = 28;
   const handleChatPaneMouseLeave = useCallback(
@@ -598,7 +591,12 @@ export function SalesHubView({
         className={cn(
           "min-h-0 flex-1 overflow-hidden",
           activeDeal
-            ? "grid grid-cols-1 gap-3 md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-1"
+            ? cn(
+                "grid grid-cols-1 gap-3 md:grid-rows-1",
+                detailsOpen
+                  ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)]"
+                  : "md:grid-cols-[300px_minmax(0,1fr)]",
+              )
             : "flex",
         )}
       >
@@ -658,8 +656,7 @@ export function SalesHubView({
 
         {/* Coluna 2 — Chat compacto (compactChrome) + barra mínima de ações.
             Sem deal ativo: a coluna inteira fica oculta (a fila ocupa
-            100%). Aparece só quando o operador escolhe um deal — aí
-            o grid acima vira [fila estreita | chat]. */}
+            100%). Com deal: [fila | chat]; com CRM aberto: [fila | chat | aside]. */}
         <div
           onMouseLeave={handleChatPaneMouseLeave}
           className={cn(
@@ -763,7 +760,46 @@ export function SalesHubView({
           )}
         </div>
 
-        {/* CRM: Sheet à direita (DealDetailPanel), não na fila. */}
+        {/* Coluna 3 — CRM inline (DealDetailPanel crmOnly): comprime o chat,
+            sem Sheet/scrim. Abre via briefcase ou mouse leave na borda direita. */}
+        {activeDeal && detailsOpen ? (
+          <aside
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md md:min-w-[280px]"
+            aria-label="Detalhes do negócio"
+          >
+            <header className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 py-3 text-left">
+              <h2 className="font-display text-[14px] font-bold text-[var(--text-primary)]">
+                Detalhes do negócio
+              </h2>
+              <TooltipHost label="Excluir negócio" side="bottom">
+                <button
+                  type="button"
+                  aria-label="Excluir negócio"
+                  onClick={() => void handleDeleteDealFromHub()}
+                  className="ml-auto flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
+                >
+                  <Trash className="size-4" />
+                </button>
+              </TooltipHost>
+              <button
+                type="button"
+                aria-label="Fechar"
+                onClick={() => setDetailsOpen(false)}
+                className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+              >
+                <X className="size-4" />
+              </button>
+            </header>
+            <div className="min-h-0 flex-1 overflow-hidden bg-[var(--glass-bg)]">
+              <DealDetailPanel
+                crmOnly
+                isOpen={detailsOpen}
+                onClose={() => setDetailsOpen(false)}
+                deal={detailDeal}
+              />
+            </div>
+          </aside>
+        ) : null}
       </div>
 
       <Dialog open={convListOpen} onOpenChange={setConvListOpen}>
@@ -800,43 +836,6 @@ export function SalesHubView({
           </ul>
         </DialogContent>
       </Dialog>
-
-      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent
-          side="right"
-          className="flex w-full max-w-[360px] flex-col gap-0 overflow-hidden border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-0 shadow-[var(--glass-shadow)] backdrop-blur-md sm:max-w-[360px]"
-        >
-          <SheetHeader className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 py-3 text-left">
-            <SheetTitle className="font-display text-[14px] font-bold text-[var(--text-primary)]">
-              Detalhes do negócio
-            </SheetTitle>
-            <TooltipHost label="Excluir negócio" side="bottom">
-              <button
-                type="button"
-                aria-label="Excluir negócio"
-                onClick={() => void handleDeleteDealFromHub()}
-                className="ml-auto flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
-              >
-                <Trash className="size-4" />
-              </button>
-            </TooltipHost>
-            <SheetClose
-              aria-label="Fechar"
-              className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-            >
-              <X className="size-4" />
-            </SheetClose>
-          </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-hidden bg-[var(--glass-bg)]">
-            <DealDetailPanel
-              crmOnly
-              isOpen={detailsOpen}
-              onClose={() => setDetailsOpen(false)}
-              deal={detailDeal}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
 
       {confirmDeleteDialog}
     </div>

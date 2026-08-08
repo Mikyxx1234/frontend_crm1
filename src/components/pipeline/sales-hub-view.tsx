@@ -31,10 +31,7 @@ import {
 } from "@/components/sales-hub/deal-queue";
 import { SalesHubChat } from "@/components/sales-hub/sales-hub-chat";
 import { ConversationActionsMenu } from "@/features/inbox-v2/extras";
-import {
-  DealMoveStageButton,
-  DealOutcomeButtons,
-} from "@/components/sales-hub/deal-actions";
+import { DealMoveStageButton } from "@/components/sales-hub/deal-actions";
 import {
   DealDetailPanel,
   type DealDetail,
@@ -780,11 +777,6 @@ export function SalesHubView({
               onConversationReopened={handleConversationReopened}
               headerActionsSlot={
                 <>
-                  <DealOutcomeButtons
-                    deal={activeDeal}
-                    pipelineId={pipelineId}
-                    className="shrink-0"
-                  />
                   {contactConversations.length > 1 ? (
                     <TooltipHost label="Conversas do contato" side="bottom">
                       <button

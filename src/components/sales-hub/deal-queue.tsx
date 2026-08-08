@@ -27,8 +27,10 @@ import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { SUBTLE_SPRING } from "@/lib/design-system";
 import { DealCard } from "@/components/crm/deal-card";
 import { TagChip } from "@/components/crm/tag-chip";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { toDealCard } from "@/features/pipeline-v2/adapters";
 import type { BoardDealDto } from "@/features/pipeline-v2/api";
+import { TagsPopover } from "@/features/pipeline-v2/extras";
 import { TooltipHost } from "@/components/ui/tooltip";
 import {
   computePopoverPosition,
@@ -263,12 +265,16 @@ function DealQueueItem({
   onSelectDeal,
   onDeselect,
   wasRecentlyMoved,
+  pipelineId,
+  statusFilter = "OPEN",
 }: {
   deal: BoardDeal & { stageId: string };
   isActive: boolean;
   onSelectDeal: (dealId: string) => void;
   onDeselect?: () => void;
   wasRecentlyMoved: boolean;
+  pipelineId: string;
+  statusFilter?: StatusFilter;
 }) {
   const toggleSelection = () => {
     if (isActive) onDeselect?.();
@@ -276,8 +282,11 @@ function DealQueueItem({
   };
 
   const vm = toDealCard(deal as unknown as BoardDealDto);
-  const tagList = deal.tags ?? [];
+  const allTags = deal.tags ?? [];
   const unread = deal.unreadCount ?? 0;
+  const MAX_VISIBLE = 2;
+  const visibleTags = allTags.slice(0, MAX_VISIBLE);
+  const hiddenTags = allTags.slice(MAX_VISIBLE);
 
   // Não scrollIntoView aqui: com AnimatePresence/popLayout a reordenação
   // remonta o item ativo e o effect rodaria de novo, pulando a fila para
@@ -302,24 +311,40 @@ function DealQueueItem({
         onClick={toggleSelection}
         // Flow: uma linha só (nowrap). Nunca `two-col` — grid cria 2 linhas e infla o card.
         tagsWrap={false}
+        // Mesmo padrão do kanban: chips + "+N" + TagsPopover `+` na mesma linha.
         tagsSlot={
-          tagList.length > 0 ? (
-            <>
-              {tagList.slice(0, 2).map((t) => (
+          <>
+            {visibleTags.map((t) => (
+              <TooltipGlass key={t.id} label={t.name} side="top">
                 <TagChip
-                  key={t.id}
                   name={t.name}
                   color={t.color}
-                  className="min-w-0 max-w-[46%] shrink truncate whitespace-nowrap"
+                  className="max-w-[7.5rem] min-w-0 shrink"
                 />
-              ))}
-              {tagList.length > 2 ? (
-                <span className="inline-flex shrink-0 items-center whitespace-nowrap text-[10px] font-semibold text-[var(--text-muted)]">
-                  +{tagList.length - 2}
+              </TooltipGlass>
+            ))}
+            {hiddenTags.length > 0 && (
+              <TooltipGlass
+                label={hiddenTags.map((t) => t.name).join(", ")}
+                side="top"
+              >
+                <span className="inline-flex shrink-0 cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--text-muted)]">
+                  +{hiddenTags.length}
                 </span>
-              ) : null}
-            </>
-          ) : undefined
+              </TooltipGlass>
+            )}
+            <TagsPopover
+              dealId={deal.id}
+              currentTags={allTags}
+              pipelineId={pipelineId}
+              statusFilter={statusFilter}
+              trigger={
+                <span className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
+                  +
+                </span>
+              }
+            />
+          </>
         }
       />
       {unread > 0 ? (
@@ -343,6 +368,8 @@ export function DealQueue({
   onDeselect,
   recentlyMovedDealId,
   sortMode,
+  pipelineId,
+  statusFilter = "OPEN",
 }: DealQueueProps) {
   // Mantem o card ativo sempre visivel na fila — quando a selecao
   // muda, rola suave pro card novo ficar no viewport.
@@ -388,6 +415,8 @@ export function DealQueue({
                     onSelectDeal={onSelectDeal}
                     onDeselect={onDeselect}
                     wasRecentlyMoved={wasRecentlyMoved}
+                    pipelineId={pipelineId}
+                    statusFilter={statusFilter}
                   />
                 </div>
               );

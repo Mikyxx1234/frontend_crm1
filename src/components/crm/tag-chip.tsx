@@ -35,6 +35,10 @@ export function TagChip({
 }: TagChipProps) {
   const chipColor = color || "#6366f1";
   const Comp = onClick ? "button" : "span";
+  // Só reserva o check em chips interativos (filtros/listas). Em chips de
+  // exibição (card/fila) o ícone invisível deslocava o rótulo e parecia
+  // cortado/fora do centro.
+  const showCheckSlot = Boolean(onClick) || selected;
 
   return (
     <Comp
@@ -43,7 +47,7 @@ export function TagChip({
       aria-pressed={ariaPressed ?? (onClick ? selected : undefined)}
       title={title ?? name}
       className={cn(
-        "inline-flex max-w-full items-center gap-1 border font-display font-semibold leading-tight transition-all",
+        "inline-flex max-w-full items-center justify-center gap-1 border font-display font-semibold leading-tight transition-all",
         size === "md"
           ? "rounded-[8px] px-2.5 py-1 text-[12.5px]"
           : "rounded-[6px] px-2 py-0.5 text-[11px]",
@@ -65,16 +69,17 @@ export function TagChip({
             }
       }
     >
-      {/* Reserva espaço do check sempre — evita reflow em flex-wrap
-          quando selected muda no meio de um gesto de clique (ghost click
-          em outra chip). */}
-      <IconCheck
-        size={size === "md" ? 12 : 10}
-        stroke={3}
-        className={cn("shrink-0", !selected && "invisible")}
-        aria-hidden={!selected}
-      />
-      <span className="truncate">{name}</span>
+      {/* Reserva espaço do check só quando há toggle — evita reflow em
+          flex-wrap quando selected muda no meio de um gesto de clique. */}
+      {showCheckSlot ? (
+        <IconCheck
+          size={size === "md" ? 12 : 10}
+          stroke={3}
+          className={cn("shrink-0", !selected && "invisible")}
+          aria-hidden={!selected}
+        />
+      ) : null}
+      <span className="min-w-0 truncate text-center">{name}</span>
       {count != null && (
         <small
           className={cn(

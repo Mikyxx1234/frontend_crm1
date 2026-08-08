@@ -63,7 +63,13 @@ import {
 import { FormDialog } from "@/components/ui/form-dialog";
 import { RequirePermission } from "@/components/auth/require-permission";
 
-import { useBoard, useDealsList, usePipelines, useTeamUsers } from "@/features/pipeline-v2/hooks";
+import {
+  useBoard,
+  useDealsList,
+  usePipelineUrlSync,
+  usePipelines,
+  useTeamUsers,
+} from "@/features/pipeline-v2/hooks";
 import { toDealListRow } from "@/features/pipeline-v2/adapters";
 import {
   ExportPanel,
@@ -129,7 +135,6 @@ export default function V2PipelineListClientPage() {
   const bump = useImportExportBump();
   const queryClient = useQueryClient();
 
-  const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [search, setSearch] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
@@ -211,13 +216,9 @@ export default function V2PipelineListClientPage() {
 
   const pipelinesQuery = usePipelines(isAuthenticated);
   const pipelines = pipelinesQuery.data ?? [];
-
-  useEffect(() => {
-    if (!pipelineId && pipelines.length) {
-      const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
-      setPipelineId(def.id);
-    }
-  }, [pipelines, pipelineId]);
+  const { pipelineId, setPipelineId } = usePipelineUrlSync(
+    pipelinesQuery.data,
+  );
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -325,8 +326,11 @@ export default function V2PipelineListClientPage() {
   }
 
   function openDeal(id: string, number?: number | null) {
-    const param = number != null ? String(number) : id;
-    router.push(`/pipeline?deal=${encodeURIComponent(param)}`);
+    if (number != null) {
+      router.push(`/pipeline?deal=${encodeURIComponent(String(number))}`);
+      return;
+    }
+    router.push("/pipeline");
   }
 
   return (

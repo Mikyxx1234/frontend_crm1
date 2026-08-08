@@ -75,7 +75,18 @@ export type AdvancedDealFilters = {
 };
 
 export type FilterOptionsResponse = {
-  pipelines: { id: string; name: string; stages: { id: string; name: string; color: string; position: number }[] }[];
+  pipelines: {
+    id: string;
+    name: string;
+    slug?: string;
+    stages: {
+      id: string;
+      name: string;
+      slug?: string;
+      color: string;
+      position: number;
+    }[];
+  }[];
   users: { id: string; name: string; avatarUrl?: string | null; role: string; type: string }[];
   tags: { id: string; name: string; color: string; dealCount?: number }[];
   dealCustomFields: CustomField[];

@@ -57,6 +57,8 @@ export interface BoardDealDto {
 export interface BoardStageDto {
   id: string;
   name: string;
+  /** Slug público para `?stage=` (único no funil). */
+  slug?: string;
   color: string;
   position: number;
   winProbability: number;
@@ -78,6 +80,8 @@ export interface BoardStageDto {
 export interface PipelineListItemDto {
   id: string;
   name: string;
+  /** Slug público para `?pipeline=` (único na org). */
+  slug?: string;
   isDefault?: boolean;
   /**
    * Estágios do funil (retornados pelo GET /api/pipelines) — usados
@@ -90,6 +94,7 @@ export interface PipelineListItemDto {
 export interface PipelineListStageDto {
   id: string;
   name: string;
+  slug?: string;
   color: string | null;
   position: number;
   isWon?: boolean;

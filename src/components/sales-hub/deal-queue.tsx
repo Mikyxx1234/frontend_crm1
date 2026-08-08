@@ -325,8 +325,8 @@ function DealQueueItem({
         onClick={() => onToggle(deal.id)}
         // Flow: uma linha só (nowrap). Nunca `two-col` — grid cria 2 linhas e infla o card.
         tagsWrap={false}
-        // Com tags: chips na linha própria + Gerenciar. Sem tags: + ao
-        // lado do responsável (tagsAddSlot).
+        // Com tags: chips + `+` no canto direito. Sem tags: + ao lado
+        // do responsável (tagsAddSlot).
         tagsSlot={
           allTags.length > 0 ? (
             <>

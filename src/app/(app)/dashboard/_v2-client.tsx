@@ -74,9 +74,9 @@ export default function DashboardV2ClientPage({
 
   const [editing, setEditing] = useState(false);
 
-  const { filters, patch, clear } = useDashboardFilters();
-
   const { data: options } = useDashboardFilterOptions(isAuthenticated);
+
+  const { filters, patch, clear } = useDashboardFilters(options?.pipelines);
 
   const dashboardQuery = useDashboard(filters, isAuthenticated && isDeals);
 

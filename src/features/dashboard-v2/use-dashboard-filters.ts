@@ -5,9 +5,10 @@
  * (legível e compartilhável). Recarregar a página mantém os filtros.
  *
  * Exemplo:
- *   /dashboard?period=last_30&tags=t1,t2&sources=google,meta&owners=u1
+ *   /dashboard?period=last_30&pipeline=vendas&stages=negociacao,proposta&tags=t1
  *
  * Sem query string → padrão "Este mês" (this_month).
+ * `pipeline` / `stages` na URL são slugs; estado interno e API usam CUID.
  */
 
 import { useCallback, useMemo } from "react";
@@ -25,15 +26,31 @@ const VALID_PERIODS: PeriodKey[] = [
   "custom",
 ];
 
+export type DashboardPipelineOption = {
+  id: string;
+  slug?: string;
+  stages?: Array<{ id: string; slug?: string }>;
+};
+
 function parseCsv(value: string | null): string[] {
   return value
     ? value.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
 }
 
-export function readDashboardFilters(
-  sp: URLSearchParams,
-): DashboardFiltersState {
+/** Valores crus da URL (slug ou CUID legado). */
+type UrlFilterKeys = {
+  period: PeriodKey;
+  startDate?: string;
+  endDate?: string;
+  pipelineKey?: string;
+  stageKeys: string[];
+  tagIds: string[];
+  ownerIds: string[];
+  sources: string[];
+};
+
+function readUrlKeys(sp: URLSearchParams): UrlFilterKeys {
   const periodRaw = sp.get("period");
   const period: PeriodKey =
     periodRaw && VALID_PERIODS.includes(periodRaw as PeriodKey)
@@ -43,23 +60,77 @@ export function readDashboardFilters(
     period,
     startDate: sp.get("startDate") ?? undefined,
     endDate: sp.get("endDate") ?? undefined,
-    pipelineId: sp.get("pipelineId") ?? undefined,
-    stageIds: parseCsv(sp.get("stages")),
+    // Novo: `pipeline=<slug>`; legado: `pipelineId=<cuid>`.
+    pipelineKey: sp.get("pipeline") ?? sp.get("pipelineId") ?? undefined,
+    stageKeys: parseCsv(sp.get("stages")),
     tagIds: parseCsv(sp.get("tags")),
     ownerIds: parseCsv(sp.get("owners")),
     sources: parseCsv(sp.get("sources")),
   };
 }
 
-function toSearchParams(f: DashboardFiltersState): string {
+function resolveToIds(
+  keys: UrlFilterKeys,
+  pipelines: DashboardPipelineOption[] | undefined,
+): DashboardFiltersState {
+  let pipelineId: string | undefined;
+  let stageIds: string[] = [];
+
+  if (keys.pipelineKey && pipelines?.length) {
+    const p =
+      pipelines.find((x) => x.slug === keys.pipelineKey) ??
+      pipelines.find((x) => x.id === keys.pipelineKey);
+    pipelineId = p?.id;
+    if (p && keys.stageKeys.length) {
+      const stages = p.stages ?? [];
+      stageIds = keys.stageKeys
+        .map(
+          (k) =>
+            stages.find((s) => s.slug === k)?.id ??
+            stages.find((s) => s.id === k)?.id,
+        )
+        .filter((id): id is string => !!id);
+    }
+  } else if (keys.pipelineKey && /^[a-z][a-z0-9]{20,}$/i.test(keys.pipelineKey)) {
+    // Opções ainda não carregaram: CUID legado continua válido na API.
+    pipelineId = keys.pipelineKey;
+    stageIds = keys.stageKeys.filter((k) => /^[a-z][a-z0-9]{20,}$/i.test(k));
+  }
+
+  return {
+    period: keys.period,
+    startDate: keys.startDate,
+    endDate: keys.endDate,
+    pipelineId,
+    stageIds,
+    tagIds: keys.tagIds,
+    ownerIds: keys.ownerIds,
+    sources: keys.sources,
+  };
+}
+
+function toSearchParams(
+  f: DashboardFiltersState,
+  pipelines: DashboardPipelineOption[] | undefined,
+): string {
   const sp = new URLSearchParams();
   if (f.period && f.period !== "this_month") sp.set("period", f.period);
   if (f.period === "custom") {
     if (f.startDate) sp.set("startDate", f.startDate);
     if (f.endDate) sp.set("endDate", f.endDate);
   }
-  if (f.pipelineId) sp.set("pipelineId", f.pipelineId);
-  if (f.stageIds.length) sp.set("stages", f.stageIds.join(","));
+  if (f.pipelineId) {
+    const p = pipelines?.find((x) => x.id === f.pipelineId);
+    if (p?.slug) sp.set("pipeline", p.slug);
+  }
+  if (f.stageIds.length && f.pipelineId) {
+    const p = pipelines?.find((x) => x.id === f.pipelineId);
+    const stages = p?.stages ?? [];
+    const slugs = f.stageIds
+      .map((id) => stages.find((s) => s.id === id)?.slug)
+      .filter((s): s is string => !!s);
+    if (slugs.length) sp.set("stages", slugs.join(","));
+  }
   if (f.tagIds.length) sp.set("tags", f.tagIds.join(","));
   if (f.ownerIds.length) sp.set("owners", f.ownerIds.join(","));
   if (f.sources.length) sp.set("sources", f.sources.join(","));
@@ -86,22 +157,36 @@ export const DEFAULT_DASHBOARD_FILTERS: DashboardFiltersState = {
   sources: [],
 };
 
-export function useDashboardFilters() {
+/** @deprecated use read via hook — mantido para testes/leituras sem resolve. */
+export function readDashboardFilters(
+  sp: URLSearchParams,
+  pipelines?: DashboardPipelineOption[],
+): DashboardFiltersState {
+  return resolveToIds(readUrlKeys(sp), pipelines);
+}
+
+export function useDashboardFilters(
+  pipelines?: DashboardPipelineOption[],
+) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const filters = useMemo(
-    () => readDashboardFilters(new URLSearchParams(searchParams.toString())),
-    [searchParams],
+    () =>
+      resolveToIds(
+        readUrlKeys(new URLSearchParams(searchParams.toString())),
+        pipelines,
+      ),
+    [searchParams, pipelines],
   );
 
   const setFilters = useCallback(
     (next: DashboardFiltersState) => {
-      const qs = toSearchParams(next);
+      const qs = toSearchParams(next, pipelines);
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router, pathname],
+    [router, pathname, pipelines],
   );
 
   const patch = useCallback(

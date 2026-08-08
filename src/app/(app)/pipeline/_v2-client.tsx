@@ -63,6 +63,7 @@ import {
   useDealDetail,
   useEntityViewers,
   useMoveDeal,
+  usePipelineUrlSync,
   usePipelines,
   useTeamUsers,
   type MoveVars,
@@ -160,27 +161,23 @@ export default function KanbanV2ClientPage({
 
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
 
-  // Deep-link: o negócio aberto é refletido na URL (?deal=<id>). Usamos
-  // a History API direto (em vez de router.push) para NÃO disparar um
-  // refetch do server component a cada abrir/fechar. O estado React é a
-  // fonte de renderização; a URL apenas espelha (e habilita compartilhar
-  // o link + voltar/avançar do navegador via popstate).
-  // setActiveDeal(id, num?) — id = CUID interno, num = número sequencial para a URL.
-  // A URL exibe o número legível (?deal=102); internamente usamos sempre o CUID.
+  // Deep-link: negócio aberto em `?deal=<número>`. History API (sem RSC refetch).
+  // Interno = CUID; URL = só número. Nunca escrever CUID novo na query.
   const setActiveDeal = useCallback((id: string | null, num?: number | null) => {
     setActiveDealId(id);
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    if (id) {
-      const urlVal = num != null ? String(num) : id;
-      if (url.searchParams.get("deal") === urlVal) return;
-      url.searchParams.set("deal", urlVal);
-      window.history.pushState(window.history.state, "", url.toString());
-    } else {
+    if (!id) {
       if (!url.searchParams.has("deal")) return;
       url.searchParams.delete("deal");
       window.history.replaceState(window.history.state, "", url.toString());
+      return;
     }
+    if (num == null) return;
+    const urlVal = String(num);
+    if (url.searchParams.get("deal") === urlVal) return;
+    url.searchParams.set("deal", urlVal);
+    window.history.pushState(window.history.state, "", url.toString());
   }, []);
 
   // Inicializa a partir da URL no mount.
@@ -270,44 +267,8 @@ export default function KanbanV2ClientPage({
 
   const status = BOARD_STATUS;
   const { data: pipelines } = usePipelines(isAuthenticated);
-  const [pipelineId, setPipelineId] = useState<string | null>(null);
-
-  // Persistência do último funil selecionado (operador da DNAWork: ao trocar
-  // pra "TESTE funil2" e dar F5, voltava pro padrão). Ordem de prioridade
-  // ao abrir a página: (1) último salvo em localStorage se ainda existir nos
-  // pipelines da org, (2) pipeline `isDefault`, (3) primeiro da lista.
-  // `localStorage` em vez de cookie pra ficar por aba/usuário sem custo de
-  // servidor; chave inclui ":v1" pra invalidação futura.
-  const PIPELINE_STORAGE_KEY = "crm:pipeline:last-selected:v1";
-
-  useEffect(() => {
-    if (pipelineId || !pipelines?.length) return;
-    let saved: string | null = null;
-    try {
-      saved = typeof window !== "undefined" ? localStorage.getItem(PIPELINE_STORAGE_KEY) : null;
-    } catch {
-      saved = null;
-    }
-    if (saved && pipelines.some((p) => p.id === saved)) {
-      setPipelineId(saved);
-      return;
-    }
-    const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
-    setPipelineId(def.id);
-  }, [pipelines, pipelineId]);
-
-  // Sincroniza qualquer mudança de pipelineId pro localStorage. Mantém em sync
-  // mesmo se a troca vier de outro caminho (ex.: deep link futuro).
-  useEffect(() => {
-    if (!pipelineId) return;
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(PIPELINE_STORAGE_KEY, pipelineId);
-      }
-    } catch {
-      /* localStorage indisponível (modo privado, quota cheia) — ignorar */
-    }
-  }, [pipelineId]);
+  // URL `?pipeline=<slug>` + LS interno; nunca CUID na query.
+  const { pipelineId, setPipelineId } = usePipelineUrlSync(pipelines);
 
   const boardSort = useMemo<BoardSortParam | undefined>(() => {
     if (sortKey === "created_newest") return { field: "createdAt", direction: "desc" };
@@ -640,6 +601,17 @@ export default function KanbanV2ClientPage({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealDetail?.id]);
+
+  // URL só com número: após detail (ou legado com CUID), replaceState.
+  useEffect(() => {
+    const num = (dealDetail as { number?: number } | undefined)?.number;
+    if (num == null || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const urlVal = String(num);
+    if (url.searchParams.get("deal") === urlVal) return;
+    url.searchParams.set("deal", urlVal);
+    window.history.replaceState(window.history.state, "", url.toString());
+  }, [dealDetail]);
 
   // Encontra o stage corrente do deal aberto pra alimentar o header de pills.
   const activeDealStage = useMemo(() => {

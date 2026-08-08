@@ -12,7 +12,7 @@ import {
   IconCircleCheck,
   IconCircleX,
   IconGridDots,
-  IconRoute,
+  IconMessages,
 } from "@tabler/icons-react"
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos"
@@ -37,7 +37,7 @@ const VIEW_ITEMS = [
     value: "flow",
     label: (
       <span className="flex items-center gap-1.5">
-        <IconRoute size={14} />
+        <IconMessages size={14} />
         Flow
       </span>
     ),

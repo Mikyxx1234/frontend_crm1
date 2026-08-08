@@ -40,7 +40,6 @@ import {
   Composer,
   ConversationTimelineTab,
   TemplatePickerList,
-  TransferPopover,
   whatsappTemplateToPending,
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
@@ -62,8 +61,6 @@ export type SalesHubChatProps = {
   pipelineId?: string | null;
   /** Ações à direita do header (Ganho/Perdido, gaveta CRM, kebab…). */
   headerActionsSlot?: React.ReactNode;
-  /** Responsável atual — destacado no TransferPopover do Composer. */
-  currentAssigneeId?: string | null;
   /**
    * Enviar numa conversa encerrada reabre como NOVO ticket (id novo). O
    * host precisa trocar a conversa ativa, senão a UI fica presa no
@@ -85,7 +82,6 @@ export function SalesHubChat({
   dealId,
   pipelineId,
   headerActionsSlot,
-  currentAssigneeId,
   onConversationReopened,
 }: SalesHubChatProps) {
   const [draft, setDraft] = useState("");
@@ -324,13 +320,6 @@ export function SalesHubChat({
             onCancelReply={() => setReplyTo(null)}
             onReopenNewConversation={onConversationReopened}
             conversationNumber={conversationNumber ?? null}
-            transferSlot={
-              <TransferPopover
-                variant="composer"
-                conversationId={conversationId}
-                currentAssigneeId={currentAssigneeId ?? null}
-              />
-            }
           />
         }
       />

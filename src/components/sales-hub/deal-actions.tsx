@@ -226,7 +226,7 @@ export function DealMoveStageButton({
   const position = computePopoverPosition(rect, 320, 240);
   const noDeal = !deal;
   const disabled = noDeal || moveMutation.isPending;
-  const tooltip = noDeal ? "Selecione um negócio" : "Mover de fase";
+  const tooltip = noDeal ? "Selecione um negócio" : "Mover negócio de fase";
 
   React.useEffect(() => {
     if (!open) return;
@@ -257,8 +257,8 @@ export function DealMoveStageButton({
             toggle();
           }}
           className={cn(
-            // Mesma linguagem do botão de transferência de conversa no inbox:
-            // pílula ciano sólida — ação "viva", não um ícone fantasma.
+            // Ícone vivo (ciano) — mesma energia do inbox, mas a ação é
+            // mover o NEGÓCIO de fase (não transferir conversa).
             "inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-cyan-500 p-0 text-white shadow-[0_2px_8px_rgba(6,182,212,0.35)] transition-all hover:bg-cyan-600",
             open && "bg-cyan-600 ring-[3px] ring-cyan-500/25",
             disabled && "cursor-not-allowed opacity-50 hover:bg-cyan-500",

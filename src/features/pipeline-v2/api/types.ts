@@ -32,6 +32,10 @@ export interface BoardDealDto {
   } | null;
   owner: { id: string; name: string; avatarUrl?: string | null } | null;
   lastMessage: {
+    /** Id interno da Message — casa com `internalId` do SSE message_status. */
+    id?: string;
+    /** wamid / externalId — casa com `messageId` do SSE (bolha no chat). */
+    externalId?: string | null;
     content: string;
     createdAt: string;
     direction: string;

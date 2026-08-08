@@ -805,7 +805,6 @@ export function SalesHubView({
               }
               dealId={activeDeal.id}
               pipelineId={pipelineId}
-              currentAssigneeId={activeConversation.assignedToId ?? null}
               onConversationReopened={handleConversationReopened}
               headerActionsSlot={
                 <>

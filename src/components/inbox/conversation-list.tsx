@@ -1032,7 +1032,11 @@ function ConversationItem({
         !active && !unread && "bg-transparent",
       )}
       onClick={() => !selectionMode && onSelect(row)}
-      aria-label={unread ? `${row.contact.name || "Conversa"} — ${row.unreadCount} mensagens não lidas` : undefined}
+      aria-label={
+        unread
+          ? `${row.contact?.name || "Conversa"} — ${row.unreadCount ?? 0} mensagens não lidas`
+          : undefined
+      }
     >
       <div className="flex w-full gap-2 px-3 py-2.5">
       {selectionMode && (
@@ -1049,8 +1053,12 @@ function ConversationItem({
       )}
 
       <ChatAvatar
-        user={{ id: row.contact.id, name: row.contact.name, imageUrl: row.contact.avatarUrl }}
-        phone={row.contact.phone ?? undefined}
+        user={{
+          id: row.contact?.id,
+          name: row.contact?.name,
+          imageUrl: row.contact?.avatarUrl,
+        }}
+        phone={row.contact?.phone ?? undefined}
         unreadCount={selectionMode ? 0 : row.unreadCount}
         channel={row.channel as ChatAvatarChannel}
         size={28}
@@ -1059,7 +1067,7 @@ function ConversationItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
           <p className="min-w-0 truncate text-[13px] font-semibold text-foreground dark:text-white">
-            {row.contact.name || row.contact.phone || "Sem nome"}
+            {row.contact?.name || row.contact?.phone || "Sem nome"}
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
             {/* Timer de sessão — ícone + tempo ao lado da hora */}

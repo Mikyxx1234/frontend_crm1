@@ -506,7 +506,8 @@ export function DealQueue({
     <div className="flex h-full min-h-0 flex-1 flex-col bg-transparent">
       <div
         ref={scrollerRef}
-        className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
+        // pt extra: hover -translate-y do 1º card não clipa no header da fila.
+        className="scrollbar-thin min-h-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain px-2 pb-2 pt-3"
       >
         <div className="flex flex-col gap-2" key={stageListKey}>
           {isStageSwitching ? (

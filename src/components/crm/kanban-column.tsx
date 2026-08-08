@@ -218,7 +218,8 @@ export function KanbanColumn({
       <div
         ref={dealsContainerRef}
         {...dealsContainerProps}
-        className="kanban-scroll flex min-h-[120px] flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden p-2"
+        // pt extra: hover -translate-y do 1º card não clipa no header da coluna.
+        className="kanban-scroll flex min-h-[120px] flex-1 flex-col gap-1.5 overflow-x-clip overflow-y-auto px-2 pb-2 pt-3"
       >
         {/* Formulário inline de criação — renderizado no TOPO da fase,
             acima dos cards. Disparado pelo "+" no header da coluna. */}

@@ -113,6 +113,19 @@ function formatCurrencyBR(value: number): string {
 // Adapters
 // ─────────────────────────────────────────────────────────────────
 
+/** Notas/sistema que não devem aparecer como preview do card (defesa FE). */
+function isInternalOrSystemPreview(content: string | null | undefined): boolean {
+  const t = (content ?? "").trim().toLowerCase();
+  if (!t) return true;
+  return (
+    t.startsWith("lead distribuído") ||
+    t.startsWith("conversa distribuída") ||
+    t.startsWith("conversa enfileirada") ||
+    t.startsWith("nota:") ||
+    t.startsWith("nota interna")
+  );
+}
+
 /** BoardDealDto → Deal (DealCard). */
 export function toDealCard(deal: BoardDealDto): Deal {
   // Contato = pessoa; título do deal ("Negócio …") fica no subtitle.
@@ -121,7 +134,12 @@ export function toDealCard(deal: BoardDealDto): Deal {
     personNameFromDealTitle(deal.title) ||
     "Sem nome";
   const ownerName = deal.owner?.name?.trim() || "Sem responsavel";
-  const lastMessage = deal.lastMessage;
+  // Prefere lastMessage do board (já filtrado no BE). Defesa: se ainda vier
+  // nota/distribuição, omite o preview em vez de poluir o card.
+  const lastMessage =
+    deal.lastMessage && !isInternalOrSystemPreview(deal.lastMessage.content)
+      ? deal.lastMessage
+      : null;
   const dir = String(lastMessage?.direction ?? "").toLowerCase();
   const messageDirection: "in" | "out" | undefined =
     dir === "out" || dir === "outbound"

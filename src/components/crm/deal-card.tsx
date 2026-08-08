@@ -12,7 +12,6 @@ import {
 } from "@/components/crm/status-ticks"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { AwaitingReplyFooter } from "@/components/crm/awaiting-reply-footer"
-import { UnreadCountPill } from "@/components/crm/unread-count-pill"
 import { Chip } from "./chip"
 import { TagChip } from "./tag-chip"
 
@@ -200,12 +199,9 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5">
-          <div className="flex items-center gap-1">
-            <UnreadCountPill count={unread} />
-            <span className="rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] px-1.5 py-px font-display text-[10px] font-bold text-[var(--brand-primary)]">
-              {deal.dealNumber}
-            </span>
-          </div>
+          <span className="rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] px-1.5 py-px font-display text-[10px] font-bold text-[var(--brand-primary)]">
+            {deal.dealNumber}
+          </span>
           <span className="text-[10px] text-[var(--text-muted)]">{deal.date}</span>
         </div>
       </div>
@@ -220,7 +216,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
             transition={COMPACT_SECTION_TRANSITION}
             className="overflow-hidden"
           >
-            {/* Message preview */}
+            {/* Message preview — tooltip no texto com a msg completa. */}
             {deal.message && (
               <div className="mt-1 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 text-[11.5px] italic leading-[1.35] text-[var(--text-secondary)]">
                 {/* Ícone de conversa com borda azul — mesmo do card de
@@ -255,7 +251,20 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
                       <StatusTicks status="sent" onLightBg size="card" />
                     </span>
                   ))}
-                <span className="line-clamp-2 flex-1 overflow-hidden">{deal.message.text}</span>
+                <TooltipGlass
+                  label={
+                    <span className="block max-h-40 overflow-y-auto whitespace-pre-wrap break-words font-normal not-italic">
+                      {deal.message.text}
+                    </span>
+                  }
+                  side="top"
+                  align="start"
+                  className="max-w-sm font-normal"
+                >
+                  <span className="line-clamp-2 min-w-0 flex-1 cursor-default overflow-hidden">
+                    {deal.message.text}
+                  </span>
+                </TooltipGlass>
                 <span className="shrink-0 text-[10px] not-italic text-[var(--text-muted)]">
                   {deal.message.time}
                 </span>

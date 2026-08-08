@@ -208,19 +208,19 @@ export function ConversationCard({
   selected = false,
   onToggleSelect,
 }: ConversationCardProps) {
+  // Guarda contra messageType fora do mapa (evita <undefined /> → crash da lista).
+  const rawType = conversation.lastMessageType
   const TypeIcon =
-    conversation.lastMessageType && conversation.lastMessageType !== "text"
-      ? typeIconMap[conversation.lastMessageType]
-      : null
+    rawType && rawType !== "text" ? typeIconMap[rawType] ?? null : null
   const typeLabel =
-    conversation.lastMessageType && conversation.lastMessageType !== "text"
-      ? typeLabelMap[conversation.lastMessageType]
-      : null
+    rawType && rawType !== "text" ? typeLabelMap[rawType] ?? null : null
   const isOutgoing = conversation.lastMessageDirection === "out"
   // Cliente ainda não respondido — última msg inbound (aguarda reply do agente).
-  const unreplied = conversation.lastMessageDirection === "in"
-  const unread = conversation.unreadCount ?? 0
-  const hasChannel = Boolean((conversation.channel ?? "").trim())
+  // Notas internas não devem sinalizar "aguardando" (só chat real in/out).
+  const unreplied =
+    conversation.lastMessageDirection === "in" && rawType !== "note"
+  const unread = Number(conversation.unreadCount) || 0
+  const hasChannel = Boolean(String(conversation.channel ?? "").trim())
 
   return (
     <article

@@ -164,6 +164,7 @@ export function BulkActionsBar({
   const { theme } = useThemeV2();
   const isDark = theme === "dark";
   const canChangeStage = useCan("deal:change_stage");
+  const canTransferOwner = useCan("deal:transfer_owner");
   const [moveOpen, setMoveOpen] = React.useState(false);
   const [ownerOpen, setOwnerOpen] = React.useState(false);
   const [lostOpen, setLostOpen] = React.useState(false);
@@ -342,6 +343,7 @@ export function BulkActionsBar({
           ) : null}
 
           {/* Change owner */}
+          {canTransferOwner ? (
           <div className="relative">
             <Button
               type="button"
@@ -383,6 +385,7 @@ export function BulkActionsBar({
               </div>
             )}
           </div>
+          ) : null}
 
           {/* Edit fields/tags */}
           <Button

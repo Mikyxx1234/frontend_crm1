@@ -23,6 +23,7 @@ import {
 
 import { useTeamUsers, useUpdateDeal } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
+import { useCan } from "@/hooks/use-my-permissions";
 
 import { computePopoverPosition, usePortalPopover } from "./use-portal-popover";
 
@@ -48,6 +49,12 @@ export function AssigneePopover({
   const { open, rect, triggerRef, popoverRef, toggle, close } = usePortalPopover();
   const [filter, setFilter] = useState("");
 
+  // Mesma regra do backend: `deal:transfer_owner` libera qualquer negócio;
+  // `deal:edit` cobre entregar um negócio próprio/sem dono.
+  const canTransferOwner = useCan("deal:transfer_owner");
+  const canEditDeal = useCan("deal:edit");
+  const readOnly = Boolean(disabled) || (!canTransferOwner && !canEditDeal);
+
   const { data: users = [], isLoading } = useTeamUsers(open, { includeAi: true });
   const update = useUpdateDeal(pipelineId, statusFilter);
 
@@ -66,7 +73,7 @@ export function AssigneePopover({
   const lastSelectAtRef = useRef(0);
 
   function handleSelect(userId: string | null) {
-    if (!dealId || update.isPending) return;
+    if (!dealId || update.isPending || readOnly) return;
     const now = Date.now();
     if (now - lastSelectAtRef.current < 500) return;
     lastSelectAtRef.current = now;
@@ -99,11 +106,18 @@ export function AssigneePopover({
 
   return (
     <>
-      <TooltipGlass label={currentOwnerName ?? "Selecionar responsável"} side="top">
+      <TooltipGlass
+        label={
+          readOnly
+            ? currentOwnerName ?? "Sem permissão para transferir o responsável"
+            : currentOwnerName ?? "Selecionar responsável"
+        }
+        side="top"
+      >
         <button
           ref={triggerRef}
           type="button"
-          disabled={disabled || !dealId}
+          disabled={readOnly || !dealId}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

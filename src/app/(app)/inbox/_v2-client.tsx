@@ -1313,7 +1313,7 @@ export default function InboxV2ClientPage({
       // das informações do deal, não no header flutuante do aside.
       assigneeSlot: activeRow ? (
         <RequirePermission
-          permission="conversation:reassign"
+          permission="conversation:transfer"
           fallback={
             <AssigneePopover
               conversationId={activeId}
@@ -1496,15 +1496,17 @@ export default function InboxV2ClientPage({
               );
             }}
             conversationNumber={activeRow?.number ?? null}
-            transferSlot={
-              <TransferPopover
-                variant="composer"
-                conversationId={activeId}
-                currentAssigneeId={activeRow.assignedTo?.id ?? null}
-                currentDepartmentId={
-                  activeRow.departmentId ?? activeRow.department?.id ?? null
-                }
-              />
+              transferSlot={
+              <RequirePermission permission="conversation:transfer">
+                <TransferPopover
+                  variant="composer"
+                  conversationId={activeId}
+                  currentAssigneeId={activeRow.assignedTo?.id ?? null}
+                  currentDepartmentId={
+                    activeRow.departmentId ?? activeRow.department?.id ?? null
+                  }
+                />
+              </RequirePermission>
             }
           />
         }

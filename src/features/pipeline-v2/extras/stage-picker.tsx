@@ -6,6 +6,7 @@
  * useMoveDeal (que tem update otimista no board).
  */
 
+import { useCan } from "@/hooks/use-my-permissions";
 import { useMoveDeal } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
 
@@ -34,6 +35,8 @@ interface StagePickerProps {
      */
     onSelectStage: (stageId: string, toPipelineId?: string | null) => void;
     isPending: boolean;
+    /** false quando o usuário não tem `deal:change_stage`. */
+    canMove: boolean;
   }) => React.ReactNode;
 }
 
@@ -46,8 +49,10 @@ export function StagePicker({
   children,
 }: StagePickerProps) {
   const move = useMoveDeal(pipelineId, statusFilter);
+  const canMove = useCan("deal:change_stage");
 
   function onSelectStage(stageId: string, toPipelineId?: string | null) {
+    if (!canMove) return;
     if (!dealId || !currentStageId || stageId === currentStageId) return;
     const vars = {
       dealId,
@@ -62,5 +67,5 @@ export function StagePicker({
     move.mutate(vars);
   }
 
-  return <>{children({ onSelectStage, isPending: move.isPending })}</>;
+  return <>{children({ onSelectStage, isPending: move.isPending, canMove })}</>;
 }

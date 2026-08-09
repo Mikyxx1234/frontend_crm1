@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
+import { useCan } from "@/hooks/use-my-permissions";
 
 type StageOption = { id: string; name: string; color?: string; isLost?: boolean };
 type UserOption = { id: string; name: string };
@@ -162,6 +163,7 @@ export function BulkActionsBar({
   // todos os overrides `dark:` e os tokens shadcn (--card, --popover, etc.).
   const { theme } = useThemeV2();
   const isDark = theme === "dark";
+  const canChangeStage = useCan("deal:change_stage");
   const [moveOpen, setMoveOpen] = React.useState(false);
   const [ownerOpen, setOwnerOpen] = React.useState(false);
   const [lostOpen, setLostOpen] = React.useState(false);
@@ -294,6 +296,7 @@ export function BulkActionsBar({
           </div>
 
           {/* Move stage */}
+          {canChangeStage ? (
           <div className="relative">
             <Button
               type="button"
@@ -336,6 +339,7 @@ export function BulkActionsBar({
               </div>
             )}
           </div>
+          ) : null}
 
           {/* Change owner */}
           <div className="relative">

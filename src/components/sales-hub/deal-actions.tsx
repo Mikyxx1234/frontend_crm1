@@ -47,6 +47,7 @@ import {
   usePortalPopover,
 } from "@/features/pipeline-v2/extras/use-portal-popover";
 import { TooltipHost } from "@/components/ui/tooltip";
+import { useCan } from "@/hooks/use-my-permissions";
 
 type StatusFilter = "OPEN" | "WON" | "LOST" | "ALL";
 
@@ -217,6 +218,7 @@ export function DealMoveStageButton({
 }) {
   const { open, rect, triggerRef, popoverRef, toggle, close } =
     usePortalPopover();
+  const canChangeStage = useCan("deal:change_stage");
   const moveMutation = useMoveMutation({
     pipelineId,
     statusFilter,
@@ -225,8 +227,12 @@ export function DealMoveStageButton({
   });
   const position = computePopoverPosition(rect, 320, 240);
   const noDeal = !deal;
-  const disabled = noDeal || moveMutation.isPending;
-  const tooltip = noDeal ? "Selecione um negócio" : "Mover negócio de fase";
+  const disabled = noDeal || moveMutation.isPending || !canChangeStage;
+  const tooltip = !canChangeStage
+    ? "Sem permissão para mover entre etapas"
+    : noDeal
+      ? "Selecione um negócio"
+      : "Mover negócio de fase";
 
   React.useEffect(() => {
     if (!open) return;
@@ -325,6 +331,7 @@ export function DealStageSelector({
   showValue = true,
 }: DealStageSelectorProps) {
   const [stageOpen, setStageOpen] = React.useState(false);
+  const canChangeStage = useCan("deal:change_stage");
   const moveMutation = useMoveMutation({
     pipelineId,
     statusFilter,
@@ -341,16 +348,21 @@ export function DealStageSelector({
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          if (!canChangeStage) return;
           setStageOpen((v) => !v);
         }}
-        disabled={moveMutation.isPending}
+        disabled={moveMutation.isPending || !canChangeStage}
+        title={
+          canChangeStage ? undefined : "Sem permissão para mover entre etapas"
+        }
         aria-haspopup="listbox"
         aria-expanded={stageOpen}
         className={cn(
           "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-[var(--color-bg-card)] px-3 py-2.5 text-left transition-all hover:border-[var(--glass-border)] dark:bg-[var(--glass-bg-base)]/50 dark:hover:border-slate-600",
           stageOpen &&
             "border-[var(--color-brand-primary)] bg-[var(--color-bg-card)] shadow-[0_0_0_3px_rgba(37,99,235,0.12)] dark:bg-[var(--glass-bg-base)]/80",
-          moveMutation.isPending && "cursor-wait opacity-60",
+          (moveMutation.isPending || !canChangeStage) && "cursor-wait opacity-60",
+          !canChangeStage && "cursor-default hover:border-border",
         )}
       >
         <span
@@ -460,6 +472,7 @@ export function DealStageBar({
   onMoved,
 }: DealActionsProps) {
   const [hoverStageId, setHoverStageId] = React.useState<string | null>(null);
+  const canChangeStage = useCan("deal:change_stage");
 
   const moveMutation = useMoveMutation({
     pipelineId,
@@ -500,6 +513,11 @@ export function DealStageBar({
             movendo…
           </span>
         )}
+        {!canChangeStage && (
+          <span className="text-[10px] font-bold text-[var(--color-ink-muted)]">
+            só leitura
+          </span>
+        )}
       </div>
 
       {/* Barra contínua. Padding vertical invisível amplia a hit-area
@@ -530,7 +548,7 @@ export function DealStageBar({
                 key={stage.id}
                 type="button"
                 onClick={() => {
-                  if (isCurrent || moveMutation.isPending) return;
+                  if (!canChangeStage || isCurrent || moveMutation.isPending) return;
                   moveMutation.mutate({
                     dealId: deal.id,
                     fromStageId: deal.stageId,
@@ -538,7 +556,7 @@ export function DealStageBar({
                   });
                 }}
                 onMouseEnter={() => setHoverStageId(stage.id)}
-                disabled={moveMutation.isPending}
+                disabled={moveMutation.isPending || !canChangeStage}
                 aria-label={
                   isCurrent
                     ? `Etapa atual: ${stage.name}`
@@ -554,10 +572,11 @@ export function DealStageBar({
                 transition={{ duration: 0.15 }}
                 className={cn(
                   "relative h-full flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-brand-primary)]/50",
-                  !isCurrent &&
+                  canChangeStage &&
+                    !isCurrent &&
                     !moveMutation.isPending &&
                     "cursor-pointer",
-                  isCurrent && "cursor-default",
+                  (isCurrent || !canChangeStage) && "cursor-default",
                   moveMutation.isPending &&
                     !isCurrent &&
                     "cursor-wait opacity-70",

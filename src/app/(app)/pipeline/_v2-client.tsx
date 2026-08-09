@@ -80,7 +80,7 @@ import { toast } from "sonner";
 import { updateDeal } from "@/features/pipeline-v2/api";
 import { createContact } from "@/features/directory-v2/api";
 import { personNameFromDealTitle, sanitizeContactName } from "@/lib/display-name";
-import { useMyPermissions } from "@/hooks/use-my-permissions";
+import { useCan, useMyPermissions } from "@/hooks/use-my-permissions";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
 import type { BulkScopeContext } from "@/components/pipeline/bulk-edit-fields-dialog";
@@ -209,6 +209,7 @@ export default function KanbanV2ClientPage({
   const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
     null,
   );
+  const canChangeStage = useCan("deal:change_stage");
   const { filters, setFilters, patch: patchFilters, clear: clearFilters } = useKanbanFilters();
   const [search, setSearch] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -351,6 +352,10 @@ export default function KanbanV2ClientPage({
 
   const requestMove = useCallback(
     (vars: MoveVars) => {
+      if (vars.fromStageId !== vars.toStageId && !canChangeStage) {
+        toast.error("Sem permissão para mover negócios entre etapas.");
+        return;
+      }
       const target = board.find((s) => s.id === vars.toStageId);
       // Cross-pipeline: quando o estágio destino não pertence ao board
       // atual, não temos como saber isLost/lossReasonRequired sem uma
@@ -366,7 +371,7 @@ export default function KanbanV2ClientPage({
       }
       moveDeal.mutate(vars);
     },
-    [board, moveDeal, lossReasonsActive],
+    [board, moveDeal, lossReasonsActive, canChangeStage],
   );
 
   // ── Seleção em massa (resgatada da versão antiga) ────────────────
@@ -951,6 +956,7 @@ export default function KanbanV2ClientPage({
                   setAddStage({ id: col.stageId, name: col.title })
                 }
                 onCloseAddDeal={() => setAddStage(null)}
+                canChangeStage={canChangeStage}
               />
             ))}
             {columns.length === 0 ? (
@@ -1040,12 +1046,13 @@ export default function KanbanV2ClientPage({
               statusFilter={status}
               onRequestMove={requestMove}
             >
-              {({ onSelectStage, isPending }) => (
+              {({ onSelectStage, isPending, canMove }) => (
                 <StageDropdown
                   stages={board}
                   currentStageId={activeDealStageId}
                   currentPipelineId={pipelineId}
                   isPending={isPending}
+                  canMove={canMove}
                   onSelect={onSelectStage}
                 />
               )}
@@ -1398,12 +1405,14 @@ function StageDropdown({
   currentStageId,
   currentPipelineId,
   isPending,
+  canMove = true,
   onSelect,
 }: {
   stages: BoardStageDto[];
   currentStageId: string | null;
   currentPipelineId: string | null;
   isPending: boolean;
+  canMove?: boolean;
   onSelect: (stageId: string, toPipelineId?: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -1411,6 +1420,7 @@ function StageDropdown({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const current = stages.find((s) => s.id === currentStageId);
+  const disabled = isPending || !canMove;
 
   useEffect(() => {
     if (!open) return;
@@ -1446,9 +1456,17 @@ function StageDropdown({
       <button
         ref={triggerRef}
         type="button"
-        disabled={isPending}
-        onClick={() => setOpen((v) => !v)}
-        className="flex max-w-[min(100%,14rem)] items-center gap-1.5 font-display text-[15px] font-bold text-[var(--text-primary)] transition-opacity hover:opacity-70 disabled:cursor-wait disabled:opacity-50"
+        disabled={disabled}
+        title={canMove ? undefined : "Sem permissão para mover entre etapas"}
+        onClick={() => {
+          if (!canMove) return;
+          setOpen((v) => !v);
+        }}
+        className={cn(
+          "flex max-w-[min(100%,14rem)] items-center gap-1.5 font-display text-[15px] font-bold text-[var(--text-primary)] transition-opacity hover:opacity-70 disabled:opacity-50",
+          isPending && "cursor-wait",
+          !canMove && "cursor-default hover:opacity-100",
+        )}
       >
         <span
           className="inline-block h-2 w-2 shrink-0 rounded-full"
@@ -1665,6 +1683,7 @@ function DroppableColumn({
   onToggleSelect,
   onToggleSelectAllInColumn,
   onRequestMove,
+  canChangeStage,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
@@ -1685,6 +1704,7 @@ function DroppableColumn({
     toStageId: string;
     toPipelineId?: string | null;
   }) => void;
+  canChangeStage: boolean;
 }) {
   // Estado de seleção em massa restrito aos deals JÁ CARREGADOS desta
   // coluna. Replica o comportamento do kanban antigo.
@@ -1700,7 +1720,7 @@ function DroppableColumn({
   const isAddingHere = addStage?.id === column.stageId;
 
   return (
-    <Droppable droppableId={column.stageId}>
+    <Droppable droppableId={column.stageId} isDropDisabled={!canChangeStage}>
       {(provided, snapshot) => (
         <KanbanColumn
           title={column.title}
@@ -1729,7 +1749,7 @@ function DroppableColumn({
             selectedCount: selectedInColumnCount,
             totalInColumn: dealIdsInColumn.length,
             onToggleAll: () => onToggleSelectAllInColumn(dealIdsInColumn),
-            enabled: selectionMode,
+            enabled: selectionMode && canChangeStage,
           }}
           dealsContainerRef={provided.innerRef}
           dealsContainerProps={{
@@ -1746,7 +1766,12 @@ function DroppableColumn({
           renderDeal={(deal, index) => {
             const raw = dealById.get(deal.id);
             return (
-              <Draggable key={deal.id} draggableId={deal.id} index={index}>
+              <Draggable
+                key={deal.id}
+                draggableId={deal.id}
+                index={index}
+                isDragDisabled={!canChangeStage}
+              >
                 {(dragProvided, dragSnapshot) => {
                   const node = (
                   <div
@@ -1756,6 +1781,7 @@ function DroppableColumn({
                     style={{
                       ...dragProvided.draggableProps.style,
                       opacity: dragSnapshot.isDragging ? 0.9 : 1,
+                      cursor: canChangeStage ? undefined : "default",
                     }}
                   >
                     <DealCard

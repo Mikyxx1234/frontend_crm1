@@ -1298,12 +1298,13 @@ export default function InboxV2ClientPage({
           currentStageId={firstDealStageId}
           pipelineId={firstDealPipelineId}
         >
-          {({ onSelectStage, isPending }) => (
+          {({ onSelectStage, isPending, canMove }) => (
             <InboxStageDropdown
               stages={boardStages}
               currentStageId={firstDealStageId}
               currentPipelineId={firstDealPipelineId}
               isPending={isPending}
+              canMove={canMove}
               onSelect={onSelectStage}
             />
           )}
@@ -1952,12 +1953,14 @@ function InboxStageDropdown({
   currentStageId,
   currentPipelineId,
   isPending,
+  canMove = true,
   onSelect,
 }: {
   stages: BoardStageDto[];
   currentStageId: string | null;
   currentPipelineId: string | null;
   isPending: boolean;
+  canMove?: boolean;
   onSelect: (stageId: string, toPipelineId?: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -1965,6 +1968,7 @@ function InboxStageDropdown({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const current = stages.find((s) => s.id === currentStageId);
+  const disabled = isPending || !canMove;
 
   useEffect(() => {
     if (!open) return;
@@ -2002,9 +2006,17 @@ function InboxStageDropdown({
       <button
         ref={triggerRef}
         type="button"
-        disabled={isPending}
-        onClick={() => setOpen((v) => !v)}
-        className="flex max-w-[min(100%,11rem)] items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
+        disabled={disabled}
+        title={canMove ? undefined : "Sem permissão para mover entre etapas"}
+        onClick={() => {
+          if (!canMove) return;
+          setOpen((v) => !v);
+        }}
+        className={cn(
+          "flex max-w-[min(100%,11rem)] items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:opacity-50",
+          isPending && "cursor-wait",
+          !canMove && "cursor-default hover:opacity-100 hover:text-[var(--text-muted)]",
+        )}
       >
         {current?.color && (
           <span

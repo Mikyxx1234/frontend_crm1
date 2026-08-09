@@ -10,6 +10,8 @@ import {
 import { cn } from "@/lib/utils"
 import { Row } from "@/components/crm/aside-row"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
+import { RequirePermission } from "@/components/auth/require-permission"
+import { useCan } from "@/hooks/use-my-permissions"
 import {
   IconBriefcase,
   IconBrandWhatsapp,
@@ -682,6 +684,16 @@ export function ContactAside({
   // Estados de modo edição
   const [contactEditMode, setContactEditMode] = useState(false)
   const [dealFieldsEditMode, setDealFieldsEditMode] = useState(false)
+  const canEditContact = useCan("contact:edit")
+  const canEditDeal = useCan("deal:edit")
+
+  // Sem permissão, não deixa o modo edição preso ligado.
+  useEffect(() => {
+    if (!canEditContact && contactEditMode) setContactEditMode(false)
+  }, [canEditContact, contactEditMode])
+  useEffect(() => {
+    if (!canEditDeal && dealFieldsEditMode) setDealFieldsEditMode(false)
+  }, [canEditDeal, dealFieldsEditMode])
 
   // Estados de configuração abertos
   const [contactConfigOpen, setContactConfigOpen] = useState(false)
@@ -984,13 +996,15 @@ export function ContactAside({
                                 }
                                 actions={
                                   <>
-                                    <HeaderBtn
-                                      label={contactEditMode ? "Sair do modo edição" : "Editar dados de contato"}
-                                      active={contactEditMode}
-                                      onClick={() => setContactEditMode((v) => !v)}
-                                    >
-                                      {contactEditMode ? <IconX size={13} /> : <IconPencil size={13} />}
-                                    </HeaderBtn>
+                                    <RequirePermission permission="contact:edit">
+                                      <HeaderBtn
+                                        label={contactEditMode ? "Sair do modo edição" : "Editar dados de contato"}
+                                        active={contactEditMode}
+                                        onClick={() => setContactEditMode((v) => !v)}
+                                      >
+                                        {contactEditMode ? <IconX size={13} /> : <IconPencil size={13} />}
+                                      </HeaderBtn>
+                                    </RequirePermission>
                                     {resolvedContactConfig && (
                                       <HeaderBtn
                                         label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
@@ -1237,13 +1251,15 @@ export function ContactAside({
                                   }
                                   actions={
                                   <>
-                                    <HeaderBtn
+                                    <RequirePermission permission="deal:edit">
+                                      <HeaderBtn
                                         label={dealFieldsEditMode ? "Sair do modo edição" : "Editar campos de negócio"}
                                         active={dealFieldsEditMode}
                                         onClick={() => setDealFieldsEditMode((v) => !v)}
                                       >
                                         {dealFieldsEditMode ? <IconX size={13} /> : <IconPencil size={13} />}
                                       </HeaderBtn>
+                                    </RequirePermission>
                                       {resolvedDealConfig && (
                                         <HeaderBtn
                                           label={dealConfigOpen ? "Fechar configurações" : "Configurar campos de negócio"}

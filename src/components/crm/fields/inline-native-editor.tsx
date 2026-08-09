@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { IconPencil, IconCheck, IconX, IconLoader2 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
+import { useCan } from "@/hooks/use-my-permissions";
 
 export interface InlineNativeEditorProps {
   value: string | undefined | null;
@@ -92,6 +93,11 @@ export function InlineNativeEditor({
   suggestions,
 }: InlineNativeEditorProps) {
   const qc = useQueryClient();
+  // Sem a permission do recurso, o valor é só leitura — o backend também
+  // rejeita o PUT, mas esconder o lápis evita o falso "deu pra editar".
+  const canEditEntity = useCan(
+    entityType === "contact" ? "contact:edit" : "deal:edit",
+  );
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(value ?? "");
   const [saving, setSaving] = React.useState(false);
@@ -110,6 +116,7 @@ export function InlineNativeEditor({
   }, [editing]);
 
   const startEdit = () => {
+    if (!canEditEntity) return;
     setDraft(value ?? "");
     setEditing(true);
   };
@@ -184,6 +191,20 @@ export function InlineNativeEditor({
       : formatDisplay
         ? formatDisplay(value!)
         : value!;
+    const textCls = cn(
+      "min-w-0 truncate",
+      isEmpty
+        ? (emptyClassName ?? "font-display text-[11px] italic text-[var(--text-muted)] opacity-60")
+        : (textClassName ?? "font-display text-[13px] font-bold text-[var(--text-primary)]"),
+    );
+
+    if (!canEditEntity) {
+      return (
+        <span className={cn("flex min-w-0 items-center text-right", textCls)} title={isEmpty ? undefined : String(display)}>
+          <span className="min-w-0 truncate">{display}</span>
+        </span>
+      );
+    }
 
     return (
       <button

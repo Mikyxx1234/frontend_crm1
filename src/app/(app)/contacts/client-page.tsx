@@ -40,6 +40,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
+import { useCan } from "@/hooks/use-my-permissions";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { pagePrimaryButtonClass, PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-toolbar";
@@ -321,6 +322,19 @@ export default function V2ContactsClientPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const deleteMut = useDeleteContact();
+  const canCreateContact = useCan("contact:create");
+  const canEditContact = useCan("contact:edit");
+  const canDeleteContact = useCan("contact:delete");
+  const canImportContact = useCan("contact:import");
+  const canExportContact = useCan("contact:export");
+
+  function requestEdit(c: ContactListItemDto) {
+    if (!canEditContact) {
+      toast.error("Sem permissão para editar contato.");
+      return;
+    }
+    setEditing(c);
+  }
 
   // Colunas visíveis da Tabela (persistidas no navegador).
   const [activeColumnKeys, setActiveColumnKeys] = useState<string[]>(DEFAULT_COLUMN_KEYS);
@@ -533,13 +547,32 @@ export default function V2ContactsClientPage() {
                 size="compact"
               />
               <ActionsMenu
-                onAdd={() => setCreateOpen(true)}
+                canCreate={canCreateContact}
+                canImport={canImportContact}
+                canExport={canExportContact}
+                onAdd={() => {
+                  if (!canCreateContact) {
+                    toast.error("Sem permissão para criar contato.");
+                    return;
+                  }
+                  setCreateOpen(true);
+                }}
                 onExport={() => {
+                  if (!canExportContact) {
+                    toast.error("Sem permissão para exportar contatos.");
+                    return;
+                  }
                   void downloadFromApi(apiUrl("/api/contacts/export"), "contatos.csv")
                     .then(() => toast.success("Exportação concluída. Verifique seus downloads."))
                     .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao exportar."));
                 }}
-                onImport={() => setImportOpen(true)}
+                onImport={() => {
+                  if (!canImportContact) {
+                    toast.error("Sem permissão para importar contatos.");
+                    return;
+                  }
+                  setImportOpen(true);
+                }}
                 onColumns={() => setColumnsOpen(true)}
                 onDupes={() => setDupesOpen(true)}
               />
@@ -623,7 +656,19 @@ export default function V2ContactsClientPage() {
               >
                 Limpar
               </ButtonGlass>
-              <ButtonGlass variant="danger" size="sm" type="button" onClick={() => setConfirmOpen(true)}>
+              <ButtonGlass
+                variant="danger"
+                size="sm"
+                type="button"
+                disabled={!canDeleteContact}
+                onClick={() => {
+                  if (!canDeleteContact) {
+                    toast.error("Sem permissão para excluir contato.");
+                    return;
+                  }
+                  setConfirmOpen(true);
+                }}
+              >
                 <IconTrash size={14} /> Excluir
               </ButtonGlass>
             </div>
@@ -665,7 +710,7 @@ export default function V2ContactsClientPage() {
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSort={toggleSort}
-            onEdit={setEditing}
+            onEdit={requestEdit}
           />
         ) : (
           <CardsView
@@ -681,7 +726,7 @@ export default function V2ContactsClientPage() {
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSort={toggleSort}
-            onEdit={setEditing}
+            onEdit={requestEdit}
             onOpenLead={openLead}
             openingLeadId={openingLeadId}
           />
@@ -1178,24 +1223,32 @@ function SearchFilterBar({
 
 function ActionsMenu({
   onAdd, onExport, onImport, onColumns, onDupes,
+  canCreate = true, canImport = true, canExport = true,
 }: {
   onAdd: () => void;
   onExport: () => void;
   onImport: () => void;
   onColumns: () => void;
   onDupes: () => void;
+  canCreate?: boolean;
+  canImport?: boolean;
+  canExport?: boolean;
 }) {
-  return (
-    <PageActionsMenu
-      items={[
-        { icon: <IconPlus size={14} stroke={2.6} />, label: "Adicionar contato", onClick: onAdd, primary: true },
-        { icon: <IconDownload size={13} />, label: "Exportar", onClick: onExport },
-        { icon: <IconFileImport size={13} />, label: "Importar", onClick: onImport },
-        { icon: <IconSettings size={13} />, label: "Configurações da lista", onClick: onColumns, divider: true },
-        { icon: <IconUsersGroup size={13} />, label: "Localizar duplicadas", onClick: onDupes },
-      ]}
-    />
-  );
+  const items = [
+    canCreate
+      ? { icon: <IconPlus size={14} stroke={2.6} />, label: "Adicionar contato", onClick: onAdd, primary: true as const }
+      : null,
+    canExport
+      ? { icon: <IconDownload size={13} />, label: "Exportar", onClick: onExport }
+      : null,
+    canImport
+      ? { icon: <IconFileImport size={13} />, label: "Importar", onClick: onImport }
+      : null,
+    { icon: <IconSettings size={13} />, label: "Configurações da lista", onClick: onColumns, divider: true as const },
+    { icon: <IconUsersGroup size={13} />, label: "Localizar duplicadas", onClick: onDupes },
+  ].filter((x): x is NonNullable<typeof x> => x !== null);
+
+  return <PageActionsMenu items={items} />;
 }
 
 // ── Localizar duplicadas ─────────────────────────────────────────────────────

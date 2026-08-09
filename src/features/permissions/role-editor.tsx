@@ -14,6 +14,7 @@ import {
   IconChevronDown,
   IconColumns,
   IconEye,
+  IconEyeOff,
   IconFilter,
   IconInfoCircle,
   IconKey,
@@ -114,20 +115,29 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   const visibilityPreset: "MEMBER" | "MANAGER" | null =
     rolePreset === "MEMBER" || rolePreset === "MANAGER" ? rolePreset : null;
   const [convVisibilityAll, setConvVisibilityAll] = useState(false);
+  // Eixo ortogonal a own/all: ver ou não os itens sem responsável (pool livre).
+  const [seeUnassigned, setSeeUnassigned] = useState(false);
   const { data: orgPermSettings } = useQuery<{
     visibility?: Record<string, "own" | "all">;
+    unassigned?: Record<string, boolean>;
   }>({
     queryKey: ["settings-permissions", "visibility"],
     queryFn: () =>
-      getJson<{ visibility?: Record<string, "own" | "all"> }>(
-        "/api/settings/permissions",
-      ),
+      getJson<{
+        visibility?: Record<string, "own" | "all">;
+        unassigned?: Record<string, boolean>;
+      }>("/api/settings/permissions"),
     staleTime: 60_000,
     enabled: visibilityPreset !== null,
   });
   useEffect(() => {
-    if (!visibilityPreset || !orgPermSettings?.visibility) return;
-    setConvVisibilityAll(orgPermSettings.visibility[visibilityPreset] === "all");
+    if (!visibilityPreset || !orgPermSettings) return;
+    if (orgPermSettings.visibility) {
+      setConvVisibilityAll(orgPermSettings.visibility[visibilityPreset] === "all");
+    }
+    if (orgPermSettings.unassigned) {
+      setSeeUnassigned(orgPermSettings.unassigned[visibilityPreset] === true);
+    }
   }, [visibilityPreset, orgPermSettings]);
 
   const [name, setName] = useState("");
@@ -244,6 +254,9 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
           body: JSON.stringify({
             visibility: {
               [visibilityPreset]: convVisibilityAll ? "all" : "own",
+            },
+            unassigned: {
+              [visibilityPreset]: seeUnassigned,
             },
           }),
         });
@@ -466,6 +479,15 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
             desc="Vale para a Caixa de entrada E para o funil (Kanban/Lista/Flow). Ligado: enxerga as conversas e os cards de todos (respeitando as filas e o escopo de canal). Desligado: vê apenas as conversas atribuídas a ele e os negócios em que é o responsável."
             checked={convVisibilityAll}
             onChange={setConvVisibilityAll}
+          />
+        )}
+        {visibilityPreset && (
+          <ExtraToggle
+            icon={<IconEyeOff size={16} />}
+            title="Ver conversas e negócios sem responsável"
+            desc="Eixo separado, combina com o toggle acima. Ligado: enxerga o pool livre — conversas e cards ainda sem responsável (respeitando filas, escopo de canal e departamento). Desligado: só o que já tem responsável. Ex.: com «toda a equipe» desligado + este ligado, vê os próprios itens mais os que estão sem dono."
+            checked={seeUnassigned}
+            onChange={setSeeUnassigned}
           />
         )}
         <ExtraToggle

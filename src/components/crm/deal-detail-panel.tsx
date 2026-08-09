@@ -999,8 +999,7 @@ export function DealDetailPanel({
                     </>
                   )}
                   <span className="text-slate-400">Tags</span>
-                  {/* w-full: o slot ocupa a coluna inteira e empurra o "+"
-                      para o canto direito, sobrando linha para as chips. */}
+                  {/* Uma linha: chips truncam; "+" fica à direita no tray. */}
                   <span className="flex w-full min-w-0 flex-nowrap items-center justify-start gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:shrink [&_.tag-chip]:truncate">
                     {tagsSlot ?? (
                       <span className="text-xs text-white/60">Nenhuma tag</span>

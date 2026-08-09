@@ -120,17 +120,16 @@ function DealTagsTray({
         <TagChip
           name={t.name}
           color={t.color}
-          className="h-5 min-w-0 max-w-full shrink"
+          className="h-5 min-w-0 max-w-[9.5rem] shrink"
         />
       </TooltipGlass>
     );
   }
 
-  // Quebra linha: no aside estreito duas chips na mesma linha truncavam em
-  // duas letras. O "+" segue ancorado à direita (ml-auto) na última linha e
-  // o excedente aparece em "Selecionadas", dentro do popover.
+  // Uma linha: chips truncam com tooltip; "+" fixo à direita. Excedente
+  // fica em "Selecionadas" no popover.
   return (
-    <div className="flex w-full min-w-0 flex-wrap items-center gap-1">
+    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
       {visible.map(chip)}
       <span className="ml-auto shrink-0 pl-1">
         <DealTagsPopover dealId={dealId} currentTags={currentTags} />
@@ -156,15 +155,15 @@ function ContactTagsTray({
         <TagChip
           name={t.name}
           color={t.color}
-          className="h-5 min-w-0 max-w-full shrink"
+          className="h-5 min-w-0 max-w-[9.5rem] shrink"
         />
       </TooltipGlass>
     );
   }
 
-  // Mesmo layout do DealTagsTray: quebra linha, "+" à direita, sem "+N".
+  // Mesmo layout do DealTagsTray: uma linha, "+" à direita.
   return (
-    <div className="flex w-full min-w-0 flex-wrap items-center gap-1">
+    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
       {visible.map(chip)}
       <span className="ml-auto shrink-0 pl-1">
         <ContactTagsPopover contactId={contactId} currentTags={currentTags} triggerVariant="icon" />

@@ -13,6 +13,7 @@ import {
   IconAlertTriangle,
   IconChevronDown,
   IconColumns,
+  IconEye,
   IconFilter,
   IconInfoCircle,
   IconKey,
@@ -104,6 +105,30 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   const createRole = useCreateRole();
   const updateRole = useUpdateRole();
   const deleteRole = useDeleteRole();
+
+  // Visibilidade de conversas (own/all) — configuração por PAPEL-BASE, não
+  // por role custom: o backend guarda em OrganizationSetting `visibility.<ROLE>`
+  // e o enforcement roda em `getVisibilityFilter`. Só exposto para os presets
+  // Operador (MEMBER) e Gestor (MANAGER); Admin sempre vê tudo.
+  const rolePreset = role?.systemPreset;
+  const visibilityPreset: "MEMBER" | "MANAGER" | null =
+    rolePreset === "MEMBER" || rolePreset === "MANAGER" ? rolePreset : null;
+  const [convVisibilityAll, setConvVisibilityAll] = useState(false);
+  const { data: orgPermSettings } = useQuery<{
+    visibility?: Record<string, "own" | "all">;
+  }>({
+    queryKey: ["settings-permissions", "visibility"],
+    queryFn: () =>
+      getJson<{ visibility?: Record<string, "own" | "all"> }>(
+        "/api/settings/permissions",
+      ),
+    staleTime: 60_000,
+    enabled: visibilityPreset !== null,
+  });
+  useEffect(() => {
+    if (!visibilityPreset || !orgPermSettings?.visibility) return;
+    setConvVisibilityAll(orgPermSettings.visibility[visibilityPreset] === "all");
+  }, [visibilityPreset, orgPermSettings]);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -209,6 +234,20 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
           fieldGrants: fieldPayload,
         });
         onSaved?.(roleId);
+      }
+      // Visibilidade de conversas vive em OrganizationSetting (por papel-base),
+      // fora do payload do Role — salva em separado quando o preset a expõe.
+      if (visibilityPreset) {
+        const res = await fetch(apiUrl("/api/settings/permissions"), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            visibility: {
+              [visibilityPreset]: convVisibilityAll ? "all" : "own",
+            },
+          }),
+        });
+        if (!res.ok) throw new Error("Erro ao salvar a visibilidade de conversas.");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao salvar.");
@@ -418,8 +457,17 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
       <CollapsibleSection
         icon={<IconMail size={16} />}
         title="Acessos extras"
-        sub="caixa compartilhada e mídia"
+        sub={visibilityPreset ? "visibilidade de conversas e funil, caixa compartilhada e mídia" : "caixa compartilhada e mídia"}
       >
+        {visibilityPreset && (
+          <ExtraToggle
+            icon={<IconEye size={16} />}
+            title="Ver conversas e negócios de toda a equipe"
+            desc="Vale para a Caixa de entrada E para o funil (Kanban/Lista/Flow). Ligado: enxerga as conversas e os cards de todos (respeitando as filas e o escopo de canal). Desligado: vê apenas as conversas atribuídas a ele e os negócios em que é o responsável."
+            checked={convVisibilityAll}
+            onChange={setConvVisibilityAll}
+          />
+        )}
         <ExtraToggle
           icon={<IconMail size={16} />}
           title="Caixa de entrada compartilhada"

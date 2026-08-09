@@ -22,17 +22,6 @@ export interface ListConversationsParams extends InboxFilters {
   search?: string;
   perPage?: number;
   page?: number;
-  /** Recorte "só as minhas" (`?mine=1`) — ver `appendMineParam`. */
-  mine?: boolean;
-}
-
-/**
- * Toggle "Minhas × Todas" do header da Inbox. Fica FORA de `InboxFilters`
- * de propósito: é um modo de visualização, não um filtro do painel, e não
- * deve contar como filtro ativo no badge do botão "Filtrar".
- */
-function appendMineParam(q: URLSearchParams, mine?: boolean): void {
-  if (mine) q.set("mine", "1");
 }
 
 /** Anexa os filtros do funil (responsável, canal, estágio, tags, origem) —
@@ -62,7 +51,6 @@ function buildConversationsUrl(p: ListConversationsParams): string {
   });
   if (p.page && p.page > 1) q.set("page", String(p.page));
   appendInboxServerFilters(q, p);
-  appendMineParam(q, p.mine);
   if (p.sortBy) q.set("sortBy", p.sortBy);
   if (p.sortOrder) q.set("sortOrder", p.sortOrder);
   const s = p.search?.trim();
@@ -89,11 +77,9 @@ export async function listConversations(
 export async function fetchTabCounts(
   filters?: InboxFilters | null,
   search?: string | null,
-  mine?: boolean,
 ): Promise<TabCounts> {
   const q = new URLSearchParams({ counts: "1" });
   if (filters) appendInboxServerFilters(q, filters);
-  appendMineParam(q, mine);
   const s = search?.trim();
   if (s) q.set("search", s);
   const res = await fetch(apiUrl(`/api/conversations?${q.toString()}`));

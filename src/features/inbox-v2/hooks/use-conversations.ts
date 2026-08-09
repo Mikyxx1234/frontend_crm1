@@ -49,23 +49,14 @@ export function useConversations(params: {
   filters: InboxFilters;
   search: string;
   enabled?: boolean;
-  /** Toggle "Minhas × Todas" do header (recorte por responsável). */
-  mine?: boolean;
 }) {
   const query = useInfiniteQuery<ConversationListResponse>({
-    queryKey: [
-      "inbox-conversations",
-      params.tab,
-      params.filters,
-      params.search,
-      params.mine ?? false,
-    ],
+    queryKey: ["inbox-conversations", params.tab, params.filters, params.search],
     queryFn: ({ pageParam = 1 }) =>
       listConversations({
         tab: params.tab,
         ...params.filters,
         search: params.search,
-        mine: params.mine,
         page: pageParam as number,
         perPage: PAGE_SIZE,
       }),
@@ -230,7 +221,6 @@ export function useTabCounts(
   enabled = true,
   filters?: InboxFilters | null,
   search?: string | null,
-  mine?: boolean,
 ) {
   const searchKey = search?.trim() || null;
   const filterKey = filters
@@ -245,8 +235,8 @@ export function useTabCounts(
       }
     : null;
   return useQuery<TabCounts>({
-    queryKey: ["conversations", "tab-counts", filterKey, searchKey, mine ?? false],
-    queryFn: () => fetchTabCounts(filters, searchKey, mine),
+    queryKey: ["conversations", "tab-counts", filterKey, searchKey],
+    queryFn: () => fetchTabCounts(filters, searchKey),
     refetchInterval: 15_000,
     enabled: isPreviewMode() ? true : enabled,
   });

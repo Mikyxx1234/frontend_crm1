@@ -19,6 +19,7 @@ import {
   useUserScopeGrants,
   type ScopeEntityOption,
 } from "./hooks";
+import { groupResourcesByCategory, RESOURCE_LABELS } from "./categories";
 
 interface UserPermissionsViewProps {
   userId: string;
@@ -62,17 +63,30 @@ export function UserPermissionsView({
 
   const hasFullAccess = data.permissions.includes("*");
 
-  // Agrupar permissions por resource
-  const grouped = new Map<string, string[]>();
-  if (hasFullAccess) {
-    grouped.set("acesso", ["total (*)"]);
-  } else {
+  // Agrupar por recurso e depois por tema (mesmas categorias do editor de papel).
+  const permissionThemeGroups = (() => {
+    if (hasFullAccess) {
+      return [
+        {
+          id: "acesso",
+          label: "Acesso",
+          resources: [{ resource: "acesso", actions: ["total (*)"] }],
+        },
+      ];
+    }
+    const byResource = new Map<string, string[]>();
     for (const key of data.permissions) {
       const [resource, action] = key.split(":");
-      if (!grouped.has(resource)) grouped.set(resource, []);
-      grouped.get(resource)!.push(action);
+      if (!resource || !action) continue;
+      if (!byResource.has(resource)) byResource.set(resource, []);
+      byResource.get(resource)!.push(action);
     }
-  }
+    const flat = Array.from(byResource.entries()).map(([resource, actions]) => ({
+      resource,
+      actions,
+    }));
+    return groupResourcesByCategory(flat);
+  })();
 
   return (
     <div className="flex flex-col gap-4">
@@ -158,21 +172,31 @@ export function UserPermissionsView({
 
         {permissionsOpen && (
           <div className="border-t px-4 pb-3 pt-2" style={{ borderColor: "var(--glass-border-subtle)" }}>
-            {grouped.size === 0 ? (
+            {permissionThemeGroups.length === 0 ? (
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>Nenhuma permissão</p>
             ) : (
-              <div className="flex flex-col gap-2">
-                {Array.from(grouped.entries()).map(([resource, actions]) => (
-                  <div key={resource} className="flex gap-2">
-                    <span
-                      className="w-28 shrink-0 text-[11px] font-semibold uppercase tracking-wide"
+              <div className="flex flex-col gap-3">
+                {permissionThemeGroups.map((group) => (
+                  <div key={group.id} className="flex flex-col gap-1.5">
+                    <p
+                      className="font-display text-[10px] font-bold uppercase tracking-widest"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      {resource}
-                    </span>
-                    <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                      {actions.join(" · ")}
+                      {group.label}
                     </p>
+                    {group.resources.map((entry) => (
+                      <div key={entry.resource} className="flex gap-2">
+                        <span
+                          className="w-28 shrink-0 text-[11px] font-semibold uppercase tracking-wide"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          {RESOURCE_LABELS[entry.resource] ?? entry.resource}
+                        </span>
+                        <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                          {entry.actions.join(" · ")}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>

@@ -537,7 +537,9 @@ function DealInline({
 
         {/* Grid 2 colunas de infos rápidas — Origem / Canal / Tags */}
         {(deal.origin || contact.connection || deal.dealTagsNode !== undefined) && (
-          <div className="relative grid grid-cols-2 items-center gap-y-1 border-t border-white/10 pt-2 text-[11px]">
+          {/* Coluna do rótulo no tamanho do texto: `grid-cols-2` dava metade
+              da largura para os valores e espremia as tags em "e…". */}
+          <div className="relative grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t border-white/10 pt-2 text-[11px]">
             {deal.origin && (
               <>
                 <span className="text-slate-400">Origem</span>

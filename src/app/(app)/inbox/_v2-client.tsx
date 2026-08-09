@@ -120,7 +120,7 @@ function DealTagsTray({
         <TagChip
           name={t.name}
           color={t.color}
-          className="h-5 min-w-0 max-w-[9.5rem] shrink"
+          className="h-5 min-w-0 max-w-[12rem] shrink"
         />
       </TooltipGlass>
     );
@@ -155,7 +155,7 @@ function ContactTagsTray({
         <TagChip
           name={t.name}
           color={t.color}
-          className="h-5 min-w-0 max-w-[9.5rem] shrink"
+          className="h-5 min-w-0 max-w-[12rem] shrink"
         />
       </TooltipGlass>
     );

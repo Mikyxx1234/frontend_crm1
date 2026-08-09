@@ -430,12 +430,13 @@ export function canSeeInboxTab(args: {
   if (perms && permissionsAllow(perms, "*")) return true;
   if (!role || role === "ADMIN" || role === "MANAGER") return true;
 
-  const scope = args.grants.inbox?.tabs;
-  if (hasRoleRule(scope, "MEMBER")) {
-    const ids = scope?.MEMBER ?? [];
-    if (ids.length === 0) return false;
-    if (ids.includes("*")) return true;
-    return ids.includes(args.tab);
+  // Lista vazia = sem regra, não "nenhuma aba" — ver o comentário longo na
+  // cópia do backend. Honrar o vazio bloqueava a Inbox inteira do operador a
+  // partir de grant legado, sem UI que o desfizesse.
+  const tabIds = args.grants.inbox?.tabs?.MEMBER;
+  if (Array.isArray(tabIds) && tabIds.length > 0) {
+    if (tabIds.includes("*")) return true;
+    return tabIds.includes(args.tab);
   }
   if (perms) {
     return memberTabAllowedByPermissions(perms, args.tab);
@@ -454,9 +455,6 @@ export function listAllowedInboxTabsForUser(args: {
   if ((perms && permissionsAllow(perms, "*")) || !role || role === "ADMIN" || role === "MANAGER") {
     return ["todos", ...INBOX_CATEGORY_TAB_ORDER];
   }
-  const scope = args.grants.inbox?.tabs;
-  const explicitEmpty =
-    hasRoleRule(scope, "MEMBER") && (scope?.MEMBER?.length ?? 0) === 0;
   const showTodos = canSeeInboxTab({
     grants: args.grants,
     role,
@@ -466,7 +464,6 @@ export function listAllowedInboxTabsForUser(args: {
   const allowed = INBOX_CATEGORY_TAB_ORDER.filter((t) =>
     canSeeInboxTab({ grants: args.grants, role, tab: t, permissions: args.permissions }),
   );
-  if (explicitEmpty) return showTodos ? ["todos"] : [];
   const base: Exclude<InboxTab, "todos">[] =
     allowed.length > 0 ? [...allowed] : ["esperando", "respondidas"];
   return showTodos ? ["todos", ...base] : [...base];

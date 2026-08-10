@@ -270,6 +270,8 @@ type CoursePricingPick = {
   price: number;
   channel: string | null;
   discountPercent: number | null;
+  installments: number | null;
+  months: number | null;
 };
 
 function normalizeCoursePricingOptions(product: {
@@ -281,12 +283,19 @@ function normalizeCoursePricingOptions(product: {
       price?: unknown;
       channel?: string | null;
       discountPercent?: unknown;
+      installments?: unknown;
+      months?: unknown;
     }> | null;
   } | null;
 }): CoursePricingPick[] {
   const cc = product.courseConfig;
   if (!cc) return [];
   const raw = Array.isArray(cc.pricingOptions) ? cc.pricingOptions : [];
+  const parsePositiveInt = (v: unknown): number | null => {
+    if (v === null || v === undefined || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) && Number.isInteger(n) && n > 0 ? n : null;
+  };
   if (raw.length > 0) {
     return raw.map((o) => ({
       price: Number(o.price) || 0,
@@ -295,6 +304,8 @@ function normalizeCoursePricingOptions(product: {
         o.discountPercent === null || o.discountPercent === undefined || o.discountPercent === ""
           ? null
           : Number(o.discountPercent),
+      installments: parsePositiveInt(o.installments),
+      months: parsePositiveInt(o.months),
     }));
   }
   // Compat: campos legados espelham a 1ª opção
@@ -307,10 +318,31 @@ function normalizeCoursePricingOptions(product: {
           cc.discountPercent === null || cc.discountPercent === undefined || cc.discountPercent === ""
             ? null
             : Number(cc.discountPercent),
+        installments: null,
+        months: null,
       },
     ];
   }
   return [];
+}
+
+/** Encontra a cota do curso que bate com preço/desconto do item do negócio. */
+function matchCoursePricingOption(
+  options: CoursePricingPick[],
+  unitPrice: number,
+  discount: number,
+): CoursePricingPick | null {
+  if (options.length === 0) return null;
+  const price = Number(unitPrice) || 0;
+  const disc = Number(discount) || 0;
+  const exact = options.find(
+    (o) =>
+      Math.abs(o.price - price) < 0.005 &&
+      Math.abs((o.discountPercent ?? 0) - disc) < 0.005,
+  );
+  if (exact) return exact;
+  const byPrice = options.find((o) => Math.abs(o.price - price) < 0.005);
+  return byPrice ?? options[0] ?? null;
 }
 
 function pricingOptionFinal(option: CoursePricingPick): number {
@@ -330,8 +362,10 @@ function buildCourseOfferMessage(input: {
   semesterLabel: string;
   basePrice: number;
   promoPrice: number;
+  /** Pós-graduação: parcelas da cota selecionada. */
+  installments?: number | null;
 }): string {
-  return [
+  const lines = [
     `🎓 Conheça o curso de ${input.name}!`,
     "",
     "Confira as principais informações:",
@@ -340,6 +374,15 @@ function buildCourseOfferMessage(input: {
     `🎓 Grau: ${input.grau}`,
     `💻 Modalidade: ${input.modeLabel}`,
     `⏳ Duração: ${input.semesterLabel}`,
+  ];
+  if (
+    input.installments != null &&
+    Number.isFinite(input.installments) &&
+    input.installments > 0
+  ) {
+    lines.push(`💳 Parcelas: ${input.installments}x`);
+  }
+  lines.push(
     "",
     `💰 Valor original: ~R$ ${formatMoneyPlain(input.basePrice)}~`,
     `🔥 Valor promocional: R$ ${formatMoneyPlain(input.promoPrice)}`,
@@ -347,7 +390,8 @@ function buildCourseOfferMessage(input: {
     "Essa é uma condição especial disponível para sua inscrição. 😊",
     "",
     "Se tiver interesse, me avise por aqui que te explico os próximos passos para garantir sua vaga e aproveitar o desconto! 🎓",
-  ].join("\n");
+  );
+  return lines.join("\n");
 }
 
 export function DealProductsSection({
@@ -384,7 +428,8 @@ export function DealProductsSection({
   } | null>(null);
   const [loadingCatalogId, setLoadingCatalogId] = React.useState<string | null>(null);
   const [loadingEditId, setLoadingEditId] = React.useState<string | null>(null);
-  const [sendingCourseOffer, setSendingCourseOffer] = React.useState(false);
+  /** id do line-item cujo "enviar mensagem" está em andamento (null = idle). */
+  const [sendingCourseOfferId, setSendingCourseOfferId] = React.useState<string | null>(null);
 
   const itemsKey = ["deal-products", dealId] as const;
 
@@ -584,10 +629,9 @@ export function DealProductsSection({
 
   const courseItems = items.filter((i) => i.productKind === "COURSE");
 
-  async function handleSendCourseOffer() {
-    const item = courseItems[0];
-    if (!item || sendingCourseOffer) return;
-    setSendingCourseOffer(true);
+  async function handleSendCourseOffer(item: DealProductItem) {
+    if (!item || sendingCourseOfferId) return;
+    setSendingCourseOfferId(item.id);
     try {
       const res = await fetch(apiUrl(`/api/products/${item.productId}`));
       if (!res.ok) {
@@ -595,7 +639,7 @@ export function DealProductsSection({
         return;
       }
       const data = (await res.json()) as {
-        product?: {
+        product?: Parameters<typeof normalizeCoursePricingOptions>[0] & {
           name?: string;
           courseConfig?: {
             level?: CourseLevel | null;
@@ -614,12 +658,22 @@ export function DealProductsSection({
       const level = cc.level ? COURSE_LEVEL_LABEL[cc.level] : "—";
       const mode = cc.mode ? COURSE_MODE_LABEL[cc.mode] : "—";
       const grau = cc.grau?.trim() || "—";
+      const matched =
+        cc.level === "POSTGRADUATE"
+          ? matchCoursePricingOption(
+              normalizeCoursePricingOptions(product),
+              Number(item.unitPrice) || 0,
+              Number(item.discount) || 0,
+            )
+          : null;
       const semesterLabel =
-        cc.semester != null && Number.isFinite(Number(cc.semester))
-          ? cc.level === "POSTGRADUATE"
-            ? `${cc.semester} meses`
-            : `${cc.semester}º semestre`
-          : "—";
+        cc.level === "POSTGRADUATE" && matched?.months != null
+          ? `${matched.months} meses`
+          : cc.semester != null && Number.isFinite(Number(cc.semester))
+            ? cc.level === "POSTGRADUATE"
+              ? `${cc.semester} meses`
+              : `${cc.semester}º semestre`
+            : "—";
       const basePrice = Number(item.unitPrice) || 0;
       const promoPrice =
         basePrice * (1 - Math.min(100, Math.max(0, Number(item.discount) || 0)) / 100);
@@ -632,13 +686,15 @@ export function DealProductsSection({
         semesterLabel,
         basePrice,
         promoPrice,
+        installments:
+          cc.level === "POSTGRADUATE" ? matched?.installments ?? null : null,
       });
       insertComposerText(message);
       toast.success("Mensagem do curso pronta no chat — confira e envie.");
     } catch {
       toast.error("Falha ao preparar a mensagem do curso.");
     } finally {
-      setSendingCourseOffer(false);
+      setSendingCourseOfferId(null);
     }
   }
 
@@ -960,6 +1016,25 @@ export function DealProductsSection({
                       {formatCurrency(item.total)}
                     </span>
                     <div className="flex items-center gap-0.5">
+                      {item.productKind === "COURSE" && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 rounded-lg text-ink-muted hover:text-[var(--brand-primary)]"
+                          aria-label={`Enviar mensagem de ${item.productName}`}
+                          title="Enviar mensagem deste curso"
+                          disabled={sendingCourseOfferId != null}
+                          onClick={() => void handleSendCourseOffer(item)}
+                        >
+                          <Send
+                            className={cn(
+                              "size-3.5",
+                              sendingCourseOfferId === item.id && "animate-pulse",
+                            )}
+                          />
+                        </Button>
+                      )}
                       {item.productType !== "SERVICE" && (
                         <Button
                           type="button"
@@ -1013,16 +1088,19 @@ export function DealProductsSection({
             <div className="border-t border-border px-4 py-3">
               <button
                 type="button"
-                disabled={sendingCourseOffer}
-                onClick={() => void handleSendCourseOffer()}
+                disabled={sendingCourseOfferId != null || !courseItems[0]}
+                onClick={() => {
+                  if (courseItems[0]) void handleSendCourseOffer(courseItems[0]);
+                }}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-[13px] font-semibold text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
               >
                 <Send className="size-3.5" strokeWidth={2.4} />
-                {sendingCourseOffer ? "Preparando…" : "Enviar produto"}
+                {sendingCourseOfferId != null ? "Preparando…" : "Enviar produto"}
               </button>
               {courseItems.length > 1 ? (
                 <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
-                  Usa o curso “{courseItems[0].productName}”
+                  Com vários cursos, use o ícone de enviar em cada item — ou este
+                  botão envia o primeiro (“{courseItems[0].productName}”).
                 </p>
               ) : null}
             </div>

@@ -49,7 +49,9 @@ export type EditorField =
   | { kind: "sendProductConfig" }
   /** Departamento + motivo (folha) do passo tabulate_conversation. */
   | { kind: "tabulationPicker" }
-  | { kind: "builder"; key: string; builder: "buttons" | "buttonsTitle" | "listRows" | "condition" | "schedule" | "headers" }
+  // `Common` e não `{ key: string }`: todas as entradas passam `label`, e o
+  // renderizador inline lê `field.label` no cabeçalho do construtor.
+  | (Common & { kind: "builder"; builder: "buttons" | "buttonsTitle" | "listRows" | "condition" | "schedule" | "headers" })
 
 const ACTIVITY_TYPES: Opt[] = [
   { value: "TASK", label: "Tarefa" },

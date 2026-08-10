@@ -878,11 +878,13 @@ export function SalesHubView({
               // mais custa aqui, e a troca instantânea some no movimento.
               // Largura fixa em vez de `min-width` animada: a coluna que
               // encolhe passa a só clipar o painel, sem reflow do CRM.
+              // Só `transform` (sem opacity): ease-out no fade esvaziava o
+              // painel no começo da saída e deixava o container “fantasma”.
               "md:w-[360px] md:shrink-0",
-              "md:transition-[transform,opacity] md:duration-[720ms] md:ease-[cubic-bezier(0.22,1,0.36,1)] md:motion-reduce:transition-none",
+              "md:transition-transform md:duration-[720ms] md:ease-[cubic-bezier(0.22,1,0.36,1)] md:motion-reduce:transition-none",
               detailsOpen
-                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:translate-x-0 md:opacity-100"
-                : "pointer-events-none hidden border-transparent shadow-none md:flex md:translate-x-[100px] md:opacity-0",
+                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:translate-x-0"
+                : "pointer-events-none hidden border-transparent shadow-none md:flex md:translate-x-[100px]",
             )}
             aria-label="Detalhes do negócio"
             aria-hidden={!detailsOpen}

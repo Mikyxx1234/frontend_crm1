@@ -751,7 +751,9 @@ export function DealDetailPanel({
     },
   ]
 
-  if (crmOnly && !isOpen) return null;
+  // Em crmOnly o pai (SalesHub aside) anima abertura/fechamento — não
+  // desmontar no close, senão o recheio some no 1º frame e sobra o
+  // container vazio deslizando.
 
   return (
     <div

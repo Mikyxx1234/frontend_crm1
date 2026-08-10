@@ -133,18 +133,20 @@ export type ConversationBadge = "enterprise" | "lead" | "success";
 
 /**
  * Tempo restante ate a janela de 24h da Meta/WhatsApp expirar.
- * Espelha a logica do legado (chat-window): backend e' source of truth,
- * mas para o CARD da lista nao temos `session.active` por conversa —
- * computamos a partir de `lastInboundAt`. Aceitamos divergencia de
- * minutos com o ChatArea (a Meta tem alguma folga).
+ * Espelha a logica do chat: 24h a partir do ultimo inbound do contato.
+ * Sem inbound (null) = sessao fechada → pill "Expirada" no card (paridade
+ * com o banner do composer).
  */
 export function sessionRemainingFromInbound(
   lastInboundAt: string | null | undefined,
   windowHours = 24,
 ): { label: string | null; expired: boolean } {
-  if (!lastInboundAt) return { label: null, expired: true };
+  // Sem inbound (ex.: ticket aberto só com template): sessão Meta fechada.
+  // Precisa de label "Expirada" — senão o card não renderiza o pill
+  // (`sessionExpiresIn && …`) enquanto o composer já bloqueia envio.
+  if (!lastInboundAt) return { label: "Expirada", expired: true };
   const d = new Date(lastInboundAt);
-  if (Number.isNaN(d.getTime())) return { label: null, expired: true };
+  if (Number.isNaN(d.getTime())) return { label: "Expirada", expired: true };
   const deadline = d.getTime() + windowHours * 3600_000;
   const ms = deadline - Date.now();
   if (ms <= 0) return { label: "Expirada", expired: true };

@@ -12,6 +12,7 @@ import { isPreviewMode } from "@/lib/preview-mode";
 import {
   createCampaign,
   fetchAudienceOptions,
+  fetchAutomations,
   fetchCampaign,
   fetchCampaignStats,
   fetchCampaigns,
@@ -142,6 +143,15 @@ export function useSegments(enabled = true) {
   return useQuery({
     queryKey: ["campaigns", "segments"],
     queryFn: fetchSegments,
+    enabled: resolveEnabled(enabled),
+    staleTime: 60_000,
+  });
+}
+
+export function useAutomations(enabled = true) {
+  return useQuery({
+    queryKey: ["campaigns", "automations"],
+    queryFn: fetchAutomations,
     enabled: resolveEnabled(enabled),
     staleTime: 60_000,
   });

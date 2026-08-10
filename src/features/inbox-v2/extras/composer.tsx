@@ -726,6 +726,10 @@ export function Composer({
           template={pendingTemplate}
           onCancel={() => setPendingTemplate(null)}
           onSent={() => setPendingTemplate(null)}
+          availableChannels={availableChannels}
+          selectedChannelId={selectedChannelId ?? null}
+          conversationChannelId={conversationChannelId ?? null}
+          onSelectChannel={onSelectChannel}
         />
       ) : null}
 

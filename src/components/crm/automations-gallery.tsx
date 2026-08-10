@@ -40,7 +40,7 @@ export function AutomationsGallery({
     >
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-1">
         <div
-          className="sticky top-0 z-[2] hidden shrink-0 items-center gap-4 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,var(--glass-bg-modal,#fff))] px-4 py-2.5 shadow-[0_1px_0_var(--glass-border-subtle)] lg:grid v2-dark:bg-[color-mix(in_srgb,var(--brand-primary)_10%,var(--glass-bg-modal,#1a1f2e))]"
+          className="sticky top-0 z-[2] hidden shrink-0 items-center gap-4 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,var(--bg-base,#dde8f5))] px-4 py-2.5 lg:grid"
           style={{ gridTemplateColumns: GRID_TEMPLATE }}
           role="row"
         >

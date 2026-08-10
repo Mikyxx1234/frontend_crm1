@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconCircleOff as CircleSlash, IconClock as Clock, IconHelpCircle as HelpCircle, IconListDetails as ListDetails, IconMessageQuestion as MessageCircleQuestion, IconClick as MousePointerClick, IconTrash as Trash2 } from "@tabler/icons-react";
+import { IconAlertTriangle as AlertTriangle, IconArrowRight as ArrowRight, IconCircleCheck as CheckCircle2, IconCircleOff as CircleSlash, IconClock as Clock, IconHelpCircle as HelpCircle, IconListDetails as ListDetails, IconMessageQuestion as MessageCircleQuestion, IconClick as MousePointerClick, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -184,6 +184,22 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
         </div>
       )}
 
+      {/* Continuar (todas) — conecta todas as opções ao mesmo destino de uma vez. */}
+      <div className="border-t border-[var(--glass-border-subtle)]">
+        <div className="relative flex h-8 items-center gap-2 px-3.5">
+          <ArrowRight className="size-3 shrink-0 text-[var(--color-lavender)]" strokeWidth={2.4} />
+          <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-lavender)]">
+            Continuar (todas)
+          </span>
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="next"
+            className={cn("size-3! border-2! border-white!", handleColor)}
+          />
+        </div>
+      </div>
+
       {/* Else + Timeout rows — cada linha tem handle próprio à DIREITA
           (não mais Bottom) pra manter o padrão visual dos demais handles
           e permitir conectar facilmente ao próximo card à direita. */}
@@ -236,10 +252,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
         </div>
       </div>
 
-      {/* NOTE: não há "main flow handle" extra — cada botão/else/timeout
-          tem seu próprio source handle na linha correspondente. Antes
-          havia um Handle source sem id centralizado à direita, que
-          aparecia sobreposto ao primeiro botão (bug "dois pontos"). */}
+      {/* Handles: btn_N por opção, next (todas), else/timeout/failure. */}
 
       {/* Stats */}
       {hasStats && (

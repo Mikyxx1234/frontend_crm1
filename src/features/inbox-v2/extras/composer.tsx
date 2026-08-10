@@ -38,7 +38,11 @@ import { getContact } from "@/features/inbox-v2/api/misc";
 import { sendAttachment, sendInternalTemplateSequence } from "@/features/inbox-v2/api";
 import { messagesKey } from "@/features/inbox-v2/hooks";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
-import { COMPOSER_INSERT_EVENT } from "@/lib/composer-insert";
+import {
+  clearPendingComposerInsert,
+  COMPOSER_INSERT_EVENT,
+  takePendingComposerInsert,
+} from "@/lib/composer-insert";
 
 import { ActiveBotsButton } from "./active-bots-button";
 import { AudioRecorderButton, type AudioRecordState } from "./audio-recorder-button";
@@ -464,16 +468,24 @@ export function Composer({
 
   // Ponte: botões da lateral (ex. "Enviar produto" de curso) empurram texto
   // pra cá sem prop-drilling pelo ContactAside.
+  // No mobile o Chat pode estar desmontado (aba Negócio) — nesse caso o
+  // texto fica em `takePendingComposerInsert` e é aplicado ao montar.
   const insertTemplateTextRef = useRef(insertTemplateText);
   insertTemplateTextRef.current = insertTemplateText;
   useEffect(() => {
+    function applyInsert(text: string) {
+      if (!text.trim()) return;
+      clearPendingComposerInsert();
+      insertTemplateTextRef.current(text);
+    }
     function onInsert(e: Event) {
       const detail = (e as CustomEvent<{ text?: string }>).detail;
       const text = typeof detail?.text === "string" ? detail.text : "";
-      if (!text.trim()) return;
-      insertTemplateTextRef.current(text);
+      applyInsert(text);
     }
     window.addEventListener(COMPOSER_INSERT_EVENT, onInsert as EventListener);
+    const pending = takePendingComposerInsert();
+    if (pending) applyInsert(pending);
     return () => {
       window.removeEventListener(COMPOSER_INSERT_EVENT, onInsert as EventListener);
     };

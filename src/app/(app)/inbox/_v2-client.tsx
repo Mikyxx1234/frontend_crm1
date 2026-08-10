@@ -43,6 +43,7 @@ import {
   usePersistentWidth,
 } from "@/components/crm/column-resizer";
 import { useIsDesktop } from "@/hooks/use-media-query";
+import { COMPOSER_FOCUS_CHAT_EVENT } from "@/lib/composer-insert";
 
 import {
   isSessionExpired,
@@ -432,6 +433,18 @@ export default function InboxV2ClientPage({
   useEffect(() => {
     setMobilePaneTab("chat");
   }, [activeId]);
+
+  // "Enviar produto" na aba Negócio: o Composer só existe na aba Chat —
+  // troca o painel pra montar o composer e aplicar o texto pendente.
+  useEffect(() => {
+    function onFocusChat() {
+      setMobilePaneTab("chat");
+    }
+    window.addEventListener(COMPOSER_FOCUS_CHAT_EVENT, onFocusChat);
+    return () => {
+      window.removeEventListener(COMPOSER_FOCUS_CHAT_EVENT, onFocusChat);
+    };
+  }, []);
 
   // Debounce do search (300ms). Evita refetch a cada tecla.
   useEffect(() => {

@@ -62,6 +62,7 @@ import { useContactSources } from "@/hooks/use-contact-sources"
 import { formatPhoneDisplay } from "@/lib/phone"
 import { useIsMobile } from "@/hooks/use-media-query"
 import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
+import { COMPOSER_FOCUS_CHAT_EVENT } from "@/lib/composer-insert"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
 // Mudancas (DD4 + DD5 do questionario):
@@ -430,6 +431,15 @@ export function DealDetailPanel({
   useEffect(() => {
     if (isOpen) setMobilePaneTab("chat")
   }, [deal?.id, isOpen])
+  // "Enviar produto" (e similares) pedem foco no Chat — no mobile o composer
+  // só existe nessa aba; sem isso o texto ficava pendente e a box vazia.
+  useEffect(() => {
+    function onFocusChat() {
+      setMobilePaneTab("chat")
+    }
+    window.addEventListener(COMPOSER_FOCUS_CHAT_EVENT, onFocusChat)
+    return () => window.removeEventListener(COMPOSER_FOCUS_CHAT_EVENT, onFocusChat)
+  }, [])
 
   // DD8 do questionario: respeitar visibilidade de blocos configurada via
   // FieldConfigPanel admin (PUT /api/field-layout, context=deal_panel_v2).

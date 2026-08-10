@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import {
   IconArrowRight,
+  IconMail,
   IconMicrophone,
   IconPencil,
   IconShieldCheck,
@@ -216,6 +217,21 @@ export function ConversationsConfigTab() {
             ]}
             onChange={(v) => save("transcriptionLanguage", v)}
             disabled={settings.audioTranscription === "none" || busy}
+          />
+        </div>
+      </GlassCard>
+
+      {/* ── Sinalização nos cards ────────────────────────────────────────── */}
+      <GlassCard variant="panel" className="min-w-0 p-3 sm:p-4.5">
+        <SectionLabel>Sinalização nos cards</SectionLabel>
+        <div className="flex flex-col gap-2.5">
+          <ToggleRow
+            icon={<IconMail size={20} />}
+            label="Sinalizar mensagens recebidas"
+            description="Mostra a barra lilás «aguardando resposta» nos cards do funil e da inbox quando a última mensagem veio do cliente."
+            checked={settings.showInboundSignal}
+            onChange={(v) => save("showInboundSignal", v)}
+            disabled={busy}
           />
         </div>
       </GlassCard>

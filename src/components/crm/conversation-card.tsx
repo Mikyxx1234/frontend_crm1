@@ -30,6 +30,8 @@ import {
   type DeliveryTickStatus,
 } from "@/components/crm/status-ticks"
 import { UnreadCountPill } from "@/components/crm/unread-count-pill"
+import { AwaitingReplyFooter } from "@/components/crm/awaiting-reply-footer"
+import { useInboxSettings } from "@/features/conversations-settings/hooks/use-inbox-settings"
 import { Chip } from "./chip"
 import { CheckboxGlass } from "./checkbox-glass"
 import { TagChip } from "./tag-chip"
@@ -216,6 +218,11 @@ export function ConversationCard({
   const isOutgoing = conversation.lastMessageDirection === "out"
   const unread = Number(conversation.unreadCount) || 0
   const hasChannel = Boolean(String(conversation.channel ?? "").trim())
+  const { settings: inboxSettings } = useInboxSettings()
+  const showInboundSignal =
+    inboxSettings.showInboundSignal &&
+    conversation.lastMessageDirection === "in" &&
+    !conversation.resolved
 
   return (
     <article
@@ -432,6 +439,12 @@ export function ConversationCard({
         </div>
       )}
       </div>
+      {showInboundSignal ? (
+        <AwaitingReplyFooter
+          unreadCount={unread}
+          className="rounded-b-[var(--radius-lg)]"
+        />
+      ) : null}
     </article>
   )
 }

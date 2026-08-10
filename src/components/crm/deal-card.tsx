@@ -12,6 +12,7 @@ import {
 } from "@/components/crm/status-ticks"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { AwaitingReplyFooter } from "@/components/crm/awaiting-reply-footer"
+import { useInboxSettings } from "@/features/conversations-settings/hooks/use-inbox-settings"
 import { Chip } from "./chip"
 import { TagChip } from "./tag-chip"
 
@@ -187,6 +188,8 @@ export function DealCard({ deal, onClick, tagsSlot, tagsAddSlot, ownerSlot, move
   const unread = deal.unreadCount ?? 0
   // Cliente ainda não respondido — última msg inbound (aguarda reply do agente).
   const unreplied = deal.message?.direction === "in"
+  const { settings: inboxSettings } = useInboxSettings()
+  const showInboundSignal = inboxSettings.showInboundSignal && unreplied
   const hasTagChips = tagsSlot != null || (deal.tags?.length ?? 0) > 0
   return (
     <a
@@ -468,7 +471,7 @@ export function DealCard({ deal, onClick, tagsSlot, tagsAddSlot, ownerSlot, move
       </AnimatePresence>
       </div>
 
-      {unreplied ? <AwaitingReplyFooter unreadCount={unread} /> : null}
+      {showInboundSignal ? <AwaitingReplyFooter unreadCount={unread} /> : null}
     </a>
   )
 }

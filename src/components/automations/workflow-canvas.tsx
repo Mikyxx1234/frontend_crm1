@@ -206,21 +206,10 @@ function collectLeafStepIds(steps: AutomationStep[]): Set<string> {
   const leaves = new Set<string>();
   for (const step of steps) {
     if (TERMINAL_STEP_TYPES.has(step.type)) continue;
-    if (isInteractiveStep(step)) {
-      const cfg = step.config as Record<string, unknown>;
-      const buttons = interactiveChoiceItems(step.type, cfg) as {
-        gotoStepId?: string;
-      }[];
-      const hasAnyValidGoto = buttons.some(
-        (b) => b.gotoStepId && b.gotoStepId !== "__none__" && stepIds.has(b.gotoStepId)
-      );
-      const elseGoto = typeof cfg.elseGotoStepId === "string"
-        && cfg.elseGotoStepId
-        && cfg.elseGotoStepId !== "__none__"
-        && stepIds.has(cfg.elseGotoStepId);
-      if (!hasAnyValidGoto && !elseGoto) leaves.add(step.id);
-      continue;
-    }
+    // Interactive tem handles por opção (+ next/else/timeout) e onConnectEnd
+    // ao arrastar do handle — não recebe a pílula "+ Adicionar próximo passo"
+    // (evita aresta fantasma pontilhada sem sourceHandle).
+    if (isInteractiveStep(step)) continue;
     if (BRANCHING_STEP_TYPES.has(step.type)) continue;
     const next = readNextStepId(step.config);
     const hasRealNext = next && next !== NONE && stepIds.has(next);
@@ -320,19 +309,39 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
         gotoStepId?: string;
       }[];
 
-      buttons.forEach((btn, idx) => {
+      const validGotos = buttons.map((btn) => {
         const gotoId = btn.gotoStepId && btn.gotoStepId !== "__none__"
           ? btn.gotoStepId
           : undefined;
-        if (!gotoId || !stepIds.has(gotoId)) return;
+        return gotoId && stepIds.has(gotoId) ? gotoId : null;
+      });
+      const allSameGoto =
+        buttons.length > 0 &&
+        validGotos.every((g) => g != null) &&
+        new Set(validGotos).size === 1;
+
+      if (allSameGoto) {
+        const gotoId = validGotos[0] as string;
         out.push({
-          id: `${a.id}-btn_${idx}-${gotoId}`,
+          id: `${a.id}-next-${gotoId}`,
           source: a.id, target: gotoId,
-          sourceHandle: `btn_${idx}`,
+          sourceHandle: "next",
           animated: false, data: EDGE_DATA_BUTTON, type: EDGE_TYPE,
           interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
         });
-      });
+      } else {
+        buttons.forEach((btn, idx) => {
+          const gotoId = validGotos[idx];
+          if (!gotoId) return;
+          out.push({
+            id: `${a.id}-btn_${idx}-${gotoId}`,
+            source: a.id, target: gotoId,
+            sourceHandle: `btn_${idx}`,
+            animated: false, data: EDGE_DATA_BUTTON, type: EDGE_TYPE,
+            interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
+          });
+        });
+      }
 
       if (typeof cfg.elseGotoStepId === "string" && cfg.elseGotoStepId && stepIds.has(cfg.elseGotoStepId)) {
         out.push({
@@ -1241,9 +1250,25 @@ function WorkflowCanvasInner({
           if (buttons[idx]) {
             buttons[idx] = { ...buttons[idx], gotoStepId: target };
             cfg[key] = buttons;
+            cfg.__hasExplicitEdges = true;
             onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
             return;
           }
+        }
+
+        // Handle `next` → todas as opções do interactive apontam pro mesmo destino
+        if (sourceHandle === "next" && isInteractiveStep(srcStep)) {
+          const cfg = { ...srcStep.config } as Record<string, unknown>;
+          const key = interactiveChoiceKey(srcStep.type);
+          const buttons = interactiveChoiceItems(srcStep.type, cfg).map((b) => ({
+            ...b,
+            gotoStepId: target,
+          }));
+          cfg[key] = buttons;
+          cfg.nextStepId = target;
+          cfg.__hasExplicitEdges = true;
+          onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
+          return;
         }
 
         // Handle `branch:<id>` → atribui destino a uma branch do condition
@@ -1430,12 +1455,30 @@ function WorkflowCanvasInner({
           if (buttons[idx]) {
             buttons[idx] = { ...buttons[idx], gotoStepId: id };
             cfg[key] = buttons;
+            cfg.__hasExplicitEdges = true;
             const updated = cur.map((s) =>
               s.id === sourceId ? { ...s, config: cfg } : s
             );
             onStepsChange([...updated, step]);
             return;
           }
+        }
+
+        if (sourceHandle === "next" && isInteractiveStep(srcStep)) {
+          const cfg = { ...srcStep.config } as Record<string, unknown>;
+          const key = interactiveChoiceKey(srcStep.type);
+          const buttons = interactiveChoiceItems(srcStep.type, cfg).map((b) => ({
+            ...b,
+            gotoStepId: id,
+          }));
+          cfg[key] = buttons;
+          cfg.nextStepId = id;
+          cfg.__hasExplicitEdges = true;
+          const updated = cur.map((s) =>
+            s.id === sourceId ? { ...s, config: cfg } : s
+          );
+          onStepsChange([...updated, step]);
+          return;
         }
 
         // Condition multi-branch: handle branch:<id> ou else
@@ -1717,6 +1760,20 @@ function WorkflowCanvasInner({
           onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
           return;
         }
+      }
+
+      if (sourceHandle === "next" && isInteractiveStep(srcStep)) {
+        const cfg = { ...srcStep.config } as Record<string, unknown>;
+        const key = interactiveChoiceKey(srcStep.type);
+        const buttons = interactiveChoiceItems(srcStep.type, cfg).map((b) => {
+          const next = { ...b };
+          delete next.gotoStepId;
+          return next;
+        });
+        cfg[key] = buttons;
+        delete cfg.nextStepId;
+        onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
+        return;
       }
 
       // Condition multi-branch: handle `branch:<id>` ou `else`

@@ -639,7 +639,11 @@ export default function InboxV2ClientPage({
   const { data: contactDetail } = useContactSidebar(activeContactId);
 
   // ── Realtime ────────────────────────────────────────────────────
-  useInboxRealtime({ activeConversationId: activeId, enabled: isAuthenticated });
+  useInboxRealtime({
+    activeConversationId: activeId,
+    currentUserId: session?.user?.id ?? null,
+    enabled: isAuthenticated,
+  });
 
   /**
    * Após reopen (modelo de ticket): seleciona o id novo e, se o operador

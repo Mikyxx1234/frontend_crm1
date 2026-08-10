@@ -240,6 +240,7 @@ export function useDealChatBinding(params: {
   // após F5 (useMessages não tem polling) — o inbox já fazia isso.
   useInboxRealtime({
     activeConversationId: effectiveConversationId,
+    currentUserId: session?.user?.id ?? null,
     enabled: !!effectiveConversationId,
   });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import { messagesKey } from "./use-messages";
 import { playInboxPing } from "./use-inbox-sound";
@@ -18,15 +18,65 @@ import { playInboxPing } from "./use-inbox-sound";
  *  - contact_updated invalida lista + sidebar do contato.
  *  - Throttle de 250ms: rajadas de eventos não viram refetch×N.
  *  - Reconexão automática com backoff fixo de 5s em onerror.
+ *
+ * Aviso sonoro: só em inbound destinado a este operador (assignedToId),
+ * para não tocar em quem tem a inbox vazia / não é responsável.
  */
+
+type InfiniteInboxPage = {
+  items?: Array<{ id: string; assignedToId?: string | null }>;
+};
+
+function shouldPlayInboundPing(
+  qc: QueryClient,
+  currentUserId: string | null | undefined,
+  data: {
+    conversationId?: string;
+    direction?: string;
+    assignedToId?: string | null;
+  },
+): boolean {
+  if (data.direction !== "in") return false;
+  if (!currentUserId) return false;
+
+  // Payload novo: responsável explícito no SSE.
+  if (typeof data.assignedToId === "string" && data.assignedToId.length > 0) {
+    return data.assignedToId === currentUserId;
+  }
+  // Sem responsável → fila livre; não é "mensagem deste operador".
+  if (data.assignedToId === null) return false;
+
+  // Payload legado (sem assignedToId): só toca se a conversa já está na
+  // lista de inbox deste cliente (visibilidade já filtrada no GET).
+  if (!data.conversationId) return false;
+  const entries = qc.getQueriesData<{ pages?: InfiniteInboxPage[] }>({
+    queryKey: ["inbox-conversations"],
+  });
+  for (const [, cached] of entries) {
+    const pages = cached?.pages;
+    if (!pages) continue;
+    for (const page of pages) {
+      const hit = page?.items?.find((c) => c.id === data.conversationId);
+      if (!hit) continue;
+      if (hit.assignedToId == null) return false;
+      return hit.assignedToId === currentUserId;
+    }
+  }
+  return false;
+}
+
 export function useInboxRealtime(options: {
   activeConversationId: string | null;
+  /** Usuário logado — necessário para filtrar o bip por responsável. */
+  currentUserId?: string | null;
   enabled?: boolean;
 }) {
-  const { activeConversationId, enabled = true } = options;
+  const { activeConversationId, currentUserId = null, enabled = true } = options;
   const qc = useQueryClient();
   const activeRef = useRef(activeConversationId);
   activeRef.current = activeConversationId;
+  const userIdRef = useRef(currentUserId);
+  userIdRef.current = currentUserId;
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -58,10 +108,11 @@ export function useInboxRealtime(options: {
           const data = JSON.parse((e as MessageEvent).data) as {
             conversationId?: string;
             direction?: string;
+            assignedToId?: string | null;
           };
-          // Aviso sonoro só em mensagens RECEBIDAS (inbound) — envios do
-          // próprio agente (direction="out") não tocam. Respeita o mudo.
-          if (data.direction === "in") playInboxPing();
+          if (shouldPlayInboundPing(qc, userIdRef.current, data)) {
+            playInboxPing();
+          }
           if (data.conversationId) {
             if (data.conversationId === activeRef.current) {
               // Conversa aberta: refetch imediato para exibir a mensagem.

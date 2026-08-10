@@ -54,9 +54,16 @@ export async function resumeAudio(): Promise<void> {
   }
 }
 
+/** Evita bip duplicado quando vários `useInboxRealtime` estão montados. */
+let lastPingAt = 0;
+const PING_DEBOUNCE_MS = 400;
+
 /** Toca o aviso sonoro, respeitando o mudo. Idempotente e não-bloqueante. */
 export function playInboxPing(): void {
   if (isInboxSoundMuted()) return;
+  const nowMs = Date.now();
+  if (nowMs - lastPingAt < PING_DEBOUNCE_MS) return;
+  lastPingAt = nowMs;
   const ctx = getCtx();
   if (!ctx) return;
   if (ctx.state === "suspended") void ctx.resume();

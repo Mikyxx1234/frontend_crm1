@@ -17,6 +17,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 
 import { ChatArea } from "@/components/crm/chat-area";
@@ -84,6 +85,7 @@ export function SalesHubChat({
   headerActionsSlot,
   onConversationReopened,
 }: SalesHubChatProps) {
+  const { data: session } = useSession();
   const [draft, setDraft] = useState("");
   const [replyTo, setReplyTo] = useState<{
     id: string;
@@ -111,6 +113,7 @@ export function SalesHubChat({
 
   useInboxRealtime({
     activeConversationId: conversationId,
+    currentUserId: session?.user?.id ?? null,
     enabled: !!conversationId,
   });
 

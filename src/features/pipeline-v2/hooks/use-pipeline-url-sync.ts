@@ -90,12 +90,47 @@ export function usePipelineUrlSync(pipelines: PipelineListItemDto[] | undefined)
   return { pipelineId, setPipelineId };
 }
 
-/** Etapa do Flow: `?stage=<slug>`; ausente = Todos. */
+/** Última fase do Flow por funil (`""` = Todos). */
+const FLOW_STAGE_STORAGE_PREFIX = "crm:pipeline:flow:last-stage:v1:";
+
+function flowStageStorageKey(pipelineId: string): string {
+  return `${FLOW_STAGE_STORAGE_PREFIX}${pipelineId}`;
+}
+
+function readSavedFlowStage(pipelineId: string | null | undefined): string | null {
+  if (!pipelineId || typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(flowStageStorageKey(pipelineId));
+  } catch {
+    return null;
+  }
+}
+
+function writeSavedFlowStage(
+  pipelineId: string | null | undefined,
+  slugOrEmpty: string,
+): void {
+  if (!pipelineId || typeof window === "undefined") return;
+  try {
+    localStorage.setItem(flowStageStorageKey(pipelineId), slugOrEmpty);
+  } catch {
+    /* private mode / quota */
+  }
+}
+
+/**
+ * Etapa do Flow: `?stage=<slug>`; ausente = Todos.
+ * Init: URL → LS (por funil) → Todos. Troca grava URL + LS.
+ *
+ * Retorna `hydrated`: enquanto false, `selectedStageId` ainda pode mudar pela
+ * restauração. Quem depende da etapa para escolher um deal inicial deve
+ * esperar — senão abre o 1º deal do board e a etapa restaurada é sobrescrita.
+ */
 export function useStageUrlSync(
   stages: Array<{ id: string; slug?: string }>,
   selectedStageId: string | null,
   setSelectedStageId: (id: string | null) => void,
-  /** Troca de funil: re-lê `?stage=` e zera seleção local. */
+  /** Troca de funil: re-lê `?stage=` / LS e zera seleção local. */
   resetKey?: string | null,
 ) {
   const [hydrated, setHydrated] = useState(false);
@@ -107,15 +142,25 @@ export function useStageUrlSync(
 
   useEffect(() => {
     if (hydrated || !stages.length) return;
+
+    const resolve = (slugOrId: string) =>
+      stages.find((s) => s.slug === slugOrId) ??
+      stages.find((s) => s.id === slugOrId);
+
     const urlSlug = readUrlParam("stage");
-    if (!urlSlug) {
+    if (urlSlug) {
+      const hit = resolve(urlSlug);
+      if (hit) setSelectedStageId(hit.id);
       setHydrated(true);
       return;
     }
-    const hit =
-      stages.find((s) => s.slug === urlSlug) ??
-      stages.find((s) => s.id === urlSlug);
-    if (hit) setSelectedStageId(hit.id);
+
+    const saved = readSavedFlowStage(resetKey);
+    if (saved != null && saved !== "") {
+      const hit = resolve(saved);
+      if (hit) setSelectedStageId(hit.id);
+    }
+    // saved === "" ou ausente → Todos (null)
     setHydrated(true);
   }, [stages, hydrated, setSelectedStageId, resetKey]);
 
@@ -123,9 +168,15 @@ export function useStageUrlSync(
     if (!hydrated) return;
     if (!selectedStageId) {
       writeUrlParam("stage", null, "replace");
+      writeSavedFlowStage(resetKey, "");
       return;
     }
     const s = stages.find((x) => x.id === selectedStageId);
-    if (s?.slug) writeUrlParam("stage", s.slug, "replace");
-  }, [selectedStageId, stages, hydrated]);
+    if (s?.slug) {
+      writeUrlParam("stage", s.slug, "replace");
+      writeSavedFlowStage(resetKey, s.slug);
+    }
+  }, [selectedStageId, stages, hydrated, resetKey]);
+
+  return { hydrated };
 }

@@ -5,7 +5,7 @@
 
 /**
  * Deve coincidir com `InboxTab` em `@/services/conversations`.
- * "todos" não entra em grants por categoria — é aba agregadora.
+ * "todos" é aba agregadora — controlada por `inbox:tab:todos`.
  */
 export type InboxTab =
   | "entrada"
@@ -357,7 +357,8 @@ const DEFAULT_MEMBER_INBOX_TABS = new Set<InboxTab>(["esperando", "respondidas"]
  * Permission keys canônicas por aba (`inbox:tab:<id>`).
  * Manter alinhado a `backend_crm1/src/lib/authz/permissions.ts` (resource `inbox`).
  */
-const INBOX_TAB_PERMISSION_KEYS: Record<Exclude<InboxTab, "todos">, string> = {
+const INBOX_TAB_PERMISSION_KEYS: Record<InboxTab, string> = {
+  todos: "inbox:tab:todos",
   entrada: "inbox:tab:entrada",
   esperando: "inbox:tab:esperando",
   respondidas: "inbox:tab:respondidas",
@@ -367,7 +368,10 @@ const INBOX_TAB_PERMISSION_KEYS: Record<Exclude<InboxTab, "todos">, string> = {
 };
 
 /** Fallback legado quando ainda não há nenhuma `inbox:tab:*`. */
-const LEGACY_INBOX_TAB_REQUIRED_PERMISSION: Record<Exclude<InboxTab, "todos">, string> = {
+const LEGACY_INBOX_TAB_REQUIRED_PERMISSION: Record<
+  Exclude<InboxTab, "todos">,
+  string
+> = {
   entrada: "conversation:claim",
   esperando: "conversation:view",
   respondidas: "conversation:view",
@@ -400,11 +404,12 @@ function hasAnyInboxTabPermission(perms: ReadonlySet<string>): boolean {
 
 function memberTabAllowedByPermissions(
   perms: ReadonlySet<string>,
-  tab: Exclude<InboxTab, "todos">,
+  tab: InboxTab,
 ): boolean {
   if (hasAnyInboxTabPermission(perms)) {
     return permissionsAllow(perms, INBOX_TAB_PERMISSION_KEYS[tab]);
   }
+  if (tab === "todos") return true;
   const required = LEGACY_INBOX_TAB_REQUIRED_PERMISSION[tab];
   if (!required) return false;
   return permissionsAllow(perms, required);
@@ -420,22 +425,23 @@ export function canSeeInboxTab(args: {
   tab: InboxTab;
   permissions?: ReadonlySet<string> | readonly string[] | null;
 }): boolean {
-  if (args.tab === "todos") return true;
   const role = asRoleKey(args.role);
   const perms = toPermissionSet(args.permissions);
   if (perms && permissionsAllow(perms, "*")) return true;
   if (!role || role === "ADMIN" || role === "MANAGER") return true;
 
-  const scope = args.grants.inbox?.tabs;
-  if (hasRoleRule(scope, "MEMBER")) {
-    const ids = scope?.MEMBER ?? [];
-    if (ids.length === 0) return false;
-    if (ids.includes("*")) return true;
-    return ids.includes(args.tab);
+  // Lista vazia = sem regra, não "nenhuma aba" — ver o comentário longo na
+  // cópia do backend. Honrar o vazio bloqueava a Inbox inteira do operador a
+  // partir de grant legado, sem UI que o desfizesse.
+  const tabIds = args.grants.inbox?.tabs?.MEMBER;
+  if (Array.isArray(tabIds) && tabIds.length > 0) {
+    if (tabIds.includes("*")) return true;
+    return tabIds.includes(args.tab);
   }
   if (perms) {
     return memberTabAllowedByPermissions(perms, args.tab);
   }
+  if (args.tab === "todos") return true;
   return DEFAULT_MEMBER_INBOX_TABS.has(args.tab);
 }
 
@@ -449,14 +455,16 @@ export function listAllowedInboxTabsForUser(args: {
   if ((perms && permissionsAllow(perms, "*")) || !role || role === "ADMIN" || role === "MANAGER") {
     return ["todos", ...INBOX_CATEGORY_TAB_ORDER];
   }
-  const scope = args.grants.inbox?.tabs;
-  const explicitEmpty =
-    hasRoleRule(scope, "MEMBER") && (scope?.MEMBER?.length ?? 0) === 0;
+  const showTodos = canSeeInboxTab({
+    grants: args.grants,
+    role,
+    tab: "todos",
+    permissions: args.permissions,
+  });
   const allowed = INBOX_CATEGORY_TAB_ORDER.filter((t) =>
     canSeeInboxTab({ grants: args.grants, role, tab: t, permissions: args.permissions }),
   );
-  if (explicitEmpty) return ["todos"];
   const base: Exclude<InboxTab, "todos">[] =
     allowed.length > 0 ? [...allowed] : ["esperando", "respondidas"];
-  return ["todos", ...base];
+  return showTodos ? ["todos", ...base] : [...base];
 }

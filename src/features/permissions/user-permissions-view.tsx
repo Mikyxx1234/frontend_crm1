@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { IconBan as Ban, IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconEye as Eye, IconLoader2 as Loader2, IconMessagePlus as MessageSquarePlus, IconPlus as Plus, IconRadio as Radio, IconSend as Send, IconSettings as Settings, IconShield as Shield, IconHierarchy as Workflow, IconX as X } from "@tabler/icons-react";
+import { IconBan as Ban, IconCheck as Check, IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconEye as Eye, IconLoader2 as Loader2, IconMessagePlus as MessageSquarePlus, IconPlus as Plus, IconRadio as Radio, IconSend as Send, IconSettings as Settings, IconShield as Shield, IconHierarchy as Workflow, IconX as X, type Icon as TablerIcon } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { SensitiveBadge } from "@/components/crm/permissions/sensitive-badge";
 import { cn } from "@/lib/utils";
 
 import {
@@ -19,6 +19,7 @@ import {
   useUserScopeGrants,
   type ScopeEntityOption,
 } from "./hooks";
+import { groupResourcesByCategory, RESOURCE_LABELS } from "./categories";
 
 interface UserPermissionsViewProps {
   userId: string;
@@ -62,17 +63,30 @@ export function UserPermissionsView({
 
   const hasFullAccess = data.permissions.includes("*");
 
-  // Agrupar permissions por resource
-  const grouped = new Map<string, string[]>();
-  if (hasFullAccess) {
-    grouped.set("acesso", ["total (*)"]);
-  } else {
+  // Agrupar por recurso e depois por tema (mesmas categorias do editor de papel).
+  const permissionThemeGroups = (() => {
+    if (hasFullAccess) {
+      return [
+        {
+          id: "acesso",
+          label: "Acesso",
+          resources: [{ resource: "acesso", actions: ["total (*)"] }],
+        },
+      ];
+    }
+    const byResource = new Map<string, string[]>();
     for (const key of data.permissions) {
       const [resource, action] = key.split(":");
-      if (!grouped.has(resource)) grouped.set(resource, []);
-      grouped.get(resource)!.push(action);
+      if (!resource || !action) continue;
+      if (!byResource.has(resource)) byResource.set(resource, []);
+      byResource.get(resource)!.push(action);
     }
-  }
+    const flat = Array.from(byResource.entries()).map(([resource, actions]) => ({
+      resource,
+      actions,
+    }));
+    return groupResourcesByCategory(flat);
+  })();
 
   return (
     <div className="flex flex-col gap-4">
@@ -96,12 +110,7 @@ export function UserPermissionsView({
         />
       ) : (
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5">
-            <Shield className="size-3.5" style={{ color: "var(--text-muted)" }} />
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-              Roles
-            </span>
-          </div>
+          <SectionLabel icon={Shield}>Papéis</SectionLabel>
           <div className="flex flex-wrap gap-1.5">
             {data.roles.length === 0 ? (
               <span className="text-xs" style={{ color: "var(--text-muted)" }}>Nenhum role atribuído</span>
@@ -163,21 +172,31 @@ export function UserPermissionsView({
 
         {permissionsOpen && (
           <div className="border-t px-4 pb-3 pt-2" style={{ borderColor: "var(--glass-border-subtle)" }}>
-            {grouped.size === 0 ? (
+            {permissionThemeGroups.length === 0 ? (
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>Nenhuma permissão</p>
             ) : (
-              <div className="flex flex-col gap-2">
-                {Array.from(grouped.entries()).map(([resource, actions]) => (
-                  <div key={resource} className="flex gap-2">
-                    <span
-                      className="w-28 shrink-0 text-[11px] font-semibold uppercase tracking-wide"
+              <div className="flex flex-col gap-3">
+                {permissionThemeGroups.map((group) => (
+                  <div key={group.id} className="flex flex-col gap-1.5">
+                    <p
+                      className="font-display text-[10px] font-bold uppercase tracking-widest"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      {resource}
-                    </span>
-                    <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                      {actions.join(" · ")}
+                      {group.label}
                     </p>
+                    {group.resources.map((entry) => (
+                      <div key={entry.resource} className="flex gap-2">
+                        <span
+                          className="w-28 shrink-0 text-[11px] font-semibold uppercase tracking-wide"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          {RESOURCE_LABELS[entry.resource] ?? entry.resource}
+                        </span>
+                        <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                          {entry.actions.join(" · ")}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -252,57 +271,52 @@ function UserRolesEditor({
     : null;
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <Shield className="size-3.5" style={{ color: "var(--text-muted)" }} />
-        <span
-          className="text-xs font-semibold uppercase tracking-wide"
-          style={{ color: "var(--text-muted)" }}
-        >
-          Roles
-        </span>
-      </div>
+    <div className="flex flex-col gap-3">
+      <SectionLabel icon={Shield}>Papéis</SectionLabel>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {currentRoles.length === 0 ? (
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-            Nenhuma role atribuída
+          <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+            Nenhum papel atribuído
           </span>
         ) : (
           currentRoles.map((r) => {
             const isRemoving = removingRoleId === r.id;
             return (
-              <Badge
+              <span
                 key={r.id}
-                variant="outline"
-                className="gap-1 pr-1 text-xs"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-enterprise-bg)] px-3 py-2"
               >
-                <span>{r.name}</span>
+                <span className="font-display text-[14px] font-semibold text-[var(--brand-primary)]">
+                  {r.name}
+                </span>
                 {r.systemPreset && (
-                  <span className="opacity-60">· sistema</span>
+                  <span className="text-[12px] text-[var(--text-muted)]">
+                    · sistema
+                  </span>
                 )}
                 <button
                   type="button"
                   onClick={() => void handleRemove(r.id)}
                   disabled={isRemoving}
-                  className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
-                  title={`Remover role "${r.name}"`}
-                  aria-label={`Remover role ${r.name}`}
+                  className="rounded-full p-0.5 text-[var(--text-muted)] transition-colors hover:bg-white/60 hover:text-[var(--brand-primary)] disabled:opacity-50 v2-dark:hover:bg-white/10"
+                  title={`Remover papel "${r.name}"`}
+                  aria-label={`Remover papel ${r.name}`}
                 >
                   {isRemoving ? (
-                    <Loader2 className="size-3 animate-spin" />
+                    <Loader2 className="size-3.5 animate-spin" />
                   ) : (
-                    <X className="size-3" />
+                    <X className="size-3.5" />
                   )}
                 </button>
-              </Badge>
+              </span>
             );
           })
         )}
       </div>
 
-      {/* Adicionar role nova */}
-      <div className="mt-1 flex items-center gap-2">
+      {/* Atribuir papel novo */}
+      <div className="flex items-center gap-3">
         <DropdownGlass
           options={availableRoles.map((r) => ({
             value: r.id,
@@ -312,33 +326,210 @@ function UserRolesEditor({
           onValueChange={setSelectedToAdd}
           placeholder={
             rolesLoading
-              ? "Carregando roles..."
+              ? "Carregando papéis..."
               : availableRoles.length === 0
-                ? "Todas as roles já atribuídas"
-                : "Atribuir role..."
+                ? "Todos os papéis já atribuídos"
+                : "Atribuir papel..."
           }
           disabled={rolesLoading || availableRoles.length === 0 || adding}
-          triggerClassName="h-7 flex-1 text-xs"
+          triggerClassName="h-11 flex-1 rounded-xl text-[13px]"
         />
-        <Button
-          size="sm"
-          variant="outline"
+        <button
+          type="button"
           onClick={() => void handleAdd()}
           disabled={!selectedToAdd || adding}
-          className="h-7 shrink-0 gap-1 text-[11px]"
+          className={cn(
+            "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-5",
+            "bg-[var(--brand-primary)] font-display text-[13.5px] font-semibold text-[var(--color-primary-foreground)]",
+            "shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--brand-primary-hover,var(--brand-primary))]",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+          )}
         >
           {adding ? (
-            <Loader2 className="size-3 animate-spin" />
+            <Loader2 className="size-4 animate-spin" />
           ) : (
-            <Plus className="size-3" />
+            <Plus className="size-4" />
           )}
           Adicionar
-        </Button>
+        </button>
       </div>
 
       {error && (
         <p className="text-[11px] text-[var(--color-danger-text)]">{error}</p>
       )}
+    </div>
+  );
+}
+
+/* ── Primitivos visuais (DS de permissions) ──────────────────────────────── */
+
+function SectionLabel({
+  icon: Icon,
+  children,
+}: {
+  icon: TablerIcon;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="size-4" style={{ color: "var(--text-muted)" }} />
+      <span
+        className="font-display text-[11px] font-bold uppercase tracking-widest"
+        style={{ color: "var(--text-muted)" }}
+      >
+        {children}
+      </span>
+    </div>
+  );
+}
+
+function IconTile({ icon: Icon }: { icon: TablerIcon }) {
+  return (
+    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+      <Icon className="size-5" aria-hidden />
+    </span>
+  );
+}
+
+/** Switch em pílula com check — mesmo padrão das ações do editor de papéis. */
+function ScopeSwitch({
+  on,
+  onToggle,
+  label,
+  tone = "brand",
+  disabled,
+}: {
+  on: boolean;
+  onToggle: () => void;
+  label: string;
+  tone?: "brand" | "warn";
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onToggle}
+      className={cn(
+        "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]",
+        "disabled:cursor-not-allowed disabled:opacity-50",
+        on
+          ? tone === "warn"
+            ? "bg-amber-500"
+            : "bg-[var(--brand-primary)]"
+          : "bg-[var(--glass-border)]",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 flex size-5 items-center justify-center rounded-full bg-white shadow transition-all",
+          on ? "left-[22px]" : "left-0.5",
+        )}
+      >
+        {on && (
+          <Check
+            className="size-3"
+            stroke={3}
+            style={{
+              color: tone === "warn" ? "#f59e0b" : "var(--brand-primary)",
+            }}
+          />
+        )}
+      </span>
+    </button>
+  );
+}
+
+type ScopeMode = "none" | "some" | "all";
+
+/** Segmented Nenhum / Selecionados / Todos. */
+function ScopeSegmented({
+  value,
+  onChange,
+  label,
+  disabled,
+}: {
+  value: ScopeMode;
+  onChange: (next: ScopeMode) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  const options: { id: ScopeMode; label: string }[] = [
+    { id: "none", label: "Nenhum" },
+    { id: "some", label: "Selecionados" },
+    { id: "all", label: "Todos" },
+  ];
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-xl bg-[var(--glass-bg-overlay)] p-1"
+    >
+      {options.map((opt) => {
+        const active = value === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            aria-pressed={active}
+            disabled={disabled}
+            onClick={() => onChange(opt.id)}
+            className={cn(
+              "rounded-lg px-3 py-1.5 font-display text-[12.5px] font-semibold transition",
+              "focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)]",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+              active
+                ? "bg-white text-[var(--brand-primary)] shadow-sm ring-1 ring-[var(--brand-primary)]/15 v2-dark:bg-[var(--glass-bg-base)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+            )}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Linha de escopo: tile + título/subtítulo + controle à direita. */
+function ScopeRow({
+  icon,
+  title,
+  badge,
+  subtitle,
+  control,
+  children,
+}: {
+  icon: TablerIcon;
+  title: string;
+  badge?: React.ReactNode;
+  subtitle: string;
+  control: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 px-5 py-4">
+      <div className="flex items-center gap-4">
+        <IconTile icon={icon} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="font-display text-[15px] font-semibold text-[var(--text-primary)]">
+              {title}
+            </h4>
+            {badge}
+          </div>
+          <p className="mt-0.5 text-[12.5px] text-[var(--text-muted)]">
+            {subtitle}
+          </p>
+        </div>
+        {control}
+      </div>
+      {children}
     </div>
   );
 }
@@ -411,127 +602,262 @@ function UserScopeEditor({ userId }: { userId: string }) {
     }
   }
 
+  const channelOptions = channels.data ?? [];
+  const channelsLoading = isLoading || channels.isLoading;
+  const capacities: {
+    key: string;
+    icon: TablerIcon;
+    title: string;
+    value: string[] | null;
+    onChange: (next: string[] | null) => void;
+  }[] = [
+    {
+      key: "view",
+      icon: Eye,
+      title: "Ver mensagens",
+      value: channelViewIds,
+      onChange: markDirty(setChannelViewIds),
+    },
+    {
+      key: "send",
+      icon: Send,
+      title: "Responder mensagens",
+      value: channelSendIds,
+      onChange: markDirty(setChannelSendIds),
+    },
+    {
+      key: "initiate",
+      icon: MessageSquarePlus,
+      title: "Iniciar nova conversa",
+      value: channelInitiateIds,
+      onChange: markDirty(setChannelInitiateIds),
+    },
+    {
+      key: "manage",
+      icon: Settings,
+      title: "Administrar",
+      value: channelManageIds,
+      onChange: markDirty(setChannelManageIds),
+    },
+  ];
+
+  const denyOn = channelDenyIds !== null;
+  const setDeny = markDirty(setChannelDenyIds);
+
   return (
-    <div
-      className="flex flex-col gap-3 rounded-[var(--radius-lg)] border p-3"
-      style={{ borderColor: "var(--glass-border)" }}
-    >
-      <div className="flex items-center gap-1.5">
-        <Workflow className="size-3.5" style={{ color: "var(--text-muted)" }} />
-        <span
-          className="text-xs font-semibold uppercase tracking-wide"
-          style={{ color: "var(--text-muted)" }}
+    <section className="flex flex-col gap-3">
+      <SectionLabel icon={Workflow}>Acesso a funis e canais</SectionLabel>
+
+      {/* Funis — switch "todos"; desligado revela a lista para escolher. */}
+      <div className="rounded-2xl border border-[var(--glass-border)] bg-white shadow-[var(--glass-shadow-sm)] v2-dark:bg-[var(--glass-bg-modal)]">
+        <ScopeRow
+          icon={Workflow}
+          title="Funis com acesso"
+          subtitle={scopeSummary(
+            pipelineIds,
+            (pipelines.data ?? []).length,
+            PIPELINE_LABELS,
+          )}
+          control={
+            <ScopeSwitch
+              on={pipelineIds === null}
+              onToggle={() =>
+                markDirty(setPipelineIds)(pipelineIds === null ? [] : null)
+              }
+              label="Dar acesso a todos os funis"
+            />
+          }
         >
-          Acesso a funis e canais
-        </span>
+          {pipelineIds !== null && (
+            <ScopeOptionList
+              options={pipelines.data ?? []}
+              value={pipelineIds}
+              onChange={markDirty(setPipelineIds)}
+              loading={isLoading || pipelines.isLoading}
+            />
+          )}
+        </ScopeRow>
       </div>
 
-      <ScopeMultiSelect
-        label="Funis com acesso"
-        icon={<Workflow className="size-3" style={{ color: "var(--text-muted)" }} />}
-        options={pipelines.data ?? []}
-        value={pipelineIds}
-        onChange={markDirty(setPipelineIds)}
-        loading={isLoading || pipelines.isLoading}
-        allLabel="Todos os funis"
-      />
+      {/* Canais por capacidade */}
+      <div className="overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-white shadow-[var(--glass-shadow-sm)] v2-dark:bg-[var(--glass-bg-modal)]">
+        <header className="flex items-center justify-between gap-2 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]/60 px-5 py-2.5">
+          <span className="font-display text-[11px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+            Canais por capacidade
+          </span>
+          <span className="text-[11.5px] text-[var(--text-muted)]">
+            {channelOptions.length} canais disponíveis
+          </span>
+        </header>
+        <div className="divide-y divide-[var(--glass-border-subtle)]">
+          {capacities.map((cap) => (
+            <ChannelCapacityRow
+              key={cap.key}
+              icon={cap.icon}
+              title={cap.title}
+              options={channelOptions}
+              value={cap.value}
+              onChange={cap.onChange}
+              loading={channelsLoading}
+            />
+          ))}
+        </div>
+      </div>
 
-      <ScopeMultiSelect
-        label="Canais — ver mensagens"
-        icon={<Eye className="size-3" style={{ color: "var(--text-muted)" }} />}
-        options={channels.data ?? []}
-        value={channelViewIds}
-        onChange={markDirty(setChannelViewIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais — responder mensagens"
-        icon={<Send className="size-3" style={{ color: "var(--text-muted)" }} />}
-        options={channels.data ?? []}
-        value={channelSendIds}
-        onChange={markDirty(setChannelSendIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais — iniciar nova conversa"
-        icon={<MessageSquarePlus className="size-3" style={{ color: "var(--text-muted)" }} />}
-        options={channels.data ?? []}
-        value={channelInitiateIds}
-        onChange={markDirty(setChannelInitiateIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais — administrar (configurar/conectar)"
-        icon={<Settings className="size-3" style={{ color: "var(--text-muted)" }} />}
-        options={channels.data ?? []}
-        value={channelManageIds}
-        onChange={markDirty(setChannelManageIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Todos os canais"
-      />
-
-      <ScopeMultiSelect
-        label="Canais bloqueados (nega tudo, exceto se o usuário administra o canal)"
-        icon={<Ban className="size-3" style={{ color: "var(--text-muted)" }} />}
-        options={channels.data ?? []}
-        value={channelDenyIds}
-        onChange={markDirty(setChannelDenyIds)}
-        loading={isLoading || channels.isLoading}
-        allLabel="Nenhum canal bloqueado"
-      />
-
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => void handleSave()}
-          disabled={!dirty || update.isPending}
-          className="h-7 shrink-0 gap-1 text-[11px]"
+      {/* Canais bloqueados — deny vence tudo, exceto quem administra. */}
+      <div className="rounded-2xl border border-[var(--glass-border)] bg-white shadow-[var(--glass-shadow-sm)] v2-dark:bg-[var(--glass-bg-modal)]">
+        <ScopeRow
+          icon={Ban}
+          title="Canais bloqueados"
+          badge={<SensitiveBadge tone="warn" withIcon>Sensível</SensitiveBadge>}
+          subtitle={
+            channelDenyIds !== null && channelDenyIds.length > 0
+              ? `${channelDenyIds.length} de ${channelOptions.length} canais bloqueados`
+              : "Nega tudo, exceto se o usuário administra o canal"
+          }
+          control={
+            <ScopeSwitch
+              on={denyOn}
+              tone="warn"
+              onToggle={() => setDeny(denyOn ? null : [])}
+              label="Bloquear canais específicos"
+            />
+          }
         >
-          {update.isPending ? <Loader2 className="size-3 animate-spin" /> : null}
-          Salvar acesso
-        </Button>
+          {channelDenyIds !== null && (
+            <ScopeOptionList
+              options={channelOptions}
+              value={channelDenyIds}
+              onChange={setDeny}
+              loading={channelsLoading}
+            />
+          )}
+        </ScopeRow>
+      </div>
+
+      <div className="flex items-center justify-end gap-3">
         {saved && !dirty && (
-          <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+          <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
             Salvo
           </span>
         )}
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={!dirty || update.isPending}
+          className={cn(
+            "inline-flex h-11 shrink-0 items-center gap-2 rounded-xl px-5",
+            "bg-[var(--brand-primary)] font-display text-[13.5px] font-semibold text-[var(--color-primary-foreground)]",
+            "shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--brand-primary-hover,var(--brand-primary))]",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+          )}
+        >
+          {update.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+          Salvar acesso
+        </button>
       </div>
 
       {error && <p className="text-[11px] text-[var(--color-danger-text)]">{error}</p>}
-    </div>
+    </section>
   );
 }
 
+/** Resumo textual do escopo — vira o subtítulo da linha. */
+function scopeSummary(
+  value: string[] | null,
+  total: number,
+  labels: { all: string; none: string; plural: string },
+): string {
+  if (value === null) return `${labels.all} (${total})`;
+  if (value.length === 0) return labels.none;
+  return `${value.length} de ${total} ${labels.plural}`;
+}
+
+const PIPELINE_LABELS = {
+  all: "Todos os funis",
+  none: "Nenhum funil",
+  plural: "funis",
+};
+const CHANNEL_LABELS = {
+  all: "Todos os canais",
+  none: "Nenhum canal",
+  plural: "canais",
+};
+
 /**
- * Seletor "Todos" + lista de checkboxes. `value === null` significa sem
- * restrição (todos); um array (mesmo vazio) restringe aos itens marcados.
+ * Linha de capacidade de canal: segmented Nenhum / Selecionados / Todos.
+ * `null` = todos; `[]` = nenhum; array = restrito à seleção.
  */
-export function ScopeMultiSelect({
-  label,
+function ChannelCapacityRow({
   icon,
+  title,
   options,
   value,
   onChange,
   loading,
-  allLabel,
 }: {
-  label: string;
-  icon: React.ReactNode;
+  icon: TablerIcon;
+  title: string;
   options: ScopeEntityOption[];
   value: string[] | null;
   onChange: (next: string[] | null) => void;
   loading?: boolean;
-  allLabel: string;
 }) {
-  const all = value === null;
-  const selected = useMemo(() => new Set(value ?? []), [value]);
+  // Mantém a lista aberta em "Selecionados" mesmo com seleção vazia —
+  // caso contrário o estado seria indistinguível de "Nenhum".
+  const [wantsList, setWantsList] = useState(false);
+  const mode: ScopeMode =
+    value === null ? "all" : value.length > 0 || wantsList ? "some" : "none";
+
+  function setMode(next: ScopeMode) {
+    setWantsList(next === "some");
+    if (next === "all") onChange(null);
+    else if (next === "none") onChange([]);
+    else onChange(value ?? []);
+  }
+
+  return (
+    <ScopeRow
+      icon={icon}
+      title={title}
+      subtitle={scopeSummary(value, options.length, CHANNEL_LABELS)}
+      control={
+        <ScopeSegmented
+          value={mode}
+          onChange={setMode}
+          label={`Canais para ${title.toLowerCase()}`}
+        />
+      }
+    >
+      {mode === "some" && (
+        <ScopeOptionList
+          options={options}
+          value={value ?? []}
+          onChange={onChange}
+          loading={loading}
+        />
+      )}
+    </ScopeRow>
+  );
+}
+
+/**
+ * Lista de itens selecionáveis do escopo. Só aparece quando o escopo está
+ * restrito — "todos" e "nenhum" são resolvidos no controle da linha.
+ */
+function ScopeOptionList({
+  options,
+  value,
+  onChange,
+  loading,
+}: {
+  options: ScopeEntityOption[];
+  value: string[];
+  onChange: (next: string[]) => void;
+  loading?: boolean;
+}) {
+  const selected = useMemo(() => new Set(value), [value]);
 
   function toggle(id: string) {
     const next = new Set(selected);
@@ -540,66 +866,48 @@ export function ScopeMultiSelect({
     onChange(Array.from(next));
   }
 
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-1.5">
-        {icon}
-        <span
-          className="text-[11px] font-semibold uppercase tracking-wide"
-          style={{ color: "var(--text-muted)" }}
-        >
-          {label}
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl bg-[var(--glass-bg-overlay)]/60 px-3 py-2.5">
+        <Loader2 className="size-3.5 animate-spin" style={{ color: "var(--text-muted)" }} />
+        <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+          Carregando…
         </span>
       </div>
+    );
+  }
 
-      <label className="flex items-center gap-2 text-xs" style={{ color: "var(--text-secondary)" }}>
-        <input
-          type="checkbox"
-          checked={all}
-          onChange={(e) => onChange(e.target.checked ? null : [])}
-          className="size-3.5 accent-[var(--brand-600)]"
-        />
-        {allLabel}
-      </label>
+  if (options.length === 0) {
+    return (
+      <p className="rounded-xl bg-[var(--glass-bg-overlay)]/60 px-3 py-2.5 text-[12px]" style={{ color: "var(--text-muted)" }}>
+        Nenhum item disponível
+      </p>
+    );
+  }
 
-      {!all && (
-        <div
-          className="flex max-h-40 flex-col gap-0.5 overflow-auto rounded-[var(--radius-md)] border p-1"
-          style={{ borderColor: "var(--glass-border)" }}
-        >
-          {loading ? (
-            <div className="flex items-center gap-2 px-2 py-1.5">
-              <Loader2 className="size-3 animate-spin" style={{ color: "var(--text-muted)" }} />
-              <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                Carregando...
-              </span>
-            </div>
-          ) : options.length === 0 ? (
-            <span className="px-2 py-1.5 text-[11px]" style={{ color: "var(--text-muted)" }}>
-              Nenhum item disponível
-            </span>
-          ) : (
-            options.map((o) => {
-              const on = selected.has(o.id);
-              return (
-                <label
-                  key={o.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1 text-xs hover:bg-black/[0.04]"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={on}
-                    onChange={() => toggle(o.id)}
-                    className="size-3.5 accent-[var(--brand-600)]"
-                  />
-                  <span className="truncate">{o.name}</span>
-                </label>
-              );
-            })
-          )}
-        </div>
-      )}
+  return (
+    <div className="flex max-h-44 flex-wrap gap-1.5 overflow-y-auto rounded-xl bg-[var(--glass-bg-overlay)]/60 p-2">
+      {options.map((o) => {
+        const on = selected.has(o.id);
+        return (
+          <button
+            key={o.id}
+            type="button"
+            aria-pressed={on}
+            onClick={() => toggle(o.id)}
+            className={cn(
+              "inline-flex max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] transition",
+              "focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)]",
+              on
+                ? "bg-white font-semibold text-[var(--brand-primary)] shadow-sm ring-1 ring-[var(--brand-primary)]/20 v2-dark:bg-[var(--glass-bg-base)]"
+                : "text-[var(--text-secondary)] hover:bg-white/70 v2-dark:hover:bg-white/5",
+            )}
+          >
+            {on && <Check className="size-3.5 shrink-0" stroke={3} />}
+            <span className="truncate">{o.name}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -103,7 +103,7 @@ import { DealNotesTab } from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
 // ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover.
-// Mostra ate 2 tags mais recentes; excedente vira `+N` com tooltip listando o resto.
+// Mostra as 2 primeiras; a lista completa fica no popover ("Selecionadas").
 function DealTagsTray({
   dealId,
   currentTags,
@@ -113,32 +113,25 @@ function DealTagsTray({
 }) {
   const MAX_VISIBLE = 2;
   const visible = currentTags.slice(0, MAX_VISIBLE);
-  const overflow = currentTags.slice(MAX_VISIBLE);
 
   function chip(t: { id: string; name: string; color: string | null }) {
     return (
-      <TagChip
-        key={t.id}
-        name={t.name}
-        color={t.color}
-        className="h-5 min-w-0 max-w-[7rem] shrink"
-      />
+      <TooltipGlass key={t.id} label={t.name} side="top">
+        <TagChip
+          name={t.name}
+          color={t.color}
+          className="h-5 min-w-0 max-w-[12rem] shrink"
+        />
+      </TooltipGlass>
     );
   }
 
-  // Uma linha só (jul/26): nowrap + overflow-hidden. Chips truncam se faltar
-  // espaço; `+N` e o botão "+" ficam fixos (shrink-0) sempre visíveis.
+  // Uma linha: chips truncam com tooltip; "+" fixo à direita. Excedente
+  // fica em "Selecionadas" no popover.
   return (
-    <div className="flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
       {visible.map(chip)}
-      {overflow.length > 0 && (
-        <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
-          <span className="inline-flex h-5 shrink-0 items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
-            +{overflow.length}
-          </span>
-        </TooltipGlass>
-      )}
-      <span className="shrink-0">
+      <span className="ml-auto shrink-0 pl-1">
         <DealTagsPopover dealId={dealId} currentTags={currentTags} />
       </span>
     </div>
@@ -155,32 +148,24 @@ function ContactTagsTray({
 }) {
   const MAX_VISIBLE = 2;
   const visible = currentTags.slice(0, MAX_VISIBLE);
-  const overflow = currentTags.slice(MAX_VISIBLE);
 
   function chip(t: { id: string; name: string; color: string | null }) {
     return (
-      <TagChip
-        key={t.id}
-        name={t.name}
-        color={t.color}
-        className="h-5 min-w-0 max-w-[7rem] shrink"
-      />
+      <TooltipGlass key={t.id} label={t.name} side="top">
+        <TagChip
+          name={t.name}
+          color={t.color}
+          className="h-5 min-w-0 max-w-[12rem] shrink"
+        />
+      </TooltipGlass>
     );
   }
 
-  // Uma linha só (jul/26): nowrap + overflow-hidden. Chips truncam se faltar
-  // espaço; `+N` e o botão "+" ficam fixos (shrink-0) sempre visíveis.
+  // Mesmo layout do DealTagsTray: uma linha, "+" à direita.
   return (
-    <div className="flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
       {visible.map(chip)}
-      {overflow.length > 0 && (
-        <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
-          <span className="inline-flex h-5 shrink-0 items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
-            +{overflow.length}
-          </span>
-        </TooltipGlass>
-      )}
-      <span className="shrink-0">
+      <span className="ml-auto shrink-0 pl-1">
         <ContactTagsPopover contactId={contactId} currentTags={currentTags} triggerVariant="icon" />
       </span>
     </div>
@@ -350,6 +335,7 @@ export default function InboxV2ClientPage({
       setTab(visibleTabs[0]?.id ?? DEFAULT_INBOX_TAB);
     }
   }, [tabHydrated, visibleTabs, tab]);
+
   // Filtros do painel persistem em localStorage — sobrevive navegação
   // para outras páginas do CRM e refresh. Lê no effect (SSR-safe).
   const [filters, setFilters] = useState<InboxFilters>(DEFAULT_FILTERS);
@@ -1311,12 +1297,13 @@ export default function InboxV2ClientPage({
           currentStageId={firstDealStageId}
           pipelineId={firstDealPipelineId}
         >
-          {({ onSelectStage, isPending }) => (
+          {({ onSelectStage, isPending, canMove }) => (
             <InboxStageDropdown
               stages={boardStages}
               currentStageId={firstDealStageId}
               currentPipelineId={firstDealPipelineId}
               isPending={isPending}
+              canMove={canMove}
               onSelect={onSelectStage}
             />
           )}
@@ -1326,7 +1313,7 @@ export default function InboxV2ClientPage({
       // das informações do deal, não no header flutuante do aside.
       assigneeSlot: activeRow ? (
         <RequirePermission
-          permission="conversation:reassign"
+          permission="conversation:transfer"
           fallback={
             <AssigneePopover
               conversationId={activeId}
@@ -1509,15 +1496,17 @@ export default function InboxV2ClientPage({
               );
             }}
             conversationNumber={activeRow?.number ?? null}
-            transferSlot={
-              <TransferPopover
-                variant="composer"
-                conversationId={activeId}
-                currentAssigneeId={activeRow.assignedTo?.id ?? null}
-                currentDepartmentId={
-                  activeRow.departmentId ?? activeRow.department?.id ?? null
-                }
-              />
+              transferSlot={
+              <RequirePermission permission="conversation:transfer">
+                <TransferPopover
+                  variant="composer"
+                  conversationId={activeId}
+                  currentAssigneeId={activeRow.assignedTo?.id ?? null}
+                  currentDepartmentId={
+                    activeRow.departmentId ?? activeRow.department?.id ?? null
+                  }
+                />
+              </RequirePermission>
             }
           />
         }
@@ -1963,12 +1952,14 @@ function InboxStageDropdown({
   currentStageId,
   currentPipelineId,
   isPending,
+  canMove = true,
   onSelect,
 }: {
   stages: BoardStageDto[];
   currentStageId: string | null;
   currentPipelineId: string | null;
   isPending: boolean;
+  canMove?: boolean;
   onSelect: (stageId: string, toPipelineId?: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -1976,6 +1967,7 @@ function InboxStageDropdown({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const current = stages.find((s) => s.id === currentStageId);
+  const disabled = isPending || !canMove;
 
   useEffect(() => {
     if (!open) return;
@@ -2013,9 +2005,17 @@ function InboxStageDropdown({
       <button
         ref={triggerRef}
         type="button"
-        disabled={isPending}
-        onClick={() => setOpen((v) => !v)}
-        className="flex max-w-[min(100%,11rem)] items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
+        disabled={disabled}
+        title={canMove ? undefined : "Sem permissão para mover entre etapas"}
+        onClick={() => {
+          if (!canMove) return;
+          setOpen((v) => !v);
+        }}
+        className={cn(
+          "flex max-w-[min(100%,11rem)] items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:opacity-50",
+          isPending && "cursor-wait",
+          !canMove && "cursor-default hover:opacity-100 hover:text-[var(--text-muted)]",
+        )}
       >
         {current?.color && (
           <span

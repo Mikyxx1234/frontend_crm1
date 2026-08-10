@@ -20,14 +20,16 @@ import type { ActionDef, ResourceDef } from "./types";
 export interface LevelDef {
   id: 0 | 1 | 2 | 3;
   label: string;
+  /** Subtítulo curto no segmented (DS permissions). */
+  hint: string;
 }
 
 /** Níveis do segmented control, em ordem. */
 export const LEVELS: readonly LevelDef[] = [
-  { id: 0, label: "Nenhum" },
-  { id: 1, label: "Ver" },
-  { id: 2, label: "Operar" },
-  { id: 3, label: "Total" },
+  { id: 0, label: "Nenhum", hint: "Sem acesso" },
+  { id: 1, label: "Ver", hint: "Apenas leitura" },
+  { id: 2, label: "Operar", hint: "Criar e editar" },
+  { id: 3, label: "Total", hint: "Inclui exclusão" },
 ] as const;
 
 /**

@@ -231,7 +231,8 @@ function resolveOrigin(ev: FeedEvent): OriginInfo {
   if (
     ev.type === "MESSAGE_SENT" ||
     ev.type === "SCHEDULED_MESSAGE_SENT" ||
-    ev.type === "MESSAGE_FAILED"
+    ev.type === "MESSAGE_FAILED" ||
+    ev.type === "MESSAGE_READ"
   ) {
     const agent = ev.actorUser?.name ?? ev.actorLabel ?? null;
     const client =

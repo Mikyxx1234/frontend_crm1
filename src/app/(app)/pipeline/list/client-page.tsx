@@ -81,6 +81,10 @@ import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
 import type { BulkScopeContext } from "@/components/pipeline/bulk-edit-fields-dialog";
 
 import { cn } from "@/lib/utils";
+import {
+  pathForPipelineView,
+  writePipelineViewPreference,
+} from "@/lib/pipeline-view-preference";
 
 const DEFAULT_PER_PAGE = 25;
 const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
@@ -134,6 +138,10 @@ export default function V2PipelineListClientPage() {
   const isAuthenticated = sessionStatus === "authenticated";
   const bump = useImportExportBump();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    writePipelineViewPreference("list");
+  }, []);
 
   const [search, setSearch] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -341,8 +349,9 @@ export default function V2PipelineListClientPage() {
         <PipelineHeader
           activeView="list"
           onViewChange={(view) => {
-            if (view === "kanban") router.push("/pipeline");
-            if (view === "flow") router.push("/pipeline/flow");
+            writePipelineViewPreference(view);
+            if (view === "list") return;
+            router.push(pathForPipelineView(view));
           }}
           titleAccessory={
             <PipelineSwitcher

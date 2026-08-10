@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { TagChip } from "@/components/crm/tag-chip";
 import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
 import {
   useAddDealTag,
@@ -198,7 +199,26 @@ export function TagsPopover({
     }
   }
 
-  const position = computePopoverPosition(rect, 320, 328);
+  /**
+   * Tags do rascunho, no topo do popover. Substitui o antigo chip "+N" do
+   * card: a lista completa (inclusive as que não cabem no card) fica aqui,
+   * onde também dá para removê-las com um clique.
+   */
+  const selectedTags = useMemo(() => {
+    const known = tagsQuery.data ?? [];
+    return Array.from(localSelected).map((id) => {
+      const hit = known.find((t) => t.id === id) ?? currentTags.find((t) => t.id === id);
+      return { id, name: hit?.name ?? "Tag", color: hit?.color ?? null };
+    });
+  }, [localSelected, tagsQuery.data, currentTags]);
+
+  // Altura estimada só alimenta o auto-flip; a seção "Selecionadas" cresce
+  // até ~100px e sem isso o popover abriria para baixo e vazaria a viewport.
+  const position = computePopoverPosition(
+    rect,
+    selectedTags.length > 0 ? 420 : 320,
+    328,
+  );
   const saveDisabled = !hasChanges || isSaving || !dealId;
 
   return (
@@ -230,6 +250,29 @@ export function TagsPopover({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
+            {selectedTags.length > 0 && (
+              <div className="mb-1.5 border-b border-[var(--glass-border-subtle)] pb-1.5">
+                <p className="mb-1 px-0.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                  Selecionadas ({selectedTags.length})
+                </p>
+                <div className="flex max-h-[74px] flex-wrap content-start gap-1.5 overflow-y-auto px-0.5">
+                  {selectedTags.map((t) => (
+                    <TagChip
+                      key={t.id}
+                      name={t.name}
+                      color={t.color}
+                      selected
+                      title={`Remover ${t.name}`}
+                      onClick={() => handleToggle(t.id)}
+                      className={cn(
+                        "max-w-[8.5rem] min-w-0",
+                        isSaving && "pointer-events-none opacity-60",
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             <input
               autoFocus
               type="text"

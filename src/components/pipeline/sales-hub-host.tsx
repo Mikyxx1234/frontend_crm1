@@ -23,11 +23,16 @@ import {
   useBoardFiltered,
   useDealDeepLink,
   useDealDetail,
+  usePipelineRealtime,
   usePipelineUrlSync,
   usePipelines,
 } from "@/features/pipeline-v2/hooks";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
 import { personNameFromDealTitle, sanitizeContactName } from "@/lib/display-name";
+import {
+  pathForPipelineView,
+  writePipelineViewPreference,
+} from "@/lib/pipeline-view-preference";
 import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import type { PipelineSortKey } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
@@ -129,6 +134,10 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
+  useEffect(() => {
+    writePipelineViewPreference("flow");
+  }, []);
+
   const [search, setSearch] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
@@ -194,7 +203,9 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     };
   }, [isAuthenticated]);
 
-  const status = "OPEN" as const;
+  // Flow inclui abas Ganho/Perdido — precisa de ALL, senão WON/LOST
+  // nunca entram no board e as contagens ficam em 0.
+  const status = "ALL" as const;
 
   const boardSort = useMemo<BoardSortParam | undefined>(() => {
     if (sortKey === "created_newest")
@@ -236,6 +247,8 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     sort: boardSort,
     enabled: isAuthenticated && hasServerBoard,
   });
+
+  usePipelineRealtime(isAuthenticated);
 
   const boardRaw = hasServerBoard
     ? (boardFiltered.data ?? [])
@@ -460,9 +473,9 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
           tabsOverride={<></>}
           activeView="flow"
           onViewChange={(view) => {
-            if (view === "kanban") router.push("/pipeline");
-            if (view === "list") router.push("/pipeline/list");
-            if (view === "flow") router.push("/pipeline/flow");
+            writePipelineViewPreference(view);
+            if (view === "flow") return;
+            router.push(pathForPipelineView(view));
           }}
           titleAccessory={
             <PipelineSwitcher

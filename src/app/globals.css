@@ -866,14 +866,22 @@
   from { opacity: 0; transform: translateX(-20px); }
   to { opacity: 1; transform: translateX(0); }
 }
-/* Sidebar de /settings — entrada deslizando para a direita até a posição
-   (adaptado do "slide-right" da Animista; cubic-bezier .25,.46,.45,.94). */
-@keyframes settings-sidebar-slide-in {
-  0% { opacity: 0; transform: translateX(-100px); }
-  100% { opacity: 1; transform: translateX(0); }
-}
-.settings-sidebar-slide-in {
-  animation: settings-sidebar-slide-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+/* Gavetas laterais (sidebar de /settings, aside CRM do Flow) usam
+   transition — e não keyframes — para que a saída espelhe a entrada.
+   A abertura reproduz o `power3.out` do GSAP: entra rápido e desacelera
+   até parar. O grid que anima a largura da coluna precisa usar os MESMOS
+   tokens, senão a moldura descola do painel no meio do trajeto.
+
+   A saída NÃO usa `power3.in`: com 500ms a curva deixa o painel quase
+   parado na primeira metade e despeja ~90% do deslocamento nos últimos
+   ~150ms — justo onde o custo de layout é maior, o que aparece como
+   tranco. Fechar é mais curto e com curva que já sai andando. */
+:root {
+  --drawer-duration: 500ms;
+  --drawer-duration-close: 300ms;
+  /* power3.out */
+  --ease-drawer-open: cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-drawer-close: cubic-bezier(0.4, 0, 0.2, 1);
 }
 /* Transição de página (rotas abertas pela NavRail).
    A NavRail é SEMPRE o primeiro filho de `.v2-screen`; animamos apenas o

@@ -40,6 +40,7 @@ import {
 } from "@/components/crm/agent-status";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
 import { useUserRole } from "@/hooks/use-user-role";
+import { useSettingsDrawer } from "@/features/settings/settings-drawer-context";
 import { cn } from "@/lib/utils";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
 import {
@@ -145,6 +146,15 @@ export function NavRailV2({ className }: { className?: string }) {
   const { data: prefs } = useSidebarPreferences();
   const { data: myPerms } = useMyPermissions();
   const { data: organization } = useOrganization();
+  const {
+    onGearEnter,
+    onGearLeave,
+  } = useSettingsDrawer();
+  /** Só em /settings a engrenagem controla a gaveta do menu (hover). */
+  const onSettingsRoute = pathname.startsWith("/settings");
+  const settingsHoverProps = onSettingsRoute
+    ? { onMouseEnter: onGearEnter, onMouseLeave: onGearLeave }
+    : undefined;
 
   // Identidade da empresa (avatar do topo, estilo Kommo): iniciais do nome da
   // org e o ID da conta (organizationId) copiável no popover. Enquanto a org
@@ -613,11 +623,12 @@ export function NavRailV2({ className }: { className?: string }) {
         </div>
       )}
 
-      {/* Configurações */}
+      {/* Configurações — em /settings, hover abre a gaveta do menu. */}
       {expanded ? (
         <Link
           href="/settings/profile"
           aria-label="Configurações"
+          {...settingsHoverProps}
           className={cn(
             expandedItemBase,
             pathname.startsWith("/settings") && !isProfileActive ? expandedItemActive : expandedItemIdle,
@@ -627,14 +638,16 @@ export function NavRailV2({ className }: { className?: string }) {
           <span className="truncate">Configurações</span>
         </Link>
       ) : (
-        <DockButton
-          href="/settings/profile"
-          title="Configurações"
-          active={pathname.startsWith("/settings") && !isProfileActive}
-          disablePop
-        >
-          <IconSettings size={20} />
-        </DockButton>
+        <span {...settingsHoverProps} className="inline-flex">
+          <DockButton
+            href="/settings/profile"
+            title="Configurações"
+            active={pathname.startsWith("/settings") && !isProfileActive}
+            disablePop
+          >
+            <IconSettings size={20} />
+          </DockButton>
+        </span>
       )}
 
       {/* Avatar — abre menu da conta (Meu perfil / Sair).

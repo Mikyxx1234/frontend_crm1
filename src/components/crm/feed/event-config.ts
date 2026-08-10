@@ -273,6 +273,12 @@ export const EVENT_CONFIG: Record<string, EventVisualConfig> = {
     bg: "bg-destructive-soft",
     label: "Falha no envio",
   },
+  MESSAGE_READ: {
+    Icon: CheckCircle2,
+    ring: "ring-sky-500/30 text-sky-500",
+    bg: "bg-sky-500/10",
+    label: "Mensagem lida",
+  },
 
   // ── Chamadas ─────────────────────────────────────────────────────
   CALL_COMPLETED: {
@@ -542,6 +548,13 @@ export function eventDescription(ev: FeedEvent): string {
           ? ` (cód. ${String(m.errorCode)})`
           : "";
       return (err || "Falha no envio") + code;
+    }
+    case "MESSAGE_READ": {
+      const preview = String(m.preview ?? ev.newValue ?? "").trim();
+      if (preview) {
+        return preview.length > 140 ? `${preview.slice(0, 140)}…` : preview;
+      }
+      return "Cliente leu a mensagem";
     }
     case "CONVERSATION_DEPARTMENT_CHANGED": {
       const from =

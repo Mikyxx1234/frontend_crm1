@@ -21,6 +21,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
+import { useCan } from "@/hooks/use-my-permissions";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
@@ -81,6 +82,9 @@ export function InlineFieldEditor({
   editMode = false,
 }: InlineFieldEditorProps) {
   const qc = useQueryClient();
+  const canEditEntity = useCan(
+    entityType === "contact" ? "contact:edit" : "deal:edit",
+  );
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(value ?? "");
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -113,6 +117,7 @@ export function InlineFieldEditor({
   });
 
   const startEdit = () => {
+    if (!canEditEntity) return;
     setDraft(value ?? "");
     setEditing(true);
   };
@@ -166,14 +171,20 @@ export function InlineFieldEditor({
                 "font-display text-[13px] font-bold text-[var(--text-primary)]",
         )}
       >
-        <button
-          type="button"
-          onClick={startEdit}
-          aria-label={`Editar ${fieldId}`}
-          className="min-w-0 max-w-full flex-1 truncate text-left"
-        >
-          {displayValue}
-        </button>
+        {canEditEntity ? (
+          <button
+            type="button"
+            onClick={startEdit}
+            aria-label={`Editar ${fieldId}`}
+            className="min-w-0 max-w-full flex-1 truncate text-left"
+          >
+            {displayValue}
+          </button>
+        ) : (
+          <span className="min-w-0 max-w-full flex-1 truncate text-left">
+            {displayValue}
+          </span>
+        )}
         {!isEmpty && (
           <button
             type="button"
@@ -184,13 +195,15 @@ export function InlineFieldEditor({
             <IconCopy size={12} />
           </button>
         )}
-        <IconPencil
-          size={12}
-          className={cn(
-            "mt-px shrink-0 transition-opacity group-hover:opacity-60",
-            editMode ? "opacity-40" : "opacity-0",
-          )}
-        />
+        {canEditEntity && (
+          <IconPencil
+            size={12}
+            className={cn(
+              "mt-px shrink-0 transition-opacity group-hover:opacity-60",
+              editMode ? "opacity-40" : "opacity-0",
+            )}
+          />
+        )}
       </div>
     );
 

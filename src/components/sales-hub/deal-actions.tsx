@@ -47,6 +47,7 @@ import {
   usePortalPopover,
 } from "@/features/pipeline-v2/extras/use-portal-popover";
 import { TooltipHost } from "@/components/ui/tooltip";
+import { useCan } from "@/hooks/use-my-permissions";
 
 type StatusFilter = "OPEN" | "WON" | "LOST" | "ALL";
 
@@ -217,6 +218,7 @@ export function DealMoveStageButton({
 }) {
   const { open, rect, triggerRef, popoverRef, toggle, close } =
     usePortalPopover();
+  const canChangeStage = useCan("deal:change_stage");
   const moveMutation = useMoveMutation({
     pipelineId,
     statusFilter,
@@ -225,8 +227,12 @@ export function DealMoveStageButton({
   });
   const position = computePopoverPosition(rect, 320, 240);
   const noDeal = !deal;
-  const disabled = noDeal || moveMutation.isPending;
-  const tooltip = noDeal ? "Selecione um negócio" : "Mover de fase";
+  const disabled = noDeal || moveMutation.isPending || !canChangeStage;
+  const tooltip = !canChangeStage
+    ? "Sem permissão para mover entre etapas"
+    : noDeal
+      ? "Selecione um negócio"
+      : "Mover negócio de fase";
 
   React.useEffect(() => {
     if (!open) return;
@@ -257,16 +263,14 @@ export function DealMoveStageButton({
             toggle();
           }}
           className={cn(
-            "inline-flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0 text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]",
-            open &&
-              "border-[var(--brand-primary)]/40 ring-[3px] ring-[var(--brand-primary)]/15",
-            disabled && "cursor-not-allowed opacity-50 hover:bg-[var(--glass-bg-overlay)]",
+            // Ícone vivo (ciano) — mesma energia do inbox, mas a ação é
+            // mover o NEGÓCIO de fase (não transferir conversa).
+            "inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-cyan-500 p-0 text-white shadow-[0_2px_8px_rgba(6,182,212,0.35)] transition-all hover:bg-cyan-600",
+            open && "bg-cyan-600 ring-[3px] ring-cyan-500/25",
+            disabled && "cursor-not-allowed opacity-50 hover:bg-cyan-500",
           )}
         >
-          <ArrowsExchange
-            className="size-3.5 text-[var(--text-muted)]"
-            strokeWidth={2.2}
-          />
+          <ArrowsExchange className="size-3.5" strokeWidth={2.2} />
         </button>
       </TooltipHost>
       {open && deal && rect && typeof document !== "undefined"
@@ -327,6 +331,7 @@ export function DealStageSelector({
   showValue = true,
 }: DealStageSelectorProps) {
   const [stageOpen, setStageOpen] = React.useState(false);
+  const canChangeStage = useCan("deal:change_stage");
   const moveMutation = useMoveMutation({
     pipelineId,
     statusFilter,
@@ -343,16 +348,21 @@ export function DealStageSelector({
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          if (!canChangeStage) return;
           setStageOpen((v) => !v);
         }}
-        disabled={moveMutation.isPending}
+        disabled={moveMutation.isPending || !canChangeStage}
+        title={
+          canChangeStage ? undefined : "Sem permissão para mover entre etapas"
+        }
         aria-haspopup="listbox"
         aria-expanded={stageOpen}
         className={cn(
           "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-[var(--color-bg-card)] px-3 py-2.5 text-left transition-all hover:border-[var(--glass-border)] dark:bg-[var(--glass-bg-base)]/50 dark:hover:border-slate-600",
           stageOpen &&
             "border-[var(--color-brand-primary)] bg-[var(--color-bg-card)] shadow-[0_0_0_3px_rgba(37,99,235,0.12)] dark:bg-[var(--glass-bg-base)]/80",
-          moveMutation.isPending && "cursor-wait opacity-60",
+          (moveMutation.isPending || !canChangeStage) && "cursor-wait opacity-60",
+          !canChangeStage && "cursor-default hover:border-border",
         )}
       >
         <span
@@ -462,6 +472,7 @@ export function DealStageBar({
   onMoved,
 }: DealActionsProps) {
   const [hoverStageId, setHoverStageId] = React.useState<string | null>(null);
+  const canChangeStage = useCan("deal:change_stage");
 
   const moveMutation = useMoveMutation({
     pipelineId,
@@ -502,6 +513,11 @@ export function DealStageBar({
             movendo…
           </span>
         )}
+        {!canChangeStage && (
+          <span className="text-[10px] font-bold text-[var(--color-ink-muted)]">
+            só leitura
+          </span>
+        )}
       </div>
 
       {/* Barra contínua. Padding vertical invisível amplia a hit-area
@@ -532,7 +548,7 @@ export function DealStageBar({
                 key={stage.id}
                 type="button"
                 onClick={() => {
-                  if (isCurrent || moveMutation.isPending) return;
+                  if (!canChangeStage || isCurrent || moveMutation.isPending) return;
                   moveMutation.mutate({
                     dealId: deal.id,
                     fromStageId: deal.stageId,
@@ -540,7 +556,7 @@ export function DealStageBar({
                   });
                 }}
                 onMouseEnter={() => setHoverStageId(stage.id)}
-                disabled={moveMutation.isPending}
+                disabled={moveMutation.isPending || !canChangeStage}
                 aria-label={
                   isCurrent
                     ? `Etapa atual: ${stage.name}`
@@ -556,10 +572,11 @@ export function DealStageBar({
                 transition={{ duration: 0.15 }}
                 className={cn(
                   "relative h-full flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-brand-primary)]/50",
-                  !isCurrent &&
+                  canChangeStage &&
+                    !isCurrent &&
                     !moveMutation.isPending &&
                     "cursor-pointer",
-                  isCurrent && "cursor-default",
+                  (isCurrent || !canChangeStage) && "cursor-default",
                   moveMutation.isPending &&
                     !isCurrent &&
                     "cursor-wait opacity-70",

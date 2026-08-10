@@ -27,6 +27,10 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import {
+  pathForPipelineView,
+  writePipelineViewPreference,
+} from "@/lib/pipeline-view-preference";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
@@ -63,6 +67,7 @@ import {
   useDealDetail,
   useEntityViewers,
   useMoveDeal,
+  usePipelineRealtime,
   usePipelineUrlSync,
   usePipelines,
   useTeamUsers,
@@ -75,7 +80,7 @@ import { toast } from "sonner";
 import { updateDeal } from "@/features/pipeline-v2/api";
 import { createContact } from "@/features/directory-v2/api";
 import { personNameFromDealTitle, sanitizeContactName } from "@/lib/display-name";
-import { useMyPermissions } from "@/hooks/use-my-permissions";
+import { useCan, useMyPermissions } from "@/hooks/use-my-permissions";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
 import type { BulkScopeContext } from "@/components/pipeline/bulk-edit-fields-dialog";
@@ -159,6 +164,10 @@ export default function KanbanV2ClientPage({
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
+  useEffect(() => {
+    writePipelineViewPreference("kanban");
+  }, []);
+
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
 
   // Deep-link: negócio aberto em `?deal=<número>`. History API (sem RSC refetch).
@@ -200,6 +209,7 @@ export default function KanbanV2ClientPage({
   const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
     null,
   );
+  const canChangeStage = useCan("deal:change_stage");
   const { filters, setFilters, patch: patchFilters, clear: clearFilters } = useKanbanFilters();
   const [search, setSearch] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -312,6 +322,8 @@ export default function KanbanV2ClientPage({
   });
   const board = hasServerBoard ? boardFiltered.data ?? [] : boardNormal.data ?? [];
 
+  usePipelineRealtime(isAuthenticated);
+
   const moveDeal = useMoveDeal(pipelineId, status);
 
   // ── Tabulação de motivo da perda ─────────────────────────────────
@@ -340,6 +352,10 @@ export default function KanbanV2ClientPage({
 
   const requestMove = useCallback(
     (vars: MoveVars) => {
+      if (vars.fromStageId !== vars.toStageId && !canChangeStage) {
+        toast.error("Sem permissão para mover negócios entre etapas.");
+        return;
+      }
       const target = board.find((s) => s.id === vars.toStageId);
       // Cross-pipeline: quando o estágio destino não pertence ao board
       // atual, não temos como saber isLost/lossReasonRequired sem uma
@@ -355,7 +371,7 @@ export default function KanbanV2ClientPage({
       }
       moveDeal.mutate(vars);
     },
-    [board, moveDeal, lossReasonsActive],
+    [board, moveDeal, lossReasonsActive, canChangeStage],
   );
 
   // ── Seleção em massa (resgatada da versão antiga) ────────────────
@@ -813,8 +829,13 @@ export default function KanbanV2ClientPage({
           tabsOverride={<></>}
           activeView="kanban"
           onViewChange={(view) => {
-            if (view === "list" && listHref) router.push(listHref);
-            if (view === "flow") router.push("/pipeline/flow");
+            writePipelineViewPreference(view);
+            if (view === "kanban") return;
+            router.push(
+              view === "list" && listHref
+                ? listHref
+                : pathForPipelineView(view),
+            );
           }}
           titleAccessory={
             <PipelineSwitcher
@@ -935,6 +956,7 @@ export default function KanbanV2ClientPage({
                   setAddStage({ id: col.stageId, name: col.title })
                 }
                 onCloseAddDeal={() => setAddStage(null)}
+                canChangeStage={canChangeStage}
               />
             ))}
             {columns.length === 0 ? (
@@ -1024,12 +1046,13 @@ export default function KanbanV2ClientPage({
               statusFilter={status}
               onRequestMove={requestMove}
             >
-              {({ onSelectStage, isPending }) => (
+              {({ onSelectStage, isPending, canMove }) => (
                 <StageDropdown
                   stages={board}
                   currentStageId={activeDealStageId}
                   currentPipelineId={pipelineId}
                   isPending={isPending}
+                  canMove={canMove}
                   onSelect={onSelectStage}
                 />
               )}
@@ -1243,45 +1266,37 @@ export default function KanbanV2ClientPage({
         tagsSlot={
           activeDealId ? (() => {
             const allTags = dealDetail?.tags ?? [];
+            // Sem chip "+N": as demais tags aparecem em "Selecionadas",
+            // dentro do popover de gerenciar tags.
             const MAX_VISIBLE = 2;
             const visibleTags = allTags.slice(0, MAX_VISIBLE);
-            const hiddenTags = allTags.slice(MAX_VISIBLE);
             return (
-              <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
+              // "+" ancorado no canto direito (ml-auto): as chips ficam com
+              // toda a largura restante da linha antes de truncar.
+              <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5">
                 {visibleTags.map((t) => (
-                  // Linha única no grid do hero: chips truncam (max-w) e o
-                  // container não quebra — "+N" e "+" ficam sempre visíveis
-                  // na mesma linha.
                   <TooltipGlass key={t.id} label={t.name} side="top">
                     <TagChip
                       name={t.name}
                       color={t.color}
-                      className="max-w-[7.5rem] min-w-0 shrink"
+                      className="max-w-[9.5rem] min-w-0 shrink"
                     />
                   </TooltipGlass>
                 ))}
-                {hiddenTags.length > 0 && (
-                  <TooltipGlass
-                    label={hiddenTags.map((t) => t.name).join(", ")}
-                    side="top"
-                  >
-                    <span className="inline-flex shrink-0 cursor-default items-center rounded-[6px] border border-white/25 bg-white/15 px-1.5 py-0.5 font-display text-[10.5px] font-bold text-white/85">
-                      +{hiddenTags.length}
-                    </span>
-                  </TooltipGlass>
-                )}
-                <TagsPopover
-                  dealId={activeDealId}
-                  currentTags={allTags}
-                  pipelineId={pipelineId}
-                  statusFilter={status}
-                  trigger={
-                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-white/35 px-2.5 py-0.5 font-display text-[11px] font-semibold text-white/70 transition-colors hover:border-white hover:text-white">
-                      <IconPlus size={10} />
-                      {allTags.length === 0 ? "Adicionar" : ""}
-                    </span>
-                  }
-                />
+                <span className="ml-auto shrink-0 pl-1">
+                  <TagsPopover
+                    dealId={activeDealId}
+                    currentTags={allTags}
+                    pipelineId={pipelineId}
+                    statusFilter={status}
+                    trigger={
+                      <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-white/35 px-2.5 py-0.5 font-display text-[11px] font-semibold text-white/70 transition-colors hover:border-white hover:text-white">
+                        <IconPlus size={10} />
+                        {allTags.length === 0 ? "Adicionar" : ""}
+                      </span>
+                    }
+                  />
+                </span>
               </div>
             );
           })() : undefined
@@ -1390,12 +1405,14 @@ function StageDropdown({
   currentStageId,
   currentPipelineId,
   isPending,
+  canMove = true,
   onSelect,
 }: {
   stages: BoardStageDto[];
   currentStageId: string | null;
   currentPipelineId: string | null;
   isPending: boolean;
+  canMove?: boolean;
   onSelect: (stageId: string, toPipelineId?: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -1403,6 +1420,7 @@ function StageDropdown({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const current = stages.find((s) => s.id === currentStageId);
+  const disabled = isPending || !canMove;
 
   useEffect(() => {
     if (!open) return;
@@ -1438,9 +1456,17 @@ function StageDropdown({
       <button
         ref={triggerRef}
         type="button"
-        disabled={isPending}
-        onClick={() => setOpen((v) => !v)}
-        className="flex max-w-[min(100%,14rem)] items-center gap-1.5 font-display text-[15px] font-bold text-[var(--text-primary)] transition-opacity hover:opacity-70 disabled:cursor-wait disabled:opacity-50"
+        disabled={disabled}
+        title={canMove ? undefined : "Sem permissão para mover entre etapas"}
+        onClick={() => {
+          if (!canMove) return;
+          setOpen((v) => !v);
+        }}
+        className={cn(
+          "flex max-w-[min(100%,14rem)] items-center gap-1.5 font-display text-[15px] font-bold text-[var(--text-primary)] transition-opacity hover:opacity-70 disabled:opacity-50",
+          isPending && "cursor-wait",
+          !canMove && "cursor-default hover:opacity-100",
+        )}
       >
         <span
           className="inline-block h-2 w-2 shrink-0 rounded-full"
@@ -1630,9 +1656,11 @@ function CardMoveDropdown({
           disabled={isPending}
           aria-label="Mover de fase"
           onClick={handleOpen}
-          className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:cursor-wait disabled:opacity-50"
+          // Espelha o botão de transferência de conversa (inbox): pílula
+          // ciano sólida, para a ação não passar despercebida no rodapé.
+          className="flex size-7 items-center justify-center rounded-full bg-cyan-500 text-white shadow-[0_2px_8px_rgba(6,182,212,0.35)] transition-all hover:bg-cyan-600 disabled:cursor-wait disabled:opacity-50"
         >
-          <IconArrowsExchange size={15} />
+          <IconArrowsExchange size={15} stroke={2.2} />
         </button>
       </TooltipGlass>
       {menu}
@@ -1655,6 +1683,7 @@ function DroppableColumn({
   onToggleSelect,
   onToggleSelectAllInColumn,
   onRequestMove,
+  canChangeStage,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
@@ -1675,6 +1704,7 @@ function DroppableColumn({
     toStageId: string;
     toPipelineId?: string | null;
   }) => void;
+  canChangeStage: boolean;
 }) {
   // Estado de seleção em massa restrito aos deals JÁ CARREGADOS desta
   // coluna. Replica o comportamento do kanban antigo.
@@ -1690,7 +1720,7 @@ function DroppableColumn({
   const isAddingHere = addStage?.id === column.stageId;
 
   return (
-    <Droppable droppableId={column.stageId}>
+    <Droppable droppableId={column.stageId} isDropDisabled={!canChangeStage}>
       {(provided, snapshot) => (
         <KanbanColumn
           title={column.title}
@@ -1719,7 +1749,7 @@ function DroppableColumn({
             selectedCount: selectedInColumnCount,
             totalInColumn: dealIdsInColumn.length,
             onToggleAll: () => onToggleSelectAllInColumn(dealIdsInColumn),
-            enabled: selectionMode,
+            enabled: selectionMode && canChangeStage,
           }}
           dealsContainerRef={provided.innerRef}
           dealsContainerProps={{
@@ -1736,7 +1766,12 @@ function DroppableColumn({
           renderDeal={(deal, index) => {
             const raw = dealById.get(deal.id);
             return (
-              <Draggable key={deal.id} draggableId={deal.id} index={index}>
+              <Draggable
+                key={deal.id}
+                draggableId={deal.id}
+                index={index}
+                isDragDisabled={!canChangeStage}
+              >
                 {(dragProvided, dragSnapshot) => {
                   const node = (
                   <div
@@ -1746,6 +1781,7 @@ function DroppableColumn({
                     style={{
                       ...dragProvided.draggableProps.style,
                       opacity: dragSnapshot.isDragging ? 0.9 : 1,
+                      cursor: canChangeStage ? undefined : "default",
                     }}
                   >
                     <DealCard
@@ -1757,32 +1793,24 @@ function DroppableColumn({
                       tagsSlot={(() => {
                         const allTags = raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>);
                         if (allTags.length === 0) return undefined;
+                        // Excedente não vira mais chip "+N": a lista completa
+                        // (e a remoção) vive na seção "Selecionadas" do
+                        // popover "Gerenciar tags".
                         const MAX_VISIBLE = 2;
                         const visibleTags = allTags.slice(0, MAX_VISIBLE);
-                        const hiddenTags = allTags.slice(MAX_VISIBLE);
                         return (
                           <>
                             {visibleTags.map((t) => (
                               // Linha única: chips truncam (max-w + min-w-0)
-                              // e "+N"/trigger ficam shrink-0 na mesma linha.
+                              // e o trigger fica shrink-0 na mesma linha.
                               <TooltipGlass key={t.id} label={t.name} side="top">
                                 <TagChip
                                   name={t.name}
                                   color={t.color}
-                                  className="max-w-[7.5rem] min-w-0 shrink"
+                                  className="max-w-[9.5rem] min-w-0 shrink"
                                 />
                               </TooltipGlass>
                             ))}
-                            {hiddenTags.length > 0 && (
-                              <TooltipGlass
-                                label={hiddenTags.map((t) => t.name).join(", ")}
-                                side="top"
-                              >
-                                <span className="inline-flex shrink-0 cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--text-muted)]">
-                                  +{hiddenTags.length}
-                                </span>
-                              </TooltipGlass>
-                            )}
                           </>
                         );
                       })()}

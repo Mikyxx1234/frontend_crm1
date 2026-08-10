@@ -18,6 +18,7 @@ import {
   IconMessages as MessagesIcon,
   IconPin as Pin,
   IconPinFilled as PinFilled,
+  IconPlus as Plus,
   IconX as X,
 } from "@tabler/icons-react";
 
@@ -32,7 +33,9 @@ import {
 } from "@/components/sales-hub/deal-queue";
 import { SalesHubChat } from "@/components/sales-hub/sales-hub-chat";
 import { ConversationActionsMenu } from "@/features/inbox-v2/extras";
-import { DealMoveStageButton } from "@/components/sales-hub/deal-actions";
+import { TagsPopover } from "@/features/pipeline-v2/extras";
+import { TagChip } from "@/components/crm/tag-chip";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
   DealDetailPanel,
   type DealDetail,
@@ -199,7 +202,12 @@ export function SalesHubView({
     setSelectedStageId(id);
   }, []);
 
-  useStageUrlSync(stages, selectedStageId, setStageFromUrl, pipelineId);
+  const { hydrated: stageHydrated } = useStageUrlSync(
+    stages,
+    selectedStageId,
+    setStageFromUrl,
+    pipelineId,
+  );
   const [recentlyMovedDealId, setRecentlyMovedDealId] = useState<string | null>(
     null,
   );
@@ -303,8 +311,11 @@ export function SalesHubView({
   }, [activeDealId, asidePinned]);
 
   // Deep-link / seleção externa: se o deal ativo está em outra etapa, foca a aba.
+  // Em "Todos" o deal já aparece na fila — focar a etapa dele aqui faria o
+  // clique em "Todos" (que abre o 1º deal) saltar para a primeira etapa.
   useEffect(() => {
     if (!activeDealId) return;
+    if (selectedStageIdRef.current === null) return;
     const stage = stages.find((s) =>
       s.deals.some(
         (d) => d.id === activeDealId || String(d.number) === activeDealId,
@@ -518,11 +529,14 @@ export function SalesHubView({
       didInitialSelectRef.current = true;
       return;
     }
+    // Espera a etapa salva ser restaurada — abrir o 1º deal do board antes
+    // disso joga a seleção para a etapa dele e perde a fase anterior.
+    if (!stageHydrated) return;
     const first = sortedDeals[0];
     if (!first) return;
     didInitialSelectRef.current = true;
     onActiveDealChange(first.id, first.number ?? null);
-  }, [activeDealId, sortedDeals, onActiveDealChange]);
+  }, [activeDealId, sortedDeals, onActiveDealChange, stageHydrated]);
 
   const handleDealMoved = useCallback((dealId: string) => {
     // Highlight visual por 1.5s pra sinalizar o "salto" entre etapas.
@@ -538,9 +552,6 @@ export function SalesHubView({
         name: s.name,
         color: s.color,
         count: s.deals.length,
-        hasUrgent: s.deals.some(
-          (d) => d.isRotting || d.priority === "HIGH",
-        ),
       })),
     [filteredStages],
   );
@@ -685,12 +696,18 @@ export function SalesHubView({
           // abrir/fechar chat ou aside — sem thrash nos cards da fila.
           // Sempre split no desktop (fila ~300px + chat): evita cards
           // “gigantes” na 1ª abertura / sem deal selecionado.
-          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-300 md:ease-[cubic-bezier(0.32,0.72,0,1)]",
-          // 3 tracks sempre no md (3ª = 0fr fechada) p/ interpolar
-          // grid-template-columns no open/close do aside sem thrash.
+          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-[720ms] md:ease-[cubic-bezier(0.22,1,0.36,1)] md:motion-reduce:transition-none",
+          // 3 tracks sempre no md p/ interpolar grid-template-columns no
+          // open/close do aside sem thrash. A 3ª fechada é `minmax(0px,0px)`
+          // e não `0fr`: track de tipo diferente da aberta não interpola —
+          // o browser anima discreto e a coluna salta na metade do tempo.
+          // Aberta é 360px fixo (mesma largura fixa do aside) para que o
+          // fechamento só clipe a coluna, sem re-layoutar o CRM inteiro.
+          // Entrada e saída: mesma curva, um pouco mais lenta/fluida que o
+          // drawer global (500ms / power3.out).
           detailsOpen && activeDeal
-            ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(280px,360px)]"
-            : "md:grid-cols-[300px_minmax(0,1fr)_0fr]",
+            ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(360px,360px)]"
+            : "md:grid-cols-[300px_minmax(0,1fr)_minmax(0px,0px)]",
         )}
       >
         {/* Coluna 1 — Fila: superfície igual `KanbanColumn`
@@ -721,13 +738,6 @@ export function SalesHubView({
                   sortMode={sortMode}
                   onSortModeChange={onSortModeChange}
                   iconOnly
-                />
-                <DealMoveStageButton
-                  deal={activeDeal}
-                  stages={stages}
-                  pipelineId={pipelineId}
-                  statusFilter={statusFilter}
-                  onMoved={handleDealMoved}
                 />
               </div>
             </div>
@@ -801,7 +811,6 @@ export function SalesHubView({
               }
               dealId={activeDeal.id}
               pipelineId={pipelineId}
-              currentAssigneeId={activeConversation.assignedToId ?? null}
               onConversationReopened={handleConversationReopened}
               headerActionsSlot={
                 <>
@@ -856,16 +865,26 @@ export function SalesHubView({
 
         {/* Coluna 3 — CRM inline (DealDetailPanel crmOnly): comprime o chat,
             sem Sheet/scrim. Abre via briefcase ou mouse leave na borda direita.
-            Mantida montada com deal ativo p/ slide-out (grid 0fr + transform)
+            Mantida montada com deal ativo p/ slide-out (track 0 + transform)
             antes do colapso; no mobile some do fluxo quando fechada. */}
         {activeDeal ? (
           <aside
             className={cn(
               "min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--glass-bg-modal)] backdrop-blur-md",
-              "md:transition-[transform,opacity,border-color,box-shadow,min-width] md:duration-300 md:ease-[cubic-bezier(0.32,0.72,0,1)]",
+              // Mesmos tokens da gaveta de Configurações: desliza 100px,
+              // abre com power3.out e fecha mais curto. `border-color`
+              // e `box-shadow` ficam FORA da lista de transição: repintar
+              // sombra a cada frame de um painel com backdrop-blur é o que
+              // mais custa aqui, e a troca instantânea some no movimento.
+              // Largura fixa em vez de `min-width` animada: a coluna que
+              // encolhe passa a só clipar o painel, sem reflow do CRM.
+              // Só `transform` (sem opacity): ease-out no fade esvaziava o
+              // painel no começo da saída e deixava o container “fantasma”.
+              "md:w-[360px] md:shrink-0",
+              "md:transition-transform md:duration-[720ms] md:ease-[cubic-bezier(0.22,1,0.36,1)] md:motion-reduce:transition-none",
               detailsOpen
-                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:min-w-[280px] md:translate-x-0 md:opacity-100"
-                : "pointer-events-none hidden border-transparent shadow-none md:flex md:min-w-0 md:translate-x-3 md:opacity-0",
+                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:translate-x-0"
+                : "pointer-events-none hidden border-transparent shadow-none md:flex md:translate-x-[100px]",
             )}
             aria-label="Detalhes do negócio"
             aria-hidden={!detailsOpen}
@@ -879,6 +898,38 @@ export function SalesHubView({
                 isOpen={detailsOpen}
                 onClose={() => setDetailsOpen(false)}
                 deal={detailDeal}
+                // Paridade com o aside do Kanban: chips + "+" no canto
+                // direito, para gerenciar tags sem sair do Flow.
+                tagsSlot={(() => {
+                  const allTags = activeDeal.tags ?? [];
+                  return (
+                    <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
+                      {allTags.slice(0, 2).map((t) => (
+                        <TooltipGlass key={t.id} label={t.name} side="top">
+                          <TagChip
+                            name={t.name}
+                            color={t.color}
+                            className="min-w-0 max-w-full shrink"
+                          />
+                        </TooltipGlass>
+                      ))}
+                      <span className="ml-auto shrink-0 pl-1">
+                        <TagsPopover
+                          dealId={activeDeal.id}
+                          currentTags={allTags}
+                          pipelineId={pipelineId}
+                          statusFilter={statusFilter}
+                          trigger={
+                            <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-white/35 px-2.5 py-0.5 font-display text-[11px] font-semibold text-white/70 transition-colors hover:border-white hover:text-white">
+                              <Plus size={10} />
+                              {allTags.length === 0 ? "Adicionar" : ""}
+                            </span>
+                          }
+                        />
+                      </span>
+                    </div>
+                  );
+                })()}
                 customFieldsSlot={customFieldsSlot}
                 contactFieldConfigSlot={contactFieldConfigSlot}
                 dealFieldConfigSlot={dealFieldConfigSlot}

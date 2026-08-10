@@ -6,7 +6,14 @@
  * stacking contexts criados por @hello-pangea/dnd em cada Draggable.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
@@ -16,6 +23,7 @@ import {
 
 import { useTeamUsers, useUpdateDeal } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
+import { useCan } from "@/hooks/use-my-permissions";
 
 import { computePopoverPosition, usePortalPopover } from "./use-portal-popover";
 
@@ -41,6 +49,12 @@ export function AssigneePopover({
   const { open, rect, triggerRef, popoverRef, toggle, close } = usePortalPopover();
   const [filter, setFilter] = useState("");
 
+  // Mesma regra do backend: `deal:transfer_owner` libera qualquer negócio;
+  // `deal:edit` cobre entregar um negócio próprio/sem dono.
+  const canTransferOwner = useCan("deal:transfer_owner");
+  const canEditDeal = useCan("deal:edit");
+  const readOnly = Boolean(disabled) || (!canTransferOwner && !canEditDeal);
+
   const { data: users = [], isLoading } = useTeamUsers(open, { includeAi: true });
   const update = useUpdateDeal(pipelineId, statusFilter);
 
@@ -52,8 +66,17 @@ export function AssigneePopover({
     return sortByPresence(list);
   }, [users, filter]);
 
+  // Dedupe: a seleção é disparada tanto no pointerdown quanto no click.
+  // Pointerdown cobre o caso em que o clique é engolido (dnd dos cards,
+  // re-render do board); o click cobre navegadores/interações em que o
+  // preventDefault do pointerdown cancela o evento seguinte.
+  const lastSelectAtRef = useRef(0);
+
   function handleSelect(userId: string | null) {
-    if (!dealId) return;
+    if (!dealId || update.isPending || readOnly) return;
+    const now = Date.now();
+    if (now - lastSelectAtRef.current < 500) return;
+    lastSelectAtRef.current = now;
     update.mutate(
       { dealId, payload: { ownerId: userId } },
       {
@@ -65,16 +88,42 @@ export function AssigneePopover({
     );
   }
 
+  function selectHandlers(userId: string | null) {
+    return {
+      onPointerDown: (e: ReactPointerEvent) => {
+        e.stopPropagation();
+        handleSelect(userId);
+      },
+      onClick: (e: ReactMouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSelect(userId);
+      },
+    };
+  }
+
   const position = computePopoverPosition(rect, 280, 256);
 
   return (
     <>
-      <TooltipGlass label={currentOwnerName ?? "Selecionar responsável"} side="top">
+      <TooltipGlass
+        label={
+          readOnly
+            ? currentOwnerName ?? "Sem permissão para transferir o responsável"
+            : currentOwnerName ?? "Selecionar responsável"
+        }
+        side="top"
+      >
         <button
           ref={triggerRef}
           type="button"
-          disabled={disabled || !dealId}
-          onClick={toggle}
+          disabled={readOnly || !dealId}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggle();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
           className="inline-flex"
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -87,6 +136,8 @@ export function AssigneePopover({
         createPortal(
           <div
             ref={popoverRef}
+            role="listbox"
+            data-assignee-popover=""
             className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-2 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
             style={{
               position: "fixed",
@@ -106,15 +157,16 @@ export function AssigneePopover({
               placeholder="Buscar pessoa…"
               className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             />
-            <ul role="listbox" className="max-h-56 overflow-y-auto">
+            <ul className="max-h-56 overflow-y-auto">
               {currentOwnerId && (
                 <li>
                   <button
                     type="button"
-                    onClick={() => handleSelect(null)}
-                    className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--color-warning)] hover:bg-[var(--glass-bg-strong)]"
+                    disabled={update.isPending}
+                    {...selectHandlers(null)}
+                    className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--color-warning)] hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
                   >
-                    <span>Remover responsavel</span>
+                    <span>Remover responsável</span>
                   </button>
                 </li>
               )}
@@ -125,7 +177,7 @@ export function AssigneePopover({
               )}
               {!isLoading && filtered.length === 0 && (
                 <li className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                  Ninguem encontrado.
+                  Ninguém encontrado.
                 </li>
               )}
               {filtered.map((u) => {
@@ -135,8 +187,8 @@ export function AssigneePopover({
                     <button
                       type="button"
                       disabled={update.isPending}
-                      onClick={() => handleSelect(u.id)}
-                      className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] hover:bg-[var(--glass-bg-strong)] ${
+                      {...selectHandlers(u.id)}
+                      className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] hover:bg-[var(--glass-bg-strong)] disabled:opacity-50 ${
                         isActive
                           ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
                           : "text-[var(--text-primary)]"

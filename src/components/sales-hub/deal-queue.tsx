@@ -31,6 +31,7 @@ import { DealCard } from "@/components/crm/deal-card";
 import { TagChip } from "@/components/crm/tag-chip";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { UserAvatar } from "@/components/crm/user-avatar";
+import { DealMoveStageButton } from "@/components/sales-hub/deal-actions";
 import { toDealCard } from "@/features/pipeline-v2/adapters";
 import type { BoardDealDto } from "@/features/pipeline-v2/api";
 import {
@@ -276,29 +277,34 @@ type DealQueueProps = {
 // Unread fica no próprio DealCard (mesmo visual Kanban + Flow).
 function DealQueueItem({
   deal,
+  stages,
   isActive,
   isExpanded,
   onToggle,
   wasRecentlyMoved,
   pipelineId,
   statusFilter = "OPEN",
+  onMoved,
   /** Troca de etapa: só fade, sem y — evita flash “sujo” na remount. */
   softEnter = false,
 }: {
   deal: BoardDeal & { stageId: string };
+  stages: BoardStage[];
   isActive: boolean;
   isExpanded: boolean;
   onToggle: (dealId: string) => void;
   wasRecentlyMoved: boolean;
   pipelineId: string;
   statusFilter?: StatusFilter;
+  onMoved?: (dealId: string) => void;
   softEnter?: boolean;
 }) {
   const vm = toDealCard(deal as unknown as BoardDealDto);
   const allTags = deal.tags ?? [];
+  // Excedente não vira mais chip "+N": a lista completa (e a remoção) vive
+  // no popover "Gerenciar tags", na seção "Selecionadas".
   const MAX_VISIBLE = 2;
   const visibleTags = allTags.slice(0, MAX_VISIBLE);
-  const hiddenTags = allTags.slice(MAX_VISIBLE);
 
   // Sem `layout` / popLayout: ao abrir o chat a coluna estreita e o
   // layout animation da fila brigava com height do card (jank).
@@ -335,20 +341,10 @@ function DealQueueItem({
                   <TagChip
                     name={t.name}
                     color={t.color}
-                    className="max-w-[7.5rem] min-w-0 shrink"
+                    className="max-w-[9.5rem] min-w-0 shrink"
                   />
                 </TooltipGlass>
               ))}
-              {hiddenTags.length > 0 && (
-                <TooltipGlass
-                  label={hiddenTags.map((t) => t.name).join(", ")}
-                  side="top"
-                >
-                  <span className="inline-flex h-5 shrink-0 cursor-default items-center rounded-[6px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 font-display text-[10px] font-bold leading-none text-[var(--text-muted)]">
-                    +{hiddenTags.length}
-                  </span>
-                </TooltipGlass>
-              )}
             </>
           ) : undefined
         }
@@ -395,6 +391,17 @@ function DealQueueItem({
             }
           />
         }
+        // Mover de fase por card (igual kanban) — antes vivia no header
+        // da fila e só agia sobre o deal ativo.
+        moveMenuSlot={
+          <DealMoveStageButton
+            deal={deal}
+            stages={stages}
+            pipelineId={pipelineId}
+            statusFilter={statusFilter}
+            onMoved={onMoved}
+          />
+        }
       />
     </motion.div>
   );
@@ -404,6 +411,7 @@ function DealQueueItem({
 
 export function DealQueue({
   deals,
+  stages,
   activeDealId,
   onSelectDeal,
   recentlyMovedDealId,
@@ -412,6 +420,7 @@ export function DealQueue({
   stageSwitchToken = 0,
   pipelineId,
   statusFilter = "OPEN",
+  onMoved,
 }: DealQueueProps) {
   // Mantem o card ativo sempre visivel na fila — quando a selecao
   // muda, rola suave pro card novo ficar no viewport.
@@ -545,12 +554,14 @@ export function DealQueue({
                   >
                     <DealQueueItem
                       deal={deal}
+                      stages={stages}
                       isActive={isActive}
                       isExpanded={isExpanded}
                       onToggle={handleToggleDeal}
                       wasRecentlyMoved={wasRecentlyMoved}
                       pipelineId={pipelineId}
                       statusFilter={statusFilter}
+                      onMoved={onMoved}
                       softEnter={softEnterWave}
                     />
                   </div>

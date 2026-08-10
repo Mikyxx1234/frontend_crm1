@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * StageRibbon — filtro de etapas do Sales Hub.
- * Visual alinhado aos chips/segmented controls do Inbox/CRM
- * (`PageSegmentedControl` + `Chip`), não a um funil analytics.
+ * StageRibbon — chevrons encadeados do funil no Flow.
+ * Preenchem a largura (flex-1); ativo = cor sólida; inativo = pastel.
  */
 
 import { cn } from "@/lib/utils";
@@ -13,7 +12,6 @@ type StageRibbonStage = {
   name: string;
   color: string;
   count: number;
-  hasUrgent: boolean;
 };
 
 type StageRibbonProps = {
@@ -21,12 +19,75 @@ type StageRibbonProps = {
   totalDeals: number;
   selectedStageId: string | null;
   onSelectStage: (stageId: string | null) => void;
-  /** Menos padding — com deal ativo no hub, libera altura para o chat. */
+  /** Menos altura — com deal ativo no hub, libera espaço para o chat. */
   compact?: boolean;
 };
 
-const chipBase =
-  "inline-flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 overflow-hidden rounded-[var(--radius-sm)] border px-2 font-display text-[11px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25";
+/** Primeiro segmento: borda reta à esquerda, ponta à direita. */
+const CLIP_FIRST =
+  "polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)";
+/** Demais: entalhe à esquerda (encaixa no chevron anterior). */
+const CLIP_CHEVRON =
+  "polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%)";
+
+function StageChevron({
+  label,
+  count,
+  color,
+  active,
+  first,
+  compact,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  color: string;
+  active: boolean;
+  first: boolean;
+  compact: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      aria-pressed={active}
+      title={label}
+      onClick={onClick}
+      style={{
+        clipPath: first ? CLIP_FIRST : CLIP_CHEVRON,
+        backgroundColor: active
+          ? color
+          : `color-mix(in srgb, ${color} 16%, #ffffff)`,
+        color: active ? "#ffffff" : color,
+      }}
+      className={cn(
+        "relative flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 font-display font-semibold tracking-tight transition-[filter,opacity] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1",
+        first ? "pl-2.5 pr-4 sm:pl-3 sm:pr-5" : "pl-4 pr-4 sm:pl-5 sm:pr-5",
+        compact ? "h-8 text-[11.5px] sm:h-9 sm:text-[12px]" : "h-9 text-[12px] sm:h-10 sm:text-[12.5px]",
+        active ? "z-[1]" : "hover:brightness-[0.97]",
+      )}
+    >
+      <span className="min-w-0 truncate">{label}</span>
+      <span
+        className={cn(
+          "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10.5px] font-bold tabular-nums leading-none sm:h-[22px] sm:min-w-[22px] sm:text-[11px]",
+        )}
+        style={
+          active
+            ? { backgroundColor: "rgba(255,255,255,0.28)", color: "#ffffff" }
+            : {
+                backgroundColor: `color-mix(in srgb, ${color} 22%, #ffffff)`,
+                color: `color-mix(in srgb, ${color} 82%, #1a1a1a)`,
+              }
+        }
+      >
+        {count}
+      </span>
+    </button>
+  );
+}
 
 export function StageRibbon({
   stages,
@@ -35,99 +96,44 @@ export function StageRibbon({
   onSelectStage,
   compact = false,
 }: StageRibbonProps) {
+  const allActive = selectedStageId === null;
+  const allColor = "var(--brand-primary, #5b6ff5)";
+
   return (
     <div
       className={cn(
-        "relative w-full shrink-0 bg-transparent",
-        compact ? "px-0.5 py-1.5" : "px-0.5 py-2",
+        "relative w-full min-w-0 shrink-0",
+        compact ? "mb-2" : "mb-3",
       )}
     >
       <div
-        className="scrollbar-none flex w-full items-stretch gap-1 overflow-x-auto"
+        className="flex w-full min-w-0 items-stretch gap-1"
         role="tablist"
         aria-label="Filtrar por etapa"
       >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={selectedStageId === null}
-          aria-pressed={selectedStageId === null}
+        <StageChevron
+          label="Todos"
+          count={totalDeals}
+          color={allColor}
+          active={allActive}
+          first
+          compact={compact}
           onClick={() => onSelectStage(null)}
-          className={cn(
-            chipBase,
-            compact ? "h-7" : "h-8",
-            // min width only as scroll fallback on very narrow viewports
-            "min-w-[4.5rem]",
-            selectedStageId === null
-              ? "border-[var(--brand-primary)]/25 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-              : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]",
-          )}
-        >
-          <span className="min-w-0 truncate">Todos</span>
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
-              selectedStageId === null
-                ? "bg-[var(--brand-primary)] text-white"
-                : "bg-black/[0.06] text-[var(--text-muted)] dark:bg-white/10",
-            )}
-          >
-            {totalDeals}
-          </span>
-        </button>
+        />
 
         {stages.map((stage) => {
           const isActive = stage.id === selectedStageId;
           return (
-            <button
+            <StageChevron
               key={stage.id}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              aria-pressed={isActive}
+              label={stage.name}
+              count={stage.count}
+              color={stage.color || "#64748b"}
+              active={isActive}
+              first={false}
+              compact={compact}
               onClick={() => onSelectStage(isActive ? null : stage.id)}
-              className={cn(
-                chipBase,
-                compact ? "h-7" : "h-8",
-                "min-w-[4.5rem]",
-                isActive
-                  ? "shadow-[var(--glass-shadow-sm)]"
-                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]",
-              )}
-              style={
-                isActive
-                  ? {
-                      color: stage.color,
-                      borderColor: `color-mix(in srgb, ${stage.color} 30%, transparent)`,
-                      background: `color-mix(in srgb, ${stage.color} 12%, transparent)`,
-                    }
-                  : undefined
-              }
-            >
-              <span
-                className="size-1.5 shrink-0 rounded-full"
-                style={{ backgroundColor: stage.color }}
-                aria-hidden
-              />
-              <span className="min-w-0 truncate">{stage.name}</span>
-              <span
-                className={cn(
-                  "shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
-                  isActive
-                    ? "bg-black/[0.08] dark:bg-white/15"
-                    : "bg-black/[0.06] text-[var(--text-muted)] dark:bg-white/10",
-                )}
-                style={isActive ? { color: stage.color } : undefined}
-              >
-                {stage.count}
-              </span>
-              {stage.hasUrgent && !isActive ? (
-                <span
-                  className="size-1.5 shrink-0 rounded-full bg-[var(--color-danger)]"
-                  aria-label="Há deals urgentes"
-                />
-              ) : null}
-            </button>
+            />
           );
         })}
       </div>

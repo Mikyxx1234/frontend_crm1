@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
-import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { useSettingsDrawer } from "@/features/settings/settings-drawer-context";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 
@@ -15,20 +13,16 @@ import { SettingsSlide } from "./_components/settings-slide";
 /**
  * Layout master-detail de /settings.
  *
- * Grid persistente: NavRailV2 (72px) | SettingsSidebar (lista) | painel direito.
- * O painel direito envolve `{children}` num wrapper com `key={pathname}` para
- * animar a entrada do conteúdo da direita a cada troca de sub-rota.
- *
- * A sidebar é retrátil: clicando no botão do próprio header, o grid transita
- * a largura da coluna do meio para 0 (retrai para a esquerda) e um botão
- * flutuante aparece à beira do painel direito para expandi-la de volta.
+ * Grid: NavRailV2 | SettingsSidebar (gaveta) | painel direito.
+ * A gaveta abre no hover da engrenagem da NavRail; fecha ao sair,
+ * salvo se estiver pinada (persistido em localStorage).
  */
 export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(true);
+  const { open, onDrawerEnter, onDrawerLeave } = useSettingsDrawer();
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const isHub = pathname === "/settings" || pathname === "/settings/";
@@ -55,58 +49,37 @@ export default function SettingsLayout({
     <div
       className={cn(
         "v2-screen grid min-w-0 grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4",
-        // Transição do grid: a coluna do meio anima entre 0 e 288px.
-        "transition-[grid-template-columns] duration-300 ease-out",
+        // Transição do grid: a coluna do meio anima entre 0 e 288px, no
+        // mesmo tempo/curva do slide da sidebar (abrir e fechar).
+        //
+        // As duas listas de tracks precisam ser ESTRUTURALMENTE iguais
+        // (mesma contagem e mesma função por track) — `minmax(240px,288px)`
+        // contra um `0px` cru não é interpolável e o browser cai em
+        // animação discreta, trocando a largura de uma vez na metade do
+        // tempo. Era isso que fazia a gaveta "pular" em vez de deslizar.
+        //
+        // Track aberta é 288px fixo (e não uma faixa): a sidebar tem a
+        // MESMA largura fixa, então a coluna encolhendo apenas a clipa em
+        // vez de re-layoutar o conteúdo dela a cada frame.
+        "transition-[grid-template-columns] motion-reduce:transition-none",
         open
-          ? "grid-cols-[var(--nav-rail-w,72px)_minmax(240px,288px)_minmax(0,1fr)]"
-          : "grid-cols-[var(--nav-rail-w,72px)_0px_minmax(0,1fr)]",
+          ? "grid-cols-[var(--nav-rail-w,72px)_minmax(288px,288px)_minmax(0,1fr)] duration-[var(--drawer-duration)] ease-[var(--ease-drawer-open)]"
+          : "grid-cols-[var(--nav-rail-w,72px)_minmax(0px,0px)_minmax(0,1fr)] duration-[var(--drawer-duration-close)] ease-[var(--ease-drawer-close)]",
       )}
     >
       <NavRailSpacer />
 
-      {/* Coluna da sidebar — sempre montada; o overflow-hidden clipa quando a
-          coluna colapsa a 0. Dentro, a própria sidebar aplica translate-x e
-          fade pra transição parecer com o grid. */}
-      {/* overflow-visible: deixa a abinha de recolher ESCAPAR pra fora da
-          coluna do menu e grudar na costura (senão ficava boiando no gap). */}
-      <div className="relative min-w-0 overflow-visible">
+      {/* Coluna da sidebar — clipa em 0 quando fechada. Hover na área
+          cancela o fechamento iniciado ao sair da engrenagem. */}
+      <div
+        className="relative min-w-0 overflow-hidden"
+        onMouseEnter={onDrawerEnter}
+        onMouseLeave={onDrawerLeave}
+      >
         <SettingsSidebar open={open} />
-        {/* Abinha recolher — grudada na borda direita do menu, chevron `<`.
-            Mesmo estilo do aside. Sai da coluna via translate-x-full. */}
-        {open && (
-          <div className="pointer-events-none absolute right-0 top-1/2 z-20 -translate-y-1/2 translate-x-full">
-            <TooltipGlass label="Recolher menu" side="right">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Recolher menu de configurações"
-                className="pointer-events-auto flex h-14 w-6 items-center justify-center rounded-r-[var(--radius-md)] border border-l-0 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow)] backdrop-blur-md transition-all hover:bg-[var(--brand-primary)] hover:text-white"
-              >
-                <IconChevronLeft size={14} strokeWidth={3} />
-              </button>
-            </TooltipGlass>
-          </div>
-        )}
       </div>
 
       <div className="relative flex min-w-0 flex-col overflow-hidden">
-        {/* Abinha expandir — só quando recolhido; encostada na borda esquerda
-            (ao lado do navrail), chevron `>`. */}
-        {!open && (
-          <div className="pointer-events-none absolute left-0 top-1/2 z-10 -translate-y-1/2">
-            <TooltipGlass label="Mostrar menu" side="right">
-              <button
-                type="button"
-                onClick={() => setOpen(true)}
-                aria-label="Expandir menu de configurações"
-                className="pointer-events-auto flex h-14 w-6 items-center justify-center rounded-r-[var(--radius-md)] border border-l-0 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow)] backdrop-blur-md transition-all hover:bg-[var(--brand-primary)] hover:text-white"
-              >
-                <IconChevronRight size={14} strokeWidth={3} />
-              </button>
-            </TooltipGlass>
-          </div>
-        )}
-
         <SettingsSlide>{children}</SettingsSlide>
       </div>
     </div>

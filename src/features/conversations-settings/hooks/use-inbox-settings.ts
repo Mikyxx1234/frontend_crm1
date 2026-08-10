@@ -11,6 +11,11 @@ export interface InboxSettings {
   keepDepartmentOnEnd: boolean;
   audioTranscription: "none" | "all" | "on_demand";
   transcriptionLanguage: "pt-BR" | "en-US" | "es-ES";
+  /**
+   * Rodapé lilás "aguardando resposta" nos cards (kanban/inbox) quando a
+   * última mensagem é inbound. Default ligado.
+   */
+  showInboundSignal: boolean;
 }
 
 const DEFAULTS: InboxSettings = {
@@ -21,6 +26,7 @@ const DEFAULTS: InboxSettings = {
   keepDepartmentOnEnd: false,
   audioTranscription: "none",
   transcriptionLanguage: "pt-BR",
+  showInboundSignal: true,
 };
 
 const QUERY_KEY = ["org-settings", "inbox"];
@@ -40,6 +46,8 @@ async function fetchInboxSettings(): Promise<InboxSettings> {
     keepDepartmentOnEnd: data["conversation.keepDepartmentOnEnd"] === "true",
     audioTranscription: (data["conversation.audioTranscription"] as InboxSettings["audioTranscription"]) ?? "none",
     transcriptionLanguage: (data["conversation.transcriptionLanguage"] as InboxSettings["transcriptionLanguage"]) ?? "pt-BR",
+    // Default ligado: ausência da chave mantém o comportamento atual.
+    showInboundSignal: data["conversation.showInboundSignal"] !== "false",
   };
 }
 

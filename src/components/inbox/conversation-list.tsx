@@ -2,6 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   useMutation,
   useQuery,
@@ -363,7 +364,9 @@ function InboxCategorySelect({
   allowedTabKeys?: readonly InboxTab[];
 }) {
   const [selectOpen, setSelectOpen] = React.useState(false);
-  const selectRef = React.useRef<HTMLDivElement>(null);
+  const [menuRect, setMenuRect] = React.useState<DOMRect | null>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
 
   const includesTab = React.useCallback(
     (k: InboxTab) => !allowedTabKeys?.length || allowedTabKeys.includes(k),
@@ -375,16 +378,29 @@ function InboxCategorySelect({
     [includesTab],
   );
 
+  const updateMenuRect = React.useCallback(() => {
+    if (triggerRef.current) {
+      setMenuRect(triggerRef.current.getBoundingClientRect());
+    }
+  }, []);
+
   React.useEffect(() => {
     if (!selectOpen) return;
+    updateMenuRect();
     function handleClick(e: MouseEvent) {
-      if (selectRef.current && !selectRef.current.contains(e.target as Node)) {
-        setSelectOpen(false);
-      }
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setSelectOpen(false);
     }
+    window.addEventListener("scroll", updateMenuRect, true);
+    window.addEventListener("resize", updateMenuRect);
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [selectOpen]);
+    return () => {
+      window.removeEventListener("scroll", updateMenuRect, true);
+      window.removeEventListener("resize", updateMenuRect);
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [selectOpen, updateMenuRect]);
 
   React.useEffect(() => {
     setSelectOpen(false);
@@ -395,95 +411,124 @@ function InboxCategorySelect({
   const triggerTone = inboxTabTriggerToneClasses(activeConfig.tone);
   const activeCount = tabCounts[activeTab] ?? 0;
 
-  return (
-    <div className="shrink-0 border-b border-border px-3 pb-2 pt-1" ref={selectRef}>
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setSelectOpen((v) => !v)}
-          aria-expanded={selectOpen}
-          aria-haspopup="listbox"
-          className={cn(
-            "flex w-full items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-left shadow-[var(--shadow-sm)] transition-colors lumen-transition",
-            "hover:border-input",
-          )}
-        >
-          <div className="flex min-w-0 items-center gap-2">
-            <ActiveIcon className={cn("size-3.5 shrink-0", triggerTone.icon)} />
-            <span className={cn("truncate text-[12px] font-semibold", triggerTone.label)}>
-              {activeConfig.label}
-            </span>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {activeCount > 0 ? (
-              <span
-                className={cn(
-                  "rounded px-1.5 text-[10px] font-semibold tabular-nums leading-[18px]",
-                  triggerTone.count,
-                )}
-              >
-                {activeCount}
-              </span>
-            ) : null}
-            {selectOpen ? (
-              <ChevronUp className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.5} />
-            ) : (
-              <ChevronDown className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.5} />
-            )}
-          </div>
-        </button>
+  const menuMaxHeight = React.useMemo(() => {
+    if (!menuRect) return 320;
+    const spaceBelow = window.innerHeight - menuRect.bottom - 12;
+    return Math.max(160, Math.min(360, spaceBelow));
+  }, [menuRect]);
 
-        {selectOpen ? (
-          <div
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-(--z-popover) overflow-hidden rounded-lg border border-black/10 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-[var(--glass-border)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
-            style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
-            role="listbox"
-            aria-label="Categoria da inbox"
-          >
-            {visibleKeys.map((key) => {
-              const config = TAB_CONFIG[key];
-              const Icon = config.icon;
-              const isActive = activeTab === key;
-              const count = tabCounts[key] ?? 0;
-              return (
-                <React.Fragment key={key}>
-                  {config.dividerBefore ? <div className="mx-2 my-0.5 h-px bg-border" /> : null}
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={isActive}
-                    onClick={() => {
-                      onTabChange(key);
-                      setSelectOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center justify-between px-3 py-2 text-left transition-colors lumen-transition",
-                      inboxTabRowSurface(config.tone, isActive),
-                    )}
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Icon className={cn("size-3.5 shrink-0", inboxTabRowIconClass(config.tone, isActive))} />
-                      <span className={cn("truncate text-[11px]", inboxTabRowLabelClass(config.tone, isActive))}>
-                        {config.label}
-                      </span>
-                    </div>
-                    {count > 0 ? (
-                      <span
-                        className={cn(
-                          "rounded px-1.5 text-[10px] font-semibold tabular-nums leading-[18px]",
-                          inboxTabRowCountClass(config.tone, isActive),
-                        )}
-                      >
-                        {count}
-                      </span>
+  return (
+    <div className="shrink-0 border-b border-border px-3 pb-2 pt-1">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setSelectOpen((v) => !v)}
+        aria-expanded={selectOpen}
+        aria-haspopup="listbox"
+        className={cn(
+          "flex w-full items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-left shadow-[var(--shadow-sm)] transition-colors lumen-transition",
+          "hover:border-input",
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <ActiveIcon className={cn("size-3.5 shrink-0", triggerTone.icon)} />
+          <span className={cn("truncate text-[12px] font-semibold", triggerTone.label)}>
+            {activeConfig.label}
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {activeCount > 0 ? (
+            <span
+              className={cn(
+                "rounded px-1.5 text-[10px] font-semibold tabular-nums leading-[18px]",
+                triggerTone.count,
+              )}
+            >
+              {activeCount}
+            </span>
+          ) : null}
+          {selectOpen ? (
+            <ChevronUp className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.5} />
+          ) : (
+            <ChevronDown className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.5} />
+          )}
+        </div>
+      </button>
+
+      {/* Portal: o painel da lista tem overflow-hidden e cortava o menu. */}
+      {selectOpen && menuRect && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="z-(--z-popover) overflow-y-auto overscroll-contain rounded-lg border border-black/10 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-[var(--glass-border)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
+              style={{
+                position: "fixed",
+                top: menuRect.bottom + 4,
+                left: menuRect.left,
+                width: menuRect.width,
+                maxHeight: menuMaxHeight,
+                backgroundColor: "var(--dropdown-solid-bg)",
+              }}
+              role="listbox"
+              aria-label="Categoria da inbox"
+            >
+              {visibleKeys.map((key) => {
+                const config = TAB_CONFIG[key];
+                const Icon = config.icon;
+                const isActive = activeTab === key;
+                const count = tabCounts[key] ?? 0;
+                return (
+                  <React.Fragment key={key}>
+                    {config.dividerBefore ? (
+                      <div className="mx-2 my-0.5 h-px bg-border" />
                     ) : null}
-                  </button>
-                </React.Fragment>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      onClick={() => {
+                        onTabChange(key);
+                        setSelectOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center justify-between px-3 py-2.5 text-left transition-colors lumen-transition",
+                        inboxTabRowSurface(config.tone, isActive),
+                      )}
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Icon
+                          className={cn(
+                            "size-3.5 shrink-0",
+                            inboxTabRowIconClass(config.tone, isActive),
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "truncate text-[12px]",
+                            inboxTabRowLabelClass(config.tone, isActive),
+                          )}
+                        >
+                          {config.label}
+                        </span>
+                      </div>
+                      {count > 0 ? (
+                        <span
+                          className={cn(
+                            "rounded px-1.5 text-[10px] font-semibold tabular-nums leading-[18px]",
+                            inboxTabRowCountClass(config.tone, isActive),
+                          )}
+                        >
+                          {count}
+                        </span>
+                      ) : null}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

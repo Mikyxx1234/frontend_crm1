@@ -2,21 +2,21 @@
  * Categorização (presentation-only) dos recursos de permissão.
  *
  * O backend (`PERMISSION_CATALOG`) permanece uma lista plana — o agrupamento
- * por tipo é puramente de UI, definido aqui e consumido pelo editor de
- * permissões. Recurso novo sem categoria cai no grupo "Outros" (fail-safe:
- * nunca some da tela).
+ * por tema é puramente de UI, definido aqui e consumido pelo editor de
+ * papéis e pela visão de permissões efetivas. Recurso novo sem categoria
+ * cai no grupo "Outros" (fail-safe: nunca some da tela).
  *
- * Os recursos de MENSAGERIA são editados numa seção dedicada em
- * `/settings/conversations` (não no editor de papel) — por isso ficam fora
- * dos grupos do editor principal.
+ * `settings` e `nav` entram aqui para a visão efetiva; o editor de papel
+ * filtra esses dois e trata-os em seções próprias.
  */
 
-/** Recursos de conversas/mensageria, relocados para /settings/conversations. */
+/** Recursos de conversas/mensageria (legado — útil p/ filtros pontuais). */
 export const MESSAGING_RESOURCES = [
   "conversation",
   "channel",
   "template",
   "campaign",
+  "inbox",
 ] as const;
 
 export function isMessagingResource(resource: string): boolean {
@@ -31,9 +31,7 @@ interface CategoryDef {
 }
 
 /**
- * Categorias do editor principal (sem os recursos de mensageria, que vivem
- * em /settings/conversations). `settings` e `nav` são tratados à parte pelo
- * editor (grade administrativa + navegação derivada).
+ * Temas do editor / visão efetiva. Ordem = ordem na tela.
  */
 export const PERMISSION_CATEGORIES: CategoryDef[] = [
   {
@@ -42,9 +40,14 @@ export const PERMISSION_CATEGORIES: CategoryDef[] = [
     resources: ["pipeline", "deal", "contact", "company", "task", "report"],
   },
   {
-    id: "messaging",
-    label: "Mensageria & Automação",
-    resources: ["automation", "ai_agent", "distribution", "inbox"],
+    id: "inbox",
+    label: "Inbox & Mensagens",
+    resources: ["conversation", "inbox", "channel", "template", "campaign"],
+  },
+  {
+    id: "automation",
+    label: "Automação & Distribuição",
+    resources: ["automation", "ai_agent", "distribution"],
   },
   {
     id: "catalog",
@@ -56,7 +59,45 @@ export const PERMISSION_CATEGORIES: CategoryDef[] = [
     label: "Tags & Segmentos",
     resources: ["tag", "segment"],
   },
+  {
+    id: "admin",
+    label: "Administração",
+    resources: ["settings"],
+  },
+  {
+    id: "nav",
+    label: "Navegação",
+    resources: ["nav"],
+  },
 ];
+
+/** Rótulos curtos dos recursos — para listas efetivas sem catálogo carregado. */
+export const RESOURCE_LABELS: Record<string, string> = {
+  pipeline: "Funis",
+  deal: "Negócios",
+  contact: "Contatos",
+  company: "Empresas",
+  task: "Tarefas",
+  report: "Relatórios",
+  conversation: "Conversas",
+  inbox: "Filas da Inbox",
+  channel: "Canais",
+  template: "Templates",
+  campaign: "Campanhas",
+  automation: "Automações",
+  ai_agent: "Agentes de IA",
+  distribution: "Distribuição",
+  product: "Produtos",
+  inventory: "Inventário",
+  catalog: "Catálogos",
+  job_opening: "Vagas",
+  org_unit: "Unidades",
+  tag: "Tags",
+  segment: "Segmentos",
+  settings: "Configurações",
+  nav: "Menu lateral",
+  acesso: "Acesso",
+};
 
 export interface CategoryGroupResult<T> {
   id: string;

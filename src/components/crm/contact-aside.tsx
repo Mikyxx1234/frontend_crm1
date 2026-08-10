@@ -10,6 +10,8 @@ import {
 import { cn } from "@/lib/utils"
 import { Row } from "@/components/crm/aside-row"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
+import { RequirePermission } from "@/components/auth/require-permission"
+import { useCan } from "@/hooks/use-my-permissions"
 import {
   IconBriefcase,
   IconBrandWhatsapp,
@@ -533,9 +535,11 @@ function DealInline({
           </div>
         )}
 
-        {/* Grid 2 colunas de infos rápidas — Origem / Canal / Tags */}
+        {/* Grid 2 colunas de infos rápidas — Origem / Canal / Tags.
+            Coluna do rótulo no tamanho do texto (`auto`): `grid-cols-2`
+            dava metade da largura aos valores e espremia as tags em "e…". */}
         {(deal.origin || contact.connection || deal.dealTagsNode !== undefined) && (
-          <div className="relative grid grid-cols-2 items-center gap-y-1 border-t border-white/10 pt-2 text-[11px]">
+          <div className="relative grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t border-white/10 pt-2 text-[11px]">
             {deal.origin && (
               <>
                 <span className="text-slate-400">Origem</span>
@@ -553,10 +557,10 @@ function DealInline({
             {deal.dealTagsNode !== undefined && (
               <>
                 <span className="text-slate-400">Tags</span>
-                {/* Uma linha só (jul/26): nowrap + overflow-hidden. Os chips
-                    truncam quando falta espaço; `+N` e o botão "+" ficam
-                    fixados (shrink-0) dentro do próprio DealTagsTray. */}
-                <span className="flex min-w-0 flex-nowrap items-center justify-end gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white">
+                {/* Uma linha só: os chips truncam quando falta espaço e o
+                    botão "+" fica ancorado no canto direito pelo próprio
+                    DealTagsTray (w-full + ml-auto). */}
+                <span className="flex w-full min-w-0 flex-nowrap items-center justify-start gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white">
                   {deal.dealTagsNode}
                 </span>
               </>
@@ -589,7 +593,7 @@ function DealInline({
           <div className="mb-1 flex items-center gap-1.5 font-display text-[12px] font-bold text-[var(--text-primary)]">
             <IconBriefcase size={12} className="text-[var(--brand-primary)]" />
             <span className="flex items-baseline gap-1.5">
-              Informações do Negócio
+              Negócio
               {deal.number != null && (
                 <span className="font-mono text-[10px] font-normal text-[var(--text-muted)]">#{deal.number}</span>
               )}
@@ -682,6 +686,16 @@ export function ContactAside({
   // Estados de modo edição
   const [contactEditMode, setContactEditMode] = useState(false)
   const [dealFieldsEditMode, setDealFieldsEditMode] = useState(false)
+  const canEditContact = useCan("contact:edit")
+  const canEditDeal = useCan("deal:edit")
+
+  // Sem permissão, não deixa o modo edição preso ligado.
+  useEffect(() => {
+    if (!canEditContact && contactEditMode) setContactEditMode(false)
+  }, [canEditContact, contactEditMode])
+  useEffect(() => {
+    if (!canEditDeal && dealFieldsEditMode) setDealFieldsEditMode(false)
+  }, [canEditDeal, dealFieldsEditMode])
 
   // Estados de configuração abertos
   const [contactConfigOpen, setContactConfigOpen] = useState(false)
@@ -977,20 +991,22 @@ export function ContactAside({
                                 onToggle={() => setContactSectionOpen((v) => !v)}
                                 meta={
                                   contact.contactNumber != null ? (
-                                    <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                    <span className="rounded-full bg-orange-500/15 px-1.5 py-px font-mono text-[10px] font-semibold tabular-nums text-orange-600">
                                       #{contact.contactNumber}
                                     </span>
                                   ) : undefined
                                 }
                                 actions={
                                   <>
-                                    <HeaderBtn
-                                      label={contactEditMode ? "Sair do modo edição" : "Editar dados de contato"}
-                                      active={contactEditMode}
-                                      onClick={() => setContactEditMode((v) => !v)}
-                                    >
-                                      {contactEditMode ? <IconX size={13} /> : <IconPencil size={13} />}
-                                    </HeaderBtn>
+                                    <RequirePermission permission="contact:edit">
+                                      <HeaderBtn
+                                        label={contactEditMode ? "Sair do modo edição" : "Editar dados de contato"}
+                                        active={contactEditMode}
+                                        onClick={() => setContactEditMode((v) => !v)}
+                                      >
+                                        {contactEditMode ? <IconX size={13} /> : <IconPencil size={13} />}
+                                      </HeaderBtn>
+                                    </RequirePermission>
                                     {resolvedContactConfig && (
                                       <HeaderBtn
                                         label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
@@ -1003,7 +1019,7 @@ export function ContactAside({
                                   </>
                                 }
                               >
-                                Informações do Contato
+                                Contato
                               </SectionHeader>
 
                               {contactSectionOpen && (
@@ -1237,13 +1253,15 @@ export function ContactAside({
                                   }
                                   actions={
                                   <>
-                                    <HeaderBtn
+                                    <RequirePermission permission="deal:edit">
+                                      <HeaderBtn
                                         label={dealFieldsEditMode ? "Sair do modo edição" : "Editar campos de negócio"}
                                         active={dealFieldsEditMode}
                                         onClick={() => setDealFieldsEditMode((v) => !v)}
                                       >
                                         {dealFieldsEditMode ? <IconX size={13} /> : <IconPencil size={13} />}
                                       </HeaderBtn>
+                                    </RequirePermission>
                                       {resolvedDealConfig && (
                                         <HeaderBtn
                                           label={dealConfigOpen ? "Fechar configurações" : "Configurar campos de negócio"}
@@ -1256,7 +1274,7 @@ export function ContactAside({
                                     </>
                                   }
                                 >
-                                  Informações do Negócio
+                                  Negócio
                                 </SectionHeader>
 
                                 {dealFieldsSectionOpen && (

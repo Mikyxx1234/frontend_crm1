@@ -54,6 +54,8 @@ const TYPE_META: Record<
   // contexto do inbox (escopada ao negócio do contato).
   MESSAGE_RECEIVED: { label: "Mensagem recebida", icon: IconMessage, color: "var(--brand-primary)" },
   MESSAGE_SENT: { label: "Mensagem enviada", icon: IconSend, color: "var(--color-success)" },
+  MESSAGE_READ: { label: "Mensagem lida", icon: IconCircleCheck, color: "#38bdf8" },
+  MESSAGE_FAILED: { label: "Falha no envio", icon: IconCircleX, color: "var(--color-danger)" },
   CONVERSATION_CREATED: { label: "Conversa criada", icon: IconMessagePlus, color: "var(--brand-primary)" },
   CONVERSATION_CLOSED: { label: "Conversa encerrada", icon: IconCircleCheck, color: "var(--color-success)" },
   CONVERSATION_REOPENED: { label: "Conversa reaberta", icon: IconRefresh, color: "var(--color-warning)" },

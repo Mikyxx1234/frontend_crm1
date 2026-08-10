@@ -751,7 +751,9 @@ export function DealDetailPanel({
     },
   ]
 
-  if (crmOnly && !isOpen) return null;
+  // Em crmOnly o pai (SalesHub aside) anima abertura/fechamento — não
+  // desmontar no close, senão o recheio some no 1º frame e sobra o
+  // container vazio deslizando.
 
   return (
     <div
@@ -999,7 +1001,8 @@ export function DealDetailPanel({
                     </>
                   )}
                   <span className="text-slate-400">Tags</span>
-                  <span className="flex min-w-0 flex-nowrap items-center justify-start gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:shrink [&_.tag-chip]:truncate">
+                  {/* Uma linha: chips truncam; "+" fica à direita no tray. */}
+                  <span className="flex w-full min-w-0 flex-nowrap items-center justify-start gap-1 overflow-hidden [&_.tag-chip]:!border-white/20 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:shrink [&_.tag-chip]:truncate">
                     {tagsSlot ?? (
                       <span className="text-xs text-white/60">Nenhuma tag</span>
                     )}
@@ -1103,11 +1106,11 @@ export function DealDetailPanel({
 
                                   {sectionId === "contato" && (
                                     <FieldCard
-                                      title="Informações do Contato"
+                                      title="Contato"
                                       compactTitle={crmOnly}
                                       titleMeta={
                                         deal.contactNumber != null ? (
-                                          <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                          <span className="rounded-full bg-orange-500/15 px-1.5 py-px font-mono text-[10px] font-semibold tabular-nums text-orange-600">
                                             #{deal.contactNumber}
                                           </span>
                                         ) : undefined
@@ -1227,12 +1230,12 @@ export function DealDetailPanel({
 
                                   {sectionId === "campos" && (
                                     <FieldCard
-                                      title="Informações do Negócio"
+                                      title="Negócio"
                                       compactTitle={crmOnly}
                                       plain={viewMode !== "compact"}
                                       titleMeta={
                                         deal.number != null ? (
-                                          <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                          <span className="rounded-full bg-[var(--brand-primary)]/15 px-1.5 py-px font-mono text-[10px] font-semibold tabular-nums text-[var(--brand-primary)]">
                                             #{deal.number}
                                           </span>
                                         ) : undefined
@@ -1994,7 +1997,7 @@ function FieldCard({
         )}
         {title && (
           <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-600">
-            {title === "Informações do Contato" ? (
+            {title === "Contato" ? (
               <IconUser size={16} className="shrink-0 text-orange-500" />
             ) : (
               <IconBriefcase size={16} className="shrink-0 text-[var(--brand-primary)]" />
@@ -2008,7 +2011,7 @@ function FieldCard({
               {title}
             </span>
             {titleMeta ? (
-              <span className="shrink-0 font-normal opacity-60">{titleMeta}</span>
+              <span className="shrink-0">{titleMeta}</span>
             ) : null}
           </span>
         )}

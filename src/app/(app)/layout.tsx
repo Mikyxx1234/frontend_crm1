@@ -25,6 +25,7 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RouteTransition } from "@/components/crm/route-transition";
 import { MobileStartRoute } from "@/components/layout/mobile-start-route";
 import { SystemPresenceHeartbeat } from "@/components/layout/system-presence-heartbeat";
+import { SettingsDrawerProvider } from "@/features/settings/settings-drawer-context";
 
 // O TooltipProvider (Radix) é provido uma única vez na raiz (app/providers.tsx),
 // cobrindo tanto os TooltipGlass quanto os TooltipContent/TooltipHost. Não é
@@ -35,7 +36,7 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <SettingsDrawerProvider>
       <ChatThemeApplier />
       <SystemPresenceHeartbeat />
       <div className="v2-root v2-min-screen">
@@ -63,6 +64,6 @@ export default function AppLayout({
         <MobileBottomNav />
       </div>
       <BiometricLockGate />
-    </>
+    </SettingsDrawerProvider>
   );
 }

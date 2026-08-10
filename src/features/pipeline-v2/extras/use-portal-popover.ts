@@ -28,7 +28,13 @@ export function usePortalPopover(): PortalPopoverState {
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
-  const toggle = useCallback(() => setOpen((v) => !v), []);
+  // Mede o trigger já no toggle: o portal só renderiza com `rect`, então
+  // depender apenas do efeito custa um frame (e falha se o ref só for
+  // preenchido depois, como em triggers com Slot/asChild).
+  const toggle = useCallback(() => {
+    if (triggerRef.current) setRect(triggerRef.current.getBoundingClientRect());
+    setOpen((v) => !v);
+  }, []);
 
   // Atualiza posicao quando abre e reage a scroll/resize.
   useEffect(() => {
@@ -80,6 +86,7 @@ export function usePortalPopover(): PortalPopoverState {
           el.closest("[data-radix-popper-content-wrapper]") ||
           el.closest("[data-radix-select-viewport]") ||
           el.closest("[data-radix-dropdown-menu-content]") ||
+          el.closest("[data-assignee-popover]") ||
           el.closest("[role='listbox']") ||
           el.closest("[role='menu']")
         ) {

@@ -19,6 +19,8 @@ import {
   type ReactionDto,
 } from "../api";
 
+import { invalidatePipelineBoards } from "@/features/pipeline-v2/hooks/use-pipeline-realtime";
+
 export function messagesKey(conversationId: string | null | undefined) {
   return ["messages", conversationId ?? "__none__"] as const;
 }
@@ -77,6 +79,8 @@ export function useSendMessage(conversationId: string | null) {
       }
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
       qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
+      // Rodapé "aguardando resposta" dos cards vem do board (lastMessage).
+      invalidatePipelineBoards(qc);
     },
   });
 }
@@ -259,6 +263,7 @@ export function useSendAttachment(conversationId: string | null) {
         qc.invalidateQueries({ queryKey: ["deal"] });
         qc.invalidateQueries({ queryKey: ["contact"] });
       }
+      invalidatePipelineBoards(qc);
     },
   });
 }

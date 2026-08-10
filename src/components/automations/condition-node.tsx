@@ -1,11 +1,14 @@
 "use client";
 
+import { useMemo } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { IconFilter as Filter, IconGitBranch as GitBranch, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import type { ConditionBranch } from "@/lib/automation-condition";
 import { cn } from "@/lib/utils";
+import { useDepartmentOptions } from "./editor-data";
+import { CONDITION_FIELDS } from "./editor-fields";
 import { NodeInlineConfig } from "./node-inline-config";
 
 export type ConditionNodeData = {
@@ -37,15 +40,24 @@ const OP_LABEL: Record<string, string> = {
   not_empty: "Preenchido",
 };
 
-function ruleSummary(branch: ConditionBranch): string {
+/** Caminho técnico → rótulo do catálogo ("conversation.departmentId" → "Departamento"). */
+const FIELD_LABEL: Record<string, string> = Object.fromEntries(
+  CONDITION_FIELDS.map((f) => [f.value, f.label]),
+);
+
+function ruleSummary(
+  branch: ConditionBranch,
+  /** id → nome, para os campos cujo valor é um cuid ilegível no card. */
+  resolveValue: (field: string, value: unknown) => string,
+): string {
   if (branch.rules.length === 0) return branch.label ?? "Condição";
   const first = branch.rules[0];
-  const field = first.field || "—";
+  const field = FIELD_LABEL[first.field] ?? first.field ?? "—";
   const op = OP_LABEL[first.op] ?? first.op;
   const value =
     first.op === "empty" || first.op === "not_empty"
       ? ""
-      : ` ${String(first.value ?? "").slice(0, 18)}`;
+      : ` ${resolveValue(first.field, first.value).slice(0, 24)}`;
   const base = `${field} ${op}${value}`;
   if (branch.rules.length > 1) {
     return `${base} +${branch.rules.length - 1}`;
@@ -64,6 +76,20 @@ function ruleSummary(branch: ConditionBranch): string {
 export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) {
   const branches = data.branches ?? [];
   const hasBranches = branches.length > 0;
+
+  // Sem isto uma condição por departamento — o jeito de montar um "switch de
+  // departamento" no editor — mostra "conversation.departmentId Igual a
+  // cmk3x…" em cada linha, e o operador não consegue ler para onde vai cada
+  // saída. Query compartilhada por todos os nós do canvas (mesma queryKey).
+  const { options: departmentOptions } = useDepartmentOptions();
+  const resolveValue = useMemo(() => {
+    const byId = new Map(departmentOptions.map((o) => [o.value, o.label]));
+    return (field: string, value: unknown) => {
+      const raw = String(value ?? "");
+      if (field === "conversation.departmentId") return byId.get(raw) ?? raw;
+      return raw;
+    };
+  }, [departmentOptions]);
 
   return (
     <div className="group/node relative">
@@ -138,7 +164,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
                 )}
                 <p className="truncate text-[11px] font-medium tracking-tight text-[var(--color-ink-soft)]">
                   <Filter className="mr-1 inline size-2.5 text-[var(--color-cyan)]" strokeWidth={2.4} />
-                  Se {ruleSummary(branch)}
+                  Se {ruleSummary(branch, resolveValue)}
                 </p>
               </div>
               <Handle

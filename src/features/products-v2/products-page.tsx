@@ -81,13 +81,30 @@ const LIST_GRID = "32px minmax(0,1fr) 130px 120px 110px 84px";
 type SortField = "name" | "price" | "kind" | "status";
 
 async function fetchProducts(search: string): Promise<ProductRow[]> {
-  const params = new URLSearchParams();
-  if (search) params.set("search", search);
-  params.set("perPage", "100");
-  const res = await fetch(apiUrl(`/api/products?${params}`));
-  if (!res.ok) throw new Error("Erro ao carregar produtos");
-  const data = await res.json();
-  return data.products as ProductRow[];
+  const perPage = 1000;
+  const all: ProductRow[] = [];
+  let page = 1;
+  let total = Infinity;
+
+  while (all.length < total) {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("perPage", String(perPage));
+    params.set("page", String(page));
+    const res = await fetch(apiUrl(`/api/products?${params}`));
+    if (!res.ok) throw new Error("Erro ao carregar produtos");
+    const data = (await res.json()) as {
+      products?: ProductRow[];
+      total?: number;
+    };
+    const batch = Array.isArray(data.products) ? data.products : [];
+    total = typeof data.total === "number" ? data.total : batch.length;
+    all.push(...batch);
+    if (batch.length === 0) break;
+    page += 1;
+  }
+
+  return all;
 }
 
 async function deleteProductRequest(id: string) {

@@ -49,8 +49,9 @@ export default function SettingsLayout({
     <div
       className={cn(
         "v2-screen grid min-w-0 grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4",
-        // Transição do grid: a coluna do meio anima entre 0 e 288px, no
-        // mesmo tempo/curva do slide da sidebar (abrir e fechar).
+        // Transição do grid: a coluna do meio anima entre 0 e 288px com
+        // os mesmos 720ms / curva do aside CRM do Flow (tokens
+        // `--drawer-*`). Sem opacity no painel — só clip + translate.
         //
         // As duas listas de tracks precisam ser ESTRUTURALMENTE iguais
         // (mesma contagem e mesma função por track) — `minmax(240px,288px)`

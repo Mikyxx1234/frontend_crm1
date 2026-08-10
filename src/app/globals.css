@@ -866,22 +866,17 @@
   from { opacity: 0; transform: translateX(-20px); }
   to { opacity: 1; transform: translateX(0); }
 }
-/* Gavetas laterais (sidebar de /settings, aside CRM do Flow) usam
-   transition — e não keyframes — para que a saída espelhe a entrada.
-   A abertura reproduz o `power3.out` do GSAP: entra rápido e desacelera
-   até parar. O grid que anima a largura da coluna precisa usar os MESMOS
-   tokens, senão a moldura descola do painel no meio do trajeto.
-
-   A saída NÃO usa `power3.in`: com 500ms a curva deixa o painel quase
-   parado na primeira metade e despeja ~90% do deslocamento nos últimos
-   ~150ms — justo onde o custo de layout é maior, o que aparece como
-   tranco. Fechar é mais curto e com curva que já sai andando. */
+/* Gaveta de Configurações — espelha o aside CRM do Flow:
+   720ms e a mesma curva nos dois sentidos. Só `transform` no painel
+   (sem opacity): fade no close esvaziava o recheio no 1º frame.
+   O grid que anima a largura da coluna usa os MESMOS tokens, senão a
+   moldura descola do painel no meio do trajeto. */
 :root {
-  --drawer-duration: 500ms;
-  --drawer-duration-close: 300ms;
-  /* power3.out */
-  --ease-drawer-open: cubic-bezier(0.165, 0.84, 0.44, 1);
-  --ease-drawer-close: cubic-bezier(0.4, 0, 0.2, 1);
+  --drawer-duration: 720ms;
+  --drawer-duration-close: 720ms;
+  /* Mesma curva do Flow CRM aside (abrir e fechar). */
+  --ease-drawer-open: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-drawer-close: cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* Transição de página (rotas abertas pela NavRail).
    A NavRail é SEMPRE o primeiro filho de `.v2-screen`; animamos apenas o

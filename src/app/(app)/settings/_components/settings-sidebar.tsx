@@ -9,9 +9,8 @@
  *
  * A sidebar é uma gaveta: abre no hover da engrenagem (NavRail) e fecha
  * ao sair, salvo se pinada. O layout anima a largura via
- * grid-template-columns; aqui só translate/opacity + o pin no header.
- * Transição (em vez de keyframes) para que fechar também anime; curvas e
- * durações ficam nos tokens `--drawer-*` em globals.css.
+ * grid-template-columns; aqui só `transform` (sem opacity) — mesmo
+ * padrão do aside CRM do Flow. Tokens `--drawer-*` em globals.css.
  */
 
 import Link from "next/link";
@@ -156,13 +155,13 @@ export function SettingsSidebar({
         // re-layoutado a cada frame do fechamento — trunca texto, refaz
         // flex e re-rasteriza o backdrop-blur. Fixa, a coluna só clipa.
         "w-full md:w-[288px] md:shrink-0",
-        // Sem `scale`: o painel tem backdrop-blur e escalar obriga o
-        // browser a re-rasterizar o desfoque a cada frame — o translate
-        // sozinho fica no compositor e é o que mantém o movimento liso.
-        "transition-[transform,opacity] motion-reduce:transition-none",
+        // Sem `scale` / sem `opacity`: o painel tem backdrop-blur e
+        // escalar re-rasteriza o desfoque; fade no close esvazia o
+        // recheio no 1º frame (mesmo ajuste do Flow CRM aside).
+        "transition-transform motion-reduce:transition-none",
         open
-          ? "translate-x-0 opacity-100 duration-[var(--drawer-duration)] ease-[var(--ease-drawer-open)]"
-          : "-translate-x-[100px] opacity-0 duration-[var(--drawer-duration-close)] ease-[var(--ease-drawer-close)]",
+          ? "translate-x-0 duration-[var(--drawer-duration)] ease-[var(--ease-drawer-open)]"
+          : "-translate-x-[100px] duration-[var(--drawer-duration-close)] ease-[var(--ease-drawer-close)]",
       )}
     >
       {/* Header do card — pin mantém a gaveta aberta sem hover. */}

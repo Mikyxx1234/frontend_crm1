@@ -701,7 +701,9 @@ function truncateFileName(name: string, max: number): string {
 }
 
 function getSessionTimer(lastInboundAt: string | null | undefined): { label: string; color: string } | null {
-  if (!lastInboundAt) return null;
+  if (!lastInboundAt) {
+    return { label: "Expirada", color: "var(--color-destructive)" };
+  }
   const minsLeft = SESSION_HOURS * 60 - differenceInMinutes(new Date(), new Date(lastInboundAt));
   if (minsLeft <= 0) return { label: "Expirada", color: "var(--color-destructive)" };
   const h = Math.floor(minsLeft / 60);

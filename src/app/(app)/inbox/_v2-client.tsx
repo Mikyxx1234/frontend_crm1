@@ -839,6 +839,33 @@ export default function InboxV2ClientPage({
 
   // ── Polling do encerramento em massa (leads-worker) ─────────────
   const qc = useQueryClient();
+
+  // Alinha o card da lista com a sessão do chat (GET messages = contact+canal).
+  // Ticket só-template / lastInbound denormalizado stale ficava sem "Expirada"
+  // no card enquanto o composer já bloqueava envio.
+  useEffect(() => {
+    if (!activeId || !sessionInfo) return;
+    const nextInbound = sessionInfo.lastInboundAt ?? null;
+    qc.setQueriesData<{
+      pages: { items: { id: string; lastInboundAt: string | null }[] }[];
+      pageParams: unknown[];
+    }>({ queryKey: ["inbox-conversations"] }, (old) => {
+      if (!old?.pages) return old;
+      let changed = false;
+      const pages = old.pages.map((page) => {
+        const items = (page.items ?? []).map((row) => {
+          if (row.id !== activeId) return row;
+          const prev = row.lastInboundAt ?? null;
+          if (prev === nextInbound) return row;
+          changed = true;
+          return { ...row, lastInboundAt: nextInbound };
+        });
+        return { ...page, items };
+      });
+      return changed ? { ...old, pages } : old;
+    });
+  }, [activeId, sessionInfo, sessionInfo?.lastInboundAt, sessionInfo?.active, qc]);
+
   const [inboxRefreshing, setInboxRefreshing] = useState(false);
   const refreshInboxQueue = async () => {
     if (inboxRefreshing) return;

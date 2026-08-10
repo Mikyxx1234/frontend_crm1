@@ -213,24 +213,6 @@ export function SalesHubView({
   );
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [asidePinned, setAsidePinned] = useState(false);
-  /**
-   * Largura da 3ª coluna do grid. Na saída, atrasamos o colapso até o
-   * fim do slide/opacity (`--drawer-duration-close`): se a track for a 0
-   * no mesmo frame em que o painel anima, o overflow clipa tudo e a
-   * saída parece instantânea (a entrada continua suave porque a track
-   * cresce revelando o slide-in).
-   */
-  const [asideColumnOpen, setAsideColumnOpen] = useState(false);
-  const DRAWER_CLOSE_MS = 300;
-
-  useEffect(() => {
-    if (detailsOpen) {
-      setAsideColumnOpen(true);
-      return;
-    }
-    const t = window.setTimeout(() => setAsideColumnOpen(false), DRAWER_CLOSE_MS);
-    return () => window.clearTimeout(t);
-  }, [detailsOpen]);
 
   const [pickedConversationId, setPickedConversationId] = useState<
     string | null
@@ -714,18 +696,17 @@ export function SalesHubView({
           // abrir/fechar chat ou aside — sem thrash nos cards da fila.
           // Sempre split no desktop (fila ~300px + chat): evita cards
           // “gigantes” na 1ª abertura / sem deal selecionado.
-          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:motion-reduce:transition-none",
+          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-[var(--drawer-duration)] md:ease-[var(--ease-drawer-open)] md:motion-reduce:transition-none",
           // 3 tracks sempre no md p/ interpolar grid-template-columns no
           // open/close do aside sem thrash. A 3ª fechada é `minmax(0px,0px)`
           // e não `0fr`: track de tipo diferente da aberta não interpola —
           // o browser anima discreto e a coluna salta na metade do tempo.
           // Aberta é 360px fixo (mesma largura fixa do aside) para que o
           // fechamento só clipe a coluna, sem re-layoutar o CRM inteiro.
+          // Entrada e saída usam a mesma duração/easing (espelho).
           detailsOpen && activeDeal
-            ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(360px,360px)] md:duration-[var(--drawer-duration)] md:ease-[var(--ease-drawer-open)]"
-            : asideColumnOpen && activeDeal
-              ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(360px,360px)] md:duration-[var(--drawer-duration-close)] md:ease-[var(--ease-drawer-close)]"
-              : "md:grid-cols-[300px_minmax(0,1fr)_minmax(0px,0px)] md:duration-[var(--drawer-duration-close)] md:ease-[var(--ease-drawer-close)]",
+            ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(360px,360px)]"
+            : "md:grid-cols-[300px_minmax(0,1fr)_minmax(0px,0px)]",
         )}
       >
         {/* Coluna 1 — Fila: superfície igual `KanbanColumn`
@@ -897,10 +878,10 @@ export function SalesHubView({
               // Largura fixa em vez de `min-width` animada: a coluna que
               // encolhe passa a só clipar o painel, sem reflow do CRM.
               "md:w-[360px] md:shrink-0",
-              "md:transition-[transform,opacity] md:motion-reduce:transition-none",
+              "md:transition-[transform,opacity] md:duration-[var(--drawer-duration)] md:ease-[var(--ease-drawer-open)] md:motion-reduce:transition-none",
               detailsOpen
-                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:translate-x-0 md:opacity-100 md:duration-[var(--drawer-duration)] md:ease-[var(--ease-drawer-open)]"
-                : "pointer-events-none hidden border-transparent shadow-none md:flex md:translate-x-[100px] md:opacity-0 md:duration-[var(--drawer-duration-close)] md:ease-[var(--ease-drawer-close)]",
+                ? "flex border-[var(--glass-border-subtle)] shadow-[var(--glass-shadow-sm)] md:translate-x-0 md:opacity-100"
+                : "pointer-events-none hidden border-transparent shadow-none md:flex md:translate-x-[100px] md:opacity-0",
             )}
             aria-label="Detalhes do negócio"
             aria-hidden={!detailsOpen}

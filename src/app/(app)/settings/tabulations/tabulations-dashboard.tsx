@@ -37,7 +37,9 @@ type AnalyticsResponse = {
     name: string;
     path: string;
     // A mesma folha existe em vários departamentos ("Sem Resposta"); sem isto
-    // o ranking mostra linhas de texto idêntico.
+    // o ranking mostra linhas de texto idêntico. O id serve ao atalho de
+    // filtro na própria linha.
+    departmentId: string | null;
     departmentName: string | null;
     count: number;
   }>;
@@ -134,6 +136,14 @@ export function TabulationsDashboard() {
     ],
     [usersQuery.data],
   );
+  // Atalho do ranking. Clicar no departamento já selecionado limpa o filtro:
+  // sem o toggle o operador entra no recorte e não acha a saída sem voltar ao
+  // dropdown do topo.
+  const toggleDepartment = (id: string) => {
+    setDepartmentId((prev) => (prev === id ? "" : id));
+    setPage(1);
+  };
+
   const departmentOptions = useMemo(
     () => [
       { value: "", label: "Todos" },
@@ -282,15 +292,44 @@ export function TabulationsDashboard() {
                       className="min-w-0 flex-1 truncate text-[var(--text-primary)]"
                       title={
                         row.departmentName
-                          ? `${row.path} · ${row.departmentName}`
+                          ? `${row.path} / ${row.departmentName}`
                           : row.path
                       }
                     >
                       {row.path}
-                      {row.departmentName && (
-                        <span className="ml-1.5 text-[11px] text-[var(--text-muted)]">
-                          {row.departmentName}
-                        </span>
+                      {row.departmentId && row.departmentName && (
+                        <>
+                          <span
+                            className="mx-1 text-[var(--text-muted)]"
+                            aria-hidden
+                          >
+                            /
+                          </span>
+                          {/* Só o nome do departamento é clicável — se a linha
+                              ganhar comportamento próprio depois, o clique
+                              daqui não escapa pra ela. */}
+                          <button
+                            type="button"
+                            aria-pressed={departmentId === row.departmentId}
+                            aria-label={
+                              departmentId === row.departmentId
+                                ? `Limpar filtro de ${row.departmentName}`
+                                : `Filtrar por ${row.departmentName}`
+                            }
+                            title={
+                              departmentId === row.departmentId
+                                ? `Limpar filtro de ${row.departmentName}`
+                                : `Filtrar por ${row.departmentName}`
+                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleDepartment(row.departmentId as string);
+                            }}
+                            className="cursor-pointer text-[11px] text-[var(--text-muted)] underline-offset-2 transition-colors hover:text-[var(--text-primary)] hover:underline focus-visible:text-[var(--text-primary)] focus-visible:underline focus-visible:outline-none"
+                          >
+                            {row.departmentName}
+                          </button>
+                        </>
                       )}
                     </span>
                     <span className="shrink-0 font-medium text-[var(--text-muted)]">

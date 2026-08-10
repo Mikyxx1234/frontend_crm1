@@ -177,23 +177,24 @@ function TeamContent() {
   const isDesktop = useIsDesktop();
   const searchParams = useSearchParams();
 
-  // Funções disponíveis (modelo híbrido): ADMIN preset + roles customizadas.
+  // Funções disponíveis: Administrador + demais papéis (Gestor/Operador +
+  // customizados). Antes filtrávamos `!isSystem`, o que escondia Gestor e
+  // Operador — só aparecia Administrador se a org ainda não tinha roles
+  // customizadas em Permissões.
   const { data: roles = [] } = useRoles();
   const adminRole = React.useMemo(
     () => roles.find((r) => r.systemPreset === "ADMIN"),
     [roles],
   );
-  const customRoles = React.useMemo(
-    () => roles.filter((r) => !r.isSystem),
-    [roles],
-  );
-  const baseRoleOptions = React.useMemo(
-    () => [
-      ...(adminRole ? [{ value: adminRole.id, label: "Administrador" }] : []),
-      ...customRoles.map((r) => ({ value: r.id, label: r.name })),
-    ],
-    [adminRole, customRoles],
-  );
+  const baseRoleOptions = React.useMemo(() => {
+    const adminOpt = adminRole
+      ? [{ value: adminRole.id, label: "Administrador" }]
+      : [];
+    const others = roles
+      .filter((r) => r.systemPreset !== "ADMIN")
+      .map((r) => ({ value: r.id, label: r.name }));
+    return [...adminOpt, ...others];
+  }, [adminRole, roles]);
 
   // 0 = Usuários, 1 = Expediente, 2 = Departamentos. Suporta deep-link
   // via ?tab= (usado pelo redirect da rota antiga /settings/departments).
@@ -398,11 +399,21 @@ function TeamContent() {
     !updatePassword.isPending;
 
   const inviteIsAdmin = inviteRoleId !== "" && inviteRoleId === adminRole?.id;
-  const inviteIsCustomRole =
-    inviteRoleId !== "" && !inviteIsAdmin && customRoles.some((r) => r.id === inviteRoleId);
+  const inviteSelectedRole = React.useMemo(
+    () => roles.find((r) => r.id === inviteRoleId),
+    [roles, inviteRoleId],
+  );
 
   const invite = useMutation({
     mutationFn: async () => {
+      const legacyRole =
+        inviteSelectedRole?.systemPreset === "ADMIN" ||
+        inviteSelectedRole?.systemPreset === "MANAGER" ||
+        inviteSelectedRole?.systemPreset === "MEMBER"
+          ? inviteSelectedRole.systemPreset
+          : inviteIsAdmin
+            ? "ADMIN"
+            : "MEMBER";
       const res = await fetch(apiUrl("/api/users"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -410,15 +421,15 @@ function TeamContent() {
           name: inviteName.trim(),
           email: inviteEmail.trim(),
           password: invitePassword,
-          // Baseline legado: ADMIN preset ou MEMBER. A role customizada,
-          // quando escolhida, é aplicada logo após via primary-role.
-          role: inviteIsAdmin ? "ADMIN" : "MEMBER",
+          // Baseline legado ADMIN/MANAGER/MEMBER. Role customizada (ou
+          // confirmação do preset) é aplicada em seguida via primary-role.
+          role: legacyRole,
         }),
       });
       if (!res.ok) await parseJsonError(res, "Erro ao convidar membro.");
       const created = (await res.json()) as { id?: string } & UserRow;
 
-      if (created?.id && inviteIsCustomRole) {
+      if (created?.id && inviteRoleId && !inviteIsAdmin) {
         try {
           await fetch(apiUrl(`/api/users/${created.id}/primary-role`), {
             method: "PUT",
@@ -981,8 +992,8 @@ function TeamContent() {
                 triggerClassName="w-full"
               />
               <p className="text-[11px] text-[var(--text-muted)]">
-                Apenas <strong>Administrador</strong> é preset. As demais funções
-                são as roles criadas em Permissões.
+                Lista os papéis de <strong>Permissões</strong> (Gestor, Operador
+                e roles personalizadas), além de Administrador.
               </p>
             </div>
             <GlassCard variant="overlay" className="grid gap-2 p-3">

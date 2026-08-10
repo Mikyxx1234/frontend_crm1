@@ -20,4 +20,5 @@ export {
   LIFECYCLE_COLORS,
   STATUS_LABEL,
   ContactInfoRows,
+  catalogProductSubtitle,
 } from "@/components/pipeline/deal-detail/shared";

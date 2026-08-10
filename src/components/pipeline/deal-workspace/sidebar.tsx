@@ -30,12 +30,13 @@ import {
   tagPillStyle,
 } from "@/lib/utils";
 
-import type {
-  CatalogProduct,
-  ContactDetail,
-  DealDetailData,
-  DealProductItem,
-  UserOption,
+import {
+  catalogProductSubtitle,
+  type CatalogProduct,
+  type ContactDetail,
+  type DealDetailData,
+  type DealProductItem,
+  type UserOption,
 } from "./shared";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1555,22 +1556,28 @@ function ProductsCard({
             {catalog.length === 0 ? (
               <p className="px-3 py-3 text-center text-xs text-[var(--color-ink-muted)]">Nenhum produto encontrado</p>
             ) : (
-              catalog.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => addMutation.mutate(p.id)}
-                  disabled={addMutation.isPending}
-                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)]"
-                >
-                  <span className="min-w-0 flex-1 truncate font-semibold tracking-tight text-foreground">
-                    {p.name}
-                  </span>
-                  <span className="shrink-0 font-bold tabular-nums text-success">
-                    {formatCurrency(Number(p.price))}
-                  </span>
-                </button>
-              ))
+              catalog.map((p) => {
+                const subtitle = catalogProductSubtitle(p);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => addMutation.mutate(p.id)}
+                    disabled={addMutation.isPending}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)]"
+                  >
+                    <span className="min-w-0 flex-1 truncate font-semibold tracking-tight text-foreground">
+                      {p.name}
+                      {subtitle ? (
+                        <span className="ml-1 font-normal text-muted-foreground">({subtitle})</span>
+                      ) : null}
+                    </span>
+                    <span className="shrink-0 font-bold tabular-nums text-success">
+                      {formatCurrency(Number(p.price))}
+                    </span>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>

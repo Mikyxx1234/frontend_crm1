@@ -29,6 +29,7 @@ import { cn, formatCurrency, getInitials, tagPillStyle } from "@/lib/utils";
 
 import {
   CatalogProduct,
+  catalogProductSubtitle,
   ContactDetail,
   ContactInfoRows,
   DealDetailData,
@@ -810,30 +811,33 @@ export function DealProductsSection({
                     Nenhum produto encontrado
                   </p>
                 ) : (
-                  catalog.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => handleCatalogProductClick(p)}
-                      disabled={addMutation.isPending || loadingCatalogId === p.id}
-                      className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)] disabled:opacity-60"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <span className="font-medium">{p.name}</span>
-                        {p.sku && (
-                          <span className="ml-1 text-muted-foreground">({p.sku})</span>
-                        )}
-                        {p.type === "SERVICE" && (
-                          <span className="ml-1.5 rounded bg-lavender-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">
-                            Serviço
-                          </span>
-                        )}
-                      </div>
-                      <span className="shrink-0 font-semibold tabular-nums text-success">
-                        {loadingCatalogId === p.id ? "…" : formatCurrency(Number(p.price))}
-                      </span>
-                    </button>
-                  ))
+                  catalog.map((p) => {
+                    const subtitle = catalogProductSubtitle(p);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleCatalogProductClick(p)}
+                        disabled={addMutation.isPending || loadingCatalogId === p.id}
+                        className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)] disabled:opacity-60"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium">{p.name}</span>
+                          {subtitle ? (
+                            <span className="ml-1 text-muted-foreground">({subtitle})</span>
+                          ) : null}
+                          {p.type === "SERVICE" && (
+                            <span className="ml-1.5 rounded bg-lavender-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">
+                              Serviço
+                            </span>
+                          )}
+                        </div>
+                        <span className="shrink-0 font-semibold tabular-nums text-success">
+                          {loadingCatalogId === p.id ? "…" : formatCurrency(Number(p.price))}
+                        </span>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </>

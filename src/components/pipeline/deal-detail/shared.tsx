@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { IconAt as AtSign, IconBuilding as Building2, IconExternalLink as ExternalLink, IconMail as Mail, IconPhone as Phone, IconUser as User } from "@tabler/icons-react";
 
+import { COURSE_MODE_LABEL, type CourseLevel, type CourseMode, type ProductKind } from "@/features/products-v2/types";
 import { cn } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/phone";
 
@@ -128,7 +129,29 @@ export type CatalogProduct = {
   price: number | string;
   unit: string;
   type?: "PRODUCT" | "SERVICE";
+  kind?: ProductKind;
+  courseConfig?: {
+    level: CourseLevel | null;
+    mode: CourseMode;
+    semester: number | null;
+  } | null;
 };
+
+/** Subtítulo cinza ao lado do nome no seletor de catálogo (pipeline/chat). */
+export function catalogProductSubtitle(p: CatalogProduct): string {
+  const cc = p.courseConfig;
+  if (p.kind === "COURSE" && cc) {
+    if (cc.level === "POSTGRADUATE" && cc.semester != null && cc.semester > 0) {
+      return `${cc.semester} meses`;
+    }
+    if (cc.level === "GRADUATION" && cc.mode) {
+      // No seletor comercial, HYBRID aparece como Semipresencial.
+      if (cc.mode === "HYBRID") return "Semipresencial";
+      return COURSE_MODE_LABEL[cc.mode] ?? cc.mode;
+    }
+  }
+  return (p.sku ?? "").trim();
+}
 
 export const ACTIVITY_TYPES = [
   { value: "CALL", label: "Ligação", icon: "📞" },

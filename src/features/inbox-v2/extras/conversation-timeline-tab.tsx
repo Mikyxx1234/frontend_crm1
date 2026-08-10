@@ -89,7 +89,7 @@ export function ConversationTimelineTab({ conversationId }: ConversationTimeline
           Sem eventos ainda
         </div>
         <p className="max-w-xs text-[12px]">
-          Mensagens, mudancas de status e atribuicoes vao aparecer aqui.
+          Criação do contato/negócio, mensagens, status e atribuições aparecem aqui.
         </p>
       </div>
     );

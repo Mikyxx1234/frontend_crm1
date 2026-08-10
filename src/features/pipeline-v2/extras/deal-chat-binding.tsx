@@ -149,7 +149,11 @@ export function useDealChatBinding(params: {
       const res = await fetch(apiUrl("/api/conversations/create"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: cid, skipSend: true }),
+        body: JSON.stringify({
+          contactId: cid,
+          skipSend: true,
+          source: "deal_chat",
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message ?? "Erro ao iniciar conversa");
@@ -158,6 +162,8 @@ export function useDealChatBinding(params: {
     onSuccess: (conv) => {
       setEnsuredId(conv.id);
       if (contactId) qc.invalidateQueries({ queryKey: ["contact", contactId] });
+      qc.invalidateQueries({ queryKey: ["conversation-timeline", conv.id] });
+      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
     },
     onError: (err: Error) => toast.error(err.message || "Falha ao iniciar conversa"),
   });

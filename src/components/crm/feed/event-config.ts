@@ -412,6 +412,18 @@ const FIELD_LABEL: Record<string, string> = {
 
 /// Descricao textual do evento (linha 2 do FeedRow), no formato
 /// "antigo → novo" / "rotulo do alvo" / "preview" conforme o tipo.
+function formatCreatedAtLabel(iso: string | null | undefined): string {
+  if (!iso) return "";
+  try {
+    const d =
+      typeof iso === "string" && iso.includes("T") ? parseISO(iso) : new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return format(d, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  } catch {
+    return "";
+  }
+}
+
 export function eventDescription(ev: FeedEvent): string {
   const m = ev.meta ?? {};
 
@@ -426,6 +438,12 @@ export function eventDescription(ev: FeedEvent): string {
   };
 
   switch (ev.type) {
+    case "CREATED": {
+      const when =
+        formatCreatedAtLabel(String(m.createdAt ?? "")) ||
+        formatCreatedAtLabel(ev.occurredAt);
+      return when ? `Criado em ${when}` : String(ev.entityLabel ?? "");
+    }
     case "STAGE_CHANGED": {
       const from = (m.from as { name?: string })?.name ?? ev.oldValue ?? "?";
       const to = (m.to as { name?: string })?.name ?? ev.newValue ?? "?";
@@ -509,8 +527,15 @@ export function eventDescription(ev: FeedEvent): string {
       const from = (m.from as { name?: string })?.name ?? "";
       return from;
     }
-    case "CONTACT_CREATED":
-      return String(m.preview ?? m.source ?? "");
+    case "CONTACT_CREATED": {
+      const when =
+        formatCreatedAtLabel(String(m.createdAt ?? "")) ||
+        formatCreatedAtLabel(ev.occurredAt);
+      const who = String(m.name ?? m.preview ?? ev.entityLabel ?? "").trim();
+      if (when && who) return `${who} · criado em ${when}`;
+      if (when) return `Criado em ${when}`;
+      return who || String(m.source ?? "");
+    }
     case "CONTACT_DELETED":
     case "DEAL_DELETED":
       return String(ev.entityLabel ?? m.name ?? m.title ?? "");
@@ -562,8 +587,21 @@ export function eventDescription(ev: FeedEvent): string {
       const to = (m.toDepartmentName as string) ?? ev.newValue ?? "Nenhum";
       return `${from} → ${to}`;
     }
-    case "CONVERSATION_CREATED":
-      return String(m.channel ?? "");
+    case "CONVERSATION_CREATED": {
+      const source = String(m.source ?? "");
+      const openedEmpty = m.openedWithoutMessage === true;
+      if (openedEmpty || source === "ui_skip_send" || source === "deal_chat" || source === "deal_workspace" || source === "deal_panel") {
+        const where =
+          source === "deal_chat" || source === "deal_workspace" || source === "deal_panel"
+            ? "pelo negócio"
+            : "pela interface";
+        return `Atendimento aberto sem mensagem (${where})`;
+      }
+      if (source === "reopen") return "Novo ticket após reabertura";
+      if (source === "outbound_reopen") return "Novo ticket ao responder conversa encerrada";
+      const channel = String(m.channel ?? "").trim();
+      return channel ? `Canal ${channel}` : "";
+    }
     case "CONVERSATION_CLOSED":
     case "CONVERSATION_REOPENED":
     case "CONVERSATION_STATUS_CHANGED": {

@@ -66,6 +66,7 @@ const TYPE_META: Record<
   TAG_REMOVED: { label: "Tag removida", icon: IconTagOff, color: "var(--color-danger)" },
   // Tags do CONTATO (logadas com contactId) — antes caíam no fallback com
   // ícone de relógio. Agora têm ícone/label/cor próprios.
+  CONTACT_CREATED: { label: "Contato criado", icon: IconUser, color: "var(--brand-primary)" },
   CONTACT_TAG_ADDED: { label: "Tag adicionada ao contato", icon: IconTag, color: "var(--color-info)" },
   CONTACT_TAG_REMOVED: { label: "Tag removida do contato", icon: IconTagOff, color: "var(--color-danger)" },
   CONTACT_FIELD_CHANGED: { label: "Campo do contato alterado", icon: IconEdit, color: "var(--text-muted)" },

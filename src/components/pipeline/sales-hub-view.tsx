@@ -213,6 +213,24 @@ export function SalesHubView({
   );
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [asidePinned, setAsidePinned] = useState(false);
+  /**
+   * Largura da 3ª coluna do grid. Na saída, atrasamos o colapso até o
+   * fim do slide/opacity (`--drawer-duration-close`): se a track for a 0
+   * no mesmo frame em que o painel anima, o overflow clipa tudo e a
+   * saída parece instantânea (a entrada continua suave porque a track
+   * cresce revelando o slide-in).
+   */
+  const [asideColumnOpen, setAsideColumnOpen] = useState(false);
+  const DRAWER_CLOSE_MS = 300;
+
+  useEffect(() => {
+    if (detailsOpen) {
+      setAsideColumnOpen(true);
+      return;
+    }
+    const t = window.setTimeout(() => setAsideColumnOpen(false), DRAWER_CLOSE_MS);
+    return () => window.clearTimeout(t);
+  }, [detailsOpen]);
 
   const [pickedConversationId, setPickedConversationId] = useState<
     string | null
@@ -705,7 +723,9 @@ export function SalesHubView({
           // fechamento só clipe a coluna, sem re-layoutar o CRM inteiro.
           detailsOpen && activeDeal
             ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(360px,360px)] md:duration-[var(--drawer-duration)] md:ease-[var(--ease-drawer-open)]"
-            : "md:grid-cols-[300px_minmax(0,1fr)_minmax(0px,0px)] md:duration-[var(--drawer-duration-close)] md:ease-[var(--ease-drawer-close)]",
+            : asideColumnOpen && activeDeal
+              ? "md:grid-cols-[300px_minmax(0,1fr)_minmax(360px,360px)] md:duration-[var(--drawer-duration-close)] md:ease-[var(--ease-drawer-close)]"
+              : "md:grid-cols-[300px_minmax(0,1fr)_minmax(0px,0px)] md:duration-[var(--drawer-duration-close)] md:ease-[var(--ease-drawer-close)]",
         )}
       >
         {/* Coluna 1 — Fila: superfície igual `KanbanColumn`

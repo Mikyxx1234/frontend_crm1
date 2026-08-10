@@ -61,6 +61,11 @@ interface ConversationActionsMenuProps {
   }) => void;
   assigneeId?: string | null;
   assigneeType?: string | null;
+  /**
+   * Quando true, esconde/bloqueia "Devolver à IA" (ex.: lead no
+   * Acolhimento — campanha com botão / fluxo humano).
+   */
+  blockReturnToAi?: boolean;
 }
 
 export function ConversationActionsMenu({
@@ -77,6 +82,7 @@ export function ConversationActionsMenu({
   onDepartmentChanged,
   assigneeId: _assigneeId,
   assigneeType,
+  blockReturnToAi = false,
 }: ConversationActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [deptMenuOpen, setDeptMenuOpen] = useState(false);
@@ -289,6 +295,12 @@ export function ConversationActionsMenu({
 
   function handleReturnToAi() {
     if (!conversationId) return;
+    if (blockReturnToAi) {
+      toast.error(
+        "IA não atende leads no Acolhimento. Use um consultor humano.",
+      );
+      return;
+    }
     const agent = aiAgentsQuery.data?.[0];
     if (!agent?.userId) {
       toast.error("Nenhum agente IA ativo encontrado.");
@@ -351,6 +363,20 @@ export function ConversationActionsMenu({
                 />
               )}
               <span>Assumir conversa</span>
+            </button>
+          ) : blockReturnToAi ? (
+            <button
+              type="button"
+              disabled
+              title="IA não atende leads no Acolhimento"
+              className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left text-[13px] font-medium text-[var(--text-muted)] opacity-60"
+            >
+              <IconRobot
+                size={16}
+                className="shrink-0 text-[var(--text-muted)]"
+                stroke={2}
+              />
+              <span>IA indisponível (Acolhimento)</span>
             </button>
           ) : (
             <button

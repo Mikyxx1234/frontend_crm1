@@ -15,11 +15,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconLock, IconSend, IconX } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconLock,
+  IconSend,
+  IconX,
+} from "@tabler/icons-react";
 
 import { sendTemplate, type WhatsappTemplate } from "@/features/inbox-v2/api";
 import { emitConversationReopened, messagesKey } from "@/features/inbox-v2/hooks";
+import type { OutboundChannelOption } from "@/features/inbox-v2/hooks/use-channels";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
+
+import { ChannelSelector } from "./channel-selector";
 
 /** Template selecionado, pronto para validação/envio. */
 export interface PendingTemplate {
@@ -80,14 +88,43 @@ export function TemplateComposePanel({
   template,
   onCancel,
   onSent,
+  availableChannels,
+  selectedChannelId,
+  conversationChannelId,
+  onSelectChannel,
 }: {
   conversationId: string;
   template: PendingTemplate;
   onCancel: () => void;
   onSent?: () => void;
+  /**
+   * Canais WhatsApp CONNECTED da org. Quando presente, o painel exibe um
+   * seletor para o operador escolher por qual número enviar — importante
+   * quando o canal original da conversa está DISCONNECTED (a Meta pode
+   * invalidar o token do lado dela).
+   */
+  availableChannels?: OutboundChannelOption[];
+  /** Canal escolhido para envio (controlado pelo pai). */
+  selectedChannelId?: string | null;
+  /** Canal "atual" da conversa (último inbound) — destacado como referência. */
+  conversationChannelId?: string | null;
+  onSelectChannel?: (channelId: string) => void;
 }) {
   const qc = useQueryClient();
   const [vars, setVars] = useState<Record<string, string>>({});
+
+  // Aviso quando o canal original da conversa NÃO aparece na lista de
+  // canais CONNECTED — significa que ele foi desconectado (a Meta
+  // invalidou o token) e o operador precisa escolher outro para não
+  // travar o envio em "Servidor temporariamente indisponível".
+  const channelDisconnected = useMemo(() => {
+    if (!conversationChannelId || !availableChannels) return false;
+    return !availableChannels.some((c) => c.id === conversationChannelId);
+  }, [conversationChannelId, availableChannels]);
+
+  const showChannelSelector = Boolean(
+    availableChannels && availableChannels.length > 0 && onSelectChannel,
+  );
 
   const placeholders = useMemo(
     () => extractPlaceholders(template.content, template.operatorVariables),
@@ -134,6 +171,10 @@ export function TemplateComposePanel({
         languageCode: template.language ?? "pt_BR",
         components,
         templateGraphId: template.metaTemplateId ?? null,
+        // Override do canal — sem isso o backend usa o `conv.channelRef`,
+        // que pode estar DISCONNECTED (motivo do erro genérico "Servidor
+        // temporariamente indisponível").
+        channelId: selectedChannelId ?? null,
       });
     },
     onSuccess: (data) => {
@@ -228,7 +269,28 @@ export function TemplateComposePanel({
         </button>
       </div>
 
-      <div className="mt-3 flex items-center justify-end gap-2">
+      {channelDisconnected && showChannelSelector ? (
+        <div className="mt-3 flex items-start gap-2 rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--text-primary)]">
+          <IconAlertTriangle size={14} className="mt-px shrink-0 text-[var(--color-warn)]" />
+          <p>
+            O canal original desta conversa está{" "}
+            <span className="font-semibold">desconectado</span>. Escolha
+            abaixo por qual WhatsApp da organização enviar o template.
+          </p>
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+        {showChannelSelector ? (
+          <ChannelSelector
+            channels={availableChannels ?? []}
+            selectedChannelId={selectedChannelId ?? null}
+            conversationChannelId={conversationChannelId ?? null}
+            onSelect={onSelectChannel!}
+            disabled={sendMutation.isPending}
+            className="mr-auto"
+          />
+        ) : null}
         <button
           type="button"
           onClick={onCancel}

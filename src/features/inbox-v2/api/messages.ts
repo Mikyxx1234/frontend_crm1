@@ -186,6 +186,11 @@ export async function sendTemplate(
     flowToken?: string | null;
     flowActionData?: Record<string, unknown> | null;
     templateGraphId?: string | null;
+    /**
+     * Override do canal de saída. Usado quando o canal original da conversa
+     * está DISCONNECTED e o operador escolhe outro WhatsApp da mesma org.
+     */
+    channelId?: string | null;
   },
 ): Promise<{ message: InboxMessageDto; reopenedConversationId?: string }> {
   const body = JSON.stringify({
@@ -200,6 +205,7 @@ export async function sendTemplate(
       ? { flowActionData: vars.flowActionData }
       : {}),
     ...(vars.templateGraphId ? { templateGraphId: vars.templateGraphId } : {}),
+    ...(vars.channelId ? { channelId: vars.channelId } : {}),
   });
 
   const postOnce = () =>

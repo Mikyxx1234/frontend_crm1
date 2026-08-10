@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { TabulationStepConfig } from "./tabulation-step-config";
 import { Textarea } from "@/components/ui/textarea";
 import type { AutomationStep } from "@/lib/automation-workflow";
 import { stepTypeLabel, summarizeStepConfig } from "@/lib/automation-workflow";
@@ -581,6 +582,19 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
     }
     if (step.type === "finish_conversation") {
       config = {};
+    }
+    if (step.type === "tabulate_conversation") {
+      const tabulationId = String(config.tabulationId ?? "").trim();
+      if (!tabulationId) {
+        toast.error("Selecione a tabulação que este passo vai gravar.");
+        return;
+      }
+      config = {
+        departmentId: String(config.departmentId ?? ""),
+        tabulationId,
+        tabulationLabel: String(config.tabulationLabel ?? ""),
+        closeConversation: config.closeConversation !== false,
+      };
     }
     if (step.type === "execute_distribution") {
       const ids = Array.isArray(config.departmentIds)
@@ -1679,6 +1693,13 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
             <p className="text-sm text-muted-foreground">
               Encerra todas as conversas abertas do contato, marcando-as como resolvidas.
             </p>
+          )}
+
+          {step.type === "tabulate_conversation" && (
+            <TabulationStepConfig
+              config={draft}
+              onChange={(next) => setDraft(() => next)}
+            />
           )}
 
           {step.type === "consume_stock" && (

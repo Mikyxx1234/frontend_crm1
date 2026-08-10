@@ -47,6 +47,7 @@ const GROUPS: { title: string; items: PaletteItem[] }[] = [
       { type: "set_variable" },
       { type: "goto" },
       { type: "transfer_automation" },
+      { type: "tabulate_conversation" },
       { type: "finish_conversation" },
       { type: "finish" },
     ],

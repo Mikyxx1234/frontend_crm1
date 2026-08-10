@@ -47,6 +47,7 @@ import {
 } from "./editor-data"
 import { WebhookStepConfig } from "./webhook-step-config"
 import { SendProductInlineConfig } from "./send-product-config"
+import { TabulationStepConfig } from "./tabulation-step-config"
 import {
   showsUpdateFieldVariableHint,
   UpdateFieldValueControl,
@@ -318,6 +319,9 @@ function Field({
 
     case "sendProductConfig":
       return <SendProductInlineConfig config={config} onChange={onChange} />
+
+    case "tabulationPicker":
+      return <TabulationStepConfig config={config} onChange={onChange} />
 
     case "channelPicker":
       return (

@@ -47,6 +47,8 @@ export type EditorField =
   | { kind: "webhookConfig" }
   /** Seletor de produto (+ preço/canal) do passo send_product. */
   | { kind: "sendProductConfig" }
+  /** Departamento + motivo (folha) do passo tabulate_conversation. */
+  | { kind: "tabulationPicker" }
   | { kind: "builder"; key: string; builder: "buttons" | "buttonsTitle" | "listRows" | "condition" | "schedule" | "headers" }
 
 const ACTIVITY_TYPES: Opt[] = [
@@ -298,6 +300,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "number", key: "value", label: "Valor", min: 0, step: 1, suffix: "R$" },
   ],
   finish_conversation: [{ kind: "info", text: "Marca as conversas abertas como resolvidas." }],
+  tabulate_conversation: [{ kind: "tabulationPicker" }],
   business_hours: [
     { kind: "builder", builder: "schedule", key: "schedule", label: "Horários de funcionamento" },
     { kind: "text", key: "timezone", label: "Fuso horário", placeholder: "America/Sao_Paulo" },

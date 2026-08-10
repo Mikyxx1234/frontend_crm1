@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconRobotFace as BotMessageSquare, IconBriefcase as Briefcase, IconCalendarPlus as CalendarPlus, IconCircleCheck as CheckCircle2, IconCircleX as CircleX, IconClock as Clock, IconCornerDownRight as CornerDownRight, IconFileText as FileText, IconGitBranch as GitBranch, IconGlobe as Globe, IconPhoto as Image, IconListDetails as ListDetails, IconMail as Mail, IconMessageQuestion as MessageCircleQuestion, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPackageOff as PackageMinus, IconPlayerPause as Pause, IconPencil as Pencil, IconPlus as Plus, IconRefresh as RefreshCw, IconRepeat as Repeat, IconRoute as Route, IconShoppingBag as ShoppingBag, IconSquare as Square, IconPlayerStop as StopCircle, IconTag as Tag, IconClock as Timer, IconTrendingUp as TrendingUp, IconTrophy as Trophy, IconUserPlus as UserPlus, IconUsersGroup as UsersGroup, IconVariable as Variable } from "@tabler/icons-react";
+import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconRobotFace as BotMessageSquare, IconBriefcase as Briefcase, IconCalendarPlus as CalendarPlus, IconCircleCheck as CheckCircle2, IconChecklist as Checklist, IconCircleX as CircleX, IconClock as Clock, IconCornerDownRight as CornerDownRight, IconFileText as FileText, IconGitBranch as GitBranch, IconGlobe as Globe, IconPhoto as Image, IconListDetails as ListDetails, IconMail as Mail, IconMessageQuestion as MessageCircleQuestion, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPackageOff as PackageMinus, IconPlayerPause as Pause, IconPencil as Pencil, IconPlus as Plus, IconRefresh as RefreshCw, IconRepeat as Repeat, IconRoute as Route, IconShoppingBag as ShoppingBag, IconSquare as Square, IconPlayerStop as StopCircle, IconTag as Tag, IconClock as Timer, IconTrendingUp as TrendingUp, IconTrophy as Trophy, IconUserPlus as UserPlus, IconUsersGroup as UsersGroup, IconVariable as Variable } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 
 import { cn } from "@/lib/utils";
@@ -41,6 +41,7 @@ export const stepIcon: Record<string, ComponentType<{ className?: string; stroke
   finish: Square,
   create_deal: Briefcase,
   finish_conversation: CheckCircle2,
+  tabulate_conversation: Checklist,
   business_hours: Timer,
   ask_ai_agent: Bot,
   transfer_to_ai_agent: BotMessageSquare,
@@ -82,6 +83,8 @@ export const stepDescription: Record<string, string> = {
   finish: "Encerra a automação neste ponto — nenhum passo posterior será executado.",
   create_deal: "Cria um novo negocio para o contato.",
   finish_conversation: "Marca a conversa como resolvida.",
+  tabulate_conversation:
+    "Grava o motivo de encerramento da conversa e, por padrao, ja encerra.",
   business_hours: "Decide com base no horario de atendimento.",
   ask_ai_agent: "Consulta um agente de IA e salva a resposta em variavel.",
   transfer_to_ai_agent:
@@ -123,6 +126,7 @@ export const stepColor: Record<string, string> = {
   finish: "text-[var(--color-danger)]",
   create_deal: "text-[var(--color-success-text)]",
   finish_conversation: "text-[var(--color-success)]",
+  tabulate_conversation: "text-[var(--color-cyan)]",
   business_hours: "text-[var(--color-warn)]",
   ask_ai_agent: "text-[var(--color-lavender)]",
   transfer_to_ai_agent: "text-[var(--color-lavender)]",
@@ -163,6 +167,7 @@ export const STEP_GROUPS: StepGroup[] = [
       "create_activity",
       "update_lead_score",
       "create_deal",
+      "tabulate_conversation",
       "finish_conversation",
       "consume_stock",
       "execute_distribution",

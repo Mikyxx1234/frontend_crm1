@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Label } from "@/components/ui/label";
+import { DeptGlyph } from "@/features/conversations-settings/department-icons";
 import { apiUrl } from "@/lib/api";
 
 type TabulationTreeNode = {
@@ -87,7 +88,8 @@ export function TabulationStepConfig({
             { value: "", label: "Selecione…" },
             ...departments.map((d) => ({
               value: d.id,
-              label: d.icon ? `${d.icon} ${d.name}` : d.name,
+              label: d.name,
+              icon: <DeptGlyph icon={d.icon} size={16} />,
             })),
           ]}
           onValueChange={(next) =>
@@ -128,6 +130,12 @@ export function TabulationStepConfig({
             });
           }}
         />
+        {departmentId && leaves.length > 0 && (
+          <p className="text-[11px] text-muted-foreground">
+            A lista traz só os motivos finais, com o caminho completo. Os
+            níveis acima servem para agrupar e não podem ser gravados.
+          </p>
+        )}
         {departmentId && !loadingTree && leaves.length === 0 && (
           <p className="text-[11px] text-[var(--color-danger)]">
             Este departamento ainda não tem árvore de tabulação em Configurações

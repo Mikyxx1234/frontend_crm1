@@ -15,6 +15,7 @@ import {
 import { useModalPortalContainer } from "@/components/ui/modal-portal-context";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DeptGlyph } from "@/features/conversations-settings/department-icons";
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { AUTOMATION_TRIGGER_TYPES, triggerTypeLabel } from "@/lib/automation-workflow";
@@ -767,7 +768,8 @@ function LeadDistributedFields({
             { value: "", label: "Qualquer departamento" },
             ...(departmentsQuery.data ?? []).map((d) => ({
               value: d.id,
-              label: d.icon ? `${d.icon} ${d.name}` : d.name,
+              label: d.name,
+              icon: <DeptGlyph icon={d.icon} size={16} />,
             })),
           ]}
           onValueChange={(v) => patch({ departmentId: v })}
@@ -859,7 +861,8 @@ function ConversationTabulatedFields({
             { value: "", label: "Qualquer departamento" },
             ...(departmentsQuery.data ?? []).map((d) => ({
               value: d.id,
-              label: d.icon ? `${d.icon} ${d.name}` : d.name,
+              label: d.name,
+              icon: <DeptGlyph icon={d.icon} size={16} />,
             })),
           ]}
           onValueChange={(v) =>

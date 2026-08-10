@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { DeptGlyph } from "@/features/conversations-settings/department-icons";
 import { TabulationStepConfig } from "./tabulation-step-config";
 import { Textarea } from "@/components/ui/textarea";
 import type { AutomationStep } from "@/lib/automation-workflow";
@@ -2715,7 +2716,8 @@ function DepartmentPickerValue({
         { value: "", label: "Selecione…" },
         ...departments.map((d) => ({
           value: d.id,
-          label: d.icon ? `${d.icon} ${d.name}` : d.name,
+          label: d.name,
+          icon: <DeptGlyph icon={d.icon} size={16} />,
         })),
       ]}
       onValueChange={onChange}
@@ -3184,7 +3186,8 @@ function TransferDepartmentStepConfig({
           { value: "", label: "Selecione…" },
           ...departments.map((d) => ({
             value: d.id,
-            label: d.icon ? `${d.icon} ${d.name}` : d.name,
+            label: d.name,
+            icon: <DeptGlyph icon={d.icon} size={16} />,
           })),
         ]}
         onValueChange={(next) => {

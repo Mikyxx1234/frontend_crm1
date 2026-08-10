@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { endOfDay, format, parseISO, startOfDay, subDays } from "date-fns";
+import { endOfDay, format, parseISO, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   IconChartBar,
@@ -49,10 +49,11 @@ type AnalyticsResponse = {
   }>;
 };
 
+// Abre sempre no dia corrente: a leitura do dia é o uso diário do painel, e
+// os presets do seletor cobrem o histórico em um clique.
 function defaultRange(): DateRange {
-  const to = new Date();
-  const from = subDays(to, 30);
-  return { from, to };
+  const today = startOfDay(new Date());
+  return { from: today, to: today };
 }
 
 export function TabulationsDashboard() {

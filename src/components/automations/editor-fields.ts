@@ -24,7 +24,7 @@ type Common = {
 }
 
 export type EditorField =
-  | (Common & { kind: "text" })
+  | (Common & { kind: "text"; variables?: boolean })
   | (Common & { kind: "media" })
   | (Common & { kind: "tag" })
   | (Common & { kind: "textarea" })
@@ -228,6 +228,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
       label: "Botão que abre a lista",
       placeholder: "Ver opções",
       hint: "Máx. 20 caracteres (limite da Meta).",
+      variables: true,
     },
     {
       kind: "text",
@@ -235,9 +236,10 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
       label: "Título da seção",
       optional: true,
       placeholder: "Opções",
+      variables: true,
     },
-    { kind: "text", key: "header", label: "Cabeçalho", optional: true },
-    { kind: "text", key: "footer", label: "Rodapé", optional: true },
+    { kind: "text", key: "header", label: "Cabeçalho", optional: true, variables: true },
+    { kind: "text", key: "footer", label: "Rodapé", optional: true, variables: true },
     {
       kind: "builder",
       builder: "listRows",

@@ -141,12 +141,20 @@ function Field({
     case "text":
       return (
         <Labeled label={field.label} optional={field.optional} hint={field.hint}>
-          <InputGlass
-            className="nodrag"
-            value={str(config[field.key])}
-            placeholder={field.placeholder}
-            onChange={(e) => set(field.key, e.target.value)}
-          />
+          {field.variables ? (
+            <VariableInput
+              value={str(config[field.key])}
+              placeholder={field.placeholder}
+              onChange={(v) => set(field.key, v)}
+            />
+          ) : (
+            <InputGlass
+              className="nodrag"
+              value={str(config[field.key])}
+              placeholder={field.placeholder}
+              onChange={(e) => set(field.key, e.target.value)}
+            />
+          )}
         </Labeled>
       )
 
@@ -418,20 +426,11 @@ function useMessageVariables(): VarOpt[] {
   }, [contact, deal])
 }
 
-function VariableTextarea({
-  value,
-  placeholder,
-  onChange,
-}: {
-  value: string
-  placeholder?: string
-  onChange: (v: string) => void
-}) {
+function useVariablePicker(value: string, onChange: (v: string) => void) {
   const options = useMessageVariables()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [startPos, setStartPos] = useState<number | null>(null)
-  const ref = useRef<HTMLTextAreaElement | null>(null)
   const closeT = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const filtered = useMemo(() => {
@@ -448,7 +447,7 @@ function VariableTextarea({
     setStartPos(null)
   }
 
-  const refresh = (el: HTMLTextAreaElement) => {
+  const refresh = (el: HTMLInputElement | HTMLTextAreaElement) => {
     const caret = el.selectionStart ?? el.value.length
     const left = el.value.slice(0, caret)
     // Gatilho: "{" (tokens são {{...}}) ou "[" — usa o mais próximo do cursor.
@@ -468,8 +467,7 @@ function VariableTextarea({
     setOpen(true)
   }
 
-  const apply = (token: string) => {
-    const el = ref.current
+  const apply = (el: HTMLInputElement | HTMLTextAreaElement | null, token: string) => {
     if (!el || startPos == null) return
     const caret = el.selectionStart ?? value.length
     const next = `${value.slice(0, startPos)}${token}${value.slice(caret)}`
@@ -481,6 +479,92 @@ function VariableTextarea({
       el.setSelectionRange(pos, pos)
     })
   }
+
+  return { open, filtered, closeT, refresh, apply, setOpen }
+}
+
+function VariablePickerPop({
+  open,
+  filtered,
+  onPick,
+}: {
+  open: boolean
+  filtered: VarOpt[]
+  onPick: (token: string) => void
+}) {
+  if (!open || filtered.length === 0) return null
+  return (
+    <div className="cfg-pop nowheel nopan">
+      {filtered.map((o) => (
+        <button
+          key={o.token}
+          type="button"
+          className="cfg-pop-item nodrag"
+          title={o.token}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            onPick(o.token)
+          }}
+        >
+          <span className="cfg-pop-dot" />
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function VariableInput({
+  value,
+  placeholder,
+  onChange,
+  className,
+}: {
+  value: string
+  placeholder?: string
+  onChange: (v: string) => void
+  className?: string
+}) {
+  const ref = useRef<HTMLInputElement | null>(null)
+  const { open, filtered, closeT, refresh, apply, setOpen } = useVariablePicker(value, onChange)
+
+  return (
+    <div className="cfg-combo">
+      <InputGlass
+        ref={ref}
+        className={cn("nodrag", className)}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => {
+          onChange(e.target.value)
+          refresh(e.target)
+        }}
+        onKeyUp={(e) => refresh(e.currentTarget)}
+        onClick={(e) => refresh(e.currentTarget)}
+        onFocus={(e) => {
+          if (closeT.current) clearTimeout(closeT.current)
+          refresh(e.currentTarget)
+        }}
+        onBlur={() => {
+          closeT.current = setTimeout(() => setOpen(false), 160)
+        }}
+      />
+      <VariablePickerPop open={open} filtered={filtered} onPick={(token) => apply(ref.current, token)} />
+    </div>
+  )
+}
+
+function VariableTextarea({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string
+  placeholder?: string
+  onChange: (v: string) => void
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null)
+  const { open, filtered, closeT, refresh, apply, setOpen } = useVariablePicker(value, onChange)
 
   return (
     <div className="cfg-combo">
@@ -504,25 +588,7 @@ function VariableTextarea({
           closeT.current = setTimeout(() => setOpen(false), 160)
         }}
       />
-      {open && filtered.length > 0 && (
-        <div className="cfg-pop nowheel nopan">
-          {filtered.map((o) => (
-            <button
-              key={o.token}
-              type="button"
-              className="cfg-pop-item nodrag"
-              title={o.token}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                apply(o.token)
-              }}
-            >
-              <span className="cfg-pop-dot" />
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <VariablePickerPop open={open} filtered={filtered} onPick={(token) => apply(ref.current, token)} />
     </div>
   )
 }
@@ -1448,23 +1514,19 @@ function ListRowsBuilder({
         {items.map((it, i) => (
           <div className="cfg-item" key={it.id ?? i}>
             <div className="cfg-item-head">
-              <InputGlass
-                className="nodrag"
+              <VariableInput
                 placeholder={`Item ${i + 1}`}
                 value={str(it.title)}
-                maxLength={24}
-                onChange={(e) => update(i, { title: e.target.value })}
+                onChange={(v) => update(i, { title: v })}
               />
               <button className="cfg-x nodrag" title="Remover" onClick={() => remove(i)}>
                 ×
               </button>
             </div>
-            <InputGlass
-              className="nodrag"
+            <VariableInput
               placeholder="Descrição (opcional)"
               value={str(it.description)}
-              maxLength={72}
-              onChange={(e) => update(i, { description: e.target.value })}
+              onChange={(v) => update(i, { description: v })}
             />
             <ConfigSelect
               value={str(it.gotoStepId)}

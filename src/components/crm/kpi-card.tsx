@@ -74,14 +74,14 @@ export function KpiCard({
         </p>
         <p
           className={cn(
-            "font-display text-[24px] font-extrabold leading-tight tracking-tight text-[var(--text-primary)]",
+            "flex min-w-0 items-baseline gap-1.5 font-display text-[24px] font-extrabold leading-tight tracking-tight text-[var(--text-primary)]",
             "max-sm:text-[20px]",
             compact && "text-[20px]",
           )}
         >
-          {value}
+          <span className="min-w-0 truncate">{value}</span>
           {hint && (
-            <small className="ml-1.5 text-[13px] font-semibold text-[var(--text-muted)]">
+            <small className="shrink-0 text-[13px] font-semibold text-[var(--text-muted)]">
               {hint}
             </small>
           )}

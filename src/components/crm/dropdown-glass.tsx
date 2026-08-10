@@ -186,7 +186,9 @@ export function DropdownGlass({
           sideOffset={sideOffset}
           className={cn(
             FILTER_FIELD_MENU_CLASS,
-            matchTriggerWidth && "min-w-[var(--radix-dropdown-menu-trigger-width)]",
+            // Largura = gatilho (min+max): evita lista "esticar" além da tela no mobile.
+            matchTriggerWidth &&
+              "w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)] max-w-[min(100vw-1.5rem,var(--radix-dropdown-menu-trigger-width))]",
             "origin-(--radix-dropdown-menu-content-transform-origin)",
             "animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
             "data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1",

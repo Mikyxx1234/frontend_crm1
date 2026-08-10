@@ -17,6 +17,7 @@ import { GlassCard } from "@/components/crm/glass-card";
 import { KpiCard } from "@/components/crm/kpi-card";
 import { KpiStrip } from "@/components/crm/kpi-strip";
 import { DateRangePicker, type DateRange } from "@/components/crm/date-range-picker";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { apiUrl } from "@/lib/api";
@@ -123,17 +124,36 @@ export function TabulationsDashboard() {
   const maxUser = data?.byUser[0]?.count ?? 1;
   const loadingValue = analyticsQuery.isLoading ? "…" : "—";
 
+  const userOptions = useMemo(
+    () => [
+      { value: "", label: "Todos" },
+      ...(usersQuery.data ?? []).map((u) => ({ value: u.id, label: u.name })),
+    ],
+    [usersQuery.data],
+  );
+  const departmentOptions = useMemo(
+    () => [
+      { value: "", label: "Todos" },
+      ...(departmentsQuery.data ?? []).map((d) => ({
+        value: d.id,
+        label: d.name,
+      })),
+    ],
+    [departmentsQuery.data],
+  );
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       {/* z-30: o calendário do período é absolute dentro deste card, e o
           backdrop-blur do card cria um contexto de empilhamento — sem isso a
           faixa de KPIs (irmã seguinte) desenha por cima do popover. */}
-      <GlassCard className="relative z-30 flex flex-wrap items-end gap-3 p-3.5">
-        <div className="flex min-w-[220px] flex-col gap-1">
+      <GlassCard className="relative z-30 flex min-w-0 flex-col gap-3 overflow-visible p-3.5 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="flex w-full min-w-0 flex-col gap-1 sm:min-w-[220px] sm:flex-1">
           <span className="text-[11px] font-medium text-[var(--text-muted)]">
             Período
           </span>
           <DateRangePicker
+            className="w-full"
             value={range}
             onChange={(next) => {
               setRange(next);
@@ -141,51 +161,49 @@ export function TabulationsDashboard() {
             }}
           />
         </div>
-        <label className="flex min-w-[180px] flex-col gap-1">
+        <div className="flex w-full min-w-0 flex-col gap-1 sm:min-w-[180px] sm:flex-1">
           <span className="text-[11px] font-medium text-[var(--text-muted)]">
             Usuário
           </span>
-          <select
+          {/* DropdownGlass (não <select> nativo): no DevTools/mobile o popup
+              nativo estoura a largura da tela; aqui a lista segue o gatilho. */}
+          <DropdownGlass
+            options={userOptions}
             value={actorUserId}
-            onChange={(e) => {
-              setActorUserId(e.target.value);
+            placeholder="Todos"
+            searchable
+            searchPlaceholder="Buscar usuário…"
+            matchTriggerWidth
+            triggerClassName="w-full min-w-0"
+            onValueChange={(next) => {
+              setActorUserId(next);
               setPage(1);
             }}
-            className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 text-[12.5px] text-[var(--text-primary)]"
-          >
-            <option value="">Todos</option>
-            {(usersQuery.data ?? []).map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex min-w-[180px] flex-col gap-1">
+          />
+        </div>
+        <div className="flex w-full min-w-0 flex-col gap-1 sm:min-w-[180px] sm:flex-1">
           <span className="text-[11px] font-medium text-[var(--text-muted)]">
             Departamento
           </span>
-          <select
+          <DropdownGlass
+            options={departmentOptions}
             value={departmentId}
-            onChange={(e) => {
-              setDepartmentId(e.target.value);
+            placeholder="Todos"
+            searchable
+            searchPlaceholder="Buscar departamento…"
+            matchTriggerWidth
+            triggerClassName="w-full min-w-0"
+            onValueChange={(next) => {
+              setDepartmentId(next);
               setPage(1);
             }}
-            className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 text-[12.5px] text-[var(--text-primary)]"
-          >
-            <option value="">Todos</option>
-            {(departmentsQuery.data ?? []).map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
+        </div>
         <ButtonGlass
           type="button"
           variant="glass"
           size="sm"
-          className="ml-auto"
+          className="w-full sm:ml-auto sm:w-auto"
           onClick={() => analyticsQuery.refetch()}
           disabled={analyticsQuery.isFetching}
         >
@@ -207,7 +225,7 @@ export function TabulationsDashboard() {
         </div>
       )}
 
-      <KpiStrip aria-label="Indicadores de tabulações">
+      <KpiStrip aria-label="Indicadores de tabulações" cardMinWidth={168}>
         <KpiCard
           label="Tabulações no período"
           value={data?.total ?? loadingValue}
@@ -233,8 +251,8 @@ export function TabulationsDashboard() {
         />
       </KpiStrip>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <GlassCard className="p-4">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+        <GlassCard className="min-w-0 overflow-hidden p-4">
           <h3 className="mb-3 text-[13px] font-semibold text-[var(--text-primary)]">
             Principais tabulações
           </h3>
@@ -248,10 +266,10 @@ export function TabulationsDashboard() {
           ) : (
             <ul className="flex flex-col gap-2">
               {data.byTabulation.map((row) => (
-                <li key={row.tabulationId} className="flex flex-col gap-1">
-                  <div className="flex items-baseline justify-between gap-2 text-[12.5px]">
+                <li key={row.tabulationId} className="flex min-w-0 flex-col gap-1">
+                  <div className="flex min-w-0 items-baseline justify-between gap-2 text-[12.5px]">
                     <span
-                      className="truncate text-[var(--text-primary)]"
+                      className="min-w-0 flex-1 truncate text-[var(--text-primary)]"
                       title={row.path}
                     >
                       {row.path}
@@ -272,7 +290,7 @@ export function TabulationsDashboard() {
           )}
         </GlassCard>
 
-        <GlassCard className="p-4">
+        <GlassCard className="min-w-0 overflow-hidden p-4">
           <h3 className="mb-3 text-[13px] font-semibold text-[var(--text-primary)]">
             Por usuário
           </h3>
@@ -286,9 +304,12 @@ export function TabulationsDashboard() {
           ) : (
             <ul className="flex flex-col gap-2">
               {data.byUser.map((row) => (
-                <li key={row.userId} className="flex flex-col gap-1">
-                  <div className="flex items-baseline justify-between gap-2 text-[12.5px]">
-                    <span className="truncate text-[var(--text-primary)]">
+                <li key={row.userId} className="flex min-w-0 flex-col gap-1">
+                  <div className="flex min-w-0 items-baseline justify-between gap-2 text-[12.5px]">
+                    <span
+                      className="min-w-0 flex-1 truncate text-[var(--text-primary)]"
+                      title={row.name}
+                    >
                       {row.name}
                     </span>
                     <span className="shrink-0 font-medium text-[var(--text-muted)]">

@@ -1034,10 +1034,11 @@ function TreeEditor(props: {
       </div>
 
       {/* Nova categoria raiz */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex min-w-0 items-center gap-2">
         <InputGlass
           placeholder="Novo nível raiz…"
           value={newRootName}
+          className="min-w-0 flex-1"
           onChange={(e) => setNewRootName(e.target.value)}
           onKeyDown={(e) => {
             if (e.nativeEvent.isComposing) return;
@@ -1052,9 +1053,10 @@ function TreeEditor(props: {
           variant="primary"
           onClick={submitRoot}
           disabled={!newRootName.trim()}
-          className="shrink-0"
+          className="shrink-0 max-sm:px-2.5"
         >
-          <IconPlus size={16} /> Adicionar
+          <IconPlus size={16} />
+          <span className="max-sm:hidden">Adicionar</span>
         </ButtonGlass>
       </div>
 
@@ -1151,12 +1153,14 @@ function TreeCard(props: {
           )}
         </button>
 
-        {/* Nome + subtítulo OU edição */}
+        {/* Nome + subtítulo OU edição — texto/input com flex-1 para usar
+            todo o espaço até o switch (antes truncava cedo com faixa vazia). */}
         {editing ? (
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
             <InputGlass
               autoFocus
               value={draft}
+              className="min-w-0 flex-1"
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.nativeEvent.isComposing) return;
@@ -1194,9 +1198,9 @@ function TreeCard(props: {
           <button
             type="button"
             onClick={() => hasChildren && setOpen((v) => !v)}
-            className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+            className="flex min-w-0 flex-1 items-center gap-2 text-left sm:gap-2.5"
           >
-            <span className="flex min-w-0 flex-col">
+            <span className="flex min-w-0 flex-1 flex-col">
               <span
                 className={cn(
                   "truncate font-display text-[13.5px] font-semibold",
@@ -1204,12 +1208,20 @@ function TreeCard(props: {
                     ? "text-[var(--text-primary)]"
                     : "text-[var(--text-muted)] line-through",
                 )}
+                title={node.name}
               >
                 {node.name}
               </span>
               <span className="truncate font-body text-[11px] text-[var(--text-muted)]">
                 {isLeaf
-                  ? "Nível final — selecionável pelo agente"
+                  ? (
+                      <>
+                        <span className="sm:hidden">Nível final</span>
+                        <span className="hidden sm:inline">
+                          Nível final — selecionável pelo agente
+                        </span>
+                      </>
+                    )
                   : `${node.children.length} ${node.children.length === 1 ? "subnível" : "subníveis"}`}
               </span>
             </span>
@@ -1235,21 +1247,22 @@ function TreeCard(props: {
           </button>
         )}
 
-        {/* Ações */}
+        {/* Ações — no mobile os ícones +/✎/🗑 ficam sempre acessíveis sem
+            reservar ~110px invisíveis (opacity-0) que engoliam o nome. */}
         {!editing && (
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
             <SwitchGlass
               checked={node.active}
               onChange={(v) => props.onToggleActive(node.id, v)}
               size="sm"
               aria-label={node.active ? "Desativar" : "Ativar"}
             />
-            <div className="flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+            <div className="flex items-center gap-0.5 sm:opacity-0 sm:transition-opacity sm:focus-within:opacity-100 sm:group-hover:opacity-100">
               <button
                 type="button"
                 onClick={() => setAdding(true)}
                 aria-label="Adicionar subnível"
-                className="flex size-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--brand-primary)]"
+                className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--brand-primary)] sm:size-9"
               >
                 <IconPlus size={16} />
               </button>
@@ -1260,7 +1273,7 @@ function TreeCard(props: {
                   setEditing(true);
                 }}
                 aria-label="Renomear"
-                className="flex size-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)]"
+                className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)] sm:size-9"
               >
                 <IconEdit size={16} />
               </button>
@@ -1272,7 +1285,7 @@ function TreeCard(props: {
                   }
                 }}
                 aria-label="Excluir"
-                className="flex size-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
+                className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] sm:size-9"
               >
                 <IconTrash size={16} />
               </button>
@@ -1283,11 +1296,12 @@ function TreeCard(props: {
 
       {/* Form de adicionar filho */}
       {adding && (
-        <div className="flex items-center gap-2 px-2.5 pb-2.5 pl-[62px]">
+        <div className="flex min-w-0 items-center gap-2 px-2.5 pb-2.5 max-sm:pl-3 sm:pl-[62px]">
           <InputGlass
             autoFocus
             value={childName}
             placeholder="Nome do subnível…"
+            className="min-w-0 flex-1"
             onChange={(e) => setChildName(e.target.value)}
             onKeyDown={(e) => {
               if (e.nativeEvent.isComposing) return;
@@ -1301,8 +1315,9 @@ function TreeCard(props: {
               }
             }}
           />
-          <ButtonGlass type="button" variant="primary" onClick={commitAdd} className="shrink-0">
-            <IconCheck size={16} /> Adicionar
+          <ButtonGlass type="button" variant="primary" onClick={commitAdd} className="shrink-0 max-sm:px-2.5">
+            <IconCheck size={16} />
+            <span className="max-sm:hidden">Adicionar</span>
           </ButtonGlass>
           <button
             type="button"

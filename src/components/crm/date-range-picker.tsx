@@ -206,19 +206,19 @@ export function DateRangePicker({
   }
 
   return (
-    <div ref={ref} className={cn("relative", className)}>
+    <div ref={ref} className={cn("relative w-full min-w-0", className)}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex h-10 items-center gap-2 rounded-[var(--radius-lg)] border px-3 font-display text-[13px] font-semibold backdrop-blur-md transition-colors",
+          "flex h-9 w-full min-w-0 items-center gap-2 rounded-lg border px-3 font-display text-[12.5px] font-semibold backdrop-blur-md transition-colors",
           hasValue
             ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
             : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
         )}
       >
         <IconCalendar size={16} className="shrink-0" />
-        <span className="truncate">{triggerLabel ?? placeholder}</span>
+        <span className="min-w-0 flex-1 truncate">{triggerLabel ?? placeholder}</span>
         {hasValue && (
           <span
             role="button"
@@ -229,7 +229,7 @@ export function DateRangePicker({
               onChange({ from: null, to: null });
               setPendingFrom(null);
             }}
-            className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/15"
+            className="ml-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/15"
           >
             <IconX size={12} />
           </span>
@@ -237,9 +237,9 @@ export function DateRangePicker({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-50 flex overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
-          {/* Presets */}
-          <div className="flex w-[150px] flex-col gap-0.5 border-r border-[var(--glass-border-subtle)] p-2">
+        <div className="absolute left-0 right-auto top-[calc(100%+8px)] z-50 flex max-w-[min(100vw-1.5rem,34rem)] flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl sm:flex-row">
+          {/* Presets — horizontal scroll on mobile; left column from sm+ */}
+          <div className="flex gap-0.5 overflow-x-auto border-b border-[var(--glass-border-subtle)] p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-[150px] sm:shrink-0 sm:flex-col sm:overflow-visible sm:border-b-0 sm:border-r">
             {PRESETS.map((preset) => (
               <button
                 key={preset.label}
@@ -251,7 +251,7 @@ export function DateRangePicker({
                   setPendingFrom(null);
                   setOpen(false);
                 }}
-                className="rounded-[var(--radius-md)] px-2.5 py-1.5 text-left font-display text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]"
+                className="shrink-0 rounded-[var(--radius-md)] px-2.5 py-1.5 text-left font-display text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]"
               >
                 {preset.label}
               </button>
@@ -259,21 +259,21 @@ export function DateRangePicker({
           </div>
 
           {/* Calendários */}
-          <div className="p-3">
+          <div className="min-w-0 p-3">
             <div className="mb-3 flex items-center justify-between">
               <button
                 type="button"
                 aria-label="Mês anterior"
                 onClick={() => setLeftMonth((m) => subMonths(m, 1))}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]"
               >
                 <IconChevronLeft size={18} />
               </button>
-              <div className="flex flex-1 items-center justify-around gap-6">
+              <div className="flex min-w-0 flex-1 items-center justify-around gap-6">
                 <span className="font-display text-[13px] font-bold capitalize text-[var(--text-primary)]">
                   {format(leftMonth, "MMMM yyyy", { locale: ptBR })}
                 </span>
-                <span className="font-display text-[13px] font-bold capitalize text-[var(--text-primary)]">
+                <span className="hidden font-display text-[13px] font-bold capitalize text-[var(--text-primary)] sm:inline">
                   {format(addMonths(leftMonth, 1), "MMMM yyyy", { locale: ptBR })}
                 </span>
               </div>
@@ -281,14 +281,16 @@ export function DateRangePicker({
                 type="button"
                 aria-label="Próximo mês"
                 onClick={() => setLeftMonth((m) => addMonths(m, 1))}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]"
               >
                 <IconChevronRight size={18} />
               </button>
             </div>
             <div className="flex gap-5">
-              <div className="w-[224px]">{renderMonth(leftMonth)}</div>
-              <div className="w-[224px]">{renderMonth(addMonths(leftMonth, 1))}</div>
+              <div className="w-full min-w-0 sm:w-[224px]">{renderMonth(leftMonth)}</div>
+              <div className="hidden w-[224px] sm:block">
+                {renderMonth(addMonths(leftMonth, 1))}
+              </div>
             </div>
           </div>
         </div>

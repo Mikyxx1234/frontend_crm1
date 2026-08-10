@@ -226,32 +226,64 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     return () => clearTimeout(t);
   }, [rawSearch]);
 
-  const mergedFilters = useMemo(() => {
-    const f: AdvancedDealFilters = { ...filters };
+  // Critérios avançados (chips/modal) entram no POST com debounce curto —
+  // evita fan-out de POSTs caros (~status=ALL) ao clicar vários chips.
+  // Busca já tem debounce próprio acima; aqui só o restante.
+  const advancedForQuery = useMemo(() => {
+    const { search: _s, ...rest } = filters;
+    return rest;
+  }, [filters]);
+  const advancedKey = JSON.stringify(advancedForQuery);
+  const [debouncedAdvanced, setDebouncedAdvanced] = useState(advancedForQuery);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        setDebouncedAdvanced(JSON.parse(advancedKey) as AdvancedDealFilters);
+      } catch {
+        setDebouncedAdvanced({});
+      }
+    }, 200);
+    return () => clearTimeout(t);
+  }, [advancedKey]);
+
+  const queryFilters = useMemo(() => {
+    const f: AdvancedDealFilters = { ...debouncedAdvanced };
     if (debouncedSearch.length >= 2) f.search = debouncedSearch;
     return f;
-  }, [filters, debouncedSearch]);
+  }, [debouncedAdvanced, debouncedSearch]);
 
-  const hasServerBoard = hasServerSideFilters(mergedFilters);
+  const hasServerBoard = hasServerSideFilters(queryFilters);
+  // Filtros já aplicados na UI mas ainda no debounce → board normal fica
+  // visível (sem flash vazio) até o POST disparar.
+  const filtersPendingDebounce =
+    advancedKey !== JSON.stringify(debouncedAdvanced);
 
   const boardNormal = useBoard({
     pipelineId,
     status,
     sort: boardSort,
+    // Desliga o GET com filtros ativos (economiza rede); o cache do
+    // query ainda alimenta o fallback visual no 1º POST.
     enabled: isAuthenticated && !hasServerBoard,
   });
   const boardFiltered = useBoardFiltered({
     pipelineId,
     status,
-    filters: mergedFilters,
+    filters: queryFilters,
     sort: boardSort,
     enabled: isAuthenticated && hasServerBoard,
   });
 
   usePipelineRealtime(isAuthenticated);
 
+  const boardRefreshing =
+    filtersPendingDebounce ||
+    (hasServerBoard && (boardFiltered.isFetching || boardFiltered.isPending));
+
+  // Enquanto o POST não resolve: NÃO zerar a fila (`?? []`). placeholderData
+  // do hook cobre filtro→filtro; normal→filtrado cai no GET em cache.
   const boardRaw = hasServerBoard
-    ? (boardFiltered.data ?? [])
+    ? (boardFiltered.data ?? boardNormal.data ?? [])
     : (boardNormal.data ?? []);
 
   // Faixa de valor é cliente-only (igual kanban).
@@ -561,7 +593,20 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
 
         {/* Sem wrapper glass opaco — board do Flow senta no mesh lavanda
             como o kanban (colunas `glass-bg` contrastam com cards). */}
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div
+          className={`relative min-h-0 flex-1 overflow-hidden transition-opacity duration-200 ${
+            boardRefreshing ? "opacity-70" : "opacity-100"
+          }`}
+          aria-busy={boardRefreshing || undefined}
+        >
+          {boardRefreshing && (
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden bg-[var(--color-primary-soft)]"
+              aria-hidden
+            >
+              <div className="h-full w-1/3 animate-pulse bg-[var(--brand-primary)]" />
+            </div>
+          )}
           <SalesHubView
             key={pipelineId}
             pipelineId={pipelineId}

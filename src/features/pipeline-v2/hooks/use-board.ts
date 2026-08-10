@@ -168,8 +168,10 @@ export function useBoardFiltered(params: {
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
+    // Troca rápida de critério cancela o POST anterior (signal no queryFn).
     // [jul/26] Mantém o quadro filtrado anterior enquanto reaplica filtros
-    // (evita flash de vazio ao mexer em tags/datas/origem).
-    placeholderData: (prev) => prev,
+    // (evita flash de vazio ao mexer em tags/datas/origem). Hosts (Flow/
+    // kanban) ainda fazem fallback pro GET em cache no 1º POST.
+    placeholderData: (previousData) => previousData,
   });
 }

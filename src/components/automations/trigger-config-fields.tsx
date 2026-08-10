@@ -749,8 +749,9 @@ function LeadDistributedFields({
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
         Disparado automaticamente quando a distribuição inteligente atribui um
-        consultor humano pela primeira vez (ainda sem resposta humana no chat).
-        Use a mensagem WhatsApp com{" "}
+        consultor humano (vindo da IA ou sem responsável) — inclusive se o
+        aluno já teve atendimento humano nesta conversa. Não re-dispara em
+        transferência entre consultores. Use a mensagem WhatsApp com{" "}
         <span className="font-medium text-foreground">Enviar como → Responsável</span>{" "}
         e tokens{" "}
         <code className="text-[11px]">{"{{contact.name}}"}</code> /{" "}

@@ -61,6 +61,7 @@ const STEP_CHIP: Record<string, Chip> = {
   update_lead_score: "green",
   create_deal: "green",
   finish_conversation: "green",
+  tabulate_conversation: "green",
   consume_stock: "amber",
   execute_distribution: "blue",
   // Lógica

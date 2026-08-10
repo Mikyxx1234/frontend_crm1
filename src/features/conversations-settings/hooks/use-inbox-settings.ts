@@ -16,6 +16,11 @@ export interface InboxSettings {
    * última mensagem é inbound. Default ligado.
    */
   showInboundSignal: boolean;
+  /**
+   * Contar outbound de agente/automação/IA como respondida nos filtros
+   * (inbox + direção no funil). Default desligado.
+   */
+  countAgentReplyAsAnswered: boolean;
 }
 
 const DEFAULTS: InboxSettings = {
@@ -27,6 +32,7 @@ const DEFAULTS: InboxSettings = {
   audioTranscription: "none",
   transcriptionLanguage: "pt-BR",
   showInboundSignal: true,
+  countAgentReplyAsAnswered: false,
 };
 
 const QUERY_KEY = ["org-settings", "inbox"];
@@ -48,6 +54,8 @@ async function fetchInboxSettings(): Promise<InboxSettings> {
     transcriptionLanguage: (data["conversation.transcriptionLanguage"] as InboxSettings["transcriptionLanguage"]) ?? "pt-BR",
     // Default ligado: ausência da chave mantém o comportamento atual.
     showInboundSignal: data["conversation.showInboundSignal"] !== "false",
+    countAgentReplyAsAnswered:
+      data["conversation.countAgentReplyAsAnswered"] === "true",
   };
 }
 

@@ -5,7 +5,10 @@ import { IconSettings } from "@tabler/icons-react";
 
 import { PageHeader, type PageHeaderBack } from "@/components/crm/page-header";
 
-/** Atalho voltar ao hub de configurações — use em sub-páginas de `/settings/*`. */
+/**
+ * Voltar ao hub `/settings`. No desktop o hub redireciona para Perfil;
+ * no mobile permanece a lista do menu.
+ */
 export const SETTINGS_HUB_BACK: PageHeaderBack = {
   href: "/settings",
   label: "Configurações",
@@ -40,8 +43,9 @@ export function useSettingsHeaderSlots(): SettingsHeaderSlotSetters | null {
  * PageHeader + a área rolável do painel direito. Preserva o Provider dos
  * slots de header para as sub-páginas continuarem injetando controles.
  *
- * Sub-páginas de `/settings/*` podem passar `back={SETTINGS_HUB_BACK}` para
- * atalho ao hub.
+ * Sub-páginas de `/settings/*` (exceto Perfil) podem passar
+ * `back={SETTINGS_HUB_BACK}` para o hub. Perfil é a página padrão e
+ * não exibe Voltar — saída pela sidebar ou NavRail.
  */
 export function SettingsV2Shell({
   title,

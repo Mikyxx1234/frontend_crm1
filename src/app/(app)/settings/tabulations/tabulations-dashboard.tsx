@@ -36,6 +36,9 @@ type AnalyticsResponse = {
     tabulationId: string;
     name: string;
     path: string;
+    // A mesma folha existe em vários departamentos ("Sem Resposta"); sem isto
+    // o ranking mostra linhas de texto idêntico.
+    departmentName: string | null;
     count: number;
   }>;
   byUser: Array<{ userId: string; name: string; count: number }>;
@@ -245,7 +248,14 @@ export function TabulationsDashboard() {
           label="Top motivo"
           value={data?.byTabulation[0]?.name ?? loadingValue}
           hint={
-            data?.byTabulation[0] ? `${data.byTabulation[0].count}×` : undefined
+            data?.byTabulation[0]
+              ? [
+                  `${data.byTabulation[0].count}×`,
+                  data.byTabulation[0].departmentName,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : undefined
           }
           icon={<IconTrophy size={20} stroke={2.2} />}
         />
@@ -270,9 +280,18 @@ export function TabulationsDashboard() {
                   <div className="flex min-w-0 items-baseline justify-between gap-2 text-[12.5px]">
                     <span
                       className="min-w-0 flex-1 truncate text-[var(--text-primary)]"
-                      title={row.path}
+                      title={
+                        row.departmentName
+                          ? `${row.path} · ${row.departmentName}`
+                          : row.path
+                      }
                     >
                       {row.path}
+                      {row.departmentName && (
+                        <span className="ml-1.5 text-[11px] text-[var(--text-muted)]">
+                          {row.departmentName}
+                        </span>
+                      )}
                     </span>
                     <span className="shrink-0 font-medium text-[var(--text-muted)]">
                       {row.count}

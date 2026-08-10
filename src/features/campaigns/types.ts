@@ -129,6 +129,12 @@ export interface SegmentRow {
   filters: Record<string, unknown>;
 }
 
+export interface AutomationRow {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
 export interface TemplateRow {
   id?: string;
   name: string;

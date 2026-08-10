@@ -27,6 +27,7 @@ import {
 } from "./mock-campaigns";
 
 import type {
+  AutomationRow,
   CampaignAction,
   CampaignDetail,
   CampaignFilters,
@@ -223,6 +224,16 @@ export function fetchSegments(): Promise<SegmentRow[]> {
     "/api/segments",
     "Erro ao carregar segmentos.",
   ).then((d) => d.segments ?? []);
+}
+
+export function fetchAutomations(): Promise<AutomationRow[]> {
+  if (isPageMockMode()) {
+    return Promise.resolve([]);
+  }
+  return getJson<{ items?: AutomationRow[]; automations?: AutomationRow[] }>(
+    "/api/automations?perPage=100",
+    "Erro ao carregar automações.",
+  ).then((d) => d.items ?? d.automations ?? []);
 }
 
 export async function fetchTemplates(channelId?: string | null): Promise<TemplateRow[]> {

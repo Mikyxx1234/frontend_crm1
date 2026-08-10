@@ -616,7 +616,9 @@ export function DealProductsSection({
       const grau = cc.grau?.trim() || "—";
       const semesterLabel =
         cc.semester != null && Number.isFinite(Number(cc.semester))
-          ? `${cc.semester}º semestre`
+          ? cc.level === "POSTGRADUATE"
+            ? `${cc.semester} meses`
+            : `${cc.semester}º semestre`
           : "—";
       const basePrice = Number(item.unitPrice) || 0;
       const promoPrice =

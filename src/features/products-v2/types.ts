@@ -34,6 +34,10 @@ export type CoursePricingOption = {
   price: number;
   channel: string | null;
   discountPercent: number | null;
+  /** Parcelas — usado principalmente em pós-graduação. */
+  installments?: number | null;
+  /** Duração em meses da cota (pós-graduação). */
+  months?: number | null;
 };
 
 export type StakeholderChannel = "WHATSAPP" | "EMAIL";

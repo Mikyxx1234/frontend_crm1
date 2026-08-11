@@ -8,6 +8,7 @@ import {
   IconPencil,
   IconToolsKitchen2,
   IconUsers,
+  IconWifi,
   IconX as X,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
@@ -32,6 +33,8 @@ import { cn } from "@/lib/utils";
 
 type DepartmentRef = { id: string; name: string; color: string };
 
+type AgentPresence = "ONLINE" | "AWAY" | "OFFLINE";
+
 type CoverageAgent = {
   id: string;
   name: string;
@@ -39,24 +42,35 @@ type CoverageAgent = {
   role: string;
   avatarUrl?: string | null;
   schedule: Schedule | null;
+  agentStatus: {
+    status: AgentPresence;
+    availableForVoiceCalls?: boolean;
+    updatedAt: string;
+  } | null;
   departments: DepartmentRef[];
 };
 
 type SlotState = "work" | "lunch" | "off";
 
+type PresenceFilter = "" | AgentPresence;
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SLOT_MINUTES = 30;
-/** Largura de cada slot de 30min na grade. */
-const SLOT_PX = 22;
 /** Coluna fixa (sticky) com seleção + identidade do agente. */
-const AGENT_COL_PX = 260;
+const AGENT_COL_PX = 280;
 
 const SLOT_STYLES: Record<SlotState, string> = {
   work: "bg-[color-mix(in_srgb,var(--color-success)_58%,transparent)]",
-  lunch: "bg-[color-mix(in_srgb,var(--color-warn)_62%,transparent)]",
-  off: "bg-[var(--glass-bg-strong)] opacity-45",
+  lunch: "bg-[color-mix(in_srgb,var(--color-warn)_80%,transparent)]",
+  off: "bg-[var(--glass-bg-strong)] opacity-40",
 };
+
+const PRESENCE_OPTIONS: { id: PresenceFilter; label: string; dot: string }[] = [
+  { id: "ONLINE", label: "Online", dot: "bg-[var(--color-success)]" },
+  { id: "AWAY", label: "Ausente", dot: "bg-[var(--color-warn)]" },
+  { id: "OFFLINE", label: "Offline", dot: "bg-[var(--text-muted)]" },
+];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -95,6 +109,18 @@ function slotState(schedule: Schedule | null, weekday: number, slotMin: number):
   return "work";
 }
 
+/** Resumo textual do dia na coluna do agente (expediente + almoço explícitos). */
+function daySummary(schedule: Schedule | null, weekday: number): string {
+  if (!schedule) return "Sempre elegível";
+  if (weekday === 6) {
+    return schedule.saturdayEnabled
+      ? `Sáb ${schedule.saturdayStart ?? "09:00"}–${schedule.saturdayEnd ?? "13:00"}`
+      : "Folga";
+  }
+  if (!schedule.weekdays.includes(weekday)) return "Folga";
+  return `${schedule.startTime}–${schedule.endTime} · almoço ${schedule.lunchStart}–${schedule.lunchEnd}`;
+}
+
 async function fetchCoverage(): Promise<CoverageAgent[]> {
   const res = await fetch(apiUrl("/api/agents/schedules"));
   if (!res.ok) throw new Error("Erro ao carregar expedientes");
@@ -108,16 +134,33 @@ export function CoverageBoard() {
   const { data: agents = [], isLoading, isError } = useQuery({
     queryKey: ["agents-coverage"],
     queryFn: fetchCoverage,
+    // Presença ao vivo (dot online/offline) acompanha sem refresh manual.
+    refetchInterval: 30_000,
   });
 
   const [weekday, setWeekday] = React.useState<number>(() => new Date().getDay());
   const [deptFilter, setDeptFilter] = React.useState<Set<string>>(new Set());
+  const [presenceFilter, setPresenceFilter] = React.useState<PresenceFilter>("");
   const [search, setSearch] = React.useState("");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [editAgent, setEditAgent] = React.useState<CoverageAgent | null>(null);
   const [editSchedule, setEditSchedule] = React.useState<Schedule>(DEFAULT_SCHEDULE);
   const [bulkOpen, setBulkOpen] = React.useState(false);
   const [bulkSchedule, setBulkSchedule] = React.useState<Schedule>(DEFAULT_SCHEDULE);
+
+  // Tick de 1min para o marcador "agora" acompanhar o relógio.
+  const [nowMinutes, setNowMinutes] = React.useState(() => {
+    const n = new Date();
+    return n.getHours() * 60 + n.getMinutes();
+  });
+  React.useEffect(() => {
+    const t = setInterval(() => {
+      const n = new Date();
+      setNowMinutes(n.getHours() * 60 + n.getMinutes());
+    }, 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const isToday = weekday === new Date().getDay();
 
   // ── Departamentos disponíveis (dedup a partir dos agentes) ────────────────
 
@@ -127,12 +170,15 @@ export function CoverageBoard() {
     return [...map.values()].sort((x, y) => x.name.localeCompare(y.name, "pt-BR"));
   }, [agents]);
 
-  // ── Filtro (área + busca) ─────────────────────────────────────────────────
+  // ── Filtro (área + presença + busca) ──────────────────────────────────────
 
   const filtered = React.useMemo(() => {
     let arr = agents;
     if (deptFilter.size > 0) {
       arr = arr.filter((a) => a.departments.some((d) => deptFilter.has(d.id)));
+    }
+    if (presenceFilter) {
+      arr = arr.filter((a) => (a.agentStatus?.status ?? "OFFLINE") === presenceFilter);
     }
     const q = search.trim().toLowerCase();
     if (q) {
@@ -141,7 +187,7 @@ export function CoverageBoard() {
       );
     }
     return arr;
-  }, [agents, deptFilter, search]);
+  }, [agents, deptFilter, presenceFilter, search]);
 
   // ── Range dinâmico da grade (hora cheia) ──────────────────────────────────
 
@@ -177,7 +223,8 @@ export function CoverageBoard() {
     const minSlot = perSlot.find((s) => s.work === minWork);
     const maxLunch = perSlot.length ? Math.max(...perSlot.map((s) => s.lunch)) : 0;
     const maxLunchSlot = perSlot.find((s) => s.lunch === maxLunch);
-    return { perSlot, gaps, minWork, minSlot, maxLunch, maxLunchSlot };
+    const onlineNow = filtered.filter((a) => a.agentStatus?.status === "ONLINE").length;
+    return { perSlot, gaps, minWork, minSlot, maxLunch, maxLunchSlot, onlineNow };
   }, [filtered, slots, weekday]);
 
   // ── Mutations ─────────────────────────────────────────────────────────────
@@ -265,7 +312,15 @@ export function CoverageBoard() {
     setEditSchedule(agent.schedule ?? DEFAULT_SCHEDULE);
   };
 
-  const gridTemplate = `${AGENT_COL_PX}px repeat(${slots.length}, ${SLOT_PX}px)`;
+  // Slots fluidos (1fr) — a grade estica para preencher a largura disponível
+  // e só rola horizontalmente quando a tela é estreita demais.
+  const gridTemplate = `${AGENT_COL_PX}px repeat(${slots.length}, minmax(16px, 1fr))`;
+
+  // Posição (%) do marcador "agora" dentro da área de slots.
+  const nowPct =
+    isToday && nowMinutes >= rangeStart && nowMinutes <= rangeEnd
+      ? ((nowMinutes - rangeStart) / (rangeEnd - rangeStart)) * 100
+      : null;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -277,7 +332,7 @@ export function CoverageBoard() {
         </p>
       )}
 
-      {/* Controles: dia da semana + áreas + busca */}
+      {/* Controles: dia da semana + áreas + presença + busca */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1">
           {WEEKDAYS.map((wd) => (
@@ -336,6 +391,29 @@ export function CoverageBoard() {
 
         <div className="h-6 w-px bg-[var(--glass-border)]" />
 
+        {/* Presença ao vivo */}
+        {PRESENCE_OPTIONS.map((p) => {
+          const active = presenceFilter === p.id;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setPresenceFilter((prev) => (prev === p.id ? "" : p.id))}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-colors",
+                active
+                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+              )}
+            >
+              <span className={cn("size-2 rounded-full", active ? "bg-white" : p.dot)} />
+              {p.label}
+            </button>
+          );
+        })}
+
+        <div className="h-6 w-px bg-[var(--glass-border)]" />
+
         <input
           type="search"
           value={search}
@@ -353,6 +431,12 @@ export function CoverageBoard() {
           value={filtered.length.toLocaleString("pt-BR")}
           icon={<IconUsers size={20} stroke={2.2} />}
           tone="brand"
+        />
+        <KpiCard
+          label="Online agora"
+          value={coverage.onlineNow.toLocaleString("pt-BR")}
+          icon={<IconWifi size={20} stroke={2.2} />}
+          tone={coverage.onlineNow > 0 ? "success" : "warning"}
         />
         <KpiCard
           label="Gaps no dia"
@@ -388,7 +472,7 @@ export function CoverageBoard() {
           {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className="h-[52px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
+              className="h-[56px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
             />
           ))}
         </div>
@@ -401,10 +485,25 @@ export function CoverageBoard() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]">
-          <div className="min-w-max">
+          <div className="relative min-w-full">
+            {/* Marcador "agora" — linha vertical sobre toda a grade */}
+            {nowPct !== null && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 z-20 w-0.5 bg-[var(--color-danger)]"
+                style={{
+                  left: `calc(${AGENT_COL_PX}px + (100% - ${AGENT_COL_PX}px) * ${nowPct / 100})`,
+                }}
+              >
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-[var(--radius-sm)] bg-[var(--color-danger)] px-1.5 py-0.5 font-display text-[9px] font-bold text-white tabular-nums">
+                  {formatSlot(nowMinutes)}
+                </span>
+              </div>
+            )}
+
             {/* Header de horas */}
             <div className="grid border-b border-[var(--glass-border)]" style={{ gridTemplateColumns: gridTemplate }}>
-              <div className="sticky left-0 z-10 flex items-center gap-2 border-r border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2">
+              <div className="sticky left-0 z-10 flex items-center gap-2 border-r border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2.5">
                 <CheckboxGlass
                   checked={allFilteredSelected}
                   onChange={toggleSelectAll}
@@ -417,7 +516,7 @@ export function CoverageBoard() {
               {Array.from({ length: (rangeEnd - rangeStart) / 60 }).map((_, i) => (
                 <div
                   key={i}
-                  className="col-span-2 border-l border-[var(--glass-border)] px-1 py-2 font-display text-[10px] font-bold text-[var(--text-muted)] tabular-nums"
+                  className="border-l border-[var(--glass-border)] px-1 py-2.5 font-display text-[10px] font-bold text-[var(--text-muted)] tabular-nums"
                   style={{ gridColumn: `span 2` }}
                 >
                   {String(rangeStart / 60 + i).padStart(2, "0")}h
@@ -427,7 +526,7 @@ export function CoverageBoard() {
 
             {/* Linha de cobertura */}
             <div className="grid border-b border-[var(--glass-border)] bg-[var(--glass-bg-panel)]" style={{ gridTemplateColumns: gridTemplate }}>
-              <div className="sticky left-0 z-10 flex items-center border-r border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-1.5">
+              <div className="sticky left-0 z-10 flex items-center border-r border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-2">
                 <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
                   Cobertura
                 </span>
@@ -440,7 +539,7 @@ export function CoverageBoard() {
                 >
                   <div
                     className={cn(
-                      "flex items-center justify-center py-1.5 font-display text-[10px] font-bold tabular-nums",
+                      "flex items-center justify-center py-2 font-display text-[11px] font-bold tabular-nums",
                       s.work === 0
                         ? "bg-[color-mix(in_srgb,var(--color-danger)_72%,transparent)] text-white"
                         : s.work === 1
@@ -455,68 +554,85 @@ export function CoverageBoard() {
             </div>
 
             {/* Linhas dos agentes */}
-            {filtered.map((agent) => (
-              <div
-                key={agent.id}
-                className="group grid border-b border-[var(--glass-border)] last:border-b-0 hover:bg-[var(--glass-bg-panel)]"
-                style={{ gridTemplateColumns: gridTemplate }}
-              >
-                <div className="sticky left-0 z-10 flex items-center gap-2 border-r border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2 group-hover:bg-[var(--glass-bg-panel)]">
-                  <CheckboxGlass
-                    checked={selected.has(agent.id)}
-                    onChange={() => toggleSelected(agent.id)}
-                    aria-label={`Selecionar ${agent.name}`}
-                  />
-                  <UserAvatar size={28} name={agent.name} imageUrl={agent.avatarUrl} />
-                  <div className="min-w-0 flex-1 leading-tight">
-                    <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
-                      {agent.name}
-                    </p>
-                    <p className="flex items-center gap-1 truncate font-body text-[11px] text-[var(--text-muted)]">
-                      {agent.departments.length > 0 ? (
-                        agent.departments.map((d) => (
-                          <span key={d.id} className="inline-flex items-center gap-1">
-                            <span className="size-1.5 rounded-full" style={{ backgroundColor: d.color }} />
-                            {d.name}
-                          </span>
-                        ))
-                      ) : (
-                        <span>Sem área</span>
-                      )}
-                    </p>
-                  </div>
-                  {!agent.schedule && (
-                    <TooltipGlass label="Sem expediente definido — sempre elegível na distribuição" side="left">
-                      <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
-                        Livre
-                      </span>
-                    </TooltipGlass>
-                  )}
-                  <TooltipGlass label="Editar horário" side="left">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(agent)}
-                      aria-label={`Editar horário de ${agent.name}`}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--color-primary-soft)]"
-                    >
-                      <IconPencil size={13} />
-                    </button>
-                  </TooltipGlass>
-                </div>
-                {slots.map((slotMin) => {
-                  const st = slotState(agent.schedule, weekday, slotMin);
-                  return (
-                    <div
-                      key={slotMin}
-                      className={cn("border-l border-[var(--glass-border)]/40", SLOT_STYLES[st])}
-                      title={`${agent.name} — ${formatSlot(slotMin)}: ${
-                        st === "work" ? "em expediente" : st === "lunch" ? "almoço" : "fora"
-                      }`}
+            {filtered.map((agent) => {
+              const presence = agent.agentStatus?.status ?? "OFFLINE";
+              return (
+                <div
+                  key={agent.id}
+                  className="group grid border-b border-[var(--glass-border)] last:border-b-0 hover:bg-[var(--glass-bg-panel)]"
+                  style={{ gridTemplateColumns: gridTemplate }}
+                >
+                  <div className="sticky left-0 z-10 flex items-center gap-2.5 border-r border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2 group-hover:bg-[var(--glass-bg-panel)]">
+                    <CheckboxGlass
+                      checked={selected.has(agent.id)}
+                      onChange={() => toggleSelected(agent.id)}
+                      aria-label={`Selecionar ${agent.name}`}
                     />
-                  );
-                })}
-              </div>
-            ))}
+                    <UserAvatar
+                      size={32}
+                      name={agent.name}
+                      imageUrl={agent.avatarUrl}
+                      status={
+                        presence === "ONLINE"
+                          ? "online"
+                          : presence === "AWAY"
+                            ? "away"
+                            : "offline"
+                      }
+                    />
+                    <div className="min-w-0 flex-1 leading-tight">
+                      <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+                        {agent.name}
+                      </p>
+                      <p className="truncate font-body text-[11px] font-semibold text-[var(--text-secondary)] tabular-nums">
+                        {daySummary(agent.schedule, weekday)}
+                      </p>
+                      <p className="flex items-center gap-1.5 truncate font-body text-[10px] text-[var(--text-muted)]">
+                        {agent.departments.length > 0 ? (
+                          agent.departments.map((d) => (
+                            <span key={d.id} className="inline-flex items-center gap-1">
+                              <span className="size-1.5 rounded-full" style={{ backgroundColor: d.color }} />
+                              {d.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span>Sem área</span>
+                        )}
+                      </p>
+                    </div>
+                    {!agent.schedule && (
+                      <TooltipGlass label="Sem expediente definido — sempre elegível na distribuição" side="left">
+                        <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
+                          Livre
+                        </span>
+                      </TooltipGlass>
+                    )}
+                    <TooltipGlass label="Editar horário" side="left">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(agent)}
+                        aria-label={`Editar horário de ${agent.name}`}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--color-primary-soft)]"
+                      >
+                        <IconPencil size={13} />
+                      </button>
+                    </TooltipGlass>
+                  </div>
+                  {slots.map((slotMin) => {
+                    const st = slotState(agent.schedule, weekday, slotMin);
+                    return (
+                      <div
+                        key={slotMin}
+                        className={cn("border-l border-[var(--glass-border)]/40", SLOT_STYLES[st])}
+                        title={`${agent.name} — ${formatSlot(slotMin)}: ${
+                          st === "work" ? "em expediente" : st === "lunch" ? "almoço" : "fora"
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -534,6 +650,9 @@ export function CoverageBoard() {
         </span>
         <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
           <span className="size-3 rounded-sm bg-[color-mix(in_srgb,var(--color-danger)_72%,transparent)]" /> Gap (0 agentes)
+        </span>
+        <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
+          <span className="h-3 w-0.5 bg-[var(--color-danger)]" /> Agora
         </span>
       </div>
 

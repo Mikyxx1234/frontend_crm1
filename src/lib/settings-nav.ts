@@ -1,4 +1,4 @@
-import { IconBroadcast as Broadcast, IconDatabase as Database, IconForms as Forms, IconHeadphones as Headphones, IconLifebuoy as LifeBuoy, IconListTree as ListTree, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconAdjustments as Settings2, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconTemplate as Template, IconUsers as Users } from "@tabler/icons-react";
+import { IconBroadcast as Broadcast, IconCalendarTime as CalendarTime, IconDatabase as Database, IconForms as Forms, IconHeadphones as Headphones, IconLifebuoy as LifeBuoy, IconListTree as ListTree, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconAdjustments as Settings2, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconTemplate as Template, IconUsers as Users } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { UserRole } from "@/lib/prisma-enum-types";
 
@@ -168,6 +168,15 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         description: "Membros, funções e convites",
         icon: Users,
         href: "/settings/team",
+        allowedRoles: GESTAO,
+        requiredPermission: "settings:team",
+      },
+      {
+        id: "coverage",
+        label: "Cobertura",
+        description: "Grade de horários e gaps por área",
+        icon: CalendarTime,
+        href: "/settings/coverage",
         allowedRoles: GESTAO,
         requiredPermission: "settings:team",
       },

@@ -33,6 +33,10 @@ import {
   pathForPipelineView,
   writePipelineViewPreference,
 } from "@/lib/pipeline-view-preference";
+import {
+  SEARCH_DEBOUNCE_MS,
+  normalizeSearchQuery,
+} from "@/lib/search-query";
 import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import type { PipelineSortKey } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
@@ -222,7 +226,7 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const rawSearch = (filters.search ?? search).trim();
   const [debouncedSearch, setDebouncedSearch] = useState(rawSearch);
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(rawSearch), 300);
+    const t = setTimeout(() => setDebouncedSearch(rawSearch), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [rawSearch]);
 
@@ -248,7 +252,8 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
 
   const queryFilters = useMemo(() => {
     const f: AdvancedDealFilters = { ...debouncedAdvanced };
-    if (debouncedSearch.length >= 2) f.search = debouncedSearch;
+    const q = normalizeSearchQuery(debouncedSearch);
+    if (q) f.search = q;
     return f;
   }, [debouncedAdvanced, debouncedSearch]);
 

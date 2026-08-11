@@ -16,6 +16,7 @@ import type { AdvancedDealFilters } from "@/components/pipeline/kanban-filters/t
 import { hasServerSideFilters } from "@/components/pipeline/kanban-filters/types";
 
 import { isPreviewMode } from "@/lib/preview-mode";
+import { normalizeSearchQuery } from "@/lib/search-query";
 
 /** Lista de pipelines (dropdown do header). */
 export function usePipelines(enabled = true) {
@@ -74,7 +75,7 @@ export function useBoard(params: {
  * Board com busca server-side via POST /api/pipelines/:id/board.
  *
  * Roda em paralelo com `useBoard` — ativado SOMENTE quando há termo de
- * busca (≥2 chars, já debounced pelo caller). Tem queryKey própria pra
+ * busca (≥3 chars, já debounced pelo caller). Tem queryKey própria pra
  * NÃO invalidar o cache do board normal: ao limpar a busca, o paginado
  * volta sem flicker.
  *
@@ -90,7 +91,7 @@ export function useBoardSearch(params: {
   enabled?: boolean;
   perStage?: number;
 }) {
-  const term = params.search.trim();
+  const term = normalizeSearchQuery(params.search);
   const sortKey = params.sort
     ? `${params.sort.field}:${params.sort.direction}`
     : "default";
@@ -113,8 +114,8 @@ export function useBoardSearch(params: {
         signal,
       }),
     enabled:
-      (params.enabled ?? true) && !!params.pipelineId && term.length >= 2,
-    staleTime: 10_000,
+      (params.enabled ?? true) && !!params.pipelineId && term.length > 0,
+    staleTime: 30_000,
     // Evita fan-out: troca rápida de termo cancela o POST anterior.
     refetchOnWindowFocus: false,
     retry: 1,

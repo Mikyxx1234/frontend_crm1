@@ -219,7 +219,8 @@ function writeStoredInboxFilters(filters: InboxFilters) {
 
 // Ordem das tabs alinhada ao legado (`conversation-list.tsx`
 // TAB_ORDER). "Automação" lista conversas cujo contato tem automação
-// RUNNING (fila de automação). "Erro" = hasError=true (webhook/send).
+// RUNNING (fila de automação). "Erro" = OPEN + hasError (falha de envio);
+// encerradas não entram — hasError sticky em RESOLVED poluía a aba.
 const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "todos", label: "Todas" },
   { id: "entrada", label: "Entrada" },

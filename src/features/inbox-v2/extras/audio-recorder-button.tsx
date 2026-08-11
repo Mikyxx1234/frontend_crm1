@@ -66,11 +66,19 @@ export function AudioRecorderButton({
   conversationId,
   className,
   onStateChange,
+  disabled,
+  beforeSend,
+  onBlocked,
 }: {
   conversationId: string | null;
   className?: string;
   /** Notifica o Composer quando o estado de gravação muda */
   onStateChange?: (s: AudioRecordState) => void;
+  disabled?: boolean;
+  /** Se retornar false, o envio do áudio é abortado (ex.: confirmação de canal). */
+  beforeSend?: () => boolean | Promise<boolean>;
+  /** Chamado quando a gravação é bloqueada (sessão encerrada, etc.). */
+  onBlocked?: () => void;
 }) {
   const sendAttachment = useSendAttachment(conversationId);
 
@@ -144,6 +152,10 @@ export function AudioRecorderButton({
 
   // ── Start recording ───────────────────────────────────────────────
   async function start() {
+    if (disabled) {
+      onBlocked?.();
+      return;
+    }
     if (!conversationId) { toast.error("Selecione uma conversa antes de gravar"); return; }
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       toast.error("Gravação não suportada neste navegador"); return;
@@ -226,9 +238,17 @@ export function AudioRecorderButton({
   }
 
   // ── Send ──────────────────────────────────────────────────────────
-  function sendAudio() {
+  async function sendAudio() {
     const blob = audioBlobRef.current;
     if (!blob || blob.size === 0) { toast.error("Nenhum áudio para enviar"); return; }
+    if (disabled) {
+      onBlocked?.();
+      return;
+    }
+    if (beforeSend) {
+      const ok = await beforeSend();
+      if (!ok) return;
+    }
     sendAttachment.mutate(
       { file: blob, fileName: `audio-${Date.now()}.webm` },
       {
@@ -373,8 +393,8 @@ export function AudioRecorderButton({
       size="icon"
       className={className}
       onClick={start}
-      disabled={sendAttachment.isPending || !conversationId}
-      title="Gravar áudio"
+      disabled={sendAttachment.isPending || !conversationId || !!disabled}
+      title={disabled ? "Sessão encerrada — use um template" : "Gravar áudio"}
     >
       <IconMicrophone size={20} />
     </ButtonGlass>

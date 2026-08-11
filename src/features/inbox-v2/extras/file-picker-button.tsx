@@ -21,6 +21,9 @@ export function FilePickerButton({
   accept,
   capture,
   onOpen,
+  disabled,
+  beforeSend,
+  onBlocked,
 }: {
   conversationId: string | null;
   children: React.ReactNode;
@@ -30,6 +33,11 @@ export function FilePickerButton({
   capture?: "user" | "environment";
   /** Chamado antes de abrir o picker (ex.: fechar o menu que contém o botão). */
   onOpen?: () => void;
+  disabled?: boolean;
+  /** Se retornar false, o upload é abortado (ex.: confirmação de canal). */
+  beforeSend?: () => boolean | Promise<boolean>;
+  /** Chamado quando o picker é bloqueado (sessão encerrada, etc.). */
+  onBlocked?: () => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const sendAttachment = useSendAttachment(conversationId);
@@ -39,16 +47,28 @@ export function FilePickerButton({
       toast.error("Selecione uma conversa antes de anexar");
       return;
     }
+    if (disabled) {
+      onBlocked?.();
+      return;
+    }
     // Abre o picker antes de onOpen — se onOpen fechar o menu pai,
     // o <input> seria desmontado e o click não dispararia.
     ref.current?.click();
     queueMicrotask(() => onOpen?.());
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = ""; // permite reanexar o mesmo arquivo depois
+    if (disabled) {
+      onBlocked?.();
+      return;
+    }
+    if (beforeSend) {
+      const ok = await beforeSend();
+      if (!ok) return;
+    }
     sendAttachment.mutate(
       { file, fileName: file.name },
       {
@@ -75,7 +95,7 @@ export function FilePickerButton({
         size="icon"
         className={className}
         onClick={openPicker}
-        disabled={sendAttachment.isPending || !conversationId}
+        disabled={sendAttachment.isPending || !conversationId || !!disabled}
       >
         {children}
       </ButtonGlass>

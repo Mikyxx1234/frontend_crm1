@@ -52,6 +52,9 @@ export function ComposerMenu({
   onResolved,
   departmentId,
   requireTabulationOnClose,
+  outboundDisabled,
+  beforeOutboundSend,
+  onOutboundBlocked,
 }: {
   conversationId: string | null;
   /** Canal de envio atual — filtra templates WhatsApp da WABA correta. */
@@ -78,6 +81,10 @@ export function ComposerMenu({
   /** Departamento vinculado — abre modal de tabulacao quando encerrar. */
   departmentId?: string | null;
   requireTabulationOnClose?: boolean;
+  /** Bloqueia anexos/foto/agenda de texto livre (sessão 24h encerrada). Templates seguem ok. */
+  outboundDisabled?: boolean;
+  beforeOutboundSend?: () => boolean | Promise<boolean>;
+  onOutboundBlocked?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"root" | "template" | "internal">("root");
@@ -184,6 +191,9 @@ export function ComposerMenu({
             >
               <FilePickerButton
                 conversationId={conversationId}
+                disabled={outboundDisabled}
+                beforeSend={beforeOutboundSend}
+                onBlocked={onOutboundBlocked}
                 className="w-full justify-start rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] transition-colors hover:bg-primary/8 hover:text-primary [&>svg]:transition-colors hover:[&>svg]:text-primary"
               >
                 <span className="inline-flex items-center gap-2.5">
@@ -196,6 +206,9 @@ export function ComposerMenu({
                 accept="image/*"
                 capture="environment"
                 onOpen={closeMenu}
+                disabled={outboundDisabled}
+                beforeSend={beforeOutboundSend}
+                onBlocked={onOutboundBlocked}
                 className="w-full justify-start rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] transition-colors hover:bg-primary/8 hover:text-primary [&>svg]:transition-colors hover:[&>svg]:text-primary"
               >
                 <span className="inline-flex items-center gap-2.5">
@@ -235,6 +248,10 @@ export function ComposerMenu({
               <button
                 type="button"
                 onClick={() => {
+                  if (outboundDisabled) {
+                    onOutboundBlocked?.();
+                    return;
+                  }
                   setScheduleOpen(true);
                   closeMenu();
                 }}

@@ -8,6 +8,10 @@ import { useBulkOperation, isBulkOperationFinished } from "@/hooks/use-bulk-oper
 import { RequirePermission } from "@/components/auth/require-permission";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { listAllowedInboxTabsForUser } from "@/lib/authz/scope-grants-shared";
+import {
+  SEARCH_DEBOUNCE_MS,
+  normalizeSearchQuery,
+} from "@/lib/search-query";
 import { toast } from "sonner";
 import {
   IconArrowLeft,
@@ -446,11 +450,17 @@ export default function InboxV2ClientPage({
     };
   }, []);
 
-  // Debounce do search (300ms). Evita refetch a cada tecla.
+  // Debounce do search (~350ms) + min 3 chars no query (ver searchForQuery).
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
+    const t = setTimeout(
+      () => setDebouncedSearch(searchInput.trim()),
+      SEARCH_DEBOUNCE_MS,
+    );
     return () => clearTimeout(t);
   }, [searchInput]);
+
+  // Só dispara list/counts com ≥3 chars — ILIKE curto é caro e pouco útil.
+  const searchForQuery = normalizeSearchQuery(debouncedSearch);
 
   // ── Deep-link por URL (?c=<conversationId>) ─────────────────────
   // Permite compartilhar o link de uma conversa específica (ex.: enviar a
@@ -499,7 +509,7 @@ export default function InboxV2ClientPage({
   } = useConversations({
     tab,
     filters: serverFilters,
-    search: debouncedSearch,
+    search: searchForQuery,
     // Só busca depois da sessão + prefs (tab/filtros do localStorage).
     // Sem isso: (1) query disabled → isLoading=false → empty flash;
     // (2) fetch com tab default "esperando" antes de hidratar a aba salva.
@@ -561,7 +571,7 @@ export default function InboxV2ClientPage({
   const { data: tabCounts } = useTabCounts(
     isAuthenticated && filtersHydrated,
     filters,
-    debouncedSearch,
+    searchForQuery,
   );
 
   // ── Sticky activeRow ────────────────────────────────────────────
@@ -803,7 +813,7 @@ export default function InboxV2ClientPage({
             action,
             allInFilter: true,
             tab,
-            search: debouncedSearch,
+            search: searchForQuery,
             filters: serverFilters as Record<string, unknown>,
           }
         : { ids, action },
@@ -1024,7 +1034,7 @@ export default function InboxV2ClientPage({
 
   // Com busca ativa: só exibe badge nos status que têm match (esconde 0).
   // Sem busca: badges globais/filtrados por funil como antes.
-  const searchActive = debouncedSearch.trim().length > 0;
+  const searchActive = searchForQuery.length > 0;
 
   const inboxSearchFilterNode = (
     <InboxSearchFilterBar

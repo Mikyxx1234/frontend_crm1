@@ -107,7 +107,7 @@ export async function getBoard(
  * achados que o filtro client-side jamais conseguiria.
  *
  * Modo de uso (de `useBoardSearch`): ativar SÓ quando há termo de busca
- * digitado (≥2 chars + debounce). Sem busca, continuar usando `getBoard`.
+ * digitado (≥3 chars + debounce). Sem busca, continuar usando `getBoard`.
  */
 export async function getBoardFiltered(
   pipelineId: string,

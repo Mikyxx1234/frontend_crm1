@@ -69,8 +69,11 @@ export function useConversations(params: {
       return loaded < total ? page + 1 : undefined;
     },
     enabled: isPreviewMode() ? true : (params.enabled ?? true),
-    refetchInterval: 20_000,
-    staleTime: 5_000,
+    // SSE (`useInboxRealtime`) já invalida esta query em new_message /
+    // conversation_updated. Polling fica só como safety-net.
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 
   // Agrega todas as páginas carregadas em um único `items[]` pra
@@ -237,7 +240,10 @@ export function useTabCounts(
   return useQuery<TabCounts>({
     queryKey: ["conversations", "tab-counts", filterKey, searchKey],
     queryFn: () => fetchTabCounts(filters, searchKey),
-    refetchInterval: 15_000,
+    // Contadores das abas: SSE invalida em tempo real; 60s cobre gaps.
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
     enabled: isPreviewMode() ? true : enabled,
   });
 }

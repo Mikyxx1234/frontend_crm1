@@ -31,10 +31,11 @@ export function useMessages(conversationId: string | null) {
     queryKey: messagesKey(conversationId),
     queryFn: () => getMessages(conversationId as string),
     enabled: !!conversationId,
-    staleTime: 5_000,
+    staleTime: 15_000,
     // Fallback p/ ticks de leitura quando o SSE atrasa/bufferiza (rewrite,
-    // multi-réplica). 5s é aceitável na conversa aberta.
-    refetchInterval: 5_000,
+    // multi-réplica). SSE cobre o caminho quente; 30s reduz fan-out.
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: false,
   });
 }
 

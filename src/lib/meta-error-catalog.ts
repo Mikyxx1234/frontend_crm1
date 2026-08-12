@@ -13,6 +13,8 @@
 const CATALOG: Record<number, string> = {
   // ── Genéricos / infra ───────────────────────────────────────
   1: "Erro desconhecido ao enviar pela Meta. Tente reenviar. Se persistir, verifique a saúde da conta WhatsApp e o status da Cloud API.",
+  // Oficial Meta: downtime/overload (HTTP 503). O texto Graph "Something went
+  // wrong" é genérico — NÃO é janela 24h (131047) nem token inválido (190).
   2: "Serviço da Meta temporariamente indisponível. Tente novamente em alguns minutos.",
   // ── Autenticação / autorização ──────────────────────────────
   0: "Falha de autenticação com a Meta. Verifique o token de acesso do canal nas configurações.",

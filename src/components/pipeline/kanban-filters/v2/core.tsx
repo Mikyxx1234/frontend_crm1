@@ -102,6 +102,8 @@ export const QUICK_FILTERS: { label: string; dot?: string; filters: AdvancedDeal
   { label: "Leads ganhos", dot: "var(--color-success)", filters: { statuses: ["WON"] } },
   { label: "Leads perdidos", dot: "var(--color-danger)", filters: { statuses: ["LOST"] } },
   { label: "Sem responsável", dot: "var(--color-warning)", filters: { withoutOwner: true } },
+  { label: "Mensagem recebida", dot: "#0ea5e9", filters: { lastMessageDirection: "in" } },
+  { label: "Mensagem enviada", dot: "#8b5cf6", filters: { lastMessageDirection: "out" } },
 ];
 
 // ─── Hook de estado (apply imediato, estilo Kommo) ──────────────────────────────

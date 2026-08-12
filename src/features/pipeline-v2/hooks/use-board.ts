@@ -18,6 +18,9 @@ import { hasServerSideFilters } from "@/components/pipeline/kanban-filters/types
 import { isPreviewMode } from "@/lib/preview-mode";
 import { normalizeSearchQuery } from "@/lib/search-query";
 
+/** Página de cards por coluna no Kanban ("Carregar mais" soma +50). */
+export const BOARD_PAGE_SIZE = 50;
+
 /** Lista de pipelines (dropdown do header). */
 export function usePipelines(enabled = true) {
   return useQuery<PipelineListItemDto[]>({
@@ -53,13 +56,34 @@ export function useBoard(params: {
   status?: StatusFilter;
   sort?: BoardSortParam;
   enabled?: boolean;
+  /** Cards por coluna (default: 100 do backend). Kanban v2 passa 50. */
+  perStage?: number;
+  /**
+   * Expansões cumulativas por coluna ("Carregar mais"): stageId → extras
+   * além de `perStage`. Quando há pelo menos 1 expansão, o board passa a
+   * vir do POST /board (única rota que aceita offset) — mesma queryKey,
+   * então invalidações de mutações/SSE continuam valendo e a expansão
+   * sobrevive aos refetches de 60s.
+   */
+  offsetByStage?: Record<string, number>;
 }) {
   const status = params.status ?? "OPEN";
   const sort = params.sort;
+  const perStage = params.perStage;
+  const offsetByStage = params.offsetByStage;
+  const hasOffsets = !!offsetByStage && Object.keys(offsetByStage).length > 0;
   const preview = isPreviewMode();
   return useQuery<BoardStageDto[]>({
     queryKey: boardKey(params.pipelineId ?? "pl-1", status, sort),
-    queryFn: () => getBoard(params.pipelineId ?? "pl-1", status, sort),
+    queryFn: () =>
+      hasOffsets
+        ? getBoardFiltered(params.pipelineId ?? "pl-1", {
+            status,
+            sort,
+            perStage,
+            offsetByStage,
+          })
+        : getBoard(params.pipelineId ?? "pl-1", status, sort, perStage),
     enabled: preview ? true : ((params.enabled ?? true) && !!params.pipelineId),
     // Alinhado ao cache Redis do board (45s) + padrão inbox-v2.
     // SSE (`usePipelineRealtime`) invalida em new_message/conversation_updated;

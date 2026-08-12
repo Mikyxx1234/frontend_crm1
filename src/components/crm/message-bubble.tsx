@@ -606,7 +606,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
         transcript.status === "done" ? "pb-2" : "pb-1",
       )}
     >
-      {url && <audio ref={audioRef} src={url} preload="metadata" aria-hidden="true" />}
+      {url && <audio ref={audioRef} src={url} preload="none" aria-hidden="true" />}
 
       <div className="flex items-center gap-2">
         <button
@@ -746,7 +746,7 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
       <div className="flex flex-col gap-1.5">
         <video
           controls
-          preload="metadata"
+          preload="none"
           src={url}
           className="max-h-[320px] w-full min-w-[220px] rounded-[var(--radius-md)] bg-black"
         />

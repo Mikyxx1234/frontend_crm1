@@ -89,12 +89,89 @@ function patchBoardLastMessageStatus(
 }
 
 /**
+ * Patch in-place do `lastMessage`/preview do card no board (P0-2): um
+ * `new_message` atualiza o card do contato afetado em vez de invalidar
+ * o board inteiro (887KB) a cada evento da org. Casa o deal pelo
+ * `contact.id` (o payload SSE não traz dealId).
+ *
+ * Retorna true quando algum card foi patcheado. Quando o contato não
+ * está no board cacheado, NÃO invalidamos: deal novo/auto-criado entra
+ * no próximo poll de 60s do `useBoard` — preço aceitável pra matar o
+ * loop de refetch (ver perf-network-report.md).
+ */
+function patchBoardLastMessage(
+  qc: QueryClient,
+  data: {
+    contactId?: string;
+    direction?: string;
+    content?: string;
+    timestamp?: string;
+  },
+): boolean {
+  if (!data.contactId) return false;
+  const direction =
+    data.direction === "in" || data.direction === "out" ? data.direction : null;
+  const ts =
+    typeof data.timestamp === "string" && data.timestamp
+      ? data.timestamp
+      : new Date().toISOString();
+  const content = typeof data.content === "string" ? data.content : "";
+
+  const boards = qc.getQueriesData<BoardStageDto[]>({
+    predicate: (q) => isBoardQueryKey(q.queryKey),
+  });
+
+  let found = false;
+  for (const [queryKey, data_] of boards) {
+    if (!Array.isArray(data_)) continue;
+    let touched = false;
+    const next = data_.map((stage) => {
+      let stageTouched = false;
+      const deals = stage.deals.map((deal) => {
+        if (deal.contact?.id !== data.contactId) return deal;
+        stageTouched = true;
+        touched = true;
+        found = true;
+        const lm = deal.lastMessage;
+        return {
+          ...deal,
+          lastMessage: {
+            ...(lm ?? {}),
+            content,
+            createdAt: ts,
+            direction: direction ?? lm?.direction ?? "",
+            // Outbound recém-enviada: ack chega via message_status (patch
+            // acima). Inbound não tem ticks.
+            sendStatus: direction === "out" ? "sent" : null,
+            sendError: null,
+          },
+          // Rodapé "aguardando resposta": inbound empilha (cap 5, como o
+          // backend); outbound do agente/bot limpa a fila de espera.
+          awaitingMessages:
+            direction === "in"
+              ? [...(deal.awaitingMessages ?? []), { content, createdAt: ts }].slice(-5)
+              : direction === "out"
+                ? []
+                : deal.awaitingMessages,
+          unreadCount:
+            direction === "in" ? (deal.unreadCount ?? 0) + 1 : deal.unreadCount,
+        };
+      });
+      return stageTouched ? { ...stage, deals } : stage;
+    });
+    if (touched) qc.setQueryData(queryKey, next);
+  }
+  return found;
+}
+
+/**
  * Mantém os cards do Kanban/Flow em dia sem esperar o polling de 30s.
  *
  * O board carrega `lastMessage`, que define o rodapé "aguardando resposta"
  * e os ticks enviado/entregue/lido no `DealCard`.
  *
- * - `new_message` / `conversation_updated` → invalida (preview + awaiting).
+ * - `new_message` → patch in-place do card do contato (sem refetch).
+ * - `conversation_updated` → invalida (mudança estrutural: status, etc.).
  * - `message_status` → patch otimista do `sendStatus` (ticks), sem
  *   recompute do board.
  */
@@ -109,6 +186,16 @@ export function usePipelineRealtime(enabled = true) {
     },
     [],
   );
+
+  // Invalidação debounced do board inteiro — reservada a mudanças
+  // estruturais (conversation_updated) e payloads legados sem contactId.
+  const scheduleBoardRefresh = useCallback(() => {
+    if (timerRef.current) return;
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      qc.invalidateQueries({ predicate: (q) => isBoardQueryKey(q.queryKey) });
+    }, 800);
+  }, [qc]);
 
   const handler = useCallback(
     (event: string, data: unknown) => {
@@ -133,16 +220,29 @@ export function usePipelineRealtime(enabled = true) {
         return;
       }
 
-      if (event !== "new_message" && event !== "conversation_updated") {
+      if (event === "new_message") {
+        const payload = (data ?? {}) as {
+          contactId?: string;
+          direction?: string;
+          content?: string;
+          timestamp?: string;
+        };
+        // Payload sem contactId (legado): fallback à invalidação
+        // debounced do board — não dá pra localizar o card.
+        if (!payload.contactId) {
+          scheduleBoardRefresh();
+          return;
+        }
+        patchBoardLastMessage(qc, payload);
         return;
       }
-      if (timerRef.current) return;
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null;
-        qc.invalidateQueries({ predicate: (q) => isBoardQueryKey(q.queryKey) });
-      }, 800);
+
+      if (event !== "conversation_updated") {
+        return;
+      }
+      scheduleBoardRefresh();
     },
-    [qc],
+    [qc, scheduleBoardRefresh],
   );
 
   useSSE("/api/sse/messages", handler, enabled);

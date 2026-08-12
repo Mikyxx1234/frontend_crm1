@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import { apiUrl } from "@/lib/api";
 import { isPreviewMode } from "@/lib/preview-mode";
+import { fetchSidebarPreferences } from "@/features/sidebar/api";
+import { SIDEBAR_PREFS_KEY } from "@/features/sidebar/hooks";
 
 export type ThemeV2 = "light" | "dark";
 
@@ -92,8 +95,12 @@ function persistThemeToServer(theme: ThemeV2) {
  *   (exceto se houve toggle após o início desta sync).
  * - Servidor null + valor explícito em localStorage → migra via PATCH.
  * Preview mode: só local (mock incompatível).
+ *
+ * P1-2: o GET /api/profile/preferences vai pelo cache do React Query
+ * (`fetchQuery` na key canônica da sidebar) — antes era um fetch cru
+ * fora do RQ e o endpoint baixava 2× por carga fria.
  */
-function ensureServerSync(): Promise<void> {
+function ensureServerSync(qc: QueryClient): Promise<void> {
   if (serverSyncPromise) return serverSyncPromise;
   if (typeof window === "undefined" || isPreviewMode()) {
     serverSyncPromise = Promise.resolve();
@@ -104,18 +111,13 @@ function ensureServerSync(): Promise<void> {
 
   serverSyncPromise = (async () => {
     try {
-      const res = await fetch(apiUrl("/api/profile/preferences"));
-      if (!res.ok) return;
-      const contentType = res.headers.get("content-type") ?? "";
-      if (!contentType.includes("application/json")) return;
-      const text = await res.text();
-      if (!text.trim()) return;
-      let data: { appearance?: { theme?: unknown } };
-      try {
-        data = JSON.parse(text) as { appearance?: { theme?: unknown } };
-      } catch {
-        return;
-      }
+      const data = await qc.fetchQuery({
+        queryKey: SIDEBAR_PREFS_KEY,
+        queryFn: fetchSidebarPreferences,
+        staleTime: 60_000,
+        // Fail-fast como o fetch cru anterior (sem o retry padrão do RQ).
+        retry: false,
+      });
       // Toggle (ou outra interação local) durante o GET: não sobrescrever.
       if (themeGeneration !== generationAtStart) return;
 
@@ -137,6 +139,7 @@ function ensureServerSync(): Promise<void> {
 }
 
 export function useThemeV2() {
+  const qc = useQueryClient();
   // Começa em "light" no SSR e no 1º render client (evita hydration mismatch);
   // o valor real é resolvido no efeito de mount abaixo.
   const [theme, setTheme] = useState<ThemeV2>("light");
@@ -159,13 +162,13 @@ export function useThemeV2() {
     };
     window.addEventListener("storage", onStorage);
 
-    void ensureServerSync();
+    void ensureServerSync(qc);
 
     return () => {
       listeners.delete(onChange);
       window.removeEventListener("storage", onStorage);
     };
-  }, []);
+  }, [qc]);
 
   function toggle() {
     themeGeneration += 1;

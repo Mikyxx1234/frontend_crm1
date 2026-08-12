@@ -5,6 +5,7 @@ import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import { messagesKey } from "./use-messages";
 import { playInboxPing } from "./use-inbox-sound";
+import type { ConversationListRow } from "../api";
 
 /**
  * SSE em /api/sse/messages — preserva exatamente o comportamento do
@@ -30,6 +31,97 @@ import { playInboxPing } from "./use-inbox-sound";
 type InfiniteInboxPage = {
   items?: Array<{ id: string; assignedToId?: string | null }>;
 };
+
+type NewMessagePayload = {
+  conversationId?: string;
+  direction?: string;
+  assignedToId?: string | null;
+  content?: string;
+  timestamp?: string;
+};
+
+/**
+ * Patch in-place do card da conversa no cache da lista (P0-1): um
+ * `new_message` atualiza preview/direção/unread do card JÁ carregado em
+ * vez de invalidar a lista inteira (35KB) a cada evento da org.
+ *
+ * Retorna true quando a conversa foi encontrada em alguma página
+ * cacheada. Quando não foi (conversa nova ou fora da página/filtro
+ * atual), o chamador deve invalidar a lista — é uma mudança estrutural.
+ *
+ * Não reordena páginas (risco de quebrar o infinite scroll); a posição
+ * do card se ajusta no próximo refetch (poll de 60s / troca de aba).
+ */
+function patchInboxConversationCard(
+  qc: QueryClient,
+  data: NewMessagePayload,
+): boolean {
+  if (!data.conversationId) return false;
+  const direction =
+    data.direction === "in" || data.direction === "out" ? data.direction : null;
+  const ts =
+    typeof data.timestamp === "string" && data.timestamp
+      ? data.timestamp
+      : new Date().toISOString();
+  const content = typeof data.content === "string" ? data.content : "";
+
+  const entries = qc.getQueriesData<{ pages?: Array<{ items?: ConversationListRow[] }> }>({
+    queryKey: ["inbox-conversations"],
+  });
+  let found = false;
+  for (const [queryKey, cached] of entries) {
+    if (!cached?.pages) continue;
+    let touched = false;
+    const pages = cached.pages.map((page) => {
+      const items = page?.items;
+      if (!items) return page;
+      const idx = items.findIndex((c) => c?.id === data.conversationId);
+      if (idx < 0) return page;
+      found = true;
+      touched = true;
+      const conv = items[idx];
+      const nextItems = items.slice();
+      nextItems[idx] = {
+        ...conv,
+        lastMessageAt: ts,
+        updatedAt: ts,
+        ...(direction === "in"
+          ? {
+              lastInboundAt: ts,
+              unreadCount: (conv.unreadCount ?? 0) + 1,
+            }
+          : {}),
+        ...(data.assignedToId !== undefined
+          ? { assignedToId: data.assignedToId }
+          : {}),
+        // messageType "" força o adapter a re-inferir o ícone pelo
+        // placeholder do content ("[Áudio]", "📎 ...") da nova mensagem.
+        lastMessagePreview: {
+          content,
+          messageType: "",
+          mediaUrl: null,
+          direction: direction ?? conv.lastMessagePreview?.direction ?? "",
+          sendStatus: direction === "out" ? "sent" : null,
+          sendError: null,
+        },
+        // Campo "futuro" tem precedência no adapter — se existir na row,
+        // precisa acompanhar o patch pra não exibir preview velho.
+        ...(conv.lastMessage
+          ? {
+              lastMessage: {
+                ...conv.lastMessage,
+                preview: content,
+                direction: direction ?? conv.lastMessage.direction,
+              },
+            }
+          : {}),
+      };
+      return { ...page, items: nextItems };
+    });
+    if (touched) qc.setQueryData(queryKey, { ...cached, pages });
+  }
+  return found;
+}
 
 function shouldPlayInboundPing(
   qc: QueryClient,
@@ -83,6 +175,7 @@ export function useInboxRealtime(options: {
   userIdRef.current = currentUserId;
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
@@ -101,6 +194,17 @@ export function useInboxRealtime(options: {
       }, 1000);
     }
 
+    // Counts com debounce maior (P0-1): o patch in-place já atualiza o
+    // card; os badges das abas podem ficar até 5s defasados em rajada
+    // (o GET de counts é barato — cache Redis de 45s no backend).
+    function scheduleCountsRefresh() {
+      if (countsTimerRef.current) return;
+      countsTimerRef.current = setTimeout(() => {
+        countsTimerRef.current = null;
+        qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
+      }, 5000);
+    }
+
     let es: EventSource | null = null;
     let retry: ReturnType<typeof setTimeout> | undefined;
 
@@ -109,11 +213,7 @@ export function useInboxRealtime(options: {
 
       es.addEventListener("new_message", (e) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
-            conversationId?: string;
-            direction?: string;
-            assignedToId?: string | null;
-          };
+          const data = JSON.parse((e as MessageEvent).data) as NewMessagePayload;
           if (shouldPlayInboundPing(qc, userIdRef.current, data)) {
             playInboxPing();
           }
@@ -130,7 +230,14 @@ export function useInboxRealtime(options: {
               });
             }
           }
-          scheduleInboxRefresh();
+          // Patch in-place do card quando a conversa está na página
+          // cacheada; invalidação da lista só quando ela NÃO está
+          // (conversa nova/fora da página = mudança estrutural).
+          if (patchInboxConversationCard(qc, data)) {
+            scheduleCountsRefresh();
+          } else {
+            scheduleInboxRefresh();
+          }
         } catch {
           /* ignore */
         }
@@ -309,6 +416,8 @@ export function useInboxRealtime(options: {
       if (retry) clearTimeout(retry);
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = null;
+      if (countsTimerRef.current) clearTimeout(countsTimerRef.current);
+      countsTimerRef.current = null;
     };
   }, [enabled, qc]);
 }

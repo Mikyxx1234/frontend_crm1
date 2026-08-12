@@ -1,7 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { apiUrl } from "@/lib/api";
+import {
+  fetchInboxSettings,
+  INBOX_SETTINGS_QUERY_KEY,
+  type InboxSettings,
+} from "@/features/conversations-settings/hooks/use-inbox-settings";
 
 /**
  * Permissões de funcionalidades da conversa, configuradas por admin em
@@ -17,27 +23,24 @@ export interface ConversationFeatures {
   agentSignatureEditable: boolean;
 }
 
-const QUERY_KEY = ["org-settings", "conversation"];
+// P1-2: mesma query key do `useInboxSettings` (mesmo endpoint) — este
+// hook virou um `select` sobre o cache compartilhado, sem request próprio.
+const QUERY_KEY = INBOX_SETTINGS_QUERY_KEY;
 
-async function fetchConversationFeatures(): Promise<ConversationFeatures> {
-  const res = await fetch(
-    apiUrl("/api/settings/org?prefix=conversation."),
-    { credentials: "include" },
-  );
-  if (!res.ok) return { agentSignatureEnabled: true, agentSignatureEditable: true };
-  const data: Record<string, string> = await res.json();
+function selectConversationFeatures(s: InboxSettings): ConversationFeatures {
   return {
-    agentSignatureEnabled: data["conversation.agentSignatureEnabled"] !== "false",
-    agentSignatureEditable: data["conversation.agentSignatureEditable"] !== "false",
+    agentSignatureEnabled: s.agentSignatureEnabled,
+    agentSignatureEditable: s.agentSignatureEditable,
   };
 }
 
 /** Lê as permissões de conversa para uso no Composer e em outras UIs. */
 export function useConversationFeatures() {
-  const { data, ...rest } = useQuery<ConversationFeatures>({
+  const { data, ...rest } = useQuery<InboxSettings, Error, ConversationFeatures>({
     queryKey: QUERY_KEY,
-    queryFn: fetchConversationFeatures,
+    queryFn: fetchInboxSettings,
     staleTime: 5 * 60_000,
+    select: selectConversationFeatures,
   });
 
   return {

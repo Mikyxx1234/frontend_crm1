@@ -146,7 +146,9 @@ export function InlineNativeEditor({
         }
       }
       if (fieldKey === "source") {
-        qc.invalidateQueries({ queryKey: ["contact-sources"] });
+        // Mesma key do `useContactSources` (P1-2 — cache compartilhado
+        // com as filter-options do Kanban).
+        qc.invalidateQueries({ queryKey: ["kanban-filter-options"] });
       }
       setEditing(false);
     } catch (e: unknown) {

@@ -12,8 +12,24 @@
 import { toast } from "sonner";
 
 import { apiUrl } from "@/lib/api";
+import {
+  isSessionClosedError,
+  SESSION_CLOSED_TOAST,
+} from "../extras/channel-switch-confirm";
 
 import { sendAttachment, sendMessage } from "./messages";
+
+// 409 SESSION_CLOSED (sessão expirou no meio da sequência) ganha o aviso
+// padronizado em vez da mensagem crua do backend.
+function toastSendError(err: unknown, fallback: string) {
+  toast.error(
+    isSessionClosedError(err)
+      ? SESSION_CLOSED_TOAST
+      : err instanceof Error
+        ? err.message
+        : fallback,
+  );
+}
 
 export interface InternalTemplateSequenceAttachment {
   url: string;
@@ -39,7 +55,7 @@ export async function sendInternalTemplateSequence({
     try {
       await sendMessage(conversationId, { content: trimmedContent, channelId });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao enviar mensagem do modelo");
+      toastSendError(err, "Falha ao enviar mensagem do modelo");
     }
   }
 
@@ -55,9 +71,7 @@ export async function sendInternalTemplateSequence({
           channelId,
         });
       } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Falha ao enviar mensagem antes do anexo",
-        );
+        toastSendError(err, "Falha ao enviar mensagem antes do anexo");
       }
     }
 
@@ -70,11 +84,7 @@ export async function sendInternalTemplateSequence({
         channelId,
       });
     } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : `Falha ao enviar anexo${att.name ? ` "${att.name}"` : ""}`,
-      );
+      toastSendError(err, `Falha ao enviar anexo${att.name ? ` "${att.name}"` : ""}`);
     }
   }
 }

@@ -3,13 +3,37 @@
  * Espelham as linhas 15-22, 28-31, 49-50 do contrato Fase 1.
  */
 
-import { apiUrl, parseApiResponse } from "@/lib/api";
+import { apiUrl, ApiError, parseApiResponse } from "@/lib/api";
 
 import type {
   InboxMessageDto,
   MessagesResponse,
   ReactionDto,
+  SessionInfo,
 } from "./types";
+
+/** GET /api/conversations/:id/session?channelId=X — janela de 24h do
+ *  contato NO canal informado (o `session` do GET messages reflete só o
+ *  canal da conversa). Alimenta o bloqueio do composer ao trocar de canal. */
+export async function getChannelSession(
+  conversationId: string,
+  channelId: string,
+): Promise<SessionInfo> {
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/session?channelId=${encodeURIComponent(channelId)}`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao consultar sessão do canal",
+    );
+  }
+  return {
+    active: data.active === true,
+    lastInboundAt: data.lastInboundAt ?? null,
+    expiresAt: data.expiresAt ?? null,
+  };
+}
 
 /** GET /api/conversations/:id/messages
  *  `history` default false no cold path — ticket atual pinta rápido;
@@ -117,8 +141,10 @@ export async function sendAttachment(
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(
+    throw new ApiError(
       typeof data?.message === "string" ? data.message : "Erro ao enviar anexo",
+      res.status,
+      typeof data?.code === "string" ? data.code : undefined,
     );
   }
   if (data.metaError) {

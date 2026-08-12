@@ -26,6 +26,7 @@ import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { isSessionExpired, toMessageBubble } from "@/features/inbox-v2/adapters";
 import {
+  useChannelSession,
   useConversationFeatures,
   useFavoriteMessage,
   useInboxRealtime,
@@ -44,6 +45,10 @@ import {
   whatsappTemplateToPending,
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
+import {
+  isSessionClosedError,
+  SESSION_CLOSED_TOAST,
+} from "@/features/inbox-v2/extras/channel-switch-confirm";
 import { DealNotesTab } from "@/features/pipeline-v2/extras";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 
@@ -123,6 +128,18 @@ export function SalesHubChat({
     { conversationId, conversationChannelId, availableChannels: whatsappChannels },
   );
 
+  // Override de canal ativo: revalida a janela de 24h no canal de DESTINO
+  // (o `session` do GET messages reflete só o canal da conversa).
+  const channelOverrideActive =
+    !!selectedChannelId &&
+    !!conversationChannelId &&
+    selectedChannelId !== conversationChannelId;
+  const { data: overrideSession } = useChannelSession(
+    conversationId,
+    channelOverrideActive ? selectedChannelId : null,
+    channelOverrideActive,
+  );
+
   const pinnedMessageIds = useMemo(
     () => messagesData?.pinnedMessageIds ?? [],
     [messagesData?.pinnedMessageIds],
@@ -162,6 +179,12 @@ export function SalesHubChat({
       ? !sessionInfo.active
       : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundAt ?? null)
     : false;
+  // Com override de canal, manda a sessão do canal de DESTINO; enquanto a
+  // query carrega, mantém o valor da conversa (evita flicker do composer).
+  const sessionExpiredEffective =
+    channelOverrideActive && overrideSession
+      ? !overrideSession.active
+      : sessionExpired;
   const canReply = messagesData?.canReply ?? true;
   const isResolved = conversationStatus === "RESOLVED";
 
@@ -180,7 +203,17 @@ export function SalesHubChat({
         onConversationReopened?.(data.reopenedConversationId);
       }
     } catch (err) {
-      toast.error((err as Error)?.message || "Falha ao enviar");
+      // Corrida: a sessão de 24h expirou enquanto o agente digitava (o
+      // backend bloqueia com 409 antes de criar a mensagem). Em vez do
+      // toast genérico, mostra o aviso de sessão e abre o fluxo de template.
+      if (isSessionClosedError(err)) {
+        toast.error(SESSION_CLOSED_TOAST, {
+          action: { label: "Usar Template", onClick: () => setTemplateOpen(true) },
+        });
+        setTemplateOpen(true);
+      } else {
+        toast.error((err as Error)?.message || "Falha ao enviar");
+      }
       throw err;
     }
   }
@@ -268,7 +301,7 @@ export function SalesHubChat({
           channel: contactChannel ?? null,
         }}
         messages={messageBubbles}
-        showSessionAlert={sessionExpired}
+        showSessionAlert={sessionExpiredEffective}
         connection={messagesData?.channel ?? null}
         connections={messagesData?.channels}
         conversationNumber={conversationNumber ?? null}
@@ -303,7 +336,7 @@ export function SalesHubChat({
             onSend={handleSend}
             onSendNote={handleSendNote}
             sending={sendMessage.isPending}
-            disabled={!canReply || sessionExpired}
+            disabled={!canReply || sessionExpiredEffective}
             placeholder={
               !canReply
                 ? "Você não tem permissão para enviar mensagens neste canal."
@@ -314,7 +347,7 @@ export function SalesHubChat({
             externalTemplate={externalTemplate}
             onExternalTemplateConsumed={() => setExternalTemplate(null)}
             onRequestTemplate={() => setTemplateOpen(true)}
-            sessionExpired={sessionExpired}
+            sessionExpired={sessionExpiredEffective}
             signatureAllowed={convFeatures.agentSignatureEnabled}
             signatureEditable={convFeatures.agentSignatureEditable}
             availableChannels={whatsappChannels}

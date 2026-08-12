@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiUrl } from "@/lib/api";
 
+import { getChannelSession, type SessionInfo } from "../api";
+
 /**
  * Conexão WhatsApp da org (forma reduzida). Usado pelo seletor de canal
  * acima do composer (Inbox / Deal). O campo `phoneNumber` é exibido como
@@ -68,6 +70,31 @@ export function useWhatsappChannels(enabled = true) {
     queryFn: fetchOutboundWhatsappChannels,
     enabled,
     staleTime: 60_000,
+  });
+}
+
+/**
+ * Janela de 24h do contato NO canal selecionado — usada quando o agente
+ * troca o canal de envio no composer (selectedChannelId ≠ canal da
+ * conversa), caso que o `session` do GET messages não cobre. Habilite
+ * SOMENTE nesse cenário; sem override, o sessionInfo da conversa basta.
+ */
+export function useChannelSession(
+  conversationId: string | null,
+  channelId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<SessionInfo>({
+    queryKey: [
+      "channel-session",
+      conversationId ?? "__none__",
+      channelId ?? "__none__",
+    ],
+    queryFn: () =>
+      getChannelSession(conversationId as string, channelId as string),
+    enabled: enabled && !!conversationId && !!channelId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 }
 

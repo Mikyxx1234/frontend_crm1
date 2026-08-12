@@ -1,7 +1,13 @@
+import { ApiError } from "@/lib/api";
 import type { OutboundChannelOption } from "@/features/inbox-v2/hooks/use-channels";
 
 export const SESSION_CLOSED_TOAST =
   "Sessão de 24h encerrada. Para continuar, utilize um template aprovado.";
+
+/** Erro 409 do backend: envio humano bloqueado por sessão de 24h fechada. */
+export function isSessionClosedError(err: unknown): boolean {
+  return err instanceof ApiError && err.code === "SESSION_CLOSED";
+}
 
 /** Canal selecionado (Y) ≠ canal atual da conversa (X). */
 export function isChannelMismatch(

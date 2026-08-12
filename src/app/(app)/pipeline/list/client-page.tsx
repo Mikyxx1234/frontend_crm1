@@ -75,6 +75,7 @@ import {
   ExportPanel,
   ImportPanel,
   useImportExportBump,
+  type ExportScope,
 } from "@/features/pipeline-v2/import-export";
 import type { DealListItemDto } from "@/features/pipeline-v2/api";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
@@ -526,6 +527,15 @@ export default function V2PipelineListClientPage() {
             bump();
             void queryClient.invalidateQueries({ queryKey: ["deals-list"] });
           }}
+          exportScope={{
+            pipelineId,
+            filters: {
+              ...filters,
+              ...(debounced ? { search: debounced } : {}),
+            },
+            status: statusFromTab(statusTab) ?? "ALL",
+            filteredTotal: total,
+          }}
         />
       )}
 
@@ -886,10 +896,13 @@ function ImportExportModal({
   activeTab,
   onClose,
   bump,
+  exportScope,
 }: {
   activeTab: "import" | "export";
   onClose: () => void;
   bump: () => void;
+  /** Funil + filtros ativos: habilita "exportar só a base filtrada". */
+  exportScope?: ExportScope;
 }) {
   return (
     <div
@@ -940,7 +953,7 @@ function ImportExportModal({
               }}
             />
           ) : (
-            <ExportPanel />
+            <ExportPanel scope={exportScope} />
           )}
         </div>
       </div>

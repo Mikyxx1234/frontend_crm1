@@ -42,6 +42,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+import {
+  type AdvancedDealFilters,
+  isEmptyFilters,
+} from "@/components/pipeline/kanban-filters/types";
+import { encodeFiltersParam } from "@/components/pipeline/kanban-filters/use-kanban-filters";
 import { apiUrl } from "@/lib/api";
 import {
   type CsvDelimiter,
@@ -1554,8 +1559,37 @@ function ResultStat({
 
 type Pipeline = { id: string; name: string };
 
-export function ExportPanel() {
-  const [pipelineId, setPipelineId] = React.useState<string>("all");
+/**
+ * Contexto do funil aberto quando a exportação é chamada do Pipeline
+ * (Kanban ou Lista). Permite escolher entre exportar o funil inteiro ou
+ * apenas os negócios que batem no filtro/busca ativos.
+ */
+export type ExportScope = {
+  pipelineId?: string | null;
+  /** Filtros avançados + `search`, no mesmo shape que o board manda. */
+  filters?: AdvancedDealFilters;
+  /** Aba de status da Lista. "ALL" (ou ausente) = sem recorte por status. */
+  status?: "OPEN" | "WON" | "LOST" | "ALL";
+  /** Quantos negócios batem no filtro atual. */
+  filteredTotal?: number;
+  /** Total do funil sem filtro (quando conhecido). */
+  pipelineTotal?: number | null;
+};
+
+function scopeHasFilters(scope?: ExportScope): boolean {
+  if (!scope) return false;
+  if (scope.status && scope.status !== "ALL") return true;
+  return !isEmptyFilters(scope.filters);
+}
+
+export function ExportPanel({ scope }: { scope?: ExportScope } = {}) {
+  const hasFilters = scopeHasFilters(scope);
+  const [pipelineId, setPipelineId] = React.useState<string>(
+    scope?.pipelineId ?? "all",
+  );
+  const [dealScope, setDealScope] = React.useState<"filtered" | "all">(
+    hasFilters ? "filtered" : "all",
+  );
   const [busy, setBusy] = React.useState<null | "deals" | "contacts">(null);
 
   const { data: pipelines = [] } = useQuery<Pipeline[]>({
@@ -1571,12 +1605,28 @@ export function ExportPanel() {
     },
   });
 
+  const buildDealsQuery = (): string => {
+    const params = new URLSearchParams();
+    if (pipelineId !== "all") params.set("pipelineId", pipelineId);
+    if (hasFilters && dealScope === "filtered" && scope) {
+      if (scope.status && scope.status !== "ALL") params.set("status", scope.status);
+      if (!isEmptyFilters(scope.filters)) {
+        const encoded = encodeFiltersParam(scope.filters ?? {});
+        if (encoded) params.set("f", encoded);
+      }
+    }
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
+  };
+
   const runExport = async (kind: "deals" | "contacts") => {
     setBusy(kind);
     try {
       if (kind === "deals") {
-        const qs = pipelineId !== "all" ? `?pipelineId=${encodeURIComponent(pipelineId)}` : "";
-        await downloadFromApi(apiUrl(`/api/deals/export${qs}`), "negocios.csv");
+        await downloadFromApi(
+          apiUrl(`/api/deals/export${buildDealsQuery()}`),
+          "negocios.csv",
+        );
       } else {
         await downloadFromApi(apiUrl("/api/contacts/export"), "contatos.csv");
       }
@@ -1598,10 +1648,72 @@ export function ExportPanel() {
           </CardTitle>
           <CardDescription>
             Gera um CSV com 1 linha por negócio: dados do negócio, contato, pipeline/estágio, dono,
-            tags, datas e campos personalizados. O arquivo pode ser reimportado nesta mesma tela.
+            tags, datas e todos os campos personalizados (do negócio e do contato). O arquivo pode
+            ser reimportado nesta mesma tela.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {hasFilters && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                O que exportar
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  {
+                    value: "filtered" as const,
+                    title: "Somente a base filtrada",
+                    desc:
+                      scope?.filteredTotal != null
+                        ? `${scope.filteredTotal.toLocaleString("pt-BR")} negócio(s) que batem no filtro e na busca atuais.`
+                        : "Apenas os negócios que batem no filtro e na busca atuais.",
+                  },
+                  {
+                    value: "all" as const,
+                    title: "Funil inteiro",
+                    desc:
+                      scope?.pipelineTotal != null
+                        ? `Ignora o filtro: ${scope.pipelineTotal.toLocaleString("pt-BR")} negócio(s) do funil.`
+                        : "Ignora o filtro ativo e exporta todos os negócios do funil.",
+                  },
+                ].map((opt) => {
+                  const active = dealScope === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setDealScope(opt.value)}
+                      className={cn(
+                        "flex flex-col items-start gap-1 rounded-[var(--radius-md)] border px-4 py-3 text-left transition-colors",
+                        active
+                          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/[0.06]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] hover:bg-[var(--glass-bg-strong)]",
+                      )}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "flex h-4 w-4 items-center justify-center rounded-full border",
+                            active
+                              ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
+                              : "border-[var(--glass-border)]",
+                          )}
+                        >
+                          {active && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                        </span>
+                        <span className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
+                          {opt.title}
+                        </span>
+                      </span>
+                      <span className="font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
+                        {opt.desc}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">
               Pipeline

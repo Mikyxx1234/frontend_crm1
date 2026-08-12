@@ -57,6 +57,7 @@ import {
   ExportPanel,
   ImportPanel,
   useImportExportBump,
+  type ExportScope,
 } from "@/features/pipeline-v2/import-export";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { avatarInitials } from "@/features/inbox-v2/adapters";
@@ -559,16 +560,51 @@ export default function KanbanV2ClientPage({
     [stageGrantsFiltered],
   );
 
+  // ── Contagem total do board ──────────────────────────────────────
+  // Soma os `totalCount` das colunas visíveis para o operador não precisar
+  // somar etapa por etapa. Com filtro server-side o backend devolve o total
+  // real por etapa (groupBy respeitando o filtro), não só os cards carregados.
+  const filteredTotal = useMemo(
+    () =>
+      stageGrantsFiltered.reduce(
+        (acc, s) => acc + (s.totalCount ?? s.deals.length),
+        0,
+      ),
+    [stageGrantsFiltered],
+  );
+
+  // Total do funil SEM filtro. Vem do board não filtrado, que o React Query
+  // mantém em cache mesmo enquanto o board filtrado está ativo — por isso não
+  // custa requisição extra. `null` quando o usuário abriu a página já com
+  // filtro e o board cheio nunca foi carregado.
+  const pipelineTotalUnfiltered = useMemo(() => {
+    const data = boardNormal.data;
+    if (!data) return null;
+    const grants = myPerms?.stageGrants ?? [];
+    const stages =
+      grants.length > 0 ? data.filter((s) => grants.includes(s.id)) : data;
+    return stages.reduce((acc, s) => acc + (s.totalCount ?? s.deals.length), 0);
+  }, [boardNormal.data, myPerms?.stageGrants]);
+
+  const isFiltering = !isEmptyFilters(filters) || rawSearch.length > 0;
+  const boardPending = hasServerBoard
+    ? boardFiltered.isPending
+    : boardNormal.isPending;
+  const totalLabel = boardPending
+    ? "Contando…"
+    : isFiltering &&
+        pipelineTotalUnfiltered != null &&
+        pipelineTotalUnfiltered !== filteredTotal
+      ? `${filteredTotal.toLocaleString("pt-BR")} de ${pipelineTotalUnfiltered.toLocaleString("pt-BR")} negócios`
+      : `${filteredTotal.toLocaleString("pt-BR")} ${filteredTotal === 1 ? "negócio" : "negócios"}`;
+
   // Contexto para "selecionar todos que batem no filtro" na edição em massa.
   // Permite editar além dos ~100 cards carregados por coluna: o servidor
   // resolve os IDs a partir do mesmo filtro/visibilidade do board.
   const scopeContext = useMemo<BulkScopeContext | undefined>(() => {
     if (!pipelineId) return undefined;
     const boardForScope = stageGrantsFiltered;
-    const pipelineTotal = boardForScope.reduce(
-      (acc, s) => acc + (s.totalCount ?? s.deals.length),
-      0,
-    );
+    const pipelineTotal = filteredTotal;
     // Habilita o escopo "etapa" só quando TODA a seleção está numa única etapa.
     let stage: { id: string; name: string; total: number } | null = null;
     if (selectedIds.size > 0) {
@@ -582,7 +618,7 @@ export default function KanbanV2ClientPage({
     }
     const scopeFilters = { ...filters, ...(rawSearch ? { search: rawSearch } : {}) };
     return { pipelineId, status, filters: scopeFilters, pipelineTotal, stage };
-  }, [pipelineId, stageGrantsFiltered, selectedIds, filters, rawSearch, status]);
+  }, [pipelineId, stageGrantsFiltered, selectedIds, filters, rawSearch, status, filteredTotal]);
 
   // Lookup ownerId / tags reais por dealId. O `Deal` (v0) que chega no
   // renderDeal só tem `owner.name`, não o `ownerId` nem `tagIds`. Esse
@@ -908,25 +944,54 @@ export default function KanbanV2ClientPage({
           onClose={() => setKebabOpen(false)}
         />
 
-        {!isEmptyFilters(filters) && (
-          <div className="flex flex-wrap items-center gap-2 px-0.5">
-            <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
-              Filtros ativos
-            </span>
-            <FilterChips
-              filters={filters}
-              options={filterOptions}
-              onPatch={patchFilters}
-            />
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="font-display text-[11px] font-semibold text-[var(--text-muted)] underline-offset-2 hover:text-[var(--brand-primary)] hover:underline"
-            >
-              Limpar todos
-            </button>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2 px-0.5">
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[11.5px] font-bold",
+              isFiltering
+                ? "border-[var(--brand-primary)]/30 bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)]",
+            )}
+            aria-live="polite"
+          >
+            {totalLabel}
+          </span>
+
+          {/* `filters.search` tem precedência sobre a barra (ver `rawSearch`) e
+              já ganha chip próprio no FilterChips — não duplicar. */}
+          {!filters.search?.trim() && search.trim() && (
+            <TooltipGlass label="Limpar busca" side="top">
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="group inline-flex items-center gap-1 rounded-full border border-primary/25 bg-[var(--color-primary-soft)] px-2.5 py-0.5 text-[11px] font-medium text-primary transition-all hover:border-[var(--color-danger)]/35 hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
+              >
+                <span>Buscar: {search.trim()}</span>
+                <IconX className="size-3 opacity-60 group-hover:opacity-100" />
+              </button>
+            </TooltipGlass>
+          )}
+
+          {!isEmptyFilters(filters) && (
+            <>
+              <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+                Filtros ativos
+              </span>
+              <FilterChips
+                filters={filters}
+                options={filterOptions}
+                onPatch={patchFilters}
+              />
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="font-display text-[11px] font-semibold text-[var(--text-muted)] underline-offset-2 hover:text-[var(--brand-primary)] hover:underline"
+              >
+                Limpar todos
+              </button>
+            </>
+          )}
+        </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -979,6 +1044,16 @@ export default function KanbanV2ClientPage({
           activeTab={importExportOpen}
           onClose={() => setImportExportOpen(null)}
           bump={bump}
+          exportScope={{
+            pipelineId,
+            filters: {
+              ...filters,
+              ...(rawSearch ? { search: rawSearch } : {}),
+            },
+            status,
+            filteredTotal,
+            pipelineTotal: pipelineTotalUnfiltered,
+          }}
         />
       )}
 
@@ -2129,9 +2204,11 @@ interface ImportExportModalProps {
   activeTab: "import" | "export";
   onClose: () => void;
   bump: () => void;
+  /** Funil + filtros ativos: habilita "exportar só a base filtrada". */
+  exportScope?: ExportScope;
 }
 
-function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps) {
+function ImportExportModal({ activeTab, onClose, bump, exportScope }: ImportExportModalProps) {
   return (
     <div
       className="fixed inset-0 z-(--z-modal) flex items-center justify-center bg-black/25 px-4 py-4 backdrop-blur-[2px] sm:px-6 sm:py-6"
@@ -2176,7 +2253,7 @@ function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps)
         <div className="p-6 sm:p-8">
           {activeTab === "import"
             ? <ImportPanel fixedEntity="deals" onDone={() => { bump(); onClose(); }} />
-            : <ExportPanel />
+            : <ExportPanel scope={exportScope} />
           }
         </div>
       </div>

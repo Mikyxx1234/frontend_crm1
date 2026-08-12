@@ -19,6 +19,15 @@ import { isEmptyFilters } from "./types";
 const LS_KEY = "kanban-advanced-filters";
 const URL_PARAM = "f";
 
+/**
+ * Serializa filtros para o parâmetro `f` da URL/API (base64url do JSON).
+ * Exportado porque a exportação de CSV manda os mesmos filtros para
+ * `/api/deals/export?f=…`.
+ */
+export function encodeFiltersParam(filters: AdvancedDealFilters): string {
+  return encode(filters);
+}
+
 function encode(filters: AdvancedDealFilters): string {
   try {
     const json = JSON.stringify(filters);

@@ -76,7 +76,7 @@ function readAsidePinned(): boolean {
  */
 type ConversationRow = {
   id: string;
-  channel: string;
+  channel: string | null;
   status: string;
   updatedAt: string;
   lastInboundAt?: string | null;
@@ -88,7 +88,10 @@ type ConversationRow = {
 async function fetchContactConversations(
   contactId: string,
 ): Promise<ConversationRow[]> {
-  const res = await fetch(apiUrl(`/api/conversations?contactId=${contactId}&perPage=10`));
+  // view=light: lista mínima por contato (sem hydrate inbox / previews).
+  const res = await fetch(
+    apiUrl(`/api/conversations?contactId=${contactId}&perPage=10&view=light`),
+  );
   if (!res.ok) return [];
   const data = await res.json().catch(() => ({}));
   return Array.isArray(data.items)
@@ -441,11 +444,11 @@ export function SalesHubView({
         (activeDealId != null && String(d.number) === activeDealId),
     ) ?? null;
 
-  // Resolve a conversa do contato do deal ativo. Usa o mesmo endpoint
-  // que o inbox/deal-detail consome — garante que a conversa carregada
-  // é exatamente a mesma independente do ponto de entrada (inbox, kanban
-  // card, list view ou sales hub).
+  // Resolve a conversa do contato do deal ativo.
+  // Seed imediato via `conversationId` do board (já no card) — não bloqueia
+  // o chat no GET /conversations. A lista light preenche o picker multi-ticket.
   const activeContactId = activeDeal?.contact?.id ?? null;
+  const boardConversationId = activeDeal?.conversationId ?? null;
   const { data: contactConversations = [], isLoading: conversationsLoading } =
     useQuery({
       queryKey: ["saleshub-contact-conversations", activeContactId],
@@ -454,16 +457,38 @@ export function SalesHubView({
       staleTime: 30_000,
     });
   const activeConversation = useMemo(() => {
-    if (contactConversations.length === 0) return null;
     if (pickedConversationId) {
-      return (
-        contactConversations.find((c) => c.id === pickedConversationId) ??
-        contactConversations[0] ??
-        null
-      );
+      const hit =
+        contactConversations.find((c) => c.id === pickedConversationId) ?? null;
+      if (hit) return hit;
+      return {
+        id: pickedConversationId,
+        status: "OPEN",
+        channel: activeDeal?.channel ?? null,
+        updatedAt: new Date().toISOString(),
+        assignedToId: null,
+      } satisfies ConversationRow;
     }
-    return contactConversations[0] ?? null;
-  }, [contactConversations, pickedConversationId]);
+    if (contactConversations.length > 0) return contactConversations[0] ?? null;
+    if (boardConversationId) {
+      return {
+        id: boardConversationId,
+        status: "OPEN",
+        channel: activeDeal?.channel ?? null,
+        updatedAt: new Date().toISOString(),
+        assignedToId: null,
+      } satisfies ConversationRow;
+    }
+    return null;
+  }, [
+    contactConversations,
+    pickedConversationId,
+    boardConversationId,
+    activeDeal?.channel,
+  ]);
+  // Spinner só quando não há seed do board e a lista ainda não voltou.
+  const conversationsPending =
+    conversationsLoading && !boardConversationId && !pickedConversationId;
 
   const queryClient = useQueryClient();
 
@@ -788,7 +813,7 @@ export function SalesHubView({
               title="Deal sem contato"
               subtitle="Este deal nao tem contato vinculado — atribua um contato para iniciar a conversa."
             />
-          ) : conversationsLoading ? (
+          ) : conversationsPending ? (
             <div className="flex flex-1 items-center justify-center bg-[var(--color-chat-bg)]">
               <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>

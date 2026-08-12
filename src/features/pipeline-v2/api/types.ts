@@ -49,6 +49,11 @@ export interface BoardDealDto {
    * Alimenta o tooltip em balões no DealCard quando unread > 1.
    */
   awaitingMessages?: Array<{ content: string; createdAt: string }> | null;
+  /**
+   * Conversa mais recente do contato (board). Permite abrir o chat do deal
+   * sem esperar GET /deals/:id nem GET /conversations?contactId=.
+   */
+  conversationId?: string | null;
   channel?: string | null;
   productName?: string | null;
   productType?: "PRODUCT" | "SERVICE" | null;

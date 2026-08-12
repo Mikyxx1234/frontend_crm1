@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -25,16 +26,53 @@ export function messagesKey(conversationId: string | null | undefined) {
   return ["messages", conversationId ?? "__none__"] as const;
 }
 
-/** Histórico da conversa ativa (ticket atual + histórico capado/paralelo no backend). */
+function hasTicketHistory(data: MessagesResponse | undefined): boolean {
+  return !!data?.messages?.some((m) => m.messageType === "ticket-separator");
+}
+
+/**
+ * Histórico da conversa ativa.
+ * Cold path: ticket atual (sem ?history=1) pinta rápido; em seguida
+ * enriquece com tickets RESOLVED anteriores no mesmo cache key.
+ */
 export function useMessages(conversationId: string | null) {
-  return useQuery<MessagesResponse>({
+  const qc = useQueryClient();
+  const query = useQuery<MessagesResponse>({
     queryKey: messagesKey(conversationId),
-    queryFn: () => getMessages(conversationId as string, { history: true }),
+    queryFn: async () => {
+      const cached = qc.getQueryData<MessagesResponse>(
+        messagesKey(conversationId),
+      );
+      // Refetch / polling: se já temos separadores, mantém history=1.
+      return getMessages(conversationId as string, {
+        history: hasTicketHistory(cached),
+      });
+    },
     enabled: !!conversationId,
     staleTime: 20_000,
     refetchInterval: 45_000,
     refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    if (!conversationId || !query.isFetched) return;
+    const cur = qc.getQueryData<MessagesResponse>(messagesKey(conversationId));
+    if (hasTicketHistory(cur)) return;
+    let cancelled = false;
+    void getMessages(conversationId, { history: true })
+      .then((full) => {
+        if (cancelled) return;
+        qc.setQueryData(messagesKey(conversationId), full);
+      })
+      .catch(() => {
+        /* cold path já está na tela */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId, query.isFetched, query.dataUpdatedAt, qc]);
+
+  return query;
 }
 
 /** Mutation: enviar mensagem de texto ou nota interna. */

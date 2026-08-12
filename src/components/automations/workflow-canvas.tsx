@@ -2024,7 +2024,7 @@ function WorkflowCanvasInner({
 
       {/* Canvas area */}
       <div
-        className="automation-canvas relative min-h-0 min-w-0 flex-1 bg-[var(--bg-base)]"
+        className="automation-canvas relative min-h-0 min-w-0 flex-1"
         onDrop={onDrop}
         onDragOver={onDragOver}
       >
@@ -2061,9 +2061,9 @@ function WorkflowCanvasInner({
           <Background
             id="auto-dots"
             variant={BackgroundVariant.Dots}
-            gap={20}
+            gap={26}
             size={1.2}
-            color={isDark ? "#33405c" : "#cbd5e1"}
+            color={isDark ? "rgba(120, 140, 180, 0.16)" : "#E1E5F2"}
           />
           <Controls className="m-3!" showInteractive={false} />
           <MiniMap

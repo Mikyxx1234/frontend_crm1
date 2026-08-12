@@ -6,8 +6,6 @@ import {
   IconActivity as Activity,
   IconArrowsLeftRight as ArrowRightLeft,
   IconRobotFace as BotMessageSquare,
-  IconCircleCheck as CheckCircle2,
-  IconCircleOff as CircleSlash,
   IconCircleX as CircleX,
   IconClock as Clock,
   IconPhoto as Image,
@@ -36,6 +34,8 @@ import {
   FlowNodeDeleteButton,
   FlowNodeHeader,
   FlowNodeShell,
+  FlowNodeStats,
+  type FlowNodeType,
 } from "./flow-node-shell";
 
 export type ActionNodeData = {
@@ -90,6 +90,19 @@ function StepIcon({ type }: { type: string }) {
   return <Icon className="size-3.5" strokeWidth={2.4} aria-hidden />;
 }
 
+function actionNodeType(stepType: string): FlowNodeType {
+  if (stepType === "webhook") return "api";
+  if (
+    stepType.startsWith("send_whatsapp") ||
+    stepType === "send_product" ||
+    stepType === "send_email"
+  ) {
+    return "message";
+  }
+  if (stepType === "update_field" || stepType === "set_variable") return "fields";
+  return "action";
+}
+
 export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
   const hasFailureOutput = META_LINEAR_FAILURE_TYPES.has(data.stepType);
   const hasTimeoutOutput = META_WAIT_TIMEOUT_TYPES.has(data.stepType);
@@ -102,15 +115,14 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
     enabled: isChannelStep,
   });
   const channelBadgeLabel = channelLabelFromOptions(channelOptions, channelId);
-  const isWa =
-    data.stepType.startsWith("send_whatsapp") || data.stepType === "send_product";
-  const accent = isWa ? "violet" : data.stepType === "send_email" ? "primary" : "primary";
+  const nodeType = actionNodeType(data.stepType);
+  const s = data.stats;
 
   return (
     <FlowNodeShell
       selected={selected}
       incomplete={data.incomplete}
-      accent={accent}
+      type={nodeType}
       stepIndex={data.stepIndex}
       expanded={selected}
       className={cn(
@@ -148,39 +160,38 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
       />
       {hasFailureOutput ? (
         <div className="wf-node__outs">
-          <div className="wf-node__out wf-node__out--ok">
-            <CheckCircle2 className="size-3.5 shrink-0" strokeWidth={2.2} />
-            <span className="flex-1 truncate">Enviado</span>
+          <div className="wf-node__out wf-node__out--ok fx-out fx-out--flow">
+            <span className="fx-out__label flex-1">Próximo passo</span>
             <CustomHandle
               type="source"
               position={Position.Right}
               id="next"
               connectionLimit={1}
-              className="wf-handle--ok"
+              className="fx-port--flow"
             />
           </div>
           {hasTimeoutOutput && (
-            <div className="wf-node__out">
-              <Clock className="size-3.5 shrink-0" strokeWidth={2.2} />
-              <span className="flex-1 truncate">Sem resposta</span>
+            <div className="wf-node__out fx-out fx-out--error">
+              <span className="fx-out__label flex-1">Caso o contato não responda</span>
               <CustomHandle
                 type="source"
                 position={Position.Right}
                 id="timeout"
                 connectionLimit={1}
-                className="wf-handle--muted"
+                className="fx-port--error"
               />
             </div>
           )}
-          <div className="wf-node__out wf-node__out--err">
-            <CircleSlash className="size-3.5 shrink-0" strokeWidth={2.2} />
-            <span className="flex-1 truncate">Falha ao enviar</span>
+          <div className="wf-node__out wf-node__out--err fx-out fx-out--error">
+            <span className="fx-out__label flex-1">
+              Caso ocorrer erro no envio de mensagem
+            </span>
             <CustomHandle
               type="source"
               position={Position.Right}
               id="failure"
               connectionLimit={1}
-              className="wf-handle--err"
+              className="fx-port--error"
             />
           </div>
         </div>
@@ -195,6 +206,14 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
         isFirstMessageStep={data.isFirstMessageStep}
         onChange={(next) => data.onConfigChange?.(next)}
       />
+      {s && (
+        <FlowNodeStats
+          success={s.success}
+          warning={s.skipped}
+          error={s.failed}
+          onClick={data.onStatsClick}
+        />
+      )}
     </FlowNodeShell>
   );
 }

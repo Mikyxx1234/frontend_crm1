@@ -33,6 +33,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursRF>
   return (
     <FlowNodeShell
       selected={selected}
+      type="fields"
       accent="amber"
       stepIndex={data.stepIndex}
       expanded={selected}
@@ -41,7 +42,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursRF>
         type="target"
         position={Position.Left}
         connectionLimit={1}
-        className="wf-handle--orange"
+        className="fx-port--flow"
       />
       <FlowNodeHeader
         icon={<Clock className="size-3.5" strokeWidth={2.4} />}
@@ -50,26 +51,26 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursRF>
         actions={<FlowNodeDeleteButton onDelete={data.onDelete} />}
       />
       <div className="wf-node__outs">
-        <div className="wf-node__out wf-node__out--ok">
+        <div className="wf-node__out wf-node__out--ok fx-out fx-out--cond">
           <CircleCheck className="size-3.5 shrink-0" strokeWidth={2.4} />
-          <span className="flex-1 truncate">Dentro do expediente</span>
+          <span className="fx-out__label flex-1">Dentro do expediente</span>
           <CustomHandle
             type="source"
             position={Position.Right}
             id="true"
             connectionLimit={1}
-            className="wf-handle--ok"
+            className="fx-port--cond"
           />
         </div>
-        <div className="wf-node__out wf-node__out--err">
+        <div className="wf-node__out wf-node__out--err fx-out fx-out--error">
           <CircleX className="size-3.5 shrink-0" strokeWidth={2.4} />
-          <span className="flex-1 truncate">Fora do expediente</span>
+          <span className="fx-out__label flex-1">Fora do expediente</span>
           <CustomHandle
             type="source"
             position={Position.Right}
             id="false"
             connectionLimit={1}
-            className="wf-handle--err"
+            className="fx-port--error"
           />
         </div>
       </div>

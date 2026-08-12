@@ -34,7 +34,7 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionRF>) {
   const hasStats = s && (s.success > 0 || s.failed > 0);
 
   return (
-    <FlowNodeShell selected={selected} accent="violet">
+    <FlowNodeShell selected={selected} type="message" accent="violet">
       <CustomHandle type="target" position={Position.Left} connectionLimit={1} />
       <FlowNodeHeader
         icon={<HelpCircle className="size-3.5" strokeWidth={2.4} />}

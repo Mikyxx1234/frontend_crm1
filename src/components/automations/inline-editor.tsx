@@ -1802,20 +1802,22 @@ function ConditionBuilder({ config, steps, onChange }: { config: Cfg; steps: Ste
                       placeholder="Operador"
                       onChange={(v) => updateRule(bi, ri, { op: v })}
                     />
-                    {!noVal && (
+                  </div>
+                  {!noVal && (
+                    <div className="cfg-rule-row">
                       <ConditionValue
                         field={field}
                         op={str(r.op)}
                         value={str(r.value)}
                         onChange={(v) => updateRule(bi, ri, { value: v })}
                       />
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
             <button
-              className="cfg-add sm nodrag"
+              className="cfg-add cfg-add--dashed nodrag"
               onClick={() =>
                 updateBranch(bi, { rules: [...(b.rules ?? []), { field: "", op: "eq", value: "" }] })
               }
@@ -1843,9 +1845,9 @@ function ConditionBuilder({ config, steps, onChange }: { config: Cfg; steps: Ste
           ])
         }
       >
-        + Adicionar condição
+        + Adicionar ramo
       </button>
-      <div className="cfg-subrow">
+      <div className="cfg-subrow cfg-subrow--else">
         <span className="cfg-sublabel">Nenhuma condição → ir para</span>
         <ConfigSelect
           value={str(config.elseStepId)}

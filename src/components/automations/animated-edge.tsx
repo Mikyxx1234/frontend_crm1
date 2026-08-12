@@ -9,9 +9,11 @@ import {
   type EdgeProps,
 } from "@xyflow/react";
 
+import type { OutputKind } from "./flow-node";
+
 /**
- * Edge sóbria (bezier) — sem gradiente brand / pulse.
- * Variantes só ajustam stroke + dash.
+ * Edge Suave — cor semântica via classe `fx-edge--{kind}`.
+ * Sem stroke hard-coded no JS.
  */
 
 export type AnimatedEdgeVariant =
@@ -24,31 +26,23 @@ export type AnimatedEdgeVariant =
 export type AnimatedEdgeData = {
   variant?: AnimatedEdgeVariant;
   energized?: boolean;
+  /** Preferir kind semântico (flow|error|cond). */
+  kind?: OutputKind;
 };
 
-const VARIANT_STROKE: Record<AnimatedEdgeVariant, string> = {
-  default: "#94a3b8",
-  button: "#64748b",
-  else: "#f59e0b",
-  timeout: "#94a3b8",
-  add: "#cbd5e1",
-};
-
-const VARIANT_WIDTH: Record<AnimatedEdgeVariant, number> = {
-  default: 1.5,
-  button: 1.5,
-  else: 1.35,
-  timeout: 1.35,
-  add: 1.2,
-};
-
-const VARIANT_DASH: Record<AnimatedEdgeVariant, string | undefined> = {
-  default: "5 5",
-  button: "5 5",
-  else: "5 4",
-  timeout: "5 4",
-  add: "4 4",
-};
+function variantToKind(variant: AnimatedEdgeVariant): OutputKind {
+  switch (variant) {
+    case "button":
+      return "cond";
+    case "else":
+    case "timeout":
+      return "error";
+    case "add":
+    case "default":
+    default:
+      return "flow";
+  }
+}
 
 /** Mantido por compat — defs vazios (gradientes removidos). */
 export function AnimatedEdgeDefs() {
@@ -72,6 +66,7 @@ function AnimatedEdgeImpl(props: EdgeProps) {
 
   const edgeData = data as AnimatedEdgeData | undefined;
   const variant: AnimatedEdgeVariant = edgeData?.variant ?? "default";
+  const kind = edgeData?.kind ?? variantToKind(variant);
 
   const [path, labelX, labelY] = getBezierPath({
     sourceX,
@@ -83,24 +78,17 @@ function AnimatedEdgeImpl(props: EdgeProps) {
     curvature: 0.28,
   });
 
-  const stroke = VARIANT_STROKE[variant];
-  const strokeWidth = selected
-    ? VARIANT_WIDTH[variant] + 0.5
-    : VARIANT_WIDTH[variant];
-  const dash = VARIANT_DASH[variant];
-
   return (
     <>
       <BaseEdge
         id={id}
         path={path}
         markerEnd={markerEnd}
+        className={`fx-edge fx-edge--${kind}${selected ? " is-selected" : ""}`}
         style={{
-          stroke,
-          strokeWidth,
-          strokeDasharray: dash,
           fill: "none",
           cursor: "pointer",
+          strokeWidth: selected ? 3.1 : undefined,
         }}
       />
 
@@ -113,7 +101,7 @@ function AnimatedEdgeImpl(props: EdgeProps) {
                 transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
                 pointerEvents: "all",
               }}
-              className="nodrag nopan flex size-5 items-center justify-center rounded-full border border-[var(--wf-node-border,#e2e8f0)] bg-[var(--color-bg-card)] text-[10px] font-bold text-[var(--color-ink-muted)] shadow-sm transition-colors hover:border-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
+              className="fx-edge-delete nodrag nopan"
             >
               {label}
             </div>

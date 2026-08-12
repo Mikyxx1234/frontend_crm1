@@ -28,6 +28,7 @@ export function GotoNode({ data, selected }: NodeProps<GotoRF>) {
   return (
     <FlowNodeShell
       selected={selected}
+      type="action"
       accent="cyan"
       stepIndex={data.stepIndex}
       expanded={selected}

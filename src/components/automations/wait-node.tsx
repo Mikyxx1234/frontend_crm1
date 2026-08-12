@@ -2,20 +2,18 @@
 
 import { Position, type Node, type NodeProps } from "@xyflow/react";
 import {
-  IconAlertTriangle as AlertTriangle,
-  IconCircleCheck as CheckCircle2,
   IconClock as Clock,
   IconMessageCircle as MessageCircle,
   IconPlayerPause as Pause,
 } from "@tabler/icons-react";
 
-import { TooltipHost } from "@/components/ui/tooltip";
 import { NodeInlineConfig } from "./node-inline-config";
 import { CustomHandle } from "./custom-handle";
 import {
   FlowNodeDeleteButton,
   FlowNodeHeader,
   FlowNodeShell,
+  FlowNodeStats,
 } from "./flow-node-shell";
 
 export type WaitNodeData = {
@@ -38,11 +36,11 @@ type WaitRF = Node<WaitNodeData, "wait">;
 
 export function WaitNode({ data, selected }: NodeProps<WaitRF>) {
   const s = data.stats;
-  const hasStats = s && (s.success > 0 || s.failed > 0);
 
   return (
     <FlowNodeShell
       selected={selected}
+      type="fields"
       accent="orange"
       stepIndex={data.stepIndex}
       expanded={selected}
@@ -55,53 +53,31 @@ export function WaitNode({ data, selected }: NodeProps<WaitRF>) {
         actions={<FlowNodeDeleteButton onDelete={data.onDelete} label="Remover espera" />}
       />
       <div className="wf-node__outs">
-        <div className="wf-node__out wf-node__out--ok">
+        <div className="wf-node__out wf-node__out--ok fx-out fx-out--cond">
           <MessageCircle className="size-3 shrink-0" strokeWidth={2.4} />
-          <span className="flex-1 truncate">Até a mensagem recebida</span>
+          <span className="fx-out__label flex-1">Mensagem recebida</span>
           <CustomHandle
             type="source"
             position={Position.Right}
             id="received"
             connectionLimit={1}
-            className="wf-handle--ok"
+            className="fx-port--cond"
           />
         </div>
-        <div className="wf-node__out">
+        <div className="wf-node__out fx-out fx-out--error">
           <Clock className="size-3 shrink-0" strokeWidth={2.4} />
-          <span className="flex-1 truncate">{data.timeoutLabel || "Cronômetro"}</span>
+          <span className="fx-out__label flex-1">
+            {data.timeoutLabel || "Caso o contato não responda"}
+          </span>
           <CustomHandle
             type="source"
             position={Position.Right}
             id="timeout"
             connectionLimit={1}
-            className="wf-handle--muted"
+            className="fx-port--error"
           />
         </div>
       </div>
-      {hasStats && (
-        <TooltipHost label="Ver eventos" side="bottom">
-          <button
-            type="button"
-            className="wf-node__stats"
-            onClick={(e) => {
-              e.stopPropagation();
-              data.onStatsClick?.();
-            }}
-            aria-label="Ver eventos"
-          >
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)]">
-              <CheckCircle2 className="size-3" />
-              {s.success}
-            </span>
-            {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)]">
-                <AlertTriangle className="size-3" />
-                {s.failed}
-              </span>
-            )}
-          </button>
-        </TooltipHost>
-      )}
       <NodeInlineConfig
         selected={selected}
         stepType={data.stepType ?? "wait_for_reply"}
@@ -109,6 +85,14 @@ export function WaitNode({ data, selected }: NodeProps<WaitRF>) {
         stepOptions={data.stepOptions ?? []}
         onChange={(next) => data.onConfigChange?.(next)}
       />
+      {s && (
+        <FlowNodeStats
+          success={s.success}
+          warning={s.skipped}
+          error={s.failed}
+          onClick={data.onStatsClick}
+        />
+      )}
     </FlowNodeShell>
   );
 }

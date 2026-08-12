@@ -13,6 +13,7 @@ import {
   FlowNodeDeleteButton,
   FlowNodeHeader,
   FlowNodeShell,
+  FlowNodeStats,
 } from "./flow-node-shell";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +62,7 @@ function ruleSummary(
   const value =
     first.op === "empty" || first.op === "not_empty"
       ? ""
-      : ` ${resolveValue(first.field, first.value).slice(0, 32)}`;
+      : ` ${resolveValue(first.field, first.value)}`;
   const base = `${field} ${op}${value}`;
   if (branch.rules.length > 1) {
     return `${base} (+${branch.rules.length - 1})`;
@@ -72,6 +73,7 @@ function ruleSummary(
 export function ConditionNode({ data, selected }: NodeProps<ConditionRF>) {
   const branches = data.branches ?? [];
   const hasBranches = branches.length > 0;
+  const s = data.stats;
 
   const { options: departmentOptions } = useDepartmentOptions();
   const resolveValue = useMemo(() => {
@@ -86,6 +88,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionRF>) {
   return (
     <FlowNodeShell
       selected={selected}
+      type="condition"
       accent="cyan"
       stepIndex={data.stepIndex}
       expanded={selected}
@@ -95,59 +98,87 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionRF>) {
         type="target"
         position={Position.Left}
         connectionLimit={1}
-        className="wf-handle--cyan"
+        className="fx-port--flow"
       />
       <FlowNodeHeader
         icon={<GitBranch className="size-3.5" strokeWidth={2.4} />}
         title={data.label || "Condição"}
         subtitle={
           selected
-            ? "Filtros para seguir caminhos diferentes"
+            ? hasBranches
+              ? `Faça filtros para seguir caminhos diferentes`
+              : "Clique para adicionar uma condição"
             : hasBranches
-              ? `${branches.length} ${branches.length > 1 ? "condições" : "condição"}`
-              : "Clique para configurar"
+              ? `${branches.length} ${branches.length > 1 ? "ramos" : "ramo"}`
+              : "Faça filtros para seguir caminhos diferentes"
         }
         actions={
           <FlowNodeDeleteButton onDelete={data.onDelete} label="Remover condição" />
         }
       />
-      <div className="wf-node__outs wf-node__outs--branches">
+      <div
+        className={cn(
+          "wf-node__outs wf-node__outs--branches",
+          selected && "wf-node__outs--editing"
+        )}
+      >
         {branches.map((branch, idx) => {
           const title =
-            (branch.label && branch.label.trim()) || `Condição ${idx + 1}`;
+            (branch.label && branch.label.trim()) || `Ramo ${idx + 1}`;
           const desc = ruleSummary(branch, resolveValue);
           return (
-            <div key={branch.id} className="wf-cond-card">
-              <span className="wf-branch-num">{idx + 1}</span>
-              <div className="wf-cond-card__text">
-                <p className="wf-cond-card__title">{title}</p>
-                <p className="wf-cond-card__desc">
-                  <Filter className="inline size-2.5 opacity-60" strokeWidth={2.2} />{" "}
-                  {desc}
-                </p>
+            <div key={branch.id}>
+              <div
+                className={cn(
+                  "wf-cond-card fx-item",
+                  selected && "wf-cond-card--handle"
+                )}
+              >
+                <span className="wf-branch-num">{idx + 1}</span>
+                <div className="wf-cond-card__text fx-item__text">
+                  <p className="wf-cond-card__title fx-item__title">{title}</p>
+                  {!selected && (
+                    <p className="wf-cond-card__desc fx-item__sub">
+                      <Filter className="inline size-2.5 opacity-60" strokeWidth={2.2} />{" "}
+                      {desc}
+                    </p>
+                  )}
+                </div>
               </div>
-              <CustomHandle
-                type="source"
-                position={Position.Right}
-                id={`branch:${branch.id}`}
-                connectionLimit={1}
-                className="wf-handle--ok"
-              />
+              <div className="fx-item-out">
+                <span>Se esta condição for verdadeira</span>
+                <CustomHandle
+                  type="source"
+                  position={Position.Right}
+                  id={`branch:${branch.id}`}
+                  connectionLimit={1}
+                  className="fx-port--cond"
+                />
+              </div>
             </div>
           );
         })}
-        <div className="wf-cond-card wf-cond-card--else">
+        <div
+          className={cn(
+            "wf-cond-card wf-cond-card--else fx-out fx-out--error",
+            selected && "wf-cond-card--handle"
+          )}
+        >
           <span className="wf-branch-num wf-branch-num--err">⊘</span>
           <div className="wf-cond-card__text">
-            <p className="wf-cond-card__title">Nenhuma das condições</p>
-            <p className="wf-cond-card__desc">Quando não atender a nenhum ramo</p>
+            <p className="wf-cond-card__title">
+              {selected ? "Senão" : "Quando não atender a nenhuma condição"}
+            </p>
+            {!selected && (
+              <p className="wf-cond-card__desc">Caminho alternativo do fluxo</p>
+            )}
           </div>
           <CustomHandle
             type="source"
             position={Position.Right}
             id="else"
             connectionLimit={1}
-            className="wf-handle--err"
+            className="fx-port--error"
           />
         </div>
       </div>
@@ -158,6 +189,14 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionRF>) {
         stepOptions={data.stepOptions ?? []}
         onChange={(next) => data.onConfigChange?.(next)}
       />
+      {s && (
+        <FlowNodeStats
+          success={s.success}
+          warning={s.skipped}
+          error={s.failed}
+          onClick={data.onStatsClick}
+        />
+      )}
     </FlowNodeShell>
   );
 }

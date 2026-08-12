@@ -2,9 +2,7 @@
 
 import { Position, type Node, type NodeProps } from "@xyflow/react";
 import {
-  IconAlertTriangle as AlertTriangle,
   IconArrowRight as ArrowRight,
-  IconCircleCheck as CheckCircle2,
   IconCircleOff as CircleSlash,
   IconClock as Clock,
   IconHelpCircle as HelpCircle,
@@ -13,7 +11,6 @@ import {
   IconClick as MousePointerClick,
 } from "@tabler/icons-react";
 
-import { TooltipHost } from "@/components/ui/tooltip";
 import { isMessageChannelStep } from "@/lib/automation-workflow";
 import { NodeInlineConfig } from "./node-inline-config";
 import {
@@ -27,6 +24,7 @@ import {
   FlowNodeDeleteButton,
   FlowNodeHeader,
   FlowNodeShell,
+  FlowNodeStats,
 } from "./flow-node-shell";
 
 export type InteractiveButton = {
@@ -63,7 +61,6 @@ function buttonLabel(btn: InteractiveButton, idx: number): string {
 export function InteractiveNode({ data, selected }: NodeProps<InteractiveRF>) {
   const buttons = data.buttons ?? [];
   const s = data.stats;
-  const hasStats = s && (s.success > 0 || s.failed > 0);
   const isQuestion = data.stepType === "question";
   const isList = data.stepType === "send_whatsapp_list";
   const Icon = isQuestion
@@ -85,6 +82,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveRF>) {
     <FlowNodeShell
       selected={selected}
       incomplete={data.incomplete}
+      type="message"
       accent="violet"
       stepIndex={data.stepIndex}
       expanded={selected}
@@ -117,92 +115,70 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveRF>) {
 
       <div className="wf-node__outs">
         {buttons.map((btn, i) => (
-          <div key={btn.id || i} className="wf-node__out">
-            <span className="size-1.5 shrink-0 rounded-full bg-[var(--wf-accent)]" />
-            <span className="flex-1 truncate text-[var(--text-primary)]">
-              {buttonLabel(btn, i)}
-            </span>
+          <div key={btn.id || i} className="wf-node__out fx-out fx-out--cond">
+            <span className="size-1.5 shrink-0 rounded-full bg-[var(--fx-cond)]" />
+            <span className="fx-out__label flex-1">{buttonLabel(btn, i)}</span>
             <CustomHandle
               type="source"
               position={Position.Right}
               id={`btn_${i}`}
               connectionLimit={1}
+              className="fx-port--cond"
             />
           </div>
         ))}
-        <div className="wf-node__out">
-          <ArrowRight className="size-3 shrink-0 text-[var(--wf-accent)]" strokeWidth={2.4} />
-          <span className="flex-1 truncate text-[var(--wf-accent)]">Continuar (todas)</span>
+        <div className="wf-node__out fx-out fx-out--flow">
+          <ArrowRight className="size-3 shrink-0" strokeWidth={2.4} />
+          <span className="fx-out__label flex-1">Próximo passo</span>
           <CustomHandle
             type="source"
             position={Position.Right}
             id="next"
             connectionLimit={1}
+            className="fx-port--flow"
           />
         </div>
         {data.hasElse && (
-          <div className="wf-node__out">
-            <HelpCircle className="size-3 shrink-0 text-[var(--color-warning)]" strokeWidth={2.4} />
-            <span className="flex-1 truncate">Outra resposta</span>
+          <div className="wf-node__out fx-out fx-out--error">
+            <HelpCircle className="size-3 shrink-0" strokeWidth={2.4} />
+            <span className="fx-out__label flex-1">Outra resposta</span>
             <CustomHandle
               type="source"
               position={Position.Right}
               id="else"
               connectionLimit={1}
-              className="wf-handle--orange"
+              className="fx-port--error"
             />
           </div>
         )}
         {data.hasTimeout && (
-          <div className="wf-node__out">
+          <div className="wf-node__out fx-out fx-out--error">
             <Clock className="size-3 shrink-0" strokeWidth={2.4} />
-            <span className="flex-1 truncate">Sem resposta</span>
+            <span className="fx-out__label flex-1">Caso o contato não responda</span>
             <CustomHandle
               type="source"
               position={Position.Right}
               id="timeout"
               connectionLimit={1}
-              className="wf-handle--muted"
+              className="fx-port--error"
             />
           </div>
         )}
-        <div className="wf-node__out wf-node__out--err">
+        <div className="wf-node__out wf-node__out--err fx-out fx-out--error">
           <CircleSlash className="size-3 shrink-0" strokeWidth={2.4} />
-          <span className="flex-1 truncate">Falha ao enviar</span>
+          <span className="fx-out__label flex-1">
+            Caso ocorrer erro no envio de mensagem
+          </span>
           <CustomHandle
             type="source"
             position={Position.Right}
             id="failure"
             connectionLimit={1}
-            className="wf-handle--err"
+            className="fx-port--error"
           />
         </div>
       </div>
 
-      {hasStats && (
-        <TooltipHost label="Ver eventos" side="bottom">
-          <button
-            type="button"
-            className="wf-node__stats"
-            onClick={(e) => {
-              e.stopPropagation();
-              data.onStatsClick?.();
-            }}
-            aria-label="Ver eventos"
-          >
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)]">
-              <CheckCircle2 className="size-3" />
-              {s.success}
-            </span>
-            {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)]">
-                <AlertTriangle className="size-3" />
-                {s.failed}
-              </span>
-            )}
-          </button>
-        </TooltipHost>
-      )}
       <NodeInlineConfig
         selected={selected}
         stepType={data.stepType}
@@ -211,6 +187,14 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveRF>) {
         isFirstMessageStep={data.isFirstMessageStep}
         onChange={(next) => data.onConfigChange?.(next)}
       />
+      {s && (
+        <FlowNodeStats
+          success={s.success}
+          warning={s.skipped}
+          error={s.failed}
+          onClick={data.onStatsClick}
+        />
+      )}
     </FlowNodeShell>
   );
 }

@@ -26,7 +26,11 @@ export function CustomHandle({
     <Handle
       {...props}
       isConnectable={connectable}
-      className={className ? `wf-handle ${className}` : "wf-handle"}
+      className={
+        className
+          ? `wf-handle fx-port ${className}`
+          : "wf-handle fx-port fx-port--flow"
+      }
     />
   );
 }

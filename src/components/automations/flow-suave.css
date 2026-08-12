@@ -1,0 +1,319 @@
+/* ============================================================
+   FLOW · Estilo "Suave"
+   Tokens + componentes para os cards de automação do CRM.
+   Framework-agnóstico: funciona com React, Vue ou HTML puro.
+   ============================================================ */
+
+/* Tokens scoped ao editor de automações (evita vazar pro app). */
+.automation-editor,
+.ds-flow.automation-editor {
+  /* --- superfícies --- */
+  --fx-canvas-top:#F6F7FC;
+  --fx-canvas-bottom:#F1F3FA;
+  --fx-canvas-dot:#E1E5F2;
+  --fx-surface:#FFFFFF;
+  --fx-surface-border:#EDEFF7;
+  --fx-item-border:#EEF0F7;
+  --fx-divider:#F1F2F9;
+
+  /* --- texto --- */
+  --fx-text-strong:#141A2C;   /* título do nó */
+  --fx-text:#22283A;          /* título do item */
+  --fx-text-muted:#8A90A2;    /* descrição */
+  --fx-text-subtle:#9096A8;   /* subtítulo do item */
+  --fx-text-faint:#9CA2B4;    /* rótulo de estatística */
+
+  /* --- cores por tipo de nó --- */
+  --fx-type-trigger:#22C55E;
+  --fx-type-message:#22C55E;
+  --fx-type-action:#8B5CF6;
+  --fx-type-condition:#0EA5C4;
+  --fx-type-api:#7E869B;
+  --fx-type-fields:#0EA5B7;
+
+  /* --- cores por tipo de saída/porta --- */
+  --fx-flow:#16A6C4;    /* próximo passo */
+  --fx-error:#E5484D;   /* erro */
+  --fx-cond:#22A55A;    /* condição verdadeira */
+  --fx-port-idle:#CBD0DC;
+
+  /* --- estatísticas --- */
+  --fx-stat-ok:#1F9A57;
+  --fx-stat-warn:#C98A18;
+  --fx-stat-err:#D8484D;
+
+  /* --- raios (a assinatura do estilo Suave) --- */
+  --fx-radius-node:20px;
+  --fx-radius-item:13px;
+  --fx-radius-chip:10px;
+  --fx-radius-pill:999px;
+
+  /* --- sombras --- */
+  --fx-shadow-node:0 16px 30px rgba(30,42,80,.10), 0 3px 8px rgba(30,42,80,.05);
+  --fx-shadow-float:0 8px 22px rgba(20,28,55,.16);
+
+  /* --- espaçamento --- */
+  --fx-pad:16px;
+  --fx-gap:8px;
+
+  /* --- tipografia --- */
+  --fx-font:"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fx-font-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --fx-node-width:252px;
+
+  /* aliases de ponte p/ camada wf-* existente */
+  --wf-node-bg:var(--fx-surface);
+  --wf-node-border:var(--fx-surface-border);
+  --wf-canvas-dot:var(--fx-canvas-dot);
+}
+
+/* React Flow handles: cor semântica suave, posição do RF intacta */
+.automation-editor .react-flow__handle.wf-handle,
+.automation-editor .react-flow__handle.fx-port {
+  position: absolute; /* RF controla left/top via transform */
+  right: auto;
+  width:11px !important;
+  height:11px !important;
+  border:2px solid #fff !important;
+  border-radius:50%;
+  background:var(--fx-port-idle) !important;
+  box-shadow:0 0 0 1px var(--fx-port-idle) !important;
+  transition:transform .12s ease;
+  cursor:crosshair;
+}
+.automation-editor .react-flow__handle.wf-handle:hover,
+.automation-editor .react-flow__handle.fx-port:hover {
+  transform:scale(1.25);
+}
+.automation-editor .react-flow__handle.fx-port--flow,
+.automation-editor .react-flow__handle.wf-handle--cyan {
+  background:var(--fx-flow) !important;
+  box-shadow:0 0 0 1px var(--fx-flow) !important;
+}
+.automation-editor .react-flow__handle.fx-port--error,
+.automation-editor .react-flow__handle.wf-handle--err {
+  background:var(--fx-error) !important;
+  box-shadow:0 0 0 1px var(--fx-error) !important;
+}
+.automation-editor .react-flow__handle.fx-port--cond,
+.automation-editor .react-flow__handle.wf-handle--ok {
+  background:var(--fx-cond) !important;
+  box-shadow:0 0 0 1px var(--fx-cond) !important;
+}
+.automation-editor .react-flow__handle.wf-handle--muted,
+.automation-editor .react-flow__handle.wf-handle--orange {
+  background:var(--fx-port-idle) !important;
+  box-shadow:0 0 0 1px var(--fx-port-idle) !important;
+}
+
+/* Edges via classe (AnimatedEdge) */
+.automation-editor .react-flow__edge-path.fx-edge {
+  fill:none;
+  stroke-width:2.6;
+  stroke-linecap:round;
+  opacity:.9;
+}
+.automation-editor .react-flow__edge-path.fx-edge--flow { stroke:var(--fx-flow); stroke-dasharray:none; }
+.automation-editor .react-flow__edge-path.fx-edge--error { stroke:var(--fx-error); stroke-dasharray:5 5; }
+.automation-editor .react-flow__edge-path.fx-edge--cond { stroke:var(--fx-cond); stroke-dasharray:none; }
+
+/* Canvas suave */
+.automation-editor .automation-canvas,
+.automation-editor .react-flow {
+  background:linear-gradient(180deg, var(--fx-canvas-top) 0%, var(--fx-canvas-bottom) 100%);
+}
+
+/* ============================ CANVAS ============================ */
+.fx-canvas{
+  position:relative;
+  background:linear-gradient(180deg, var(--fx-canvas-top) 0%, var(--fx-canvas-bottom) 100%);
+}
+.fx-canvas::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(var(--fx-canvas-dot) 1.2px, transparent 1.2px);
+  background-size:26px 26px;opacity:.7;
+}
+
+/* ============================ NÓ ============================ */
+.fx-node{
+  --fx-type:var(--fx-type-api);          /* sobrescrito pelo modificador de tipo */
+  position:relative;width:var(--fx-node-width);
+  font-family:var(--fx-font);line-height:1.4;
+  background:var(--fx-surface);
+  border:1px solid var(--fx-surface-border);
+  border-radius:var(--fx-radius-node);
+  box-shadow:var(--fx-shadow-node);
+  transition:box-shadow .16s ease, border-color .16s ease, transform .16s ease;
+}
+.fx-node:hover{box-shadow:0 20px 38px rgba(30,42,80,.13), 0 4px 10px rgba(30,42,80,.06)}
+.fx-node.is-selected{
+  border-color:var(--fx-type);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--fx-type) 22%, transparent), var(--fx-shadow-node);
+}
+.fx-node.is-dragging{transform:scale(1.02);cursor:grabbing}
+.fx-node.is-invalid{border-color:var(--fx-error);box-shadow:0 0 0 3px rgba(229,72,77,.16), var(--fx-shadow-node)}
+
+/* modificadores de tipo */
+.fx-node--trigger{--fx-type:var(--fx-type-trigger)}
+.fx-node--message{--fx-type:var(--fx-type-message)}
+.fx-node--action{--fx-type:var(--fx-type-action)}
+.fx-node--condition{--fx-type:var(--fx-type-condition)}
+.fx-node--api{--fx-type:var(--fx-type-api)}
+.fx-node--fields{--fx-type:var(--fx-type-fields)}
+
+/* --- cabeçalho --- */
+.fx-node__head{display:flex;align-items:center;gap:10px;padding:15px var(--fx-pad) 10px}
+.fx-node__icon{
+  flex:0 0 auto;width:30px;height:30px;border-radius:var(--fx-radius-chip);
+  display:grid;place-items:center;
+  background:color-mix(in srgb, var(--fx-type) 15%, #fff);
+  color:var(--fx-type);
+}
+.fx-node__icon svg{width:16px;height:16px;display:block}
+.fx-node__title{
+  flex:1 1 auto;min-width:0;font-size:14px;font-weight:600;
+  letter-spacing:-.01em;color:var(--fx-text-strong);
+  /* IMPORTANTE: sem truncamento — o título quebra linha */
+  overflow-wrap:anywhere;
+}
+.fx-node__chevron{
+  flex:0 0 auto;width:22px;height:22px;display:grid;place-items:center;
+  border:none;background:transparent;border-radius:7px;color:#AEB4C4;cursor:pointer;
+}
+.fx-node__chevron:hover{background:#F1F2F7;color:#7B8296}
+.fx-node__chevron svg{width:14px;height:14px;transition:transform .18s ease}
+.fx-node.is-collapsed .fx-node__chevron svg{transform:rotate(-90deg)}
+.fx-node.is-collapsed .fx-node__desc,
+.fx-node.is-collapsed .fx-node__body,
+.fx-node.is-collapsed .fx-node__outs{display:none}
+
+.fx-node__desc{
+  margin:0;padding:0 var(--fx-pad) 12px;
+  font-size:11.5px;line-height:1.5;color:var(--fx-text-muted);
+}
+
+/* --- corpo / itens configurados --- */
+.fx-node__body{padding:0 var(--fx-pad)}
+.fx-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 11px;background:var(--fx-surface);
+  border:1px solid var(--fx-item-border);border-radius:var(--fx-radius-item);
+  transition:border-color .14s ease, background .14s ease;
+}
+.fx-item + .fx-item{margin-top:var(--fx-gap)}
+.fx-item:hover{border-color:color-mix(in srgb, var(--fx-type) 35%, var(--fx-item-border));background:color-mix(in srgb, var(--fx-type) 3%, #fff)}
+.fx-item__icon{flex:0 0 auto;width:18px;height:18px;margin-top:1px;display:grid;place-items:center;color:#6B7280}
+.fx-item__icon svg{width:16px;height:16px}
+.fx-item__text{min-width:0;flex:1 1 auto}
+.fx-item__title{font-size:12.5px;font-weight:500;color:var(--fx-text);overflow-wrap:anywhere}
+.fx-item__sub{margin-top:2px;font-size:11px;line-height:1.4;color:var(--fx-text-subtle);overflow-wrap:anywhere}
+/* única exceção ao "não truncar": URLs longas */
+.fx-item__sub--url{
+  font-family:var(--fx-font-mono);font-size:10.5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+.fx-badge{
+  flex:0 0 auto;align-self:flex-start;
+  font-family:var(--fx-font-mono);font-size:9px;font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase;line-height:1;
+  padding:3px 6px;border-radius:5px;
+}
+.fx-badge--test{background:#FFF2E0;color:#C77B15}
+.fx-badge--pub{background:#EAF0FF;color:#3E63DD}
+
+/* --- botão adicionar --- */
+.fx-add{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  width:100%;margin-top:9px;padding:10px;
+  font-family:var(--fx-font);font-size:12px;font-weight:500;
+  color:var(--fx-type);
+  background:color-mix(in srgb, var(--fx-type) 5%, #fff);
+  border:1px dashed color-mix(in srgb, var(--fx-type) 45%, #fff);
+  border-radius:var(--fx-radius-item);cursor:pointer;
+  transition:background .14s ease;
+}
+.fx-add:hover{background:color-mix(in srgb, var(--fx-type) 10%, #fff)}
+.fx-add svg{width:14px;height:14px}
+
+/* --- saídas rotuladas --- */
+.fx-node__outs{padding:10px var(--fx-pad) 4px}
+.fx-out{
+  position:relative;display:flex;align-items:center;justify-content:flex-end;
+  gap:8px;padding:6px 0;font-size:11px;line-height:1.35;text-align:right;
+}
+.fx-out__label{max-width:190px;color:#7A8194}
+.fx-out--flow  .fx-out__label{color:#3D8399}
+.fx-out--error .fx-out__label{color:#B4525A}
+.fx-out--cond  .fx-out__label{color:#3F8C57}
+/* saída ancorada a um item específico (ex.: cada condição) */
+.fx-item-out{
+  position:relative;display:flex;align-items:center;justify-content:flex-end;
+  gap:8px;padding:7px 0 2px;font-size:11px;color:#6C7386;
+}
+
+/* --- portas --- */
+.fx-port{
+  position:absolute;right:-20px;top:50%;transform:translateY(-50%);
+  width:11px;height:11px;border-radius:50%;
+  background:var(--fx-port-idle);border:2px solid #fff;
+  box-shadow:0 0 0 1px var(--fx-port-idle);
+  cursor:crosshair;transition:transform .12s ease;
+}
+.fx-port:hover{transform:translateY(-50%) scale(1.25)}
+.fx-port--in{left:-6px;right:auto;top:30px;transform:none;cursor:default}
+.fx-port--in:hover{transform:scale(1.25)}
+.fx-port--flow {background:var(--fx-flow); box-shadow:0 0 0 1px var(--fx-flow)}
+.fx-port--error{background:var(--fx-error);box-shadow:0 0 0 1px var(--fx-error)}
+.fx-port--cond {background:var(--fx-cond); box-shadow:0 0 0 1px var(--fx-cond)}
+
+/* --- rodapé de estatísticas --- */
+.fx-node__foot{display:flex;margin-top:8px;border-top:1px solid var(--fx-divider)}
+.fx-stat{flex:1;text-align:center;padding:10px 4px}
+.fx-stat + .fx-stat{border-left:1px solid var(--fx-divider)}
+.fx-stat b{display:block;font-size:14px;font-weight:600;line-height:1;color:#2A3145}
+.fx-stat span{display:block;margin-top:3px;font-size:9.5px;letter-spacing:.02em;color:var(--fx-text-faint)}
+.fx-stat--ok b{color:var(--fx-stat-ok)}
+.fx-stat--warn b{color:var(--fx-stat-warn)}
+.fx-stat--err b{color:var(--fx-stat-err)}
+
+/* ============================ CONEXÕES ============================ */
+.fx-edge{fill:none;stroke-width:2.6;stroke-linecap:round;opacity:.9}
+.fx-edge--flow{stroke:var(--fx-flow)}
+.fx-edge--error{stroke:var(--fx-error);stroke-dasharray:5 5}
+.fx-edge--cond{stroke:var(--fx-cond)}
+.fx-edge-delete{
+  position:absolute;z-index:3;width:18px;height:18px;border-radius:50%;
+  display:grid;place-items:center;transform:translate(-50%,-50%);
+  font-size:11px;line-height:1;cursor:pointer;
+  background:#fff;border:1px solid #D8DDEA;color:#98A0B3;
+  box-shadow:0 1px 2px rgba(16,24,40,.1);
+  transition:color .12s ease, border-color .12s ease, transform .12s ease;
+}
+.fx-edge-delete:hover{color:var(--fx-error);border-color:#F3B0B0;transform:translate(-50%,-50%) scale(1.12)}
+
+/* ============================ BARRA DE AÇÕES ============================ */
+.fx-toolbar{
+  position:absolute;z-index:6;display:flex;gap:2px;padding:5px;
+  transform:translate(-50%,-100%);
+  background:#fff;border:1px solid #E4E7F0;
+  border-radius:var(--fx-radius-chip);box-shadow:var(--fx-shadow-float);
+}
+.fx-toolbar button{
+  width:32px;height:32px;border:none;background:transparent;border-radius:8px;
+  color:#6A7183;cursor:pointer;display:grid;place-items:center;
+}
+.fx-toolbar button:hover{background:#F1F2F7;color:#333A4D}
+.fx-toolbar button.is-danger:hover{background:#FDECEC;color:var(--fx-error)}
+.fx-toolbar svg{width:16px;height:16px}
+
+/* ============================ ACESSIBILIDADE ============================ */
+.fx-node :focus-visible,
+.fx-port:focus-visible,
+.fx-edge-delete:focus-visible{
+  outline:2px solid var(--fx-flow);outline-offset:2px;
+}
+@media (prefers-reduced-motion:reduce){
+  .fx-node,.fx-item,.fx-add,.fx-port,.fx-edge-delete,.fx-node__chevron svg{transition:none}
+}

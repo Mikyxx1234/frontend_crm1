@@ -28,6 +28,7 @@ export function VariableNode({ data, selected }: NodeProps<VariableRF>) {
   return (
     <FlowNodeShell
       selected={selected}
+      type="fields"
       accent="violet"
       stepIndex={data.stepIndex}
       expanded={selected}

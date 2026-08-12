@@ -32,6 +32,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionRF>) 
   return (
     <FlowNodeShell
       selected={selected}
+      type="action"
       accent="primary"
       stepIndex={data.stepIndex}
       expanded={selected}
@@ -44,26 +45,26 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionRF>) 
         actions={<FlowNodeDeleteButton onDelete={data.onDelete} />}
       />
       <div className="wf-node__outs">
-        <div className="wf-node__out wf-node__out--ok">
+        <div className="wf-node__out wf-node__out--ok fx-out fx-out--cond">
           <CircleCheckBig className="size-3.5 shrink-0" strokeWidth={2.4} />
-          <span className="flex-1 truncate">Distribuído</span>
+          <span className="fx-out__label flex-1">Distribuído</span>
           <CustomHandle
             type="source"
             position={Position.Right}
             id="true"
             connectionLimit={1}
-            className="wf-handle--ok"
+            className="fx-port--cond"
           />
         </div>
-        <div className="wf-node__out wf-node__out--err">
+        <div className="wf-node__out wf-node__out--err fx-out fx-out--error">
           <CircleSlash className="size-3.5 shrink-0" strokeWidth={2.4} />
-          <span className="flex-1 truncate">Sem agente</span>
+          <span className="fx-out__label flex-1">Sem agente</span>
           <CustomHandle
             type="source"
             position={Position.Right}
             id="false"
             connectionLimit={1}
-            className="wf-handle--err"
+            className="fx-port--error"
           />
         </div>
       </div>

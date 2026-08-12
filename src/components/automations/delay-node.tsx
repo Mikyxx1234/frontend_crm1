@@ -28,6 +28,7 @@ export function DelayNode({ data, selected }: NodeProps<DelayRF>) {
   return (
     <FlowNodeShell
       selected={selected}
+      type="action"
       accent="orange"
       stepIndex={data.stepIndex}
       expanded={selected}

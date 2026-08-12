@@ -28,6 +28,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishRF>) {
   return (
     <FlowNodeShell
       selected={selected}
+      type="action"
       accent="rose"
       stepIndex={data.stepIndex}
       expanded={selected}

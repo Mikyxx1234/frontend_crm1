@@ -59,6 +59,7 @@ export function RoundRobinNode({ data, selected }: NodeProps<RoundRobinRF>) {
   return (
     <FlowNodeShell
       selected={selected}
+      type="condition"
       accent="cyan"
       stepIndex={data.stepIndex}
       expanded={selected}
@@ -68,7 +69,7 @@ export function RoundRobinNode({ data, selected }: NodeProps<RoundRobinRF>) {
         type="target"
         position={Position.Left}
         connectionLimit={1}
-        className="wf-handle--cyan"
+        className="fx-port--flow"
       />
       <FlowNodeHeader
         icon={<Refresh className="size-3.5" strokeWidth={2.4} />}
@@ -115,7 +116,7 @@ export function RoundRobinNode({ data, selected }: NodeProps<RoundRobinRF>) {
                     e.stopPropagation();
                     setEditingId(option.id);
                   }}
-                  className="truncate text-left text-[11px] font-bold text-[var(--text-primary)] hover:underline"
+                  className="text-left text-[11px] font-bold text-[var(--fx-text-strong)] hover:underline"
                   title="Clique para renomear"
                 >
                   {roundRobinOptionLabel(option, idx)}
@@ -144,7 +145,7 @@ export function RoundRobinNode({ data, selected }: NodeProps<RoundRobinRF>) {
               position={Position.Right}
               id={`option:${option.id}`}
               connectionLimit={1}
-              className="wf-handle--ok"
+              className="fx-port--cond"
             />
           </div>
         ))}

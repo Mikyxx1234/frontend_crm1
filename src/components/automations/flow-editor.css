@@ -1,8 +1,9 @@
 /* ============================================================
    AUTOMAÇÕES — EDITOR DE FLUXO (React Flow) · Design System v2
-   Espelha automations-canvas.html. Herda tokens de globals-v2.css.
-   Único token local: pontilhado do canvas.
+   Visual Suave: tokens em flow-suave.css (--fx-*).
    ============================================================ */
+@import "./flow-suave.css";
+
 .ds-flow {
   --canvas-dot: rgba(120, 140, 180, 0.28);
 
@@ -1327,34 +1328,31 @@
 }
 
 /* ============================================================
-   WORKFLOW CANVAS — cards simples (estilo Kommo / refs)
-   Borda colorida fina, sem barra lateral / glass.
+   WORKFLOW CANVAS — cards Suave (--fx-* de flow-suave.css)
    ============================================================ */
-.automation-editor,
-.ds-flow.automation-editor {
-  --wf-node-bg: #fff;
-  --wf-node-border: #e5e7eb;
-  --wf-handle-bg: var(--brand-primary, #6366f1);
-  --wf-canvas-dot: rgba(148, 163, 184, 0.45);
-}
-
 .v2-dark .automation-editor {
-  --wf-node-bg: var(--color-bg-card, #1a2234);
-  --wf-node-border: rgba(148, 163, 184, 0.22);
-  --wf-canvas-dot: rgba(120, 140, 180, 0.16);
+  --fx-canvas-top: #121826;
+  --fx-canvas-bottom: #0e1420;
+  --fx-canvas-dot: rgba(120, 140, 180, 0.16);
+  --fx-surface: var(--color-bg-card, #1a2234);
+  --fx-surface-border: rgba(148, 163, 184, 0.22);
+  --fx-text-strong: var(--text-primary);
+  --fx-text: var(--text-primary);
+  --fx-text-muted: var(--text-muted);
+  --fx-text-subtle: var(--text-muted);
+  --wf-node-bg: var(--fx-surface);
+  --wf-node-border: var(--fx-surface-border);
+  --wf-canvas-dot: var(--fx-canvas-dot);
 }
 
-.wf-node {
-  position: relative;
+/* Bridge: wf-node herda visual fx-node */
+.wf-node.fx-node {
+  width: auto;
   min-width: 240px;
   max-width: 280px;
-  border-radius: 10px;
-  border: 1.5px solid var(--wf-accent, var(--wf-node-border));
-  background: var(--wf-node-bg);
-  box-shadow: none;
-  transition: border-width 0.12s ease, box-shadow 0.12s ease;
-  color: var(--text-primary, #0f172a);
-  font-family: inherit;
+  --wf-accent: var(--fx-type);
+  --wf-handle-bg: var(--fx-flow);
+  color: var(--fx-text-strong);
 }
 .wf-node--expanded {
   min-width: 280px;
@@ -1364,36 +1362,15 @@
   min-width: 380px;
   max-width: 460px;
 }
-.wf-node:hover {
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-}
-.wf-node--selected {
-  border-width: 2px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-}
-.wf-node--incomplete {
-  border-color: var(--color-warning, #f59e0b);
-}
 
-/* Header tingido no card aberto */
-.wf-node--selected > .wf-node__head {
-  background: color-mix(in srgb, var(--wf-accent, #a78bfa) 14%, #fff);
-  border-bottom: 1px solid color-mix(in srgb, var(--wf-accent, #a78bfa) 20%, #f1f5f9);
-  border-radius: 8px 8px 0 0;
-  padding: 12px 12px 11px;
-}
-.v2-dark .wf-node--selected > .wf-node__head {
-  background: color-mix(in srgb, var(--wf-accent, #a78bfa) 18%, var(--wf-node-bg));
-}
-
-.wf-node--primary { --wf-accent: #818cf8; }
-.wf-node--cyan { --wf-accent: #22d3ee; }
-.wf-node--amber { --wf-accent: #fbbf24; }
-.wf-node--orange { --wf-accent: #fb923c; }
-.wf-node--rose { --wf-accent: #fb7185; }
-.wf-node--green { --wf-accent: #4ade80; }
-.wf-node--slate { --wf-accent: #94a3b8; }
-.wf-node--violet { --wf-accent: #a78bfa; }
+.wf-node--primary { --wf-accent: var(--fx-type-trigger); }
+.wf-node--cyan { --wf-accent: var(--fx-type-condition); }
+.wf-node--amber { --wf-accent: var(--fx-type-fields); }
+.wf-node--orange { --wf-accent: var(--fx-type-fields); }
+.wf-node--rose { --wf-accent: var(--fx-error); }
+.wf-node--green { --wf-accent: var(--fx-type-message); }
+.wf-node--slate { --wf-accent: var(--fx-type-api); }
+.wf-node--violet { --wf-accent: var(--fx-type-action); }
 
 .wf-node__index {
   position: absolute;
@@ -1405,13 +1382,13 @@
   height: 22px;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  background: var(--wf-accent, #818cf8);
+  border-radius: var(--fx-radius-pill);
+  background: var(--fx-type);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  box-shadow: 0 0 0 2px var(--wf-node-bg);
+  box-shadow: 0 0 0 2px var(--fx-surface);
   line-height: 1;
 }
 .wf-node__warn {
@@ -1424,76 +1401,65 @@
   height: 18px;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  background: #f59e0b;
+  border-radius: var(--fx-radius-pill);
+  background: var(--fx-stat-warn);
   color: #fff;
-  box-shadow: 0 0 0 2px var(--wf-node-bg);
+  box-shadow: 0 0 0 2px var(--fx-surface);
 }
 
-.wf-node__head {
+.wf-node__head.fx-node__head {
   display: flex;
   cursor: grab;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 12px 12px 10px;
-}
-.wf-node__head:active {
-  cursor: grabbing;
-}
-.wf-node__ico {
-  display: flex;
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
   align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--wf-accent, #818cf8) 18%, transparent);
-  color: color-mix(in srgb, var(--wf-accent, #818cf8) 70%, #312e81);
+  gap: 10px;
+  padding: 15px var(--fx-pad) 10px;
+}
+.wf-node__head:active { cursor: grabbing; }
+.wf-node__ico.fx-node__icon {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--fx-radius-chip);
+  background: color-mix(in srgb, var(--fx-type) 15%, #fff);
+  color: var(--fx-type);
   margin-top: 0;
 }
-.wf-node__titles {
-  min-width: 0;
-  flex: 1;
-  padding-top: 1px;
-}
-.wf-node__eyebrow {
-  display: none; /* refs nao usam eyebrow — reduz ruido */
-}
-.wf-node__title {
+.wf-node__ico.fx-node__icon svg { width: 16px; height: 16px; display: block; }
+.wf-node__titles { min-width: 0; flex: 1 1 auto; }
+.wf-node__eyebrow { display: none; }
+.wf-node__title.fx-node__title {
   margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
   letter-spacing: -0.01em;
-  color: #0f172a;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--fx-text-strong);
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-overflow: unset;
+  overflow: visible;
 }
-.v2-dark .wf-node__title {
-  color: var(--text-primary);
+.wf-node__sub.fx-node__desc {
+  display: block;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--fx-text-muted);
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: unset;
+  white-space: normal;
+  overflow: visible;
 }
-.wf-node__sub {
-  margin: 3px 0 0;
-  font-size: 11px;
-  font-weight: 450;
-  line-height: 1.35;
-  color: #94a3b8;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.wf-node__badge-slot {
-  margin-top: 6px;
-}
+.wf-node__badge-slot { margin-top: 6px; }
 .wf-node__actions {
   display: flex;
   flex-shrink: 0;
-  align-items: flex-start;
+  align-items: center;
   gap: 2px;
-  margin-top: -2px;
 }
 .wf-node__del {
   display: flex;
@@ -1502,55 +1468,39 @@
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   background: transparent;
-  color: #cbd5e1;
+  color: var(--fx-text-faint);
   opacity: 0;
   cursor: pointer;
   transition: opacity 0.12s, background 0.12s, color 0.12s;
 }
 .group\/node:hover .wf-node__del,
 .wf-node:hover .wf-node__del,
-.wf-node--selected .wf-node__del {
-  opacity: 1;
-}
-.wf-node__del:hover {
-  background: #fff1f2;
-  color: #e11d48;
-}
+.wf-node.is-selected .wf-node__del,
+.wf-node--selected .wf-node__del { opacity: 1; }
+.wf-node__del:hover { background: #fdecec; color: var(--fx-error); }
 
-/* Saídas — lista simples alinhada aos handles */
 .wf-node__outs {
-  border-top: 1px solid #f1f5f9;
-  padding: 2px 0 4px;
-}
-.v2-dark .wf-node__outs {
-  border-top-color: rgba(148, 163, 184, 0.15);
+  padding: 10px var(--fx-pad) 4px;
+  border-top: 1px solid var(--fx-divider);
 }
 .wf-node__out {
   position: relative;
   display: flex;
   min-height: 28px;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
-  padding: 4px 14px 4px 12px;
-  border-bottom: none;
-  font-size: 11.5px;
+  padding: 6px 0;
+  font-size: 11px;
   font-weight: 500;
-  color: #64748b;
-  line-height: 1.3;
+  line-height: 1.35;
+  text-align: right;
+  color: var(--fx-text-subtle);
 }
-.wf-node__out:last-child {
-  border-bottom: none;
-}
-.wf-node__out--ok {
-  color: #16a34a;
-  font-weight: 600;
-}
-.wf-node__out--err {
-  color: #e11d48;
-  font-weight: 600;
-}
+.wf-node__out--ok { color: #3f8c57; font-weight: 600; }
+.wf-node__out--err { color: #b4525a; font-weight: 600; }
 .wf-node__out .wf-branch-num {
   display: flex;
   width: 18px;
@@ -1559,46 +1509,41 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--wf-accent, #22d3ee) 16%, transparent);
-  color: color-mix(in srgb, var(--wf-accent, #22d3ee) 55%, #0e7490);
+  background: color-mix(in srgb, var(--fx-type) 16%, transparent);
+  color: var(--fx-type);
   font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-}
-.wf-node__stats {
-  display: none; /* refs priorizam conteudo; stats poluem o card */
+  margin-right: auto;
 }
 
-/* Handles — bolinhas pequenas nas bordas */
-.automation-editor .react-flow__handle.wf-handle,
-.wf-handle.react-flow__handle {
-  width: 9px !important;
-  height: 9px !important;
-  border: 2px solid #fff !important;
-  background: var(--wf-handle-bg, #6366f1) !important;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--wf-handle-bg, #6366f1) 35%, transparent) !important;
-  transition: transform 0.12s ease;
-}
-.automation-editor .react-flow__handle.wf-handle:hover,
-.wf-handle.react-flow__handle:hover {
-  transform: scale(1.2);
-}
-.wf-handle--ok {
-  --wf-handle-bg: #22c55e;
-}
-.wf-handle--err {
-  --wf-handle-bg: #f43f5e;
-}
-.wf-handle--muted {
-  --wf-handle-bg: #94a3b8;
-}
-.wf-handle--cyan {
-  --wf-handle-bg: #22d3ee;
-}
-.wf-handle--orange {
-  --wf-handle-bg: #fb923c;
+.wf-node__stats.fx-node__foot {
+  display: flex;
+  width: 100%;
+  margin-top: 8px;
+  border: none;
+  border-top: 1px solid var(--fx-divider);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
 }
 
+.fx-node.is-collapsed .wf-node__outs,
+.fx-node.is-collapsed .wf-node__sub,
+.fx-node.is-collapsed .fx-node__desc,
+.fx-node.is-collapsed .ds-flow--node-inline,
+.fx-node.is-collapsed .wf-node__stats,
+.fx-node.is-collapsed .fx-node__foot,
+.fx-node.is-collapsed .wf-node__badge-slot {
+  display: none !important;
+}
+
+.react-flow__node.dragging .fx-node {
+  transform: scale(1.02);
+  cursor: grabbing;
+}
 /* Inline config: menos “painel”, mais formulário do card */
 .automation-editor .wf-node .cfg-block,
 .automation-editor .wf-node [class*="node-inline"] {
@@ -1681,10 +1626,9 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--wf-accent, #818cf8) 18%, transparent);
   outline: none;
 }
-/* Selects / botões glass → flat */
+/* Selects / botões glass → flat (não aplicar a .cfg-add / .cfg-x) */
 .wf-node .ds-flow.ds-flow--node-inline .cfg-select-wrap > button,
-.wf-node .ds-flow.ds-flow--node-inline .cfg-combo > button,
-.wf-node .ds-flow.ds-flow--node-inline button[type="button"].nodrag {
+.wf-node .ds-flow.ds-flow--node-inline .cfg-combo > button {
   border: 1px solid #e2e8f0 !important;
   background: #fff !important;
   box-shadow: none !important;
@@ -1740,12 +1684,13 @@
 }
 
 /* ============================================================
-   CONDIÇÃO — card maior / ramos robustos (estilo Kommo)
+   CONDIÇÃO — card amplo / ramos legíveis (estilo Kommo)
    ============================================================ */
 .wf-node.wf-node--lg.wf-node--expanded,
 .wf-node.wf-node--condition.wf-node--expanded {
-  min-width: 420px;
-  max-width: 480px;
+  min-width: 460px;
+  max-width: 520px;
+  width: 500px;
 }
 .wf-node.wf-node--condition:not(.wf-node--expanded) {
   min-width: 280px;
@@ -1759,6 +1704,11 @@
   padding: 10px 12px 12px !important;
   border-top: 1px solid #f1f5f9;
 }
+/* Ao editar: só faixas de handle (sem preview redundante com o formulário) */
+.wf-node__outs--branches.wf-node__outs--editing {
+  gap: 4px;
+  padding: 8px 12px 10px !important;
+}
 .wf-cond-card {
   position: relative;
   display: flex;
@@ -1770,9 +1720,24 @@
   background: #fff;
   min-height: 48px;
 }
+.wf-cond-card--handle {
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 14px 6px 8px;
+  background: #f8fafc;
+}
 .wf-cond-card--else {
   background: #fffafa;
   border-color: #fecdd3;
+}
+.wf-cond-card--else.wf-cond-card--handle {
+  background: #fff;
+  border-color: #e2e8f0;
+}
+.wf-cond-card--else.wf-cond-card--handle .wf-cond-card__title {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 12px;
 }
 .wf-cond-card__text {
   min-width: 0;
@@ -1784,55 +1749,108 @@
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1.3;
-  color: #0f172a;
+  color: var(--fx-text-strong);
+  overflow-wrap: anywhere;
 }
 .wf-cond-card__desc {
   margin: 3px 0 0;
   font-size: 11px;
   font-weight: 450;
   line-height: 1.35;
-  color: #94a3b8;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  color: var(--fx-text-subtle);
+  overflow-wrap: anywhere;
+}
+/* Saídas ancoradas a item (condição) — handle RF fica na borda do nó */
+.automation-editor .fx-item-out {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 7px 14px 2px 0;
+  font-size: 11px;
+  color: var(--fx-text-subtle);
 }
 .wf-branch-num--err {
   background: #ffe4e6 !important;
   color: #e11d48 !important;
 }
 
-/* Builder: regras empilhadas, sem truncar */
+/* Builder: campo / operador / valor em coluna, largura total */
 .wf-node .ds-flow.ds-flow--node-inline .cfg-list {
-  gap: 10px;
+  gap: 12px;
 }
 .wf-node .ds-flow.ds-flow--node-inline .cfg-branch {
   gap: 10px;
-  padding: 12px;
-  border-radius: 10px;
+  padding: 14px;
+  border-radius: 12px;
   background: #fff;
   border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-rule {
+  flex-wrap: nowrap;
+  min-width: 0;
+  width: 100%;
 }
 .wf-node .ds-flow.ds-flow--node-inline .cfg-rule--stack {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
   background: #f8fafc;
   border: 1px solid #f1f5f9;
+  width: 100%;
+  min-width: 0;
 }
 .wf-node .ds-flow.ds-flow--node-inline .cfg-rule-row {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   min-width: 0;
+  width: 100%;
 }
 .wf-node .ds-flow.ds-flow--node-inline .cfg-rule-row > .cfg-select-wrap,
 .wf-node .ds-flow.ds-flow--node-inline .cfg-rule-row > .cfg-combo,
-.wf-node .ds-flow.ds-flow--node-inline .cfg-rule-row > input {
-  flex: 1;
+.wf-node .ds-flow.ds-flow--node-inline .cfg-rule-row > input,
+.wf-node .ds-flow.ds-flow--node-inline .cfg-rule--stack > input,
+.wf-node .ds-flow.ds-flow--node-inline .cfg-rule-row > *:not(.cfg-x) {
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0 !important;
+  max-width: none;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-rule-row > .cfg-select-wrap > button,
+.wf-node .ds-flow.ds-flow--node-inline .cfg-rule-row > .cfg-combo > button {
+  width: 100%;
   min-width: 0;
+  justify-content: space-between;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-rule-row > .cfg-x {
+  flex: 0 0 auto;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-add--dashed {
+  align-self: stretch;
+  width: 100%;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px dashed #cbd5e1;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 650;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-add--dashed:hover {
+  border-color: color-mix(in srgb, var(--wf-accent, #22d3ee) 50%, #94a3b8);
+  color: color-mix(in srgb, var(--wf-accent, #22d3ee) 40%, #0e7490);
+  background: color-mix(in srgb, var(--wf-accent, #22d3ee) 6%, #fff);
 }
 .wf-node .ds-flow.ds-flow--node-inline .cfg-add--block {
   align-self: stretch;
@@ -1841,7 +1859,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 11px 12px;
   border-radius: 10px;
   border: 1.5px dashed color-mix(in srgb, var(--wf-accent, #22d3ee) 55%, #94a3b8);
   color: color-mix(in srgb, var(--wf-accent, #22d3ee) 45%, #0e7490);
@@ -1859,7 +1877,22 @@
   color: #64748b;
 }
 .wf-node .ds-flow.ds-flow--node-inline .cfg-subrow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 6px;
+  width: 100%;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-subrow > .cfg-select-wrap {
+  width: 100%;
+  min-width: 0;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-subrow--else {
+  margin-top: 4px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #fecdd3;
+  background: #fffafa;
 }
 
 /* Canvas chrome sóbrio */

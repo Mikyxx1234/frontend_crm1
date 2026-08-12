@@ -592,7 +592,9 @@ export default function KanbanV2ClientPage({
     return stages.reduce((acc, s) => acc + (s.totalCount ?? s.deals.length), 0);
   }, [boardNormal.data, myPerms?.stageGrants]);
 
-  const isFiltering = !isEmptyFilters(filters) || rawSearch.length > 0;
+  // `mergedFilters` e não `filters` + `rawSearch`: é o recorte que o board de
+  // fato pediu ao servidor (busca já com debounce e mínimo de caracteres).
+  const isFiltering = !isEmptyFilters(mergedFilters);
   const boardPending = hasServerBoard
     ? boardFiltered.isPending
     : boardNormal.isPending;
@@ -622,9 +624,15 @@ export default function KanbanV2ClientPage({
         stage = { id: s.id, name: s.name, total: s.totalCount ?? s.deals.length };
       }
     }
-    const scopeFilters = { ...filters, ...(rawSearch ? { search: rawSearch } : {}) };
-    return { pipelineId, status, filters: scopeFilters, pipelineTotal, stage };
-  }, [pipelineId, stageGrantsFiltered, selectedIds, filters, rawSearch, status, filteredTotal]);
+    return { pipelineId, status, filters: mergedFilters, pipelineTotal, stage };
+  }, [
+    pipelineId,
+    stageGrantsFiltered,
+    selectedIds,
+    mergedFilters,
+    status,
+    filteredTotal,
+  ]);
 
   // Lookup ownerId / tags reais por dealId. O `Deal` (v0) que chega no
   // renderDeal só tem `owner.name`, não o `ownerId` nem `tagIds`. Esse
@@ -1052,10 +1060,7 @@ export default function KanbanV2ClientPage({
           bump={bump}
           exportScope={{
             pipelineId,
-            filters: {
-              ...filters,
-              ...(rawSearch ? { search: rawSearch } : {}),
-            },
+            filters: mergedFilters,
             status,
             filteredTotal,
             pipelineTotal: pipelineTotalUnfiltered,

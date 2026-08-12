@@ -535,9 +535,13 @@ export default function V2PipelineListClientPage() {
           }}
           exportScope={{
             pipelineId,
+            // Espelha exatamente o que `dealsQuery` pediu: `advancedForList`
+            // (sem o `search` do modal, que a lista ignora) + a busca já
+            // normalizada. Do contrário o "exportar base filtrada" traria um
+            // recorte diferente do que está na tela.
             filters: {
-              ...filters,
-              ...(debounced ? { search: debounced } : {}),
+              ...advancedForList,
+              ...(listSearch ? { search: listSearch } : {}),
             },
             status: statusFromTab(statusTab) ?? "ALL",
             filteredTotal: total,

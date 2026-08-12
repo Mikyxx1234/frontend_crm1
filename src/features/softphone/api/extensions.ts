@@ -29,6 +29,23 @@ export async function getMyCredentials(): Promise<SipCredentials> {
   return data.credentials;
 }
 
+/**
+ * Variante pra queries de "feature gate" (widgets que só verificam se o
+ * usuário tem ramal): 404 resolve `null` em vez de lançar. Sem isso o
+ * React Query trata como erro (sempre stale) e refaz o 404 a cada
+ * mount/navegação fria. O fluxo de conexão SIP (`use-softphone`)
+ * continua usando `getMyCredentials` (que lança) — lá o erro importa.
+ */
+export async function getMyCredentialsOrNull(): Promise<SipCredentials | null> {
+  const res = await fetch(`${BASE}/sip-extensions/me/credentials`);
+  if (res.status === 404) return null;
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
+  }
+  return (body as { credentials: SipCredentials }).credentials;
+}
+
 export type ConnectApi4ComResponse = {
   extension: SipExtension;
   api4com: { domain: string; ramal: string; wsServer: string };

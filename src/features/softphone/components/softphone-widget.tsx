@@ -46,7 +46,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSoftphone } from "../hooks/use-softphone";
 import { useCallsWidget } from "../hooks/use-calls-widget";
-import { getMyCredentials } from "../api/extensions";
+import { getMyCredentialsOrNull } from "../api/extensions";
 import { SOFTPHONE_EXPAND_EVENT } from "./softphone-nav-icon";
 
 function formatDuration(ms: number): string {
@@ -72,7 +72,7 @@ export function SoftphoneWidget() {
   // lançando erro, e o widget simplesmente não renderiza (handler abaixo).
   const credentialsQuery = useQuery({
     queryKey: ["softphone", "credentials"],
-    queryFn: getMyCredentials,
+    queryFn: getMyCredentialsOrNull,
     enabled: isAuthenticated && callsWidget.enabled === true,
     retry: false,
     staleTime: 5 * 60 * 1000,

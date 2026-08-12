@@ -15,7 +15,7 @@ import { DockButton } from "@/components/crm/floating-dock";
 import { cn } from "@/lib/utils";
 import { useSoftphone } from "../hooks/use-softphone";
 import { useCallsWidget } from "../hooks/use-calls-widget";
-import { getMyCredentials } from "../api/extensions";
+import { getMyCredentialsOrNull } from "../api/extensions";
 
 /** Evento pra o SoftphoneWidget expandir o chip de detalhes (ramal / erro). */
 export const SOFTPHONE_EXPAND_EVENT = "crm:softphone-expand";
@@ -41,7 +41,7 @@ export function SoftphoneNavIcon({
 
   const credentialsQuery = useQuery({
     queryKey: ["softphone", "credentials"],
-    queryFn: getMyCredentials,
+    queryFn: getMyCredentialsOrNull,
     enabled: isAuthenticated && callsWidget.enabled === true,
     retry: false,
     staleTime: 5 * 60 * 1000,

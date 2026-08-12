@@ -1357,12 +1357,12 @@
   font-family: inherit;
 }
 .wf-node--expanded {
-  min-width: 300px;
-  max-width: 360px;
+  min-width: 280px;
+  max-width: 320px;
 }
 .wf-node--expanded.wf-node--wide {
-  min-width: 420px;
-  max-width: 520px;
+  min-width: 380px;
+  max-width: 460px;
 }
 .wf-node:hover {
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
@@ -1373,6 +1373,17 @@
 }
 .wf-node--incomplete {
   border-color: var(--color-warning, #f59e0b);
+}
+
+/* Header tingido no card aberto */
+.wf-node--selected > .wf-node__head {
+  background: color-mix(in srgb, var(--wf-accent, #a78bfa) 14%, #fff);
+  border-bottom: 1px solid color-mix(in srgb, var(--wf-accent, #a78bfa) 20%, #f1f5f9);
+  border-radius: 8px 8px 0 0;
+  padding: 12px 12px 11px;
+}
+.v2-dark .wf-node--selected > .wf-node__head {
+  background: color-mix(in srgb, var(--wf-accent, #a78bfa) 18%, var(--wf-node-bg));
 }
 
 .wf-node--primary { --wf-accent: #818cf8; }
@@ -1592,6 +1603,140 @@
 .automation-editor .wf-node .cfg-block,
 .automation-editor .wf-node [class*="node-inline"] {
   border-top: 1px solid #f1f5f9;
+}
+
+/* ============================================================
+   CARD ABERTO — formulário flat (sem glass), estilo da ref
+   ============================================================ */
+.wf-node .ds-flow.ds-flow--node-inline {
+  width: 100%;
+  border-top: 1px solid #f1f5f9;
+  background: #fff;
+}
+.v2-dark .wf-node .ds-flow.ds-flow--node-inline {
+  background: var(--wf-node-bg);
+  border-top-color: rgba(148, 163, 184, 0.15);
+}
+.wf-node .ds-flow.ds-flow--node-inline .n-config {
+  gap: 12px;
+  padding: 12px 12px 14px;
+  border-top: none;
+  cursor: default;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-field {
+  gap: 4px;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-opt {
+  font-size: 10.5px;
+  font-weight: 500;
+  font-style: normal;
+  color: #94a3b8;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-hint,
+.wf-node .ds-flow.ds-flow--node-inline .cfg-info {
+  font-size: 11px;
+  font-weight: 450;
+  line-height: 1.35;
+  color: #94a3b8;
+  margin: 0;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-warning {
+  font-size: 11px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  backdrop-filter: none;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-input,
+.wf-node .ds-flow.ds-flow--node-inline .cfg-textarea,
+.wf-node .ds-flow.ds-flow--node-inline input.cfg-input,
+.wf-node .ds-flow.ds-flow--node-inline textarea.cfg-textarea {
+  padding: 8px 11px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  font-size: 12.5px;
+  line-height: 1.4;
+  box-shadow: none;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-textarea {
+  min-height: 64px;
+  resize: vertical;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-input:focus,
+.wf-node .ds-flow.ds-flow--node-inline .cfg-textarea:focus {
+  border-color: color-mix(in srgb, var(--wf-accent, #818cf8) 70%, #94a3b8);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--wf-accent, #818cf8) 18%, transparent);
+  outline: none;
+}
+/* Selects / botões glass → flat */
+.wf-node .ds-flow.ds-flow--node-inline .cfg-select-wrap > button,
+.wf-node .ds-flow.ds-flow--node-inline .cfg-combo > button,
+.wf-node .ds-flow.ds-flow--node-inline button[type="button"].nodrag {
+  border: 1px solid #e2e8f0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 8px !important;
+  min-height: 34px;
+  font-size: 12.5px;
+  color: #0f172a;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-duration {
+  gap: 6px;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-affix {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-affix .cfg-input {
+  border: none;
+  border-radius: 0;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-suffix {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f8fafc;
+  border-left: 1px solid #e2e8f0;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-branch,
+.wf-node .ds-flow.ds-flow--node-inline .cfg-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fafafa;
+  padding: 10px;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.wf-node .ds-flow.ds-flow--node-inline .cfg-tpl-preview {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  backdrop-filter: none;
+}
+
+/* Saídas ficam entre header e form — respiro */
+.wf-node--selected > .wf-node__outs {
+  background: #fff;
+  border-top: none;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 4px 0 6px;
 }
 
 /* Canvas chrome sóbrio */

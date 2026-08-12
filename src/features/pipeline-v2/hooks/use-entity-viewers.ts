@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
+import { subscribeSSEEvents } from "@/hooks/use-sse";
+
 /**
  * Presença "quem está vendo" (estilo Kommo). Enquanto a entidade (ex.: um
  * deal) estiver aberta, envia heartbeats ao backend e escuta o evento SSE
@@ -65,24 +67,25 @@ export function useEntityViewers(
     void beat(); // join
     const interval = setInterval(beat, 15_000);
 
-    const es = new EventSource("/api/sse/messages");
-    es.addEventListener("entity_viewers", (e) => {
-      try {
-        const data = JSON.parse((e as MessageEvent).data) as {
-          entityType?: string;
-          entityId?: string;
-          viewers?: EntityViewer[];
-        };
-        if (
-          data.entityType === entityType &&
-          data.entityId === entityId &&
-          Array.isArray(data.viewers)
-        ) {
-          setViewers(data.viewers);
+    const unsubscribeSSE = subscribeSSEEvents("/api/sse/messages", {
+      entity_viewers: (raw: unknown) => {
+        try {
+          const data = raw as {
+            entityType?: string;
+            entityId?: string;
+            viewers?: EntityViewer[];
+          };
+          if (
+            data.entityType === entityType &&
+            data.entityId === entityId &&
+            Array.isArray(data.viewers)
+          ) {
+            setViewers(data.viewers);
+          }
+        } catch {
+          /* ignore */
         }
-      } catch {
-        /* ignore */
-      }
+      },
     });
 
     // beforeunload + pagehide cobrem fechar aba / navegação externa / bfcache.
@@ -92,7 +95,7 @@ export function useEntityViewers(
     return () => {
       cancelled = true;
       clearInterval(interval);
-      es.close();
+      unsubscribeSSE();
       window.removeEventListener("beforeunload", leaveBeacon);
       window.removeEventListener("pagehide", leaveBeacon);
       leaveBeacon(); // saída ao navegar para outra rota do app

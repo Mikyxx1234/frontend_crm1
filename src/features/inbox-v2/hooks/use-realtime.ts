@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
+import { subscribeSSEEvents } from "@/hooks/use-sse";
 import { messagesKey } from "./use-messages";
 import { playInboxPing } from "./use-inbox-sound";
 import type { ConversationListRow } from "../api";
@@ -205,15 +206,10 @@ export function useInboxRealtime(options: {
       }, 5000);
     }
 
-    let es: EventSource | null = null;
-    let retry: ReturnType<typeof setTimeout> | undefined;
-
-    function connect() {
-      es = new EventSource("/api/sse/messages");
-
-      es.addEventListener("new_message", (e) => {
+    const unsubscribe = subscribeSSEEvents("/api/sse/messages", {
+      new_message: (raw: unknown) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as NewMessagePayload;
+          const data = raw as NewMessagePayload;
           if (shouldPlayInboundPing(qc, userIdRef.current, data)) {
             playInboxPing();
           }
@@ -241,11 +237,11 @@ export function useInboxRealtime(options: {
         } catch {
           /* ignore */
         }
-      });
+      },
 
-      es.addEventListener("message_status", (e) => {
+      message_status: (raw: unknown) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
+          const data = raw as {
             conversationId?: string;
             /** Id da bolha (= externalId/wamid no Meta). */
             messageId?: string;
@@ -317,19 +313,19 @@ export function useInboxRealtime(options: {
         } catch {
           /* ignore */
         }
-      });
+      },
 
-      es.addEventListener("conversation_updated", () => {
+      conversation_updated: () => {
         scheduleInboxRefresh();
-      });
+      },
 
       // Timeline (chatter) da conversa — encerramento/reabertura empurrados
       // pelo backend. Invalida ["conversation-timeline", id] p/ o
       // ConversationTimelineTab exibir o evento na hora, mesmo quando a
       // acao veio de outro agente/automacao (sem mutation local).
-      es.addEventListener("conversation_timeline_updated", (e) => {
+      conversation_timeline_updated: (raw: unknown) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
+          const data = raw as {
             conversationId?: string;
           };
           if (data.conversationId) {
@@ -340,11 +336,11 @@ export function useInboxRealtime(options: {
         } catch {
           /* ignore */
         }
-      });
+      },
 
-      es.addEventListener("contact_updated", (e) => {
+      contact_updated: (raw: unknown) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
+          const data = raw as {
             contactId?: string;
           };
           scheduleInboxRefresh();
@@ -354,11 +350,11 @@ export function useInboxRealtime(options: {
         } catch {
           /* ignore */
         }
-      });
+      },
 
-      es.addEventListener("whatsapp_call", (e) => {
+      whatsapp_call: (raw: unknown) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
+          const data = raw as {
             conversationId?: string;
           };
           if (data.conversationId && data.conversationId === activeRef.current) {
@@ -367,22 +363,22 @@ export function useInboxRealtime(options: {
         } catch {
           /* ignore */
         }
-      });
+      },
 
-      es.addEventListener("presence_update", () => {
+      presence_update: () => {
         qc.invalidateQueries({ queryKey: ["my-agent-status"] });
-      });
+      },
 
       // Ciclo de vida de automações (robô iniciou/avançou/terminou) —
       // atualiza o chip "robô em execução" do chat aberto. O evento traz
       // contactId (contexto não referencia conversa), então invalidamos a
       // query da conversa ativa; se o contato não for o mesmo, o refetch
       // é barato e o resultado idêntico.
-      es.addEventListener("automation_state", (e) => {
+      automation_state: (raw: unknown) => {
         // Invalida o botão "Robôs ativos" (por contato) do evento e,
         // por compat, o chip antigo (por conversa ativa).
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
+          const data = raw as {
             contactId?: string;
           };
           if (data.contactId) {
@@ -401,19 +397,11 @@ export function useInboxRealtime(options: {
             queryKey: ["active-automations", activeRef.current],
           });
         }
-      });
-
-      es.onerror = () => {
-        es?.close();
-        retry = setTimeout(connect, 5_000);
-      };
-    }
-
-    connect();
+      },
+    });
 
     return () => {
-      es?.close();
-      if (retry) clearTimeout(retry);
+      unsubscribe();
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = null;
       if (countsTimerRef.current) clearTimeout(countsTimerRef.current);

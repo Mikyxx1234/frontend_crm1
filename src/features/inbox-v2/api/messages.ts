@@ -11,14 +11,19 @@ import type {
   ReactionDto,
 } from "./types";
 
-/** GET /api/conversations/:id/messages */
+/** GET /api/conversations/:id/messages
+ *  `history` default false no cold path — ticket atual pinta rápido;
+ *  o hook faz um segundo fetch com history=1 e mescla no cache.
+ */
 export async function getMessages(
   conversationId: string,
+  opts?: { history?: boolean },
 ): Promise<MessagesResponse> {
-  // history=1: inclui mensagens de tickets anteriores do mesmo contato,
-  // com separadores de ticket injetados pelo backend. Sempre ativo no
-  // inbox v2 para exibir a linha do tempo contínua (comportamento Kommo).
-  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages?history=1`));
+  const history = opts?.history === true;
+  const q = history ? "?history=1" : "";
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/messages${q}`),
+  );
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(

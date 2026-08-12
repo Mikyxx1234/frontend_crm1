@@ -94,8 +94,8 @@ import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inb
 import { hasInboxServerFilters, normalizeInboxFilters } from "@/features/inbox-v2/api/types";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
-  useBoard,
   useDealDetail,
+  usePipelines,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
 import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
@@ -105,7 +105,7 @@ import { CallHistoryList } from "@/features/softphone/components/call-history-li
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { DealNotesTab } from "@/features/pipeline-v2/extras";
-import type { BoardStageDto } from "@/features/pipeline-v2/api";
+import type { PipelineListStageDto } from "@/features/pipeline-v2/api";
 
 // ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover.
 // Mostra as 2 primeiras; a lista completa fica no popover ("Selecionadas").
@@ -570,8 +570,8 @@ export default function InboxV2ClientPage({
   }, [rawRows, windowState, lastMessageDirection, sortBy, sortOrder]);
 
   const { data: tabCounts } = useTabCounts(
-    isAuthenticated && filtersHydrated,
-    filters,
+    isAuthenticated && tabHydrated && filtersHydrated,
+    serverFilters,
     searchForQuery,
   );
 
@@ -663,10 +663,12 @@ export default function InboxV2ClientPage({
   const { data: contactDetail } = useContactSidebar(activeContactId);
 
   // ── Realtime ────────────────────────────────────────────────────
+  // Só após prefs (tab/filtros) — evita invalidate lista+counts no
+  // connect enquanto a query key ainda está mudando no hydrate.
   useInboxRealtime({
     activeConversationId: activeId,
     currentUserId: session?.user?.id ?? null,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && tabHydrated && filtersHydrated,
   });
 
   /**
@@ -1303,43 +1305,48 @@ export default function InboxV2ClientPage({
     </div>
   );
 
-  // ── Funil real do primeiro deal do contato ──────────────────────
+  // ── Funil do primeiro deal ──────────────────────────────────────
+  // pipelineId já vem achatado no GET contact (?view=inbox). Não espera
+  // useDealDetail nem carrega o board completo (~150KB) — só stages via
+  // GET /api/pipelines (~3KB, staleTime 5min).
   const firstDeal = contactAsideView?.deals?.[0] ?? null;
   const firstDealId = firstDeal?.id ?? null;
   const { data: firstDealDetail } = useDealDetail(firstDealId);
-  // O detail do deal (/api/deals/:id) devolve pipeline e stage ANINHADOS
-  // em `deal.stage.pipeline.id` / `deal.stage.id` — não no topo. Ler o
-  // caminho errado deixava pipelineId nulo, o board nunca carregava e a
-  // aside mostrava "Sem estágio" sem dropdown de troca de fase.
   const dealStage = (
     firstDealDetail as
       | { stage?: { id?: string; pipeline?: { id?: string; name?: string } } }
       | undefined
   )?.stage;
-  const firstDealPipelineId = dealStage?.pipeline?.id ?? firstDeal?.pipelineId ?? null;
-  const firstDealPipelineName = dealStage?.pipeline?.name ?? null;
-  const { data: boardStages } = useBoard({
-    pipelineId: firstDealPipelineId,
-    enabled: !!firstDealPipelineId,
-  });
+  const firstDealPipelineId =
+    firstDeal?.pipelineId ?? dealStage?.pipeline?.id ?? null;
+  const firstDealPipelineName =
+    firstDeal?.pipelineName ?? dealStage?.pipeline?.name ?? null;
+  const { data: pipelinesLite } = usePipelines(
+    isAuthenticated && !!firstDealPipelineId,
+  );
+  const boardStages: PipelineListStageDto[] = useMemo(() => {
+    if (!firstDealPipelineId || !pipelinesLite) return [];
+    const pipe = pipelinesLite.find((p) => p.id === firstDealPipelineId);
+    return pipe?.stages ?? [];
+  }, [pipelinesLite, firstDealPipelineId]);
 
   // Monta funnelSegments e stageDropdownSlot para o primeiro deal.
   // Os demais deals ficam com fallback (sem barra + stageName estático).
-  const firstDealFunnelSegments = boardStages?.map((s) => ({
+  const firstDealFunnelSegments = boardStages.map((s) => ({
     id: s.id,
     name: s.name,
     color: s.color ?? "var(--brand-primary)",
     position: s.position,
   }));
-  const firstDealStageId = dealStage?.id ?? firstDeal?.stageId ?? null;
+  const firstDealStageId = firstDeal?.stageId ?? dealStage?.id ?? null;
   const firstDealStageName =
-    boardStages?.find((s) => s.id === firstDealStageId)?.name ??
+    boardStages.find((s) => s.id === firstDealStageId)?.name ??
     firstDeal?.stageName ??
     null;
 
   // Injeta funnelSegments + stageDropdownSlot + assigneeSlot apenas no primeiro deal.
   const dealsWithSlots = (contactAsideView?.deals ?? []).map((d, idx) => {
-    if (idx !== 0 || !boardStages?.length) return d;
+    if (idx !== 0 || !boardStages.length) return d;
     return {
       ...d,
       stageId: firstDealStageId ?? d.stageId,
@@ -2017,7 +2024,7 @@ function InboxStageDropdown({
   canMove = true,
   onSelect,
 }: {
-  stages: BoardStageDto[];
+  stages: PipelineListStageDto[];
   currentStageId: string | null;
   currentPipelineId: string | null;
   isPending: boolean;

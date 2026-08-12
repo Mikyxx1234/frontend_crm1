@@ -11,13 +11,15 @@ import { playInboxPing } from "./use-inbox-sound";
  * legado (`useSSE` + `scheduleInboxRefresh`):
  *
  *  - 1 EventSource só, compartilhado pela página.
- *  - Eventos new_message / message_status / conversation_updated
- *    invalidam list + counts.
+ *  - Eventos new_message / conversation_updated invalidam list + counts.
+ *  - message_status NÃO invalida lista/counts (só ticks da bolha) — evita
+ *    refetch storm em cold-load / rajadas de delivery receipts.
  *  - new_message / whatsapp_call invalidam mensagens da conversa
  *    ativa quando o conversationId casa.
- *  - contact_updated invalida lista + sidebar do contato.
- *  - Throttle de 250ms: rajadas de eventos não viram refetch×N.
+ *  - contact_updated passa pelo mesmo debounce da lista.
+ *  - Throttle de 800ms: rajadas de eventos não viram refetch×N.
  *  - Reconexão automática com backoff fixo de 5s em onerror.
+ *    NÃO invalida lista no connect/reconnect (só em eventos reais).
  *
  * Aviso sonoro: só em inbound destinado a este operador (assignedToId),
  * para não tocar em quem tem a inbox vazia / não é responsável.
@@ -94,7 +96,7 @@ export function useInboxRealtime(options: {
         refreshTimerRef.current = null;
         qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
         qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
-      }, 250);
+      }, 800);
     }
 
     let es: EventSource | null = null;
@@ -192,7 +194,8 @@ export function useInboxRealtime(options: {
               qc.invalidateQueries({ queryKey: ["activity-feed-stats"] });
             }
           }
-          scheduleInboxRefresh();
+          // Delivery receipts não mudam a lista/counts — só ticks na bolha.
+          // Evita cold-load storm quando o SSE despeja message_status em lote.
         } catch {
           /* ignore */
         }
@@ -226,7 +229,7 @@ export function useInboxRealtime(options: {
           const data = JSON.parse((e as MessageEvent).data) as {
             contactId?: string;
           };
-          qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+          scheduleInboxRefresh();
           if (data.contactId) {
             qc.invalidateQueries({ queryKey: ["contact-sidebar", data.contactId] });
           }

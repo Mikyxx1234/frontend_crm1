@@ -225,9 +225,9 @@ export interface ContactDetail {
   dealInboxPanelFields?: Record<string, InboxLeadPanelField[]>;
 }
 
-/** GET /api/contacts/:id */
+/** GET /api/contacts/:id — `view=inbox` pula relations pesadas do aside. */
 export async function getContact(contactId: string): Promise<ContactDetail> {
-  const res = await fetch(apiUrl(`/api/contacts/${contactId}`));
+  const res = await fetch(apiUrl(`/api/contacts/${contactId}?view=inbox`));
   if (!res.ok) throw new Error("Erro ao carregar contato");
   return res.json() as Promise<ContactDetail>;
 }

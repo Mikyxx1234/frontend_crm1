@@ -72,8 +72,9 @@ export function useConversations(params: {
     // SSE (`useInboxRealtime`) já invalida esta query em new_message /
     // conversation_updated. Polling fica só como safety-net.
     refetchInterval: 60_000,
-    staleTime: 30_000,
+    staleTime: 45_000,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Agrega todas as páginas carregadas em um único `items[]` pra
@@ -241,9 +242,12 @@ export function useTabCounts(
     queryKey: ["conversations", "tab-counts", filterKey, searchKey],
     queryFn: () => fetchTabCounts(filters, searchKey),
     // Contadores das abas: SSE invalida em tempo real; 60s cobre gaps.
+    // staleTime alinhado ao cache Redis do backend (45s) pra não
+    // re-disparar counts×N no mount/StrictMode/prefs hydrate.
     refetchInterval: 60_000,
-    staleTime: 30_000,
+    staleTime: 45_000,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
     enabled: isPreviewMode() ? true : enabled,
   });
 }

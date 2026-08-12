@@ -65,7 +65,7 @@ export type DealPanelField = {
   highlight: { severity: string; label: string } | null;
 };
 
-/** GET /api/deals/:id — detail panel (`view=panel` omite activities/notes embutidos). */
+/** GET /api/deals/:id — detail panel */
 export async function getDeal(dealId: string): Promise<BoardDealDto & {
   notes?: string | null;
   source?: string | null;
@@ -78,7 +78,7 @@ export async function getDeal(dealId: string): Promise<BoardDealDto & {
   /** Campos de negócio marcados para exibição no painel Deal Detail (showInDealPanel). */
   dealPanelFields?: DealPanelField[];
 }> {
-  const res = await fetch(apiUrl(`/api/deals/${dealId}?view=panel`));
+  const res = await fetch(apiUrl(`/api/deals/${dealId}`));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(

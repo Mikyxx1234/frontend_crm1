@@ -72,12 +72,6 @@ export function useDealChatBinding(params: {
   /** ID do deal — usado para "Adicionar ao log". */
   dealId?: string | null;
   /**
-   * Quando false, não dispara POST /conversations/create enquanto o
-   * detail do deal ainda está carregando (evita race + create desnecessário).
-   * Default true (comportamento legado).
-   */
-  allowEnsure?: boolean;
-  /**
    * Override opcional. Quando ausente, o hook deriva `sessionExpired` do
    * `session` retornado pela própria query `useMessages` (mesma fonte que o
    * /inbox usa). Mantemos o backend como source of truth quando disponível,
@@ -99,7 +93,6 @@ export function useDealChatBinding(params: {
     contactName,
     contactId,
     dealId,
-    allowEnsure = true,
     sessionExpired: sessionExpiredOverride,
     isResolved,
     closedAt,
@@ -183,27 +176,16 @@ export function useDealChatBinding(params: {
   }, [contactId]);
 
   useEffect(() => {
-    if (
-      allowEnsure &&
-      !conversationId &&
-      contactId &&
-      !ensuredId &&
-      !autoEnsuredRef.current &&
-      !ensureMutation.isPending
-    ) {
+    if (!conversationId && contactId && !ensuredId && !autoEnsuredRef.current && !ensureMutation.isPending) {
       autoEnsuredRef.current = true;
       ensureMutation.mutate(contactId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, contactId, ensuredId, allowEnsure]);
+  }, [conversationId, contactId, ensuredId]);
 
   // Id efetivo: o do deal (quando já vinculado) ou o recém-garantido.
   const effectiveConversationId = conversationId ?? ensuredId;
-  const ensuring =
-    allowEnsure &&
-    !effectiveConversationId &&
-    !!contactId &&
-    (ensureMutation.isPending || !ensureMutation.isError);
+  const ensuring = !effectiveConversationId && !!contactId && (ensureMutation.isPending || !ensureMutation.isError);
 
   const { data: messagesResp } = useMessages(effectiveConversationId);
   const sendMutation = useSendMessage(effectiveConversationId);

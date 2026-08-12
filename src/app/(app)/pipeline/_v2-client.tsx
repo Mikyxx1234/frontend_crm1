@@ -786,8 +786,9 @@ export default function KanbanV2ClientPage({
   );
 
   // ── Conversa real ligada ao deal ────────────────────────────────
-  // Preferência: (1) detail API, (2) conversationId já no card do board
-  // (seed imediato — não espera GET /deals/:id), (3) ensure via contact.
+  // Pega a conversa mais recente do contato (o backend ja ordena por
+  // updatedAt desc em getDealById). Quando o deal nao tem contato
+  // vinculado ou nao ha conversa, o binding retorna nodes de "vazio".
   const dealConversation =
     (dealDetail?.contact as
       | {
@@ -807,8 +808,7 @@ export default function KanbanV2ClientPage({
       | null
       | undefined
     )?.conversations?.[0] ?? null;
-  const boardConversationId = boardDealSeed?.conversationId ?? null;
-  const dealConversationId = dealConversation?.id ?? boardConversationId ?? null;
+  const dealConversationId = dealConversation?.id ?? null;
   const dealConversationDepartmentId =
     dealConversation?.departmentId ??
     dealConversation?.department?.id ??
@@ -825,9 +825,6 @@ export default function KanbanV2ClientPage({
       contactName: dealContactName,
       contactId: dealContactId,
       dealId: activeDealId,
-      // Só auto-cria conversa depois do detail (ou se o board já disse
-      // que não há conversationId e o detail confirmou contato sem conv).
-      allowEnsure: !!dealDetail && !dealConversationId,
       isResolved: dealConversation?.status === "RESOLVED",
       closedAt: dealConversation?.closedAt ?? null,
       conversationNumber: dealConversation?.number ?? null,

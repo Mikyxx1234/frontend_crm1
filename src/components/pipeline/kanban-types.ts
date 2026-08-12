@@ -40,8 +40,6 @@ export type BoardDeal = {
    * quando o contato ainda não tem nenhuma conversa registrada.
    */
   channel?: string | null;
-  /** Conversa mais recente do contato — seed do chat ao abrir o deal. */
-  conversationId?: string | null;
   productName?: string | null;
   productType?: "PRODUCT" | "SERVICE" | null;
   tags?: { id: string; name: string; color: string }[];

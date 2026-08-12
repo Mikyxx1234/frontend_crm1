@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -179,23 +179,11 @@ export const contactActiveAutomationsKey = (contactId: string | null) =>
  * tempo real pelo evento SSE `automation_state` (ver use-realtime.ts).
  */
 export function useContactActiveAutomations(contactId: string | null) {
-  // Adia o fetch ~1s para não competir com messages/deal no open do painel.
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    if (!contactId) {
-      setReady(false);
-      return;
-    }
-    setReady(false);
-    const t = window.setTimeout(() => setReady(true), 1000);
-    return () => window.clearTimeout(t);
-  }, [contactId]);
-
   return useQuery<{ items: ActiveAutomationDto[] }, Error, ActiveAutomationDto[]>({
     queryKey: contactActiveAutomationsKey(contactId),
     queryFn: () => getContactActiveAutomations(contactId as string),
-    enabled: Boolean(contactId) && ready && !isPreviewMode(),
-    staleTime: 60_000,
+    enabled: Boolean(contactId) && !isPreviewMode(),
+    staleTime: 15_000,
     select: (d) => d.items,
   });
 }

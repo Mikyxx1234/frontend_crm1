@@ -1761,25 +1761,32 @@ function ConditionBuilder({ config, steps, onChange }: { config: Cfg; steps: Ste
               const field = str(r.field)
               const isCustom = !!field && !knownFields.has(field)
               return (
-                <div className="cfg-rule" key={ri}>
-                  <ConfigSelect
-                    value={isCustom ? CUSTOM_FIELD_SENTINEL : field}
-                    options={[
-                      ...fieldOptions,
-                      { value: CUSTOM_FIELD_SENTINEL, label: "Outro (caminho livre)…" },
-                    ]}
-                    loading={fieldsLoading}
-                    placeholder="campo"
-                    onChange={(v) => {
-                      // Trocar de campo zera o valor (o widget muda de tipo).
-                      // "Outro" injeta um seed editável (`variables.`).
-                      if (v === CUSTOM_FIELD_SENTINEL) {
-                        updateRule(bi, ri, { field: "variables.", value: "" })
-                      } else {
-                        updateRule(bi, ri, { field: v, value: "" })
-                      }
-                    }}
-                  />
+                <div className="cfg-rule cfg-rule--stack" key={ri}>
+                  <div className="cfg-rule-row">
+                    <ConfigSelect
+                      value={isCustom ? CUSTOM_FIELD_SENTINEL : field}
+                      options={[
+                        ...fieldOptions,
+                        { value: CUSTOM_FIELD_SENTINEL, label: "Outro (caminho livre)…" },
+                      ]}
+                      loading={fieldsLoading}
+                      placeholder="Campo"
+                      onChange={(v) => {
+                        if (v === CUSTOM_FIELD_SENTINEL) {
+                          updateRule(bi, ri, { field: "variables.", value: "" })
+                        } else {
+                          updateRule(bi, ri, { field: v, value: "" })
+                        }
+                      }}
+                    />
+                    <button
+                      className="cfg-x nodrag"
+                      title="Remover regra"
+                      onClick={() => updateBranch(bi, { rules: (b.rules ?? []).filter((_, i) => i !== ri) })}
+                    >
+                      ×
+                    </button>
+                  </div>
                   {isCustom && (
                     <InputGlass
                       className="nodrag"
@@ -1788,41 +1795,64 @@ function ConditionBuilder({ config, steps, onChange }: { config: Cfg; steps: Ste
                       onChange={(e) => updateRule(bi, ri, { field: e.target.value })}
                     />
                   )}
-                  <ConfigSelect value={str(r.op)} options={CONDITION_OPS} placeholder="operador" onChange={(v) => updateRule(bi, ri, { op: v })} />
-                  {!noVal && (
-                    <ConditionValue
-                      field={field}
-                      op={str(r.op)}
-                      value={str(r.value)}
-                      onChange={(v) => updateRule(bi, ri, { value: v })}
+                  <div className="cfg-rule-row">
+                    <ConfigSelect
+                      value={str(r.op)}
+                      options={CONDITION_OPS}
+                      placeholder="Operador"
+                      onChange={(v) => updateRule(bi, ri, { op: v })}
                     />
-                  )}
-                  <button
-                    className="cfg-x nodrag"
-                    title="Remover regra"
-                    onClick={() => updateBranch(bi, { rules: (b.rules ?? []).filter((_, i) => i !== ri) })}
-                  >
-                    ×
-                  </button>
+                    {!noVal && (
+                      <ConditionValue
+                        field={field}
+                        op={str(r.op)}
+                        value={str(r.value)}
+                        onChange={(v) => updateRule(bi, ri, { value: v })}
+                      />
+                    )}
+                  </div>
                 </div>
               )
             })}
-            <button className="cfg-add sm nodrag" onClick={() => updateBranch(bi, { rules: [...(b.rules ?? []), { field: "", op: "eq", value: "" }] })}>
+            <button
+              className="cfg-add sm nodrag"
+              onClick={() =>
+                updateBranch(bi, { rules: [...(b.rules ?? []), { field: "", op: "eq", value: "" }] })
+              }
+            >
               + regra
             </button>
             <div className="cfg-subrow">
               <span className="cfg-sublabel">Quando bater → ir para</span>
-              <ConfigSelect value={str(b.nextStepId)} options={steps} placeholder="passo…" onChange={(v) => updateBranch(bi, { nextStepId: v })} />
+              <ConfigSelect
+                value={str(b.nextStepId)}
+                options={steps}
+                placeholder="Selecione o passo…"
+                onChange={(v) => updateBranch(bi, { nextStepId: v })}
+              />
             </div>
           </div>
         ))}
       </div>
-      <button className="cfg-add nodrag" onClick={() => setBranches([...branches, { id: rid("br"), label: "", rules: [{ field: "", op: "eq", value: "" }] }])}>
-        + Adicionar ramo
+      <button
+        className="cfg-add cfg-add--block nodrag"
+        onClick={() =>
+          setBranches([
+            ...branches,
+            { id: rid("br"), label: "", rules: [{ field: "", op: "eq", value: "" }] },
+          ])
+        }
+      >
+        + Adicionar condição
       </button>
       <div className="cfg-subrow">
         <span className="cfg-sublabel">Nenhuma condição → ir para</span>
-        <ConfigSelect value={str(config.elseStepId)} options={steps} placeholder="passo…" onChange={(v) => onChange({ ...config, elseStepId: v })} />
+        <ConfigSelect
+          value={str(config.elseStepId)}
+          options={steps}
+          placeholder="Selecione o passo…"
+          onChange={(v) => onChange({ ...config, elseStepId: v })}
+        />
       </div>
     </div>
   )

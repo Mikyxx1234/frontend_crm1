@@ -14,6 +14,7 @@ import {
   FlowNodeHeader,
   FlowNodeShell,
 } from "./flow-node-shell";
+import { cn } from "@/lib/utils";
 
 export type ConditionNodeData = {
   label: string;
@@ -53,17 +54,17 @@ function ruleSummary(
   branch: ConditionBranch,
   resolveValue: (field: string, value: unknown) => string
 ): string {
-  if (branch.rules.length === 0) return branch.label ?? "Condição";
+  if (branch.rules.length === 0) return "Sem regras — clique para configurar";
   const first = branch.rules[0];
   const field = FIELD_LABEL[first.field] ?? first.field ?? "—";
   const op = OP_LABEL[first.op] ?? first.op;
   const value =
     first.op === "empty" || first.op === "not_empty"
       ? ""
-      : ` ${resolveValue(first.field, first.value).slice(0, 24)}`;
+      : ` ${resolveValue(first.field, first.value).slice(0, 32)}`;
   const base = `${field} ${op}${value}`;
   if (branch.rules.length > 1) {
-    return `${base} +${branch.rules.length - 1}`;
+    return `${base} (+${branch.rules.length - 1})`;
   }
   return base;
 }
@@ -88,7 +89,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionRF>) {
       accent="cyan"
       stepIndex={data.stepIndex}
       expanded={selected}
-      className={selected ? "max-w-[380px] min-w-[320px]" : "max-w-[300px] min-w-[260px]"}
+      className={cn("wf-node--condition", selected && "wf-node--lg")}
     >
       <CustomHandle
         type="target"
@@ -98,40 +99,49 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionRF>) {
       />
       <FlowNodeHeader
         icon={<GitBranch className="size-3.5" strokeWidth={2.4} />}
-        title={data.label}
+        title={data.label || "Condição"}
         subtitle={
-          hasBranches
-            ? `${branches.length} ${branches.length > 1 ? "condições" : "condição"}`
-            : "Clique para configurar"
+          selected
+            ? "Filtros para seguir caminhos diferentes"
+            : hasBranches
+              ? `${branches.length} ${branches.length > 1 ? "condições" : "condição"}`
+              : "Clique para configurar"
         }
         actions={
           <FlowNodeDeleteButton onDelete={data.onDelete} label="Remover condição" />
         }
       />
-      <div className="wf-node__outs">
-        {branches.map((branch, idx) => (
-          <div key={branch.id} className="wf-node__out" style={{ minHeight: 30, height: "auto" }}>
-            <span className="wf-branch-num">{idx + 1}</span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[11.5px] font-medium text-[#64748b]">
-                <Filter className="mr-1 inline size-2.5 opacity-70" strokeWidth={2.2} />
-                Se {ruleSummary(branch, resolveValue)}
-              </p>
+      <div className="wf-node__outs wf-node__outs--branches">
+        {branches.map((branch, idx) => {
+          const title =
+            (branch.label && branch.label.trim()) || `Condição ${idx + 1}`;
+          const desc = ruleSummary(branch, resolveValue);
+          return (
+            <div key={branch.id} className="wf-cond-card">
+              <span className="wf-branch-num">{idx + 1}</span>
+              <div className="wf-cond-card__text">
+                <p className="wf-cond-card__title">{title}</p>
+                <p className="wf-cond-card__desc">
+                  <Filter className="inline size-2.5 opacity-60" strokeWidth={2.2} />{" "}
+                  {desc}
+                </p>
+              </div>
+              <CustomHandle
+                type="source"
+                position={Position.Right}
+                id={`branch:${branch.id}`}
+                connectionLimit={1}
+                className="wf-handle--ok"
+              />
             </div>
-            <CustomHandle
-              type="source"
-              position={Position.Right}
-              id={`branch:${branch.id}`}
-              connectionLimit={1}
-              className="wf-handle--ok"
-            />
+          );
+        })}
+        <div className="wf-cond-card wf-cond-card--else">
+          <span className="wf-branch-num wf-branch-num--err">⊘</span>
+          <div className="wf-cond-card__text">
+            <p className="wf-cond-card__title">Nenhuma das condições</p>
+            <p className="wf-cond-card__desc">Quando não atender a nenhum ramo</p>
           </div>
-        ))}
-        <div className="wf-node__out wf-node__out--err">
-          <span className="wf-branch-num" style={{ background: "#ffe4e6", color: "#e11d48" }}>
-            ⊘
-          </span>
-          <p className="flex-1 truncate">Nenhuma das condições</p>
           <CustomHandle
             type="source"
             position={Position.Right}

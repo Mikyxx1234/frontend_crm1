@@ -31,6 +31,10 @@ import {
   pathForPipelineView,
   writePipelineViewPreference,
 } from "@/lib/pipeline-view-preference";
+import {
+  SEARCH_DEBOUNCE_MS,
+  normalizeSearchQuery,
+} from "@/lib/search-query";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
@@ -296,13 +300,15 @@ export default function KanbanV2ClientPage({
   const rawSearch = (filters.search ?? search).trim();
   const [debouncedSearch, setDebouncedSearch] = useState(rawSearch);
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(rawSearch), 300);
+    const t = setTimeout(() => setDebouncedSearch(rawSearch), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [rawSearch]);
 
   const mergedFilters = useMemo(() => {
     const f: AdvancedDealFilters = { ...filters };
-    if (debouncedSearch.length >= 2) f.search = debouncedSearch;
+    const q = normalizeSearchQuery(debouncedSearch);
+    if (q) f.search = q;
+    else delete f.search;
     return f;
   }, [filters, debouncedSearch]);
 

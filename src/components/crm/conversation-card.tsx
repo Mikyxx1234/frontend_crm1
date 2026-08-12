@@ -316,16 +316,6 @@ export function ConversationCard({
                   <StatusTicks status="failed" onLightBg size="card" />
                 </span>
               </TooltipGlass>
-            ) : isOutgoing && conversation.lastMessageStatus ? (
-              <span className="inline-flex shrink-0 not-italic">
-                <StatusTicks
-                  status={conversation.lastMessageStatus}
-                  onLightBg
-                  size="card"
-                />
-              </span>
-            ) : isOutgoing ? (
-              <StatusTicks status="sent" onLightBg size="card" />
             ) : null}
             {TypeIcon ? (
               <TypeIcon size={12} className="shrink-0 text-[var(--brand-primary)]" />

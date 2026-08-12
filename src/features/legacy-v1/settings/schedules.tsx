@@ -3,9 +3,7 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  IconCheck as Check,
   IconClock,
-  IconLoader2 as Loader2,
   IconPencil,
   IconPhone,
   IconPlus,
@@ -17,7 +15,6 @@ import {
 import { toast } from "sonner";
 
 import { UserAvatar } from "@/components/crm/user-avatar";
-import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { KpiCard, type KpiTone } from "@/components/crm/kpi-card";
 import { KpiStrip } from "@/components/crm/kpi-strip";
@@ -31,33 +28,20 @@ import {
   type SortDir,
 } from "@/components/crm/sortable-header";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
+import {
+  DEFAULT_SCHEDULE,
+  ScheduleDialogShell,
+  ScheduleFields,
+  type Schedule,
+} from "@/features/settings/schedules/schedule-shared";
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type AgentOnlineStatus = "ONLINE" | "OFFLINE" | "AWAY";
-
-type Schedule = {
-  startTime: string;
-  lunchStart: string;
-  lunchEnd: string;
-  endTime: string;
-  timezone: string;
-  weekdays: number[];
-};
 
 type AgentRow = {
   id: string;
@@ -96,25 +80,6 @@ const STATUS_DOT: Record<AgentOnlineStatus, string> = {
   AWAY: "bg-[var(--color-warn)]",
 };
 
-const WEEKDAYS = [
-  { value: 0, short: "Dom", label: "Domingo" },
-  { value: 1, short: "Seg", label: "Segunda" },
-  { value: 2, short: "Ter", label: "Terça" },
-  { value: 3, short: "Qua", label: "Quarta" },
-  { value: 4, short: "Qui", label: "Quinta" },
-  { value: 5, short: "Sex", label: "Sexta" },
-  { value: 6, short: "Sáb", label: "Sábado" },
-];
-
-const DEFAULT_SCHEDULE: Schedule = {
-  startTime: "08:00",
-  lunchStart: "12:00",
-  lunchEnd: "13:00",
-  endTime: "18:00",
-  timezone: "America/Sao_Paulo",
-  weekdays: [1, 2, 3, 4, 5],
-};
-
 /** Mini-dash: segmentos de status clicáveis. */
 const STATUS_SEGMENTS: {
   id: Exclude<StatusFilter, "">;
@@ -137,93 +102,6 @@ async function fetchAgents(): Promise<AgentRow[]> {
   const res = await fetch(apiUrl("/api/agents/status"));
   if (!res.ok) throw new Error("Erro ao carregar agentes");
   return res.json();
-}
-
-// ─── Sub-form reutilizável de horário (edição + template) ─────────────────────
-
-function ScheduleFields({
-  schedule,
-  onChange,
-}: {
-  schedule: Schedule;
-  onChange: (next: Schedule) => void;
-}) {
-  const toggleWeekday = (day: number) => {
-    onChange({
-      ...schedule,
-      weekdays: schedule.weekdays.includes(day)
-        ? schedule.weekdays.filter((d) => d !== day)
-        : [...schedule.weekdays, day].sort(),
-    });
-  };
-
-  return (
-    <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="min-w-0 w-full space-y-1.5">
-          <Label>Início expediente</Label>
-          <InputGlass
-            type="time"
-            value={schedule.startTime}
-            onChange={(e) => onChange({ ...schedule, startTime: e.target.value })}
-            className="w-full"
-          />
-        </div>
-        <div className="min-w-0 w-full space-y-1.5">
-          <Label>Fim expediente</Label>
-          <InputGlass
-            type="time"
-            value={schedule.endTime}
-            onChange={(e) => onChange({ ...schedule, endTime: e.target.value })}
-            className="w-full"
-          />
-        </div>
-        <div className="min-w-0 w-full space-y-1.5">
-          <Label>Início almoço</Label>
-          <InputGlass
-            type="time"
-            value={schedule.lunchStart}
-            onChange={(e) => onChange({ ...schedule, lunchStart: e.target.value })}
-            className="w-full"
-          />
-        </div>
-        <div className="min-w-0 w-full space-y-1.5">
-          <Label>Fim almoço</Label>
-          <InputGlass
-            type="time"
-            value={schedule.lunchEnd}
-            onChange={(e) => onChange({ ...schedule, lunchEnd: e.target.value })}
-            className="w-full"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Dias de trabalho</Label>
-        <div className="flex flex-wrap gap-2">
-          {WEEKDAYS.map((wd) => {
-            const active = schedule.weekdays.includes(wd.value);
-            return (
-              <button
-                key={wd.value}
-                type="button"
-                onClick={() => toggleWeekday(wd.value)}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-[var(--radius-md)] px-3 py-2 text-xs font-semibold transition-colors",
-                  active
-                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                    : "border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] text-[var(--text-muted)] hover:border-[var(--brand-primary)] hover:text-[var(--text-primary)]",
-                )}
-              >
-                {active && <Check className="size-3" />}
-                {wd.short}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </>
-  );
 }
 
 // ─── Tab de Expediente (sem header slots próprios) ────────────────────────────
@@ -633,144 +511,90 @@ export function ExpedienteTab({
         </MobileTableScroll>
       )}
 
-      {/* Edit schedule dialog */}
-      <Dialog open={!!editAgent} onOpenChange={(o) => { if (!o) setEditAgent(null); }}>
-        <DialogContent size="md">
-          <DialogClose />
-          <DialogHeader>
-            <DialogTitle>Expediente de {editAgent?.name}</DialogTitle>
-            <DialogDescription>Defina o expediente, almoço e dias de trabalho.</DialogDescription>
-          </DialogHeader>
-
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (editAgent) scheduleMutation.mutate({ userId: editAgent.id, schedule: editSchedule });
-            }}
-          >
-            <ScheduleFields schedule={editSchedule} onChange={setEditSchedule} />
-
-            {scheduleMutation.isError && (
-              <p className="text-sm text-destructive">
-                {scheduleMutation.error instanceof Error
-                  ? scheduleMutation.error.message
-                  : "Erro ao salvar."}
-              </p>
-            )}
-
-            <DialogFooter className="gap-2">
-              <ButtonGlass type="button" variant="glass" onClick={() => setEditAgent(null)}>
-                Cancelar
-              </ButtonGlass>
-              <ButtonGlass
-                type="submit"
-                variant="primary"
-                disabled={scheduleMutation.isPending}
-                className="gap-2"
-              >
-                {scheduleMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Check className="size-4" />
-                )}
-                Salvar
-              </ButtonGlass>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Edit schedule dialog — padrão das modais de filtros (kanban/inbox) */}
+      <ScheduleDialogShell
+        open={!!editAgent}
+        onOpenChange={(o) => { if (!o) setEditAgent(null); }}
+        title={`Expediente de ${editAgent?.name ?? ""}`}
+        description="Defina o expediente, almoço e dias de trabalho."
+        submitLabel="Salvar"
+        submitPending={scheduleMutation.isPending}
+        error={
+          scheduleMutation.isError ? (
+            <p className="px-5 pb-2 text-sm text-destructive">
+              {scheduleMutation.error instanceof Error
+                ? scheduleMutation.error.message
+                : "Erro ao salvar."}
+            </p>
+          ) : undefined
+        }
+        onSubmit={() => {
+          if (editAgent) scheduleMutation.mutate({ userId: editAgent.id, schedule: editSchedule });
+        }}
+      >
+        <ScheduleFields schedule={editSchedule} onChange={setEditSchedule} />
+      </ScheduleDialogShell>
 
       {/* Novo expediente (template aplicável a vários usuários) */}
-      <Dialog open={newExpedienteOpen} onOpenChange={onNewExpedienteOpenChange}>
-        <DialogContent size="md">
-          <DialogClose />
-          <DialogHeader>
-            <DialogTitle>Novo expediente</DialogTitle>
-            <DialogDescription>
-              Defina um expediente e aplique-o aos usuários selecionados.
-            </DialogDescription>
-          </DialogHeader>
+      <ScheduleDialogShell
+        open={newExpedienteOpen}
+        onOpenChange={onNewExpedienteOpenChange}
+        title="Novo expediente"
+        description="Defina um expediente e aplique-o aos usuários selecionados."
+        submitLabel="Aplicar expediente"
+        submitPending={applyTemplate.isPending}
+        submitDisabled={templateUsers.size === 0}
+        onSubmit={() => {
+          const ids = [...templateUsers];
+          if (ids.length === 0) return;
+          applyTemplate.mutate({ userIds: ids, schedule: templateSchedule });
+        }}
+      >
+        <ScheduleFields schedule={templateSchedule} onChange={setTemplateSchedule} />
 
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const ids = [...templateUsers];
-              if (ids.length === 0) return;
-              applyTemplate.mutate({ userIds: ids, schedule: templateSchedule });
-            }}
-          >
-            <ScheduleFields schedule={templateSchedule} onChange={setTemplateSchedule} />
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Aplicar a</Label>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setTemplateUsers((prev) =>
-                      prev.size === agents.length ? new Set() : new Set(agents.map((a) => a.id)),
-                    )
-                  }
-                  className="font-display text-[11px] font-semibold text-[var(--brand-primary)] hover:underline"
-                >
-                  {templateUsers.size === agents.length ? "Limpar" : "Selecionar todos"}
-                </button>
-              </div>
-              <div className="max-h-[220px] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1.5">
-                {agents.map((a) => (
-                  <label
-                    key={a.id}
-                    className="flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors hover:bg-[var(--glass-bg-strong)]"
-                  >
-                    <CheckboxGlass
-                      checked={templateUsers.has(a.id)}
-                      onChange={() => toggleTemplateUser(a.id)}
-                      aria-label={`Selecionar ${a.name}`}
-                    />
-                    <UserAvatar size={32} name={a.name} imageUrl={a.avatarUrl} />
-                    <span className="min-w-0 leading-tight">
-                      <span className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
-                        {a.name}
-                      </span>
-                      <span className="block truncate font-body text-[11px] text-[var(--text-muted)]">
-                        {a.email}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-              <p className="font-body text-[11px] text-[var(--text-muted)]">
-                {templateUsers.size} usuário(s) selecionado(s).
-              </p>
-            </div>
-
-            <DialogFooter className="gap-2">
-              <ButtonGlass
-                type="button"
-                variant="glass"
-                onClick={() => onNewExpedienteOpenChange(false)}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Aplicar a</Label>
+            <button
+              type="button"
+              onClick={() =>
+                setTemplateUsers((prev) =>
+                  prev.size === agents.length ? new Set() : new Set(agents.map((a) => a.id)),
+                )
+              }
+              className="font-display text-[11px] font-semibold text-[var(--brand-primary)] hover:underline"
+            >
+              {templateUsers.size === agents.length ? "Limpar" : "Selecionar todos"}
+            </button>
+          </div>
+          <div className="max-h-[220px] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1.5">
+            {agents.map((a) => (
+              <label
+                key={a.id}
+                className="flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors hover:bg-[var(--glass-bg-strong)]"
               >
-                Cancelar
-              </ButtonGlass>
-              <ButtonGlass
-                type="submit"
-                variant="primary"
-                disabled={applyTemplate.isPending || templateUsers.size === 0}
-                className="gap-2"
-              >
-                {applyTemplate.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Check className="size-4" />
-                )}
-                Aplicar expediente
-              </ButtonGlass>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+                <CheckboxGlass
+                  checked={templateUsers.has(a.id)}
+                  onChange={() => toggleTemplateUser(a.id)}
+                  aria-label={`Selecionar ${a.name}`}
+                />
+                <UserAvatar size={32} name={a.name} imageUrl={a.avatarUrl} />
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                    {a.name}
+                  </span>
+                  <span className="block truncate font-body text-[11px] text-[var(--text-muted)]">
+                    {a.email}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <p className="font-body text-[11px] text-[var(--text-muted)]">
+            {templateUsers.size} usuário(s) selecionado(s).
+          </p>
+        </div>
+      </ScheduleDialogShell>
     </div>
   );
 }

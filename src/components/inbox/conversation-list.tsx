@@ -1165,9 +1165,6 @@ function ConversationItem({
         </div>
 
         <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
-          {row.lastMessageDirection === "out" && (
-            <CheckCheck size={15} className={cn("shrink-0", active ? "text-primary" : "text-ink-subtle dark:text-ink-soft")} />
-          )}
           {(() => {
             const { icon: PreviewIcon, iconClass, label } = describePreview(row.lastMessagePreview);
             return (

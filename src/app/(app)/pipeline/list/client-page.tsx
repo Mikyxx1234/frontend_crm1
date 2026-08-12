@@ -86,6 +86,10 @@ import {
   pathForPipelineView,
   writePipelineViewPreference,
 } from "@/lib/pipeline-view-preference";
+import {
+  SEARCH_DEBOUNCE_MS,
+  normalizeSearchQuery,
+} from "@/lib/search-query";
 
 const DEFAULT_PER_PAGE = 25;
 const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
@@ -191,7 +195,7 @@ export default function V2PipelineListClientPage() {
     const t = setTimeout(() => {
       setDebounced(search.trim());
       setPage(1);
-    }, 300);
+    }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [search]);
 
@@ -253,9 +257,11 @@ export default function V2PipelineListClientPage() {
     return rest;
   }, [filters]);
 
+  const listSearch = normalizeSearchQuery(debounced);
+
   const dealsQuery = useDealsList({
     pipelineId: pipelineId ?? undefined,
-    search: debounced || undefined,
+    search: listSearch || undefined,
     status: statusFromTab(statusTab),
     page,
     perPage,
@@ -307,11 +313,11 @@ export default function V2PipelineListClientPage() {
     return {
       pipelineId,
       status,
-      filters: { ...filters, ...(debounced ? { search: debounced } : {}) },
+      filters: { ...filters, ...(listSearch ? { search: listSearch } : {}) },
       pipelineTotal: total,
       stage,
     };
-  }, [pipelineId, statusTab, filters, debounced, stages, total]);
+  }, [pipelineId, statusTab, filters, listSearch, stages, total]);
 
   const tabCounts = useMemo(
     () => ({

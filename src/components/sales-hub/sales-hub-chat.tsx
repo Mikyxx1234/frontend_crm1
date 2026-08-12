@@ -313,6 +313,8 @@ export function SalesHubChat({
             contactId={contactId}
             externalTemplate={externalTemplate}
             onExternalTemplateConsumed={() => setExternalTemplate(null)}
+            onRequestTemplate={() => setTemplateOpen(true)}
+            sessionExpired={sessionExpired}
             signatureAllowed={convFeatures.agentSignatureEnabled}
             signatureEditable={convFeatures.agentSignatureEditable}
             availableChannels={whatsappChannels}

@@ -22,11 +22,16 @@ import {
   IconX,
 } from "@tabler/icons-react";
 
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { sendTemplate, type WhatsappTemplate } from "@/features/inbox-v2/api";
 import { emitConversationReopened, messagesKey } from "@/features/inbox-v2/hooks";
 import type { OutboundChannelOption } from "@/features/inbox-v2/hooks/use-channels";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 
+import {
+  channelSwitchConfirmOptions,
+  isChannelMismatch,
+} from "./channel-switch-confirm";
 import { ChannelSelector } from "./channel-selector";
 
 /** Template selecionado, pronto para validação/envio. */
@@ -112,6 +117,7 @@ export function TemplateComposePanel({
 }) {
   const qc = useQueryClient();
   const [vars, setVars] = useState<Record<string, string>>({});
+  const { confirm: confirmDialog, dialog: confirmDialogNode } = useConfirm();
 
   // Aviso quando o canal original da conversa NÃO aparece na lista de
   // canais CONNECTED — significa que ele foi desconectado (a Meta
@@ -191,8 +197,27 @@ export function TemplateComposePanel({
     onError: (err: Error) => toast.error(err.message || "Falha ao enviar template"),
   });
 
+  async function handleSendClick() {
+    if (
+      isChannelMismatch(selectedChannelId, conversationChannelId) &&
+      selectedChannelId &&
+      conversationChannelId
+    ) {
+      const ok = await confirmDialog(
+        channelSwitchConfirmOptions(
+          availableChannels,
+          selectedChannelId,
+          conversationChannelId,
+        ),
+      );
+      if (!ok) return;
+    }
+    sendMutation.mutate();
+  }
+
   return (
     <div className="absolute bottom-full left-0 mb-2 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      {confirmDialogNode}
       <div className="flex items-start gap-2">
         <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-success)]/12 text-[var(--color-success-text)]">
           <IconLock size={13} />
@@ -302,7 +327,7 @@ export function TemplateComposePanel({
           type="button"
           disabled={sendMutation.isPending || !allFilled}
           title={!allFilled ? "Preencha todas as variáveis primeiro" : "Enviar template"}
-          onClick={() => sendMutation.mutate()}
+          onClick={() => void handleSendClick()}
           className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-1.5 text-[12px] font-semibold text-white shadow-[var(--glass-shadow-sm)] transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           <IconSend size={14} />

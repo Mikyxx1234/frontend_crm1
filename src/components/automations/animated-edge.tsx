@@ -27,24 +27,24 @@ export type AnimatedEdgeData = {
 };
 
 const VARIANT_STROKE: Record<AnimatedEdgeVariant, string> = {
-  default: "var(--brand-primary, #6366f1)",
-  button: "var(--color-success, #22c55e)",
-  else: "var(--color-warning, #f59e0b)",
+  default: "#94a3b8",
+  button: "#64748b",
+  else: "#f59e0b",
   timeout: "#94a3b8",
   add: "#cbd5e1",
 };
 
 const VARIANT_WIDTH: Record<AnimatedEdgeVariant, number> = {
-  default: 1.75,
-  button: 1.75,
-  else: 1.5,
-  timeout: 1.5,
-  add: 1.25,
+  default: 1.5,
+  button: 1.5,
+  else: 1.35,
+  timeout: 1.35,
+  add: 1.2,
 };
 
 const VARIANT_DASH: Record<AnimatedEdgeVariant, string | undefined> = {
-  default: undefined,
-  button: undefined,
+  default: "5 5",
+  button: "5 5",
   else: "5 4",
   timeout: "5 4",
   add: "4 4",

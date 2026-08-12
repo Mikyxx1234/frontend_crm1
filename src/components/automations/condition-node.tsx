@@ -110,18 +110,11 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionRF>) {
       />
       <div className="wf-node__outs">
         {branches.map((branch, idx) => (
-          <div key={branch.id} className="wf-node__out" style={{ height: "auto", minHeight: 36, paddingBlock: 6 }}>
-            <span className="flex size-5 shrink-0 items-center justify-center rounded bg-[color-mix(in_srgb,var(--color-cyan)_12%,transparent)] text-[10px] font-bold tabular-nums text-[var(--color-cyan)]">
-              {idx + 1}
-            </span>
+          <div key={branch.id} className="wf-node__out" style={{ minHeight: 30, height: "auto" }}>
+            <span className="wf-branch-num">{idx + 1}</span>
             <div className="min-w-0 flex-1">
-              {branch.label && (
-                <p className="truncate text-[11px] font-bold text-[var(--text-primary)]">
-                  {branch.label}
-                </p>
-              )}
-              <p className="truncate text-[11px] font-medium text-[var(--text-muted)]">
-                <Filter className="mr-1 inline size-2.5 text-[var(--color-cyan)]" strokeWidth={2.4} />
+              <p className="truncate text-[11.5px] font-medium text-[#64748b]">
+                <Filter className="mr-1 inline size-2.5 opacity-70" strokeWidth={2.2} />
                 Se {ruleSummary(branch, resolveValue)}
               </p>
             </div>
@@ -135,10 +128,10 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionRF>) {
           </div>
         ))}
         <div className="wf-node__out wf-node__out--err">
-          <span className="flex size-5 shrink-0 items-center justify-center rounded bg-[var(--color-danger-bg)] text-[10px] font-bold text-[var(--color-danger-text)]">
+          <span className="wf-branch-num" style={{ background: "#ffe4e6", color: "#e11d48" }}>
             ⊘
           </span>
-          <p className="flex-1 truncate italic">Nenhuma das condições</p>
+          <p className="flex-1 truncate">Nenhuma das condições</p>
           <CustomHandle
             type="source"
             position={Position.Right}

@@ -4,7 +4,6 @@ import type { ComponentType } from "react";
 import { Position, type Node, type NodeProps } from "@xyflow/react";
 import {
   IconActivity as Activity,
-  IconAlertTriangle as AlertTriangle,
   IconArrowsLeftRight as ArrowRightLeft,
   IconRobotFace as BotMessageSquare,
   IconCircleCheck as CheckCircle2,
@@ -22,7 +21,6 @@ import {
   IconWebhook as Webhook,
 } from "@tabler/icons-react";
 
-import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import { NodeInlineConfig } from "./node-inline-config";
@@ -93,8 +91,6 @@ function StepIcon({ type }: { type: string }) {
 }
 
 export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
-  const s = data.stats;
-  const hasStats = s && (s.success > 0 || s.failed > 0);
   const hasFailureOutput = META_LINEAR_FAILURE_TYPES.has(data.stepType);
   const hasTimeoutOutput = META_WAIT_TIMEOUT_TYPES.has(data.stepType);
   const isChannelStep = isMessageChannelStep(data.stepType);
@@ -106,12 +102,15 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
     enabled: isChannelStep,
   });
   const channelBadgeLabel = channelLabelFromOptions(channelOptions, channelId);
+  const isWa =
+    data.stepType.startsWith("send_whatsapp") || data.stepType === "send_product";
+  const accent = isWa ? "violet" : data.stepType === "send_email" ? "primary" : "primary";
 
   return (
     <FlowNodeShell
       selected={selected}
       incomplete={data.incomplete}
-      accent="primary"
+      accent={accent}
       stepIndex={data.stepIndex}
       expanded={selected}
       className={cn(
@@ -126,10 +125,14 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
         icon={<StepIcon type={data.stepType} />}
         title={data.label}
         subtitle={data.summary}
-        badge={channelBadgeLabel ? <StepChannelBadge label={channelBadgeLabel} /> : undefined}
+        badge={
+          selected && channelBadgeLabel ? (
+            <StepChannelBadge label={channelBadgeLabel} />
+          ) : undefined
+        }
         actions={
           <>
-            {isChannelStep && (
+            {isChannelStep && selected && (
               <StepChannelKebabMenu
                 stepType={data.stepType}
                 channelId={channelId}
@@ -143,34 +146,10 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
           </>
         }
       />
-      {hasStats && (
-        <TooltipHost label="Ver eventos" side="bottom">
-          <button
-            type="button"
-            className="wf-node__stats"
-            onClick={(e) => {
-              e.stopPropagation();
-              data.onStatsClick?.();
-            }}
-            aria-label="Ver eventos"
-          >
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)]">
-              <CheckCircle2 className="size-3" />
-              {s.success}
-            </span>
-            {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)]">
-                <AlertTriangle className="size-3" />
-                {s.failed}
-              </span>
-            )}
-          </button>
-        </TooltipHost>
-      )}
       {hasFailureOutput ? (
         <div className="wf-node__outs">
           <div className="wf-node__out wf-node__out--ok">
-            <CheckCircle2 className="size-3.5 shrink-0" strokeWidth={2.4} />
+            <CheckCircle2 className="size-3.5 shrink-0" strokeWidth={2.2} />
             <span className="flex-1 truncate">Enviado</span>
             <CustomHandle
               type="source"
@@ -182,7 +161,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
           </div>
           {hasTimeoutOutput && (
             <div className="wf-node__out">
-              <Clock className="size-3.5 shrink-0" strokeWidth={2.4} />
+              <Clock className="size-3.5 shrink-0" strokeWidth={2.2} />
               <span className="flex-1 truncate">Sem resposta</span>
               <CustomHandle
                 type="source"
@@ -194,7 +173,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
             </div>
           )}
           <div className="wf-node__out wf-node__out--err">
-            <CircleSlash className="size-3.5 shrink-0" strokeWidth={2.4} />
+            <CircleSlash className="size-3.5 shrink-0" strokeWidth={2.2} />
             <span className="flex-1 truncate">Falha ao enviar</span>
             <CustomHandle
               type="source"

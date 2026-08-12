@@ -29,8 +29,8 @@ export type FlowNodeShellProps = {
 };
 
 /**
- * Chrome denso estilo n8n / React Flow: borda fina, acento à esquerda,
- * sem glass/lift. Conteúdo (header, body, outputs) fica nos children.
+ * Chrome simples estilo Kommo: borda colorida fina, índice no canto,
+ * sem barra lateral / glass. Conteúdo fica nos children.
  */
 export function FlowNodeShell({
   selected,

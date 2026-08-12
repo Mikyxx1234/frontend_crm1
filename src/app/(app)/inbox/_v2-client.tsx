@@ -58,6 +58,7 @@ import {
 } from "@/features/inbox-v2/adapters";
 import {
   useBulkConversationAction,
+  useChannelSession,
   useConversationById,
   useConversationFeatures,
   useConversations,
@@ -90,6 +91,10 @@ import {
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
 import { InboxSearchFilterBar } from "@/features/inbox-v2/extras/filter-panel";
+import {
+  isSessionClosedError,
+  SESSION_CLOSED_TOAST,
+} from "@/features/inbox-v2/extras/channel-switch-confirm";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
 import { hasInboxServerFilters, normalizeInboxFilters } from "@/features/inbox-v2/api/types";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -924,6 +929,18 @@ export default function InboxV2ClientPage({
     },
   );
 
+  // Override de canal ativo: revalida a janela de 24h no canal de DESTINO
+  // (o `session` do GET messages reflete só o canal da conversa).
+  const channelOverrideActive =
+    !!selectedChannelId &&
+    !!conversationChannelId &&
+    selectedChannelId !== conversationChannelId;
+  const { data: overrideSession } = useChannelSession(
+    activeId,
+    channelOverrideActive ? selectedChannelId : null,
+    channelOverrideActive,
+  );
+
   function handleSelect(id: string) {
     setActiveId(id);
     markRead.mutate(id);
@@ -952,7 +969,17 @@ export default function InboxV2ClientPage({
         handleReopenNewConversation(data.reopenedConversationId);
       }
     } catch (err) {
-      toast.error((err as Error)?.message || "Falha ao enviar");
+      // Corrida: a sessão de 24h expirou enquanto o agente digitava (o
+      // backend bloqueia com 409 antes de criar a mensagem). Em vez do
+      // toast genérico, mostra o aviso de sessão e abre o fluxo de template.
+      if (isSessionClosedError(err)) {
+        toast.error(SESSION_CLOSED_TOAST, {
+          action: { label: "Usar Template", onClick: () => setTemplateOpen(true) },
+        });
+        setTemplateOpen(true);
+      } else {
+        toast.error((err as Error)?.message || "Falha ao enviar");
+      }
       throw err;
     }
   }
@@ -1012,11 +1039,17 @@ export default function InboxV2ClientPage({
       ? !sessionActiveFromBackend
       : isSessionExpired(sessionInfo?.lastInboundAt ?? activeRow.lastInboundAt)
     : false;
+  // Com override de canal, manda a sessão do canal de DESTINO; enquanto a
+  // query carrega, mantém o valor da conversa (evita flicker do composer).
+  const sessionExpiredEffective =
+    channelOverrideActive && overrideSession
+      ? !overrideSession.active
+      : sessionExpired;
   // Bloco C (25/jun/26): backend pode setar `canReply:false` quando o
   // usuário não tem `channel.send`. Default true preserva compat com
   // backend antigo (que não envia o campo).
   const canReply = messagesData?.canReply ?? true;
-  const composerDisabled = !canReply || sessionExpired;
+  const composerDisabled = !canReply || sessionExpiredEffective;
   const composerPlaceholder = !canReply
     ? "Você não tem permissão para enviar mensagens neste canal."
     : undefined;
@@ -1453,7 +1486,7 @@ export default function InboxV2ClientPage({
         contact={chatContact}
         messages={messageBubbles}
         stages={stagePillsView}
-        showSessionAlert={sessionExpired}
+        showSessionAlert={sessionExpiredEffective}
         connection={messagesData?.channel ?? null}
         connections={messagesData?.channels}
         conversationNumber={activeRow?.number ?? null}
@@ -1539,7 +1572,7 @@ export default function InboxV2ClientPage({
             externalTemplate={externalTemplate}
             onExternalTemplateConsumed={() => setExternalTemplate(null)}
             onRequestTemplate={() => setTemplateOpen(true)}
-            sessionExpired={sessionExpired}
+            sessionExpired={sessionExpiredEffective}
             signatureAllowed={convFeatures.agentSignatureEnabled}
             signatureEditable={convFeatures.agentSignatureEditable}
             availableChannels={whatsappChannels}

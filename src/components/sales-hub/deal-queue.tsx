@@ -516,6 +516,40 @@ export function DealQueue({
 
   const visibleDeals = isStageSwitching ? [] : deals;
 
+  // Windowing: monta no DOM só o início da fila e cresce +60 quando o
+  // sentinel entra no viewport. Com funis grandes (500+ deals), evita
+  // montar centenas de cards (e suas mídias/avatars) de uma vez — a
+  // fila renderiza sob demanda conforme o scroll.
+  const QUEUE_PAGE = 60;
+  const [renderLimit, setRenderLimit] = useState(QUEUE_PAGE);
+  // Troca de etapa/ordenação já rola pro topo — a janela volta ao início.
+  useEffect(() => {
+    setRenderLimit(QUEUE_PAGE);
+  }, [stageListKey, sortMode]);
+  // Deep-link/navegação por teclado: garante que o deal ativo esteja
+  // dentro da janela renderizada (senão o scrollIntoView não tem alvo).
+  const activeIdx = activeDealId
+    ? deals.findIndex((d) => d.id === activeDealId)
+    : -1;
+  const effectiveLimit = Math.max(renderLimit, activeIdx + 1);
+  const windowedDeals = visibleDeals.slice(0, effectiveLimit);
+  const hasMoreToRender = visibleDeals.length > effectiveLimit;
+  const queueSentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = queueSentinelRef.current;
+    if (!el || !hasMoreToRender) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setRenderLimit((n) => n + QUEUE_PAGE);
+        }
+      },
+      { root: scrollerRef.current, rootMargin: "300px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMoreToRender]);
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-transparent">
       <div
@@ -539,7 +573,7 @@ export function DealQueue({
             </div>
           ) : (
             <AnimatePresence initial={softEnterWave}>
-              {visibleDeals.map((deal) => {
+              {windowedDeals.map((deal) => {
                 const isActive = activeDealId === deal.id;
                 const isExpanded = expandedDealId === deal.id;
                 const wasRecentlyMoved = recentlyMovedDealId === deal.id;
@@ -568,6 +602,9 @@ export function DealQueue({
                 );
               })}
             </AnimatePresence>
+          )}
+          {hasMoreToRender && !isStageSwitching && (
+            <div ref={queueSentinelRef} aria-hidden className="h-px shrink-0" />
           )}
           {!isStageSwitching && visibleDeals.length === 0 && (
             <p className="px-2 py-8 text-center text-xs text-[var(--text-muted)]">

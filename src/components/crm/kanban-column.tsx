@@ -9,6 +9,7 @@ import {
   IconSquareMinus,
 } from "@tabler/icons-react"
 import type { HTMLAttributes, ReactNode } from "react"
+import { useEffect, useRef } from "react"
 import { DealCard, type Deal } from "./deal-card"
 
 export type ColumnColor = "novo" | "quali" | "proposta" | "nego" | "fecha"
@@ -113,6 +114,31 @@ export function KanbanColumn({
     !!selection &&
     selection.totalInColumn > 0 &&
     selection.enabled !== false
+
+  // Auto-load: sentinel no fim da lista dispara o "Carregar mais" ao
+  // entrar no viewport (200px de margem). O botão manual permanece como
+  // fallback acessível. Refs evitam recriar o observer a cada render
+  // (onClick é inline no pai) e bloqueiam double-fire durante o fetch.
+  const loadMoreOnClickRef = useRef(loadMore?.onClick)
+  loadMoreOnClickRef.current = loadMore?.onClick
+  const loadMoreLoadingRef = useRef(loadMore?.loading ?? false)
+  loadMoreLoadingRef.current = loadMore?.loading ?? false
+  const hasLoadMore = !!loadMore && loadMore.remaining > 0
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasLoadMore) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !loadMoreLoadingRef.current) {
+          loadMoreOnClickRef.current?.()
+        }
+      },
+      { root: el.parentElement, rootMargin: "200px" },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [hasLoadMore])
 
   // Cor efetiva do estágio: hex do backend > preset. Badge usa
   // color-mix inline para gerar background 15% da cor do estágio
@@ -243,6 +269,10 @@ export function KanbanColumn({
           ),
         )}
         {placeholderSlot}
+
+        {hasLoadMore ? (
+          <div ref={sentinelRef} aria-hidden className="h-px shrink-0" />
+        ) : null}
 
         {loadMore && loadMore.remaining > 0 ? (
           <button

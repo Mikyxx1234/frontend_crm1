@@ -275,13 +275,13 @@ export function Composer({
   );
 
   // ── Contexto para interpolação de templates internos ─────────────
-  // Busca dados do contato quando contactId está disponível, para
-  // substituir tokens {{contato.nome}}, {{negocio.valor}} etc.
+  // Reusa a mesma queryKey do ContactAside — evita GET /contacts ×2
+  // ao abrir a conversa (sidebar + composer).
   const { data: contactData } = useQuery({
-    queryKey: ["contact-for-template", contactId],
+    queryKey: ["contact-sidebar", contactId ?? "__none__"],
     queryFn: () => getContact(contactId!),
     enabled: !!contactId,
-    staleTime: 2 * 60_000,
+    staleTime: 60_000,
   });
 
   // Ref para o textarea — exigido pelo useSlashMenu para movimentar o cursor

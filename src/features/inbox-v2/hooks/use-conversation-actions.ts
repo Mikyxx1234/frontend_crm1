@@ -208,13 +208,39 @@ export function useToggleConversationResolve(
 /** Marcar conversa como lida (swipe / ao abrir). */
 export function useMarkConversationRead() {
   const qc = useQueryClient();
-  return useMutation<void, Error, string>({
+  return useMutation<
+    void,
+    Error,
+    string,
+    { previous: Array<[unknown, unknown]> }
+  >({
     mutationFn: (conversationId) => markConversationRead(conversationId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+    onMutate: async (conversationId) => {
+      await qc.cancelQueries({ queryKey: ["inbox-conversations"] });
+      const previous = qc.getQueriesData({ queryKey: ["inbox-conversations"] });
+      qc.setQueriesData(
+        { queryKey: ["inbox-conversations"] },
+        (old: { pages?: Array<{ items?: Array<{ id: string; unreadCount?: number }> }> } | undefined) => {
+          if (!old?.pages) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items?.map((item) =>
+                item.id === conversationId ? { ...item, unreadCount: 0 } : item,
+              ),
+            })),
+          };
+        },
+      );
+      return { previous };
     },
-    onError: () => {
+    onError: (_err, _id, ctx) => {
       // silencioso — marcar como lida não deve incomodar o operador
+      if (!ctx?.previous) return;
+      for (const [key, data] of ctx.previous) {
+        qc.setQueryData(key as Parameters<typeof qc.setQueryData>[0], data);
+      }
     },
   });
 }

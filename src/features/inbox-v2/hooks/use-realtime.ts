@@ -17,7 +17,9 @@ import { playInboxPing } from "./use-inbox-sound";
  *  - new_message / whatsapp_call invalidam mensagens da conversa
  *    ativa quando o conversationId casa.
  *  - contact_updated passa pelo mesmo debounce da lista.
- *  - Throttle de 800ms: rajadas de eventos não viram refetch×N.
+ *  - Throttle de 1000ms: rajadas de eventos não viram refetch×N.
+ *  - message_status: update otimista do tick; refetch só em `failed`
+ *    (delivered/read não disparam GET messages de novo).
  *  - Reconexão automática com backoff fixo de 5s em onerror.
  *    NÃO invalida lista no connect/reconnect (só em eventos reais).
  *
@@ -96,7 +98,7 @@ export function useInboxRealtime(options: {
         refreshTimerRef.current = null;
         qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
         qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
-      }, 800);
+      }, 1000);
     }
 
     let es: EventSource | null = null;
@@ -174,20 +176,29 @@ export function useInboxRealtime(options: {
                 );
               }
             }
-            // Refetch forçado na conversa aberta — invalidate sozinho
-            // às vezes não dispara a tempo do tick azul.
-            if (data.conversationId === activeRef.current) {
-              void qc.refetchQueries({
-                queryKey: messagesKey(data.conversationId),
-              });
-            } else {
+            // Tick já atualizado de forma otimista acima. Refetch só em
+            // failed (precisa sendError completo); delivered/read não
+            // disparam GET messages — evita spam na conversa aberta.
+            const statusLc = (data.status ?? "").toLowerCase();
+            if (statusLc === "failed") {
+              if (data.conversationId === activeRef.current) {
+                void qc.refetchQueries({
+                  queryKey: messagesKey(data.conversationId),
+                });
+              } else {
+                qc.invalidateQueries({
+                  queryKey: messagesKey(data.conversationId),
+                  refetchType: "none",
+                });
+              }
+            } else if (data.conversationId !== activeRef.current) {
               qc.invalidateQueries({
                 queryKey: messagesKey(data.conversationId),
                 refetchType: "none",
               });
             }
             // Leitura (ticks azuis): atualiza timeline do deal e feed /logs.
-            if ((data.status ?? "").toLowerCase() === "read") {
+            if (statusLc === "read") {
               qc.invalidateQueries({ queryKey: ["deal-timeline-v2"] });
               qc.invalidateQueries({ queryKey: ["deal-timeline"] });
               qc.invalidateQueries({ queryKey: ["activity-feed"] });

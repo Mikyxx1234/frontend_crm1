@@ -174,6 +174,16 @@ export function FilterChips({ filters, options, onPatch, className }: Props) {
     });
   }
 
+  if (filters.lastMessageDirection) {
+    chips.push({
+      label:
+        filters.lastMessageDirection === "in"
+          ? "Mensagem recebida"
+          : "Mensagem enviada",
+      onRemove: () => onPatch({ lastMessageDirection: undefined }),
+    });
+  }
+
   for (const cf of filters.dealCustomFields ?? []) {
     const def = options?.dealCustomFields.find((d) => d.name === cf.name);
     const label = def?.label ?? cf.name;

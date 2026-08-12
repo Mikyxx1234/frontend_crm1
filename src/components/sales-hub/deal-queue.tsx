@@ -255,6 +255,14 @@ type DealQueueProps = {
   /** Quando muda, a fila volta ao topo para a nova ordem ficar visível. */
   sortMode?: DealQueueSortMode;
   /**
+   * Paginação de rede (board em 50/etapa): true quando alguma etapa
+   * ainda tem deals no servidor. Esgotada a janela local, o sentinel
+   * dispara `onLoadMore` em vez de só crescer a janela.
+   */
+  hasMoreServer?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
+  /**
    * Etapa filtrada (`null` = Todos). Quando muda, a fila volta ao topo
    * e o auto-select do primeiro lead não dispara scrollIntoView.
    */
@@ -416,6 +424,9 @@ export function DealQueue({
   onSelectDeal,
   recentlyMovedDealId,
   sortMode,
+  hasMoreServer = false,
+  loadingMore = false,
+  onLoadMore,
   selectedStageId,
   stageSwitchToken = 0,
   pipelineId,
@@ -535,20 +546,38 @@ export function DealQueue({
   const windowedDeals = visibleDeals.slice(0, effectiveLimit);
   const hasMoreToRender = visibleDeals.length > effectiveLimit;
   const queueSentinelRef = useRef<HTMLDivElement>(null);
+  // Dois níveis de paginação: 1º esgota a janela local (+60); só então
+  // busca a próxima página na rede (+50/etapa, via host). Refs evitam
+  // recriar o observer a cada render (onLoadMore é inline no pai) e
+  // bloqueiam double-fire durante o fetch — padrão do KanbanColumn.
+  const showQueueSentinel = hasMoreToRender || hasMoreServer;
+  const hasMoreToRenderRef = useRef(hasMoreToRender);
+  hasMoreToRenderRef.current = hasMoreToRender;
+  const hasMoreServerRef = useRef(hasMoreServer);
+  hasMoreServerRef.current = hasMoreServer;
+  const loadingMoreRef = useRef(loadingMore);
+  loadingMoreRef.current = loadingMore;
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
   useEffect(() => {
     const el = queueSentinelRef.current;
-    if (!el || !hasMoreToRender) return;
+    if (!el || !showQueueSentinel) return;
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
+        if (!entries[0]?.isIntersecting) return;
+        if (hasMoreToRenderRef.current) {
           setRenderLimit((n) => n + QUEUE_PAGE);
+        } else if (hasMoreServerRef.current && !loadingMoreRef.current) {
+          onLoadMoreRef.current?.();
         }
       },
       { root: scrollerRef.current, rootMargin: "300px" },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [hasMoreToRender]);
+    // `loadingMore` nas deps: o sentinel desmonta durante o fetch (hint
+    // "Carregando…" ocupa o lugar) — ao terminar, re-observa o nó novo.
+  }, [showQueueSentinel, loadingMore]);
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-transparent">
@@ -603,9 +632,15 @@ export function DealQueue({
               })}
             </AnimatePresence>
           )}
-          {hasMoreToRender && !isStageSwitching && (
-            <div ref={queueSentinelRef} aria-hidden className="h-px shrink-0" />
-          )}
+          {!isStageSwitching &&
+            showQueueSentinel &&
+            (loadingMore && !hasMoreToRender ? (
+              <div className="shrink-0 py-2 text-center text-xs text-[var(--text-muted)]">
+                Carregando…
+              </div>
+            ) : (
+              <div ref={queueSentinelRef} aria-hidden className="h-px shrink-0" />
+            ))}
           {!isStageSwitching && visibleDeals.length === 0 && (
             <p className="px-2 py-8 text-center text-xs text-[var(--text-muted)]">
               Nenhum deal encontrado

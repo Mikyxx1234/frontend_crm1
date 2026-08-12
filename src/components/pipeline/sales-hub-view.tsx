@@ -156,6 +156,14 @@ export type SalesHubViewProps = {
   onOpenFullDeal?: (dealId: string) => void;
   sortMode: DealQueueSortMode;
   onSortModeChange: (mode: DealQueueSortMode) => void;
+  /**
+   * Paginação de rede da fila (board normal, sem filtros server-side):
+   * `queueHasMore` sinaliza que alguma etapa tem mais deals no servidor;
+   * `onQueueLoadMore` expande +50 em todas elas de uma vez.
+   */
+  queueHasMore?: boolean;
+  queueLoadingMore?: boolean;
+  onQueueLoadMore?: () => void;
   /** Seleção controlada pelo host (`useDealDeepLink` em `/saleshub`). */
   activeDealId: string | null;
   onActiveDealChange: (dealId: string | null, dealNumber?: number | null) => void;
@@ -185,6 +193,9 @@ export function SalesHubView({
   onOpenFullDeal,
   sortMode,
   onSortModeChange,
+  queueHasMore,
+  queueLoadingMore,
+  onQueueLoadMore,
   activeDealId,
   onActiveDealChange,
   detailDeal = null,
@@ -429,8 +440,10 @@ export function SalesHubView({
     });
   }, [filteredStages, selectedStageId, sortMode]);
 
+  // Com o board paginado (50/etapa), `deals.length` sub-reporta — usa o
+  // total real da etapa quando o backend o envia.
   const totalDeals = filteredStages.reduce(
-    (sum, s) => sum + s.deals.length,
+    (sum, s) => sum + (s.totalCount ?? s.deals.length),
     0,
   );
 
@@ -759,6 +772,9 @@ export function SalesHubView({
             onDeselect={handleDeselectDeal}
             recentlyMovedDealId={recentlyMovedDealId}
             sortMode={sortMode}
+            hasMoreServer={queueHasMore}
+            loadingMore={queueLoadingMore}
+            onLoadMore={onQueueLoadMore}
             selectedStageId={selectedStageId}
             stageSwitchToken={stageSwitchToken}
             pipelineId={pipelineId}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconSettings } from "@tabler/icons-react";
 
 import { RequirePermission } from "@/components/auth/require-permission";
@@ -22,6 +22,8 @@ import type { BoardSortParam } from "@/features/pipeline-v2/api";
 import {
   useBoard,
   useBoardFiltered,
+  boardKey,
+  BOARD_PAGE_SIZE,
   useDealDeepLink,
   useDealDetail,
   usePipelineRealtime,
@@ -251,6 +253,14 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const filtersPendingDebounce =
     advancedKey !== JSON.stringify(debouncedAdvanced);
 
+  // "Carregar mais" da fila: stageId → extras cumulativos além da página
+  // inicial (50). A fila do Flow é FLAT (mistura etapas), então cada
+  // disparo expande TODAS as colunas com hasMore de uma vez — mesmo
+  // padrão do kanban (`_v2-client`): com ≥1 offset o board passa a vir
+  // do POST /board (única rota que aceita offset) na mesma queryKey.
+  const [boardExtraByStage, setBoardExtraByStage] = useState<Record<string, number>>({});
+  const [loadingMoreQueue, setLoadingMoreQueue] = useState(false);
+
   const boardNormal = useBoard({
     pipelineId,
     status,
@@ -258,6 +268,8 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     // Desliga o GET com filtros ativos (economiza rede); o cache do
     // query ainda alimenta o fallback visual no 1º POST.
     enabled: isAuthenticated && !hasServerBoard,
+    perStage: BOARD_PAGE_SIZE,
+    offsetByStage: boardExtraByStage,
   });
   const boardFiltered = useBoardFiltered({
     pipelineId,
@@ -268,6 +280,50 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   });
 
   usePipelineRealtime(isAuthenticated);
+
+  const queryClient = useQueryClient();
+
+  // Expansões "Carregar mais": cada disparo soma +50 nas etapas com
+  // hasMore e refaz o board (POST com offsetByStage — o queryFn já
+  // enxerga o estado novo no render que segue o setState).
+  const extrasKey = JSON.stringify(boardExtraByStage);
+  useEffect(() => {
+    if (Object.keys(boardExtraByStage).length === 0) return;
+    queryClient
+      .refetchQueries({
+        queryKey: boardKey(pipelineId ?? "pl-1", status, boardSort),
+        exact: true,
+      })
+      .finally(() => setLoadingMoreQueue(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extrasKey]);
+
+  // Troca de funil/status/ordenação/filtro → expansões voltam a 50.
+  useEffect(() => {
+    setBoardExtraByStage({});
+    setLoadingMoreQueue(false);
+  }, [pipelineId, status, boardSort, hasServerBoard]);
+
+  const handleQueueLoadMore = useCallback(() => {
+    const stagesWithMore = (boardNormal.data ?? []).filter(
+      (s) => s.hasMore === true,
+    );
+    if (stagesWithMore.length === 0) return;
+    setLoadingMoreQueue(true);
+    setBoardExtraByStage((prev) => {
+      const next = { ...prev };
+      for (const s of stagesWithMore) {
+        next[s.id] = (next[s.id] ?? 0) + BOARD_PAGE_SIZE;
+      }
+      return next;
+    });
+  }, [boardNormal.data]);
+
+  // Com filtros server-side o boardFiltered segue perStage 200 — sem
+  // load-more de rede (espelha o kanban, que esconde o botão).
+  const queueHasMore =
+    !hasServerBoard &&
+    (boardNormal.data ?? []).some((s) => s.hasMore === true);
 
   const boardRefreshing =
     filtersPendingDebounce ||
@@ -608,6 +664,9 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
             searchQuery={hasServerBoard ? "" : search}
             sortMode={sortMode}
             onSortModeChange={setSortMode}
+            queueHasMore={queueHasMore}
+            queueLoadingMore={loadingMoreQueue}
+            onQueueLoadMore={handleQueueLoadMore}
             activeDealId={resolvedDealId}
             onActiveDealChange={setActiveDeal}
             detailDeal={detailDeal}

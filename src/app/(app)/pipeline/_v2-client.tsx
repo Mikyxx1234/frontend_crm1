@@ -69,6 +69,8 @@ import { useContactSidebar } from "@/features/inbox-v2/hooks";
 import {
   useBoard,
   useBoardFiltered,
+  boardKey,
+  BOARD_PAGE_SIZE,
   useDealDetail,
   useEntityViewers,
   useMoveDeal,
@@ -312,11 +314,19 @@ export default function KanbanV2ClientPage({
 
   const hasServerBoard = hasServerSideFilters(mergedFilters);
 
+  // "Carregar mais" por coluna: stageId → extras cumulativos além da
+  // página inicial (50). Com ≥1 expansão o board passa a vir do POST
+  // /board (única rota que aceita offset) — ver `useBoard`.
+  const [boardExtraByStage, setBoardExtraByStage] = useState<Record<string, number>>({});
+  const [loadingMoreStageId, setLoadingMoreStageId] = useState<string | null>(null);
+
   const boardNormal = useBoard({
     pipelineId,
     status,
     sort: boardSort,
     enabled: isAuthenticated && !hasServerBoard,
+    perStage: BOARD_PAGE_SIZE,
+    offsetByStage: boardExtraByStage,
   });
   const boardFiltered = useBoardFiltered({
     pipelineId,
@@ -633,6 +643,35 @@ export default function KanbanV2ClientPage({
 
   const { data: dealDetail } = useDealDetail(activeDealId);
   const queryClient = useQueryClient();
+
+  // Expansões "Carregar mais": cada clique soma +50 na coluna e refaz o
+  // board (POST com offsetByStage — o queryFn já enxerga o estado novo
+  // porque o observer é atualizado no render que segue o setState).
+  const extrasKey = JSON.stringify(boardExtraByStage);
+  useEffect(() => {
+    if (Object.keys(boardExtraByStage).length === 0) return;
+    queryClient
+      .refetchQueries({
+        queryKey: boardKey(pipelineId ?? "pl-1", status, boardSort),
+        exact: true,
+      })
+      .finally(() => setLoadingMoreStageId(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extrasKey]);
+
+  // Troca de funil/status/ordenação/filtro → colunas expandidas voltam a 50.
+  useEffect(() => {
+    setBoardExtraByStage({});
+    setLoadingMoreStageId(null);
+  }, [pipelineId, status, sortKey, hasServerBoard]);
+
+  const handleLoadMoreColumn = useCallback((stageId: string) => {
+    setLoadingMoreStageId(stageId);
+    setBoardExtraByStage((prev) => ({
+      ...prev,
+      [stageId]: (prev[stageId] ?? 0) + BOARD_PAGE_SIZE,
+    }));
+  }, []);
 
   // Presença "quem está vendo" (estilo Kommo) — chaveada pelo CUID real do
   // deal (não pelo ?deal=<número>), pra ambas as janelas baterem na mesma sala.
@@ -997,7 +1036,13 @@ export default function KanbanV2ClientPage({
             ref={boardRef}
             className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden"
           >
-            {columns.map((col) => (
+            {columns.map((col) => {
+              const rawStage = boardNormal.data?.find((s) => s.id === col.stageId);
+              const remaining = Math.max(
+                0,
+                (rawStage?.totalCount ?? 0) - (rawStage?.deals.length ?? 0),
+              );
+              return (
               <DroppableColumn
                 key={col.stageId}
                 column={col}
@@ -1020,8 +1065,18 @@ export default function KanbanV2ClientPage({
                 }
                 onCloseAddDeal={() => setAddStage(null)}
                 canChangeStage={canChangeStage}
+                loadMore={
+                  !hasServerBoard && rawStage?.hasMore && remaining > 0
+                    ? {
+                        remaining,
+                        loading: loadingMoreStageId === col.stageId,
+                        onClick: () => handleLoadMoreColumn(col.stageId),
+                      }
+                    : undefined
+                }
               />
-            ))}
+              );
+            })}
             {columns.length === 0 ? (
               <EmptyBoard isAuthenticated={isAuthenticated} />
             ) : null}
@@ -1754,6 +1809,7 @@ function DroppableColumn({
   onToggleSelectAllInColumn,
   onRequestMove,
   canChangeStage,
+  loadMore,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
@@ -1775,6 +1831,7 @@ function DroppableColumn({
     toPipelineId?: string | null;
   }) => void;
   canChangeStage: boolean;
+  loadMore?: { remaining: number; loading: boolean; onClick: () => void };
 }) {
   // Estado de seleção em massa restrito aos deals JÁ CARREGADOS desta
   // coluna. Replica o comportamento do kanban antigo.
@@ -1822,6 +1879,7 @@ function DroppableColumn({
             enabled: selectionMode && canChangeStage,
           }}
           dealsContainerRef={provided.innerRef}
+          loadMore={loadMore}
           dealsContainerProps={{
             ...provided.droppableProps,
             "aria-label": `Coluna ${column.title}`,

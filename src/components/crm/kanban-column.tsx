@@ -65,6 +65,15 @@ interface KanbanColumnProps {
   selection?: KanbanColumnSelection
   /** Formulário inline de criação de deal — renderizado acima do botão "Adicionar negócio". */
   addFormSlot?: ReactNode
+  /**
+   * Botão "Carregar mais" ao fim da lista — exibido quando o board pagina
+   * (50/coluna) e a etapa tem mais deals no servidor (`hasMore`).
+   */
+  loadMore?: {
+    remaining: number
+    loading: boolean
+    onClick: () => void
+  }
 }
 
 const colorMap: Record<ColumnColor, string> = {
@@ -98,6 +107,7 @@ export function KanbanColumn({
   placeholderSlot,
   selection,
   addFormSlot,
+  loadMore,
 }: KanbanColumnProps) {
   const showSelectAll =
     !!selection &&
@@ -233,6 +243,17 @@ export function KanbanColumn({
           ),
         )}
         {placeholderSlot}
+
+        {loadMore && loadMore.remaining > 0 ? (
+          <button
+            type="button"
+            disabled={loadMore.loading}
+            onClick={loadMore.onClick}
+            className="mt-0.5 flex shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-dashed border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/5 py-2 text-[11px] font-medium text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-primary)]/50 hover:bg-[var(--brand-primary)]/10 disabled:opacity-60"
+          >
+            {loadMore.loading ? "Carregando..." : `Carregar mais (${loadMore.remaining})`}
+          </button>
+        ) : null}
       </div>
     </section>
   )

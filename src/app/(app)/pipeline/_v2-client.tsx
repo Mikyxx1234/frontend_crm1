@@ -74,6 +74,7 @@ import {
   useMoveDeal,
   usePipelineRealtime,
   usePipelineUrlSync,
+  usePipelineLossReasons,
   usePipelines,
   useTeamUsers,
   type MoveVars,
@@ -90,7 +91,6 @@ import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
 import type { BulkScopeContext } from "@/components/pipeline/bulk-edit-fields-dialog";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
-import { apiUrl } from "@/lib/api";
 import type {
   BoardDealDto,
   BoardSortParam,
@@ -224,8 +224,6 @@ export default function KanbanV2ClientPage({
       return "";
     }
   });
-  const [filterOptions, setFilterOptions] = useState<import("@/components/pipeline/kanban-filters/types").FilterOptionsResponse | null>(null);
-  const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
   const kebabBtnRef = useRef<HTMLButtonElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
@@ -338,23 +336,8 @@ export default function KanbanV2ClientPage({
   // Ativa (pipelines.lossReasonRequired). Cancelar = não move.
   const [pendingLostMove, setPendingLostMove] = useState<MoveVars | null>(null);
 
-  // Chave dedicada — o LossReasonDialog usa ["pipeline-loss-reasons", pipelineId]
-  // com refetchOnMount:"always" e shape distinto ({ reasons, required, allowOther }).
-  // Compartilhar a mesma key aqui poluia o cache e fazia lossReasonRequired virar
-  // undefined depois da primeira abertura do modal, resultando em POST /move sem
-  // lostReason no segundo mover-para-Perdido → 400.
-  const lossMetaQuery = useQuery({
-    queryKey: ["pipeline-loss-meta", pipelineId],
-    queryFn: async () => {
-      const res = await fetch(
-        apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),
-      );
-      if (!res.ok) return { lossReasonRequired: false };
-      return res.json() as Promise<{ lossReasonRequired?: boolean }>;
-    },
-    enabled: !!pipelineId,
-    staleTime: 30_000,
-  });
+  // Key compartilhada com LossReasonDialog / actions-menu / bulk-bar.
+  const lossMetaQuery = usePipelineLossReasons(pipelineId);
   const lossReasonsActive = Boolean(lossMetaQuery.data?.lossReasonRequired);
 
   const requestMove = useCallback(
@@ -389,7 +372,11 @@ export default function KanbanV2ClientPage({
    * modo limpa a seleção atual.
    */
   const [selectionMode, setSelectionMode] = useState(false);
-  const { data: teamUsers = [] } = useTeamUsers(isAuthenticated);
+  // Só busca /api/users quando a barra de massa precisa (modo seleção).
+  // AssigneePopover/filters carregam sob demanda com a mesma query key.
+  const { data: teamUsers = [] } = useTeamUsers(
+    isAuthenticated && (selectionMode || selectedIds.size > 0),
+  );
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -426,21 +413,18 @@ export default function KanbanV2ClientPage({
     setSelectedIds(new Set());
   }, [pipelineId]);
 
-  // Recarrega as options de filtro toda vez que o painel é aberto.
-  // Antes buscava só uma vez (guard `filterOptions !== null`), o que
-  // cacheava listas vazias da org — ex.: motivos de perda criados depois
-  // da primeira abertura nunca apareciam sem dar reload na página.
-  // Mantém as opções anteriores em caso de erro (não pisca pra vazio).
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let cancelled = false;
-    setFilterOptionsLoading(true);
-    fetchFilterOptions()
-      .then((opts) => { if (!cancelled) setFilterOptions(opts); })
-      .catch(() => { /* mantém opções já carregadas */ })
-      .finally(() => { if (!cancelled) setFilterOptionsLoading(false); });
-    return () => { cancelled = true; };
-  }, [isAuthenticated]);
+  // Options de filtro: cache RQ compartilhado com Flow (mesmo key).
+  // staleTime alto — lista muda pouco; invalidar após criar tags/campos.
+  const filterOptionsQuery = useQuery({
+    queryKey: ["kanban-filter-options"],
+    queryFn: fetchFilterOptions,
+    enabled: isAuthenticated,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+  const filterOptions = filterOptionsQuery.data ?? null;
+  const filterOptionsLoading = filterOptionsQuery.isLoading;
 
   // Aplica filtros client-side ANTES de virar colunas.
   const filteredBoard = useMemo(() => {

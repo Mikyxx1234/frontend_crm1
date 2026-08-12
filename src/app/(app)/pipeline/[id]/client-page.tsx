@@ -17,7 +17,7 @@ import {
 import { DealViewersStack } from "@/components/crm/deal-viewers-stack";
 import { ChatWindow } from "@/components/inbox/chat-window";
 
-import { useBoard, useDealDetail, useEntityViewers } from "@/features/pipeline-v2/hooks";
+import { useDealDetail, useEntityViewers, usePipelines } from "@/features/pipeline-v2/hooks";
 import type {
   DealContactConversation,
   DealPanelField,
@@ -27,9 +27,9 @@ import type {
  * /v2/pipeline/[id] — detalhe do negócio (página inteira).
  *
  * Cabeada em:
- *  - `GET /api/deals/:id`           → useDealDetail
- *  - `GET /api/pipelines/:id/board` → useBoard (apenas para extrair
- *    a lista de stages do pipeline e desenhar o funil segmentado)
+ *  - `GET /api/deals/:id`     → useDealDetail
+ *  - `GET /api/pipelines`     → usePipelines (stages leves pro funil;
+ *    evita o board completo ~900KB)
  *
  * O chat real (mensagens da conversa do contato) fica como
  * placeholder por enquanto — o `deal-chat-binding` existente está
@@ -139,19 +139,19 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
     }
   }, [deal, autoLoaded, conversations, selectedConv]);
 
-  // Para desenhar o funil precisamos da lista de stages do pipeline.
-  // O endpoint /api/deals/:id já devolve `stage.pipelineId`.
+  // Funil visual: stages já vêm em GET /api/pipelines — NÃO puxar o board
+  // inteiro (~900KB / ~8s em prod) só para desenhar segmentos de cor.
   const pipelineId = deal?.stage?.pipelineId;
-  const boardQuery = useBoard({
-    pipelineId: pipelineId ?? null,
-    status: "OPEN",
-    enabled: !!pipelineId,
-  });
+  const pipelinesQuery = usePipelines(!!pipelineId);
+  const funnelStages = useMemo(() => {
+    const p = pipelinesQuery.data?.find((x) => x.id === pipelineId);
+    return p?.stages ?? [];
+  }, [pipelinesQuery.data, pipelineId]);
 
   const record: DealRecord | null = useMemo(() => {
     if (!deal) return null;
 
-    const stages = boardQuery.data ?? [];
+    const stages = funnelStages;
     const currentStageId = deal.stageId;
     const currentStagePos =
       stages.find((s) => s.id === currentStageId)?.position ?? 0;
@@ -263,7 +263,7 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
           ],
       groups,
     };
-  }, [deal, boardQuery.data]);
+  }, [deal, funnelStages]);
 
   return (
     <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">

@@ -65,5 +65,7 @@ export function useTeamUsers(
     queryFn: () => listUsers({ includeAi }),
     enabled,
     staleTime: 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 }

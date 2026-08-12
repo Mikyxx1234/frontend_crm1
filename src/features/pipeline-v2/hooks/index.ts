@@ -4,6 +4,7 @@ export * from "./use-deal-detail";
 export * from "./use-deal-deep-link";
 export * from "./use-pipeline-url-sync";
 export * from "./use-pipeline-realtime";
+export * from "./use-pipeline-loss-reasons";
 export * from "./use-deals-list";
 export * from "./use-deal-custom-fields";
 export * from "./use-entity-viewers";

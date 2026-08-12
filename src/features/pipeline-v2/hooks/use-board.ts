@@ -61,10 +61,15 @@ export function useBoard(params: {
     queryKey: boardKey(params.pipelineId ?? "pl-1", status, sort),
     queryFn: () => getBoard(params.pipelineId ?? "pl-1", status, sort),
     enabled: preview ? true : ((params.enabled ?? true) && !!params.pipelineId),
-    staleTime: 10_000,
-    refetchInterval: 30_000,
+    // Alinhado ao cache Redis do board (45s) + padrão inbox-v2.
+    // SSE (`usePipelineRealtime`) invalida em new_message/conversation_updated;
+    // polling fica só como safety-net — evita refetch storm no remount.
+    staleTime: 45_000,
+    refetchInterval: 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     // [jul/26] Mantém o quadro anterior VISÍVEL enquanto refaz o fetch
-    // (troca de funil/ordenação, refetch de 30s, invalidação pós-move).
+    // (troca de funil/ordenação, refetch de 60s, invalidação pós-move).
     // Evita o "flash" de tela vazia/"Carregando..." — a query mais cara do
     // app leva ~1-2s, então sem isso o board pisca em branco a cada refetch.
     placeholderData: (prev) => prev,
@@ -116,8 +121,8 @@ export function useBoardSearch(params: {
     enabled:
       (params.enabled ?? true) && !!params.pipelineId && term.length > 0,
     staleTime: 30_000,
-    // Evita fan-out: troca rápida de termo cancela o POST anterior.
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
     retry: 1,
     // [jul/26] Preserva os resultados anteriores enquanto o novo termo é
     // buscado — sem piscar em branco entre teclas (já debounced no caller).
@@ -168,6 +173,7 @@ export function useBoardFiltered(params: {
     enabled: (params.enabled ?? true) && !!params.pipelineId && active,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
     retry: 1,
     // Troca rápida de critério cancela o POST anterior (signal no queryFn).
     // [jul/26] Mantém o quadro filtrado anterior enquanto reaplica filtros

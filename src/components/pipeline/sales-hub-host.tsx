@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 import { IconSettings } from "@tabler/icons-react";
 
 import { RequirePermission } from "@/components/auth/require-permission";
@@ -46,7 +47,6 @@ import {
   isEmptyFilters,
   hasServerSideFilters,
   type AdvancedDealFilters,
-  type FilterOptionsResponse,
 } from "@/components/pipeline/kanban-filters/types";
 
 const SALESHUB_QUEUE_SORT_LS = "saleshub-queue-sort:v1";
@@ -154,9 +154,16 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const [sortMode, setSortMode] = useState<DealQueueSortMode>(readQueueSort);
   const { filters, setFilters, patch: patchFilters, clear: clearFilters } =
     useKanbanFilters();
-  const [filterOptions, setFilterOptions] =
-    useState<FilterOptionsResponse | null>(null);
-  const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
+  const filterOptionsQuery = useQuery({
+    queryKey: ["kanban-filter-options"],
+    queryFn: fetchFilterOptions,
+    enabled: isAuthenticated,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+  const filterOptions = filterOptionsQuery.data ?? null;
+  const filterOptionsLoading = filterOptionsQuery.isLoading;
 
   const { activeDealId, setActiveDeal, normalizeDealId, syncDealNumber } =
     useDealDeepLink();
@@ -187,25 +194,6 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
       /* noop */
     }
   }, [sortMode]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let cancelled = false;
-    setFilterOptionsLoading(true);
-    fetchFilterOptions()
-      .then((opts) => {
-        if (!cancelled) setFilterOptions(opts);
-      })
-      .catch(() => {
-        /* mantém opções já carregadas */
-      })
-      .finally(() => {
-        if (!cancelled) setFilterOptionsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated]);
 
   // Flow inclui abas Ganho/Perdido — precisa de ALL, senão WON/LOST
   // nunca entram no board e as contagens ficam em 0.

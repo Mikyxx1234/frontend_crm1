@@ -9,6 +9,7 @@ import { FormDialog } from "@/components/ui/form-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { usePipelineLossReasons } from "@/features/pipeline-v2/hooks/use-pipeline-loss-reasons";
 
 type LossReason = { id: string; label: string };
 
@@ -17,25 +18,6 @@ async function fetchCatalogReasons(): Promise<LossReason[]> {
   if (!res.ok) return [];
   const data = (await res.json()) as LossReason[];
   return Array.isArray(data) ? data : [];
-}
-
-async function fetchPipelineReasons(pipelineId: string): Promise<{
-  reasons: LossReason[];
-  required: boolean;
-  allowOther: boolean;
-}> {
-  const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`));
-  if (!res.ok) return { reasons: [], required: false, allowOther: true };
-  const data = (await res.json()) as {
-    reasons?: LossReason[];
-    lossReasonRequired?: boolean;
-    lossReasonAllowOther?: boolean;
-  };
-  return {
-    reasons: Array.isArray(data.reasons) ? data.reasons : [],
-    required: Boolean(data.lossReasonRequired),
-    allowOther: data.lossReasonAllowOther !== false,
-  };
 }
 
 async function fetchOrgAllowOther(): Promise<boolean> {
@@ -81,19 +63,16 @@ export function LossReasonDialog({
     enabled: open && !pipelineId,
   });
 
-  const pipelineQuery = useQuery({
-    queryKey: ["pipeline-loss-reasons", pipelineId],
-    queryFn: () => fetchPipelineReasons(pipelineId!),
-    staleTime: 0,
-    refetchOnMount: "always",
+  // Reusa cache do kanban (mesma key/shape) — evita GET duplicado no open.
+  const pipelineQuery = usePipelineLossReasons(pipelineId, {
     enabled: open && !!pipelineId,
   });
 
   const orgAllowOtherQuery = useQuery({
     queryKey: ["org-setting", "deals.loss_reason_allow_other"],
     queryFn: fetchOrgAllowOther,
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 60_000,
+    refetchOnMount: false,
     enabled: open && !pipelineId,
   });
 
@@ -101,10 +80,10 @@ export function LossReasonDialog({
     ? (pipelineQuery.data?.reasons ?? [])
     : (catalogQuery.data ?? []);
   const required = pipelineId
-    ? Boolean(pipelineQuery.data?.required)
+    ? Boolean(pipelineQuery.data?.lossReasonRequired)
     : true;
   const allowOther = pipelineId
-    ? (pipelineQuery.data?.allowOther ?? true)
+    ? pipelineQuery.data?.lossReasonAllowOther !== false
     : (orgAllowOtherQuery.data ?? true);
 
   React.useEffect(() => {

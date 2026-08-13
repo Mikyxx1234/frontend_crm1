@@ -54,7 +54,8 @@ export function UsagePanel({ agentId }: { agentId: string }) {
       if (!res.ok) throw new Error("Falha ao carregar estatísticas.");
       return (await res.json()) as Stats;
     },
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   if (isLoading || !data) {

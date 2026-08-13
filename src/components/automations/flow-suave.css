@@ -12,9 +12,25 @@
   --fx-canvas-bottom:#F1F3FA;
   --fx-canvas-dot:#E1E5F2;
   --fx-surface:#FFFFFF;
+  --fx-surface-2:#F8FAFC;
+  --fx-input-bg:#FFFFFF;
+  --fx-text-label:#475569;
+  --fx-accent-ink:#0E7490;
+  --fx-chip-err-bg:#FFE4E6;
+  --fx-chip-err-text:#E11D48;
+  --fx-warn-bg:#FFFBEB;
+  --fx-warn-border:#FDE68A;
+  --fx-warn-text:#92400E;        /* sub-blocos: preview, faixas, cards internos */
+  --fx-surface-err:#FFFAFA;      /* fundo suave de erro/senão */
+  --fx-border-err:#FECDD3;
   --fx-surface-border:#EDEFF7;
   --fx-item-border:#EEF0F7;
   --fx-divider:#F1F2F9;
+  --fx-divider-strong:#E2E8F0;   /* borda de cards internos */
+  --fx-out-label:#7A8194;
+  --fx-out-label-flow:#3D8399;
+  --fx-out-label-error:#B4525A;
+  --fx-out-label-cond:#3F8C57;
 
   /* --- texto --- */
   --fx-text-strong:#141A2C;   /* título do nó */
@@ -75,7 +91,7 @@
   right: auto;
   width:11px !important;
   height:11px !important;
-  border:2px solid #fff !important;
+  border:2px solid var(--fx-surface) !important;
   border-radius:50%;
   background:var(--fx-port-idle) !important;
   box-shadow:0 0 0 1px var(--fx-port-idle) !important;
@@ -85,6 +101,34 @@
 .automation-editor .react-flow__handle.wf-handle:hover,
 .automation-editor .react-flow__handle.fx-port:hover {
   transform:scale(1.25);
+}
+
+/* Saídas rotuladas: com `right:auto` a porta cai na posição estática do flex
+   (justify-content:flex-end) — em cima do fim do rótulo. O React Flow ancora
+   em `right:0` + `translate(50%,-50%)`, então basta descontar o padding do
+   container para o ponto voltar a cair sobre a borda do nó. */
+.automation-editor .wf-node__out .react-flow__handle.fx-port,
+.automation-editor .fx-out .react-flow__handle.fx-port,
+.automation-editor .fx-item-out .react-flow__handle.fx-port {
+  left:auto !important;
+  right:-16px !important; /* = --fx-pad de .wf-node__outs */
+}
+/* Nó expandido: `.wf-node__outs` perde o padding lateral. */
+.automation-editor .wf-node--selected > .wf-node__outs .react-flow__handle.fx-port {
+  right:0 !important;
+}
+/* Ramos de condição mantêm 12px mesmo com o nó expandido. */
+.automation-editor .wf-node__outs--branches .react-flow__handle.fx-port {
+  right:-12px !important;
+}
+
+/* O hover escala o ponto; sem repetir o translate do React Flow ele saltaria
+   meia largura para a direita e meia altura para baixo. */
+.automation-editor .react-flow__handle-right.fx-port:hover {
+  transform:translate(50%,-50%) scale(1.25);
+}
+.automation-editor .react-flow__handle-left.fx-port:hover {
+  transform:translate(-50%,-50%) scale(1.25);
 }
 .automation-editor .react-flow__handle.fx-port--flow,
 .automation-editor .react-flow__handle.wf-handle--cyan {
@@ -167,7 +211,7 @@
 .fx-node__icon{
   flex:0 0 auto;width:30px;height:30px;border-radius:var(--fx-radius-chip);
   display:grid;place-items:center;
-  background:color-mix(in srgb, var(--fx-type) 15%, #fff);
+  background:color-mix(in srgb, var(--fx-type) 15%, var(--fx-surface));
   color:var(--fx-type);
 }
 .fx-node__icon svg{width:16px;height:16px;display:block}
@@ -179,9 +223,9 @@
 }
 .fx-node__chevron{
   flex:0 0 auto;width:22px;height:22px;display:grid;place-items:center;
-  border:none;background:transparent;border-radius:7px;color:#AEB4C4;cursor:pointer;
+  border:none;background:transparent;border-radius:7px;color:var(--fx-text-faint);cursor:pointer;
 }
-.fx-node__chevron:hover{background:#F1F2F7;color:#7B8296}
+.fx-node__chevron:hover{background:var(--fx-surface-2);color:var(--fx-text-muted)}
 .fx-node__chevron svg{width:14px;height:14px;transition:transform .18s ease}
 .fx-node.is-collapsed .fx-node__chevron svg{transform:rotate(-90deg)}
 .fx-node.is-collapsed .fx-node__desc,
@@ -202,8 +246,8 @@
   transition:border-color .14s ease, background .14s ease;
 }
 .fx-item + .fx-item{margin-top:var(--fx-gap)}
-.fx-item:hover{border-color:color-mix(in srgb, var(--fx-type) 35%, var(--fx-item-border));background:color-mix(in srgb, var(--fx-type) 3%, #fff)}
-.fx-item__icon{flex:0 0 auto;width:18px;height:18px;margin-top:1px;display:grid;place-items:center;color:#6B7280}
+.fx-item:hover{border-color:color-mix(in srgb, var(--fx-type) 35%, var(--fx-item-border));background:color-mix(in srgb, var(--fx-type) 3%, var(--fx-surface))}
+.fx-item__icon{flex:0 0 auto;width:18px;height:18px;margin-top:1px;display:grid;place-items:center;color:var(--fx-text-muted)}
 .fx-item__icon svg{width:16px;height:16px}
 .fx-item__text{min-width:0;flex:1 1 auto}
 .fx-item__title{font-size:12.5px;font-weight:500;color:var(--fx-text);overflow-wrap:anywhere}
@@ -229,12 +273,12 @@
   width:100%;margin-top:9px;padding:10px;
   font-family:var(--fx-font);font-size:12px;font-weight:500;
   color:var(--fx-type);
-  background:color-mix(in srgb, var(--fx-type) 5%, #fff);
-  border:1px dashed color-mix(in srgb, var(--fx-type) 45%, #fff);
+  background:color-mix(in srgb, var(--fx-type) 5%, var(--fx-surface));
+  border:1px dashed color-mix(in srgb, var(--fx-type) 45%, var(--fx-surface));
   border-radius:var(--fx-radius-item);cursor:pointer;
   transition:background .14s ease;
 }
-.fx-add:hover{background:color-mix(in srgb, var(--fx-type) 10%, #fff)}
+.fx-add:hover{background:color-mix(in srgb, var(--fx-type) 10%, var(--fx-surface))}
 .fx-add svg{width:14px;height:14px}
 
 /* --- saídas rotuladas --- */
@@ -243,21 +287,21 @@
   position:relative;display:flex;align-items:center;justify-content:flex-end;
   gap:8px;padding:6px 0;font-size:11px;line-height:1.35;text-align:right;
 }
-.fx-out__label{max-width:190px;color:#7A8194}
-.fx-out--flow  .fx-out__label{color:#3D8399}
-.fx-out--error .fx-out__label{color:#B4525A}
-.fx-out--cond  .fx-out__label{color:#3F8C57}
+.fx-out__label{max-width:190px;color:var(--fx-out-label)}
+.fx-out--flow  .fx-out__label{color:var(--fx-out-label-flow)}
+.fx-out--error .fx-out__label{color:var(--fx-out-label-error)}
+.fx-out--cond  .fx-out__label{color:var(--fx-out-label-cond)}
 /* saída ancorada a um item específico (ex.: cada condição) */
 .fx-item-out{
   position:relative;display:flex;align-items:center;justify-content:flex-end;
-  gap:8px;padding:7px 0 2px;font-size:11px;color:#6C7386;
+  gap:8px;padding:7px 0 2px;font-size:11px;color:var(--fx-out-label);
 }
 
 /* --- portas --- */
 .fx-port{
   position:absolute;right:-20px;top:50%;transform:translateY(-50%);
   width:11px;height:11px;border-radius:50%;
-  background:var(--fx-port-idle);border:2px solid #fff;
+  background:var(--fx-port-idle);border:2px solid var(--fx-surface);
   box-shadow:0 0 0 1px var(--fx-port-idle);
   cursor:crosshair;transition:transform .12s ease;
 }
@@ -272,7 +316,7 @@
 .fx-node__foot{display:flex;margin-top:8px;border-top:1px solid var(--fx-divider)}
 .fx-stat{flex:1;text-align:center;padding:10px 4px}
 .fx-stat + .fx-stat{border-left:1px solid var(--fx-divider)}
-.fx-stat b{display:block;font-size:14px;font-weight:600;line-height:1;color:#2A3145}
+.fx-stat b{display:block;font-size:14px;font-weight:600;line-height:1;color:var(--fx-text-strong)}
 .fx-stat span{display:block;margin-top:3px;font-size:9.5px;letter-spacing:.02em;color:var(--fx-text-faint)}
 .fx-stat--ok b{color:var(--fx-stat-ok)}
 .fx-stat--warn b{color:var(--fx-stat-warn)}
@@ -287,7 +331,7 @@
   position:absolute;z-index:3;width:18px;height:18px;border-radius:50%;
   display:grid;place-items:center;transform:translate(-50%,-50%);
   font-size:11px;line-height:1;cursor:pointer;
-  background:#fff;border:1px solid #D8DDEA;color:#98A0B3;
+  background:var(--fx-surface);border:1px solid var(--fx-divider-strong);color:var(--fx-text-muted);
   box-shadow:0 1px 2px rgba(16,24,40,.1);
   transition:color .12s ease, border-color .12s ease, transform .12s ease;
 }
@@ -297,14 +341,14 @@
 .fx-toolbar{
   position:absolute;z-index:6;display:flex;gap:2px;padding:5px;
   transform:translate(-50%,-100%);
-  background:#fff;border:1px solid #E4E7F0;
+  background:var(--fx-surface);border:1px solid var(--fx-divider-strong);
   border-radius:var(--fx-radius-chip);box-shadow:var(--fx-shadow-float);
 }
 .fx-toolbar button{
   width:32px;height:32px;border:none;background:transparent;border-radius:8px;
-  color:#6A7183;cursor:pointer;display:grid;place-items:center;
+  color:var(--fx-text-muted);cursor:pointer;display:grid;place-items:center;
 }
-.fx-toolbar button:hover{background:#F1F2F7;color:#333A4D}
+.fx-toolbar button:hover{background:var(--fx-surface-2);color:var(--fx-text-strong)}
 .fx-toolbar button.is-danger:hover{background:#FDECEC;color:var(--fx-error)}
 .fx-toolbar svg{width:16px;height:16px}
 

@@ -34,6 +34,8 @@ import {
 import { WebhookStepConfig } from "@/components/automations/webhook-step-config";
 import { ProductPicker } from "@/components/automations/send-product-config";
 import { useCustomFieldConditionMeta } from "@/components/automations/editor-data";
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import {
   showsUpdateFieldVariableHint,
   UpdateFieldValueControl,
@@ -368,16 +370,9 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
     return out;
   }, [declaredVariables, customFieldsShortcutQuery.data, step?.type]);
 
-  const pipelinesQuery = useQuery({
-    queryKey: ["pipelines-for-steps"],
-    enabled: open && (step?.type === "move_stage" || step?.type === "create_deal"),
-    staleTime: 60_000,
-    queryFn: async () => {
-      const res = await fetch(apiUrl("/api/pipelines"));
-      if (!res.ok) return [] as Pipeline[];
-      return (await res.json()) as Pipeline[];
-    },
-  });
+  const pipelinesQuery = usePipelinesQuery<Pipeline>(
+    open && (step?.type === "move_stage" || step?.type === "create_deal"),
+  );
 
   const customFieldsQuery = useQuery({
     queryKey: ["custom-fields-for-update-field"],
@@ -2393,15 +2388,7 @@ function StagePickerValue({
   value: string;
   onChange: (next: string) => void;
 }) {
-  const { data: pipelines = [], isLoading } = useQuery({
-    queryKey: ["pipelines-for-condition"],
-    queryFn: async (): Promise<Pipeline[]> => {
-      const res = await fetch(apiUrl("/api/pipelines"));
-      if (!res.ok) return [];
-      return (await res.json()) as Pipeline[];
-    },
-    staleTime: 60_000,
-  });
+  const { data: pipelines = [], isLoading } = usePipelinesQuery<Pipeline>();
 
   if (isLoading) {
     return (
@@ -2435,15 +2422,7 @@ function PipelinePickerValue({
   value: string;
   onChange: (next: string) => void;
 }) {
-  const { data: pipelines = [], isLoading } = useQuery({
-    queryKey: ["pipelines-for-condition"],
-    queryFn: async (): Promise<Pipeline[]> => {
-      const res = await fetch(apiUrl("/api/pipelines"));
-      if (!res.ok) return [];
-      return (await res.json()) as Pipeline[];
-    },
-    staleTime: 60_000,
-  });
+  const { data: pipelines = [], isLoading } = usePipelinesQuery<Pipeline>();
 
   if (isLoading) {
     return (
@@ -2547,15 +2526,7 @@ function StageNamePickerValue({
   value: string;
   onChange: (next: string) => void;
 }) {
-  const { data: pipelines = [], isLoading } = useQuery({
-    queryKey: ["pipelines-for-condition"],
-    queryFn: async (): Promise<Pipeline[]> => {
-      const res = await fetch(apiUrl("/api/pipelines"));
-      if (!res.ok) return [];
-      return (await res.json()) as Pipeline[];
-    },
-    staleTime: 60_000,
-  });
+  const { data: pipelines = [], isLoading } = usePipelinesQuery<Pipeline>();
 
   const allNames = useMemo(() => {
     const set = new Set<string>();
@@ -2601,15 +2572,7 @@ function PipelineNamePickerValue({
   value: string;
   onChange: (next: string) => void;
 }) {
-  const { data: pipelines = [], isLoading } = useQuery({
-    queryKey: ["pipelines-for-condition"],
-    queryFn: async (): Promise<Pipeline[]> => {
-      const res = await fetch(apiUrl("/api/pipelines"));
-      if (!res.ok) return [];
-      return (await res.json()) as Pipeline[];
-    },
-    staleTime: 60_000,
-  });
+  const { data: pipelines = [], isLoading } = usePipelinesQuery<Pipeline>();
 
   const allNames = useMemo(
     () => new Set(pipelines.map((p) => p.name)),
@@ -2732,15 +2695,8 @@ function OwnerPickerValue({
   value: string;
   onChange: (next: string) => void;
 }) {
-  const { data: humans = [], isLoading: loadingHumans } = useQuery({
-    queryKey: ["automation-users-human"],
-    queryFn: async (): Promise<HumanUserOption[]> => {
-      const res = await fetch(apiUrl("/api/users"));
-      if (!res.ok) return [];
-      return (await res.json()) as HumanUserOption[];
-    },
-    staleTime: 120_000,
-  });
+  const { data: humans = [], isLoading: loadingHumans } =
+    useTeamUsersQuery<HumanUserOption>();
 
   const { data: agents = [], isLoading: loadingAgents } = useQuery({
     queryKey: ["automation-ai-agents-with-user"],
@@ -3213,26 +3169,8 @@ function AssignOwnerStepConfig({
   draft: Record<string, unknown>;
   setDraft: Dispatch<SetStateAction<Record<string, unknown>>>;
 }) {
-  const { data: humans = [], isLoading: loadingHumans } = useQuery({
-    queryKey: ["automation-users-human"],
-    queryFn: async (): Promise<HumanUserOption[]> => {
-      const res = await fetch(apiUrl("/api/users"));
-      if (!res.ok) return [];
-      const rows = (await res.json()) as Array<{
-        id: string;
-        name: string;
-        email: string;
-        role: string;
-      }>;
-      return rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        email: r.email,
-        role: r.role,
-      }));
-    },
-    staleTime: 120_000,
-  });
+  const { data: humans = [], isLoading: loadingHumans } =
+    useTeamUsersQuery<HumanUserOption>();
 
   const { data: agents = [], isLoading: loadingAgents } = useQuery({
     queryKey: ["automation-ai-agents-with-user"],

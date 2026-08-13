@@ -22,6 +22,8 @@ import { Label } from "@/components/ui/label";
 import { pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 
 type DistributionMode = "ROUND_ROBIN" | "RULE_BASED" | "MANUAL";
 
@@ -61,23 +63,6 @@ async function fetchRules(): Promise<DistributionRuleRow[]> {
   return res.json();
 }
 
-async function fetchUsers(): Promise<UserRow[]> {
-  const res = await fetch(apiUrl("/api/users"));
-  if (!res.ok) await parseJsonError(res, "Erro ao carregar usuários.");
-  return res.json();
-}
-
-async function fetchPipelines(): Promise<PipelineRow[]> {
-  const res = await fetch(apiUrl("/api/pipelines"));
-  if (!res.ok) await parseJsonError(res, "Erro ao carregar pipelines.");
-  const data = (await res.json()) as unknown;
-  if (!Array.isArray(data)) return [];
-  return data.map((p) => {
-    const r = p as { id?: string; name?: string };
-    return { id: String(r.id ?? ""), name: String(r.name ?? "") };
-  });
-}
-
 export default function DistributionSettingsPage() {
   const qc = useQueryClient();
   const invalidateRules = () => void qc.invalidateQueries({ queryKey: ["distribution-rules"] });
@@ -89,14 +74,10 @@ export default function DistributionSettingsPage() {
 
   const { data: rules = [], isLoading: rulesLoading, isError: rulesError, error: rulesErr } =
     useQuery({ queryKey: ["distribution-rules"], queryFn: fetchRules });
-  const { data: users = [], isLoading: usersLoading } = useQuery({
-    queryKey: ["users-list"],
-    queryFn: fetchUsers,
-  });
-  const { data: pipelines = [], isLoading: pipelinesLoading } = useQuery({
-    queryKey: ["pipelines-list"],
-    queryFn: fetchPipelines,
-  });
+  const { data: users = [], isLoading: usersLoading } =
+    useTeamUsersQuery<UserRow>();
+  const { data: pipelines = [], isLoading: pipelinesLoading } =
+    usePipelinesQuery<PipelineRow>();
 
   const createMutation = useMutation({
     mutationFn: async () => {

@@ -25,6 +25,7 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
@@ -467,33 +468,9 @@ export function ImportPanel({
   // Lista de pipelines da org (com etapas) para os dropdowns opcionais. Só faz
   // fetch quando o painel é renderizado em modo "deals" — para "contacts" não
   // há custo.
-  const { data: pipelines = [] } = useQuery<PipelineLite[]>({
-    queryKey: ["pipelines"],
-    enabled: entity === "deals",
-    queryFn: async () => {
-      const res = await fetch(apiUrl("/api/pipelines"));
-      if (!res.ok) return [];
-      const data = (await res.json()) as unknown;
-      if (!Array.isArray(data)) return [];
-      return data
-        .filter(
-          (p): p is { id: string; name: string; stages?: unknown } =>
-            !!p && typeof (p as { id?: string }).id === "string",
-        )
-        .map((p) => ({
-          id: p.id,
-          name: p.name,
-          stages: Array.isArray(p.stages)
-            ? (p.stages as unknown[])
-                .filter(
-                  (s): s is { id: string; name: string } =>
-                    !!s && typeof (s as { id?: string }).id === "string",
-                )
-                .map((s) => ({ id: s.id, name: s.name }))
-            : [],
-        }));
-    },
-  });
+  const { data: pipelines = [] } = usePipelinesQuery<PipelineLite>(
+    entity === "deals",
+  );
 
   // Etapas do pipeline alvo selecionado (por nome). Alimenta o dropdown de
   // "Etapa alvo".
@@ -1592,18 +1569,7 @@ export function ExportPanel({ scope }: { scope?: ExportScope } = {}) {
   );
   const [busy, setBusy] = React.useState<null | "deals" | "contacts">(null);
 
-  const { data: pipelines = [] } = useQuery<Pipeline[]>({
-    queryKey: ["pipelines"],
-    queryFn: async () => {
-      const res = await fetch(apiUrl("/api/pipelines"));
-      if (!res.ok) return [];
-      const data = (await res.json()) as unknown;
-      if (!Array.isArray(data)) return [];
-      return data
-        .filter((p): p is Pipeline => !!p && typeof (p as Pipeline).id === "string")
-        .map((p) => ({ id: p.id, name: (p as Pipeline).name }));
-    },
-  });
+  const { data: pipelines = [] } = usePipelinesQuery<Pipeline>();
 
   const buildDealsQuery = (): string => {
     const params = new URLSearchParams();

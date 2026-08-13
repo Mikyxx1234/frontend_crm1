@@ -1,10 +1,10 @@
 "use client";
 
-import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
 import { IconArrowsLeftRight as ArrowLeftRight, IconCalendar as Calendar, IconChevronDown as ChevronDown, IconFilter as Filter, IconRotate2 as RotateCcw } from "@tabler/icons-react";
 import { SelectNative } from "@/components/ui/select";
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import {
   useDashboardStore,
   type ComparisonMode,
@@ -46,25 +46,9 @@ export function FiltersBar() {
   const [customFrom, setCustomFrom] = React.useState("");
   const [customTo, setCustomTo] = React.useState("");
 
-  const { data: pipelines = [] } = useQuery<PipelineOption[]>({
-    queryKey: ["pipelines-list"],
-    queryFn: async () => {
-      const r = await fetch(apiUrl("/api/pipelines"));
-      const j = await r.json();
-      return Array.isArray(j) ? j : j.pipelines ?? [];
-    },
-    staleTime: 120_000,
-  });
+  const { data: pipelines = [] } = usePipelinesQuery<PipelineOption>();
 
-  const { data: users = [] } = useQuery<UserOption[]>({
-    queryKey: ["users-list"],
-    queryFn: async () => {
-      const r = await fetch(apiUrl("/api/users"));
-      const j = await r.json();
-      return Array.isArray(j) ? j : [];
-    },
-    staleTime: 120_000,
-  });
+  const { data: users = [] } = useTeamUsersQuery<UserOption>();
 
   const handleCustomApply = () => {
     if (customFrom && customTo) {

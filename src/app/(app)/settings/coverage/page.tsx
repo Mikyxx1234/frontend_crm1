@@ -1,13 +1,10 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import CoverageV2ClientPage from "./client-page";
-
-export const dynamic = "force-dynamic";
-
+/**
+ * A grade de Cobertura virou a aba "Cobertura" da tela de Distribuição
+ * (ao lado de "Equipe"). A rota antiga fica como redirect permanente
+ * para não quebrar links salvos/bookmarks.
+ */
 export default function CoveragePage() {
-  return (
-    <Suspense fallback={null}>
-      <CoverageV2ClientPage />
-    </Suspense>
-  );
+  redirect("/widgets/distribution?tab=coverage");
 }

@@ -2161,3 +2161,8 @@ aplicada com SQL aditivo idempotente em
 - Modelo: Cursor Grok 4.5
 - Decisão: incluir `automations` em `DEFAULT_ENABLED` (FE+BE) e garantir no `MobileMoreSheet` via `MORE_SHEET_ENSURE`, para layouts já salvos sem o módulo. Restrito a ADMIN/MANAGER (`allowedRoles`), paridade com a sidebar. Continua fora do bottom nav padrão — só em "Mais seções".
 - Alternativas descartadas: só alterar o Layout Builder (orgs com row salva não veriam); pinar Automações na barra inferior (ocupa slot de core).
+
+### 2026-08-13 — Tema escuro do editor de automações
+- Modelo: Cursor Grok 4.5
+- Decisão: tokenizar as cores fixas do editor em `--fx-*` (novos: `--fx-surface-2`, `--fx-input-bg`, `--fx-divider-strong`, `--fx-surface-err`, `--fx-border-err`, `--fx-out-label*`, `--fx-text-label`, `--fx-accent-ink`, `--fx-warn-*`), com os hex claros atuais como valor padrão, e concentrar o dark em um único bloco `.v2-dark .automation-editor`. Canvas passa de `#0e1524` para `#1a2334`–`#1f2a40` (azul escuro suave, família do `--bg-mesh` do CRM); cards em `#26314a`, campos recuados em `#1e2740`. O glifo `⊘` do ramo "senão" virou `IconBan` (Tabler) — a fonte do app não tem U+2298 e renderizava tofu.
+- Alternativas descartadas: sobrescrever cada seletor em `.v2-dark` (duplica regra e desincroniza com o claro); manter o remapeamento por utilitário Tailwind em `globals-v2.css` como única estratégia (não alcança as classes `cfg-*`/`fx-*`, que são CSS puro).

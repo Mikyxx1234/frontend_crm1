@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { IconChevronRight as ChevronRight, IconTrophy as Trophy } from "@tabler/icons-react";
 
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
 import { SUBTLE_SPRING, formatBRL, formatCount } from "@/lib/dashboard-tokens";
 import { cn } from "@/lib/utils";
 import { useDashboardStore } from "@/stores/dashboard-store";
@@ -35,13 +36,6 @@ type StageRankingResponse = {
 
 type Pipeline = { id: string; name: string };
 
-async function fetchPipelines(): Promise<Pipeline[]> {
-  const res = await fetch(apiUrl("/api/pipelines"));
-  if (!res.ok) return [];
-  const json = await res.json();
-  return Array.isArray(json) ? json : json.pipelines ?? [];
-}
-
 async function fetchStageRanking(
   pipelineId: string,
   from: string,
@@ -67,11 +61,7 @@ export function StageRankingWidget(props: StageRankingProps = {}) {
   const store = useDashboardStore();
   const [metric, setMetric] = React.useState<Metric>("count");
 
-  const pipelinesQuery = useQuery({
-    queryKey: ["pipelines"],
-    queryFn: fetchPipelines,
-    staleTime: 5 * 60_000,
-  });
+  const pipelinesQuery = usePipelinesQuery<Pipeline>();
 
   const from = props.from ?? store.from;
   const to = props.to ?? store.to;

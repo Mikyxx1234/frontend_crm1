@@ -36,7 +36,8 @@ export function AgentsOnlineWidget() {
       if (!r.ok) throw new Error("Falha ao carregar agentes");
       return r.json();
     },
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
     staleTime: 10_000,
   });
 

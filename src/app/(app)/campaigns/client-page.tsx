@@ -27,10 +27,11 @@ import { PageHeader } from "@/components/crm/page-header";
 import { EmptyState } from "@/components/crm/empty-state";
 import { KpiSquareScroll } from "@/components/crm/kpi-card";
 import { PageActionsMenu, PagePrimaryButton, PageSegmentedControl } from "@/components/crm/page-toolbar";
+import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { cn } from "@/lib/utils";
 
 import { useCampaigns } from "@/features/campaigns/hooks";
-import { MOCK_CAMPAIGNS_PAGE } from "@/features/campaigns/mock-campaigns";
+import { MOCK_CAMPAIGNS_PAGE, mockCampaignsPage } from "@/features/campaigns/mock-campaigns";
 import {
   CAMPAIGN_STATUS_FILTERS,
   STATUS_META,
@@ -59,6 +60,8 @@ function fmtDateTimeBR(iso: string | null | undefined): string {
   });
 }
 
+const DEFAULT_PER_PAGE = 25;
+
 const SENDING_STATUSES: CampaignStatus[] = ["SENDING", "PROCESSING"];
 
 export default function CampaignsClientPage() {
@@ -67,29 +70,59 @@ export default function CampaignsClientPage() {
   const isAuthenticated = authStatus === "authenticated";
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
 
-  const allQuery = useCampaigns({ perPage: 200 }, isAuthenticated);
-  const realItems = allQuery.data?.items ?? [];
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter, perPage]);
+
+  // Lista paginada de verdade (API: status/search/page/perPage/total).
+  const listQuery = useCampaigns(
+    {
+      page,
+      perPage,
+      status: statusFilter || undefined,
+      search: debouncedSearch || undefined,
+    },
+    isAuthenticated,
+  );
+
+  // KPIs e contagens do popover — lote amplo, sem os filtros da lista.
+  const metricsQuery = useCampaigns({ page: 1, perPage: 200 }, isAuthenticated);
+  const realItems = metricsQuery.data?.items ?? [];
 
   const isDemoBase = shouldAutoDemoEmpty({
     realCount: realItems.length,
     hasFilters: false,
-    isLoading: allQuery.isLoading,
-    isError: allQuery.isError,
+    isLoading: metricsQuery.isLoading,
+    isError: metricsQuery.isError,
   });
 
-  const allItems = useMemo(() => {
-    const base = isDemoBase ? MOCK_CAMPAIGNS_PAGE.items : realItems;
-    const q = search.trim().toLowerCase();
-    return base
-      .filter((c) => !statusFilter || c.status === statusFilter)
-      .filter(
-        (c) =>
-          !q ||
-          c.name.toLowerCase().includes(q) ||
-          (c.segment?.name ?? "").toLowerCase().includes(q),
-      );
-  }, [isDemoBase, realItems, statusFilter, search]);
+  // Em modo demo a paginação roda sobre o mock com os mesmos params da API.
+  const demoPage = useMemo(
+    () =>
+      isDemoBase
+        ? mockCampaignsPage({
+            page,
+            perPage,
+            status: statusFilter || undefined,
+            search: debouncedSearch || undefined,
+          })
+        : null,
+    [isDemoBase, page, perPage, statusFilter, debouncedSearch],
+  );
+
+  const allItems = demoPage ? demoPage.items : listQuery.data?.items ?? [];
+  const total = demoPage ? demoPage.total : listQuery.data?.total ?? 0;
+  const lastPage = Math.max(1, Math.ceil(total / perPage));
+  const safePage = Math.min(page, lastPage);
 
   const statusCounts = useMemo(() => {
     const source = isDemoBase ? MOCK_CAMPAIGNS_PAGE.items : realItems;
@@ -100,8 +133,8 @@ export default function CampaignsClientPage() {
     return map;
   }, [isDemoBase, realItems]);
 
-  const isLoading = allQuery.isLoading;
-  const error = allQuery.error && !isDemoBase;
+  const isLoading = listQuery.isLoading;
+  const error = isDemoBase ? null : listQuery.error;
 
   const dashSource = isDemoBase ? MOCK_CAMPAIGNS_PAGE.items : realItems;
   const hasFilters = Boolean(statusFilter) || search.trim().length > 0;
@@ -171,9 +204,11 @@ export default function CampaignsClientPage() {
                   icon={<IconSpeakerphone size={28} />}
                   title="Nenhuma campanha"
                   description={
-                    statusFilter
-                      ? "Nenhuma campanha com esse status."
-                      : "Crie sua primeira campanha para disparar mensagens em massa."
+                    debouncedSearch
+                      ? `Sem resultados para "${debouncedSearch}".`
+                      : statusFilter
+                        ? "Nenhuma campanha com esse status."
+                        : "Crie sua primeira campanha para disparar mensagens em massa."
                   }
                   action={
                     <PagePrimaryButton href="/campaigns/new">
@@ -190,6 +225,23 @@ export default function CampaignsClientPage() {
               </div>
             )}
           </div>
+
+          <PaginationGlass
+            className="shrink-0"
+            total={total}
+            entityLabel="campanhas"
+            page={safePage}
+            lastPage={lastPage}
+            canPrev={safePage > 1}
+            canNext={safePage < lastPage}
+            onPrev={() => setPage((p) => Math.max(1, p - 1))}
+            onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+            perPage={perPage}
+            onPerPageChange={(value) => {
+              setPerPage(value);
+              setPage(1);
+            }}
+          />
         </div>
       </main>
     </div>

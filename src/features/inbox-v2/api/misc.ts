@@ -7,6 +7,7 @@
  */
 
 import { apiUrl } from "@/lib/api";
+import { fetchTeamUsers } from "@/features/shared/queries/team-users";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 
 // ─────────────────────────────────────────────────────────────────
@@ -133,21 +134,11 @@ export interface TeamUser {
   lastSeenAt?: string | null;
 }
 
-/** GET /api/users */
+/** GET /api/users — delega no fetcher canônico (shape normalizado). */
 export async function listUsers(opts?: {
   includeAi?: boolean;
 }): Promise<TeamUser[]> {
-  const q = opts?.includeAi ? "?includeAi=1" : "";
-  const res = await fetch(apiUrl(`/api/users${q}`));
-  const data = await res.json().catch(() => []);
-  if (!res.ok) {
-    throw new Error(
-      typeof (data as { message?: unknown })?.message === "string"
-        ? (data as { message: string }).message
-        : "Erro ao carregar equipe",
-    );
-  }
-  return Array.isArray(data) ? data : [];
+  return fetchTeamUsers<TeamUser>(opts);
 }
 
 // ─────────────────────────────────────────────────────────────────

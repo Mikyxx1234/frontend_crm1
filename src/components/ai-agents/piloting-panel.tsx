@@ -1,6 +1,5 @@
 "use client";
 
-import { apiUrl } from "@/lib/api";
 /**
  * Painel de "pilotagem" do agente de IA — controles operacionais que
  * moram ACIMA do prompt e não dependem do LLM pra serem respeitados.
@@ -17,7 +16,7 @@ import { apiUrl } from "@/lib/api";
  * painel é "controlled" e só dispara `onChange` quando algo muda.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import { IconAlertTriangle as AlertTriangle, IconBan as Ban, IconRobot as Bot, IconCalendarClock as CalendarClock, IconChecks as CheckCheck, IconClock as Clock, IconEye as Eye, IconHeartHandshake as Handshake, IconKeyboard as Keyboard, IconMessageCircle as MessageCircle, IconPlus as Plus, IconSparkles as Sparkles, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
 import * as React from "react";
 
@@ -80,23 +79,6 @@ type Props = {
 };
 
 type UserOption = { id: string; name: string; email: string };
-
-async function fetchHumanUsers(): Promise<UserOption[]> {
-  const res = await fetch(apiUrl("/api/users"));
-  if (!res.ok) return [];
-  const data = (await res.json()) as unknown;
-  if (!Array.isArray(data)) return [];
-  return data
-    .map((u) => {
-      const rec = u as Record<string, unknown>;
-      return {
-        id: String(rec.id ?? ""),
-        name: String(rec.name ?? ""),
-        email: String(rec.email ?? ""),
-      };
-    })
-    .filter((u) => u.id && u.name);
-}
 
 export function PilotingPanel({ value, onChange }: Props) {
   const patch = React.useCallback(
@@ -531,10 +513,22 @@ function InactivitySection({
   value: PilotingValue;
   patch: (p: Partial<PilotingValue>) => void;
 }) {
-  const { data: users = [] } = useQuery({
-    queryKey: ["piloting-users"],
-    queryFn: fetchHumanUsers,
-  });
+  const { data: teamUsers = [] } = useTeamUsersQuery<{
+    id?: unknown;
+    name?: unknown;
+    email?: unknown;
+  }>();
+  const users = React.useMemo<UserOption[]>(
+    () =>
+      teamUsers
+        .map((u) => ({
+          id: String(u.id ?? ""),
+          name: String(u.name ?? ""),
+          email: String(u.email ?? ""),
+        }))
+        .filter((u) => u.id && u.name),
+    [teamUsers],
+  );
 
   const timerMinutes = Math.round(value.inactivityTimerMs / 60_000);
 

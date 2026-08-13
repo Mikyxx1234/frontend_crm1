@@ -90,7 +90,9 @@ export function useSystemPresenceSync(enabled = true) {
         queryKey: ["distribution-responsibles"],
         refetchType: "active",
       });
-    }, 60_000);
+      // O SSE acima já patcheia essas caches in-place; este interval é só
+      // safety-net para queda silenciosa da stream.
+    }, 300_000);
     return () => clearInterval(t);
   }, [enabled, qc]);
 }

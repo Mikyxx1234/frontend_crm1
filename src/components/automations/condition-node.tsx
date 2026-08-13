@@ -2,7 +2,11 @@
 
 import { useMemo } from "react";
 import { Position, type Node, type NodeProps } from "@xyflow/react";
-import { IconFilter as Filter, IconGitBranch as GitBranch } from "@tabler/icons-react";
+import {
+  IconBan,
+  IconFilter as Filter,
+  IconGitBranch as GitBranch,
+} from "@tabler/icons-react";
 
 import type { ConditionBranch } from "@/lib/automation-condition";
 import { useDepartmentOptions } from "./editor-data";
@@ -164,7 +168,9 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionRF>) {
             selected && "wf-cond-card--handle"
           )}
         >
-          <span className="wf-branch-num wf-branch-num--err">⊘</span>
+          <span className="wf-branch-num wf-branch-num--err">
+            <IconBan size={12} stroke={2.4} />
+          </span>
           <div className="wf-cond-card__text">
             <p className="wf-cond-card__title">
               {selected ? "Senão" : "Quando não atender a nenhuma condição"}

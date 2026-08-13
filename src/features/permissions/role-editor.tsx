@@ -56,6 +56,7 @@ import {
   toPersistItems,
   type SidebarEditorItem,
 } from "@/features/sidebar/sidebar-customization";
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
 
 // ─── Data helpers (etapas do funil + campos personalizados) ──────────────────
 
@@ -69,11 +70,8 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 function usePipelinesWithStages() {
-  return useQuery<PipelineWithStages[]>({
-    queryKey: ["pipelines-stages"],
-    queryFn: () => getJson<PipelineWithStages[]>("/api/pipelines"),
-    staleTime: 60_000,
-  });
+  // `stages` já vem no payload canônico do GET /api/pipelines.
+  return usePipelinesQuery<PipelineWithStages>();
 }
 
 function useEntityFields(entity: string) {

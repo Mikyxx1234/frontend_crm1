@@ -4,11 +4,19 @@
  * feito no client (useWidgets) e reforçado pelo backend em todas as rotas.
  */
 
+import { Suspense } from "react";
+
 import DistributionClientPage from "./client-page";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 
 export const dynamic = "force-dynamic";
 
 export default function DistributionPage() {
-  return <DistributionClientPage navRail={<NavRailSpacer />} />;
+  // Suspense: o client lê `?tab=` (deep-link da aba Cobertura) com
+  // `useSearchParams`.
+  return (
+    <Suspense fallback={null}>
+      <DistributionClientPage navRail={<NavRailSpacer />} />
+    </Suspense>
+  );
 }

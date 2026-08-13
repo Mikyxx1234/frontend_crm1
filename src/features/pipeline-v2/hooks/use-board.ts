@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getBoard,
   getBoardFiltered,
-  listPipelines,
   type BoardSortParam,
   type BoardStageDto,
   type PipelineListItemDto,
@@ -16,19 +15,15 @@ import type { AdvancedDealFilters } from "@/components/pipeline/kanban-filters/t
 import { hasServerSideFilters } from "@/components/pipeline/kanban-filters/types";
 
 import { isPreviewMode } from "@/lib/preview-mode";
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
 import { normalizeSearchQuery } from "@/lib/search-query";
 
 /** Página de cards por coluna no Kanban ("Carregar mais" soma +50). */
 export const BOARD_PAGE_SIZE = 50;
 
-/** Lista de pipelines (dropdown do header). */
+/** Lista de pipelines (dropdown do header) — key canônica compartilhada. */
 export function usePipelines(enabled = true) {
-  return useQuery<PipelineListItemDto[]>({
-    queryKey: ["pipelines-v2"],
-    queryFn: listPipelines,
-    enabled: isPreviewMode() ? true : enabled,
-    staleTime: 5 * 60_000,
-  });
+  return usePipelinesQuery<PipelineListItemDto>(enabled);
 }
 
 /**

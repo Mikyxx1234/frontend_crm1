@@ -135,7 +135,8 @@ export function CoverageBoard() {
     queryKey: ["agents-coverage"],
     queryFn: fetchCoverage,
     // Presença ao vivo (dot online/offline) acompanha sem refresh manual.
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const [weekday, setWeekday] = React.useState<number>(() => new Date().getDay());

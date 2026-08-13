@@ -177,6 +177,7 @@ export function useInboxRealtime(options: {
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dailyStatsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
@@ -203,6 +204,16 @@ export function useInboxRealtime(options: {
       countsTimerRef.current = setTimeout(() => {
         countsTimerRef.current = null;
         qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
+      }, 5000);
+    }
+
+    // Chips do painel do dia (P1-8): o poll longo (3min) é safety-net; a
+    // atualização perceptível vem daqui, com o mesmo debounce dos counts.
+    function scheduleDailyStatsRefresh() {
+      if (dailyStatsTimerRef.current) return;
+      dailyStatsTimerRef.current = setTimeout(() => {
+        dailyStatsTimerRef.current = null;
+        qc.invalidateQueries({ queryKey: ["inbox", "daily-stats"] });
       }, 5000);
     }
 
@@ -234,6 +245,7 @@ export function useInboxRealtime(options: {
           } else {
             scheduleInboxRefresh();
           }
+          scheduleDailyStatsRefresh();
         } catch {
           /* ignore */
         }
@@ -317,6 +329,7 @@ export function useInboxRealtime(options: {
 
       conversation_updated: () => {
         scheduleInboxRefresh();
+        scheduleDailyStatsRefresh();
       },
 
       // Timeline (chatter) da conversa — encerramento/reabertura empurrados
@@ -406,6 +419,8 @@ export function useInboxRealtime(options: {
       refreshTimerRef.current = null;
       if (countsTimerRef.current) clearTimeout(countsTimerRef.current);
       countsTimerRef.current = null;
+      if (dailyStatsTimerRef.current) clearTimeout(dailyStatsTimerRef.current);
+      dailyStatsTimerRef.current = null;
     };
   }, [enabled, qc]);
 }

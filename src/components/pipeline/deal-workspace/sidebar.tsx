@@ -13,6 +13,7 @@ import { DealCustomFieldsSection } from "@/components/pipeline/deal-custom-field
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
 import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
 import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
+import { dealDetailKey } from "@/features/pipeline-v2/hooks/use-deal-detail";
 import { SortableSidebar } from "@/components/ui/sortable-sidebar";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -315,7 +316,7 @@ export function WorkspaceSidebar({
       if (!res.ok) throw new Error("Erro ao adicionar tag");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["deal", deal.id] });
+      queryClient.invalidateQueries({ queryKey: dealDetailKey(deal.id) });
       queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
       setTagInput("");
       setShowTagComposer(false);
@@ -332,7 +333,7 @@ export function WorkspaceSidebar({
       if (!res.ok) throw new Error("Erro ao remover tag");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["deal", deal.id] });
+      queryClient.invalidateQueries({ queryKey: dealDetailKey(deal.id) });
       queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
     },
   });
@@ -1483,7 +1484,7 @@ function ProductsCard({
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: itemsKey });
-    queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
+    queryClient.invalidateQueries({ queryKey: dealDetailKey(dealId) });
     queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
   };
 

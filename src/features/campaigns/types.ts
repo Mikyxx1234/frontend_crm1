@@ -58,7 +58,9 @@ export interface CampaignDetail extends CampaignListItem {
   textContent?: string | null;
   sendRate: number;
   automation?: { id: string; name: string } | null;
-  /** Tags usadas no filtro de audiência do disparo (ad-hoc ou do segmento). */
+  /** Filtros ad-hoc gravados na criação (inclui tagIds do disparo). */
+  filters?: CampaignFilters | null;
+  /** Tags resolvidas no backend (quando o GET já enriquece). */
   audienceTags?: { id: string; name: string }[];
 }
 

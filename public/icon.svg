@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="EduIT CRM">
   <title>EduIT CRM</title>
   <!--
-    Ícone PWA EduIT CRM.
+    Icone PWA EduIT CRM.
     - Fundo: brand-navy #0d1b3e (mesmo da sidebar).
-    - Cantos arredondados (rx=224 ~ 22%  padrão iOS app icon).
-    - Glow cyan sutil no canto inferior direito (sem agredir).
-    - Letra "E" em branco, geometria sólida via retângulos
-      (sem dependência de fonte)  escala infinita sem flicker.
+    - Cantos arredondados (rx=224 ~ 22% - padrao iOS app icon).
+    - Glow cyan sutil no canto inferior direito.
+    - Letra "E" em branco, geometria solida via retangulos
+      (sem dependencia de fonte) - escala infinita sem flicker.
   -->
   <defs>
     <radialGradient id="cyanGlow" cx="80%" cy="80%" r="55%">

@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { apiUrl } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   IconKey,
   IconMail,
@@ -57,6 +57,10 @@ import {
 } from "@/lib/permissions";
 
 import { useRoles } from "@/features/permissions/hooks";
+import {
+  TEAM_USERS_QUERY_PREFIX,
+  useTeamUsersQuery,
+} from "@/features/shared/queries/team-users";
 import { useIsDesktop } from "@/hooks/use-media-query";
 
 import {
@@ -122,12 +126,6 @@ function userFunctionRole(
 async function parseJsonError(res: Response, fallback: string): Promise<never> {
   const data = (await res.json().catch(() => ({}))) as { message?: string };
   throw new Error(typeof data.message === "string" ? data.message : fallback);
-}
-
-async function fetchUsers(): Promise<UserRow[]> {
-  const res = await fetch(apiUrl("/api/users"));
-  if (!res.ok) await parseJsonError(res, "Erro ao carregar equipe.");
-  return res.json();
 }
 
 export default function TeamV2ClientPage() {
@@ -239,11 +237,7 @@ function TeamContent() {
     isLoading,
     isError,
     error,
-  } = useQuery({
-    queryKey: ["users-list"],
-    queryFn: fetchUsers,
-    enabled: status === "authenticated",
-  });
+  } = useTeamUsersQuery<UserRow>(status === "authenticated");
 
   // ─── Derivados: busca client-side ──────────────────────────────────────
   const term = search.trim().toLowerCase();
@@ -346,7 +340,7 @@ function TeamContent() {
       return res.json();
     },
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["users-list"] });
+      void qc.invalidateQueries({ queryKey: TEAM_USERS_QUERY_PREFIX });
       void qc.invalidateQueries({ queryKey: ["my-permissions"] });
       toast.success("Função atualizada.");
     },
@@ -470,7 +464,7 @@ function TeamContent() {
       return created;
     },
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["users-list"] });
+      void qc.invalidateQueries({ queryKey: TEAM_USERS_QUERY_PREFIX });
       void qc.invalidateQueries({ queryKey: ["visibility-settings"] });
       toast.success("Usuário criado com sucesso.");
       setInviteOpen(false);
@@ -489,7 +483,7 @@ function TeamContent() {
       return res.json() as Promise<{ ok: true }>;
     },
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["users-list"] });
+      void qc.invalidateQueries({ queryKey: TEAM_USERS_QUERY_PREFIX });
       toast.success("Usuário excluído com sucesso.");
       setDeleteTarget(null);
     },
@@ -515,7 +509,7 @@ function TeamContent() {
     setBulkDeleting(false);
     setBulkDeleteOpen(false);
     setSelected(new Set());
-    void qc.invalidateQueries({ queryKey: ["users-list"] });
+    void qc.invalidateQueries({ queryKey: TEAM_USERS_QUERY_PREFIX });
     if (fail === 0) {
       toast.success(ok === 1 ? "Usuário excluído." : `${ok} usuários excluídos.`);
     } else if (ok === 0) {

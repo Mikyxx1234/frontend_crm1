@@ -12,6 +12,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -45,13 +46,6 @@ type DealFormProps = {
 
 type UserOption = { id: string; name: string; email: string };
 
-async function fetchUsers(): Promise<UserOption[]> {
-  const res = await fetch(apiUrl("/api/users"));
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.items ?? data) as UserOption[];
-}
-
 async function fetchContacts(search: string) {
   const q = search.trim() ? `&search=${encodeURIComponent(search.trim())}` : "";
   const res = await fetch(apiUrl(`/api/contacts?perPage=50${q}`));
@@ -83,11 +77,7 @@ export function DealForm({
     return () => window.clearTimeout(t);
   }, [contactSearch]);
 
-  const { data: users = [] } = useQuery({
-    queryKey: ["users-list"],
-    queryFn: fetchUsers,
-    staleTime: 5 * 60_000,
-  });
+  const { data: users = [] } = useTeamUsersQuery<UserOption>();
 
   const { data: contacts = [], isFetching: contactsLoading } = useQuery({
     queryKey: ["contacts", "pipeline-pick", debouncedSearch],

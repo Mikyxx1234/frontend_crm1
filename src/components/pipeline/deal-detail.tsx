@@ -14,6 +14,7 @@ import { ActivitiesPanel, ConversationsPanel, DealTabs, NotesPanel, type RightTa
 import { TimelinePanel } from "@/components/pipeline/deal-detail/timeline-panel";
 import { ContactDetail, ConversationRow, DealDetailData, UserOption } from "@/components/pipeline/deal-detail/shared";
 import { DealSidebar } from "@/components/pipeline/deal-detail/sidebar";
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import { dealNumericValue } from "@/lib/utils";
 
 // ── Fetchers ──────────────────────────────────
@@ -29,13 +30,6 @@ async function fetchContact(id: string): Promise<ContactDetail> {
   const res = await fetch(apiUrl(`/api/contacts/${id}`));
   if (!res.ok) throw new Error("Erro ao carregar contato");
   return res.json();
-}
-
-async function fetchUsers(): Promise<UserOption[]> {
-  const res = await fetch(apiUrl("/api/users"));
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.items ?? data) as UserOption[];
 }
 
 // ── Main Component ────────────────────────────
@@ -127,12 +121,7 @@ export function DealDetail({ dealId, open, onOpenChange, pipelineId, boardStages
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: boardKey(pipelineId) }); onOpenChange(false); },
   });
 
-  const { data: users = [] } = useQuery({
-    queryKey: ["users-list"],
-    queryFn: fetchUsers,
-    staleTime: 5 * 60_000,
-    enabled: open,
-  });
+  const { data: users = [] } = useTeamUsersQuery<UserOption>(open);
 
   const ownerMutation = useMutation({
     mutationFn: async (ownerId: string | null) => {

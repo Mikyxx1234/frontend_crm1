@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import {
   IconPlus,
   IconSearch,
@@ -16,8 +15,8 @@ import { useUserRole } from "@/hooks/use-user-role";
 import { RoleEditor } from "@/features/permissions/role-editor";
 import { UserPermissionsView } from "@/features/permissions/user-permissions-view";
 import { useRoles } from "@/features/permissions/hooks";
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import type { RoleSummary, RoleUser } from "@/features/permissions/types";
-import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
@@ -44,14 +43,7 @@ interface UserListItem extends RoleUser {
 }
 
 function useUsers() {
-  return useQuery<UserListItem[]>({
-    queryKey: ["users-list"],
-    queryFn: async () => {
-      const res = await fetch(apiUrl("/api/users"));
-      if (!res.ok) throw new Error("Erro ao carregar usuários");
-      return res.json() as Promise<UserListItem[]>;
-    },
-  });
+  return useTeamUsersQuery<UserListItem>();
 }
 
 // ─── Página ─────────────────────────────────────────────────────────────────

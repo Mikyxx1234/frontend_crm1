@@ -7,12 +7,13 @@ import {
   getAgentStatus,
   getPermissions,
   getSelfAssignCapability,
-  listUsers,
   type AgentCapacity,
   type AgentOnlineStatus,
   type SelfAssignResponse,
   type TeamUser,
 } from "../api";
+
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 
 /** Permissões + scopeGrants do usuário logado. */
 export function usePermissionsPanel(enabled = true) {
@@ -59,13 +60,5 @@ export function useTeamUsers(
   enabled = true,
   opts?: { includeAi?: boolean },
 ) {
-  const includeAi = opts?.includeAi === true;
-  return useQuery<TeamUser[]>({
-    queryKey: ["users", "assign-picker", includeAi ? "with-ai" : "human"],
-    queryFn: () => listUsers({ includeAi }),
-    enabled,
-    staleTime: 60_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  });
+  return useTeamUsersQuery<TeamUser>(enabled, opts);
 }

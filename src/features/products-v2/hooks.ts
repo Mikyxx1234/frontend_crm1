@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiUrl } from "@/lib/api";
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
 import type {
   InventoryMovement,
   InventoryPoolView,
@@ -164,14 +165,12 @@ export function useAdjustInventory(id: string | null) {
 
 // ── Dropdowns auxiliares ────────────────────────────────────────────────────
 export function usePipelinesLite() {
-  return useQuery({
-    queryKey: ["pipelines-lite"],
-    queryFn: () =>
-      jsonFetch<Array<{ id: string; name: string; stages?: { id: string; name: string }[] }>>(
-        "/api/pipelines",
-      ),
-    staleTime: 60_000,
-  });
+  // Mesmo endpoint/shape do `usePipelines` do pipeline-v2 → key canônica.
+  return usePipelinesQuery<{
+    id: string;
+    name: string;
+    stages?: { id: string; name: string }[];
+  }>();
 }
 
 export function useContactsSearch(search: string) {

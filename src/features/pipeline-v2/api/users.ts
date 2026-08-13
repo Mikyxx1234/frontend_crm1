@@ -5,7 +5,7 @@
  * URL idêntica à consumida pelo /inbox e /pipeline legados.
  */
 
-import { apiUrl } from "@/lib/api";
+import { fetchTeamUsers } from "@/features/shared/queries/team-users";
 
 export interface TeamUser {
   id: string;
@@ -20,13 +20,9 @@ export interface TeamUser {
   lastSeenAt?: string | null;
 }
 
-/** GET /api/users — lista usuários da organização. */
+/** GET /api/users — delega no fetcher canônico (shape normalizado). */
 export async function listTeamUsers(opts?: {
   includeAi?: boolean;
 }): Promise<TeamUser[]> {
-  const q = opts?.includeAi ? "?includeAi=1" : "";
-  const res = await fetch(apiUrl(`/api/users${q}`));
-  if (!res.ok) throw new Error("Erro ao carregar usuarios");
-  const data = await res.json();
-  return Array.isArray(data) ? data : (data.users ?? []);
+  return fetchTeamUsers<TeamUser>(opts);
 }

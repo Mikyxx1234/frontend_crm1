@@ -9,7 +9,10 @@
  * não refazer fetch a cada card que abrir.
  */
 import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 import { apiUrl } from "@/lib/api"
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines"
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users"
 
 export type Opt = { value: string; label: string; group?: string }
 
@@ -35,30 +38,25 @@ type RawPipeline = { id: string; name: string; stages?: { id: string; name: stri
 
 /** Estágios de todos os funis → value: stageId, group: nome do funil. */
 export function useStageOptions() {
-  const q = useQuery({
-    queryKey: ["editor-pipelines"],
-    staleTime: STALE,
-    queryFn: async (): Promise<Opt[]> => {
-      const list = asArray(await getJson("/api/pipelines")) as RawPipeline[]
-      return list.flatMap((p) =>
+  const q = usePipelinesQuery<RawPipeline>()
+  const options = useMemo<Opt[]>(
+    () =>
+      (q.data ?? []).flatMap((p) =>
         (p.stages ?? []).map((s) => ({ value: s.id, label: s.name, group: p.name })),
-      )
-    },
-  })
-  return { options: q.data ?? [], isLoading: q.isLoading }
+      ),
+    [q.data],
+  )
+  return { options, isLoading: q.isLoading }
 }
 
 /** Funis (pipelines) → value: pipelineId. Para condições `deal.pipelineId`. */
 export function usePipelineOptions() {
-  const q = useQuery({
-    queryKey: ["editor-pipelines-flat"],
-    staleTime: STALE,
-    queryFn: async (): Promise<Opt[]> => {
-      const list = asArray(await getJson("/api/pipelines")) as RawPipeline[]
-      return list.map((p) => ({ value: p.id, label: p.name }))
-    },
-  })
-  return { options: q.data ?? [], isLoading: q.isLoading }
+  const q = usePipelinesQuery<RawPipeline>()
+  const options = useMemo<Opt[]>(
+    () => (q.data ?? []).map((p) => ({ value: p.id, label: p.name })),
+    [q.data],
+  )
+  return { options, isLoading: q.isLoading }
 }
 
 type RawPipelineLossReasonMeta = { reasons?: { id: string; label: string }[] }
@@ -111,18 +109,18 @@ export function useDepartmentOptions() {
 type RawUser = { id: string; name?: string; email?: string }
 
 export function useUserOptions() {
-  const q = useQuery({
-    queryKey: ["editor-users"],
-    staleTime: STALE,
-    queryFn: async (): Promise<Opt[]> => {
-      const list = asArray(await getJson("/api/users")) as RawUser[]
-      return list.map((u) => ({
+  // Key canônica de /api/users — o mapeamento p/ `Opt` vira `select`
+  // pra não criar um segundo cache do mesmo endpoint.
+  const q = useTeamUsersQuery<RawUser>()
+  const options = useMemo<Opt[]>(
+    () =>
+      (q.data ?? []).map((u) => ({
         value: u.id,
         label: u.email ? `${u.name ?? u.email} (${u.email})` : (u.name ?? u.id),
-      }))
-    },
-  })
-  return { options: q.data ?? [], isLoading: q.isLoading }
+      })),
+    [q.data],
+  )
+  return { options, isLoading: q.isLoading }
 }
 
 type RawAgent = { id: string; userId: string; name: string; active?: boolean }

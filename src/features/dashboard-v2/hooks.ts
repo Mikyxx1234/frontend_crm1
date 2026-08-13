@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchDashboard,
   fetchDealsOverview,
-  fetchPipelines,
   fetchServiceOverview,
   type DashboardData,
   type DashboardFiltersState,
@@ -18,6 +17,7 @@ import {
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import type { FilterOptionsResponse } from "@/components/pipeline/kanban-filters/types";
 import { isPreviewMode } from "@/lib/preview-mode";
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
 
 export function useDealsOverview(params: {
   period: DashboardPeriod;
@@ -51,12 +51,8 @@ export function useServiceOverview(params: {
 }
 
 export function usePipelineOptions(enabled = true) {
-  return useQuery<PipelineOption[]>({
-    queryKey: ["dashboard-v2", "pipelines"],
-    queryFn: fetchPipelines,
-    enabled: isPreviewMode() ? true : enabled,
-    staleTime: 5 * 60_000,
-  });
+  // Mesmo GET /api/pipelines (mesmo shape) do pipeline-v2 → key canônica.
+  return usePipelinesQuery<PipelineOption>(enabled);
 }
 
 /**

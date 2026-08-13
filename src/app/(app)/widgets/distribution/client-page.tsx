@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   IconAdjustmentsHorizontal,
@@ -82,6 +83,7 @@ import {
   MOCK_DISTRIBUTION_PENDING,
   MOCK_DISTRIBUTION_RESPONSIBLES,
 } from "@/features/distribution/mock";
+import { CoverageBoard } from "@/features/settings/coverage/coverage-board";
 import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const SMART_DISTRIBUTION_SLUG = "smart_distribution";
@@ -104,7 +106,18 @@ function isDevDemoEnv(): boolean {
   );
 }
 
-type DistributionView = "team" | "queue" | "logs";
+type DistributionView = "team" | "coverage" | "queue" | "logs";
+
+/**
+ * Deep-link de aba (`?tab=coverage`). Usado pelo redirect da rota antiga
+ * `/settings/coverage`, que virou a aba "Cobertura" aqui ao lado de "Equipe".
+ */
+function parseViewParam(raw: string | null): DistributionView | null {
+  if (raw === "team" || raw === "coverage" || raw === "queue" || raw === "logs") {
+    return raw;
+  }
+  return null;
+}
 
 /** Presença efetiva de um responsável (para badge + filtro). */
 type PresenceKey = "ONLINE" | "AWAY" | "OFFLINE" | "INACTIVE";
@@ -151,7 +164,9 @@ export default function DistributionClientPage({
   const [deptConfigOpen, setDeptConfigOpen] = useState(false);
 
   // ── Estado de UI: aba, busca, filtros ──
-  const [view, setView] = useState<DistributionView>("team");
+  const searchParams = useSearchParams();
+  const viewFromUrl = parseViewParam(searchParams.get("tab"));
+  const [view, setView] = useState<DistributionView>(viewFromUrl ?? "team");
   const [search, setSearch] = useState("");
   const [presence, setPresence] = useState<PresenceKey[]>([]);
   const [eligibility, setEligibility] = useState<("eligible" | "blocked")[]>([]);
@@ -301,7 +316,7 @@ export default function DistributionClientPage({
             ) : undefined
           }
           actions={
-            smartInstalled ? (
+            smartInstalled || view === "coverage" ? (
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <PageSegmentedControl
                   size="compact"
@@ -312,6 +327,13 @@ export default function DistributionClientPage({
                       label: (
                         <SegLabel label="Equipe" count={teamListCount} />
                       ),
+                    },
+                    {
+                      // Grade de expedientes/gaps — antes vivia em
+                      // /settings/coverage, agora ao lado de "Equipe"
+                      // (a cobertura é o que define quem está elegível).
+                      value: "coverage",
+                      label: <span>Cobertura</span>,
                     },
                     {
                       value: "queue",
@@ -373,7 +395,16 @@ export default function DistributionClientPage({
           }
         />
 
-        {widgetsQuery.isLoading ? (
+        {/* Cobertura não depende do widget `smart_distribution`: a grade
+            de expedientes valia para qualquer org quando morava em
+            /settings/coverage. Fica fora do gating pra não perder acesso. */}
+        {view === "coverage" ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <CoverageBoard />
+            </div>
+          </div>
+        ) : widgetsQuery.isLoading ? (
           <SkeletonState />
         ) : !smartInstalled ? (
           <NotEnabledState />

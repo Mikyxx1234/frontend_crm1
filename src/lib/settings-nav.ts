@@ -176,7 +176,9 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         label: "Cobertura",
         description: "Grade de horários e gaps por área",
         icon: CalendarTime,
-        href: "/settings/coverage",
+        // Vive na tela de Distribuição (aba ao lado de "Equipe"); o card
+        // aqui continua sendo o atalho conhecido de Configurações.
+        href: "/widgets/distribution?tab=coverage",
         allowedRoles: GESTAO,
         requiredPermission: "settings:team",
       },

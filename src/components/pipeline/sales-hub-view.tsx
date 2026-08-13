@@ -574,7 +574,9 @@ export function SalesHubView({
         id: s.id,
         name: s.name,
         color: s.color,
-        count: s.deals.length,
+        // Com board paginado (50/etapa) `deals.length` sub-reporta — usa o
+        // total real da etapa quando o backend o envia.
+        count: s.totalCount ?? s.deals.length,
       })),
     [filteredStages],
   );
@@ -587,7 +589,9 @@ export function SalesHubView({
         return {
           name: stage.name,
           color: stage.color || "var(--brand-primary)",
-          count: stage.deals.length,
+          // Com board paginado (50/etapa) `deals.length` sub-reporta — usa o
+          // total real da etapa quando o backend o envia.
+          count: stage.totalCount ?? stage.deals.length,
           totalValue: stage.deals.reduce(
             (sum, d) => sum + dealNumericValue(d.value),
             0,

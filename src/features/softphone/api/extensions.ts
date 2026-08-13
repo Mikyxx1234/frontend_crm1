@@ -23,9 +23,12 @@ export async function listExtensions(): Promise<SipExtension[]> {
 }
 
 export async function getMyCredentials(): Promise<SipCredentials> {
-  const data = await fetchJson<{ credentials: SipCredentials }>(
+  const data = await fetchJson<{ credentials: SipCredentials | null }>(
     `${BASE}/sip-extensions/me/credentials`,
   );
+  if (!data.credentials) {
+    throw new Error("Nenhum ramal SIP configurado para este usuário.");
+  }
   return data.credentials;
 }
 
@@ -38,12 +41,16 @@ export async function getMyCredentials(): Promise<SipCredentials> {
  */
 export async function getMyCredentialsOrNull(): Promise<SipCredentials | null> {
   const res = await fetch(`${BASE}/sip-extensions/me/credentials`);
+  // 404 = backend antigo (pré 200-null); mantido p/ compat em rolling deploy.
   if (res.status === 404) return null;
-  const body = await res.json().catch(() => ({}));
+  const body = (await res.json().catch(() => ({}))) as {
+    credentials?: SipCredentials | null;
+    message?: string;
+  };
   if (!res.ok) {
-    throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
+    throw new Error(body.message ?? `HTTP ${res.status}`);
   }
-  return (body as { credentials: SipCredentials }).credentials;
+  return body.credentials ?? null;
 }
 
 export type ConnectApi4ComResponse = {

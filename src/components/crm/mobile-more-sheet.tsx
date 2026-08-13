@@ -25,7 +25,7 @@ import { MobileModuleIcon } from "@/components/layout/mobile-module-icon";
 import { useMobileLayout } from "@/hooks/use-mobile-layout";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
 import { useUserRole } from "@/hooks/use-user-role";
-import { isModuleAllowedForRole, MOBILE_MODULES } from "@/lib/mobile-layout";
+import { isModuleAllowedForRole, MOBILE_MODULES, MORE_SHEET_ENSURE } from "@/lib/mobile-layout";
 import { cn } from "@/lib/utils";
 
 const MOBILE_MODULE_MAP = new Map(MOBILE_MODULES.map((m) => [m.id, m] as const));
@@ -81,8 +81,21 @@ export function MobileMoreSheet({
   if (!open) return null;
 
   const bottomSet = new Set(config.bottomNav);
-  const secondaryModules = config.enabled
-    .filter((id) => !bottomSet.has(id))
+  const secondaryIds: typeof config.enabled = [];
+  const seen = new Set<string>();
+  for (const id of config.enabled) {
+    if (bottomSet.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    secondaryIds.push(id);
+  }
+  // Layouts antigos podem não ter módulos novos em `enabled` — garante
+  // entrada no Mais sem exigir re-salvar o Layout Builder.
+  for (const id of MORE_SHEET_ENSURE) {
+    if (bottomSet.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    secondaryIds.push(id);
+  }
+  const secondaryModules = secondaryIds
     .map((id) => MOBILE_MODULE_MAP.get(id))
     .filter((m): m is NonNullable<typeof m> => Boolean(m))
     .filter((m) => isModuleAllowedForRole(m, role, isSuperAdmin));

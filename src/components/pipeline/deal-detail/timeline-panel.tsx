@@ -8,6 +8,9 @@ import { ptBR } from "date-fns/locale";
 import { IconAlertTriangle as AlertTriangle, IconArrowRight as ArrowRight, IconRobot as Bot, IconCalendarCheck as CalendarCheck, IconCircleCheck as CheckCircle2, IconClock as Clock, IconEdit as Edit3, IconPackage as Package, IconSend as Send, IconNote as StickyNote, IconTag as Tag, IconTrash as Trash2, IconTrophy as Trophy, IconUserCheck as UserCheck, IconUserCog as UserCog, IconUserMinus as UserMinus, IconUserPlus as UserPlus, IconHierarchy as Workflow, IconCircleX as XCircle, IconRefresh as RefreshCw, IconRotate2 as RotateCcw } from "@tabler/icons-react"
 import type { Icon as LucideIcon } from "@tabler/icons-react";
 
+import Link from "next/link";
+
+import { automationOrigin } from "@/components/crm/feed/event-config";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { DealTimelineEvent } from "./shared";
@@ -422,6 +425,9 @@ export function TimelinePanel({ dealId }: { dealId: string }) {
                   const desc = eventDescription(ev);
                   const at = parseISO(ev.createdAt);
                   const isLast = idx === dayItems.length - 1;
+                  // Origem da ação automática (automação + nº do card do
+                  // editor). Ausente em eventos antigos / ações manuais.
+                  const origin = automationOrigin(ev.meta);
 
                   return (
                     <li key={ev.id} className="relative flex gap-3 pb-6 last:pb-0">
@@ -457,6 +463,20 @@ export function TimelinePanel({ dealId }: { dealId: string }) {
                         {ev.user && (
                           <p className="mt-1 text-xs text-muted-foreground">
                             por {ev.user.name}
+                          </p>
+                        )}
+                        {origin && (
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {origin.automationId ? (
+                              <Link
+                                href={`/automations/${origin.automationId}`}
+                                className="underline decoration-dotted underline-offset-2 hover:text-foreground"
+                              >
+                                {origin.text}
+                              </Link>
+                            ) : (
+                              origin.text
+                            )}
                           </p>
                         )}
                       </div>

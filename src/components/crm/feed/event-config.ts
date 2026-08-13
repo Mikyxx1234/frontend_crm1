@@ -683,6 +683,69 @@ export function eventDescription(ev: FeedEvent): string {
   }
 }
 
+/**
+ * Origem de automacao do evento — "qual card fez isso".
+ *
+ * O backend grava `meta.automationOrigin` em todo evento produzido dentro
+ * de um passo de automacao (ver `lib/automation-origin.ts` +
+ * `withAutomationOriginMeta`). O `stepNumber` e o MESMO numero exibido no
+ * badge do card no editor de automacoes, entao o operador consegue abrir
+ * o fluxo e achar o passo que, por exemplo, distribuiu o lead.
+ *
+ * Eventos ANTIGOS (pre-feature) nao tem a chave: retornamos `null` e a UI
+ * simplesmente nao renderiza a linha. Como fallback, aceitamos o
+ * `meta.automationId`/`automationName` que alguns eventos (STAGE_CHANGED,
+ * STATUS_CHANGED, AUTOMATION_EXECUTED) ja gravavam sem o numero do card.
+ */
+export type AutomationOriginInfo = {
+  automationId: string | null;
+  automationName: string | null;
+  stepNumber: number | null;
+  stepLabel: string | null;
+  /// Texto pronto, ex.: `via automação «Boas-vindas» · card #3 (Executar distribuição)`.
+  text: string;
+};
+
+export function automationOrigin(
+  meta: Record<string, unknown> | null | undefined,
+): AutomationOriginInfo | null {
+  const m = meta ?? {};
+  const raw = m.automationOrigin;
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : null;
+
+  const automationId =
+    typeof o?.automationId === "string"
+      ? o.automationId
+      : typeof m.automationId === "string"
+        ? m.automationId
+        : null;
+  const automationName =
+    typeof o?.automationName === "string" && o.automationName.trim()
+      ? o.automationName.trim()
+      : typeof m.automationName === "string" && m.automationName.trim()
+        ? (m.automationName as string).trim()
+        : null;
+  const stepNumber =
+    typeof o?.stepNumber === "number" && Number.isFinite(o.stepNumber)
+      ? o.stepNumber
+      : null;
+  const stepLabel =
+    typeof o?.stepLabel === "string" && o.stepLabel.trim() ? o.stepLabel.trim() : null;
+
+  if (!automationId && !automationName) return null;
+
+  const namePart = automationName ? `«${automationName}»` : "";
+  const cardPart = stepNumber != null ? ` · card #${stepNumber}` : "";
+  const labelPart = stepLabel ? ` (${stepLabel})` : "";
+  return {
+    automationId,
+    automationName,
+    stepNumber,
+    stepLabel,
+    text: `via automação ${namePart}${cardPart}${labelPart}`.replace(/\s+/g, " ").trim(),
+  };
+}
+
 /// Label de exibicao do ator (com fallback razoavel).
 export function actorDisplay(ev: FeedEvent): {
   label: string;

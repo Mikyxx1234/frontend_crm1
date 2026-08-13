@@ -5,6 +5,7 @@
  * GET /api/deals/:id/timeline.
  */
 
+import Link from "next/link";
 import {
   IconBolt,
   IconCircleCheck,
@@ -29,6 +30,7 @@ import { useDealTimeline } from "@/features/pipeline-v2/hooks";
 import type { DealTimelineEvent } from "@/features/pipeline-v2/api";
 import {
   EVENT_CONFIG,
+  automationOrigin,
   eventDescription,
   type FeedEvent,
 } from "@/components/crm/feed/event-config";
@@ -160,6 +162,11 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
         };
         const Icon = meta.icon;
         const desc = describe(ev);
+        // "Por que essa pessoa foi distribuída?" — origem da ação
+        // automática (automação + nº do card do editor). Ausente em
+        // eventos antigos e em ações manuais: a linha simplesmente não
+        // é renderizada.
+        const origin = automationOrigin(ev.meta);
         return (
           <div
             key={ev.id}
@@ -195,6 +202,20 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
               {ev.user?.name ? (
                 <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
                   por {ev.user.name}
+                </div>
+              ) : null}
+              {origin ? (
+                <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+                  {origin.automationId ? (
+                    <Link
+                      href={`/automations/${origin.automationId}`}
+                      className="underline decoration-dotted underline-offset-2 hover:text-[var(--text-secondary)]"
+                    >
+                      {origin.text}
+                    </Link>
+                  ) : (
+                    origin.text
+                  )}
                 </div>
               ) : null}
             </div>

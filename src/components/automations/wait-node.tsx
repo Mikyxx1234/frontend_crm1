@@ -44,6 +44,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitRF>) {
       accent="orange"
       stepIndex={data.stepIndex}
       expanded={selected}
+      className={selected ? "wf-node--wide" : undefined}
     >
       <CustomHandle type="target" position={Position.Left} connectionLimit={1} />
       <FlowNodeHeader

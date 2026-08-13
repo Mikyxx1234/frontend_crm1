@@ -117,6 +117,9 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
   const channelBadgeLabel = channelLabelFromOptions(channelOptions, channelId);
   const nodeType = actionNodeType(data.stepType);
   const s = data.stats;
+  const hasReplyTimeout =
+    data.stepType === "send_whatsapp_message" ||
+    data.stepType === "send_whatsapp_template";
 
   return (
     <FlowNodeShell
@@ -129,7 +132,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
         (data.stepType === "add_tag" || data.stepType === "remove_tag") &&
           selected &&
           "z-20 overflow-visible",
-        selected && data.stepType === "webhook" && "wf-node--wide"
+        selected && (data.stepType === "webhook" || hasReplyTimeout) && "wf-node--wide"
       )}
     >
       <CustomHandle type="target" position={Position.Left} connectionLimit={1} />

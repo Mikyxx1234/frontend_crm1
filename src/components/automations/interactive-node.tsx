@@ -86,7 +86,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveRF>) {
       accent="violet"
       stepIndex={data.stepIndex}
       expanded={selected}
-      className={selected ? "max-w-[420px] min-w-[360px]" : undefined}
+      className={selected ? "wf-node--wide" : undefined}
     >
       <CustomHandle type="target" position={Position.Left} connectionLimit={1} />
       <FlowNodeHeader

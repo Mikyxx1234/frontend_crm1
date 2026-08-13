@@ -295,6 +295,15 @@ export function mockCampaignsPage(
   if (params.status) items = items.filter((c) => c.status === params.status);
   if (params.type) items = items.filter((c) => c.type === params.type);
 
+  const q = params.search?.trim().toLowerCase();
+  if (q) {
+    items = items.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.segment?.name ?? "").toLowerCase().includes(q),
+    );
+  }
+
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const start = (page - 1) * perPage;

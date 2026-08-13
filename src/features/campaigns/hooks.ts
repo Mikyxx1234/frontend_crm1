@@ -8,6 +8,8 @@ import {
 
 import { isPageMockMode } from "@/lib/page-mock-mode";
 import { isPreviewMode } from "@/lib/preview-mode";
+import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
+import type { FilterOptionsResponse } from "@/components/pipeline/kanban-filters/types";
 
 import {
   createCampaign,
@@ -22,6 +24,7 @@ import {
   fetchTemplates,
   previewAudience,
   runCampaignAction,
+  type AudienceFilterOptions,
   type FetchCampaignsParams,
   type FetchRecipientsParams,
 } from "./api";
@@ -166,11 +169,46 @@ export function useTemplates(enabled = true, channelId?: string | null) {
   });
 }
 
+/**
+ * Opções de audiência (tags/pipelines/responsáveis).
+ *
+ * P1-6: bate no MESMO `GET /api/kanban/filter-options` (sem params) que o
+ * painel de filtros do Kanban/Flow. Passou a consumir a key canônica
+ * `["kanban-filter-options"]` com o fetcher canônico e derivar o shape de
+ * audiência via `select` — antes a key própria furava o cache e rebaixava o
+ * payload inteiro ao abrir /campaigns/new.
+ *
+ * Em page-mock-mode mantemos uma key própria: o mock cobre só um subconjunto
+ * dos campos e não deve contaminar o cache canônico das páginas de pipeline.
+ */
 export function useAudienceOptions(enabled = true) {
-  return useQuery({
-    queryKey: ["campaigns", "audience-options"],
-    queryFn: fetchAudienceOptions,
+  const mock = isPageMockMode();
+
+  return useQuery<FilterOptionsResponse, Error, AudienceFilterOptions>({
+    queryKey: mock ? ["campaigns", "audience-options"] : ["kanban-filter-options"],
+    queryFn: mock ? fetchAudienceOptionsAsFilterOptions : fetchFilterOptions,
+    select: (data) => ({
+      tags: data.tags ?? [],
+      pipelines: data.pipelines ?? [],
+      users: data.users ?? [],
+    }),
     enabled: resolveEnabled(enabled),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
+}
+
+/** Adapta o mock de audiência ao shape canônico das filter-options. */
+async function fetchAudienceOptionsAsFilterOptions(): Promise<FilterOptionsResponse> {
+  const o = await fetchAudienceOptions();
+  return {
+    tags: o.tags,
+    pipelines: o.pipelines.map((p) => ({
+      ...p,
+      stages: p.stages.map((s, i) => ({ ...s, color: "", position: i })),
+    })),
+    users: o.users.map((u) => ({ ...u, role: "", type: "" })),
+    dealCustomFields: [],
+    contactCustomFields: [],
+    sources: [],
+  };
 }

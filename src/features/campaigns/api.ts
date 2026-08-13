@@ -1,6 +1,6 @@
 /*
  * Camada de API das Campanhas v2 (frontend). Bate nas rotas já existentes:
- *   GET   /api/campaigns?status&type&page&perPage
+ *   GET   /api/campaigns?status&type&search&page&perPage
  *   GET   /api/campaigns/[id]
  *   GET   /api/campaigns/[id]/stats
  *   GET   /api/campaigns/[id]/recipients?status&page&perPage
@@ -99,6 +99,7 @@ async function sendJson<T>(
 export interface FetchCampaignsParams {
   status?: string;
   type?: string;
+  search?: string;
   page?: number;
   perPage?: number;
 }
@@ -112,6 +113,7 @@ export function fetchCampaigns(
   const sp = new URLSearchParams();
   if (params.status) sp.set("status", params.status);
   if (params.type) sp.set("type", params.type);
+  if (params.search) sp.set("search", params.search);
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
   const qs = sp.toString();

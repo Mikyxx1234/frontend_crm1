@@ -57,9 +57,9 @@ const STATUS_OPTIONS: { value: "OPEN" | "WON" | "LOST"; label: string }[] = [
 ];
 
 const TAG_MODE_OPTIONS: { value: TagMode; label: string }[] = [
-  { value: "any", label: "Qualquer uma" },
-  { value: "all", label: "Todas" },
-  { value: "none", label: "Nenhuma das informadas" },
+  { value: "any", label: "Contém (qualquer uma)" },
+  { value: "all", label: "Contém todas" },
+  { value: "none", label: "Não contém" },
 ];
 
 const CUSTOM_OPERATORS: { value: CustomFieldOperator; label: string; needsValue: boolean }[] = [
@@ -1090,6 +1090,7 @@ function TagsColumn({
       : [...selectedIds, id];
     setDraftField("tagIds", next.length ? next : undefined);
     setDraftField("withoutTags", undefined);
+    if (next.length === 0) setDraftField("tagMode", undefined);
   }
 
   return (
@@ -1100,15 +1101,18 @@ function TagsColumn({
         onClear={() => {
           setDraftField("tagIds", undefined);
           setDraftField("withoutTags", undefined);
+          setDraftField("tagMode", undefined);
         }}
       />
 
       {/* Modo de combinação */}
-      {selectedIds.length > 1 && (
+      {selectedIds.length > 0 && (
         <DropdownGlass
           options={TAG_MODE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
           value={draft.tagMode ?? "any"}
-          onValueChange={(v) => setDraftField("tagMode", v as TagMode)}
+          onValueChange={(v) =>
+            setDraftField("tagMode", v === "any" ? undefined : (v as TagMode))
+          }
           triggerClassName="h-7 w-full text-[11px]"
         />
       )}

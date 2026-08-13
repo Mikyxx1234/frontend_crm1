@@ -2156,3 +2156,8 @@ aplicada com SQL aditivo idempotente em
 **Alternativas descartadas.** Marcar LOST ao escolher motivo; campo só quando LOST.
 
 **Impacto.** FE: deal-lost-reason-field + deal-detail-panel; UpdateDealPayload.lostReason.
+
+### 2026-08-13 — Automações no menu Mais (mobile/APK)
+- Modelo: Cursor Grok 4.5
+- Decisão: incluir `automations` em `DEFAULT_ENABLED` (FE+BE) e garantir no `MobileMoreSheet` via `MORE_SHEET_ENSURE`, para layouts já salvos sem o módulo. Restrito a ADMIN/MANAGER (`allowedRoles`), paridade com a sidebar. Continua fora do bottom nav padrão — só em "Mais seções".
+- Alternativas descartadas: só alterar o Layout Builder (orgs com row salva não veriam); pinar Automações na barra inferior (ocupa slot de core).

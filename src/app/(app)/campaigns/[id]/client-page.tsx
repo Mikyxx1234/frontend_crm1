@@ -22,6 +22,7 @@ import {
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { EmptyState } from "@/components/crm/empty-state";
+import { KpiSquareScroll } from "@/components/crm/kpi-card";
 
 import {
   useCampaign,
@@ -133,6 +134,67 @@ export default function CampaignDetailClientPage() {
 
   const run = (a: CampaignAction) => action.mutate(a);
 
+  const funnelStats: {
+    key: string;
+    label: string;
+    value: number;
+    icon: React.ReactNode;
+    accent: string;
+    tone?: string;
+    rate?: number;
+  }[] = [
+    {
+      key: "total",
+      label: "Total",
+      value: total,
+      icon: <IconUsers size={18} />,
+      accent: "var(--text-muted)",
+    },
+    {
+      key: "sent",
+      label: "Enviados",
+      value: sent,
+      icon: <IconSend size={18} />,
+      accent: "var(--color-success)",
+      tone: "text-[var(--color-success-text)]",
+    },
+    {
+      key: "delivered",
+      label: "Entregues",
+      value: stats?.deliveredCount ?? campaign.deliveredCount,
+      icon: <IconCircleCheck size={18} />,
+      accent: "var(--color-success)",
+      tone: "text-[var(--color-success-text)]",
+      rate: stats?.deliveryRate,
+    },
+    {
+      key: "read",
+      label: "Lidos",
+      value: stats?.readCount ?? campaign.readCount,
+      icon: <IconEye size={18} />,
+      accent: "var(--brand-primary)",
+      tone: "text-[var(--brand-primary)]",
+      rate: stats?.readRate,
+    },
+    {
+      key: "replied",
+      label: "Responderam",
+      value: stats?.repliedCount ?? campaign.repliedCount ?? 0,
+      icon: <IconMessage2 size={18} />,
+      accent: "var(--color-sky)",
+      tone: "text-[var(--color-sky)]",
+      rate: stats?.replyRate,
+    },
+    {
+      key: "failed",
+      label: "Falhas",
+      value: failed,
+      icon: <IconAlertTriangle size={18} />,
+      accent: "var(--color-danger, #dc2626)",
+      tone: "text-[var(--color-danger-text)]",
+    },
+  ];
+
   return (
     <Shell
       header={
@@ -180,42 +242,30 @@ export default function CampaignDetailClientPage() {
       ) : null}
 
       {/* Funil */}
-      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        <StatCard icon={<IconUsers size={18} />} label="Total" value={total} />
-        <StatCard
-          icon={<IconSend size={18} />}
-          label="Enviados"
-          value={sent}
-          tone="text-[var(--color-success-text)]"
+      <section className="shrink-0" aria-label="Indicadores da campanha">
+        <KpiSquareScroll
+          items={funnelStats.map((s) => ({
+            key: s.key,
+            label: s.label,
+            value: s.value.toLocaleString("pt-BR"),
+            icon: s.icon,
+            accent: s.accent,
+            percent: s.rate,
+          }))}
         />
-        <StatCard
-          icon={<IconCircleCheck size={18} />}
-          label="Entregues"
-          value={stats?.deliveredCount ?? campaign.deliveredCount}
-          tone="text-[var(--color-success-text)]"
-          rate={stats?.deliveryRate}
-        />
-        <StatCard
-          icon={<IconEye size={18} />}
-          label="Lidos"
-          value={stats?.readCount ?? campaign.readCount}
-          tone="text-[var(--brand-primary)]"
-          rate={stats?.readRate}
-        />
-        <StatCard
-          icon={<IconMessage2 size={18} />}
-          label="Responderam"
-          value={stats?.repliedCount ?? campaign.repliedCount ?? 0}
-          tone="text-[var(--color-sky)]"
-          rate={stats?.replyRate}
-        />
-        <StatCard
-          icon={<IconAlertTriangle size={18} />}
-          label="Falhas"
-          value={failed}
-          tone="text-[var(--color-danger-text)]"
-        />
-      </div>
+        <div className="hidden gap-3 lg:grid lg:grid-cols-3 xl:grid-cols-6">
+          {funnelStats.map((s) => (
+            <StatCard
+              key={s.key}
+              icon={s.icon}
+              label={s.label}
+              value={s.value}
+              tone={s.tone}
+              rate={s.rate}
+            />
+          ))}
+        </div>
+      </section>
 
       {total > 0 ? (
         <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">

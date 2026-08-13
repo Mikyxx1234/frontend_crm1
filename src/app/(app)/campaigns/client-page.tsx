@@ -25,6 +25,7 @@ import {
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { EmptyState } from "@/components/crm/empty-state";
+import { KpiSquareScroll } from "@/components/crm/kpi-card";
 import { PageActionsMenu, PagePrimaryButton, PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { cn } from "@/lib/utils";
 
@@ -412,6 +413,7 @@ function CampaignsMiniDash({ items }: { items: CampaignListItem[] }) {
   const cards: {
     key: string;
     label: string;
+    shortLabel: string;
     value: number;
     percent?: number;
     accent: string;
@@ -420,6 +422,7 @@ function CampaignsMiniDash({ items }: { items: CampaignListItem[] }) {
     {
       key: "total",
       label: "Total de campanhas",
+      shortLabel: "Campanhas",
       value: stats.total,
       accent: "var(--brand-primary)",
       icon: <IconSpeakerphone size={16} />,
@@ -427,6 +430,7 @@ function CampaignsMiniDash({ items }: { items: CampaignListItem[] }) {
     {
       key: "sending",
       label: "Em envio agora",
+      shortLabel: "Em envio",
       value: stats.sending,
       accent: "var(--color-warning, #d97706)",
       icon: <IconSend size={16} />,
@@ -434,6 +438,7 @@ function CampaignsMiniDash({ items }: { items: CampaignListItem[] }) {
     {
       key: "sent",
       label: "Enviadas · taxa de leitura",
+      shortLabel: "Enviadas",
       value: stats.sent,
       percent: stats.readRate,
       accent: "var(--color-success)",
@@ -442,6 +447,7 @@ function CampaignsMiniDash({ items }: { items: CampaignListItem[] }) {
     {
       key: "failed",
       label: "Falhas · taxa de erro",
+      shortLabel: "Falhas",
       value: stats.failed,
       percent: stats.failRate,
       accent: "var(--color-danger, #dc2626)",
@@ -450,42 +456,54 @@ function CampaignsMiniDash({ items }: { items: CampaignListItem[] }) {
   ];
 
   return (
-    <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map((c) => (
-        <div
-          key={c.key}
-          className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-        >
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={{
-              background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
-              color: c.accent,
-            }}
+    <section className="shrink-0" aria-label="Indicadores de campanhas">
+      <KpiSquareScroll
+        items={cards.map((c) => ({
+          key: c.key,
+          label: c.shortLabel,
+          value: c.value.toLocaleString("pt-BR"),
+          icon: c.icon,
+          accent: c.accent,
+          percent: c.percent,
+        }))}
+      />
+      <div className="hidden gap-3 lg:grid lg:grid-cols-4">
+        {cards.map((c) => (
+          <div
+            key={c.key}
+            className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
           >
-            {c.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-display text-[11.5px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
-              {c.label}
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
-                {c.value.toLocaleString("pt-BR")}
-              </span>
-              {c.percent !== undefined && (
-                <span
-                  className="font-display text-[12px] font-bold tabular-nums"
-                  style={{ color: c.accent }}
-                >
-                  {c.percent}%
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{
+                background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
+                color: c.accent,
+              }}
+            >
+              {c.icon}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-display text-[11.5px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
+                {c.label}
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
+                  {c.value.toLocaleString("pt-BR")}
                 </span>
-              )}
+                {c.percent !== undefined && (
+                  <span
+                    className="font-display text-[12px] font-bold tabular-nums"
+                    style={{ color: c.accent }}
+                  >
+                    {c.percent}%
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

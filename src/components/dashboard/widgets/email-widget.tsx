@@ -29,6 +29,7 @@ export function EmailWidget() {
       return (data.accounts ?? []) as EmailAccount[];
     },
     refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
     staleTime: 30_000,
   });
 

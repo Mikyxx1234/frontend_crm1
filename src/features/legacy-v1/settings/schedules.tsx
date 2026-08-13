@@ -124,7 +124,8 @@ export function ExpedienteTab({
   const { data: agents = [], isLoading, isError } = useQuery({
     queryKey: ["agents-schedules"],
     queryFn: fetchAgents,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("");

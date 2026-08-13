@@ -395,6 +395,8 @@ function buildCourseOfferMessage(input: {
   return lines.join("\n");
 }
 
+type ProductCustomFieldValue = { fieldId: string; label: string; value: string };
+
 export function DealProductsSection({
   dealId,
   compact: _compact = false,
@@ -442,6 +444,24 @@ export function DealProductsSection({
       const data = await res.json();
       return (data.items ?? []) as DealProductItem[];
     },
+  });
+
+  // P2-11: uma única request para os custom fields de TODOS os produtos do
+  // deal (antes era 1 por produto renderizado).
+  const productIds = React.useMemo(
+    () => Array.from(new Set(items.map((i) => i.productId).filter(Boolean))).sort(),
+    [items],
+  );
+
+  const { data: customFieldsByProduct = {} } = useQuery({
+    queryKey: ["product-cf-values-batch", productIds],
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/products/custom-fields?ids=${productIds.join(",")}`));
+      if (!res.ok) return {};
+      return res.json() as Promise<Record<string, ProductCustomFieldValue[]>>;
+    },
+    enabled: productIds.length > 0,
+    staleTime: 60_000,
   });
 
   const { data: catalog = [] } = useQuery({
@@ -1011,7 +1031,7 @@ export function DealProductsSection({
                       )}
                       <AvailabilityBadge productId={item.productId} />
                     </div>
-                    <ProductCustomFieldsInline productId={item.productId} />
+                    <ProductCustomFieldsInline values={customFieldsByProduct[item.productId]} />
                   </div>
 
                   {/* Preço + ações inline (sem popup — evita clip em overflow) */}
@@ -1626,18 +1646,8 @@ function presenceLabel(status: "ONLINE" | "OFFLINE" | "AWAY") {
   return "Offline";
 }
 
-function ProductCustomFieldsInline({ productId }: { productId: string }) {
-  const { data: cfValues = [] } = useQuery({
-    queryKey: ["product-cf-values", productId],
-    queryFn: async () => {
-      const res = await fetch(apiUrl(`/api/products/${productId}/custom-fields`));
-      if (!res.ok) return [];
-      return res.json() as Promise<{ fieldId: string; label: string; value: string }[]>;
-    },
-    staleTime: 60_000,
-  });
-
-  const filled = cfValues.filter((v) => v.value?.trim());
+function ProductCustomFieldsInline({ values }: { values?: ProductCustomFieldValue[] }) {
+  const filled = (values ?? []).filter((v) => v.value?.trim());
   if (filled.length === 0) return null;
 
   return (

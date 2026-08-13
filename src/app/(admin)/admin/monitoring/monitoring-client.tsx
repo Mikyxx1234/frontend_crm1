@@ -135,7 +135,7 @@ export function MonitoringClient({ initial }: { initial: PerfReport | null }) {
 
   useEffect(() => {
     if (!autoRefresh) return;
-    const id = setInterval(() => void refresh(), 30_000);
+    const id = setInterval(() => void refresh(), 60_000);
     return () => clearInterval(id);
   }, [autoRefresh, refresh]);
 

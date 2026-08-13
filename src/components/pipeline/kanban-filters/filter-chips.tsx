@@ -113,7 +113,11 @@ export function FilterChips({ filters, options, onPatch, className }: Props) {
   } else if (filters.tagIds && filters.tagIds.length > 0) {
     const names = filters.tagIds.map((id) => nameById(options?.tags, id)).join(", ");
     const modeLabel =
-      filters.tagMode === "all" ? "todas" : filters.tagMode === "none" ? "sem" : "qualquer";
+      filters.tagMode === "all"
+        ? "contém todas"
+        : filters.tagMode === "none"
+          ? "não contém"
+          : "contém";
     chips.push({
       label: `Tags (${modeLabel}): ${names}`,
       onRemove: () => onPatch({ tagIds: undefined, tagMode: undefined }),

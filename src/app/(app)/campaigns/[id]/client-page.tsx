@@ -446,6 +446,14 @@ export default function CampaignDetailClientPage() {
           <DetailRow label="Agendado para" value={fmtDateTime(campaign.scheduledAt)} />
         ) : null}
         <DetailRow label="Velocidade" value={`${campaign.sendRate} msgs/s`} />
+        <DetailRow
+          label="Tag"
+          value={
+            campaign.audienceTags && campaign.audienceTags.length > 0
+              ? campaign.audienceTags.map((t) => t.name).join(", ")
+              : "—"
+          }
+        />
         {campaign.segment ? (
           <DetailRow label="Segmento" value={campaign.segment.name} />
         ) : null}

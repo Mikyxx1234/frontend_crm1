@@ -58,6 +58,8 @@ export interface CampaignDetail extends CampaignListItem {
   textContent?: string | null;
   sendRate: number;
   automation?: { id: string; name: string } | null;
+  /** Tags usadas no filtro de audiência do disparo (ad-hoc ou do segmento). */
+  audienceTags?: { id: string; name: string }[];
 }
 
 export interface CampaignStats {

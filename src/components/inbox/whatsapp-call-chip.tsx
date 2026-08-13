@@ -46,6 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSSE } from "@/hooks/use-sse";
+import { messagesKey } from "@/features/inbox-v2/hooks/use-messages";
 import { useWhatsappOutboundWebRtc } from "@/hooks/use-whatsapp-outbound-webrtc";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -353,9 +354,7 @@ export function WhatsappCallChip({
     onSuccess: () => {
       toast.success("Solicitação de voz enviada ao cliente");
       queryClient.invalidateQueries({ queryKey: key });
-      queryClient.invalidateQueries({
-        queryKey: ["conversation-messages", conversationId],
-      });
+      queryClient.invalidateQueries({ queryKey: messagesKey(conversationId) });
       queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
     },
     onError: (e: Error) => toast.error(e.message),

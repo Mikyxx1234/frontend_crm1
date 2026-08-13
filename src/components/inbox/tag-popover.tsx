@@ -120,7 +120,7 @@ export function TagPopover({
     },
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
-      queryClient.invalidateQueries({ queryKey: ["conversation-messages"] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
       queryClient.invalidateQueries({ queryKey: ["deals"] });
       onTagsUpdated?.();
       if (vars.action === "add") toast.success("Etiqueta aplicada");

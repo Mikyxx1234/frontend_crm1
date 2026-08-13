@@ -21,7 +21,10 @@ import {
 } from "@/components/inbox/slash-command-menu";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 import { getContact } from "@/features/inbox-v2/api/misc";
-import { emitConversationReopened } from "@/features/inbox-v2/hooks";
+import {
+  emitConversationReopened,
+  messagesKey as inboxMessagesKey,
+} from "@/features/inbox-v2/hooks";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 import { Button } from "@/components/ui/button";
 import {
@@ -594,7 +597,11 @@ export function ChatWindow({
   const typingTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const messagesKey = ["conversation-messages", conversationId] as const;
+  // Mesma key do inbox v2: as duas telas buscam a MESMA URL
+  // (`/messages?history=1`), então compartilhar a entrada de cache evita
+  // refetch ao alternar entre inbox e painel do negócio, e faz as
+  // invalidações de um lado valerem no outro.
+  const messagesKey = inboxMessagesKey(conversationId);
 
   const rowMax = compactChrome
     ? "mx-auto w-full max-w-full"
@@ -1155,7 +1162,7 @@ export function ChatWindow({
       return postForward(targetId, conversationId, messageRef);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["conversation-messages"] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
       setForwardingMessage(null);
       setForwardSearch("");

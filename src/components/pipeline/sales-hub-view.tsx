@@ -13,6 +13,7 @@ import {
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  IconArrowLeft,
   IconBriefcase as Briefcase,
   IconMessageOff as MessageSquareOff,
   IconMessages as MessagesIcon,
@@ -47,6 +48,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TooltipHost } from "@/components/ui/tooltip";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome";
 import {
   cn,
   dealNumericValue,
@@ -203,6 +206,7 @@ export function SalesHubView({
   contactFieldConfigSlot,
   dealFieldConfigSlot,
 }: SalesHubViewProps) {
+  const isMdUp = useMediaQuery("(min-width: 768px)", true);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   /** Só sobe em troca explícita de etapa (ribbon/atalho) — limpa a fila. */
   const [stageSwitchToken, setStageSwitchToken] = useState(0);
@@ -454,6 +458,8 @@ export function SalesHubView({
         (activeDealId != null && String(d.number) === activeDealId),
     ) ?? null;
 
+  useMobileChatChrome(!!activeDeal);
+
   // Resolve a conversa do contato do deal ativo. Usa o mesmo endpoint
   // que o inbox/deal-detail consome — garante que a conversa carregada
   // é exatamente a mesma independente do ponto de entrada (inbox, kanban
@@ -516,6 +522,8 @@ export function SalesHubView({
         setSelectedStageId(stageId);
         setStageSwitchToken((t) => t + 1);
       }
+      // Mobile: só filtra a fila — abrir o 1º deal esconderia a lista.
+      if (!isMdUp) return;
       const source = stageId
         ? filteredStages.filter((s) => s.id === stageId)
         : filteredStages;
@@ -526,7 +534,7 @@ export function SalesHubView({
         onActiveDealChange(null);
       }
     },
-    [filteredStages, onActiveDealChange],
+    [filteredStages, isMdUp, onActiveDealChange],
   );
 
   const handleDeselectDeal = useCallback(() => {
@@ -535,6 +543,7 @@ export function SalesHubView({
 
   // 1ª abertura do Flow (sem ?deal=): seleciona o 1º da fila para já
   // entrar no layout split (fila + chat), em vez de cards em largura total.
+  // No mobile a fila ocupa a tela — não auto-selecionar.
   const didInitialSelectRef = useRef(false);
   useEffect(() => {
     if (didInitialSelectRef.current) return;
@@ -542,6 +551,7 @@ export function SalesHubView({
       didInitialSelectRef.current = true;
       return;
     }
+    if (!isMdUp) return;
     // Espera a etapa salva ser restaurada — abrir o 1º deal do board antes
     // disso joga a seleção para a etapa dele e perde a fase anterior.
     if (!stageHydrated) return;
@@ -549,7 +559,7 @@ export function SalesHubView({
     if (!first) return;
     didInitialSelectRef.current = true;
     onActiveDealChange(first.id, first.number ?? null);
-  }, [activeDealId, sortedDeals, onActiveDealChange, stageHydrated]);
+  }, [activeDealId, isMdUp, sortedDeals, onActiveDealChange, stageHydrated]);
 
   const handleDealMoved = useCallback((dealId: string) => {
     // Highlight visual por 1.5s pra sinalizar o "salto" entre etapas.
@@ -709,7 +719,7 @@ export function SalesHubView({
           // abrir/fechar chat ou aside — sem thrash nos cards da fila.
           // Sempre split no desktop (fila ~300px + chat): evita cards
           // “gigantes” na 1ª abertura / sem deal selecionado.
-          "grid grid-cols-1 gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-[720ms] md:ease-[cubic-bezier(0.22,1,0.36,1)] md:motion-reduce:transition-none",
+          "grid grid-cols-1 grid-rows-[minmax(0,1fr)] gap-3 md:grid-rows-1 md:transition-[grid-template-columns] md:duration-[720ms] md:ease-[cubic-bezier(0.22,1,0.36,1)] md:motion-reduce:transition-none",
           // 3 tracks sempre no md p/ interpolar grid-template-columns no
           // open/close do aside sem thrash. A 3ª fechada é `minmax(0px,0px)`
           // e não `0fr`: track de tipo diferente da aberta não interpola —
@@ -785,15 +795,32 @@ export function SalesHubView({
         </div>
 
         {/* Coluna 2 — Chat. Sem deal: empty state (fila continua ~300px).
-            Com deal: conversa; com CRM: [fila | chat | aside]. */}
+            Com deal: conversa; com CRM: [fila | chat | aside].
+            No mobile, detalhes abertos escondem o chat p/ a aside ocupar a tela. */}
         <div
           onMouseLeave={handleChatPaneMouseLeave}
           className={cn(
             "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
             // Mobile: sem deal a fila ocupa a tela; com deal o chat entra.
             !activeDeal && "hidden md:flex",
+            detailsOpen && activeDeal && "max-md:hidden",
           )}
         >
+          {activeDeal ? (
+            <div className="flex shrink-0 items-center gap-1 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] px-2 py-1.5 md:hidden">
+              <button
+                type="button"
+                onClick={handleDeselectDeal}
+                className="flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-1.5 py-1 text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+              >
+                <IconArrowLeft size={14} stroke={2} />
+                Voltar
+              </button>
+              <span className="min-w-0 truncate text-[12px] text-[var(--text-muted)]">
+                {activeDeal.contact?.name ?? activeDeal.title ?? ""}
+              </span>
+            </div>
+          ) : null}
           {!activeDeal ? (
             <SalesHubChatEmptyState
               title="Selecione um negócio"

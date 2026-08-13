@@ -610,9 +610,9 @@ export function ChatWindow({
     queryKey: messagesKey,
     queryFn: () => fetchMessages(conversationId!),
     enabled: !!conversationId,
-    staleTime: 4_000,
+    staleTime: 20_000,
     gcTime: 5 * 60_000,
-    refetchInterval: conversationId ? 30_000 : false,
+    refetchInterval: conversationId ? 45_000 : false,
   });
   const messages = messagesData?.messages ?? [];
   const pinnedNoteId = messagesData?.pinnedNoteId ?? null;

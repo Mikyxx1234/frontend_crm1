@@ -5,7 +5,8 @@ export type ConversationEventAction =
   | "tag"
   | "entrada"
   | "saida"
-  | "ia";
+  | "ia"
+  | "template";
 
 export type TimelineItemKind = "message" | "note" | "event";
 

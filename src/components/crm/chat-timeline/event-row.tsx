@@ -7,6 +7,7 @@ import {
   CircleCheck,
   LogIn,
   LogOut,
+  FileText,
   Sparkles,
   Tag,
   UserPlus,
@@ -29,6 +30,7 @@ const ACTION_ICON: Record<ConversationEventAction, LucideIcon> = {
   entrada: LogIn,
   saida: LogOut,
   ia: Sparkles,
+  template: FileText,
 };
 
 export type EventRowProps = {

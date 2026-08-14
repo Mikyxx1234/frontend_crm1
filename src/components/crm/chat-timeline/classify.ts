@@ -43,7 +43,8 @@ export function isConversationEventAction(
     value === "tag" ||
     value === "entrada" ||
     value === "saida" ||
-    value === "ia"
+    value === "ia" ||
+    value === "template"
   );
 }
 
@@ -75,6 +76,7 @@ export function inferEventActionFromText(
   if (/\btags?\b/.test(t)) return "tag";
   if (/entrou|entrada/.test(t)) return "entrada";
   if (/saiu|sa[ií]da/.test(t)) return "saida";
+  if (/iniciada por template/.test(t)) return "template";
   return "ia";
 }
 

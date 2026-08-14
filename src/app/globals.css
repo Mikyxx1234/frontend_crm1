@@ -479,6 +479,46 @@
   --chat-bg: transparent;
 }
 
+/* Seleção de texto nas bolhas — o ::selection global (texto #3d52e8 +
+   overlay primary 20%) some no fundo azul/primary das enviadas.
+   ::selection e ::-moz-selection em regras separadas: o Firefox descarta
+   o bloco inteiro se um prefixo for desconhecido. */
+.chat-bubble-sent::selection,
+.chat-bubble-sent *::selection {
+  background: var(--color-foreground);
+  color: var(--color-primary-foreground);
+}
+.chat-bubble-sent::-moz-selection,
+.chat-bubble-sent *::-moz-selection {
+  background: var(--color-foreground);
+  color: var(--color-primary-foreground);
+}
+.dark .chat-bubble-sent::selection,
+.dark .chat-bubble-sent *::selection,
+.v2-dark .chat-bubble-sent::selection,
+.v2-dark .chat-bubble-sent *::selection {
+  background: var(--color-background);
+  color: var(--color-primary-foreground);
+}
+.dark .chat-bubble-sent::-moz-selection,
+.dark .chat-bubble-sent *::-moz-selection,
+.v2-dark .chat-bubble-sent::-moz-selection,
+.v2-dark .chat-bubble-sent *::-moz-selection {
+  background: var(--color-background);
+  color: var(--color-primary-foreground);
+}
+
+.chat-bubble-received::selection,
+.chat-bubble-received *::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-foreground);
+}
+.chat-bubble-received::-moz-selection,
+.chat-bubble-received *::-moz-selection {
+  background: var(--color-primary-soft);
+  color: var(--color-foreground);
+}
+
 /* ══════════════════════════════════════════════════════════════════
    BASE — body com mesh gradient fixo
    ══════════════════════════════════════════════════════════════════ */

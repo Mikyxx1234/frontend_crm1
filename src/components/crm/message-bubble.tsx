@@ -1580,6 +1580,7 @@ export function MessageBubble({
           className={cn(
             "relative min-w-0 overflow-visible rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
             hasReactions && "z-[2]",
+            isOutgoing ? "chat-bubble-sent" : "chat-bubble-received",
             isOutgoing
               ? isCampaign
                 ? "rounded-br border shadow-[0_3px_12px_rgba(13,148,136,0.18)]"

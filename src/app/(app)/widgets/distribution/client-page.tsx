@@ -262,7 +262,10 @@ export default function DistributionClientPage({
         if (res.resolved > 0) {
           toast.success(`${res.resolved} lead(s) distribuído(s).`);
         } else if (res.pending > 0) {
-          toast.warning("Ainda não há responsável elegível para a fila.");
+          toast.warning(
+            res.skipMessage ||
+              "Ainda não há responsável elegível para a fila.",
+          );
         } else {
           toast.info("Fila de espera vazia.");
         }

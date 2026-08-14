@@ -118,6 +118,8 @@ export interface RetryResult {
   resolved: number;
   cancelled: number;
   pending: number;
+  skipReason?: string | null;
+  skipMessage?: string | null;
 }
 
 export type RedistributeMode = "equal" | "specific" | "to_pending";

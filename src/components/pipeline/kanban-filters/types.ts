@@ -83,6 +83,7 @@ export type FilterOptionsResponse = {
     stages: {
       id: string;
       name: string;
+      number?: number;
       slug?: string;
       color: string;
       position: number;

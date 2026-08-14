@@ -33,9 +33,39 @@ export type PipelineUrlRef = {
   name?: string;
 };
 
+export type StageUrlRef = {
+  id: string;
+  number?: number;
+  slug?: string;
+  name?: string;
+};
+
 /** Valor público na URL: `?pipeline=12`. */
 export function pipelineUrlParam(p: PipelineUrlRef | undefined | null): string | null {
   return typeof p?.number === "number" && Number.isFinite(p.number) ? String(p.number) : null;
+}
+
+/** Valor público na URL: `?stage=3`. */
+export function stageUrlParam(s: StageUrlRef | undefined | null): string | null {
+  return typeof s?.number === "number" && Number.isFinite(s.number) ? String(s.number) : null;
+}
+
+function resolvePublicUrlRef<T extends { id: string; number?: number; slug?: string; name?: string }>(
+  items: T[],
+  raw: string,
+): T | undefined {
+  const key = raw.trim();
+  if (!key) return undefined;
+  if (/^\d+$/.test(key)) {
+    const n = Number(key);
+    const byNumber = items.find((item) => item.number === n);
+    if (byNumber) return byNumber;
+  }
+  return (
+    items.find((item) => item.slug === key) ??
+    items.find((item) => (item.name ?? "").toLowerCase() === key.toLowerCase()) ??
+    items.find((item) => item.id === key)
+  );
 }
 
 /**
@@ -45,18 +75,17 @@ export function findPipelineByUrlParam<T extends PipelineUrlRef>(
   pipelines: T[],
   raw: string,
 ): T | undefined {
-  const key = raw.trim();
-  if (!key) return undefined;
-  if (/^\d+$/.test(key)) {
-    const n = Number(key);
-    const byNumber = pipelines.find((p) => p.number === n);
-    if (byNumber) return byNumber;
-  }
-  return (
-    pipelines.find((p) => p.slug === key) ??
-    pipelines.find((p) => (p.name ?? "").toLowerCase() === key.toLowerCase()) ??
-    pipelines.find((p) => p.id === key)
-  );
+  return resolvePublicUrlRef(pipelines, raw);
+}
+
+/**
+ * Resolve `?stage=`: dígitos → number; senão slug/nome (bookmarks); CUID por último.
+ */
+export function findStageByUrlParam<T extends StageUrlRef>(
+  stages: T[],
+  raw: string,
+): T | undefined {
+  return resolvePublicUrlRef(stages, raw);
 }
 
 /**
@@ -138,26 +167,27 @@ function readSavedFlowStage(pipelineId: string | null | undefined): string | nul
 
 function writeSavedFlowStage(
   pipelineId: string | null | undefined,
-  slugOrEmpty: string,
+  numberOrEmpty: string,
 ): void {
   if (!pipelineId || typeof window === "undefined") return;
   try {
-    localStorage.setItem(flowStageStorageKey(pipelineId), slugOrEmpty);
+    localStorage.setItem(flowStageStorageKey(pipelineId), numberOrEmpty);
   } catch {
     /* private mode / quota */
   }
 }
 
 /**
- * Etapa do Flow: `?stage=<slug>`; ausente = Todos.
- * Init: URL → LS (por funil) → Todos. Troca grava URL + LS.
+ * Etapa do Flow: `?stage=<number>`; ausente = Todos.
+ * Init: URL number/slug/nome/CUID → LS (por funil) → Todos. Troca grava URL + LS.
+ * Depois do load, slug/CUID na query são substituídos pelo number.
  *
  * Retorna `hydrated`: enquanto false, `selectedStageId` ainda pode mudar pela
  * restauração. Quem depende da etapa para escolher um deal inicial deve
  * esperar — senão abre o 1º deal do board e a etapa restaurada é sobrescrita.
  */
 export function useStageUrlSync(
-  stages: Array<{ id: string; slug?: string }>,
+  stages: StageUrlRef[],
   selectedStageId: string | null,
   setSelectedStageId: (id: string | null) => void,
   /** Troca de funil: re-lê `?stage=` / LS e zera seleção local. */
@@ -173,13 +203,9 @@ export function useStageUrlSync(
   useEffect(() => {
     if (hydrated || !stages.length) return;
 
-    const resolve = (slugOrId: string) =>
-      stages.find((s) => s.slug === slugOrId) ??
-      stages.find((s) => s.id === slugOrId);
-
-    const urlSlug = readUrlParam("stage");
-    if (urlSlug) {
-      const hit = resolve(urlSlug);
+    const urlKey = readUrlParam("stage");
+    if (urlKey) {
+      const hit = findStageByUrlParam(stages, urlKey);
       if (hit) setSelectedStageId(hit.id);
       setHydrated(true);
       return;
@@ -187,7 +213,7 @@ export function useStageUrlSync(
 
     const saved = readSavedFlowStage(resetKey);
     if (saved != null && saved !== "") {
-      const hit = resolve(saved);
+      const hit = findStageByUrlParam(stages, saved);
       if (hit) setSelectedStageId(hit.id);
     }
     // saved === "" ou ausente → Todos (null)
@@ -202,9 +228,10 @@ export function useStageUrlSync(
       return;
     }
     const s = stages.find((x) => x.id === selectedStageId);
-    if (s?.slug) {
-      writeUrlParam("stage", s.slug, "replace");
-      writeSavedFlowStage(resetKey, s.slug);
+    const urlVal = stageUrlParam(s);
+    if (urlVal) {
+      writeUrlParam("stage", urlVal, "replace");
+      writeSavedFlowStage(resetKey, urlVal);
     }
   }, [selectedStageId, stages, hydrated, resetKey]);
 

@@ -69,6 +69,8 @@ async function fetchPipelinesFallback(): Promise<FilterOptionsResponse["pipeline
         ? (p.stages as Record<string, unknown>[]).map((s, i) => ({
             id: String(s.id ?? ""),
             name: String(s.name ?? ""),
+            number: typeof s.number === "number" ? s.number : undefined,
+            slug: typeof s.slug === "string" ? s.slug : undefined,
             color: String(s.color ?? "#94a3b8"),
             position: typeof s.position === "number" ? s.position : i,
           }))

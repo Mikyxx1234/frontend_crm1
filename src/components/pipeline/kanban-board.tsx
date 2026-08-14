@@ -28,6 +28,8 @@ const DELETE_DROPPABLE_ID = "__delete_zone__";
 export type BoardStage = {
   id: string;
   name: string;
+  /** Número sequencial no funil para `?stage=3`. */
+  number?: number;
   slug?: string;
   color: string;
   position: number;

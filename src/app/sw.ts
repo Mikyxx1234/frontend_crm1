@@ -1,5 +1,5 @@
-import { apiUrl } from "@/lib/api";
 /// <reference lib="webworker" />
+import { apiUrl } from "@/lib/api";
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { NetworkOnly, Serwist } from "serwist";

@@ -26,6 +26,7 @@ import {
 import { listCalls } from "../api/extensions";
 import type {
   CallRecord,
+  CallsSortDir,
   CallsSortField,
   ListCallsFilters,
 } from "../api/types";

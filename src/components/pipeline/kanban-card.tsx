@@ -25,6 +25,7 @@ import {
   resolveContactAvatarDisplayUrl,
 } from "@/lib/utils";
 import { ds } from "@/lib/design-system";
+import { dt } from "@/lib/design-tokens";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
 import { TagChip } from "@/components/crm/tag-chip";
 import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";

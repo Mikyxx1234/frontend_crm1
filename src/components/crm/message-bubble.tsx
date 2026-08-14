@@ -426,10 +426,19 @@ function FormBubble({ message, className }: { message: Message; className?: stri
                   <p className="font-display text-[9.5px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-none mb-0.5">
                     {f.label}
                   </p>
-                  {/* No último campo, o timestamp flutua no canto inferior direito — padrão WhatsApp */}
+                  {/* Último campo: spacer flutuante reserva só a largura do horário
+                      (padrão WhatsApp) — sem padding-right fixo que abre um vão. */}
                   <div className="relative">
-                    <p className="font-body text-[12.5px] leading-snug text-[var(--text-primary)] pr-11">
+                    <p className="flow-root font-body text-[12.5px] leading-snug text-[var(--text-primary)]">
                       {f.value}
+                      {isLast && (
+                        <span
+                          aria-hidden
+                          className="invisible float-right ml-1.5 font-body text-[10px] leading-none"
+                        >
+                          {message.time}
+                        </span>
+                      )}
                     </p>
                     {isLast && (
                       <span className="pointer-events-none absolute bottom-0 right-0 select-none font-body text-[10px] leading-none text-[var(--text-muted)]">
@@ -722,8 +731,46 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
   )
 }
 
+/**
+ * Reserva invisível no fluxo do texto para o horário (+ ticks).
+ * `float: right` empurra o slot para o fim da última linha quando cabe;
+ * se não cabe, a linha seguinte fica só com o horário à direita — sem o
+ * vão horizontal que `padding-right` fixo + `position: absolute` abrem
+ * quando a bolha é larga (asides fechados / coluna central larga).
+ */
+function MetaReserve({
+  time,
+  isOutgoing,
+  status,
+  isFavorited,
+}: {
+  time: string
+  isOutgoing: boolean
+  status?: Message["status"]
+  isFavorited?: boolean
+}) {
+  return (
+    <span
+      aria-hidden
+      className="invisible float-right ml-1.5 inline-flex items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none"
+    >
+      {isFavorited && <IconStarFilled size={10} />}
+      {time}
+      {isOutgoing && status ? <StatusTicks status={status} onLightBg={false} /> : null}
+    </span>
+  )
+}
+
 /** Renderiza o corpo da bolha: player de mídia quando houver, senão texto. */
-function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing: boolean }) {
+function MessageContent({
+  message,
+  isOutgoing,
+  metaReserve,
+}: {
+  message: Message
+  isOutgoing: boolean
+  metaReserve?: ReactNode
+}) {
   const kind = detectMediaKind(message.messageType, message.mediaUrl)
   const url = resolveMediaUrl(message.mediaUrl)
   const content = message.content ?? ""
@@ -737,7 +784,14 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
 
   // ── Imagem / sticker ───────────────────────────────────────────
   if (kind === "image" && url) {
-    return <ImageMedia url={url} caption={caption} isOutgoing={isOutgoing} />
+    return (
+      <ImageMedia
+        url={url}
+        caption={caption}
+        isOutgoing={isOutgoing}
+        metaReserve={metaReserve}
+      />
+    )
   }
 
   // ── Vídeo ──────────────────────────────────────────────────────
@@ -750,7 +804,9 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
           src={url}
           className="max-h-[320px] w-full min-w-[220px] rounded-[var(--radius-md)] bg-black"
         />
-        {caption && <CaptionText caption={caption} isOutgoing={isOutgoing} />}
+        {caption && (
+          <CaptionText caption={caption} isOutgoing={isOutgoing} metaReserve={metaReserve} />
+        )}
       </div>
     )
   }
@@ -812,25 +868,18 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
       : null
   if (unsupportedText) {
     return (
-      <span className={cn("break-words italic", isOutgoing ? "text-white/80" : "text-[var(--text-muted)]")}>
+      <span className={cn("flow-root break-words italic [overflow-wrap:anywhere]", isOutgoing ? "text-white/80" : "text-[var(--text-muted)]")}>
         {unsupportedText}
-        <span
-          aria-hidden
-          className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
-        />
+        {metaReserve}
       </span>
     )
   }
 
   // ── Texto ──────────────────────────────────────────────────────
   return (
-    <span className="break-words">
+    <span className="flow-root break-words [overflow-wrap:anywhere]">
       {formatWhatsapp(content)}
-      {/* Espaço reservado p/ horário (+ ticks quando outgoing). */}
-      <span
-        aria-hidden
-        className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
-      />
+      {metaReserve}
     </span>
   )
 }
@@ -843,10 +892,12 @@ function ImageMedia({
   url,
   caption,
   isOutgoing,
+  metaReserve,
 }: {
   url: string
   caption: string
   isOutgoing: boolean
+  metaReserve?: ReactNode
 }) {
   const [open, setOpen] = useState(false)
   return (
@@ -866,7 +917,9 @@ function ImageMedia({
             loading="lazy"
           />
         </button>
-        {caption && <CaptionText caption={caption} isOutgoing={isOutgoing} />}
+        {caption && (
+          <CaptionText caption={caption} isOutgoing={isOutgoing} metaReserve={metaReserve} />
+        )}
       </div>
       <ImageLightbox src={url} alt={caption} open={open} onOpenChange={setOpen} />
     </>
@@ -874,14 +927,24 @@ function ImageMedia({
 }
 
 /** Legenda exibida abaixo de imagem/vídeo, com espaço reservado pro timestamp. */
-function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boolean }) {
+function CaptionText({
+  caption,
+  isOutgoing,
+  metaReserve,
+}: {
+  caption: string
+  isOutgoing: boolean
+  metaReserve?: ReactNode
+}) {
   return (
-    <span className={cn("break-words text-[13px]", !isOutgoing && "text-[var(--chat-bubble-received-text)]")}>
+    <span
+      className={cn(
+        "flow-root break-words text-[13px] [overflow-wrap:anywhere]",
+        !isOutgoing && "text-[var(--chat-bubble-received-text)]",
+      )}
+    >
       {formatWhatsapp(caption)}
-      <span
-        aria-hidden
-        className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
-      />
+      {metaReserve}
     </span>
   )
 }
@@ -1391,15 +1454,27 @@ export function MessageBubble({
     )
   }
 
+  const metaReserve =
+    !hasButtons && !timeOverMedia ? (
+      <MetaReserve
+        time={message.time}
+        isOutgoing={isOutgoing}
+        status={isOutgoing ? message.status : undefined}
+        isFavorited={message.isFavorited}
+      />
+    ) : null
+  const hasReactions = !!(message.reactions && message.reactions.length > 0)
+
   return (
     <div
       className={cn(
-        "flex max-w-[75%] flex-col gap-0.5",
+        "flex w-fit max-w-[75%] flex-col gap-0.5 overflow-visible",
         isOutgoing ? "ml-auto items-end" : "items-start",
+        hasReactions && "relative z-[2] mb-3",
         className,
       )}
     >
-      <div className={cn("group flex items-end gap-2.5", isOutgoing && "flex-row-reverse")}>
+      <div className={cn("group flex max-w-full items-end gap-2.5 overflow-visible", isOutgoing && "flex-row-reverse")}>
         {/* Avatar: robô para bot, iniciais para agente — com tooltip do nome.
             Automação manual (colab): robô + chip de iniciais do agente que
             acionou, sobreposto no canto inferior direito. */}
@@ -1503,7 +1578,8 @@ export function MessageBubble({
         )}
         <div
           className={cn(
-            "relative min-w-0 rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
+            "relative min-w-0 overflow-visible rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
+            hasReactions && "z-[2]",
             isOutgoing
               ? isCampaign
                 ? "rounded-br border shadow-[0_3px_12px_rgba(13,148,136,0.18)]"
@@ -1636,22 +1712,22 @@ export function MessageBubble({
             />
           )}
           {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
-          <MessageContent message={message} isOutgoing={isOutgoing} />
+          <MessageContent message={message} isOutgoing={isOutgoing} metaReserve={metaReserve} />
           {/* Botões de resposta rápida (interactive/template) — cards
               empilhados abaixo do corpo, estilo WhatsApp/V0. */}
           {message.buttons && message.buttons.length > 0 && (
             <MessageButtons buttons={message.buttons} onLightBg={!isOutgoing} />
           )}
-          {/* Horário + ticks. Sem botões, flutua no canto inferior direito
-              (padrão WhatsApp). COM botões, entra em fluxo abaixo deles,
-              alinhado à direita — senão o horário/ticks ficam cortados por
-              cima do último botão. */}
+          {/* Horário + ticks. Sem botões, overlay no spacer flutuante
+              (canto inferior direito do conteúdo — padrão WhatsApp).
+              `bottom`/`right` batem com py-2 / px-3.5 pra cobrir o spacer.
+              COM botões, entra em fluxo abaixo deles. */}
           <span
             className={cn(
               "pointer-events-none select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
               hasButtons
                 ? "mt-1.5 flex w-full justify-end"
-                : "absolute bottom-1.5 right-2.5 inline-flex",
+                : "absolute bottom-2 right-3.5 inline-flex",
               timeOverMedia &&
                 "rounded px-1 py-0.5 text-white shadow-[0_1px_2px_rgba(0,0,0,0.55)] [text-shadow:0_1px_2px_rgba(0,0,0,0.75)] bg-black/35",
               !timeOverMedia && isOutgoing && isBot && !isCampaign && "text-white/70",
@@ -1687,9 +1763,9 @@ export function MessageBubble({
               <StatusTicks status={message.status} onLightBg={false} />
             ) : null}
           </span>
-          {/* Badge de reação flutuante: emoji do cliente sobre o canto
-              inferior da bolha (padrão WhatsApp Web). Quando há múltiplas
-              reações distintas, exibe as duas primeiras + contador. */}
+          {/* Badge de reação: sobrepõe a borda inferior (não o horário, que
+              fica à direita). z-index acima do card seguinte; o parent tem
+              overflow visible + margem pra não clipar. */}
           {message.reactions && message.reactions.length > 0 && (
             <ReactionBadge
               reactions={message.reactions}
@@ -1774,7 +1850,9 @@ function ReactionBadge({
   return (
     <div
       className={cn(
-        "pointer-events-none absolute -bottom-2 flex items-center gap-0.5 rounded-full border border-black/5 bg-white px-1.5 py-0.5 shadow-[0_2px_6px_rgba(15,20,40,0.18)]",
+        // top-full -mt-1: pílula na frente da borda, ~4px sobre o card —
+        // abaixo do horário (bottom-2) pra não cobrir time/ticks.
+        "pointer-events-none absolute top-full z-20 -mt-1 flex items-center gap-0.5 overflow-visible rounded-full border border-black/5 bg-white px-1.5 py-0.5 shadow-[0_2px_6px_rgba(15,20,40,0.18)]",
         anchor === "left" ? "left-1" : "right-1",
       )}
       title={reactions.map((r) => r.emoji).join(" ")}

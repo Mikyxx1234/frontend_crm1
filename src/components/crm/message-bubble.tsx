@@ -13,7 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { StatusTicks } from "@/components/crm/status-ticks"
-import { NoteRow } from "@/components/crm/chat-timeline"
+import { NoteRow, type ConversationEventAction } from "@/components/crm/chat-timeline"
 import {
   IconRobot,
   IconClipboardList,
@@ -202,14 +202,7 @@ export interface Message {
   /**
    * Ação do evento (ícone). Só relevante quando `kind === "event"`.
    */
-  eventAction?:
-    | "distribuicao"
-    | "transferencia"
-    | "status"
-    | "tag"
-    | "entrada"
-    | "saida"
-    | "ia"
+  eventAction?: ConversationEventAction
   /**
    * Nota interna — não enviada ao cliente. Quando true, a bolha é
    * renderizada com estilo diferenciado (fundo amarelo, borda lateral,

@@ -808,7 +808,9 @@ export function SalesHubView({
               aria-hidden
             />
             <p className="mt-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">
-              {formatCurrency(queueStageHeader.totalValue)}
+              {queueBoardPending || !stageHydrated
+                ? "…"
+                : formatCurrency(queueStageHeader.totalValue)}
             </p>
           </header>
 
@@ -861,7 +863,11 @@ export function SalesHubView({
               </span>
             </div>
           ) : null}
-          {!activeDealId ? (
+          {queueBoardPending || !stageHydrated ? (
+            <div className="flex flex-1 items-center justify-center bg-[var(--color-chat-bg)]">
+              <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          ) : !activeDealId ? (
             <SalesHubChatEmptyState
               title="Selecione um negócio"
               subtitle="Escolha um card na fila à esquerda para abrir a conversa."

@@ -12,7 +12,7 @@ import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import type { DealDetail } from "@/components/crm/deal-detail-panel";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
-import { PageLoading } from "@/components/crm/page-loading";
+import { FlowPendingShell } from "@/components/pipeline/flow-pending-shell";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { SalesHubView } from "@/components/pipeline/sales-hub-view";
 import type { DealQueueSortMode } from "@/components/sales-hub/deal-queue";
@@ -553,7 +553,7 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   ]);
 
   if (sessionStatus === "loading" || !pipelineId) {
-    return <PageLoading />;
+    return <FlowPendingShell />;
   }
 
   if (!isAuthenticated) {

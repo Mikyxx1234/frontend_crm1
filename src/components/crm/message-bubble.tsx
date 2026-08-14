@@ -1814,20 +1814,69 @@ export function DaySeparator({ date }: DaySeparatorProps) {
 /** Atributo nas linhas da timeline p/ o pill sticky rastrear o dia visível. */
 export const DAY_LABEL_ATTR = "data-day-label"
 
+const PILL_IDLE_MS = 700
+const PILL_ARM_MS = 450
+
 /**
  * Pill fixo no topo da lista rolável (estilo WhatsApp). `h-0` para não
  * empurrar as bolhas; o texto atualiza via `useStickyDayLabel`.
+ * Só aparece enquanto o usuário rola; some com fade após idle.
  */
 export function StickyDayPill({ date }: { date: string | null }) {
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [scrolling, setScrolling] = useState(false)
+  const lastDateRef = useRef<string | null>(null)
+  if (date) lastDateRef.current = date
+  const shown = date ?? lastDateRef.current
+
+  useEffect(() => {
+    const node = rootRef.current
+    if (!node) return
+
+    let scrollRoot: HTMLElement | null = node.parentElement
+    while (scrollRoot) {
+      const oy = getComputedStyle(scrollRoot).overflowY
+      if (oy === "auto" || oy === "scroll") break
+      scrollRoot = scrollRoot.parentElement
+    }
+    if (!scrollRoot) return
+
+    let idleTimer = 0
+    let armed = false
+    const armTimer = window.setTimeout(() => {
+      armed = true
+    }, PILL_ARM_MS)
+
+    const onScroll = () => {
+      if (!armed) return
+      setScrolling(true)
+      window.clearTimeout(idleTimer)
+      idleTimer = window.setTimeout(() => setScrolling(false), PILL_IDLE_MS)
+    }
+
+    scrollRoot.addEventListener("scroll", onScroll, { passive: true })
+    return () => {
+      window.clearTimeout(armTimer)
+      window.clearTimeout(idleTimer)
+      scrollRoot.removeEventListener("scroll", onScroll)
+    }
+  }, [])
+
   return (
     <div
-      className="pointer-events-none sticky top-2 z-[15] h-0 min-h-0 w-full shrink-0 overflow-visible"
+      ref={rootRef}
+      className="pointer-events-none sticky top-0 z-[15] h-0 min-h-0 w-full shrink-0 overflow-visible"
       aria-hidden
     >
-      {date ? (
-        <div className="flex justify-center">
-          <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/92 px-3 py-1 font-display text-[11px] font-semibold text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-            {date}
+      {shown ? (
+        <div
+          className={cn(
+            "flex justify-center transition-opacity duration-300 ease-out",
+            scrolling ? "opacity-100" : "opacity-0",
+          )}
+        >
+          <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/92 px-2.5 py-0.5 font-display text-[10px] font-semibold text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+            {shown}
           </span>
         </div>
       ) : null}
@@ -1859,7 +1908,7 @@ export function useStickyDayLabel(
 
     const pickLabel = (items: NodeListOf<HTMLElement>) => {
       if (!scrollRoot || items.length === 0) return null
-      const top = scrollRoot.getBoundingClientRect().top + 8
+      const top = scrollRoot.getBoundingClientRect().top + 2
       for (const el of items) {
         if (el.getBoundingClientRect().bottom > top) {
           return el.getAttribute(DAY_LABEL_ATTR)

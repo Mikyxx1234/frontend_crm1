@@ -310,6 +310,12 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "text", key: "timezone", label: "Fuso horário", placeholder: "America/Sao_Paulo" },
     { kind: "step", key: "elseStepId", label: "Fora do horário → ir para", optional: true },
   ],
+  check_agent_status: [
+    {
+      kind: "info",
+      text: "Verifica se o responsável da conversa está ONLINE. Sem responsável, AWAY ou OFFLINE seguem pelo ramo Offline.",
+    },
+  ],
   ask_ai_agent: [
     { kind: "source", source: "aiAgentId", key: "agentId", label: "Agente de IA" },
     { kind: "textarea", key: "promptTemplate", label: "Pergunta para o agente" },

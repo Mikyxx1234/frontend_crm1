@@ -68,6 +68,7 @@ const STEP_CHIP: Record<string, Chip> = {
   delay: "amber",
   condition: "amber",
   business_hours: "amber",
+  check_agent_status: "amber",
   // Integrações
   webhook: "blue",
   // IA

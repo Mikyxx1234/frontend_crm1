@@ -620,6 +620,11 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
         elseStepId: config.elseStepId ?? "",
       };
     }
+    if (step.type === "check_agent_status") {
+      config = {
+        elseStepId: config.elseStepId ?? "",
+      };
+    }
     if (step.type === "ask_ai_agent") {
       config = {
         agentId: String(config.agentId ?? ""),

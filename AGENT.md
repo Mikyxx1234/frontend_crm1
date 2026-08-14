@@ -5,6 +5,26 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-08-14 — Node `check_agent_status` (Status do agente)
+
+**Modelo usado.** Cursor Grok 4.6.
+
+**Decisão.** Bloco de lógica no canvas com o mesmo card binário de
+`business_hours`: handle `true` = Disponível, handle `false` = Offline
+(`elseStepId`). Sem formulário extra — verifica o responsável da conversa.
+
+**Contexto.** O runtime vive no backend; o canvas precisa do tipo na
+palette e das arestas `true`/`false` para o operador montar o ramo de
+transferência quando o dono está offline.
+
+**Alternativas descartadas.** Reusar `ConditionNode` (N ramos); reusar
+`BusinessHoursNode` com labels genéricos (acopla dois conceitos).
+
+**Impacto.** Palette Lógica, workflow-canvas, auditor/layout/workflow
+espelhados do backend.
+
+---
+
 ### 2026-08-07 — Node `send_whatsapp_list` (Lista / menu interativo)
 
 **Modelo usado.** Cursor Grok 4.5.

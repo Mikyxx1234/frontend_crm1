@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { IconAdjustmentsHorizontal, IconLayoutDashboard } from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRail } from "@/components/crm/nav-rail";
 import { PageHeader } from "@/components/crm/page-header";
 import {
@@ -221,19 +222,7 @@ function QueryState({
   children: React.ReactNode;
 }) {
   if (isLoading && !hasData) {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[104px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]"
-            />
-          ))}
-        </div>
-        <div className="h-[260px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
-      </div>
-    );
+    return <AppLoading variant="inline" className="min-h-[420px]" />;
   }
 
   if (error) {

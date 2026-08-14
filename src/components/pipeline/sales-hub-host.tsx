@@ -7,17 +7,18 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconSettings } from "@tabler/icons-react";
 
 import { RequirePermission } from "@/components/auth/require-permission";
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import type { DealDetail } from "@/components/crm/deal-detail-panel";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
-import { FlowPendingShell } from "@/components/pipeline/flow-pending-shell";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { SalesHubView } from "@/components/pipeline/sales-hub-view";
 import type { DealQueueSortMode } from "@/components/sales-hub/deal-queue";
 import { avatarInitials } from "@/features/inbox-v2/adapters";
 import { useContactSidebar } from "@/features/inbox-v2/hooks";
+import { useStuckTimeout } from "@/hooks/use-stuck-timeout";
 import type { BoardSortParam } from "@/features/pipeline-v2/api";
 import {
   useBoard,
@@ -180,7 +181,8 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const { activeDealId, setActiveDeal, normalizeDealId, syncDealNumber } =
     useDealDeepLink();
 
-  const { data: pipelines } = usePipelines(isAuthenticated);
+  const pipelinesQuery = usePipelines(isAuthenticated);
+  const pipelines = pipelinesQuery.data;
   const { pipelineId, setPipelineId } = usePipelineUrlSync(pipelines);
 
   useEffect(() => {
@@ -350,8 +352,9 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     (hasServerBoard ? boardFiltered.isError : boardNormal.isError);
 
   // Query recém-enabled fica 1 tick em pending+idle (`refetchOnMount: false`).
-  // Hold cobre esse gap (evita "Todos 0"); 50ms solta se o fetch nunca
-  // disparar — `!isFetched` no gate do host travava o shell para sempre.
+  // Sem o hold, esse tick renderiza a UI real com board vazio ("Nenhum deal").
+  // 50ms é teto rígido: se o fetch nunca disparar, solta — nunca vira gate
+  // eterno (era o que `!isFetched` fazia no host antigo).
   const [idleHold, setIdleHold] = useState(true);
   useEffect(() => {
     if (!pipelineId) {
@@ -454,6 +457,17 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     normalizeDealId(dealDetail?.id);
     syncDealNumber((dealDetail as { number?: number } | undefined)?.number);
   }, [dealDetail, normalizeDealId, syncDealNumber]);
+
+  // Rede de segurança: o shell do Flow depende de `pipelineId`, que só sai
+  // de null com a lista de funis. Query travada (idle que nunca dispara,
+  // resposta que nunca chega) não tem `isError` — sem o timeout a tela
+  // girava para sempre.
+  const pipelinesEmpty = Array.isArray(pipelines) && pipelines.length === 0;
+  const pipelinesStuck = useStuckTimeout(
+    isAuthenticated && !pipelineId && !pipelinesQuery.isError && !pipelinesEmpty,
+  );
+  const pipelinesFailed =
+    !pipelineId && (pipelinesQuery.isError || pipelinesEmpty || pipelinesStuck);
 
   const boardDealSeed = useMemo(() => {
     if (!activeDealId) return null;
@@ -604,14 +618,33 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     pipelineId,
   ]);
 
-  // Só sessão/funil. NÃO esperar isFetched do board — query disabled/idle
-  // nunca fica fetched e o Flow ficava preso no FlowPendingShell.
-  if (sessionStatus === "loading" || !pipelineId) {
-    return <FlowPendingShell />;
+  // Sem sessão o middleware redireciona; renderizar o shell aqui prendia a
+  // tela para sempre, porque `usePipelines` fica desligada e `pipelineId`
+  // nunca sai de null (o `!isAuthenticated` abaixo era inalcançável).
+  if (sessionStatus === "unauthenticated") {
+    return null;
   }
 
-  if (!isAuthenticated) {
-    return null;
+  // `pipelineId` só existe depois de `GET /api/pipelines`. Se essa query
+  // falha (500/timeout) ou volta vazia, não há caminho para o Flow — vira
+  // erro com retry em vez de spinner infinito.
+  if (pipelinesFailed) {
+    return (
+      <AppLoading
+        error={
+          pipelinesEmpty
+            ? "Nenhum funil configurado nesta organização."
+            : "Não foi possível carregar os funis."
+        }
+        onRetry={() => void pipelinesQuery.refetch()}
+      />
+    );
+  }
+
+  // Só sessão/funil. NÃO esperar isFetched do board — query disabled/idle
+  // nunca fica fetched e o Flow ficava preso no loading para sempre.
+  if (sessionStatus === "loading" || !pipelineId) {
+    return <AppLoading />;
   }
 
   const hasActiveFilters = !isEmptyFilters(filters) || !!search.trim();

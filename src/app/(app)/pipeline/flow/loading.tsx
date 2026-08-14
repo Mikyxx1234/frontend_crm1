@@ -1,6 +1,6 @@
-import { FlowPendingShell } from "@/components/pipeline/flow-pending-shell";
+import { AppLoading } from "@/components/crm/app-loading";
 
-/** Hard refresh de `/pipeline/flow` — chrome do Flow, não o PageLoading de 4 cards. */
+/** Hard refresh de `/pipeline/flow` — mesmo loading global das demais rotas. */
 export default function PipelineFlowLoading() {
-  return <FlowPendingShell />;
+  return <AppLoading />;
 }

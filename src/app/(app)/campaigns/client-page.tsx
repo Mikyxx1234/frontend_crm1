@@ -13,6 +13,7 @@ import {
   IconSpeakerphone,
 } from "@tabler/icons-react";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { EmptyState } from "@/components/crm/empty-state";
@@ -191,14 +192,7 @@ export default function CampaignsClientPage() {
           </div>
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
             {isLoading && allItems.length === 0 ? (
-              <div className="flex flex-col gap-2.5">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-[72px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]"
-                  />
-                ))}
-              </div>
+              <AppLoading variant="inline" className="min-h-[320px]" />
             ) : error ? (
               <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
                 {error instanceof Error ? error.message : "Erro ao carregar."}

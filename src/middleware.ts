@@ -147,9 +147,6 @@ function withTenantContext(
   slug: string | null,
 ): { requestHeaders: Headers; applyCookies: (res: NextResponse) => NextResponse } {
   const requestHeaders = new Headers(req.headers);
-  // `(app)/loading.tsx` lê isto no server — `usePathname()` no fallback
-  // cliente pintava PageLoading (4 cards) no F5 de `/pipeline/flow`.
-  requestHeaders.set("x-pathname", req.nextUrl.pathname);
   if (slug) {
     requestHeaders.set(TENANT_SLUG_HEADER, slug);
   } else {
@@ -258,11 +255,7 @@ export async function middleware(req: NextRequest) {
       requestHost.endsWith(".v0.app") ||
       requestHost.endsWith(".v0.build");
     if (isPreviewMode() || isV0Host) {
-      const previewHeaders = new Headers(req.headers);
-      previewHeaders.set("x-pathname", pathname);
-      return withSecurityHeaders(
-        NextResponse.next({ request: { headers: previewHeaders } }),
-      );
+      return withSecurityHeaders(NextResponse.next());
     }
 
     // Dev fallback (apex/localhost): header `x-tenant-slug`.

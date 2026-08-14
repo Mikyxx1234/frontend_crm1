@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { SUBTLE_SPRING } from "@/lib/design-system";
+import { AppLoading } from "@/components/crm/app-loading";
 import { Chip } from "@/components/crm/chip";
 import { DealCard } from "@/components/crm/deal-card";
 import { TagChip } from "@/components/crm/tag-chip";
@@ -685,13 +686,7 @@ export function DealQueue({
           )}
           {!isStageSwitching && visibleDeals.length === 0 && (
             isLoading ? (
-              <div
-                className="flex min-h-[200px] items-center justify-center py-8"
-                aria-busy="true"
-                aria-label="Carregando fila"
-              >
-                <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              </div>
+              <AppLoading variant="inline" label="Carregando fila" />
             ) : (
               <p className="px-2 py-8 text-center text-xs text-[var(--text-muted)]">
                 Nenhum deal encontrado

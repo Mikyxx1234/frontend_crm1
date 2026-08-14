@@ -22,6 +22,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { IconPhone, IconRefresh, IconSettings } from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { PageGhostButton, pageGhostButtonClass } from "@/components/crm/page-toolbar";
@@ -166,13 +167,6 @@ function NotEnabledState() {
 
 function SkeletonState() {
   return (
-    <div className="space-y-3">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div
-          key={i}
-          className="h-16 animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md"
-        />
-      ))}
-    </div>
+    <AppLoading variant="inline" className="min-h-[280px]" />
   );
 }

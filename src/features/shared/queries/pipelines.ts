@@ -24,12 +24,21 @@ export { listPipelines };
 
 export const PIPELINES_QUERY_KEY = ["pipelines-v2"] as const;
 
-/** Query canônica da lista de funis (com `stages`). */
+/**
+ * Query canônica da lista de funis (com `stages`).
+ *
+ * Telas como o Flow não conseguem escolher um funil sem esta lista, então uma
+ * falha transitória aqui derruba a página inteira: retry com backoff e
+ * refetch ao reconectar fazem a tela se recuperar sozinha.
+ */
 export function usePipelinesQuery<T = PipelineListItemDto>(enabled = true) {
   return useQuery<T[]>({
     queryKey: PIPELINES_QUERY_KEY,
     queryFn: () => listPipelines() as Promise<T[]>,
     enabled: isPreviewMode() ? true : enabled,
     staleTime: 5 * 60_000,
+    retry: 4,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    refetchOnReconnect: true,
   });
 }

@@ -35,6 +35,7 @@ import {
 } from "@hello-pangea/dnd";
 
 import { apiUrl } from "@/lib/api";
+import { AppLoading } from "@/components/crm/app-loading";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useFieldLayout } from "@/hooks/use-field-layout";
@@ -435,14 +436,7 @@ function CustomFieldsPage() {
 
       {/* Lista */}
       {isLoading ? (
-        <div className="flex flex-col gap-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className="h-[60px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md"
-            />
-          ))}
-        </div>
+        <AppLoading variant="inline" className="min-h-[300px]" />
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-6 py-16 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">

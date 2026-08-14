@@ -43,6 +43,7 @@ import type {
   EmailRuleAction,
   EmailRuleField,
 } from "@/features/email-v2/api/types";
+import { AppLoading } from "@/components/crm/app-loading";
 import { cn } from "@/lib/utils";
 import { SETTINGS_HUB_BACK, SettingsV2Shell, useSettingsHeaderSlots } from "../_v2-shell";
 
@@ -318,14 +319,7 @@ function AccountsList({
       </KpiStrip>
 
       {loading ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[64px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
-            />
-          ))}
-        </div>
+        <AppLoading variant="inline" className="min-h-[260px]" />
       ) : accounts.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16">
           <IconMail size={40} className="text-[var(--text-muted)] opacity-40" />
@@ -626,14 +620,7 @@ function AccountRules({
       )}
 
       {loading ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[60px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
-            />
-          ))}
-        </div>
+        <AppLoading variant="inline" className="min-h-[200px]" />
       ) : sorted.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-12">
           <IconFilter size={32} className="text-[var(--text-muted)] opacity-40" />

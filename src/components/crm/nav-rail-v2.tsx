@@ -127,9 +127,23 @@ function computeActiveHrefs(pathname: string, hrefs: readonly string[]): Set<str
   return new Set(winners);
 }
 
+/**
+ * Ponto suave enquanto o nome ainda não chegou. Antes exibíamos "··", que
+ * ficava "preso" na tela quando a request falhava e parecia conteúdo real.
+ */
+function AvatarPending() {
+  return (
+    <span
+      aria-hidden
+      className="app-loading-halo block size-2 rounded-full"
+      style={{ background: "rgba(255, 255, 255, 0.7)" }}
+    />
+  );
+}
+
 function computeInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "··";
+  if (!parts.length) return "";
   return parts
     .map((p) => p[0])
     .slice(0, 2)
@@ -158,9 +172,9 @@ export function NavRailV2({ className }: { className?: string }) {
 
   // Identidade da empresa (avatar do topo, estilo Kommo): iniciais do nome da
   // org e o ID da conta (organizationId) copiável no popover. Enquanto a org
-  // não carrega, mostra "··" — mesmo placeholder do avatar do usuário.
+  // não carrega, o avatar mostra só um ponto pulsando (nada de texto fake).
   const companyName = organization?.name?.trim() ?? "";
-  const companyInitials = companyName ? computeInitials(companyName) : "··";
+  const companyInitials = companyName ? computeInitials(companyName) : "";
   const companyLogo = organization?.logoUrl ?? null;
   const accountId =
     organization?.id ??
@@ -409,7 +423,7 @@ export function NavRailV2({ className }: { className?: string }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={companyLogo} alt={companyName || "Empresa"} className="size-full object-cover" />
           ) : (
-            companyInitials
+            companyInitials || <AvatarPending />
           )}
         </Link>
       ) : (
@@ -429,7 +443,7 @@ export function NavRailV2({ className }: { className?: string }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={companyLogo} alt={companyName || "Empresa"} className="size-full object-cover" />
             ) : (
-              companyInitials
+              companyInitials || <AvatarPending />
             )}
           </DropdownMenuTrigger>
 
@@ -447,7 +461,7 @@ export function NavRailV2({ className }: { className?: string }) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={companyLogo} alt={companyName || "Empresa"} className="size-full object-cover" />
                 ) : (
-                  companyInitials
+                  companyInitials || <AvatarPending />
                 )}
               </div>
               <div className="min-w-0">

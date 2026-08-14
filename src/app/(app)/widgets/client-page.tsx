@@ -9,6 +9,7 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { WidgetsIcon } from "@/components/icons/widgets-icon";
 import { PageHeader } from "@/components/crm/page-header";
@@ -208,16 +209,7 @@ export default function WidgetsClientPage({
 }
 
 function LoadingState() {
-  return (
-    <div className="grid min-w-0 auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div
-          key={i}
-          className="h-[380px] animate-pulse rounded-lg border border-slate-200 bg-white"
-        />
-      ))}
-    </div>
-  );
+  return <AppLoading variant="inline" className="min-h-[420px]" />;
 }
 
 function ErrorState({ message }: { message: string }) {

@@ -1090,3 +1090,42 @@
     animation: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   AppLoading — estado de carregamento único do app (ver
+   components/crm/app-loading.tsx). Respiro suave da marca + faixa
+   indeterminada; nada que imite o layout final.
+   ══════════════════════════════════════════════════════════════════ */
+@keyframes app-loading-halo {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50%      { opacity: 0.8;  transform: scale(1.1); }
+}
+@keyframes app-loading-mark {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-2px) scale(1.02); }
+}
+@keyframes app-loading-track {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(320%); }
+}
+
+.app-loading-halo {
+  animation: app-loading-halo 2.4s ease-in-out infinite;
+}
+.app-loading-mark {
+  animation: app-loading-mark 2.4s ease-in-out infinite;
+}
+.app-loading-track {
+  animation: app-loading-track 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-loading-halo,
+  .app-loading-mark,
+  .app-loading-track {
+    animation: none;
+  }
+  .app-loading-halo { opacity: 0.5; }
+  /* Sem movimento a faixa vira uma barra estática de progresso. */
+  .app-loading-track { width: 100%; }
+}

@@ -25,6 +25,7 @@ import {
 
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
+import { AppLoading } from "@/components/crm/app-loading";
 import { useStageUrlSync } from "@/features/pipeline-v2/hooks";
 import { StageRibbon } from "@/components/sales-hub/stage-ribbon";
 import {
@@ -735,6 +736,14 @@ export function SalesHubView({
 
   const hubChromeCompact = false;
 
+  // Board/etapa ainda sem dados: UM loading na área de conteúdo. Desenhar o
+  // ribbon e o header da fila aqui pintava "Todos 0" / "…" — preview falso do
+  // layout final. Os gates que alimentam `chromePending` são todos limitados
+  // (snapshot, erro ou hold de 50ms), então isto nunca fica preso.
+  if (chromePending) {
+    return <AppLoading variant="panel" className="h-full" />;
+  }
+
   return (
     // Root transparente: deixa o mesh lavanda do v2-screen aparecer
     // (mesmo contraste coluna/card do kanban). Estrutura split preservada.
@@ -749,7 +758,6 @@ export function SalesHubView({
         onSelectStage={handleSelectStage}
         totalDeals={totalDeals}
         compact={hubChromeCompact}
-        pending={chromePending}
       />
 
       <div
@@ -793,7 +801,7 @@ export function SalesHubView({
                   className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 font-display text-[11px] font-bold text-white"
                   style={{ background: queueStageHeader.color }}
                 >
-                  {chromePending ? "…" : queueStageHeader.count}
+                  {queueStageHeader.count}
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
@@ -810,9 +818,7 @@ export function SalesHubView({
               aria-hidden
             />
             <p className="mt-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">
-              {chromePending
-                ? "…"
-                : formatCurrency(queueStageHeader.totalValue)}
+              {formatCurrency(queueStageHeader.totalValue)}
             </p>
           </header>
 
@@ -865,11 +871,7 @@ export function SalesHubView({
               </span>
             </div>
           ) : null}
-          {chromePending ? (
-            <div className="flex flex-1 items-center justify-center bg-[var(--color-chat-bg)]">
-              <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            </div>
-          ) : !activeDealId ? (
+          {!activeDealId ? (
             <SalesHubChatEmptyState
               title="Selecione um negócio"
               subtitle="Escolha um card na fila à esquerda para abrir a conversa."

@@ -17,7 +17,7 @@ import {
   IconRefresh,
   type Icon as TablerIcon,
 } from "@tabler/icons-react"
-import { Skeleton } from "@/components/ui/skeleton"
+import { AppLoading } from "@/components/crm/app-loading"
 import { InputGlass } from "./input-glass"
 import { type TabItem } from "./tabs-glass"
 import { TooltipGlass } from "./tooltip-glass"
@@ -533,18 +533,7 @@ export function ConversationColumn({
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5 [-webkit-overflow-scrolling:touch]">
         <div className="flex flex-col gap-1.5">
         {isLoading ? (
-          Array.from({ length: 6 }, (_, i) => (
-            <div
-              key={i}
-              className="flex shrink-0 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-3"
-            >
-              <Skeleton className="size-10 shrink-0 rounded-full" />
-              <div className="min-w-0 flex-1 space-y-2">
-                <Skeleton className="h-3.5 w-2/3 rounded" />
-                <Skeleton className="h-3 w-full rounded" />
-              </div>
-            </div>
-          ))
+          <AppLoading variant="inline" className="min-h-[280px]" />
         ) : (
           <>
             {displayed.map((conversation) => {

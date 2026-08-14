@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { IconArrowLeft, IconMessageCircle } from "@tabler/icons-react";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import {
   DealDetailsPanel,
@@ -270,7 +271,9 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
 
       <div className="grid min-h-0 grid-cols-[380px_1fr] gap-4 overflow-hidden">
         {dealQuery.isLoading && !record ? (
-          <aside className="animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
+          <aside className="flex min-h-0 flex-col">
+            <AppLoading variant="panel" />
+          </aside>
         ) : dealQuery.error ? (
           <DealErrorPanel
             message={

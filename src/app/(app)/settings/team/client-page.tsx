@@ -48,6 +48,7 @@ import { UserAvatar } from "@/components/crm/user-avatar";
 import { ExpedienteTab } from "@/features/legacy-v1/settings/schedules";
 import { DepartmentsTab } from "@/features/conversations-settings/components/DepartmentsTab";
 import { useSearchParams } from "next/navigation";
+import { AppLoading } from "@/components/crm/app-loading";
 import { cn } from "@/lib/utils";
 import {
   CRM_ACTION_KEYS,
@@ -736,14 +737,7 @@ function TeamContent() {
 
       {/* LISTA — linha a linha (padrão canônico) */}
       {isLoading && users.length === 0 ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[64px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
-            />
-          ))}
-        </div>
+        <AppLoading variant="inline" className="min-h-[320px]" />
       ) : filtered.length === 0 ? (
         <GlassCard variant="panel" className="px-6 py-12 text-center font-body text-[13px] text-[var(--text-muted)]">
           {term || roleFilter !== "all"

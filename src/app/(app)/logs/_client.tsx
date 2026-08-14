@@ -42,6 +42,7 @@ import { format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import {
@@ -613,7 +614,7 @@ export default function LogsClientPage() {
             )}
 
             {isLoading && allItems.length === 0 ? (
-              <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
+              <AppLoading variant="inline" className="min-h-[400px]" />
             ) : isError && !isDemo ? (
               <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
                 Não foi possível carregar o feed.
@@ -730,14 +731,7 @@ export default function LogsClientPage() {
           <SystemUsageTab range={usagePeriod.range} />
         ) : isCalls ? (
           callsWidget.isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-16 animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md"
-                />
-              ))}
-            </div>
+            <AppLoading variant="inline" />
           ) : callsWidget.enabled !== true ? (
             <CallsNotEnabledState />
           ) : (

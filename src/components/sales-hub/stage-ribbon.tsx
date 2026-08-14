@@ -21,8 +21,6 @@ type StageRibbonProps = {
   onSelectStage: (stageId: string | null) => void;
   /** Menos altura — com deal ativo no hub, libera espaço para o chat. */
   compact?: boolean;
-  /** Board ainda sem dados — não pintar "Todos 0" como se a fila estivesse vazia. */
-  pending?: boolean;
 };
 
 /** Primeiro segmento: borda reta à esquerda, ponta à direita. */
@@ -39,7 +37,6 @@ function StageChevron({
   active,
   first,
   compact,
-  pending,
   onClick,
 }: {
   label: string;
@@ -48,7 +45,6 @@ function StageChevron({
   active: boolean;
   first: boolean;
   compact: boolean;
-  pending?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -87,7 +83,7 @@ function StageChevron({
               }
         }
       >
-        {pending ? "…" : count}
+        {count}
       </span>
     </button>
   );
@@ -99,7 +95,6 @@ export function StageRibbon({
   selectedStageId,
   onSelectStage,
   compact = false,
-  pending = false,
 }: StageRibbonProps) {
   const allActive = selectedStageId === null;
   const allColor = "var(--brand-primary, #5b6ff5)";
@@ -123,7 +118,6 @@ export function StageRibbon({
           active={allActive}
           first
           compact={compact}
-          pending={pending}
           onClick={() => onSelectStage(null)}
         />
 
@@ -138,7 +132,6 @@ export function StageRibbon({
               active={isActive}
               first={false}
               compact={compact}
-              pending={pending}
               onClick={() => onSelectStage(isActive ? null : stage.id)}
             />
           );

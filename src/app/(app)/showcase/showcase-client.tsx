@@ -232,7 +232,7 @@ const STAGES = [
 // ---------------------------------------------------------------------------
 
 export function ShowcaseClient() {
-  const [activeTab, setActiveTab] = useState("tokens")
+  const [activeTab, setActiveTab] = useState(0)
   const [checked, setChecked] = useState(false)
   const [toggled, setToggled] = useState(true)
   const [search, setSearch] = useState("")
@@ -454,14 +454,11 @@ export function ShowcaseClient() {
           </Block>
 
           {/* StatusPill */}
-          <Block title="StatusPill" usage="variant: online | offline | active | inactive | pending | success | danger | warning." row>
-            <StatusPill variant="online">Online</StatusPill>
-            <StatusPill variant="active">Ativo</StatusPill>
+          <Block title="StatusPill" usage="variant: enterprise | lead | success. showDot adiciona o ponto de status." row>
+            <StatusPill variant="enterprise">Enterprise</StatusPill>
+            <StatusPill variant="lead">Lead</StatusPill>
             <StatusPill variant="success">Ganho</StatusPill>
-            <StatusPill variant="pending">Pendente</StatusPill>
-            <StatusPill variant="danger">Perdido</StatusPill>
-            <StatusPill variant="warning">Em risco</StatusPill>
-            <StatusPill variant="offline">Offline</StatusPill>
+            <StatusPill variant="success" showDot>Online</StatusPill>
           </Block>
 
           {/* DeltaPill */}
@@ -470,7 +467,7 @@ export function ShowcaseClient() {
             <DeltaPill value={-3.7} />
             <DeltaPill value={0} />
             <DeltaPill value={28.5} suffix="k" />
-            <DeltaPill value={-8.1} size="lg" />
+            <DeltaPill value={-8.1} size="sm" />
           </Block>
 
           {/* Avatares */}
@@ -513,12 +510,12 @@ export function ShowcaseClient() {
           </Block>
 
           {/* Tabs */}
-          <Block title="TabsGlass" usage="tabs: TabItem[]. activeTab controla a aba selecionada. onChange dispara no clique.">
+          <Block title="TabsGlass" usage="tabs: string[] | TabItem[]. activeTab é o índice da aba selecionada. onChange recebe o índice clicado.">
             <TabsGlass
               tabs={[
-                { id: "tokens", label: "Tokens" },
-                { id: "componentes", label: "Componentes" },
-                { id: "exemplos", label: "Exemplos" },
+                { label: "Tokens" },
+                { label: "Componentes", count: 12 },
+                { label: "Exemplos" },
               ]}
               activeTab={activeTab}
               onChange={setActiveTab}
@@ -526,7 +523,7 @@ export function ShowcaseClient() {
           </Block>
 
           {/* Switch e Checkbox */}
-          <Block title="SwitchGlass + CheckboxGlass" usage="Controles de estado binário. SwitchGlass usa onChange; CheckboxGlass usa onCheckedChange. Ambos suportam disabled." row>
+          <Block title="SwitchGlass + CheckboxGlass" usage="Controles de estado binário. Ambos usam onChange e suportam disabled. CheckboxGlass também aceita indeterminate." row>
             <div className="flex items-center gap-2">
               <SwitchGlass
                 aria-label="Notificações ativas"
@@ -539,16 +536,22 @@ export function ShowcaseClient() {
               <SwitchGlass aria-label="Modo silencioso" checked={false} onChange={() => {}} disabled />
               <span className="text-[13px] text-[var(--text-muted)]">Modo silencioso (disabled)</span>
             </div>
-            <CheckboxGlass
-              label="Aceitar termos"
-              checked={checked}
-              onCheckedChange={setChecked}
-            />
-            <CheckboxGlass label="Desabilitado" checked disabled onCheckedChange={() => {}} />
+            <div className="flex items-center gap-2">
+              <CheckboxGlass
+                aria-label="Aceitar termos"
+                checked={checked}
+                onChange={setChecked}
+              />
+              <span className="text-[13px] text-[var(--text-primary)]">Aceitar termos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckboxGlass aria-label="Indeterminado" indeterminate onChange={() => {}} />
+              <span className="text-[13px] text-[var(--text-muted)]">Indeterminado</span>
+            </div>
           </Block>
 
           {/* DropdownGlass */}
-          <Block title="DropdownGlass" usage="options: DropdownOption[]. value controlado via onChange. Suporta placeholder e disabled." row>
+          <Block title="DropdownGlass" usage="options: DropdownOption[]. value controlado via onValueChange. Suporta placeholder, menuLabel e gatilho customizado." row>
             <DropdownGlass
               options={[
                 { value: "st-1", label: "Novo lead" },
@@ -556,18 +559,18 @@ export function ShowcaseClient() {
                 { value: "st-3", label: "Proposta" },
                 { value: "st-4", label: "Negociação" },
               ]}
-              value={dropdown}
-              onChange={setDropdown}
+              value={dropdown ?? undefined}
+              onValueChange={setDropdown}
               placeholder="Selecionar estágio"
             />
           </Block>
 
           {/* TooltipGlass */}
-          <Block title="TooltipGlass" usage="content: texto ou ReactNode. side: top | right | bottom | left. Usa Radix UI internamente." row>
-            <TooltipGlass content="Este é um tooltip informativo" side="top">
+          <Block title="TooltipGlass" usage="label: texto ou ReactNode. side: top | right | bottom | left. Usa Radix UI internamente." row>
+            <TooltipGlass label="Este é um tooltip informativo" side="top">
               <ButtonGlass variant="glass" size="sm">Passe o mouse</ButtonGlass>
             </TooltipGlass>
-            <TooltipGlass content="Deletar conversa — ação irreversível" side="right">
+            <TooltipGlass label="Deletar conversa — ação irreversível" side="right">
               <ButtonGlass variant="icon" size="icon" aria-label="Info">
                 <IconBell size={16} />
               </ButtonGlass>
@@ -575,8 +578,17 @@ export function ShowcaseClient() {
           </Block>
 
           {/* Paginação */}
-          <Block title="PaginationGlass" usage="page, totalPages e onPageChange controlados. Exibe navegação anterior/próxima com intervalo de páginas.">
-            <PaginationGlass page={page} totalPages={12} onPageChange={setPage} />
+          <Block title="PaginationGlass" usage="page/lastPage com canPrev/canNext e onPrev/onNext controlados. total + entityLabel renderizam o resumo à esquerda.">
+            <PaginationGlass
+              total={287}
+              entityLabel="contatos"
+              page={page}
+              lastPage={12}
+              canPrev={page > 1}
+              canNext={page < 12}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => Math.min(12, p + 1))}
+            />
           </Block>
 
           {/* StagePills */}
@@ -590,9 +602,9 @@ export function ShowcaseClient() {
         ================================================================ */}
         <Section id="superficies" icon={IconLayoutCards} title="Superfícies de vidro">
 
-          <Block title="GlassCard variants" usage="variant: base | overlay | panel | strong | modal. Backdrop-blur cresce com o nível de elevação.">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-              {(["base", "overlay", "panel", "strong", "modal"] as const).map((v) => (
+          <Block title="GlassCard variants" usage="variant: default | base | subtle | overlay | panel | strong. Backdrop-blur cresce com o nível de elevação.">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              {(["default", "base", "subtle", "overlay", "panel", "strong"] as const).map((v) => (
                 <GlassCard key={v} variant={v} className="flex flex-col items-center justify-center gap-2 p-6">
                   <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">{v}</span>
                 </GlassCard>
@@ -657,7 +669,7 @@ export function ShowcaseClient() {
                 label="Conversas ativas"
                 value="1.284"
                 delta={12.4}
-                deltaLabel="vs. semana passada"
+                caption="vs. semana passada"
               />
               <StatCard
                 accent="success"
@@ -665,7 +677,7 @@ export function ShowcaseClient() {
                 label="Leads ganhos"
                 value="312"
                 delta={8.7}
-                deltaLabel="vs. mês passado"
+                caption="vs. mês passado"
               />
               <StatCard
                 accent="warning"
@@ -673,7 +685,7 @@ export function ShowcaseClient() {
                 label="Aguardando resp."
                 value="47"
                 delta={-3.2}
-                deltaLabel="vs. ontem"
+                caption="vs. ontem"
               />
               <StatCard
                 accent="danger"
@@ -681,18 +693,18 @@ export function ShowcaseClient() {
                 label="Leads perdidos"
                 value="18"
                 delta={-22.5}
-                deltaLabel="vs. semana passada"
+                caption="vs. semana passada"
               />
             </div>
           </Block>
 
           {/* StatTile */}
-          <Block title="StatTile" usage="tone: brand | success | warning | danger | purple | teal. Versão compacta inline para dashboards e barras de resumo.">
+          <Block title="StatTile" usage="tone: brand | success | neutral | violet. Versão compacta inline para dashboards e barras de resumo.">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <StatTile label="Receita" value="R$ 128k" icon={<IconCurrencyDollar size={16} />} tone="success" hint="+12% mês" />
               <StatTile label="Oportunidades" value="74" icon={<IconTrendingUp size={16} />} tone="brand" hint="no funil" />
-              <StatTile label="Taxa fechamento" value="34%" icon={<IconTargetArrow size={16} />} tone="purple" />
-              <StatTile label="Tempo médio resp." value="4m 22s" icon={<IconClock size={16} />} tone="warning" />
+              <StatTile label="Taxa fechamento" value="34%" icon={<IconTargetArrow size={16} />} tone="violet" />
+              <StatTile label="Tempo médio resp." value="4m 22s" icon={<IconClock size={16} />} tone="neutral" />
             </div>
           </Block>
 
@@ -714,11 +726,10 @@ export function ShowcaseClient() {
           </Block>
 
           {/* SessionAlert */}
-          <Block title="SessionAlert" usage="Exibido quando a sessão de WhatsApp está inativa. Aceita onSendTemplate callback.">
+          <Block title="SessionAlert" usage="Exibido quando a sessão de WhatsApp está inativa. title/body/actionLabel são customizáveis; onUseTemplate é o callback da ação.">
             <div className="max-w-md">
               <SessionAlert
-                contactName="Maria Eduarda"
-                onSendTemplate={() => {}}
+                onUseTemplate={() => {}}
               />
             </div>
           </Block>
@@ -832,7 +843,7 @@ export function ShowcaseClient() {
                         <IconBolt size={12} />
                         <span>{a.steps} ações</span>
                       </div>
-                      <StatusPill variant={a.active ? "active" : "offline"} showDot>
+                      <StatusPill variant={a.active ? "success" : "lead"} showDot>
                         {a.active ? "Ativo" : "Inativo"}
                       </StatusPill>
                     </div>

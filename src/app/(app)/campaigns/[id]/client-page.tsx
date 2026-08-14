@@ -19,6 +19,7 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { EmptyState } from "@/components/crm/empty-state";
@@ -115,7 +116,7 @@ export default function CampaignDetailClientPage() {
   if (campaignQuery.isLoading) {
     return (
       <Shell>
-        <div className="h-40 animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
+        <AppLoading variant="inline" />
       </Shell>
     );
   }

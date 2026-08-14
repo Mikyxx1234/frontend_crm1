@@ -35,6 +35,7 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { UserAvatar } from "@/components/crm/user-avatar";
 import { AgentStatusDot } from "@/components/crm/agent-status-dot";
@@ -3820,13 +3821,6 @@ function ErrorState({ message }: { message: string }) {
 
 function SkeletonState() {
   return (
-    <div className="space-y-3">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div
-          key={i}
-          className="h-16 animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md"
-        />
-      ))}
-    </div>
+    <AppLoading variant="inline" className="min-h-[280px]" />
   );
 }

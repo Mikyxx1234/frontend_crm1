@@ -2,6 +2,7 @@ export type ConversationEventAction =
   | "distribuicao"
   | "transferencia"
   | "status"
+  | "tabulacao"
   | "tag"
   | "entrada"
   | "saida"

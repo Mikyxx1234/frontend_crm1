@@ -40,6 +40,7 @@ export function isConversationEventAction(
     value === "distribuicao" ||
     value === "transferencia" ||
     value === "status" ||
+    value === "tabulacao" ||
     value === "tag" ||
     value === "entrada" ||
     value === "saida" ||
@@ -68,8 +69,9 @@ export function inferEventActionFromText(
     return "distribuicao";
   }
   if (/transfer/.test(t)) return "transferencia";
+  if (/tabulad/.test(t)) return "tabulacao";
   if (
-    /status|tabulad|encerrad|reabert|resolvid/.test(t)
+    /status|encerrad|reabert|resolvid/.test(t)
   ) {
     return "status";
   }
@@ -96,11 +98,14 @@ export function classifyTimelineItem(
   }
 
   if (isEventMessageType(mt)) {
+    const inferred = inferEventActionFromText(input.content);
     return {
       kind: "event",
+      // Legado: tabulação era gravada como event:status
       action:
-        parseEventActionFromMessageType(mt) ??
-        inferEventActionFromText(input.content),
+        inferred === "tabulacao"
+          ? "tabulacao"
+          : parseEventActionFromMessageType(mt) ?? inferred,
     };
   }
 

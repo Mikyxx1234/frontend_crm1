@@ -13,6 +13,7 @@ import type { FilterOptionsResponse } from "@/components/pipeline/kanban-filters
 
 import {
   createCampaign,
+  deleteCampaign,
   fetchAudienceOptions,
   fetchAutomations,
   fetchCampaign,
@@ -119,6 +120,16 @@ export function useCreateCampaign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateCampaignBody) => createCampaign(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...CAMPAIGNS_KEY, "list"] });
+    },
+  });
+}
+
+export function useDeleteCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteCampaign(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [...CAMPAIGNS_KEY, "list"] });
     },

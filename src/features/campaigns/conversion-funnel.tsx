@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 import type { CampaignListItem } from "./types";
 import { nf, rate } from "./viz";
 
@@ -27,22 +29,33 @@ export function ConversionFunnel({ campaign }: { campaign: CampaignListItem }) {
   const base = Math.max(total, sent, 1);
 
   return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <div className="flex h-8 items-end gap-1">
-        {STAGES.map((s) => {
+    <div className="flex min-w-0 flex-col gap-2 overflow-visible pt-8">
+      <div className="flex h-8 items-end gap-1 overflow-visible">
+        {STAGES.map((s, i) => {
           const val = stageValue(campaign, s.key);
           const pct = Math.round((val / base) * 100);
           const ofSent =
             s.key === "read" || s.key === "replied" ? rate(val, sent) : rate(val, total);
+          const tipAlign =
+            i === 0
+              ? "left-0 translate-x-0"
+              : i === STAGES.length - 1
+                ? "right-0 left-auto translate-x-0"
+                : "left-1/2 -translate-x-1/2";
           return (
-            <div key={s.key} className="group relative min-w-0 flex-1">
+            <div key={s.key} className="group relative z-0 min-w-0 flex-1 overflow-visible hover:z-30">
               <div className="flex h-8 items-end overflow-hidden rounded-md bg-[var(--glass-bg-overlay)]">
                 <div
                   className={`w-full rounded-md ${s.tone}`}
                   style={{ height: `${Math.max(8, pct)}%` }}
                 />
               </div>
-              <div className="pointer-events-none absolute -top-7 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-[var(--text-primary)] px-2 py-1 font-body text-[10px] font-medium text-[var(--glass-bg-base)] opacity-0 transition-opacity group-hover:opacity-100 sm:block">
+              <div
+                className={cn(
+                  "pointer-events-none absolute -top-7 z-30 hidden whitespace-nowrap rounded-md bg-[var(--text-primary)] px-2 py-1 font-body text-[10px] font-medium text-[var(--glass-bg-base)] opacity-0 transition-opacity group-hover:opacity-100 sm:block",
+                  tipAlign,
+                )}
+              >
                 {s.label}: {nf(val)} · {ofSent}%
               </div>
             </div>

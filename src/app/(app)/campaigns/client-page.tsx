@@ -20,19 +20,18 @@ import { PageActionsMenu, PagePrimaryButton, PageSegmentedControl } from "@/comp
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { cn } from "@/lib/utils";
 
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
+
 import { CampaignRow } from "@/features/campaigns/campaign-row";
-import { useCampaigns } from "@/features/campaigns/hooks";
+import { CampaignsMiniDash } from "@/features/campaigns/mini-dash";
+import { useCampaigns, useDeleteCampaign } from "@/features/campaigns/hooks";
 import { MOCK_CAMPAIGNS_PAGE, mockCampaignsPage } from "@/features/campaigns/mock-campaigns";
 import { CAMPAIGN_STATUS_FILTERS } from "@/features/campaigns/constants";
 import { SortControl } from "@/features/campaigns/sort-control";
-import type { CampaignStatus } from "@/features/campaigns/types";
-import { VolumeChart } from "@/features/campaigns/volume-chart";
-import {
-  campaignDayKey,
-  sortCampaigns,
-  type CampaignSortKey,
-} from "@/features/campaigns/viz";
-import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
+import type { CampaignListItem, CampaignStatus } from "@/features/campaigns/types";
+import { sortCampaigns, type CampaignSortKey } from "@/features/campaigns/viz";
+import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const DEFAULT_PER_PAGE = 25;
 
@@ -46,7 +45,8 @@ export default function CampaignsClientPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [sortKey, setSortKey] = useState<CampaignSortKey>("readRate");
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const deleteMutation = useDeleteCampaign();
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -111,15 +111,38 @@ export default function CampaignsClientPage() {
   const error = isDemoBase ? null : listQuery.error;
 
   const dashSource = isDemoBase ? MOCK_CAMPAIGNS_PAGE.items : realItems;
-  const visibleItems = useMemo(() => {
-    const source = selectedDate
-      ? dashSource.filter((c) => campaignDayKey(c.createdAt) === selectedDate)
-      : allItems;
-    return sortCampaigns(source, sortKey);
-  }, [allItems, dashSource, selectedDate, sortKey]);
+  const visibleItems = useMemo(
+    () => sortCampaigns(allItems, sortKey),
+    [allItems, sortKey],
+  );
   const clearFilters = () => {
     setStatusFilter("");
     setSearch("");
+  };
+
+  const handleDelete = async (campaign: CampaignListItem) => {
+    if (isDemoBase || isPageMockMode() || campaign.id.startsWith("camp-")) {
+      toast.info("Modo demonstração — exclusão indisponível.");
+      return;
+    }
+    const ok = await confirm({
+      title: "Excluir campanha?",
+      description: (
+        <>
+          Tem certeza que deseja excluir <strong>{campaign.name}</strong>? Esta
+          ação não pode ser desfeita.
+        </>
+      ),
+      confirmLabel: "Excluir",
+      cancelLabel: "Cancelar",
+      destructive: true,
+    });
+    if (!ok) return;
+    deleteMutation.mutate(campaign.id, {
+      onSuccess: () => toast.success(`Campanha "${campaign.name}" excluída.`),
+      onError: (err) =>
+        toast.error(err instanceof Error ? err.message : "Erro ao excluir campanha."),
+    });
   };
 
   return (
@@ -160,11 +183,7 @@ export default function CampaignsClientPage() {
           }
         />
 
-        <VolumeChart
-          items={dashSource}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-        />
+        <CampaignsMiniDash items={dashSource} />
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
@@ -190,60 +209,47 @@ export default function CampaignsClientPage() {
                   icon={<IconSpeakerphone size={28} />}
                   title="Nenhuma campanha"
                   description={
-                    selectedDate
-                      ? "Nenhuma campanha neste dia."
-                      : debouncedSearch
-                        ? `Sem resultados para "${debouncedSearch}".`
-                        : statusFilter
-                          ? "Nenhuma campanha com esse status."
-                          : "Crie sua primeira campanha para disparar mensagens em massa."
+                    debouncedSearch
+                      ? `Sem resultados para "${debouncedSearch}".`
+                      : statusFilter
+                        ? "Nenhuma campanha com esse status."
+                        : "Crie sua primeira campanha para disparar mensagens em massa."
                   }
                   action={
-                    selectedDate ? (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDate(null)}
-                        className="font-display text-[12px] font-semibold text-[var(--brand-primary)] hover:underline"
-                      >
-                        Limpar filtro do gráfico
-                      </button>
-                    ) : (
-                      <PagePrimaryButton href="/campaigns/new">
-                        <IconPlus size={15} stroke={2.4} /> Nova campanha
-                      </PagePrimaryButton>
-                    )
+                    <PagePrimaryButton href="/campaigns/new">
+                      <IconPlus size={15} stroke={2.4} /> Nova campanha
+                    </PagePrimaryButton>
                   }
                 />
               </div>
             ) : (
               <div className="flex flex-col gap-2.5 pb-3">
                 {visibleItems.map((c) => (
-                  <CampaignRow key={c.id} campaign={c} />
+                  <CampaignRow key={c.id} campaign={c} onDelete={handleDelete} />
                 ))}
               </div>
             )}
           </div>
 
-          {!selectedDate && (
-            <PaginationGlass
-              className="shrink-0"
-              total={total}
-              entityLabel="campanhas"
-              page={safePage}
-              lastPage={lastPage}
-              canPrev={safePage > 1}
-              canNext={safePage < lastPage}
-              onPrev={() => setPage((p) => Math.max(1, p - 1))}
-              onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
-              perPage={perPage}
-              onPerPageChange={(value) => {
-                setPerPage(value);
-                setPage(1);
-              }}
-            />
-          )}
+          <PaginationGlass
+            className="shrink-0"
+            total={total}
+            entityLabel="campanhas"
+            page={safePage}
+            lastPage={lastPage}
+            canPrev={safePage > 1}
+            canNext={safePage < lastPage}
+            onPrev={() => setPage((p) => Math.max(1, p - 1))}
+            onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+            perPage={perPage}
+            onPerPageChange={(value) => {
+              setPerPage(value);
+              setPage(1);
+            }}
+          />
         </div>
       </main>
+      {confirmDialog}
     </div>
   );
 }

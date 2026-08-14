@@ -57,6 +57,13 @@ export function isSendingLike(c: CampaignListItem): boolean {
   return c.status === "SENDING" || c.status === "PROCESSING";
 }
 
+/** Status que o DELETE /api/campaigns/:id aceita. */
+const DELETABLE: CampaignStatus[] = ["DRAFT", "COMPLETED", "CANCELLED", "FAILED"];
+
+export function isDeletable(c: CampaignListItem): boolean {
+  return DELETABLE.includes(c.status);
+}
+
 export function anomalies(c: CampaignListItem): string[] {
   const total = c.totalRecipients || 0;
   const sent = c.sentCount || 0;

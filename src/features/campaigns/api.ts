@@ -192,6 +192,15 @@ export function runCampaignAction(
   );
 }
 
+export function deleteCampaign(id: string): Promise<{ ok: boolean }> {
+  return sendJson<{ ok: boolean }>(
+    `/api/campaigns/${id}`,
+    "DELETE",
+    undefined,
+    "Erro ao excluir campanha.",
+  );
+}
+
 export function previewAudience(
   filters: CampaignFilters,
 ): Promise<PreviewResponse> {

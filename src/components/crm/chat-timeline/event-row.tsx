@@ -25,16 +25,6 @@ const ACTION_ICON: Record<ConversationEventAction, LucideIcon> = {
   ia: Sparkles,
 };
 
-const ACTION_LABEL: Record<ConversationEventAction, string> = {
-  distribuicao: "Distribuição",
-  transferencia: "Transferência",
-  status: "Status",
-  tag: "Tag",
-  entrada: "Entrada",
-  saida: "Saída",
-  ia: "Agente IA",
-};
-
 export type EventRowProps = {
   action: ConversationEventAction;
   text: string;
@@ -51,7 +41,6 @@ export function EventRow({
   className,
 }: EventRowProps) {
   const Icon = ACTION_ICON[action] ?? Sparkles;
-  const actionLabel = ACTION_LABEL[action] ?? ACTION_LABEL.ia;
 
   return (
     <div
@@ -61,15 +50,15 @@ export function EventRow({
       )}
     >
       <span className="h-px min-w-4 flex-1 bg-border" aria-hidden />
-      <p className="flex min-w-0 max-w-[min(100%,36rem)] flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-center text-xs text-muted-foreground">
+      <p
+        className="flex min-w-0 max-w-[min(100%,36rem)] flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-center text-xs text-muted-foreground"
+        aria-label={text}
+      >
         <Icon
           className="size-3.5 shrink-0 text-primary"
           strokeWidth={2}
           aria-hidden
         />
-        <span className="sr-only">
-          Evento do sistema, {actionLabel}.{" "}
-        </span>
         <span className="text-foreground/80">{text}</span>
         {actor ? (
           <span className="text-muted-foreground">· {actor}</span>

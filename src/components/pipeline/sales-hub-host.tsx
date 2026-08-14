@@ -51,6 +51,16 @@ import {
   type AdvancedDealFilters,
 } from "@/components/pipeline/kanban-filters/types";
 
+/** Restante no servidor: flag `hasMore` OU `totalCount > deals.length`. */
+function stageHasMoreServer(s: {
+  hasMore?: boolean;
+  totalCount?: number;
+  deals: { length: number };
+}): boolean {
+  if (s.hasMore === true) return true;
+  return typeof s.totalCount === "number" && s.deals.length < s.totalCount;
+}
+
 const SALESHUB_QUEUE_SORT_LS = "saleshub-queue-sort:v1";
 /** Mesma chave do kanban — busca compartilha entre views. */
 const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
@@ -261,22 +271,22 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const [boardExtraByStage, setBoardExtraByStage] = useState<Record<string, number>>({});
   const [loadingMoreQueue, setLoadingMoreQueue] = useState(false);
 
-  const boardNormal = useBoard({
-    pipelineId,
-    status,
-    sort: boardSort,
-    // Desliga o GET com filtros ativos (economiza rede); o cache do
-    // query ainda alimenta o fallback visual no 1º POST.
-    enabled: isAuthenticated && !hasServerBoard,
-    perStage: BOARD_PAGE_SIZE,
-    offsetByStage: boardExtraByStage,
-  });
   const boardFiltered = useBoardFiltered({
     pipelineId,
     status,
     filters: queryFilters,
     sort: boardSort,
     enabled: isAuthenticated && hasServerBoard,
+  });
+  const boardNormal = useBoard({
+    pipelineId,
+    status,
+    sort: boardSort,
+    // Mantém o GET até o POST filtrado resolver — senão LS de filtros
+    // desliga o board normal no mount e a fila abre vazia ("Todos 0").
+    enabled: isAuthenticated && (!hasServerBoard || !boardFiltered.data),
+    perStage: BOARD_PAGE_SIZE,
+    offsetByStage: boardExtraByStage,
   });
 
   usePipelineRealtime(isAuthenticated);
@@ -304,15 +314,16 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     setLoadingMoreQueue(false);
   }, [pipelineId, status, boardSort, hasServerBoard]);
 
-  const handleQueueLoadMore = useCallback(() => {
-    const stagesWithMore = (boardNormal.data ?? []).filter(
-      (s) => s.hasMore === true,
-    );
-    if (stagesWithMore.length === 0) return;
+  const handleQueueLoadMore = useCallback((stageId?: string | null) => {
+    const stages = boardNormal.data ?? [];
+    const targets = (
+      stageId ? stages.filter((s) => s.id === stageId) : stages
+    ).filter(stageHasMoreServer);
+    if (targets.length === 0) return;
     setLoadingMoreQueue(true);
     setBoardExtraByStage((prev) => {
       const next = { ...prev };
-      for (const s of stagesWithMore) {
+      for (const s of targets) {
         next[s.id] = (next[s.id] ?? 0) + BOARD_PAGE_SIZE;
       }
       return next;
@@ -321,9 +332,17 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
 
   // Com filtros server-side o boardFiltered segue perStage 200 — sem
   // load-more de rede (espelha o kanban, que esconde o botão).
+  // Não depende só de `hasMore === true`: badge usa totalCount e o
+  // flag às vezes falta no cache — restante = total − loaded.
   const queueHasMore =
-    !hasServerBoard &&
-    (boardNormal.data ?? []).some((s) => s.hasMore === true);
+    !hasServerBoard && (boardNormal.data ?? []).some(stageHasMoreServer);
+
+  const boardPending =
+    !hasServerBoard
+      ? !boardNormal.data && (boardNormal.isPending || boardNormal.isFetching)
+      : !boardFiltered.data &&
+        !boardNormal.data &&
+        (boardFiltered.isPending || boardFiltered.isFetching);
 
   const boardRefreshing =
     filtersPendingDebounce ||
@@ -667,6 +686,7 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
             queueHasMore={queueHasMore}
             queueLoadingMore={loadingMoreQueue}
             onQueueLoadMore={handleQueueLoadMore}
+            queueBoardPending={boardPending}
             activeDealId={resolvedDealId}
             onActiveDealChange={setActiveDeal}
             detailDeal={detailDeal}

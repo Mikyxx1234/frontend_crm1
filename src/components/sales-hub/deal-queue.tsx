@@ -260,7 +260,11 @@ type DealQueueProps = {
    * dispara `onLoadMore` em vez de só crescer a janela.
    */
   hasMoreServer?: boolean;
+  /** Cards que ainda faltam no servidor (totalCount − loaded). */
+  remainingCount?: number;
   loadingMore?: boolean;
+  /** Board sem dados ainda — skeleton em vez de "Nenhum deal encontrado". */
+  isLoading?: boolean;
   onLoadMore?: () => void;
   /**
    * Etapa filtrada (`null` = Todos). Quando muda, a fila volta ao topo
@@ -425,7 +429,9 @@ export function DealQueue({
   recentlyMovedDealId,
   sortMode,
   hasMoreServer = false,
+  remainingCount = 0,
   loadingMore = false,
+  isLoading = false,
   onLoadMore,
   selectedStageId,
   stageSwitchToken = 0,
@@ -533,9 +539,11 @@ export function DealQueue({
   // fila renderiza sob demanda conforme o scroll.
   const QUEUE_PAGE = 60;
   const [renderLimit, setRenderLimit] = useState(QUEUE_PAGE);
+  const lastNetworkLoadAtCountRef = useRef(-1);
   // Troca de etapa/ordenação já rola pro topo — a janela volta ao início.
   useEffect(() => {
     setRenderLimit(QUEUE_PAGE);
+    lastNetworkLoadAtCountRef.current = -1;
   }, [stageListKey, sortMode]);
   // Deep-link/navegação por teclado: garante que o deal ativo esteja
   // dentro da janela renderizada (senão o scrollIntoView não tem alvo).
@@ -546,10 +554,10 @@ export function DealQueue({
   const windowedDeals = visibleDeals.slice(0, effectiveLimit);
   const hasMoreToRender = visibleDeals.length > effectiveLimit;
   const queueSentinelRef = useRef<HTMLDivElement>(null);
-  // Dois níveis de paginação: 1º esgota a janela local (+60); só então
-  // busca a próxima página na rede (+50/etapa, via host). Refs evitam
-  // recriar o observer a cada render (onLoadMore é inline no pai) e
-  // bloqueiam double-fire durante o fetch — padrão do KanbanColumn.
+  // Dois níveis: 1º janela local (+60); depois rede (+50/etapa).
+  // Sentinel permanece montado durante o fetch (antes sumia e o IO
+  // era destruído). Scroll listener cobre o caso em que o root do
+  // observer não é o scroller real ou o alvo h-px não intersecta.
   const showQueueSentinel = hasMoreToRender || hasMoreServer;
   const hasMoreToRenderRef = useRef(hasMoreToRender);
   hasMoreToRenderRef.current = hasMoreToRender;
@@ -559,25 +567,50 @@ export function DealQueue({
   loadingMoreRef.current = loadingMore;
   const onLoadMoreRef = useRef(onLoadMore);
   onLoadMoreRef.current = onLoadMore;
+  const visibleCountRef = useRef(visibleDeals.length);
+  visibleCountRef.current = visibleDeals.length;
   useEffect(() => {
+    const root = scrollerRef.current;
+    if (!root || !showQueueSentinel) return;
+
+    const maybeLoad = () => {
+      if (hasMoreToRenderRef.current) {
+        setRenderLimit((n) => n + QUEUE_PAGE);
+        return;
+      }
+      if (!hasMoreServerRef.current || loadingMoreRef.current) return;
+      if (lastNetworkLoadAtCountRef.current === visibleCountRef.current) return;
+      lastNetworkLoadAtCountRef.current = visibleCountRef.current;
+      onLoadMoreRef.current?.();
+    };
+
+    const onScroll = () => {
+      const gap = root.scrollHeight - root.scrollTop - root.clientHeight;
+      if (gap < 360) maybeLoad();
+    };
+    root.addEventListener("scroll", onScroll, { passive: true });
+
     const el = queueSentinelRef.current;
-    if (!el || !showQueueSentinel) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting) return;
-        if (hasMoreToRenderRef.current) {
-          setRenderLimit((n) => n + QUEUE_PAGE);
-        } else if (hasMoreServerRef.current && !loadingMoreRef.current) {
-          onLoadMoreRef.current?.();
-        }
-      },
-      { root: scrollerRef.current, rootMargin: "300px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-    // `loadingMore` nas deps: o sentinel desmonta durante o fetch (hint
-    // "Carregando…" ocupa o lugar) — ao terminar, re-observa o nó novo.
-  }, [showQueueSentinel, loadingMore]);
+    const io = el
+      ? new IntersectionObserver(
+          (entries) => {
+            if (entries[0]?.isIntersecting) maybeLoad();
+          },
+          { root, rootMargin: "400px 0px", threshold: 0 },
+        )
+      : null;
+    if (el && io) io.observe(el);
+
+    const raf = requestAnimationFrame(() => {
+      if (root.scrollHeight <= root.clientHeight + 8) maybeLoad();
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      root.removeEventListener("scroll", onScroll);
+      io?.disconnect();
+    };
+  }, [showQueueSentinel, windowedDeals.length, visibleDeals.length]);
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-transparent">
@@ -632,19 +665,48 @@ export function DealQueue({
               })}
             </AnimatePresence>
           )}
-          {!isStageSwitching &&
-            showQueueSentinel &&
-            (loadingMore && !hasMoreToRender ? (
-              <div className="shrink-0 py-2 text-center text-xs text-[var(--text-muted)]">
-                Carregando…
+          {!isStageSwitching && showQueueSentinel && (
+            <div ref={queueSentinelRef} className="shrink-0 pt-1">
+              {hasMoreServer && !hasMoreToRender ? (
+                <button
+                  type="button"
+                  disabled={loadingMore}
+                  onClick={() => {
+                    lastNetworkLoadAtCountRef.current = -1;
+                    onLoadMore?.();
+                  }}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 py-2 text-[11px] font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 disabled:opacity-60"
+                >
+                  {loadingMore
+                    ? "Carregando…"
+                    : remainingCount > 0
+                      ? `Carregar mais (${remainingCount})`
+                      : "Carregar mais"}
+                </button>
+              ) : (
+                <div aria-hidden className="h-8" />
+              )}
+            </div>
+          )}
+          {!isStageSwitching && visibleDeals.length === 0 && (
+            isLoading ? (
+              <div
+                className="flex flex-col gap-2 py-1"
+                aria-busy="true"
+                aria-label="Carregando fila"
+              >
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-[72px] animate-pulse rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]"
+                  />
+                ))}
               </div>
             ) : (
-              <div ref={queueSentinelRef} aria-hidden className="h-px shrink-0" />
-            ))}
-          {!isStageSwitching && visibleDeals.length === 0 && (
-            <p className="px-2 py-8 text-center text-xs text-[var(--text-muted)]">
-              Nenhum deal encontrado
-            </p>
+              <p className="px-2 py-8 text-center text-xs text-[var(--text-muted)]">
+                Nenhum deal encontrado
+              </p>
+            )
           )}
         </div>
       </div>

@@ -162,11 +162,13 @@ export type SalesHubViewProps = {
   /**
    * Paginação de rede da fila (board normal, sem filtros server-side):
    * `queueHasMore` sinaliza que alguma etapa tem mais deals no servidor;
-   * `onQueueLoadMore` expande +50 em todas elas de uma vez.
+   * `onQueueLoadMore` expande +50 na etapa focada (ou em todas, se Todos).
    */
   queueHasMore?: boolean;
   queueLoadingMore?: boolean;
-  onQueueLoadMore?: () => void;
+  onQueueLoadMore?: (stageId?: string | null) => void;
+  /** Board ainda sem dados — fila mostra skeleton, não "Nenhum deal". */
+  queueBoardPending?: boolean;
   /** Seleção controlada pelo host (`useDealDeepLink` em `/saleshub`). */
   activeDealId: string | null;
   onActiveDealChange: (dealId: string | null, dealNumber?: number | null) => void;
@@ -198,6 +200,7 @@ export function SalesHubView({
   onSortModeChange,
   queueHasMore,
   queueLoadingMore,
+  queueBoardPending = false,
   onQueueLoadMore,
   activeDealId,
   onActiveDealChange,
@@ -456,15 +459,24 @@ export function SalesHubView({
       (d) =>
         d.id === activeDealId ||
         (activeDealId != null && String(d.number) === activeDealId),
-    ) ?? null;
+    ) ??
+    stages
+      .flatMap((s) => s.deals)
+      .find(
+        (d) =>
+          d.id === activeDealId ||
+          (activeDealId != null && String(d.number) === activeDealId),
+      ) ??
+    null;
 
-  useMobileChatChrome(!!activeDeal);
+  useMobileChatChrome(!!activeDealId);
 
   // Resolve a conversa do contato do deal ativo. Usa o mesmo endpoint
   // que o inbox/deal-detail consome — garante que a conversa carregada
   // é exatamente a mesma independente do ponto de entrada (inbox, kanban
   // card, list view ou sales hub).
-  const activeContactId = activeDeal?.contact?.id ?? null;
+  const activeContactId =
+    activeDeal?.contact?.id ?? detailDeal?.contactId ?? null;
   const { data: contactConversations = [], isLoading: conversationsLoading } =
     useQuery({
       queryKey: ["saleshub-contact-conversations", activeContactId],
@@ -528,13 +540,20 @@ export function SalesHubView({
         ? filteredStages.filter((s) => s.id === stageId)
         : filteredStages;
       const first = source.flatMap((s) => s.deals)[0];
-      if (first) {
-        onActiveDealChange(first.id, first.number ?? null);
-      } else {
-        onActiveDealChange(null);
+      // Board ainda vazio (refresh): não apagar ?deal= / seleção atual.
+      if (!first) return;
+      if (activeDealId) {
+        const keep = source.some((s) =>
+          s.deals.some(
+            (d) =>
+              d.id === activeDealId || String(d.number) === activeDealId,
+          ),
+        );
+        if (keep) return;
       }
+      onActiveDealChange(first.id, first.number ?? null);
     },
-    [filteredStages, isMdUp, onActiveDealChange],
+    [activeDealId, filteredStages, isMdUp, onActiveDealChange],
   );
 
   const handleDeselectDeal = useCallback(() => {
@@ -611,6 +630,19 @@ export function SalesHubView({
       ),
     };
   }, [filteredStages, selectedStageId, totalDeals]);
+
+  // Restante da etapa visível (ou soma em Todos). Badge 874 + 6 cards
+  // no DOM = ainda há página no servidor, mesmo se `hasMore` vier false.
+  const queueRemaining = useMemo(() => {
+    const source = selectedStageId
+      ? filteredStages.filter((s) => s.id === selectedStageId)
+      : filteredStages;
+    return source.reduce((sum, s) => {
+      const total = s.totalCount ?? s.deals.length;
+      return sum + Math.max(0, total - s.deals.length);
+    }, 0);
+  }, [filteredStages, selectedStageId]);
+  const canLoadMoreServer = Boolean(queueHasMore) && queueRemaining > 0;
 
   // ────────────────────────────────────────────────────────────────────
   // Navegacao por teclado — faz o Sales Hub ser 100% navegavel sem sair
@@ -757,7 +789,7 @@ export function SalesHubView({
                   className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 font-display text-[11px] font-bold text-white"
                   style={{ background: queueStageHeader.color }}
                 >
-                  {queueStageHeader.count}
+                  {queueBoardPending ? "…" : queueStageHeader.count}
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
@@ -786,9 +818,11 @@ export function SalesHubView({
             onDeselect={handleDeselectDeal}
             recentlyMovedDealId={recentlyMovedDealId}
             sortMode={sortMode}
-            hasMoreServer={queueHasMore}
+            hasMoreServer={canLoadMoreServer}
+            remainingCount={queueRemaining}
             loadingMore={queueLoadingMore}
-            onLoadMore={onQueueLoadMore}
+            isLoading={queueBoardPending}
+            onLoadMore={() => onQueueLoadMore?.(selectedStageId)}
             selectedStageId={selectedStageId}
             stageSwitchToken={stageSwitchToken}
             pipelineId={pipelineId}
@@ -825,11 +859,15 @@ export function SalesHubView({
               </span>
             </div>
           ) : null}
-          {!activeDeal ? (
+          {!activeDealId ? (
             <SalesHubChatEmptyState
               title="Selecione um negócio"
               subtitle="Escolha um card na fila à esquerda para abrir a conversa."
             />
+          ) : !activeDeal && !detailDeal ? (
+            <div className="flex flex-1 items-center justify-center bg-[var(--color-chat-bg)]">
+              <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
           ) : !activeContactId ? (
             <SalesHubChatEmptyState
               title="Deal sem contato"
@@ -842,7 +880,7 @@ export function SalesHubView({
           ) : !activeConversation ? (
             <SalesHubChatEmptyState
               title="Sem conversa aberta"
-              subtitle={`${activeDeal.contact?.name ?? "Este contato"} ainda nao tem nenhuma conversa. Abra uma nova a partir do Inbox.`}
+              subtitle={`${activeDeal?.contact?.name ?? detailDeal?.name ?? "Este contato"} ainda nao tem nenhuma conversa. Abra uma nova a partir do Inbox.`}
             />
           ) : (
             <SalesHubChat
@@ -851,12 +889,19 @@ export function SalesHubView({
               conversationStatus={activeConversation.status}
               lastInboundAt={activeConversation.lastInboundAt ?? null}
               contactId={activeContactId}
-              contactName={activeDeal.contact?.name ?? activeDeal.title ?? ""}
-              contactPhone={activeDeal.contact?.phone ?? null}
-              contactChannel={
-                activeConversation.channel ?? activeDeal.channel ?? null
+              contactName={
+                activeDeal?.contact?.name ??
+                activeDeal?.title ??
+                detailDeal?.name ??
+                ""
               }
-              dealId={activeDeal.id}
+              contactPhone={
+                activeDeal?.contact?.phone ?? detailDeal?.phone ?? null
+              }
+              contactChannel={
+                activeConversation.channel ?? activeDeal?.channel ?? null
+              }
+              dealId={activeDeal?.id ?? activeDealId ?? ""}
               pipelineId={pipelineId}
               onConversationReopened={handleConversationReopened}
               headerActionsSlot={

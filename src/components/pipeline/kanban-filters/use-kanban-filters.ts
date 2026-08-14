@@ -112,8 +112,15 @@ export function useKanbanFilters(): UseKanbanFiltersResult {
   // SEMPRE fora da fase de render.
   React.useEffect(() => {
     if (!hydrated.current) return;
-    // URL
-    const params = new URLSearchParams(searchParamsRef.current.toString());
+    // Base = window.location (pipeline/stage/deal via History API).
+    // useSearchParams do App Router frequentemente ainda está vazio no
+    // 1º commit — partir dele e dar replace virava `/pipeline/flow` sem
+    // query e apagava o deep-link (fila "Todos 0" + chat vazio).
+    const liveSearch =
+      typeof window !== "undefined"
+        ? window.location.search.replace(/^\?/, "")
+        : searchParamsRef.current.toString();
+    const params = new URLSearchParams(liveSearch);
     if (isEmptyFilters(filters)) {
       params.delete(URL_PARAM);
     } else {
@@ -123,9 +130,9 @@ export function useKanbanFilters(): UseKanbanFiltersResult {
     const qs = params.toString();
     const nextUrl = qs ? `${pathnameRef.current}?${qs}` : pathnameRef.current;
     // Evita push redundante quando a URL já reflete o estado.
-    const current = `${pathnameRef.current}${
-      searchParamsRef.current.toString() ? `?${searchParamsRef.current.toString()}` : ""
-    }`;
+    const current = liveSearch
+      ? `${pathnameRef.current}?${liveSearch}`
+      : pathnameRef.current;
     if (nextUrl !== current) {
       routerRef.current.replace(nextUrl, { scroll: false });
     }

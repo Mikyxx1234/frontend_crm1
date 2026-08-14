@@ -17,6 +17,8 @@ import { avatarInitials as avatarInitialsFromLib } from "@/lib/avatar";
 import type { ConnectionRef } from "@/lib/connection-label";
 import { sanitizeContactName } from "@/lib/display-name";
 
+import { prettifyChatMessageBody } from "@/lib/whatsapp-outbound-template-label";
+
 import type {
   ContactDetail,
   ConversationListRow,
@@ -241,10 +243,11 @@ export function toConversationCard(
   // `preview`) quanto `lastMessagePreview` (forma atual, com `content`
   // + `messageType`). Preferimos o que tiver dado real; se nenhum
   // tiver, cai pra string vazia (mostra apenas o tipo, se conhecido).
-  const previewText =
+  const previewText = prettifyChatMessageBody(
     row.lastMessage?.preview ??
-    row.lastMessagePreview?.content ??
-    "";
+      row.lastMessagePreview?.content ??
+      "",
+  );
   const lastMessageType = inferLastMessageType(
     previewText,
     row.lastMessagePreview?.messageType ?? null,
@@ -468,9 +471,9 @@ export function toMessageBubble(
   // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
   const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;
 
-  // Botões de mensagem interativa/template (outbound) — separa o corpo
-  // do marcador `[Botões: ...]` gravado pelo backend.
-  const btnParsed = !formParsed ? parseInteractiveButtons(dto.content ?? "") : null;
+  // Abre `[Template: nome]` / cabeçalho 📋 e depois separa `[Botões: ...]`.
+  const prettyContent = prettifyChatMessageBody(dto.content ?? "");
+  const btnParsed = !formParsed ? parseInteractiveButtons(prettyContent) : null;
 
   return {
     id: dto.id,

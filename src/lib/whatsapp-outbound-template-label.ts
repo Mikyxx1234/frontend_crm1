@@ -65,10 +65,14 @@ export function buildOutboundTemplateMessageContent(
     ].filter(Boolean).join("\n");
   }
 
-  if (bodyPreview) {
-    // Mostra apenas o conteúdo da mensagem: nome/categoria são exibidos
-    // pelo TemplateBadge na bolha, então duplicar fica visualmente ruim.
-    return bodyPreview;
+  // Corpo aberto (header + texto + botões). Nome/categoria ficam no badge.
+  if (body || buttons.length > 0) {
+    const headerLine = header ? `*${header}*` : null;
+    const footerLine = footer ? `_${footer}_` : null;
+    const buttonMarker = buttons.length > 0 ? `[Botões: ${buttons.join(", ")}]` : null;
+    return [headerLine, body || null, footerLine, buttonMarker]
+      .filter((x): x is string => typeof x === "string" && x.length > 0)
+      .join("\n\n");
   }
 
   return [

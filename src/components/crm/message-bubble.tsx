@@ -13,7 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { StatusTicks } from "@/components/crm/status-ticks"
-import { NoteRow, type ConversationEventAction } from "@/components/crm/chat-timeline"
+import { EventRow, NoteRow, type ConversationEventAction } from "@/components/crm/chat-timeline"
 import {
   IconRobot,
   IconClipboardList,
@@ -23,7 +23,6 @@ import {
   IconCopy,
   IconPlayerPlay,
   IconPlayerPause,
-  IconLock,
   IconLoader2,
   IconTextCaption,
   IconPin,
@@ -2004,32 +2003,35 @@ interface TicketDividerProps {
  * Aparece no início de cada ticket quando `history=1` está ativo,
  * distinguindo ciclos de atendimento distintos sem esconder o histórico.
  */
+function closedEventTime(iso: string | null): string {
+  if (!iso) return ""
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ""
+  const dd = String(d.getDate()).padStart(2, "0")
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const hh = String(d.getHours()).padStart(2, "0")
+  const mi = String(d.getMinutes()).padStart(2, "0")
+  return `${dd}/${mm} ${hh}:${mi}`
+}
+
 export function TicketDivider({ number, closedAt, isCurrent }: TicketDividerProps) {
-  let dateLabel = ""
-  if (closedAt) {
-    const d = new Date(closedAt)
-    if (!Number.isNaN(d.getTime())) {
-      const dd = String(d.getDate()).padStart(2, "0")
-      const mm = String(d.getMonth() + 1).padStart(2, "0")
-      const yyyy = d.getFullYear()
-      dateLabel = ` · encerrado ${dd}/${mm}/${yyyy}`
-    }
+  if (isCurrent) {
+    return (
+      <EventRow
+        action="status"
+        text="Conversa atual"
+        actor=""
+        time=""
+      />
+    )
   }
   return (
-    <div className="my-3 flex items-center gap-2 self-stretch">
-      <span className="h-px flex-1 bg-[var(--glass-border)]" />
-      <span
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[10.5px] font-semibold",
-          isCurrent
-            ? "border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
-            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
-        )}
-      >
-        {isCurrent ? "Conversa atual" : `#${number}${dateLabel}`}
-      </span>
-      <span className="h-px flex-1 bg-[var(--glass-border)]" />
-    </div>
+    <EventRow
+      action="status"
+      text={`Conversa #${number} encerrada`}
+      actor=""
+      time={closedEventTime(closedAt)}
+    />
   )
 }
 
@@ -2040,31 +2042,16 @@ interface ConversationClosedMarkerProps {
 
 /**
  * Marcador no fim da timeline indicando que a conversa foi encerrada.
- * Mesmo padrao visual do `ConnectionDivider`/`DaySeparator` (chip pill
- * centralizado com bordas hairline) — minimalista, dentro do proprio
- * chat, sem card lateral. Usado no inbox (via ChatArea) e no pipeline
- * (via messagesSlot do DealDetailPanel).
+ * Mesmo padrão visual de `EventRow` (linha de evento, sem pill).
+ * Usado no inbox (via ChatArea) e no pipeline (via DealChatBinding).
  */
 export function ConversationClosedMarker({ closedAt }: ConversationClosedMarkerProps) {
-  let label: string | null = null
-  if (closedAt) {
-    const d = new Date(closedAt)
-    if (!Number.isNaN(d.getTime())) {
-      const dd = String(d.getDate()).padStart(2, "0")
-      const mm = String(d.getMonth() + 1).padStart(2, "0")
-      const hh = String(d.getHours()).padStart(2, "0")
-      const mi = String(d.getMinutes()).padStart(2, "0")
-      label = `${dd}/${mm} às ${hh}:${mi}`
-    }
-  }
   return (
-    <div className="my-2 flex items-center justify-center gap-2 self-center">
-      <span className="h-px w-6 bg-[var(--glass-border)]" />
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
-        <IconLock size={12} className="text-[var(--text-muted)]" />
-        Conversa encerrada{label ? ` · ${label}` : ""}
-      </span>
-      <span className="h-px w-6 bg-[var(--glass-border)]" />
-    </div>
+    <EventRow
+      action="status"
+      text="Conversa encerrada"
+      actor=""
+      time={closedEventTime(closedAt ?? null)}
+    />
   )
 }

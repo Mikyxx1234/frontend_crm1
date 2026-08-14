@@ -88,6 +88,12 @@ import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const SMART_DISTRIBUTION_SLUG = "smart_distribution";
 
+function inboxConversationHref(number: number | null | undefined, fallbackId?: string | null) {
+  if (number != null) return `/inbox?c=${number}`;
+  if (fallbackId) return `/inbox?c=${encodeURIComponent(fallbackId)}`;
+  return "/inbox";
+}
+
 /**
  * Ambiente onde os dados de exemplo (EduIT ilustrativo) PODEM aparecer:
  * localhost, host de DEV (`crm-dev-*`) ou modo mock/preview explícito. Em
@@ -1843,7 +1849,7 @@ function PendingQueueCards({
           {pending.map((p) => (
             <li key={p.id}>
               <Link
-                href={`/inbox?c=${encodeURIComponent(p.id)}`}
+                href={inboxConversationHref(p.number, p.id)}
                 className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
                 title="Abrir conversa no inbox"
               >
@@ -2575,6 +2581,7 @@ function LogMobileCard({
     contactName: string | null;
     contactPhone: string | null;
     conversationId: string | null;
+    conversationNumber?: number | null;
     departmentName: string | null;
   };
   resultLabel: string;
@@ -2682,7 +2689,7 @@ function LogMobileCard({
           <LogDetail label="ID do log" value={log.id} mono />
           {log.conversationId ? (
             <Link
-              href={`/inbox?c=${encodeURIComponent(log.conversationId)}`}
+              href={inboxConversationHref(log.conversationNumber, log.conversationId)}
               className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 font-display text-[12px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
             >
               Abrir conversa
@@ -2713,6 +2720,7 @@ function LogTableRows({
     contactName: string | null;
     contactPhone: string | null;
     conversationId: string | null;
+    conversationNumber?: number | null;
     departmentId: string | null;
     departmentName: string | null;
   };
@@ -2811,7 +2819,7 @@ function LogTableRows({
               <LogDetail label="ID do log" value={log.id} mono />
               {log.conversationId ? (
                 <Link
-                  href={`/inbox?c=${encodeURIComponent(log.conversationId)}`}
+                  href={inboxConversationHref(log.conversationNumber, log.conversationId)}
                   onClick={(event) => event.stopPropagation()}
                   className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 font-display text-[11.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
                 >

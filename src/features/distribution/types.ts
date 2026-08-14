@@ -95,6 +95,7 @@ export interface DistributionResult {
 
 export interface PendingDistributionDto {
   id: string;
+  number?: number | null;
   dealId: string | null;
   contactId: string | null;
   label: string;

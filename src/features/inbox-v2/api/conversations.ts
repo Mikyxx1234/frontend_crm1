@@ -103,10 +103,9 @@ export async function fetchTabCounts(
 }
 
 /**
- * GET /api/conversations/:id — busca UMA conversa pelo id.
- * Usado pelo deep-link (?c=<id>): quando a conversa não está na lista/aba
- * carregada (ex.: um supervisor abrindo o link de outra pessoa), buscamos
- * a conversa direto para abri-la mesmo assim. 404 = não existe ou sem acesso.
+ * GET /api/conversations/:id — busca UMA conversa (dígitos = number da org;
+ * senão CUID). Usado pelo deep-link (?c=<number>): quando a conversa não
+ * está na lista/aba carregada, buscamos direto. 404 = não existe ou sem acesso.
  */
 export async function getConversation(
   conversationId: string,

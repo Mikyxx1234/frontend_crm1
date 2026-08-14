@@ -30,6 +30,8 @@ import { useResolveConversationFlow } from "./use-resolve-conversation-flow";
 
 interface ConversationActionsMenuProps {
   conversationId: string | null;
+  /** Ticket sequencial — o link copiado usa `?c=<number>`, nunca o CUID. */
+  conversationNumber?: number | null;
   contactId?: string | null;
   isResolved: boolean;
   disabled?: boolean;
@@ -69,6 +71,7 @@ interface ConversationActionsMenuProps {
 
 export function ConversationActionsMenu({
   conversationId,
+  conversationNumber,
   contactId,
   isResolved,
   disabled,
@@ -190,12 +193,14 @@ export function ConversationActionsMenu({
     }
   }
 
-  // Copia o link absoluto da conversa (?c=<id>) para compartilhar — ex.:
-  // enviar a um supervisor para ele abrir direto esta conversa.
+  // Copia o link absoluto da conversa (?c=<number>) para compartilhar.
   async function handleCopyLink() {
     setOpen(false);
-    if (!conversationId) return;
-    const url = `${window.location.origin}/inbox?c=${conversationId}`;
+    if (conversationNumber == null) {
+      toast.error("Número da conversa indisponível.");
+      return;
+    }
+    const url = `${window.location.origin}/inbox?c=${conversationNumber}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link da conversa copiado.");

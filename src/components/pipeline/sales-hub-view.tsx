@@ -79,6 +79,7 @@ function readAsidePinned(): boolean {
  */
 type ConversationRow = {
   id: string;
+  number?: number | null;
   channel: string;
   status: string;
   updatedAt: string;
@@ -936,6 +937,7 @@ export function SalesHubView({
                   </TooltipHost>
                   <ConversationActionsMenu
                     conversationId={activeConversation.id}
+                    conversationNumber={activeConversation.number}
                     contactId={activeContactId}
                     isResolved={activeConversation.status === "RESOLVED"}
                     assigneeId={activeConversation.assignedToId ?? null}

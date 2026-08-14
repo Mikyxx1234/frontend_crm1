@@ -75,6 +75,8 @@ import {
   useTabCounts,
   useWhatsappChannels,
   useInboxSoundMuted,
+  useInboxUrlSync,
+  matchesConversationUrlRef,
   CONVERSATION_REOPENED_EVENT,
 } from "@/features/inbox-v2/hooks";
 import {
@@ -469,33 +471,6 @@ export default function InboxV2ClientPage({
   // Só dispara list/counts com ≥3 chars — ILIKE curto é caro e pouco útil.
   const searchForQuery = normalizeSearchQuery(debouncedSearch);
 
-  // ── Deep-link por URL (?c=<conversationId>) ─────────────────────
-  // Permite compartilhar o link de uma conversa específica (ex.: enviar a
-  // um supervisor). Na montagem, lê o `?c=` e seleciona a conversa. Depois,
-  // qualquer troca de `activeId` reflete no querystring (history.replaceState,
-  // sem navegação/scroll) — assim a URL da barra é sempre "copiável".
-  const [deepLinkHydrated, setDeepLinkHydrated] = useState(false);
-  useEffect(() => {
-    try {
-      const c = new URLSearchParams(window.location.search).get("c");
-      if (c) setActiveId(c);
-    } catch {
-      /* window indisponível */
-    }
-    setDeepLinkHydrated(true);
-  }, []);
-  useEffect(() => {
-    if (!deepLinkHydrated || typeof window === "undefined") return;
-    try {
-      const url = new URL(window.location.href);
-      if (activeId) url.searchParams.set("c", activeId);
-      else url.searchParams.delete("c");
-      window.history.replaceState(null, "", url.toString());
-    } catch {
-      /* URL indisponível */
-    }
-  }, [activeId, deepLinkHydrated]);
-
   // ── Dados ───────────────────────────────────────────────────────
   // Ordenação e direção da última msg são CLIENT-SIDE (evita refetch).
   // `windowState` (Aberta/Fechada) vai ao servidor — senão o badge Erro
@@ -593,7 +568,10 @@ export default function InboxV2ClientPage({
 
   // Conversa ativa presente na lista carregada da aba/filtro atual?
   const foundActiveRow = useMemo(
-    () => (activeId ? rows.find((r) => r.id === activeId) ?? null : null),
+    () =>
+      activeId
+        ? rows.find((r) => matchesConversationUrlRef(r, activeId)) ?? null
+        : null,
     [rows, activeId],
   );
 
@@ -608,7 +586,7 @@ export default function InboxV2ClientPage({
   const needsDeepLinkFetch =
     Boolean(activeId) &&
     !foundActiveRow &&
-    stickyRow?.id !== activeId;
+    !(stickyRow && matchesConversationUrlRef(stickyRow, activeId));
   const {
     data: deepLinkRow,
     error: deepLinkError,
@@ -621,17 +599,19 @@ export default function InboxV2ClientPage({
     }
     if (foundActiveRow) {
       setStickyRow(foundActiveRow);
+      if (foundActiveRow.id !== activeId) setActiveId(foundActiveRow.id);
       return;
     }
-    // Não está na lista: usa a conversa buscada pelo id (deep-link), desde
-    // que seja a mesma que está ativa. Enquanto carrega, preserva o snapshot
-    // anterior — NÃO sobrescreve com null.
-    if (deepLinkRow && deepLinkRow.id === activeId) {
+    // Não está na lista: usa a conversa buscada pelo id/número (deep-link).
+    if (deepLinkRow && matchesConversationUrlRef(deepLinkRow, activeId)) {
       setStickyRow(deepLinkRow);
+      if (deepLinkRow.id !== activeId) setActiveId(deepLinkRow.id);
       return;
     }
     // Reabrir (novo ticket) / troca de id: não manter header do ticket antigo.
-    setStickyRow((prev) => (prev?.id === activeId ? prev : null));
+    setStickyRow((prev) =>
+      prev && matchesConversationUrlRef(prev, activeId) ? prev : null,
+    );
   }, [activeId, foundActiveRow, deepLinkRow]);
 
   // Deep-link inválido (id inexistente ou sem permissão): avisa e limpa a
@@ -647,7 +627,7 @@ export default function InboxV2ClientPage({
   // do filtro da aba (Encerrar), não é deep-link inválido.
   useEffect(() => {
     if (needsDeepLinkFetch && deepLinkError && listData !== undefined) {
-      if (stickyRow?.id === activeId) return;
+      if (stickyRow && matchesConversationUrlRef(stickyRow, activeId)) return;
       toast.error(
         deepLinkError.message || "Conversa não encontrada ou sem permissão.",
       );
@@ -656,6 +636,7 @@ export default function InboxV2ClientPage({
   }, [needsDeepLinkFetch, deepLinkError, listData, stickyRow, activeId]);
 
   const activeRow = stickyRow;
+  useInboxUrlSync(activeId, setActiveId, activeRow?.number, activeRow?.id);
   const activeContactId = activeRow?.contact?.id ?? null;
 
   // Se não há conversa ativa, o aside não tem o que mostrar — força
@@ -1237,7 +1218,9 @@ export default function InboxV2ClientPage({
   const conversationColumnNode = (
     <ConversationColumn
       conversations={conversationCards}
-      activeConversationId={activeId ?? undefined}
+      activeConversationId={
+        foundActiveRow?.id ?? stickyRow?.id ?? activeId ?? undefined
+      }
       onSelectConversation={handleSelect}
       searchValue={searchInput}
       onSearchChange={setSearchInput}
@@ -1552,6 +1535,7 @@ export default function InboxV2ClientPage({
             />
             <ConversationActionsMenu
               conversationId={activeId}
+              conversationNumber={activeRow?.number}
               contactId={activeContactId}
               isResolved={activeRow.status === "RESOLVED"}
               assigneeId={activeRow.assignedTo?.id ?? null}

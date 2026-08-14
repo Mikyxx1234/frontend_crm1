@@ -1028,7 +1028,7 @@ function entityHref(entityType: string | null, entityId: string): string | null 
       return `/contacts/${entityId}`;
     case "CONVERSATION":
     case "MESSAGE":
-      return `/inbox?conversation=${entityId}`;
+      return `/inbox?c=${encodeURIComponent(entityId)}`;
     case "ACTIVITY":
       return `/activities/${entityId}`;
     default:

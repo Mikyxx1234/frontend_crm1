@@ -233,6 +233,7 @@ export interface DistributionLog {
   contactName: string | null;
   contactPhone: string | null;
   conversationId: string | null;
+  conversationNumber?: number | null;
   departmentId: string | null;
   departmentName: string | null;
 }

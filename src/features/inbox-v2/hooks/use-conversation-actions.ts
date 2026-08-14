@@ -92,7 +92,7 @@ export function useTransferConversation() {
  * o backend cria uma nova conversa (#N+1) vinculada ao mesmo contato/canal
  * e retorna o id novo em `data.conversation.id`. Callers podem passar
  * `onNewConversation` para redirecionar/selecionar a nova conversa na UI
- * (ex.: inbox seta `?c=<newId>`; pipeline confia na invalidacao do
+ * (ex.: inbox seleciona o id novo e a URL vira `?c=<number>`; pipeline confia na invalidacao do
  * `deal-detail-v2` que ja traz `conversations[0]` mais recente).
  */
 export function useToggleConversationResolve(

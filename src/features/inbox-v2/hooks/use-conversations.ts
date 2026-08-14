@@ -147,7 +147,7 @@ export function useConversations(params: {
 }
 
 /**
- * Busca UMA conversa pelo id (deep-link `?c=<id>`). Só habilita quando a
+ * Busca UMA conversa pelo `?c=` (número ou CUID legado). Só habilita quando a
  * conversa alvo NÃO está na lista carregada — assim o link abre a conversa
  * mesmo fora da aba/filtro/página atual do usuário. `retry:false` para que
  * um 404 (sem acesso / inexistente) propague rápido e o inbox trate o erro.

@@ -57,9 +57,9 @@ export const WIDGET_CONFIG_REGISTRY: Record<string, WidgetConfigEntry> = {
   },
   calls_history: {
     title: "Telefonia IP",
-    description: "Ramal SIP e provedor de chamadas",
+    description: "Integração API4Comm, webhook da org e ramais",
     icon: <IconPhone size={20} />,
-    size: "lg",
+    size: "xl",
     requiredPermission: "sip_extension:manage",
     Component: SoftphoneConfig,
   },

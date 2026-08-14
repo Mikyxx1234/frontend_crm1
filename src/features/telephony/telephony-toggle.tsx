@@ -48,9 +48,11 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
     mutationFn: (enabled: boolean) => patchTelephony(userId, enabled),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["telephony-status", userId] });
+      queryClient.invalidateQueries({ queryKey: ["sip-extensions"] });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["telephony-status", userId] });
+      queryClient.invalidateQueries({ queryKey: ["sip-extensions"] });
     },
   });
 

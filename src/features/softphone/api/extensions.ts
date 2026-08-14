@@ -1,4 +1,5 @@
 import type {
+  Api4ComIntegration,
   DialApi4ComContext,
   ListCallsFilters,
   ListCallsResponse,
@@ -20,6 +21,21 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 export async function listExtensions(): Promise<SipExtension[]> {
   const data = await fetchJson<{ extensions: SipExtension[] }>(`${BASE}/sip-extensions`);
   return data.extensions;
+}
+
+export async function getApi4ComIntegration(): Promise<Api4ComIntegration> {
+  return fetchJson<Api4ComIntegration>(`${BASE}/call-provider-configs/api4com`);
+}
+
+export async function updateApi4ComIntegration(input: {
+  serviceToken?: string | null;
+  gateway?: string;
+}): Promise<Api4ComIntegration> {
+  return fetchJson<Api4ComIntegration>(`${BASE}/call-provider-configs/api4com`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
 }
 
 export async function getMyCredentials(): Promise<SipCredentials> {

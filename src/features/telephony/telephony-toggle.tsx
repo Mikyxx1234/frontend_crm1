@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2 } from "@tabler/icons-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 interface TelephonyToggleProps {
@@ -36,6 +37,7 @@ async function patchTelephony(userId: string, enabled: boolean) {
 
 export function TelephonyToggle({ userId }: TelephonyToggleProps) {
   const queryClient = useQueryClient();
+  const { confirm, dialog } = useConfirm();
 
   const { data: status, isLoading } = useQuery({
     queryKey: ["telephony-status", userId],
@@ -47,6 +49,9 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["telephony-status", userId] });
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["telephony-status", userId] });
+    },
   });
 
   if (isLoading) {
@@ -55,8 +60,26 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
 
   const enabled = status?.telephonyEnabled ?? false;
   const step = status?.provisioningStep ?? "IDLE";
-  const error = status?.provisioningError;
-  const isProvisioning = mutation.isPending || (enabled && step !== "ACTIVE" && step !== "FAILED");
+  const error = mutation.error?.message ?? status?.provisioningError;
+  const isProvisioning =
+    mutation.isPending || (enabled && step !== "ACTIVE" && step !== "FAILED" && step !== "DISABLED");
+  const isDisabling = mutation.isPending && mutation.variables === false;
+
+  async function handleToggle() {
+    if (enabled) {
+      const ok = await confirm({
+        title: "Desativar telefonia?",
+        description:
+          "O ramal e o usuário serão apagados na API4Comm. O histórico de chamadas no CRM permanece. Religar cria um ramal novo.",
+        confirmLabel: "Desativar e apagar",
+        destructive: true,
+      });
+      if (!ok) return;
+      mutation.mutate(false);
+      return;
+    }
+    mutation.mutate(true);
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -65,7 +88,7 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
         role="switch"
         aria-checked={enabled}
         disabled={mutation.isPending}
-        onClick={() => mutation.mutate(!enabled)}
+        onClick={() => void handleToggle()}
         className={cn(
           "relative h-5 w-9 rounded-full transition-colors",
           enabled ? "bg-[var(--color-success)]" : "bg-[var(--glass-border)]",
@@ -83,19 +106,37 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
       {isProvisioning && (
         <span className="flex items-center gap-1 text-xs text-[var(--color-warning)]/80">
           <IconLoader2 size={11} className="animate-spin" />
-          Provisionando…
+          {isDisabling ? "Removendo…" : "Provisionando…"}
         </span>
       )}
 
       {step === "FAILED" && (
-        <span className="text-xs text-[var(--color-danger)]" title={error ?? undefined}>
-          Falhou
+        <span className="flex items-center gap-1.5">
+          <span className="text-xs text-[var(--color-danger)]" title={error ?? undefined}>
+            Falhou
+          </span>
+          <button
+            type="button"
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate(true)}
+            className="text-xs text-[var(--brand-primary)] underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            Tentar de novo
+          </button>
         </span>
       )}
 
-      {step === "ACTIVE" && enabled && (
+      {step === "ACTIVE" && enabled && !mutation.isPending && (
         <span className="text-xs text-[var(--color-success)]/80">Ativo</span>
       )}
+
+      {mutation.isError && step !== "FAILED" && (
+        <span className="max-w-[140px] truncate text-xs text-[var(--color-danger)]" title={error ?? undefined}>
+          {error ?? "Erro"}
+        </span>
+      )}
+
+      {dialog}
     </div>
   );
 }

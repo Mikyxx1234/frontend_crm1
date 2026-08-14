@@ -22,12 +22,11 @@ import {
 import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   useAssignConversation,
-  useToggleConversationResolve,
 } from "@/features/inbox-v2/hooks";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { useExecuteDistribution } from "@/features/distribution/hooks";
 import { apiUrl } from "@/lib/api";
-import { TabulationDialog } from "./tabulation-dialog";
+import { useResolveConversationFlow } from "./use-resolve-conversation-flow";
 
 interface ConversationActionsMenuProps {
   conversationId: string | null;
@@ -86,27 +85,21 @@ export function ConversationActionsMenu({
 }: ConversationActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [deptMenuOpen, setDeptMenuOpen] = useState(false);
-  const [tabulationOpen, setTabulationOpen] = useState(false);
-  /** Departamento vindo do erro TABULATION_REQUIRED (flag FE desatualizado). */
-  const [tabulationDeptId, setTabulationDeptId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const currentUserId =
     (session?.user as { id?: string } | undefined)?.id ?? null;
   const assign = useAssignConversation();
   const isAiAssignee = (assigneeType ?? "").toUpperCase() === "AI";
-  const effectiveTabulationDeptId = tabulationDeptId ?? departmentId ?? null;
-  const toggleResolve = useToggleConversationResolve({
-    onNewConversation: (newId) => {
-      onReopenNewConversation?.(newId);
-    },
-    onResolved: (id) => onResolved?.(id),
-    onTabulationRequired: ({ departmentId: deptFromApi }) => {
-      setOpen(false);
-      setTabulationDeptId(deptFromApi ?? departmentId ?? null);
-      setTabulationOpen(true);
-    },
-  });
+  const { handleToggleResolve: resolveFlow, toggleResolve, dialogs } =
+    useResolveConversationFlow({
+      conversationId,
+      isResolved,
+      departmentId,
+      requireTabulationOnClose,
+      onReopenNewConversation,
+      onResolved,
+    });
   const executeDist = useExecuteDistribution();
 
   const departmentsQuery = useQuery({
@@ -184,30 +177,8 @@ export function ConversationActionsMenu({
   }, [open]);
 
   function handleToggleResolve() {
-    if (!conversationId) return;
-    // Encerramento MANUAL com departamento que exige tabulacao -> abre modal.
-    // Encerramentos de bot/automação não passam por este menu.
-    if (!isResolved && requireTabulationOnClose && departmentId) {
-      setOpen(false);
-      setTabulationDeptId(departmentId);
-      setTabulationOpen(true);
-      return;
-    }
-    toggleResolve.mutate(
-      {
-        conversationId,
-        action: isResolved ? "reopen" : "resolve",
-      },
-      { onSuccess: () => setOpen(false) },
-    );
-  }
-
-  function handleConfirmTabulation(tabulationId: string) {
-    if (!conversationId) return;
-    toggleResolve.mutate(
-      { conversationId, action: "resolve", tabulationId },
-      { onSuccess: () => setTabulationOpen(false) },
-    );
+    setOpen(false);
+    resolveFlow();
   }
 
   function handleSearch() {
@@ -255,7 +226,6 @@ export function ConversationActionsMenu({
             name: dept.name,
             requireTabulationOnClose: dept.requireTabulationOnClose,
           });
-          setTabulationDeptId(dept.id);
           if (result.success) {
             toast.success(
               result.selectedUserName
@@ -512,13 +482,7 @@ export function ConversationActionsMenu({
           </RequirePermission>
         </div>
       )}
-      <TabulationDialog
-        open={tabulationOpen}
-        onOpenChange={setTabulationOpen}
-        departmentId={effectiveTabulationDeptId}
-        submitting={toggleResolve.isPending}
-        onConfirm={handleConfirmTabulation}
-      />
+      {dialogs}
     </div>
   );
 }

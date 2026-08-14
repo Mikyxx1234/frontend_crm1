@@ -5,6 +5,7 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSSE } from "@/hooks/use-sse";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { useUserRole } from "@/hooks/use-user-role";
 import { IconAlertCircle as AlertCircle, IconAlertTriangle as AlertTriangle, IconArrowRight as ArrowRight, IconRobot as Bot, IconChecks as CheckCheck, IconCircleCheck as CheckCircle2, IconSquareCheck as CheckSquare, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconClock as Clock, IconDownload as Download, IconFileText as FileText, IconTemplate as LayoutTemplate, IconLoader2 as Loader2, IconLock as Lock, IconSpeakerphone as Megaphone, IconDots as MoreHorizontal, IconPaperclip as Paperclip, IconPlayerPause as Pause, IconPencil as Pencil, IconPhone as Phone, IconPhoneIncoming as PhoneIncoming, IconPhoneOff as PhoneOff, IconPhoneOutgoing as PhoneOutgoing, IconPin as Pin, IconPlayerPlay as Play, IconPlus as Plus, IconArrowBackUp as Reply, IconRotate2 as RotateCcw, IconDeviceFloppy as Save, IconSearch as Search, IconSend as Send, IconShare2 as Share2, IconShieldCheck as ShieldCheck, IconMoodSmile as Smile, IconDeviceMobile as Smartphone, IconUpload as Upload, IconVolume as Volume2, IconTool as Wrench, IconX as X } from "@tabler/icons-react";
 import { AIDraftCard } from "@/components/inbox/ai-draft-card";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
@@ -25,6 +26,7 @@ import {
   emitConversationReopened,
   messagesKey as inboxMessagesKey,
 } from "@/features/inbox-v2/hooks";
+import { ResolveConfirmDialog } from "@/features/inbox-v2/extras/skip-automations-option";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 import { Button } from "@/components/ui/button";
 import {
@@ -203,11 +205,17 @@ async function postReaction(messageId: string, emoji: string) {
 async function postConversationAction(
   conversationId: string,
   action: "resolve" | "reopen",
+  extra?: { skipAutomations?: boolean },
 ) {
   const res = await fetch(apiUrl(`/api/conversations/${conversationId}/actions`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action }),
+    body: JSON.stringify({
+      action,
+      ...(action === "resolve" && extra?.skipAutomations
+        ? { skipAutomations: true }
+        : {}),
+    }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok)
@@ -441,6 +449,9 @@ export function ChatWindow({
 }) {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const { role, isSuperAdmin } = useUserRole();
+  const canSkipAutomations = isSuperAdmin || role === "ADMIN";
+  const [resolveConfirmOpen, setResolveConfirmOpen] = React.useState(false);
   const agentName = session?.user?.name ?? session?.user?.email ?? "Agente";
   // Mobile breakpoint < 768px — usado pra copy progressiva no
   // placeholder do composer ("Mensagem ou /" curto vs versao
@@ -1206,9 +1217,14 @@ export function ChatWindow({
     });
   }, [forwardPickData, forwardSearch, conversationId]);
   const statusMutation = useMutation({
-    mutationFn: (action: "resolve" | "reopen") =>
-      postConversationAction(conversationId!, action),
-    onSuccess: (data, action) => {
+    mutationFn: (vars: {
+      action: "resolve" | "reopen";
+      skipAutomations?: boolean;
+    }) =>
+      postConversationAction(conversationId!, vars.action, {
+        skipAutomations: vars.skipAutomations,
+      }),
+    onSuccess: (data, vars) => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
       // Pipeline v2 (`_v2-client.tsx`) lê `contact.conversations[0]` do
@@ -1223,7 +1239,8 @@ export function ChatWindow({
       queryClient.invalidateQueries({ queryKey: ["deal-timeline-v2"] });
       queryClient.invalidateQueries({ queryKey: ["deal"] });
       queryClient.invalidateQueries({ queryKey: ["contact"] });
-      if (action === "resolve") {
+      if (vars.action === "resolve") {
+        setResolveConfirmOpen(false);
         onResolve?.(data.conversation.status);
       } else {
         // Reopen no modelo de ticket: backend cria NOVA conversa e devolve
@@ -1238,6 +1255,20 @@ export function ChatWindow({
       }
     },
   });
+
+  function handleToggleResolve() {
+    if (!conversationId) return;
+    if (conversationStatus === "RESOLVED") {
+      statusMutation.mutate({ action: "reopen" });
+      return;
+    }
+    if (canSkipAutomations) {
+      setResolveConfirmOpen(true);
+      return;
+    }
+    statusMutation.mutate({ action: "resolve" });
+  }
+
   const pinNoteMutation = useMutation({
     mutationFn: async (noteId: string | null) => {
       const res = await fetch(apiUrl(`/api/conversations/${conversationId}/pin-note`), {
@@ -3851,9 +3882,7 @@ export function ChatWindow({
                 }}
                 isResolved={isResolved}
                 statusPending={statusMutation.isPending}
-                onToggleResolve={() =>
-                  statusMutation.mutate(isResolved ? "reopen" : "resolve")
-                }
+                onToggleResolve={handleToggleResolve}
               />
               <input
                 ref={fileInputRef}
@@ -4049,9 +4078,7 @@ export function ChatWindow({
                   }}
                   isResolved={isResolved}
                   statusPending={statusMutation.isPending}
-                  onToggleResolve={() =>
-                    statusMutation.mutate(isResolved ? "reopen" : "resolve")
-                  }
+                  onToggleResolve={handleToggleResolve}
                 />
                 <input
                   ref={fileInputRef}
@@ -4214,6 +4241,14 @@ export function ChatWindow({
       </Dialog>
 
       {/* Modal: Edição de assinatura */}
+      <ResolveConfirmDialog
+        open={resolveConfirmOpen}
+        onOpenChange={setResolveConfirmOpen}
+        submitting={statusMutation.isPending}
+        onConfirm={(skipAutomations) =>
+          statusMutation.mutate({ action: "resolve", skipAutomations })
+        }
+      />
       <Dialog open={signatureModalOpen} onOpenChange={setSignatureModalOpen}>
         <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>

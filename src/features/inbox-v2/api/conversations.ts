@@ -134,7 +134,12 @@ export async function listConversationsForForwardPicker(): Promise<ConversationL
 }
 
 export type ConversationActionPayload =
-  | { action: "resolve"; tabulationId?: string | null }
+  | {
+      action: "resolve";
+      tabulationId?: string | null;
+      /** Só o backend aceita se o user for ADMIN. Agentes: ignorado. */
+      skipAutomations?: boolean;
+    }
   | { action: "reopen" }
   | { action: "assign"; assignedToId: string | null }
   | {

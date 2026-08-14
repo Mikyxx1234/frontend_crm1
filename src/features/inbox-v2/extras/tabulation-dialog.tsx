@@ -23,17 +23,23 @@ import {
 import { Button } from "@/components/ui/button";
 
 import { getTabulations, type TabulationNode } from "../api/conversations";
+import { SkipAutomationsCheckbox } from "./skip-automations-option";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   departmentId: string | null;
   /** Callback recebe o id da folha escolhida. */
-  onConfirm: (tabulationId: string) => void;
+  onConfirm: (
+    tabulationId: string,
+    extra?: { skipAutomations?: boolean },
+  ) => void;
   /** Se true, permite fechar sem escolher (uso opcional em ambientes que
    *  nao exigem). Default false (exige selecao). */
   optional?: boolean;
   submitting?: boolean;
+  /** ADMIN: mostra checkbox para encerrar sem disparar automações. */
+  allowSkipAutomations?: boolean;
 };
 
 /**
@@ -49,6 +55,7 @@ export function TabulationDialog({
   onConfirm,
   optional,
   submitting,
+  allowSkipAutomations,
 }: Props) {
   const query = useQuery({
     queryKey: ["inbox-tabulations", departmentId ?? ""],
@@ -60,9 +67,13 @@ export function TabulationDialog({
   // path[]: caminho atual (categoria pai -> ... -> nó selecionado).
   // Se o ultimo do path for folha, permite confirmar.
   const [path, setPath] = useState<TabulationNode[]>([]);
+  const [skipAutomations, setSkipAutomations] = useState(false);
 
   useEffect(() => {
-    if (!open) setPath([]);
+    if (!open) {
+      setPath([]);
+      setSkipAutomations(false);
+    }
   }, [open]);
 
   const currentChildren: TabulationNode[] = useMemo(() => {
@@ -214,6 +225,13 @@ export function TabulationDialog({
           )}
         </div>
 
+        {allowSkipAutomations ? (
+          <SkipAutomationsCheckbox
+            checked={skipAutomations}
+            onChange={setSkipAutomations}
+          />
+        ) : null}
+
         {/* Sem flex-1 spacer: no mobile (flex-col-reverse) ele esticava o
             rodapé e deixava a modal desproporcional. */}
         <DialogFooter className="shrink-0 !flex-col-reverse gap-2 border-t border-[var(--glass-border-subtle)] pt-3 sm:!flex-row sm:items-center sm:border-0 sm:pt-0">
@@ -256,7 +274,10 @@ export function TabulationDialog({
             onClick={() => {
               const leaf = path[path.length - 1];
               if (!leaf || leaf.children.length > 0) return;
-              onConfirm(leaf.id);
+              onConfirm(
+                leaf.id,
+                allowSkipAutomations ? { skipAutomations } : undefined,
+              );
             }}
           >
             {submitting ? "Encerrando…" : "Confirmar encerramento"}

@@ -1,14 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { IconCircleCheck, IconRotateClockwise } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
-import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
 
-import { TabulationDialog } from "./tabulation-dialog";
+import { useResolveConversationFlow } from "./use-resolve-conversation-flow";
 
 /**
  * Botão dedicado "Encerrar / Reabrir conversa" — usado na barra do composer.
@@ -32,40 +30,17 @@ export function ConversationResolveButton({
   onResolved?: (conversationId: string) => void;
   disabled?: boolean;
 }) {
-  const [tabulationOpen, setTabulationOpen] = useState(false);
-  const [tabulationDeptId, setTabulationDeptId] = useState<string | null>(null);
-  const effectiveTabulationDeptId = tabulationDeptId ?? departmentId ?? null;
-  const toggleResolve = useToggleConversationResolve({
-    onNewConversation: (newId) => onReopenNewConversation?.(newId),
-    onResolved: (id) => onResolved?.(id),
-    onTabulationRequired: ({ departmentId: deptFromApi }) => {
-      setTabulationDeptId(deptFromApi ?? departmentId ?? null);
-      setTabulationOpen(true);
-    },
-  });
+  const { handleToggleResolve, toggleResolve, dialogs } =
+    useResolveConversationFlow({
+      conversationId,
+      isResolved,
+      departmentId,
+      requireTabulationOnClose,
+      onReopenNewConversation,
+      onResolved,
+    });
 
   const label = isResolved ? "Reabrir conversa" : "Encerrar conversa";
-
-  function handleClick() {
-    if (!conversationId) return;
-    if (!isResolved && requireTabulationOnClose && departmentId) {
-      setTabulationDeptId(departmentId);
-      setTabulationOpen(true);
-      return;
-    }
-    toggleResolve.mutate({
-      conversationId,
-      action: isResolved ? "reopen" : "resolve",
-    });
-  }
-
-  function handleConfirmTabulation(tabulationId: string) {
-    if (!conversationId) return;
-    toggleResolve.mutate(
-      { conversationId, action: "resolve", tabulationId },
-      { onSuccess: () => setTabulationOpen(false) },
-    );
-  }
 
   return (
     <RequirePermission permission="conversation:resolve">
@@ -73,7 +48,7 @@ export function ConversationResolveButton({
         <TooltipGlass label={label} side="top">
           <button
             type="button"
-            onClick={handleClick}
+            onClick={handleToggleResolve}
             disabled={disabled || !conversationId || toggleResolve.isPending}
             aria-label={label}
             className={cn(
@@ -90,14 +65,7 @@ export function ConversationResolveButton({
             )}
           </button>
         </TooltipGlass>
-
-        <TabulationDialog
-          open={tabulationOpen}
-          onOpenChange={setTabulationOpen}
-          departmentId={effectiveTabulationDeptId}
-          submitting={toggleResolve.isPending}
-          onConfirm={handleConfirmTabulation}
-        />
+        {dialogs}
       </>
     </RequirePermission>
   );

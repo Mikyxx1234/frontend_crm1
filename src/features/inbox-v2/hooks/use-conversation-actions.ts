@@ -118,13 +118,19 @@ export function useToggleConversationResolve(
       conversationId: string;
       action: "resolve" | "reopen";
       tabulationId?: string | null;
+      /** Encerrar sem disparar automações (só ADMIN; backend ignora o resto). */
+      skipAutomations?: boolean;
     }
   >({
     mutationFn: (vars) =>
       postConversationAction(
         vars.conversationId,
         vars.action === "resolve"
-          ? { action: "resolve", tabulationId: vars.tabulationId ?? null }
+          ? {
+              action: "resolve",
+              tabulationId: vars.tabulationId ?? null,
+              ...(vars.skipAutomations ? { skipAutomations: true } : {}),
+            }
           : { action: vars.action },
       ),
     onSuccess: (data, vars) => {

@@ -16,7 +16,7 @@ import {
 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
-import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
+import { useResolveConversationFlow } from "./use-resolve-conversation-flow";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 import type { WhatsappTemplate } from "@/features/inbox-v2/api";
 
@@ -25,7 +25,6 @@ import { TemplatePickerList, InternalTemplatePickerList } from "./template-picke
 import { ScheduleDialog } from "./schedule-dialog";
 import { TaskDialog } from "./task-dialog";
 import { AgentAutomationPickerModal } from "./agent-automation-picker-modal";
-import { TabulationDialog } from "./tabulation-dialog";
 
 /**
  * Menu unificado "+" do composer (estilo WhatsApp). Reúne as ações
@@ -91,21 +90,16 @@ export function ComposerMenu({
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false);
-  const [tabulationOpen, setTabulationOpen] = useState(false);
-  const [tabulationDeptId, setTabulationDeptId] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const effectiveTabulationDeptId = tabulationDeptId ?? departmentId ?? null;
-  const toggleResolve = useToggleConversationResolve({
-    onNewConversation: (newId) => {
-      onReopenNewConversation?.(newId);
-    },
-    onResolved: (id) => onResolved?.(id),
-    onTabulationRequired: ({ departmentId: deptFromApi }) => {
-      closeMenu();
-      setTabulationDeptId(deptFromApi ?? departmentId ?? null);
-      setTabulationOpen(true);
-    },
-  });
+  const { handleToggleResolve: resolveFlow, toggleResolve, dialogs } =
+    useResolveConversationFlow({
+      conversationId,
+      isResolved,
+      departmentId,
+      requireTabulationOnClose,
+      onReopenNewConversation,
+      onResolved,
+    });
 
   function closeMenu() {
     setOpen(false);
@@ -134,25 +128,8 @@ export function ComposerMenu({
   }, [open]);
 
   function handleToggleResolve() {
-    if (!conversationId) return;
-    if (!isResolved && requireTabulationOnClose && departmentId) {
-      closeMenu();
-      setTabulationDeptId(departmentId);
-      setTabulationOpen(true);
-      return;
-    }
-    toggleResolve.mutate(
-      { conversationId, action: isResolved ? "reopen" : "resolve" },
-      { onSuccess: closeMenu },
-    );
-  }
-
-  function handleConfirmTabulation(tabulationId: string) {
-    if (!conversationId) return;
-    toggleResolve.mutate(
-      { conversationId, action: "resolve", tabulationId },
-      { onSuccess: () => setTabulationOpen(false) },
-    );
+    closeMenu();
+    resolveFlow();
   }
 
   const itemClass =
@@ -322,13 +299,7 @@ export function ComposerMenu({
         conversationId={conversationId}
         contactId={contactId}
       />
-      <TabulationDialog
-        open={tabulationOpen}
-        onOpenChange={setTabulationOpen}
-        departmentId={effectiveTabulationDeptId}
-        submitting={toggleResolve.isPending}
-        onConfirm={handleConfirmTabulation}
-      />
+      {dialogs}
       <AgentAutomationPickerModal
         open={automationOpen}
         onClose={() => setAutomationOpen(false)}

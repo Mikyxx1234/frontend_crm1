@@ -161,6 +161,8 @@ export interface Message {
   senderImageUrl?: string | null
   /** Nome completo do agente ou automação que enviou a mensagem. */
   senderName?: string
+  /** User.id do agente no EVENT — fallback quando senderName é "Agente". */
+  senderUserId?: string | null
   /** Mensagem enviada por bot/automação — exibe badge "AUTOMAÇÃO" */
   isBot?: boolean
   /**

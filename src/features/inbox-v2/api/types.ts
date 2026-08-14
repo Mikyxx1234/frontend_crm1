@@ -280,6 +280,8 @@ export interface InboxMessageDto {
    * automation-executor: bot grava `senderName === "Automação"`.
    */
   senderName?: string | null;
+  /** User.id do agente humano no EVENT (legado "Agente" resolve por este id). */
+  senderUserId?: string | null;
   /**
    * Foto de perfil do agente que assinou a mensagem out (resolvida no
    * backend via match `senderName` → `User.avatarUrl`). NULL quando não

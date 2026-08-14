@@ -495,6 +495,7 @@ export function toMessageBubble(
     // Campanha: mantém o valor original ("Campanha: {nome}"); a UI usa
     // `campaignName` no destaque.
     senderName: !isInbound && dto.senderName ? dto.senderName : undefined,
+    senderUserId: dto.senderUserId ?? undefined,
     // Foto do agente remetente (resolvida no backend). Só outbound humano.
     senderImageUrl: !isInbound && !isBot ? (dto.senderImageUrl ?? undefined) : undefined,
     isBot: isBot || isAutomationRun || isCampaign || undefined,

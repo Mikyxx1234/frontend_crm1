@@ -603,6 +603,7 @@ export function ChatArea({
                       action={message.eventAction ?? "ia"}
                       text={message.content}
                       actor={message.senderName ?? ""}
+                      actorId={message.senderUserId}
                       time={message.time}
                     />
                   ) : (

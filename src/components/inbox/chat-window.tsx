@@ -82,6 +82,7 @@ type InboxMessageDto = {
   messageType: string | number | undefined;
   isPrivate?: boolean;
   senderName?: string | null;
+  senderUserId?: string | null;
   authorType?: "human" | "bot" | "system" | string | null;
   senderImageUrl?: string | null;
   mediaUrl?: string | null;
@@ -2345,6 +2346,7 @@ export function ChatWindow({
                         action={classified.action ?? "ia"}
                         text={m.content}
                         actor={m.senderName ?? ""}
+                        actorId={m.senderUserId}
                         time={m.createdAt ? chatTime(m.createdAt) : ""}
                       />
                     </div>

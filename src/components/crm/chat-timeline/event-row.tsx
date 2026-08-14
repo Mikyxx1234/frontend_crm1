@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowRightLeft,
@@ -11,8 +12,13 @@ import {
   UserPlus,
 } from "lucide-react";
 
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import { cn } from "@/lib/utils";
 
+import {
+  isGenericHumanEventActor,
+  resolveEventActorLabel,
+} from "./event-actor";
 import type { ConversationEventAction } from "./types";
 
 const ACTION_ICON: Record<ConversationEventAction, LucideIcon> = {
@@ -29,6 +35,8 @@ export type EventRowProps = {
   action: ConversationEventAction;
   text: string;
   actor: string;
+  /** User.id do agente — usado quando `actor` veio genérico ("Agente"). */
+  actorId?: string | null;
   time: string;
   className?: string;
 };
@@ -37,9 +45,21 @@ export function EventRow({
   action,
   text,
   actor,
+  actorId,
   time,
   className,
 }: EventRowProps) {
+  const needsLookup = isGenericHumanEventActor(actor) && Boolean(actorId);
+  const { data: teamUsers } = useTeamUsersQuery(needsLookup);
+  const displayActor = useMemo(() => {
+    const fromUser = actorId
+      ? teamUsers?.find((u) => u.id === actorId)
+      : undefined;
+    return resolveEventActorLabel(actor, {
+      name: fromUser?.name,
+      email: fromUser?.email,
+    });
+  }, [actor, actorId, teamUsers]);
   const Icon = ACTION_ICON[action] ?? Sparkles;
 
   return (
@@ -60,8 +80,8 @@ export function EventRow({
           aria-hidden
         />
         <span className="text-foreground/80">{text}</span>
-        {actor ? (
-          <span className="text-muted-foreground">· {actor}</span>
+        {displayActor ? (
+          <span className="text-muted-foreground">· {displayActor}</span>
         ) : null}
         {time ? (
           <time className="font-mono text-[10px] tabular-nums text-muted-foreground">

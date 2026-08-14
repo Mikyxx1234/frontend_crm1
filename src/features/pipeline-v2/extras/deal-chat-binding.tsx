@@ -617,6 +617,7 @@ export function useDealChatBinding(params: {
               action={b.eventAction ?? "ia"}
               text={b.content}
               actor={b.senderName ?? ""}
+              actorId={b.senderUserId}
               time={b.time}
             />
           ) : (

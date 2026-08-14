@@ -280,18 +280,11 @@ export function useBulkConversationAction() {
             }
           : undefined,
       ),
-    onSuccess: (result, vars) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
       qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
-      if (
-        vars.action === "resolve" &&
-        Array.isArray(result?.skipped) &&
-        result.skipped.length > 0
-      ) {
-        toast.info(
-          `${result.skipped.length} conversa(s) exigem tabulação e não foram encerradas. Encerre individualmente.`,
-        );
-      }
+      // Toast do resultado fica no caller (`handleBulkAction`) para não
+      // empilhar com "Nenhuma conversa para encerrar" / "em segundo plano".
     },
     onError: (err) => toast.error(err.message),
   });

@@ -233,6 +233,7 @@ export function useTabCounts(
         ownerIds: filters.ownerIds ?? (filters.ownerId ? [filters.ownerId] : []),
         withoutOwner: filters.withoutOwner ?? false,
         channel: filters.channel ?? null,
+        channelIds: filters.channelIds ?? [],
         stageIds: filters.stageIds ?? (filters.stageId ? [filters.stageId] : []),
         tagIds: filters.tagIds ?? [],
         sources: filters.sources ?? [],

@@ -147,7 +147,10 @@ export interface InboxFilters {
   ownerIds?: string[];
   /** true = só conversas sem responsável (`assignedToId` null). */
   withoutOwner?: boolean;
+  /** @deprecated Tipo de plataforma (whatsapp, instagram…). Preferir `channelIds`. */
   channel?: string;
+  /** IDs de instância de canal (Channel.id ou sentinela de canal excluído). */
+  channelIds?: string[];
   /** @deprecated Preferir `stageIds`. Mantido para localStorage antigo. */
   stageId?: string;
   /** Multi-seleção de etapas do negócio. */
@@ -177,6 +180,9 @@ export function normalizeInboxFilters(raw: InboxFilters): InboxFilters {
   const stageIds = Array.from(
     new Set([...(raw.stageIds ?? []), ...(raw.stageId ? [raw.stageId] : [])].filter(Boolean)),
   );
+  const channelIds = Array.from(
+    new Set((raw.channelIds ?? []).filter(Boolean)),
+  );
   const sessionHours = Number(raw.sessionExpiresWithinHours);
   const sessionExpiresWithinHours =
     Number.isFinite(sessionHours) && sessionHours > 0 && sessionHours < 24
@@ -186,6 +192,7 @@ export function normalizeInboxFilters(raw: InboxFilters): InboxFilters {
   return {
     ...rest,
     ownerIds: ownerIds.length ? ownerIds : undefined,
+    channelIds: channelIds.length ? channelIds : undefined,
     stageIds: stageIds.length ? stageIds : undefined,
     sessionExpiresWithinHours,
   };
@@ -208,6 +215,7 @@ export function hasInboxServerFilters(
     (server.ownerIds?.length ?? 0) > 0 ||
     Boolean(server.withoutOwner) ||
     Boolean(server.channel) ||
+    (server.channelIds?.length ?? 0) > 0 ||
     (server.stageIds?.length ?? 0) > 0 ||
     (server.tagIds?.length ?? 0) > 0 ||
     (server.sources?.length ?? 0) > 0 ||

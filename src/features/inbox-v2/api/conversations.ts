@@ -34,7 +34,8 @@ function appendInboxServerFilters(
   if (p.withoutOwner) q.set("withoutOwner", "1");
   else if (p.ownerIds?.length) q.set("ownerIds", p.ownerIds.join(","));
   else if (p.ownerId) q.set("ownerId", p.ownerId);
-  if (p.channel) q.set("channel", p.channel);
+  if (p.channelIds?.length) q.set("channelIds", p.channelIds.join(","));
+  else if (p.channel) q.set("channel", p.channel);
   if (p.stageIds?.length) q.set("stageIds", p.stageIds.join(","));
   else if (p.stageId) q.set("stageId", p.stageId);
   if (p.tagIds?.length) q.set("tagIds", p.tagIds.join(","));

@@ -423,12 +423,31 @@ export interface ChannelConfig {
   kind: string;
 }
 
+export interface InboxFilterChannel {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  phoneNumber: string | null;
+  deleted: boolean;
+}
+
 /** GET /api/channels */
 export async function listChannels(): Promise<ChannelConfig[]> {
   const res = await fetch(apiUrl("/api/channels"));
   if (!res.ok) throw new Error("Erro ao carregar canais");
   const data = await res.json();
   return Array.isArray(data) ? data : data.items ?? [];
+}
+
+/** GET /api/channels/inbox-filter — instâncias (inclui inativos e excluídos). */
+export async function listInboxFilterChannels(): Promise<InboxFilterChannel[]> {
+  const res = await fetch(apiUrl("/api/channels/inbox-filter"));
+  if (!res.ok) throw new Error("Erro ao carregar canais");
+  const data = (await res.json().catch(() => ({}))) as {
+    channels?: InboxFilterChannel[];
+  };
+  return Array.isArray(data.channels) ? data.channels : [];
 }
 
 // ─────────────────────────────────────────────────────────────────

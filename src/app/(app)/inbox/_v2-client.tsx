@@ -414,6 +414,7 @@ export default function InboxV2ClientPage({
   // Encerramento em massa roda no leads-worker (async). Guardamos o id da
   // BulkOperation pra pollar progresso e dar feedback ao terminar.
   const [bulkOpId, setBulkOpId] = useState<string | null>(null);
+  const bulkSkippedRef = useRef(0);
 
   function exitSelectionMode() {
     setSelectionMode(false);
@@ -803,10 +804,12 @@ export default function InboxV2ClientPage({
     const filterTotal = listData?.total ?? ids.length;
 
     if (useAllInFilter) {
+      const isAdminRole = sessionRole === "ADMIN";
       const ok = await confirmDialog({
         title: `Encerrar ${filterTotal.toLocaleString("pt-BR")} conversa${filterTotal > 1 ? "s" : ""}?`,
-        description:
-          "Todas as conversas do filtro atual (todas as páginas) serão encerradas em segundo plano pelo worker. Esta ação não pode ser desfeita em massa.",
+        description: isAdminRole
+          ? "Todas as conversas do filtro atual (todas as páginas) serão encerradas em segundo plano, inclusive as que exigem tabulação — sem tabular. Esta ação não pode ser desfeita em massa."
+          : "Todas as conversas do filtro atual (todas as páginas) serão encerradas em segundo plano pelo worker. Conversas que exigem tabulação não entram neste lote. Esta ação não pode ser desfeita em massa.",
         confirmLabel: "Encerrar todas",
         destructive: true,
       });
@@ -827,21 +830,39 @@ export default function InboxV2ClientPage({
         : { ids, action },
       {
         onSuccess: (result) => {
+          const skipped = Array.isArray(result?.skipped)
+            ? result.skipped.length
+            : 0;
           // Encerrar roda no worker (async): guarda o operationId pra pollar
-          // e mostra feedback de "em segundo plano". O toast final (sucesso/
-          // parcial/falha) vem do efeito de polling abaixo.
+          // e mostra UM único toast. O toast final (sucesso/parcial/falha)
+          // vem do efeito de polling abaixo.
           if (result?.operationId) {
+            bulkSkippedRef.current = skipped;
             setBulkOpId(result.operationId);
             const total = result.total ?? count;
-            toast.info(
-              `Encerrando ${total} conversa${total > 1 ? "s" : ""} em segundo plano…`,
-            );
+            if (skipped > 0) {
+              toast.warning(
+                `Encerrando ${total} conversa${total > 1 ? "s" : ""} em segundo plano. ${skipped} exigem tabulação e não foram encerradas — encerre individualmente.`,
+                { id: `inbox-bulk-resolve-${result.operationId}` },
+              );
+            } else {
+              toast.success(
+                `Encerrando ${total} conversa${total > 1 ? "s" : ""} em segundo plano…`,
+                { id: `inbox-bulk-resolve-${result.operationId}` },
+              );
+            }
             exitSelectionMode();
             return;
           }
           // Sem operationId → nada a processar (já encerradas / exigem tabulação).
           if (action === "resolve") {
-            toast.info("Nenhuma conversa para encerrar.");
+            if (skipped > 0) {
+              toast.warning(
+                `${skipped} conversa(s) exigem tabulação e não foram encerradas. Encerre individualmente.`,
+              );
+            } else {
+              toast.warning("Nenhuma conversa para encerrar.");
+            }
           } else {
             toast.success(
               `${count} conversa${count > 1 ? "s" : ""} reaberta${count > 1 ? "s" : ""}`,
@@ -903,12 +924,29 @@ export default function InboxV2ClientPage({
     if (!bulkOpId || !isBulkOperationFinished(bulkOpStatus)) return;
     const d = bulkOp.data;
     if (d) {
+      const toastId = `inbox-bulk-resolve-${bulkOpId}`;
+      const skipped = bulkSkippedRef.current;
       if (bulkOpStatus === "COMPLETED") {
-        toast.success(`${d.succeeded} conversa${d.succeeded > 1 ? "s" : ""} encerrada${d.succeeded > 1 ? "s" : ""}`);
+        if (skipped > 0) {
+          toast.warning(
+            `${d.succeeded} encerrada(s). ${skipped} exigem tabulação e não foram encerradas — encerre individualmente.`,
+            { id: toastId },
+          );
+        } else {
+          toast.success(
+            `${d.succeeded} conversa${d.succeeded > 1 ? "s" : ""} encerrada${d.succeeded > 1 ? "s" : ""}`,
+            { id: toastId },
+          );
+        }
       } else if (bulkOpStatus === "PARTIAL") {
-        toast.warning(`${d.succeeded} encerrada(s), ${d.failed} falharam`);
+        toast.warning(
+          skipped > 0
+            ? `${d.succeeded} encerrada(s), ${d.failed} falharam. ${skipped} exigem tabulação — encerre individualmente.`
+            : `${d.succeeded} encerrada(s), ${d.failed} falharam`,
+          { id: toastId },
+        );
       } else if (bulkOpStatus === "FAILED") {
-        toast.error("Falha ao encerrar as conversas em massa.");
+        toast.error("Falha ao encerrar as conversas em massa.", { id: toastId });
       }
     }
     qc.invalidateQueries({ queryKey: ["inbox-conversations"] });

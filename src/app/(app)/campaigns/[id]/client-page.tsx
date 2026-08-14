@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -38,6 +38,7 @@ import {
   TONE_CLASSES,
 } from "@/features/campaigns/constants";
 import type { CampaignAction, CampaignDetail } from "@/features/campaigns/types";
+import { rewriteNumericPath } from "@/lib/public-path";
 
 const ACTIVE = ["SCHEDULED", "PROCESSING", "SENDING"];
 
@@ -92,6 +93,10 @@ export default function CampaignDetailClientPage() {
 
   const campaignQuery = useCampaign(id, isAuth);
   const campaign = campaignQuery.data;
+
+  useEffect(() => {
+    if (campaign?.number != null) rewriteNumericPath("/campaigns", id, campaign.number);
+  }, [campaign?.number, id]);
   const isActive = campaign ? ACTIVE.includes(campaign.status) : false;
   const audienceOptionsQuery = useAudienceOptions(isAuth);
   const tagLabel = useMemo(

@@ -33,6 +33,7 @@ import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popo
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { removeContactTag } from "@/features/directory-v2/api";
 import { useConfirm } from "@/hooks/use-confirm";
+import { entityPath, rewriteNumericPath } from "@/lib/public-path";
 
 /**
  * /contacts/[id] — Detalhe + edição inline + delete.
@@ -81,6 +82,7 @@ export default function ContactDetailClientPage({ id }: { id: string }) {
 
   useEffect(() => {
     if (!query.data) return;
+    rewriteNumericPath("/contacts", id, query.data.number);
     setEdit({
       name: query.data.name ?? "",
       email: query.data.email ?? "",
@@ -248,7 +250,7 @@ export default function ContactDetailClientPage({ id }: { id: string }) {
                     <div className="flex items-center gap-2 px-1 py-2.5 font-body text-[13px] text-[var(--text-secondary)]">
                       {query.data.company ? (
                         <Link
-                          href={`/companies/${query.data.company.id}`}
+                          href={entityPath("/companies", query.data.company.number, query.data.company.id)}
                           className="inline-flex items-center gap-1 hover:underline"
                         >
                           {query.data.company.name}

@@ -1396,7 +1396,7 @@ function DuplicateContactRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Link
-            href={`/contacts/${contact.id}`}
+            href={`/contacts/${contact.number ?? contact.id}`}
             className="truncate font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
           >
             {contact.name}

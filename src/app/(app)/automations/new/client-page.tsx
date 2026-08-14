@@ -59,7 +59,7 @@ export default function NewAutomationClientPage() {
         allowManualRun,
       });
       toast.success("Automação criada");
-      router.push(`/automations/${created.id}`);
+      router.push(`/automations/${created.number ?? created.id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar automação");
     }

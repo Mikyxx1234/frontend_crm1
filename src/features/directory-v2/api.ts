@@ -75,6 +75,7 @@ async function sendJson<T>(
 
 export interface ContactListItemDto {
   id: string;
+  number?: number;
   name: string;
   email: string | null;
   phone: string | null;
@@ -253,6 +254,7 @@ export interface ContactDealDto {
 
 export interface ContactDetailDto {
   id: string;
+  number?: number;
   name: string;
   email: string | null;
   phone: string | null;
@@ -262,7 +264,7 @@ export interface ContactDetailDto {
   source: string | null;
   createdAt: string;
   updatedAt: string;
-  company: { id: string; name: string; domain: string | null } | null;
+  company: { id: string; number?: number; name: string; domain: string | null } | null;
   assignedTo: { id: string; name: string; email: string | null } | null;
   tags: { tag: { id: string; name: string; color: string | null } }[];
   deals: ContactDealDto[];
@@ -356,6 +358,7 @@ export function removeContactTag(
 
 export interface CompanyListItemDto {
   id: string;
+  number?: number;
   name: string;
   domain: string | null;
   industry: string | null;
@@ -459,6 +462,7 @@ export function fetchCompanies(params: FetchCompaniesParams = {}): Promise<Compa
 
 export interface CompanyContactDto {
   id: string;
+  number?: number;
   name: string;
   email: string | null;
   phone: string | null;
@@ -466,6 +470,7 @@ export interface CompanyContactDto {
 
 export interface CompanyDetailDto {
   id: string;
+  number?: number;
   name: string;
   domain: string | null;
   industry: string | null;

@@ -26,6 +26,7 @@ export type RecipientStatus =
 
 export interface CampaignListItem {
   id: string;
+  number?: number;
   name: string;
   type: CampaignType;
   status: CampaignStatus;

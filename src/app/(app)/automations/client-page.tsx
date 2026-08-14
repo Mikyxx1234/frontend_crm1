@@ -302,7 +302,7 @@ export default function V2AutomationsClientPage() {
             stepErr instanceof Error ? stepErr.message : "erro desconhecido"
           }. Abra no editor para revisar.`,
         )
-        router.push(`/automations/${created.id}`)
+        router.push(`/automations/${created.number ?? created.id}`)
         return
       }
 
@@ -311,7 +311,7 @@ export default function V2AutomationsClientPage() {
           steps.length === 1 ? "passo" : "passos"
         }).`,
       )
-      router.push(`/automations/${created.id}`)
+      router.push(`/automations/${created.number ?? created.id}`)
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Erro ao importar automação.",

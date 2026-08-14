@@ -47,7 +47,7 @@ export function CampaignRow({
       )}
     >
       <Link
-        href={`/campaigns/${campaign.id}`}
+        href={`/campaigns/${campaign.number ?? campaign.id}`}
         className={cn(
           "grid min-w-0 flex-1 items-stretch gap-3 overflow-visible p-4",
           "sm:gap-4 lg:grid-cols-[minmax(180px,1fr)_2.2fr_auto] lg:items-center",

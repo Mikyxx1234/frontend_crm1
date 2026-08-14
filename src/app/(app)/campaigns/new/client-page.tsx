@@ -165,7 +165,7 @@ export default function NewCampaignClientPage() {
 
     createMutation.mutate(body, {
       onSuccess: (data) => {
-        router.push(`/campaigns/${data.campaign.id}`);
+        router.push(`/campaigns/${data.campaign.number ?? data.campaign.id}`);
       },
       onError: (err) =>
         setError(err instanceof Error ? err.message : "Erro ao criar campanha."),

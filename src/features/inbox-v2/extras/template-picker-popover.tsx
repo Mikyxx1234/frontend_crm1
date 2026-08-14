@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -377,5 +379,83 @@ export function TemplatePickerList({
       )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Modal central do picker de templates WhatsApp — o mesmo card
+ * ("Templates do WhatsApp" + ícone verde + N modelos) usado no menu "+"
+ * e no CTA de sessão 24h encerrada.
+ */
+export function WhatsappTemplatePickerModal({
+  open,
+  onClose,
+  conversationId,
+  channelId,
+  onPick,
+}: {
+  open: boolean;
+  onClose: () => void;
+  conversationId: string | null;
+  channelId?: string | null;
+  onPick?: (tpl: WhatsappTemplate) => void;
+}) {
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPortalTarget(document.body);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!portalTarget || !conversationId) return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {open ? (
+        <>
+          <motion.div
+            key="wa-tpl-bg"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={onClose}
+            className="fixed inset-0 z-70 bg-black/30 backdrop-blur-sm"
+            aria-hidden
+          />
+          <motion.div
+            key="wa-tpl-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Templates do WhatsApp"
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed left-1/2 top-1/2 z-71 -translate-x-1/2 -translate-y-1/2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <TemplatePickerList
+              conversationId={conversationId}
+              channelId={channelId}
+              onClose={onClose}
+              onPick={onPick}
+            />
+          </motion.div>
+        </>
+      ) : null}
+    </AnimatePresence>,
+    portalTarget,
   );
 }

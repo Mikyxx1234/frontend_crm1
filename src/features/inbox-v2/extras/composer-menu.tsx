@@ -21,7 +21,7 @@ import type { InternalTemplateContext } from "@/lib/internal-template-variables"
 import type { WhatsappTemplate } from "@/features/inbox-v2/api";
 
 import { FilePickerButton } from "./file-picker-button";
-import { TemplatePickerList } from "./template-picker-popover";
+import { WhatsappTemplatePickerModal } from "./template-picker-popover";
 import { ScheduleDialog } from "./schedule-dialog";
 import { TaskDialog } from "./task-dialog";
 import { AgentAutomationPickerModal } from "./agent-automation-picker-modal";
@@ -87,7 +87,7 @@ export function ComposerMenu({
   onOutboundBlocked?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"root" | "template">("root");
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false);
@@ -105,7 +105,6 @@ export function ComposerMenu({
 
   function closeMenu() {
     setOpen(false);
-    setView("root");
   }
 
   useEffect(() => {
@@ -147,7 +146,6 @@ export function ComposerMenu({
         onClick={(e) => {
           e.stopPropagation();
           setOpen((v) => !v);
-          setView("root");
         }}
         onMouseDown={(e) => e.stopPropagation()}
         disabled={!conversationId}
@@ -163,11 +161,10 @@ export function ComposerMenu({
           role="menu"
           onMouseDown={(e) => e.stopPropagation()}
         >
-          {view === "root" ? (
-            <div
-              style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
-              className="flex w-56 flex-col gap-px rounded-[var(--radius-lg)] border border-border p-1.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
-            >
+          <div
+            style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
+            className="flex w-56 flex-col gap-px rounded-[var(--radius-lg)] border border-border p-1.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
+          >
               <FilePickerButton
                 conversationId={conversationId}
                 disabled={outboundDisabled}
@@ -208,7 +205,10 @@ export function ComposerMenu({
 
               <button
                 type="button"
-                onClick={() => setView("template")}
+                onClick={() => {
+                  setTemplateModalOpen(true);
+                  closeMenu();
+                }}
                 className={itemClass}
               >
                 <IconFileText size={15} /> Templates WhatsApp
@@ -275,14 +275,6 @@ export function ComposerMenu({
                 </>
               ) : null}
             </div>
-          ) : (
-            <TemplatePickerList
-              conversationId={conversationId}
-              channelId={channelId}
-              onClose={closeMenu}
-              onPick={onPickTemplate}
-            />
-          )}
         </div>
       ) : null}
 
@@ -313,6 +305,13 @@ export function ComposerMenu({
           onPick={onPickInternal}
         />
       ) : null}
+      <WhatsappTemplatePickerModal
+        open={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        conversationId={conversationId}
+        channelId={channelId}
+        onPick={onPickTemplate}
+      />
     </div>
   );
 }

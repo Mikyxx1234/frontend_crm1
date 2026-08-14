@@ -27,7 +27,7 @@ import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
 import { formatConnectionLabel, type ConnectionRef } from "@/lib/connection-label";
 import {
   Composer,
-  TemplatePickerList,
+  WhatsappTemplatePickerModal,
   whatsappTemplateToPending,
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
@@ -740,24 +740,16 @@ export function useDealChatBinding(params: {
   // ── template picker modal ───────────────────────────────────
   const templateModal = (
     <>
-      {templateOpen && effectiveConversationId ? (
-        <div
-          className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setTemplateOpen(false)}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <TemplatePickerList
-              conversationId={effectiveConversationId}
-              channelId={selectedChannelId}
-              onClose={() => setTemplateOpen(false)}
-              onPick={(tpl) => {
-                setExternalTemplate(whatsappTemplateToPending(tpl));
-                setTemplateOpen(false);
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
+      <WhatsappTemplatePickerModal
+        open={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+        conversationId={effectiveConversationId ?? null}
+        channelId={selectedChannelId}
+        onPick={(tpl) => {
+          setExternalTemplate(whatsappTemplateToPending(tpl));
+          setTemplateOpen(false);
+        }}
+      />
       {/* Picker de duração do "Fixar" (24h/7d/30d, estilo WhatsApp) —
           o painel "Mensagens favoritas" fica no kebab do DealDetailPanel
           (TabsBar), que já tem `conversationId` disponível. */}

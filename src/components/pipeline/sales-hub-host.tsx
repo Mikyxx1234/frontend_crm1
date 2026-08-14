@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -337,23 +337,65 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const queueHasMore =
     !hasServerBoard && (boardNormal.data ?? []).some(stageHasMoreServer);
 
-  // Sem snapshot ainda = pendente. `!data && (isPending||isFetching)` falhava
-  // no F5: query recém-ligada fica pending+idle (isFetching=false) e o
-  // host montava o Flow com fila vazia ("Todos 0").
+  const boardHasSnapshot =
+    Array.isArray(boardNormal.data) || Array.isArray(boardFiltered.data);
+  const boardFetching =
+    boardNormal.isFetching ||
+    boardNormal.isLoading ||
+    boardFiltered.isFetching ||
+    boardFiltered.isLoading;
+  const boardError =
+    !boardHasSnapshot &&
+    !boardFetching &&
+    (hasServerBoard ? boardFiltered.isError : boardNormal.isError);
+
+  // Query recém-enabled fica 1 tick em pending+idle (`refetchOnMount: false`).
+  // Hold cobre esse gap (evita "Todos 0"); 50ms solta se o fetch nunca
+  // disparar — `!isFetched` no gate do host travava o shell para sempre.
+  const [idleHold, setIdleHold] = useState(true);
+  useEffect(() => {
+    if (!pipelineId) {
+      setIdleHold(true);
+      return;
+    }
+    if (boardHasSnapshot || boardError || boardFetching) {
+      setIdleHold(false);
+      return;
+    }
+    const t = window.setTimeout(() => setIdleHold(false), 50);
+    return () => window.clearTimeout(t);
+  }, [pipelineId, boardHasSnapshot, boardError, boardFetching]);
+
+  const normalIdleUnfetched =
+    !boardNormal.data &&
+    boardNormal.fetchStatus === "idle" &&
+    !boardNormal.isFetched &&
+    !boardNormal.isError;
+  const filteredIdleUnfetched =
+    !boardFiltered.data &&
+    boardFiltered.fetchStatus === "idle" &&
+    !boardFiltered.isFetched &&
+    !boardFiltered.isError;
+
+  useLayoutEffect(() => {
+    if (!pipelineId || !isAuthenticated) return;
+    if (normalIdleUnfetched) void boardNormal.refetch();
+    if (hasServerBoard && filteredIdleUnfetched) void boardFiltered.refetch();
+    // refetch() é estável o bastante; objetos do useQuery mudam todo render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    pipelineId,
+    isAuthenticated,
+    hasServerBoard,
+    normalIdleUnfetched,
+    filteredIdleUnfetched,
+  ]);
+
   const boardPending =
-    !pipelineId ||
-    (!hasServerBoard
-      ? !Array.isArray(boardNormal.data) &&
-        (boardNormal.isPending ||
-          boardNormal.isFetching ||
-          !boardNormal.isFetched)
-      : !Array.isArray(boardFiltered.data) &&
-        !Array.isArray(boardNormal.data) &&
-        (boardFiltered.isPending ||
-          boardFiltered.isFetching ||
-          boardNormal.isPending ||
-          boardNormal.isFetching ||
-          !(boardFiltered.isFetched || boardNormal.isFetched)));
+    !!pipelineId &&
+    !boardHasSnapshot &&
+    !boardError &&
+    (boardFetching || idleHold);
 
   const boardRefreshing =
     filtersPendingDebounce ||
@@ -562,7 +604,9 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     pipelineId,
   ]);
 
-  if (sessionStatus === "loading" || !pipelineId || boardPending) {
+  // Só sessão/funil. NÃO esperar isFetched do board — query disabled/idle
+  // nunca fica fetched e o Flow ficava preso no FlowPendingShell.
+  if (sessionStatus === "loading" || !pipelineId) {
     return <FlowPendingShell />;
   }
 

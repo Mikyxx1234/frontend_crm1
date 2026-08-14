@@ -227,6 +227,8 @@ export function SalesHubView({
     setStageFromUrl,
     pipelineId,
   );
+  const stageRestorePending = !stageHydrated && stages.length > 0;
+  const chromePending = queueBoardPending || stageRestorePending;
   const [recentlyMovedDealId, setRecentlyMovedDealId] = useState<string | null>(
     null,
   );
@@ -747,7 +749,7 @@ export function SalesHubView({
         onSelectStage={handleSelectStage}
         totalDeals={totalDeals}
         compact={hubChromeCompact}
-        pending={queueBoardPending || !stageHydrated}
+        pending={chromePending}
       />
 
       <div
@@ -791,7 +793,7 @@ export function SalesHubView({
                   className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 font-display text-[11px] font-bold text-white"
                   style={{ background: queueStageHeader.color }}
                 >
-                  {queueBoardPending || !stageHydrated ? "…" : queueStageHeader.count}
+                  {chromePending ? "…" : queueStageHeader.count}
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
@@ -808,7 +810,7 @@ export function SalesHubView({
               aria-hidden
             />
             <p className="mt-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">
-              {queueBoardPending || !stageHydrated
+              {chromePending
                 ? "…"
                 : formatCurrency(queueStageHeader.totalValue)}
             </p>
@@ -825,7 +827,7 @@ export function SalesHubView({
             hasMoreServer={canLoadMoreServer}
             remainingCount={queueRemaining}
             loadingMore={queueLoadingMore}
-            isLoading={queueBoardPending || !stageHydrated}
+            isLoading={chromePending}
             onLoadMore={() => onQueueLoadMore?.(selectedStageId)}
             selectedStageId={selectedStageId}
             stageSwitchToken={stageSwitchToken}
@@ -863,7 +865,7 @@ export function SalesHubView({
               </span>
             </div>
           ) : null}
-          {queueBoardPending || !stageHydrated ? (
+          {chromePending ? (
             <div className="flex flex-1 items-center justify-center bg-[var(--color-chat-bg)]">
               <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>

@@ -58,7 +58,7 @@ function resolvePublicUrlRef<T extends { id: string; number?: number; slug?: str
   if (!key) return undefined;
   if (/^\d+$/.test(key)) {
     const n = Number(key);
-    const byNumber = items.find((item) => item.number === n);
+    const byNumber = items.find((item) => Number(item.number) === n);
     if (byNumber) return byNumber;
   }
   return (
@@ -96,7 +96,9 @@ export function findStageByUrlParam<T extends StageUrlRef>(
 export function usePipelineUrlSync(pipelines: PipelineListItemDto[] | undefined) {
   const [pipelineId, setPipelineIdState] = useState<string | null>(null);
 
-  useEffect(() => {
+  // useLayoutEffect: `?pipeline=9` vira CUID antes do paint — senão o board
+  // fica enabled:false (idle) e o host antigo esperava isFetched para sempre.
+  useLayoutEffect(() => {
     if (pipelineId || !pipelines?.length) return;
 
     const urlKey = readUrlParam("pipeline");

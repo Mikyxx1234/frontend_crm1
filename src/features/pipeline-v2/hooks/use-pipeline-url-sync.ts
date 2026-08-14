@@ -26,9 +26,43 @@ function writeUrlParam(key: string, value: string | null, mode: "replace" | "pus
   fn.call(window.history, window.history.state, "", url.toString());
 }
 
+export type PipelineUrlRef = {
+  id: string;
+  number?: number;
+  slug?: string;
+  name?: string;
+};
+
+/** Valor público na URL: `?pipeline=12`. */
+export function pipelineUrlParam(p: PipelineUrlRef | undefined | null): string | null {
+  return typeof p?.number === "number" && Number.isFinite(p.number) ? String(p.number) : null;
+}
+
 /**
- * Funil na URL como `?pipeline=<slug>`; estado interno continua CUID.
- * Init: URL slug → LS (id) → default. Troca limpa `?stage=`.
+ * Resolve `?pipeline=`: dígitos → number; senão slug/nome (bookmarks); CUID por último.
+ */
+export function findPipelineByUrlParam<T extends PipelineUrlRef>(
+  pipelines: T[],
+  raw: string,
+): T | undefined {
+  const key = raw.trim();
+  if (!key) return undefined;
+  if (/^\d+$/.test(key)) {
+    const n = Number(key);
+    const byNumber = pipelines.find((p) => p.number === n);
+    if (byNumber) return byNumber;
+  }
+  return (
+    pipelines.find((p) => p.slug === key) ??
+    pipelines.find((p) => (p.name ?? "").toLowerCase() === key.toLowerCase()) ??
+    pipelines.find((p) => p.id === key)
+  );
+}
+
+/**
+ * Funil na URL como `?pipeline=<number>`; estado interno continua CUID.
+ * Init: URL number/slug/CUID → LS (id) → default. Troca limpa `?stage=`.
+ * Depois do load, slug/CUID na query são substituídos pelo number.
  */
 export function usePipelineUrlSync(pipelines: PipelineListItemDto[] | undefined) {
   const [pipelineId, setPipelineIdState] = useState<string | null>(null);
@@ -36,17 +70,11 @@ export function usePipelineUrlSync(pipelines: PipelineListItemDto[] | undefined)
   useEffect(() => {
     if (pipelineId || !pipelines?.length) return;
 
-    const urlSlug = readUrlParam("pipeline");
-    if (urlSlug) {
-      const bySlug = pipelines.find((p) => p.slug === urlSlug);
-      if (bySlug) {
-        setPipelineIdState(bySlug.id);
-        return;
-      }
-      // slug inválido: aceita CUID legado na query
-      const byId = pipelines.find((p) => p.id === urlSlug);
-      if (byId) {
-        setPipelineIdState(byId.id);
+    const urlKey = readUrlParam("pipeline");
+    if (urlKey) {
+      const hit = findPipelineByUrlParam(pipelines, urlKey);
+      if (hit) {
+        setPipelineIdState(hit.id);
         return;
       }
     }
@@ -73,7 +101,8 @@ export function usePipelineUrlSync(pipelines: PipelineListItemDto[] | undefined)
       /* ignore */
     }
     const p = pipelines.find((x) => x.id === pipelineId);
-    if (p?.slug) writeUrlParam("pipeline", p.slug, "replace");
+    const urlVal = pipelineUrlParam(p);
+    if (urlVal) writeUrlParam("pipeline", urlVal, "replace");
   }, [pipelineId, pipelines]);
 
   const setPipelineId = useCallback(
@@ -82,7 +111,8 @@ export function usePipelineUrlSync(pipelines: PipelineListItemDto[] | undefined)
       writeUrlParam("stage", null, "replace");
       if (!id || !pipelines?.length) return;
       const p = pipelines.find((x) => x.id === id);
-      if (p?.slug) writeUrlParam("pipeline", p.slug, "replace");
+      const urlVal = pipelineUrlParam(p);
+      if (urlVal) writeUrlParam("pipeline", urlVal, "replace");
     },
     [pipelines],
   );

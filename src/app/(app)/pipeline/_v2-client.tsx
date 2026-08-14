@@ -282,7 +282,7 @@ export default function KanbanV2ClientPage({
 
   const status = BOARD_STATUS;
   const { data: pipelines } = usePipelines(isAuthenticated);
-  // URL `?pipeline=<slug>` + LS interno; nunca CUID na query.
+  // URL `?pipeline=<number>` + LS interno; nunca CUID/slug na query.
   const { pipelineId, setPipelineId } = usePipelineUrlSync(pipelines);
 
   const boardSort = useMemo<BoardSortParam | undefined>(() => {

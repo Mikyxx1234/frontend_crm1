@@ -5,14 +5,20 @@
  * (legível e compartilhável). Recarregar a página mantém os filtros.
  *
  * Exemplo:
- *   /dashboard?period=last_30&pipeline=vendas&stages=negociacao,proposta&tags=t1
+ *   /dashboard?period=last_30&pipeline=12&stages=negociacao,proposta&tags=t1
  *
  * Sem query string → padrão "Este mês" (this_month).
- * `pipeline` / `stages` na URL são slugs; estado interno e API usam CUID.
+ * `pipeline` na URL é o number da org; `stages` continuam slugs.
+ * Estado interno e API usam CUID.
  */
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+import {
+  findPipelineByUrlParam,
+  pipelineUrlParam,
+} from "@/features/pipeline-v2/hooks/use-pipeline-url-sync";
 
 import type { DashboardFiltersState, PeriodKey } from "./api";
 
@@ -28,7 +34,9 @@ const VALID_PERIODS: PeriodKey[] = [
 
 export type DashboardPipelineOption = {
   id: string;
+  number?: number;
   slug?: string;
+  name?: string;
   stages?: Array<{ id: string; slug?: string }>;
 };
 
@@ -38,7 +46,7 @@ function parseCsv(value: string | null): string[] {
     : [];
 }
 
-/** Valores crus da URL (slug ou CUID legado). */
+/** Valores crus da URL (number, slug legado ou CUID legado). */
 type UrlFilterKeys = {
   period: PeriodKey;
   startDate?: string;
@@ -60,7 +68,7 @@ function readUrlKeys(sp: URLSearchParams): UrlFilterKeys {
     period,
     startDate: sp.get("startDate") ?? undefined,
     endDate: sp.get("endDate") ?? undefined,
-    // Novo: `pipeline=<slug>`; legado: `pipelineId=<cuid>`.
+    // Novo: `pipeline=<number>`; legado: slug/nome, ou `pipelineId=<cuid>`.
     pipelineKey: sp.get("pipeline") ?? sp.get("pipelineId") ?? undefined,
     stageKeys: parseCsv(sp.get("stages")),
     tagIds: parseCsv(sp.get("tags")),
@@ -77,9 +85,7 @@ function resolveToIds(
   let stageIds: string[] = [];
 
   if (keys.pipelineKey && pipelines?.length) {
-    const p =
-      pipelines.find((x) => x.slug === keys.pipelineKey) ??
-      pipelines.find((x) => x.id === keys.pipelineKey);
+    const p = findPipelineByUrlParam(pipelines, keys.pipelineKey);
     pipelineId = p?.id;
     if (p && keys.stageKeys.length) {
       const stages = p.stages ?? [];
@@ -121,7 +127,8 @@ function toSearchParams(
   }
   if (f.pipelineId) {
     const p = pipelines?.find((x) => x.id === f.pipelineId);
-    if (p?.slug) sp.set("pipeline", p.slug);
+    const urlVal = pipelineUrlParam(p);
+    if (urlVal) sp.set("pipeline", urlVal);
   }
   if (f.stageIds.length && f.pipelineId) {
     const p = pipelines?.find((x) => x.id === f.pipelineId);
@@ -180,6 +187,21 @@ export function useDashboardFilters(
       ),
     [searchParams, pipelines],
   );
+
+  useEffect(() => {
+    if (!pipelines?.length || !filters.pipelineId) return;
+    const p = pipelines.find((x) => x.id === filters.pipelineId);
+    const want = pipelineUrlParam(p);
+    if (!want) return;
+    const current = searchParams.get("pipeline");
+    const hasLegacyId = searchParams.has("pipelineId");
+    if (current === want && !hasLegacyId) return;
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("pipeline", want);
+    sp.delete("pipelineId");
+    const qs = sp.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pipelines, filters.pipelineId, searchParams, pathname, router]);
 
   const setFilters = useCallback(
     (next: DashboardFiltersState) => {

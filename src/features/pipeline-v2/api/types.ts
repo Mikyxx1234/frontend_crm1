@@ -84,7 +84,9 @@ export interface BoardStageDto {
 export interface PipelineListItemDto {
   id: string;
   name: string;
-  /** Slug público para `?pipeline=` (único na org). */
+  /** Número sequencial por org para `?pipeline=12`. */
+  number?: number;
+  /** Slug legado — leitura de bookmarks antigos; não gravar na URL. */
   slug?: string;
   isDefault?: boolean;
   /**

@@ -63,6 +63,8 @@ async function fetchPipelinesFallback(): Promise<FilterOptionsResponse["pipeline
     return data.map((p: Record<string, unknown>) => ({
       id: String(p.id ?? ""),
       name: String(p.name ?? ""),
+      number: typeof p.number === "number" ? p.number : undefined,
+      slug: typeof p.slug === "string" ? p.slug : undefined,
       stages: Array.isArray(p.stages)
         ? (p.stages as Record<string, unknown>[]).map((s, i) => ({
             id: String(s.id ?? ""),

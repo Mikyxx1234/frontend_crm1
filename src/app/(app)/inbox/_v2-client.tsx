@@ -574,6 +574,14 @@ export default function InboxV2ClientPage({
     searchForQuery,
   );
 
+  // Uma fonte: badge da aba = select-all N. `list.total` ainda pode ser o
+  // sentinela pageSize+1 (26) se a API antiga estiver no ar.
+  const badgeTotal = tabCounts?.[tab];
+  const filterTotal =
+    typeof badgeTotal === "number" && badgeTotal > 0
+      ? badgeTotal
+      : listData?.total;
+
   // ── Sticky activeRow ────────────────────────────────────────────
   // A `rows` reflete o filtro da aba atual (ex.: "entrada"). Se o
   // agente envia uma mensagem outbound, a conversa pode deixar de
@@ -794,12 +802,12 @@ export default function InboxV2ClientPage({
     const useAllInFilter = selectAllFilter && action === "resolve";
     if (!useAllInFilter && ids.length === 0) return;
 
-    const filterTotal = listData?.total ?? ids.length;
+    const confirmTotal = filterTotal ?? ids.length;
 
     if (useAllInFilter) {
       const isAdminRole = sessionRole === "ADMIN";
       const ok = await confirmDialog({
-        title: `Encerrar ${filterTotal.toLocaleString("pt-BR")} conversa${filterTotal > 1 ? "s" : ""}?`,
+        title: `Encerrar ${confirmTotal.toLocaleString("pt-BR")} conversa${confirmTotal > 1 ? "s" : ""}?`,
         description: isAdminRole
           ? "Todas as conversas do filtro atual (todas as páginas) serão encerradas em segundo plano, inclusive as que exigem tabulação — sem tabular. Esta ação não pode ser desfeita em massa."
           : "Todas as conversas do filtro atual (todas as páginas) serão encerradas em segundo plano pelo worker. Conversas que exigem tabulação não entram neste lote. Esta ação não pode ser desfeita em massa.",
@@ -809,7 +817,7 @@ export default function InboxV2ClientPage({
       if (!ok) return;
     }
 
-    const count = useAllInFilter ? filterTotal : ids.length;
+    const count = useAllInFilter ? confirmTotal : ids.length;
     bulkAction.mutate(
       useAllInFilter
         ? {
@@ -1253,7 +1261,7 @@ export default function InboxV2ClientPage({
         setSelectAllFilter(false);
         setSelectedIds(new Set(ids));
       }}
-      totalCount={listData?.total}
+      totalCount={filterTotal}
       selectAllFilter={selectAllFilter}
       onSelectAllFilterChange={(v) => {
         setSelectAllFilter(v);

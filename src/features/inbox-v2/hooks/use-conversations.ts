@@ -65,9 +65,18 @@ export function useConversations(params: {
     getNextPageParam: (last) => {
       const page = last.page ?? 1;
       const perPage = last.perPage ?? PAGE_SIZE;
+      const itemCount = last.items?.length ?? 0;
+      // Página incompleta = fim. Não use `total === perPage+1` (sentinela
+      // antiga: 25+1=26) para parar o scroll — Automação com badge 421
+      // parava na 1ª/2ª página.
+      if (itemCount < perPage) return undefined;
+      if (last.hasMore === false) return undefined;
+      if (last.hasMore === true) return page + 1;
       const total = last.total ?? 0;
       const loaded = page * perPage;
-      return loaded < total ? page + 1 : undefined;
+      if (total > perPage + 1) return loaded < total ? page + 1 : undefined;
+      // total ausente ou sentinela (≤ pageSize+1) + página cheia → continua
+      return page + 1;
     },
     enabled: isPreviewMode() ? true : (params.enabled ?? true),
     // SSE (`useInboxRealtime`) já invalida esta query em new_message /
@@ -120,6 +129,7 @@ export function useConversations(params: {
       total: last.total,
       page: last.page,
       perPage: last.perPage,
+      hasMore: last.hasMore,
     };
   }, [query.data]);
 

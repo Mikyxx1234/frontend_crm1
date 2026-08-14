@@ -124,9 +124,12 @@ export interface ConversationListRow {
 
 export interface ConversationListResponse {
   items: ConversationListRow[];
+  /** COUNT real do filtro (mesmo das badges). Nunca pageSize+1. */
   total?: number;
   page?: number;
   perPage?: number;
+  /** Há mais páginas no servidor. Independente do `total`. */
+  hasMore?: boolean;
 }
 
 export interface TabCounts {

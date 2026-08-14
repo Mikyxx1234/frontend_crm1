@@ -61,6 +61,7 @@ import {
 import { dt } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { MetaSendErrorBalloon } from "@/components/crm/meta-send-error-balloon";
+import { EventRow, classifyTimelineItem } from "@/components/crm/chat-timeline";
 
 /** Texto da nota em uma linha (banner fixado estilo WhatsApp). */
 function notePreviewOneLine(content: string, maxChars = 140): string {
@@ -81,6 +82,7 @@ type InboxMessageDto = {
   messageType: string | number | undefined;
   isPrivate?: boolean;
   senderName?: string | null;
+  authorType?: "human" | "bot" | "system" | string | null;
   senderImageUrl?: string | null;
   mediaUrl?: string | null;
   replyToId?: string | null;
@@ -2320,6 +2322,30 @@ export function ChatWindow({
                       <SystemEventRow
                         body={systemBody}
                         createdAt={m.createdAt}
+                      />
+                    </div>
+                  </React.Fragment>
+                );
+              }
+
+              const classified = classifyTimelineItem({
+                messageType: String(m.messageType ?? ""),
+                isPrivate: m.isPrivate,
+                authorType: m.authorType,
+                senderName: m.senderName,
+                content: m.content,
+                direction: m.direction,
+              });
+              if (classified.kind === "event") {
+                return (
+                  <React.Fragment key={m.id}>
+                    {showDate && <DateSep date={m.createdAt} />}
+                    <div data-msg-idx={idx}>
+                      <EventRow
+                        action={classified.action ?? "ia"}
+                        text={m.content}
+                        actor={m.senderName ?? ""}
+                        time={m.createdAt ? chatTime(m.createdAt) : ""}
                       />
                     </div>
                   </React.Fragment>

@@ -13,6 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { StatusTicks } from "@/components/crm/status-ticks"
+import { NoteRow } from "@/components/crm/chat-timeline"
 import {
   IconRobot,
   IconClipboardList,
@@ -27,7 +28,6 @@ import {
   IconTextCaption,
   IconPin,
   IconPinFilled,
-  IconListCheck,
   IconArrowsExchange,
   IconPhoneIncoming,
   IconPhoneOutgoing,
@@ -192,6 +192,22 @@ export interface Message {
   buttons?: string[]
   /** Tipo de mídia: "audio", "image", "document", "video", "text" etc. */
   messageType?: string
+  /**
+   * Discriminante da timeline do chat: mensagem, nota humana ou evento
+   * automático (sistema/IA). Quando ausente, `isNote` continua valendo.
+   */
+  kind?: "message" | "note" | "event"
+  /**
+   * Ação do evento (ícone). Só relevante quando `kind === "event"`.
+   */
+  eventAction?:
+    | "distribuicao"
+    | "transferencia"
+    | "status"
+    | "tag"
+    | "entrada"
+    | "saida"
+    | "ia"
   /**
    * Nota interna — não enviada ao cliente. Quando true, a bolha é
    * renderizada com estilo diferenciado (fundo amarelo, borda lateral,
@@ -1352,105 +1368,21 @@ export function MessageBubble({
     )
   }
 
-  // Nota interna: card neutro (cinza claro) com acento indigo no rótulo
-  // "NOTA" — modelo alinhado ao screenshot (antes era gradiente âmbar).
-  // Layout: [🔒 NOTA] [texto flex-1] [ações hover] [agente] [hora]
+  // Nota interna humana — card com cadeado + rótulo "NOTA".
+  // Eventos automáticos NÃO passam por aqui (`kind === "event"`).
   if (isNote) {
-    const hasNoteActions = !!(onPinNote || onAddToLog)
     return (
-      <div
-        className={cn(
-          "group relative flex w-full items-center gap-2.5 rounded-[var(--radius-lg)] border px-3.5 py-2 text-sm leading-[1.45] transition-colors",
-          isPinned
-            ? "border-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,var(--glass-bg-base))]"
-            : "border-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] bg-[color-mix(in_srgb,var(--text-muted)_7%,var(--glass-bg-base))]",
-          className,
-        )}
-      >
-        {/* Indicador de nota fixada */}
-        {isPinned && (
-          <span className="absolute -top-1.5 right-8 flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_15%,var(--glass-bg-base))] px-1.5 py-0.5">
-            <IconPinFilled size={9} className="text-[var(--brand-primary)]" />
-            <span className="font-display text-[8px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-              fixada
-            </span>
-          </span>
-        )}
-
-        {/* Ícone + badge "NOTA" */}
-        <span className="flex shrink-0 items-center gap-1.5">
-          <IconLock size={13} className="text-[var(--brand-primary)]" />
-          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-[var(--brand-primary)]">
-            Nota
-          </span>
-        </span>
-
-        {/* Separador */}
-        <span className="h-3.5 w-px shrink-0 bg-[color-mix(in_srgb,var(--text-muted)_25%,transparent)]" />
-
-        {/* Conteúdo da mensagem */}
-        <span className="min-w-0 flex-1 text-[var(--text-primary)]">
-          <MessageContent message={message} isOutgoing={false} />
-        </span>
-
-        {/* Ações hover (fixar + log) */}
-        {hasNoteActions && (
-          <span className="ml-1 flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-            {onPinNote && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      isPinned ? onPinNote(null) : onPinNote(message.id)
-                    }
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] hover:text-[var(--brand-primary)]"
-                    aria-label={isPinned ? "Desafixar nota" : "Fixar nota"}
-                  >
-                    {isPinned ? (
-                      <IconPinFilled size={13} />
-                    ) : (
-                      <IconPin size={13} />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-[11px]">
-                  {isPinned ? "Desafixar nota" : "Fixar nota"}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {onAddToLog && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onAddToLog(message.content)}
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] hover:text-[var(--brand-primary)]"
-                    aria-label="Adicionar ao log do negócio"
-                  >
-                    <IconListCheck size={13} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-[11px]">
-                  Adicionar ao log do negócio
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </span>
-        )}
-
-        {/* Agente + hora */}
-        <span className="ml-auto flex shrink-0 items-center gap-2">
-          {senderName && (
-            <span className="font-display text-[11px] font-semibold text-[var(--text-secondary)]">
-              {senderName}
-            </span>
-          )}
-          <span className="font-body text-[10.5px] text-[var(--text-muted)]">
-            {message.time}
-          </span>
-        </span>
-      </div>
+      <NoteRow
+        className={className}
+        content={<MessageContent message={message} isOutgoing={false} />}
+        senderName={senderName}
+        time={message.time}
+        isPinned={isPinned}
+        noteId={message.id}
+        logContent={message.content}
+        onPinNote={onPinNote}
+        onAddToLog={onAddToLog}
+      />
     )
   }
 

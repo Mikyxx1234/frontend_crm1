@@ -9,7 +9,7 @@
  * pra serem plugados nas props correspondentes do DealDetailPanel.
  */
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,6 +21,7 @@ import { avatarInitials } from "@/lib/avatar";
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
 import { DaySeparator, ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { EventRow } from "@/components/crm/chat-timeline";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
 import { formatConnectionLabel, type ConnectionRef } from "@/lib/connection-label";
@@ -574,12 +575,13 @@ export function useDealChatBinding(params: {
       // do inbox. Sem isto o item vira uma BOLHA VAZIA no chat do deal.
       if (b.messageType === "ticket-separator" && b.ticketInfo) {
         return (
-          <TicketDivider
-            key={b.id || `sep-${index}`}
-            number={b.ticketInfo.number}
-            closedAt={b.ticketInfo.closedAt}
-            isCurrent={b.ticketInfo.isCurrent}
-          />
+          <li key={b.id || `sep-${index}`} className="list-none">
+            <TicketDivider
+              number={b.ticketInfo.number}
+              closedAt={b.ticketInfo.closedAt}
+              isCurrent={b.ticketInfo.isCurrent}
+            />
+          </li>
         );
       }
       // Só renderiza bolhas reais (incoming/outgoing). Descarta itens
@@ -597,8 +599,9 @@ export function useDealChatBinding(params: {
         lastChannelId = b.channelId;
       }
       const isNoteBubble = b.isNote === true;
+      const isEvent = b.kind === "event";
       return (
-        <Fragment key={b.id}>
+        <li key={b.id} className="list-none">
           {showSeparator && <DaySeparator date={dayLabel} />}
           {connLabel && <ConnectionDivider label={connLabel} />}
           <div
@@ -609,6 +612,14 @@ export function useDealChatBinding(params: {
                 : "flex flex-col scroll-mt-24 rounded-[var(--radius-lg)] transition-[background-color,box-shadow] duration-500"
             }
           >
+          {isEvent ? (
+            <EventRow
+              action={b.eventAction ?? "ia"}
+              text={b.content}
+              actor={b.senderName ?? ""}
+              time={b.time}
+            />
+          ) : (
           <MessageBubble
             message={b}
             agentInitials={agentInitials}
@@ -635,13 +646,16 @@ export function useDealChatBinding(params: {
             onPinMessage={isNoteBubble ? undefined : handlePinMessage}
             onFavoriteMessage={isNoteBubble ? undefined : handleFavorite}
           />
+          )}
           </div>
-        </Fragment>
+        </li>
       );
     });
     messagesNode = (
       <>
-        {bubbleNodes}
+        <ul className="flex list-none flex-col gap-1.5">
+          {bubbleNodes}
+        </ul>
         {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
         <div ref={bottomRef} />
         {showScrollDown && (

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import { useSSE } from "@/hooks/use-sse";
+import { isEventMessageType } from "@/components/crm/chat-timeline";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
 /** Cobre `pipeline-board`, `pipeline-board-search` e `pipeline-board-filtered`. */
@@ -226,7 +227,9 @@ export function usePipelineRealtime(enabled = true) {
           direction?: string;
           content?: string;
           timestamp?: string;
+          messageType?: string;
         };
+        if (isEventMessageType(payload.messageType)) return;
         // Payload sem contactId (legado): fallback à invalidação
         // debounced do board — não dá pra localizar o card.
         if (!payload.contactId) {

@@ -11,6 +11,7 @@
 
 import type { Conversation, LastMessageType } from "@/components/crm/conversation-card";
 import type { Message, FormField } from "@/components/crm/message-bubble";
+import { classifyTimelineItem } from "@/components/crm/chat-timeline";
 import { normalizeDeliveryStatus } from "@/components/crm/status-ticks";
 import { avatarInitials as avatarInitialsFromLib } from "@/lib/avatar";
 import type { ConnectionRef } from "@/lib/connection-label";
@@ -504,17 +505,30 @@ export function toMessageBubble(
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
     messageType: dto.messageType ?? undefined,
-    // Nota interna: backend serializa `isPrivate` (Prisma) e o composer
-    // legado mandava `private: true`. Detectamos pelos três sinais —
-    // qualquer um true marca como nota e dispara o estilo dedicado no
-    // MessageBubble (sem isso a nota era renderizada como balão de saída
-    // azul, indistinguível de mensagem enviada ao cliente).
-    isNote:
-      (!isAutomationRun &&
-        (dto.isPrivate === true ||
-          dto.private === true ||
-          dto.messageType === "note")) ||
-      undefined,
+    // Timeline: event (log automático) vs note (anotação humana).
+    // Legado: notas do sistema/Agente IA viram event. ai_draft fica fora.
+    ...(() => {
+      const classified = classifyTimelineItem({
+        messageType: dto.messageType,
+        isPrivate: dto.isPrivate,
+        private: dto.private,
+        authorType: dto.authorType,
+        senderName: dto.senderName,
+        content: dto.content,
+        direction: dto.direction,
+      });
+      if (classified.kind === "event") {
+        return {
+          kind: "event" as const,
+          eventAction: classified.action,
+          isNote: undefined,
+        };
+      }
+      if (classified.kind === "note" && !isAutomationRun) {
+        return { kind: "note" as const, isNote: true as const };
+      }
+      return { kind: "message" as const, isNote: undefined };
+    })(),
     mediaUrl: dto.mediaUrl ?? dto.media?.url ?? undefined,
     // Ticks de entrega (estilo WhatsApp) — apenas para mensagens out.
     status: isInbound ? undefined : toBubbleStatus(dto),

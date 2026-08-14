@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import { subscribeSSEEvents } from "@/hooks/use-sse";
+import { isEventMessageType } from "@/components/crm/chat-timeline";
 import { messagesKey } from "./use-messages";
 import { playInboxPing } from "./use-inbox-sound";
 import type { ConversationListRow } from "../api";
@@ -39,6 +40,7 @@ type NewMessagePayload = {
   assignedToId?: string | null;
   content?: string;
   timestamp?: string;
+  messageType?: string;
 };
 
 /**
@@ -58,6 +60,19 @@ function patchInboxConversationCard(
   data: NewMessagePayload,
 ): boolean {
   if (!data.conversationId) return false;
+  // Eventos de timeline (distribuição, etc.) não substituem o preview do card.
+  if (isEventMessageType(data.messageType)) {
+    const entries = qc.getQueriesData<{ pages?: Array<{ items?: ConversationListRow[] }> }>({
+      queryKey: ["inbox-conversations"],
+    });
+    for (const [, cached] of entries) {
+      if (!cached?.pages) continue;
+      for (const page of cached.pages) {
+        if (page?.items?.some((c) => c?.id === data.conversationId)) return true;
+      }
+    }
+    return false;
+  }
   const direction =
     data.direction === "in" || data.direction === "out" ? data.direction : null;
   const ts =

@@ -245,7 +245,7 @@ export interface InboxMessageDto {
   conversationId: string;
   direction: MessageDirection;
   content: string;
-  messageType?: "text" | "note" | "image" | "audio" | "video" | "file" | "template" | string;
+  messageType?: "text" | "note" | "event" | "image" | "audio" | "video" | "file" | "template" | string;
   // Backend serializa como `isPrivate` (Prisma). Mantemos `private` como
   // alias por compat com chamadas legadas — adapter consulta os dois.
   isPrivate?: boolean;

@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useRef, useState, useEffect, useCallback, useMemo, type FormEvent } from "react"
+import { useRef, useState, useEffect, useCallback, useMemo, type FormEvent } from "react"
 import { useSession } from "next-auth/react"
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions"
 import { cn } from "@/lib/utils"
@@ -10,6 +10,7 @@ import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { ChatAvatar } from "@/components/inbox/chat-avatar"
 import { AVATAR_SIZE, avatarInitials } from "@/lib/avatar"
 import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, type Message } from "./message-bubble"
+import { EventRow } from "./chat-timeline"
 import { SessionAlert } from "./session-alert"
 import {
   formatConnectionLabel,
@@ -530,7 +531,8 @@ export function ChatArea({
       })()}
       {/* MESSAGES — única área rolável; min-h-0 permite encolher e manter
           o footer (composer) sempre visível na base. */}
-      <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-7 pt-6 pb-8 max-md:px-3">
+      <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-7 pt-6 pb-8 max-md:px-3">
+        <ul className="flex list-none flex-col gap-1.5">
         {(() => {
           // Separador de dia ("Hoje" / "Ontem" / "DD/MM/AAAA") inserido
           // automaticamente sempre que a data muda entre mensagens. Usa o
@@ -550,12 +552,13 @@ export function ChatArea({
             // quando `?history=1`. Não é uma bolha; renderiza diretamente.
             if (message.messageType === "ticket-separator" && message.ticketInfo) {
               return (
-                <TicketDivider
-                  key={message.id || `sep-${index}`}
-                  number={message.ticketInfo.number}
-                  closedAt={message.ticketInfo.closedAt}
-                  isCurrent={message.ticketInfo.isCurrent}
-                />
+                <li key={message.id || `sep-${index}`} className="list-none">
+                  <TicketDivider
+                    number={message.ticketInfo.number}
+                    closedAt={message.ticketInfo.closedAt}
+                    isCurrent={message.ticketInfo.isCurrent}
+                  />
+                </li>
               )
             }
             if (message.type !== "incoming" && message.type !== "outgoing") {
@@ -582,8 +585,9 @@ export function ChatArea({
                 lastChannelId = message.channelId
               }
             }
+            const isEvent = message.kind === "event"
             return (
-              <Fragment key={message.id || index}>
+              <li key={message.id || index} className="list-none">
                 {separator && <DaySeparator date={separator} />}
                 {connLabel && <ConnectionDivider label={connLabel} />}
                 <div
@@ -594,23 +598,33 @@ export function ChatArea({
                       "bg-[var(--brand-primary)]/10 shadow-[0_0_0_2px_var(--brand-primary)]",
                   )}
                 >
-                  <MessageBubble
-                    message={message}
-                    agentInitials={agentInitials}
-                    agentName={agentName}
-                    agentImageUrl={selfAgentImage}
-                    senderPhotoByName={senderPhotoByName}
-                    onReplyMessage={onReplyMessage}
-                    onForwardMessage={onForwardMessage}
-                    onReactMessage={onReactMessage}
-                    onPinMessage={onPinMessage}
-                    onFavoriteMessage={onFavoriteMessage}
-                  />
+                  {isEvent ? (
+                    <EventRow
+                      action={message.eventAction ?? "ia"}
+                      text={message.content}
+                      actor={message.senderName ?? ""}
+                      time={message.time}
+                    />
+                  ) : (
+                    <MessageBubble
+                      message={message}
+                      agentInitials={agentInitials}
+                      agentName={agentName}
+                      agentImageUrl={selfAgentImage}
+                      senderPhotoByName={senderPhotoByName}
+                      onReplyMessage={onReplyMessage}
+                      onForwardMessage={onForwardMessage}
+                      onReactMessage={onReactMessage}
+                      onPinMessage={onPinMessage}
+                      onFavoriteMessage={onFavoriteMessage}
+                    />
+                  )}
                 </div>
-              </Fragment>
+              </li>
             )
           })
         })()}
+        </ul>
 
         {/* Marcador de encerramento — ultimo item da lista, alinhado com
             o padrao visual do DaySeparator/ConnectionDivider. Fica visivel

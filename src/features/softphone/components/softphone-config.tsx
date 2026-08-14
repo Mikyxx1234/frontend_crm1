@@ -1,37 +1,34 @@
 "use client";
 
 /**
- * Painel de configuração de Telefonia IP — reutilizado tanto pelo drawer
- * de configuração do widget na Central (`/widgets`) quanto por qualquer
- * outra superfície que precise expor as mesmas configs.
+ * Painel de configuração de Telefonia IP — drawer da Central (`/widgets`).
  *
- * O corpo é o mesmo antes usado em `/settings/softphone`. Quando renderizado
- * fora do `SettingsV2Shell` (drawer, modal), `useSettingsHeaderSlots()`
- * retorna null e o componente cai no fallback inline com as pills
- * Api4Com/PBX no topo, mantendo a UX equivalente.
+ * Guias:
+ *  - Integração: token ADMIN + gateway + webhook da org
+ *  - Usuários: quem está provisionado, ramal e toggle
+ *  - PBX: ramal SIP manual (fallback)
  */
 
 import { useEffect, useMemo, useState } from "react";
 import {
   IconCloud,
   IconKey,
-  IconPhoneCheck,
   IconServer,
+  IconUsers,
   IconWebhook,
 } from "@tabler/icons-react";
 
 import { GlassCard } from "@/components/crm/glass-card";
 import { PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { Separator } from "@/components/ui/separator";
-import {
-  Api4ComConnectForm,
-  Api4ComStatusCard,
-} from "@/features/softphone/components/api4com-connect-form";
+import { Api4ComConnectForm } from "@/features/softphone/components/api4com-connect-form";
+import { Api4ComIntegrationForm } from "@/features/softphone/components/api4com-integration-form";
+import { Api4ComUsersList } from "@/features/softphone/components/api4com-users-list";
 import { ExtensionSettingsForm } from "@/features/softphone/components/extension-settings-form";
 import { ProviderConfigForm } from "@/features/softphone/components/provider-config-form";
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
 
-type RamalType = "api4com" | "pbx";
+type ConfigTab = "integracao" | "usuarios" | "pbx";
 
 function SectionCard({
   icon,
@@ -67,17 +64,25 @@ function SectionCard({
 
 export function SoftphoneConfig() {
   const slots = useSettingsHeaderSlots();
-  const [ramalType, setRamalType] = useState<RamalType>("api4com");
+  const [tab, setTab] = useState<ConfigTab>("integracao");
 
   const actionsNode = useMemo(
     () => (
       <PageSegmentedControl
         items={[
           {
-            value: "api4com",
+            value: "integracao",
             label: (
               <span className="inline-flex items-center gap-1.5">
-                <IconCloud size={14} /> Api4Com
+                <IconCloud size={14} /> Integração
+              </span>
+            ),
+          },
+          {
+            value: "usuarios",
+            label: (
+              <span className="inline-flex items-center gap-1.5">
+                <IconUsers size={14} /> Usuários
               </span>
             ),
           },
@@ -90,13 +95,13 @@ export function SoftphoneConfig() {
             ),
           },
         ]}
-        value={ramalType}
-        onChange={(v) => setRamalType(v as RamalType)}
+        value={tab}
+        onChange={(v) => setTab(v as ConfigTab)}
         size="compact"
-        aria-label="Tipo de ramal"
+        aria-label="Seção de telefonia"
       />
     ),
-    [ramalType],
+    [tab],
   );
 
   useEffect(() => {
@@ -107,65 +112,89 @@ export function SoftphoneConfig() {
 
   return (
     <div className="flex min-w-0 w-full max-w-full flex-col gap-3 sm:gap-4">
-      <SectionCard
-        icon={<IconPhoneCheck size={18} />}
-        title="Status da conexão"
-        description="Situação atual do seu ramal e do registro de chamadas."
-      >
-        <Api4ComStatusCard onReconnect={() => setRamalType("api4com")} />
-      </SectionCard>
+      {!slots ? (
+        <PageSegmentedControl
+          items={[
+            {
+              value: "integracao",
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  <IconCloud size={14} /> Integração
+                </span>
+              ),
+            },
+            {
+              value: "usuarios",
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  <IconUsers size={14} /> Usuários
+                </span>
+              ),
+            },
+            {
+              value: "pbx",
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  <IconServer size={14} /> PBX
+                </span>
+              ),
+            },
+          ]}
+          value={tab}
+          onChange={(v) => setTab(v as ConfigTab)}
+          size="compact"
+          aria-label="Seção de telefonia"
+          className="self-start"
+        />
+      ) : null}
 
-      <SectionCard
-        icon={<IconKey size={18} />}
-        title="Configuração do ramal"
-        description="Escolha o tipo de conexão (nas pills do topo) e informe as credenciais do seu ramal."
-      >
-        <div className="flex min-w-0 flex-col gap-4">
-          {!slots ? (
-            <PageSegmentedControl
-              items={[
-                {
-                  value: "api4com",
-                  label: (
-                    <span className="inline-flex items-center gap-1.5">
-                      <IconCloud size={14} /> Api4Com
-                    </span>
-                  ),
-                },
-                {
-                  value: "pbx",
-                  label: (
-                    <span className="inline-flex items-center gap-1.5">
-                      <IconServer size={14} /> PBX
-                    </span>
-                  ),
-                },
-              ]}
-              value={ramalType}
-              onChange={(v) => setRamalType(v as RamalType)}
-              size="compact"
-              aria-label="Tipo de ramal"
-              className="self-start"
-            />
-          ) : null}
+      {tab === "integracao" ? (
+        <>
+          <SectionCard
+            icon={<IconKey size={18} />}
+            title="Token e integração"
+            description="Token ADMIN da API4Comm e gateway desta organização. O webhook é criado automaticamente para a org."
+          >
+            <Api4ComIntegrationForm />
+          </SectionCard>
+          <SectionCard
+            icon={<IconCloud size={18} />}
+            title="Conexão manual (opcional)"
+            description="Fallback: conectar um ramal com e-mail e senha da API4Comm. O fluxo principal é o token acima + toggle em Usuários."
+          >
+            <Api4ComConnectForm />
+          </SectionCard>
+        </>
+      ) : null}
 
-          <p className="rounded-[var(--radius-md)] bg-[var(--glass-bg-subtle)] px-3.5 py-2.5 text-pretty break-words text-[12.5px] text-[var(--text-muted)]">
-            {ramalType === "api4com"
-              ? "Conexão gerenciada Api4Com. Informe e-mail e senha — o CRM detecta o ramal vinculado e configura o webhook automaticamente."
-              : "Para qualquer PBX com WebSocket SIP (Asterisk, FreePBX, etc.). Informe manualmente wss://, ramal e senha SIP."}
-          </p>
+      {tab === "usuarios" ? (
+        <SectionCard
+          icon={<IconUsers size={18} />}
+          title="Usuários e ramais"
+          description="Ative a telefonia por usuário. O CRM cria o agente e o ramal na API4Comm; desligar apaga os recursos remotos."
+        >
+          <Api4ComUsersList />
+        </SectionCard>
+      ) : null}
 
-          {ramalType === "api4com" ? <Api4ComConnectForm /> : <ExtensionSettingsForm />}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        icon={<IconWebhook size={18} />}
-        title="Provedor / Webhook"
-        description="Configuração de webhook para o histórico de chamadas (nível organização). Para Api4Com, cole a URL gerada no painel de integrações (evento channel-hangup)."
-      >
-        <ProviderConfigForm />
-      </SectionCard>
+      {tab === "pbx" ? (
+        <>
+          <SectionCard
+            icon={<IconServer size={18} />}
+            title="Ramal SIP manual"
+            description="Para qualquer PBX com WebSocket SIP (Asterisk, FreePBX, etc.). Informe wss://, ramal e senha."
+          >
+            <ExtensionSettingsForm />
+          </SectionCard>
+          <SectionCard
+            icon={<IconWebhook size={18} />}
+            title="Webhook do PBX"
+            description="Provedor genérico para histórico de chamadas quando não usa API4Comm."
+          >
+            <ProviderConfigForm />
+          </SectionCard>
+        </>
+      ) : null}
     </div>
   );
 }

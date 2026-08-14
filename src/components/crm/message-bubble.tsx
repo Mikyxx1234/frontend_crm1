@@ -2018,8 +2018,8 @@ export function TicketDivider({ number, closedAt, isCurrent }: TicketDividerProp
   if (isCurrent) {
     return (
       <EventRow
-        action="status"
-        text="Conversa atual"
+        action="entrada"
+        text="Abertura da conversa"
         actor=""
         time=""
       />

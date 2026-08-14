@@ -1,40 +1,76 @@
 "use client";
 
 /*
- * ActiveBotsButton — ícone flutuante ao lado da composer (inbox e deal).
- * Ao clicar, abre um card (estilo Kommo "Bots ativos") com duas seções:
- *  - Ativas: automações vivas (RUNNING/PAUSED) do contato, cada uma com
- *    opção de INTERROMPER.
- *  - Histórico: execuções encerradas (concluídas/expiradas), carregadas
- *    sob demanda ao abrir.
- * Vínculo por contato (AutomationContext não referencia conversa).
- * Atualiza em tempo real via SSE `automation_state`.
+ * ActiveBotsButton — ícone ao lado da composer (inbox e deal).
+ * Abre um card com as automações do contato (ativas + histórico),
+ * accordion por item. Ações: adicionar (picker), interromper,
+ * reexecutar e editar. Vínculo por contato; SSE `automation_state`
+ * invalida a lista.
  */
 
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { IconRobot, IconPlayerStopFilled, IconHistory, IconClock } from "@tabler/icons-react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  IconRobot,
+  IconPlayerPauseFilled,
+  IconPlayerPlayFilled,
+  IconPencil,
+  IconChevronDown,
+  IconChevronUp,
+  IconClock,
+} from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
+import { apiUrl } from "@/lib/api";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import {
+  blockChipStyle,
+  blockKeyForStepType,
+  getBlockMeta,
+} from "@/components/crm/flow-block-icon";
 import {
   useCancelAutomation,
   useContactActiveAutomations,
   useContactAutomationHistory,
+  contactActiveAutomationsKey,
+  contactAutomationHistoryKey,
 } from "@/features/inbox-v2/hooks";
+import type {
+  ActiveAutomationDto,
+  AutomationHistoryDto,
+} from "@/features/inbox-v2/api/conversations";
+import { useAutomation } from "@/features/automations-v2/hooks";
 import {
   computePopoverPosition,
   usePortalPopover,
 } from "@/features/pipeline-v2/extras/use-portal-popover";
+import { AgentAutomationPickerModal } from "./agent-automation-picker-modal";
+
+const POPOVER_W = 380;
+const POPOVER_H = 440;
+
+type RowStatus = "RUNNING" | "PAUSED" | "COMPLETED" | "TIMED_OUT";
+
+type PanelRow = {
+  key: string;
+  automationId: string;
+  name: string;
+  status: RowStatus;
+  contextId: string | null;
+  stepLabel: string | null;
+};
 
 interface ActiveBotsButtonProps {
   contactId: string | null;
+  conversationId?: string | null;
   /**
-   * `inline` = renderiza como um botão comum na barra do composer (ao lado
-   * do enviar). Sem `inline` = overlay absoluto (uso legado). O popover
-   * usa portal com posição calculada, então funciona nos dois modos.
+   * `inline` = botão na barra do composer (ao lado do enviar).
+   * Sem `inline` = overlay absoluto (uso legado).
    */
   inline?: boolean;
-  /** Ajuste fino de posicionamento/estilo do wrapper. */
   className?: string;
 }
 
@@ -48,7 +84,6 @@ function formatWhen(iso: string): string {
   return `${dd}/${mm} ${hh}:${mi}`;
 }
 
-/** Duração da execução (finishedAt − startedAt) em formato compacto. */
 function formatDuration(startIso: string, endIso: string): string {
   const start = new Date(startIso).getTime();
   const end = new Date(endIso).getTime();
@@ -65,17 +100,161 @@ function formatDuration(startIso: string, endIso: string): string {
   return min ? `${hours}h ${min}min` : `${hours}h`;
 }
 
-export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsButtonProps) {
+function badgeFor(status: RowStatus): { label: string; className: string; dot?: boolean } {
+  switch (status) {
+    case "RUNNING":
+      return {
+        label: "RODANDO",
+        className:
+          "bg-(--color-success-bg) text-(--color-success-text)",
+        dot: true,
+      };
+    case "PAUSED":
+      return {
+        label: "PAUSADA",
+        className:
+          "bg-(--color-warn-bg) text-(--color-warn)",
+      };
+    case "COMPLETED":
+      return {
+        label: "CONCLUÍDA",
+        className:
+          "bg-(--color-info-bg) text-(--brand-primary-dark) v2-dark:text-(--brand-primary-light)",
+      };
+    case "TIMED_OUT":
+      return {
+        label: "COM ERRO",
+        className:
+          "bg-(--color-danger-bg) text-(--color-danger-text)",
+      };
+  }
+}
+
+function subtextFor(row: PanelRow): string {
+  switch (row.status) {
+    case "RUNNING":
+      return row.stepLabel || "Em execução";
+    case "PAUSED":
+      return row.stepLabel || "Aguardando";
+    case "COMPLETED":
+      return "Fluxo concluído";
+    case "TIMED_OUT":
+      return "Tempo esgotado";
+  }
+}
+
+function buildRows(
+  active: ActiveAutomationDto[],
+  history: AutomationHistoryDto[],
+): PanelRow[] {
+  const activeIds = new Set(active.map((a) => a.automationId));
+  const rows: PanelRow[] = active.map((bot) => ({
+    key: bot.contextId,
+    automationId: bot.automationId,
+    name: bot.name,
+    status: bot.status,
+    contextId: bot.contextId,
+    stepLabel: bot.stepLabel,
+  }));
+
+  const latestByAuto = new Map<string, AutomationHistoryDto>();
+  for (const h of history) {
+    if (activeIds.has(h.automationId)) continue;
+    const prev = latestByAuto.get(h.automationId);
+    if (!prev || h.finishedAt > prev.finishedAt) latestByAuto.set(h.automationId, h);
+  }
+  for (const h of latestByAuto.values()) {
+    rows.push({
+      key: h.contextId,
+      automationId: h.automationId,
+      name: h.name,
+      status: h.status,
+      contextId: null,
+      stepLabel: null,
+    });
+  }
+  return rows;
+}
+
+async function runAutomation(
+  automationId: string,
+  payload: { contactId: string; conversationId?: string | null },
+): Promise<{ automationName?: string }> {
+  const res = await fetch(apiUrl(`/api/automations/${automationId}/run`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contactId: payload.contactId,
+      conversationId: payload.conversationId ?? undefined,
+    }),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    automationName?: string;
+    message?: string;
+  };
+  if (!res.ok) {
+    throw new Error(typeof json?.message === "string" ? json.message : "Falha ao executar");
+  }
+  return { automationName: json.automationName };
+}
+
+export function ActiveBotsButton({
+  contactId,
+  conversationId = null,
+  inline,
+  className,
+}: ActiveBotsButtonProps) {
   const { open, rect, triggerRef, popoverRef, toggle, close } = usePortalPopover();
   const { data: active = [], isLoading } = useContactActiveAutomations(contactId);
-  // Histórico só carrega quando o card abre (evita request em toda conversa).
   const { data: history = [], isLoading: loadingHistory } =
     useContactAutomationHistory(contactId, open);
   const cancel = useCancelAutomation(contactId);
+  const qc = useQueryClient();
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [runningId, setRunningId] = useState<string | null>(null);
+
+  const rows = useMemo(() => buildRows(active, history), [active, history]);
+
+  useEffect(() => {
+    if (!open) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId((prev) => {
+      if (prev && rows.some((r) => r.key === prev)) return prev;
+      const running = rows.find((r) => r.status === "RUNNING");
+      return running?.key ?? rows[0]?.key ?? null;
+    });
+  }, [open, rows]);
 
   const count = active.length;
   const hasActive = count > 0;
-  const pos = computePopoverPosition(rect, 360, 320);
+  const pos = computePopoverPosition(rect, POPOVER_H, POPOVER_W);
+
+  function openPicker() {
+    close();
+    setPickerOpen(true);
+  }
+
+  async function handleReplay(row: PanelRow) {
+    if (!contactId || runningId) return;
+    setRunningId(row.automationId);
+    try {
+      const result = await runAutomation(row.automationId, {
+        contactId,
+        conversationId,
+      });
+      toast.success(`Automação disparada: ${result.automationName ?? row.name}`);
+      qc.invalidateQueries({ queryKey: contactActiveAutomationsKey(contactId) });
+      qc.invalidateQueries({ queryKey: contactAutomationHistoryKey(contactId) });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao executar automação");
+    } finally {
+      setRunningId(null);
+    }
+  }
 
   const button = (
     <button
@@ -93,8 +272,6 @@ export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsBut
       title="Automações"
       className={cn(
         "flex cursor-pointer items-center justify-center rounded-full border transition-all",
-        // Inline: absolute inset-0 dentro do box — badges ficam fora do
-        // fluxo e não deslocam o alinhamento do composer.
         inline
           ? "absolute inset-0"
           : "relative h-10 w-10 shadow-(--glass-shadow-sm) backdrop-blur-md hover:scale-[1.06]",
@@ -103,7 +280,6 @@ export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsBut
           : "border-(--glass-border) bg-(--glass-bg-overlay) text-(--text-muted) hover:text-(--brand-primary)",
       )}
     >
-      {/* Inline: ~22% maior que mic/emoji (20) para equilíbrio óptico do glyph. */}
       <IconRobot
         size={inline ? 24 : 19}
         stroke={1.75}
@@ -127,8 +303,6 @@ export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsBut
   return (
     <div
       className={cn(
-        // size-9 = mesmo footprint do mic/enviar (36px); self-center
-        // alinha no eixo do form. overflow visible só pra badges.
         inline
           ? "relative flex size-9 shrink-0 items-center justify-center self-center overflow-visible"
           : "absolute bottom-[4.75rem] right-6 z-20",
@@ -156,163 +330,299 @@ export function ActiveBotsButton({ contactId, inline, className }: ActiveBotsBut
                 position: "fixed",
                 top: pos.top,
                 left: pos.left,
-                width: 360,
+                width: POPOVER_W,
                 isolation: "isolate",
               }}
-              className="z-(--z-popover) rounded-lg border border-(--glass-border) bg-(--glass-bg-modal) p-3 shadow-(--glass-shadow-lg) backdrop-blur-xl"
+              className="z-(--z-popover) overflow-hidden rounded-[var(--radius-lg)] border border-(--glass-border) bg-(--glass-bg-modal) shadow-(--glass-shadow-lg) backdrop-blur-xl"
             >
-              <div className="mb-2 flex items-center gap-2">
-                <IconRobot size={16} className="text-violet-500" />
+              <div className="flex items-center gap-2 border-b border-(--glass-border-subtle) px-3.5 py-2.5">
+                <IconRobot size={16} className="shrink-0 text-(--brand-primary)" />
                 <span className="font-display text-[13px] font-bold text-(--text-primary)">
                   Automações
                 </span>
                 {hasActive && (
-                  <span className="rounded-full bg-violet-500/15 px-1.5 py-px text-[10px] font-bold text-violet-600 v2-dark:text-violet-300">
-                    {count} ativa{count > 1 ? "s" : ""}
+                  <span className="rounded-full bg-(--color-primary-soft) px-1.5 py-px text-[10px] font-bold text-(--brand-primary-dark) v2-dark:text-(--brand-primary-light)">
+                    {count} ativa{count === 1 ? "" : "s"}
                   </span>
                 )}
+                <button
+                  type="button"
+                  onClick={openPicker}
+                  className="ml-auto cursor-pointer text-[12.5px] font-semibold text-(--brand-primary) transition-colors hover:text-(--brand-primary-dark)"
+                >
+                  + Adicionar
+                </button>
               </div>
 
-              {/* ── Ativas ── */}
-              {isLoading && (
-                <p className="px-1 py-3 text-[12.5px] text-(--text-muted)">
-                  Carregando…
-                </p>
-              )}
+              <div className="max-h-[min(420px,60vh)] overflow-y-auto">
+                {(isLoading || (open && loadingHistory && rows.length === 0)) && (
+                  <p className="px-3.5 py-4 text-[12.5px] text-(--text-muted)">
+                    Carregando…
+                  </p>
+                )}
 
-              {!isLoading && !hasActive && (
-                <p className="px-1 py-2 text-[12.5px] text-(--text-muted)">
-                  Nenhuma automação em execução.
-                </p>
-              )}
+                {!isLoading && rows.length === 0 && !loadingHistory && (
+                  <p className="px-3.5 py-4 text-[12.5px] text-(--text-muted)">
+                    Nenhuma automação em execução.
+                  </p>
+                )}
 
-              {!isLoading && hasActive && (
-                <ul className="flex max-h-56 flex-col gap-1.5 overflow-y-auto">
-                  {active.map((bot) => (
-                    <li
-                      key={bot.contextId}
-                      className="flex items-center gap-2 rounded-md border border-(--glass-border-subtle) bg-(--glass-bg-overlay) px-2.5 py-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate text-[12.5px] font-semibold text-(--text-primary)">
-                            {bot.name}
-                          </span>
-                          <span
-                            className={cn(
-                              "shrink-0 rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
-                              bot.status === "PAUSED"
-                                ? "bg-amber-500/15 text-amber-600 v2-dark:text-amber-400"
-                                : "bg-emerald-500/15 text-emerald-600 v2-dark:text-emerald-400",
-                            )}
-                          >
-                            {bot.status === "PAUSED" ? "Pausada" : "Rodando"}
-                          </span>
-                        </div>
-                        {bot.stepLabel && (
-                          <p className="truncate text-[11px] text-(--text-muted)">
-                            {bot.stepLabel}
-                          </p>
+                {rows.length > 0 && (
+                  <ul>
+                    {rows.map((row, i) => (
+                      <AutomationRow
+                        key={row.key}
+                        row={row}
+                        history={history.filter(
+                          (h) => h.automationId === row.automationId,
                         )}
-                      </div>
-                      <TooltipGlass label="Interromper automação" side="top">
-                        <button
-                          type="button"
-                          disabled={cancel.isPending}
-                          onClick={() => cancel.mutate(bot.contextId)}
-                          aria-label={`Interromper ${bot.name}`}
-                          className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-(--color-warning) transition-colors hover:bg-(--color-warning)/12 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <IconPlayerStopFilled size={14} />
-                        </button>
-                      </TooltipGlass>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                        expanded={expandedId === row.key}
+                        onToggle={() =>
+                          setExpandedId((id) => (id === row.key ? null : row.key))
+                        }
+                        showDivider={i < rows.length - 1}
+                        cancelPending={cancel.isPending}
+                        runningReplay={runningId === row.automationId}
+                        onPause={() => {
+                          if (row.contextId) cancel.mutate(row.contextId);
+                        }}
+                        onPlay={() => void handleReplay(row)}
+                      />
+                    ))}
+                  </ul>
+                )}
 
-              {cancel.isError && (
-                <p className="mt-2 px-1 text-[11px] text-(--color-warning)">
-                  {cancel.error?.message ?? "Erro ao interromper a automação."}
-                </p>
-              )}
-
-              {/* ── Histórico ── */}
-              <div className="mt-3 mb-1.5 flex items-center gap-1.5 border-t border-(--glass-border-subtle) pt-2.5">
-                <IconHistory size={13} className="text-(--text-muted)" />
-                <span className="font-display text-[11px] font-bold uppercase tracking-wide text-(--text-muted)">
-                  Histórico
-                </span>
+                {cancel.isError && (
+                  <p className="px-3.5 py-2 text-[11px] text-(--color-warning)">
+                    {cancel.error?.message ?? "Erro ao interromper a automação."}
+                  </p>
+                )}
               </div>
-
-              {loadingHistory && (
-                <p className="px-1 py-2 text-[12px] text-(--text-muted)">
-                  Carregando histórico…
-                </p>
-              )}
-
-              {!loadingHistory && history.length === 0 && (
-                <p className="px-1 py-1 text-[12px] text-(--text-muted)">
-                  Sem execuções anteriores.
-                </p>
-              )}
-
-              {!loadingHistory && history.length > 0 && (
-                <ul className="flex max-h-44 flex-col gap-1 overflow-y-auto">
-                  {history.map((h) => {
-                    const failed = h.status === "TIMED_OUT";
-                    const duration = formatDuration(h.startedAt, h.finishedAt);
-                    return (
-                      <li
-                        key={h.contextId}
-                        className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <span className="block truncate text-[12px] font-medium text-(--text-secondary)">
-                            {h.name}
-                          </span>
-                          <span className="flex items-center gap-1.5 text-[10.5px] text-(--text-muted)">
-                            <span>{formatWhen(h.finishedAt)}</span>
-                            {duration && (
-                              <>
-                                <span aria-hidden className="opacity-50">
-                                  ·
-                                </span>
-                                <span className="inline-flex items-center gap-0.5">
-                                  <IconClock size={10} stroke={1.75} />
-                                  {duration}
-                                </span>
-                              </>
-                            )}
-                          </span>
-                        </div>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
-                            failed
-                              ? "bg-rose-500/12 text-rose-600 v2-dark:text-rose-400"
-                              : "bg-emerald-500/12 text-emerald-600 v2-dark:text-emerald-400",
-                          )}
-                        >
-                          {failed ? "Expirada" : "Concluída"}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-
-              <button
-                type="button"
-                onClick={close}
-                className="mt-2 w-full rounded-md px-2 py-1.5 text-[12px] font-medium text-(--text-muted) transition-colors hover:bg-(--glass-bg-strong) hover:text-(--text-secondary)"
-              >
-                Fechar
-              </button>
             </div>,
             document.body,
           )
         : null}
+
+      <AgentAutomationPickerModal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        conversationId={conversationId}
+        contactId={contactId}
+      />
+    </div>
+  );
+}
+
+function AutomationRow({
+  row,
+  history,
+  expanded,
+  onToggle,
+  showDivider,
+  cancelPending,
+  runningReplay,
+  onPause,
+  onPlay,
+}: {
+  row: PanelRow;
+  history: AutomationHistoryDto[];
+  expanded: boolean;
+  onToggle: () => void;
+  showDivider: boolean;
+  cancelPending: boolean;
+  runningReplay: boolean;
+  onPause: () => void;
+  onPlay: () => void;
+}) {
+  const badge = badgeFor(row.status);
+  const isLive = row.status === "RUNNING" || row.status === "PAUSED";
+  const Chevron = expanded ? IconChevronUp : IconChevronDown;
+
+  return (
+    <li className={cn(showDivider && "border-b border-(--glass-border-subtle)")}>
+      <div className="flex items-start gap-1.5 px-2.5 py-2.5">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-label={expanded ? `Recolher ${row.name}` : `Expandir ${row.name}`}
+          className="mt-0.5 flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--text-muted) transition-colors hover:bg-(--glass-bg-strong) hover:text-(--text-secondary)"
+        >
+          <Chevron size={14} stroke={2.2} />
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggle}
+          className="min-w-0 flex-1 cursor-pointer text-left"
+        >
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-[13px] font-bold text-(--text-primary)">
+              {row.name}
+            </span>
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
+                badge.className,
+              )}
+            >
+              {badge.dot && (
+                <span className="size-1.5 rounded-full bg-(--color-success)" />
+              )}
+              {badge.label}
+            </span>
+          </div>
+          <p className="mt-0.5 truncate text-[11.5px] text-(--text-muted)">
+            {subtextFor(row)}
+          </p>
+        </button>
+
+        <div className="flex shrink-0 items-center gap-0.5 pt-0.5">
+          {isLive ? (
+            <TooltipGlass label="Interromper automação" side="top">
+              <button
+                type="button"
+                disabled={cancelPending}
+                onClick={onPause}
+                aria-label={`Interromper ${row.name}`}
+                className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-(--color-warning-soft) text-(--color-warning) transition-colors hover:bg-(--color-warning)/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <IconPlayerPauseFilled size={13} />
+              </button>
+            </TooltipGlass>
+          ) : (
+            <TooltipGlass label="Executar novamente" side="top">
+              <button
+                type="button"
+                disabled={runningReplay}
+                onClick={onPlay}
+                aria-label={`Executar ${row.name}`}
+                className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-(--color-warning-soft) text-(--color-warning) transition-colors hover:bg-(--color-warning)/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <IconPlayerPlayFilled size={13} />
+              </button>
+            </TooltipGlass>
+          )}
+          <TooltipGlass label="Editar automação" side="top">
+            <Link
+              href={`/automations/${row.automationId}`}
+              aria-label={`Editar ${row.name}`}
+              className="flex size-7 items-center justify-center rounded-md text-(--text-muted) transition-colors hover:bg-(--glass-bg-strong) hover:text-(--text-secondary)"
+            >
+              <IconPencil size={14} stroke={1.8} />
+            </Link>
+          </TooltipGlass>
+        </div>
+      </div>
+
+      {expanded && (
+        <ExpandedBody automationId={row.automationId} history={history} />
+      )}
+    </li>
+  );
+}
+
+function ExpandedBody({
+  automationId,
+  history,
+}: {
+  automationId: string;
+  history: AutomationHistoryDto[];
+}) {
+  const { data, isLoading } = useAutomation(automationId);
+  const stepTypes = useMemo(() => {
+    const types = data?.steps?.map((s) => s.type) ?? data?.stepTypes ?? [];
+    return types.map((t) => blockKeyForStepType(t));
+  }, [data]);
+
+  return (
+    <div className="px-3.5 pb-3 pl-10">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-(--text-muted)">
+        Fluxo
+      </p>
+      {isLoading ? (
+        <p className="mb-3 text-[11.5px] text-(--text-muted)">Carregando fluxo…</p>
+      ) : stepTypes.length === 0 ? (
+        <p className="mb-3 text-[11.5px] text-(--text-muted)">Sem passos definidos.</p>
+      ) : (
+        <div className="mb-3 overflow-x-auto">
+          <FlowStrip stepTypes={stepTypes} />
+        </div>
+      )}
+
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-(--text-muted)">
+        Histórico
+      </p>
+      {history.length === 0 ? (
+        <p className="text-[11.5px] text-(--text-muted)">Sem execuções anteriores.</p>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {history.slice(0, 5).map((h) => {
+            const failed = h.status === "TIMED_OUT";
+            const duration = formatDuration(h.startedAt, h.finishedAt);
+            return (
+              <li
+                key={h.contextId}
+                className="flex items-center justify-between gap-2 py-0.5"
+              >
+                <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-(--text-muted)">
+                  <span>{formatWhen(h.finishedAt)}</span>
+                  {duration && (
+                    <>
+                      <span aria-hidden className="opacity-40">
+                        ·
+                      </span>
+                      <span className="inline-flex items-center gap-0.5">
+                        <IconClock size={10} stroke={1.75} />
+                        {duration}
+                      </span>
+                    </>
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
+                    failed
+                      ? "bg-(--color-danger-bg) text-(--color-danger-text)"
+                      : "bg-(--color-info-bg) text-(--brand-primary-dark) v2-dark:text-(--brand-primary-light)",
+                  )}
+                >
+                  {failed ? "COM ERRO" : "CONCLUÍDA"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Faixa circular de ícones do fluxo (definição da automação). */
+function FlowStrip({ stepTypes }: { stepTypes: string[] }) {
+  const visible = stepTypes.slice(0, 8);
+  const overflow = stepTypes.length - visible.length;
+  return (
+    <div className="flex items-center gap-1.5">
+      {visible.map((type, i) => {
+        const meta = getBlockMeta(type);
+        const Icon = meta.Icon;
+        return (
+          <TooltipGlass key={`${type}-${i}`} label={meta.label} side="top">
+            <span
+              className="flex size-7 shrink-0 items-center justify-center rounded-full border border-(--glass-border-subtle)"
+              style={blockChipStyle(type)}
+            >
+              <Icon size={13} stroke={2} />
+            </span>
+          </TooltipGlass>
+        );
+      })}
+      {overflow > 0 && (
+        <span className="flex h-7 min-w-7 items-center justify-center rounded-full border border-(--glass-border-subtle) bg-(--glass-bg-overlay) px-1.5 text-[10px] font-semibold text-(--text-muted)">
+          +{overflow}
+        </span>
+      )}
     </div>
   );
 }

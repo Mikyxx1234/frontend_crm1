@@ -1215,7 +1215,11 @@ export function Composer({
 
         {/* Automações em execução — botão ao lado do enviar (inbox e deal). */}
         {!isAudioActive && contactId && (
-          <ActiveBotsButton inline contactId={contactId} />
+          <ActiveBotsButton
+            inline
+            contactId={contactId}
+            conversationId={conversationId}
+          />
         )}
 
         {/* Botão enviar — oculto durante gravação (AudioRecorderButton tem o seu próprio) */}

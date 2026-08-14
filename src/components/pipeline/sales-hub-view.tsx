@@ -747,6 +747,7 @@ export function SalesHubView({
         onSelectStage={handleSelectStage}
         totalDeals={totalDeals}
         compact={hubChromeCompact}
+        pending={queueBoardPending || !stageHydrated}
       />
 
       <div
@@ -790,7 +791,7 @@ export function SalesHubView({
                   className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 font-display text-[11px] font-bold text-white"
                   style={{ background: queueStageHeader.color }}
                 >
-                  {queueBoardPending ? "…" : queueStageHeader.count}
+                  {queueBoardPending || !stageHydrated ? "…" : queueStageHeader.count}
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
@@ -822,7 +823,7 @@ export function SalesHubView({
             hasMoreServer={canLoadMoreServer}
             remainingCount={queueRemaining}
             loadingMore={queueLoadingMore}
-            isLoading={queueBoardPending}
+            isLoading={queueBoardPending || !stageHydrated}
             onLoadMore={() => onQueueLoadMore?.(selectedStageId)}
             selectedStageId={selectedStageId}
             stageSwitchToken={stageSwitchToken}

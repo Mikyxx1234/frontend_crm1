@@ -338,11 +338,12 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     !hasServerBoard && (boardNormal.data ?? []).some(stageHasMoreServer);
 
   const boardPending =
-    !hasServerBoard
+    !pipelineId ||
+    (!hasServerBoard
       ? !boardNormal.data && (boardNormal.isPending || boardNormal.isFetching)
       : !boardFiltered.data &&
         !boardNormal.data &&
-        (boardFiltered.isPending || boardFiltered.isFetching);
+        (boardFiltered.isPending || boardFiltered.isFetching));
 
   const boardRefreshing =
     filtersPendingDebounce ||

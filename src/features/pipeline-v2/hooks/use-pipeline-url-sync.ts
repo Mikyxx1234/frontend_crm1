@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PipelineListItemDto } from "@/features/pipeline-v2/api/types";
 
@@ -194,10 +194,20 @@ export function useStageUrlSync(
   resetKey?: string | null,
 ) {
   const [hydrated, setHydrated] = useState(false);
+  const prevResetKeyRef = useRef(resetKey);
 
   useEffect(() => {
-    setHydrated(false);
-    setSelectedStageId(null);
+    const prev = prevResetKeyRef.current;
+    prevResetKeyRef.current = resetKey;
+    // null → 1º funil: a URL ainda vale; não zerar a etapa (flash "Todos 0").
+    if (!prev && resetKey) {
+      setHydrated(false);
+      return;
+    }
+    if (prev && resetKey && prev !== resetKey) {
+      setHydrated(false);
+      setSelectedStageId(null);
+    }
   }, [resetKey, setSelectedStageId]);
 
   useEffect(() => {

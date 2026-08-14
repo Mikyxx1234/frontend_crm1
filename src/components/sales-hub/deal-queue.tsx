@@ -622,16 +622,11 @@ export function DealQueue({
         <div className="flex flex-col gap-2" key={stageListKey}>
           {isStageSwitching ? (
             <div
-              className="flex flex-col gap-2 py-1"
+              className="flex min-h-[200px] items-center justify-center py-8"
               aria-busy="true"
               aria-label="Carregando etapa"
             >
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-[72px] animate-pulse rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]"
-                />
-              ))}
+              <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
           ) : (
             <AnimatePresence initial={softEnterWave}>
@@ -691,16 +686,11 @@ export function DealQueue({
           {!isStageSwitching && visibleDeals.length === 0 && (
             isLoading ? (
               <div
-                className="flex flex-col gap-2 py-1"
+                className="flex min-h-[200px] items-center justify-center py-8"
                 aria-busy="true"
                 aria-label="Carregando fila"
               >
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-[72px] animate-pulse rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]"
-                  />
-                ))}
+                <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               </div>
             ) : (
               <p className="px-2 py-8 text-center text-xs text-[var(--text-muted)]">

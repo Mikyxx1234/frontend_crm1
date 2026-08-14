@@ -20,7 +20,7 @@ import { apiUrl } from "@/lib/api";
 import { avatarInitials } from "@/lib/avatar";
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
-import { DaySeparator, ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { DaySeparator, ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, StickyDayPill, useStickyDayLabel, type Message as BubbleMessage } from "@/components/crm/message-bubble";
 import { EventRow } from "@/components/crm/chat-timeline";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
@@ -330,6 +330,11 @@ export function useDealChatBinding(params: {
     return null;
   }, []);
 
+  const stickyDay = useStickyDayLabel(
+    findScrollEl,
+    `${effectiveConversationId ?? ""}:${bubbles[0]?.id ?? ""}:${bubbles[bubbles.length - 1]?.id ?? ""}:${bubbles.length}`,
+  );
+
   const scrollToEnd = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
       const el = findScrollEl();
@@ -607,7 +612,7 @@ export function useDealChatBinding(params: {
       const isNoteBubble = b.isNote === true;
       const isEvent = b.kind === "event";
       return (
-        <li key={b.id} className="list-none">
+        <li key={b.id} className="list-none" data-day-label={dayLabel || undefined}>
           {showSeparator && <DaySeparator date={dayLabel} />}
           {connLabel && <ConnectionDivider label={connLabel} />}
           <div
@@ -660,6 +665,7 @@ export function useDealChatBinding(params: {
     });
     messagesNode = (
       <>
+        <StickyDayPill date={stickyDay} />
         <ul className="flex list-none flex-col gap-1.5">
           {bubbleNodes}
         </ul>

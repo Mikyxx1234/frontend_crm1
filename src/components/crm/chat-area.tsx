@@ -9,7 +9,7 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { ChatAvatar } from "@/components/inbox/chat-avatar"
 import { AVATAR_SIZE, avatarInitials } from "@/lib/avatar"
-import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, type Message } from "./message-bubble"
+import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, StickyDayPill, useStickyDayLabel, type Message } from "./message-bubble"
 import { EventRow } from "./chat-timeline"
 import { SessionAlert } from "./session-alert"
 import {
@@ -374,6 +374,12 @@ export function ChatArea({
     }
   }, [messages])
 
+  const getMessagesRoot = useCallback(() => messagesRef.current, [])
+  const stickyDay = useStickyDayLabel(
+    getMessagesRoot,
+    `${messages[0]?.id ?? ""}:${messages[messages.length - 1]?.id ?? ""}:${messages.length}`,
+  )
+
   const effectiveDisabled = inputDisabled ?? showSessionAlert
   const value = inputValue ?? ""
 
@@ -532,6 +538,7 @@ export function ChatArea({
       {/* MESSAGES — única área rolável; min-h-0 permite encolher e manter
           o footer (composer) sempre visível na base. */}
       <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-7 pt-6 pb-8 max-md:px-3">
+        <StickyDayPill date={stickyDay} />
         <ul className="flex list-none flex-col gap-1.5">
         {(() => {
           // Separador de dia ("Hoje" / "Ontem" / "DD/MM/AAAA") inserido
@@ -565,10 +572,11 @@ export function ChatArea({
               return null
             }
             const dayKey = dayKeyFromISO(message.createdAt)
+            const dayLabel = dayLabelFromISO(message.createdAt)
             let separator: string | null = null
             if (dayKey) {
               if (dayKey !== lastDayKey) {
-                separator = dayLabelFromISO(message.createdAt)
+                separator = dayLabel
                 lastDayKey = dayKey
               }
             } else if (daySeparator && !usedFallback) {
@@ -587,7 +595,11 @@ export function ChatArea({
             }
             const isEvent = message.kind === "event"
             return (
-              <li key={message.id || index} className="list-none">
+              <li
+                key={message.id || index}
+                className="list-none"
+                data-day-label={dayLabel || separator || undefined}
+              >
                 {separator && <DaySeparator date={separator} />}
                 {connLabel && <ConnectionDivider label={connLabel} />}
                 <div

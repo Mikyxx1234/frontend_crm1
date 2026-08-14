@@ -1811,6 +1811,112 @@ export function DaySeparator({ date }: DaySeparatorProps) {
   )
 }
 
+/** Atributo nas linhas da timeline p/ o pill sticky rastrear o dia visível. */
+export const DAY_LABEL_ATTR = "data-day-label"
+
+/**
+ * Pill fixo no topo da lista rolável (estilo WhatsApp). `h-0` para não
+ * empurrar as bolhas; o texto atualiza via `useStickyDayLabel`.
+ */
+export function StickyDayPill({ date }: { date: string | null }) {
+  return (
+    <div
+      className="pointer-events-none sticky top-2 z-[15] h-0 min-h-0 w-full shrink-0 overflow-visible"
+      aria-hidden
+    >
+      {date ? (
+        <div className="flex justify-center">
+          <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/92 px-3 py-1 font-display text-[11px] font-semibold text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+            {date}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function resolveStickyRoot(
+  root: { current: HTMLElement | null } | (() => HTMLElement | null),
+): HTMLElement | null {
+  return typeof root === "function" ? root() : root.current
+}
+
+/** Dia da primeira mensagem visível no container rolável. */
+export function useStickyDayLabel(
+  root: { current: HTMLElement | null } | (() => HTMLElement | null),
+  resetKey: unknown,
+): string | null {
+  const [label, setLabel] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    let observer: IntersectionObserver | null = null
+    let scrollRoot: HTMLElement | null = null
+    let retryId = 0
+    let rafId = 0
+    let attempts = 0
+    let onScroll: (() => void) | null = null
+
+    const pickLabel = (items: NodeListOf<HTMLElement>) => {
+      if (!scrollRoot || items.length === 0) return null
+      const top = scrollRoot.getBoundingClientRect().top + 8
+      for (const el of items) {
+        if (el.getBoundingClientRect().bottom > top) {
+          return el.getAttribute(DAY_LABEL_ATTR)
+        }
+      }
+      return items[items.length - 1]?.getAttribute(DAY_LABEL_ATTR) ?? null
+    }
+
+    const bind = () => {
+      if (cancelled) return
+      scrollRoot = resolveStickyRoot(root)
+      if (!scrollRoot) {
+        if (attempts++ < 16) retryId = requestAnimationFrame(bind)
+        return
+      }
+      const items = scrollRoot.querySelectorAll<HTMLElement>(`[${DAY_LABEL_ATTR}]`)
+      if (items.length === 0) {
+        setLabel(null)
+        return
+      }
+
+      const apply = () => {
+        if (rafId) return
+        rafId = requestAnimationFrame(() => {
+          rafId = 0
+          const next = pickLabel(items)
+          if (next) setLabel(next)
+        })
+      }
+      onScroll = apply
+
+      observer = new IntersectionObserver(apply, {
+        root: scrollRoot,
+        threshold: [0, 0.01],
+      })
+      items.forEach((el) => observer!.observe(el))
+      scrollRoot.addEventListener("scroll", apply, { passive: true })
+      // Depois do auto-scroll ao fim (deal usa 2 rAFs).
+      requestAnimationFrame(() => requestAnimationFrame(apply))
+    }
+
+    bind()
+
+    return () => {
+      cancelled = true
+      if (retryId) cancelAnimationFrame(retryId)
+      if (rafId) cancelAnimationFrame(rafId)
+      observer?.disconnect()
+      if (scrollRoot && onScroll) {
+        scrollRoot.removeEventListener("scroll", onScroll)
+      }
+    }
+  }, [root, resetKey])
+
+  return label
+}
+
 interface ConnectionDividerProps {
   /** Rótulo completo da conexão (ex.: "WhatsApp · Vendas SP · +55 (11) 9..."). */
   label: string

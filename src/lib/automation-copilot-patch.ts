@@ -183,7 +183,7 @@ export function applyCopilotPatch(
       const src = byId.get(op.fromStepId);
       if (!src) continue;
       if (!byId.has(op.toStepId)) continue;
-      setHandleTarget(src, op.handle, op.toStepId);
+      setHandleTarget(src, op.handle ?? "next", op.toStepId);
       src.config.__hasExplicitEdges = true;
       continue;
     }

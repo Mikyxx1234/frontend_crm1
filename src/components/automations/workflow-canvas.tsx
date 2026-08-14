@@ -927,7 +927,7 @@ function WorkflowCanvasInner({
     [triggerConfig, triggerType, stats, stageNameLookup, connectedWaCount, connectedEmailCount]
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
 
   const patchStepConfig = useCallback(
     (stepId: string, next: Record<string, unknown>) => {

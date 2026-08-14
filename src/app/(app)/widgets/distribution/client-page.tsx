@@ -85,6 +85,7 @@ import {
   MOCK_DISTRIBUTION_RESPONSIBLES,
 } from "@/features/distribution/mock";
 import { CoverageBoard } from "@/features/settings/coverage/coverage-board";
+import { CoverageSearchFilterBar } from "@/features/settings/coverage/search-filter-bar";
 import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const SMART_DISTRIBUTION_SLUG = "smart_distribution";
@@ -180,6 +181,9 @@ export default function DistributionClientPage({
   const [types, setTypes] = useState<string[]>([]);
   /** ADMINs ficam ocultos na lista por padrão (não poluem a equipe). */
   const [showAdmins, setShowAdmins] = useState(false);
+  const [coverageSearch, setCoverageSearch] = useState("");
+  const [coverageDeptIds, setCoverageDeptIds] = useState<string[]>([]);
+  const [coverageShowHidden, setCoverageShowHidden] = useState(false);
 
   const realResponsibles = respQuery.data?.responsibles ?? [];
   const realPending = pendingQuery.data?.pending ?? [];
@@ -323,6 +327,15 @@ export default function DistributionClientPage({
                 typeOptions={typeOptions}
                 onClearAll={clearFilters}
               />
+            ) : view === "coverage" ? (
+              <CoverageSearchFilterBar
+                search={coverageSearch}
+                onSearch={setCoverageSearch}
+                deptIds={coverageDeptIds}
+                onDeptIdsChange={setCoverageDeptIds}
+                showHidden={coverageShowHidden}
+                onShowHiddenChange={setCoverageShowHidden}
+              />
             ) : undefined
           }
           actions={
@@ -411,7 +424,11 @@ export default function DistributionClientPage({
         {view === "coverage" ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <CoverageBoard />
+              <CoverageBoard
+                search={coverageSearch}
+                deptIds={coverageDeptIds}
+                showHidden={coverageShowHidden}
+              />
             </div>
           </div>
         ) : widgetsQuery.isLoading ? (

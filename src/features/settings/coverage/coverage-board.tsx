@@ -4,6 +4,7 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconAlertTriangle,
+  IconBuilding,
   IconClock,
   IconPencil,
   IconToolsKitchen2,
@@ -16,11 +17,19 @@ import { toast } from "sonner";
 import { UserAvatar } from "@/components/crm/user-avatar";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
+import { InputGlass } from "@/components/crm/input-glass";
 import { KpiCard } from "@/components/crm/kpi-card";
 import { KpiStrip } from "@/components/crm/kpi-strip";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { Label } from "@/components/ui/label";
 import { DISTRIBUTION_RESPONSIBLES_KEY } from "@/features/distribution/hooks";
+import {
+  useDepartments,
+  useUpdateDepartment,
+  type Department,
+  type DepartmentOperatingHours,
+} from "@/features/conversations-settings/hooks/use-departments";
 import {
   DEFAULT_SCHEDULE,
   ScheduleDialogShell,
@@ -33,7 +42,8 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type DepartmentRef = { id: string; name: string; color: string };
+export type CoverageDepartment = { id: string; name: string; color: string };
+type DepartmentRef = CoverageDepartment;
 
 type AgentPresence = "ONLINE" | "AWAY" | "OFFLINE";
 
@@ -46,6 +56,8 @@ type CoverageAgent = {
   schedule: Schedule | null;
   /** Opt-in administrativo. Default true quando o GET não manda o campo. */
   participates?: boolean;
+  /** false = some da grade (admins que não atendem). Default true. */
+  visibleInCoverage?: boolean;
   agentStatus: {
     status: AgentPresence;
     availableForVoiceCalls?: boolean;
@@ -73,6 +85,46 @@ const SLOT_STYLES: Record<SlotState, string> = {
   lunch: "bg-[color-mix(in_srgb,var(--color-warn)_80%,transparent)]",
   off: "bg-[var(--glass-bg-strong)] opacity-40",
 };
+
+const INACTIVE_SLOT_STYLES: Record<SlotState, string> = {
+  work: "bg-[color-mix(in_srgb,var(--text-muted)_22%,transparent)]",
+  lunch: "bg-[color-mix(in_srgb,var(--text-muted)_14%,transparent)]",
+  off: "bg-[var(--glass-bg-strong)] opacity-25",
+};
+
+const DEFAULT_DEPT_HOURS: DepartmentOperatingHours = {
+  start: "09:00",
+  end: "18:00",
+  weekdays: [1, 2, 3, 4, 5],
+};
+
+function normalizeDeptHours(
+  raw: DepartmentOperatingHours | null | undefined,
+): DepartmentOperatingHours {
+  if (!raw || typeof raw.start !== "string" || typeof raw.end !== "string") {
+    return DEFAULT_DEPT_HOURS;
+  }
+  const weekdays = Array.isArray(raw.weekdays)
+    ? raw.weekdays.filter((d) => d >= 0 && d <= 6)
+    : DEFAULT_DEPT_HOURS.weekdays;
+  return {
+    start: raw.start,
+    end: raw.end,
+    weekdays: weekdays.length ? weekdays : DEFAULT_DEPT_HOURS.weekdays,
+  };
+}
+
+function formatDeptHoursLabel(hours: DepartmentOperatingHours): string {
+  const days = [...hours.weekdays].sort((a, b) => a - b);
+  const isWeekdays =
+    days.length === 5 && days[0] === 1 && days[4] === 5 && !days.includes(0) && !days.includes(6);
+  const dayStr = isWeekdays
+    ? "Seg–Sex"
+    : WEEKDAYS.filter((w) => days.includes(w.value))
+        .map((w) => w.short)
+        .join("·");
+  return `${dayStr} ${hours.start}–${hours.end}`;
+}
 
 const PRESENCE_OPTIONS: { id: PresenceFilter; label: string; dot: string }[] = [
   { id: "ONLINE", label: "Online", dot: "bg-[var(--color-success)]" },
@@ -149,26 +201,187 @@ async function fetchCoverage(): Promise<CoverageAgent[]> {
   return res.json();
 }
 
-// ─── Componente principal ────────────────────────────────────────────────────
-
-export function CoverageBoard() {
-  const qc = useQueryClient();
-  const { data: agents = [], isLoading, isError } = useQuery({
+export function useCoverageAgents() {
+  return useQuery({
     queryKey: ["agents-coverage"],
     queryFn: fetchCoverage,
-    // Presença ao vivo (dot online/offline) acompanha sem refresh manual.
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
   });
+}
+
+function DepartmentHoursControl() {
+  const { data: depts = [], isLoading } = useDepartments();
+  const updateMut = useUpdateDepartment();
+  const [open, setOpen] = React.useState(false);
+  const [draft, setDraft] = React.useState<Record<string, DepartmentOperatingHours>>({});
+
+  React.useEffect(() => {
+    if (!open) return;
+    const next: Record<string, DepartmentOperatingHours> = {};
+    for (const d of depts) next[d.id] = normalizeDeptHours(d.operatingHours);
+    setDraft(next);
+  }, [open, depts]);
+
+  const summary = React.useMemo(() => {
+    if (depts.length === 0) return "Horário do departamento";
+    const labels = new Set(
+      depts.map((d) => formatDeptHoursLabel(normalizeDeptHours(d.operatingHours))),
+    );
+    if (labels.size === 1) return [...labels][0];
+    return "Horários dos departamentos";
+  }, [depts]);
+
+  const save = async () => {
+    const jobs = depts.filter((d) => {
+      const cur = formatDeptHoursLabel(normalizeDeptHours(d.operatingHours));
+      const next = draft[d.id];
+      return next && formatDeptHoursLabel(next) !== cur;
+    });
+    try {
+      for (const d of jobs) {
+        await updateMut.mutateAsync({ id: d.id, operatingHours: draft[d.id] });
+      }
+      setOpen(false);
+      toast.success(
+        jobs.length === 0 ? "Nenhuma alteração." : "Horário do departamento salvo.",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar horário.");
+    }
+  };
+
+  const patch = (id: string, partial: Partial<DepartmentOperatingHours>) => {
+    setDraft((prev) => ({
+      ...prev,
+      [id]: { ...normalizeDeptHours(prev[id]), ...partial },
+    }));
+  };
+
+  const toggleDay = (id: string, day: number) => {
+    const cur = normalizeDeptHours(draft[id]);
+    const weekdays = cur.weekdays.includes(day)
+      ? cur.weekdays.filter((d) => d !== day)
+      : [...cur.weekdays, day].sort((a, b) => a - b);
+    patch(id, { weekdays: weekdays.length ? weekdays : cur.weekdays });
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={isLoading}
+        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-1.5 font-display text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-50"
+      >
+        <IconBuilding size={14} className="text-[var(--text-muted)]" />
+        <span className="max-w-[220px] truncate">{summary}</span>
+        <IconPencil size={12} className="text-[var(--text-muted)]" />
+      </button>
+
+      <ScheduleDialogShell
+        open={open}
+        onOpenChange={setOpen}
+        title="Horário do departamento"
+        description="Janela operacional padrão (Seg–Sex 09:00–18:00). Não substitui o expediente individual."
+        submitLabel="Salvar"
+        submitPending={updateMut.isPending}
+        onSubmit={() => void save()}
+      >
+        {depts.length === 0 ? (
+          <p className="rounded-[10px] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-4 text-center font-body text-[12px] text-[var(--text-muted)]">
+            Nenhum departamento cadastrado. Crie em Configurações → Equipe → Departamentos.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {depts.map((d: Department) => {
+              const hours = normalizeDeptHours(draft[d.id]);
+              return (
+                <div
+                  key={d.id}
+                  className="flex flex-col gap-2.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: d.color }}
+                    />
+                    <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+                      {d.name}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label>Início</Label>
+                      <InputGlass
+                        type="time"
+                        value={hours.start}
+                        onChange={(e) => patch(d.id, { start: e.target.value })}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Fim</Label>
+                      <InputGlass
+                        type="time"
+                        value={hours.end}
+                        onChange={(e) => patch(d.id, { end: e.target.value })}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WEEKDAYS.map((wd) => {
+                      const active = hours.weekdays.includes(wd.value);
+                      return (
+                        <button
+                          key={wd.value}
+                          type="button"
+                          onClick={() => toggleDay(d.id, wd.value)}
+                          className={cn(
+                            "rounded-[var(--radius-md)] px-2 py-1 font-display text-[11px] font-semibold transition-colors",
+                            active
+                              ? "bg-[var(--brand-primary)] text-white"
+                              : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                          )}
+                        >
+                          {wd.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </ScheduleDialogShell>
+    </>
+  );
+}
+
+// ─── Componente principal ────────────────────────────────────────────────────
+
+export function CoverageBoard({
+  search = "",
+  deptIds = [],
+  showHidden = false,
+}: {
+  search?: string;
+  deptIds?: string[];
+  showHidden?: boolean;
+} = {}) {
+  const qc = useQueryClient();
+  const { data: agents = [], isLoading, isError } = useCoverageAgents();
 
   const [weekday, setWeekday] = React.useState<number>(() => new Date().getDay());
-  const [deptFilter, setDeptFilter] = React.useState<Set<string>>(new Set());
+  const deptFilter = React.useMemo(() => new Set(deptIds), [deptIds]);
   const [presenceFilter, setPresenceFilter] = React.useState<PresenceFilter>("");
-  const [search, setSearch] = React.useState("");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [editAgent, setEditAgent] = React.useState<CoverageAgent | null>(null);
   const [editSchedule, setEditSchedule] = React.useState<Schedule>(DEFAULT_SCHEDULE);
   const [editParticipates, setEditParticipates] = React.useState(true);
+  const [editVisible, setEditVisible] = React.useState(true);
   const [bulkOpen, setBulkOpen] = React.useState(false);
   const [bulkSchedule, setBulkSchedule] = React.useState<Schedule>(DEFAULT_SCHEDULE);
 
@@ -186,18 +399,13 @@ export function CoverageBoard() {
   }, []);
   const isToday = weekday === new Date().getDay();
 
-  // ── Departamentos disponíveis (dedup a partir dos agentes) ────────────────
-
-  const departments = React.useMemo(() => {
-    const map = new Map<string, DepartmentRef>();
-    for (const a of agents) for (const d of a.departments) map.set(d.id, d);
-    return [...map.values()].sort((x, y) => x.name.localeCompare(y.name, "pt-BR"));
-  }, [agents]);
-
   // ── Filtro (área + presença + busca) ──────────────────────────────────────
 
   const filtered = React.useMemo(() => {
     let arr = agents;
+    if (!showHidden) {
+      arr = arr.filter((a) => a.visibleInCoverage !== false);
+    }
     if (deptFilter.size > 0) {
       arr = arr.filter((a) => a.departments.some((d) => deptFilter.has(d.id)));
     }
@@ -211,7 +419,7 @@ export function CoverageBoard() {
       );
     }
     return arr;
-  }, [agents, deptFilter, presenceFilter, search]);
+  }, [agents, deptFilter, presenceFilter, search, showHidden]);
 
   // ── Range dinâmico da grade (hora cheia) ──────────────────────────────────
   // Só horários persistidos. Sem schedule não infla o eixo (antes usava
@@ -267,18 +475,22 @@ export function CoverageBoard() {
       userId,
       schedule,
       participates,
+      visibleInCoverage,
     }: {
       userId: string;
       schedule: Schedule;
       participates: boolean;
+      visibleInCoverage: boolean;
     }) => {
       const res = await fetch(apiUrl(`/api/agents/${userId}/schedule`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...schedule, participates }),
+        body: JSON.stringify({ ...schedule, participates, visibleInCoverage }),
       });
       if (!res.ok) throw new Error("Erro ao salvar horário");
-      return res.json() as Promise<Schedule & { participates?: boolean }>;
+      return res.json() as Promise<
+        Schedule & { participates?: boolean; visibleInCoverage?: boolean }
+      >;
     },
     onSuccess: (saved, vars) => {
       qc.setQueryData<CoverageAgent[]>(["agents-coverage"], (prev) =>
@@ -298,6 +510,8 @@ export function CoverageBoard() {
                   saturdayEnd: vars.schedule.saturdayEnd,
                 },
                 participates: saved.participates ?? vars.participates,
+                visibleInCoverage:
+                  saved.visibleInCoverage ?? vars.visibleInCoverage,
               }
             : a,
         ),
@@ -340,14 +554,6 @@ export function CoverageBoard() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  const toggleDept = (id: string) =>
-    setDeptFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
   const toggleSelected = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -375,6 +581,7 @@ export function CoverageBoard() {
     setEditAgent(agent);
     setEditSchedule(agent.schedule ?? DEFAULT_SCHEDULE);
     setEditParticipates(agent.participates !== false);
+    setEditVisible(agent.visibleInCoverage !== false);
   };
 
   // minmax com piso em px: a grade cresce além do container e rola no eixo X
@@ -397,7 +604,7 @@ export function CoverageBoard() {
         </p>
       )}
 
-      {/* Controles: dia da semana + áreas + presença + busca */}
+      {/* Controles: dia da semana + presença (busca/área ficam no PageHeader) */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1">
           {WEEKDAYS.map((wd) => (
@@ -419,44 +626,6 @@ export function CoverageBoard() {
 
         <div className="h-6 w-px bg-[var(--glass-border)]" />
 
-        <button
-          type="button"
-          onClick={() => setDeptFilter(new Set())}
-          className={cn(
-            "rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-colors",
-            deptFilter.size === 0
-              ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-              : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-          )}
-        >
-          Todas as áreas
-        </button>
-        {departments.map((d) => {
-          const active = deptFilter.has(d.id);
-          return (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => toggleDept(d.id)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-colors",
-                active
-                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                  : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-              )}
-            >
-              <span
-                className="size-2 rounded-full"
-                style={{ backgroundColor: d.color }}
-              />
-              {d.name}
-            </button>
-          );
-        })}
-
-        <div className="h-6 w-px bg-[var(--glass-border)]" />
-
-        {/* Presença ao vivo */}
         {PRESENCE_OPTIONS.map((p) => {
           const active = presenceFilter === p.id;
           return (
@@ -479,14 +648,7 @@ export function CoverageBoard() {
 
         <div className="h-6 w-px bg-[var(--glass-border)]" />
 
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar agente…"
-          aria-label="Buscar agente por nome ou e-mail"
-          className="h-9 w-48 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--input-border-focus)]"
-        />
+        <DepartmentHoursControl />
       </div>
 
       {/* KPIs de cobertura do dia */}
@@ -621,13 +783,25 @@ export function CoverageBoard() {
             {/* Linhas dos agentes */}
             {filtered.map((agent) => {
               const presence = agent.agentStatus?.status ?? "OFFLINE";
+              const inactive = agent.participates === false;
+              const slotStyles = inactive ? INACTIVE_SLOT_STYLES : SLOT_STYLES;
               return (
                 <div
                   key={agent.id}
-                  className="group grid border-b border-[var(--glass-border)] last:border-b-0 hover:bg-[var(--glass-bg-panel)]"
+                  className={cn(
+                    "group grid border-b border-[var(--glass-border)] last:border-b-0 hover:bg-[var(--glass-bg-panel)]",
+                    inactive && "opacity-70 grayscale-[0.35]",
+                  )}
                   style={{ gridTemplateColumns: gridTemplate }}
                 >
-                  <div className="sticky left-0 z-10 flex items-center gap-2.5 border-r border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2 group-hover:bg-[var(--glass-bg-panel)]">
+                  <div
+                    className={cn(
+                      "sticky left-0 z-10 flex items-center gap-2.5 border-r border-[var(--glass-border)] px-3 py-2 group-hover:bg-[var(--glass-bg-panel)]",
+                      inactive
+                        ? "bg-[color-mix(in_srgb,var(--text-muted)_8%,var(--glass-bg-base))]"
+                        : "bg-[var(--glass-bg-base)]",
+                    )}
+                  >
                     <CheckboxGlass
                       checked={selected.has(agent.id)}
                       onChange={() => toggleSelected(agent.id)}
@@ -646,7 +820,12 @@ export function CoverageBoard() {
                       }
                     />
                     <div className="min-w-0 flex-1 leading-tight">
-                      <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+                      <p
+                        className={cn(
+                          "truncate font-display text-[13px] font-bold",
+                          inactive ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]",
+                        )}
+                      >
                         {agent.name}
                       </p>
                       <p className="font-body text-[11px] font-semibold leading-snug text-[var(--text-secondary)] tabular-nums">
@@ -656,7 +835,10 @@ export function CoverageBoard() {
                         {agent.departments.length > 0 ? (
                           agent.departments.map((d) => (
                             <span key={d.id} className="inline-flex items-center gap-1">
-                              <span className="size-1.5 rounded-full" style={{ backgroundColor: d.color }} />
+                              <span
+                                className={cn("size-1.5 rounded-full", inactive && "opacity-50")}
+                                style={{ backgroundColor: d.color }}
+                              />
                               {d.name}
                             </span>
                           ))
@@ -665,9 +847,9 @@ export function CoverageBoard() {
                         )}
                       </p>
                     </div>
-                    {agent.participates === false ? (
+                    {inactive ? (
                       <TooltipGlass label="Não participa da distribuição — não recebe leads" side="left">
-                        <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
+                        <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
                           Inativo
                         </span>
                       </TooltipGlass>
@@ -694,9 +876,15 @@ export function CoverageBoard() {
                     return (
                       <div
                         key={slotMin}
-                        className={cn("border-l border-[var(--glass-border)]/40", SLOT_STYLES[st])}
+                        className={cn("border-l border-[var(--glass-border)]/40", slotStyles[st])}
                         title={`${agent.name} — ${formatSlot(slotMin)}: ${
-                          st === "work" ? "em expediente" : st === "lunch" ? "almoço" : "fora"
+                          inactive
+                            ? "não participa"
+                            : st === "work"
+                              ? "em expediente"
+                              : st === "lunch"
+                                ? "almoço"
+                                : "fora"
                         }`}
                       />
                     );
@@ -718,6 +906,9 @@ export function CoverageBoard() {
         </span>
         <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
           <span className={cn("size-3 rounded-sm", SLOT_STYLES.off)} /> Fora do expediente
+        </span>
+        <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
+          <span className={cn("size-3 rounded-sm", INACTIVE_SLOT_STYLES.work)} /> Não participa
         </span>
         <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
           <span className="size-3 rounded-sm bg-[color-mix(in_srgb,var(--color-danger)_72%,transparent)]" /> Gap (0 agentes)
@@ -757,7 +948,7 @@ export function CoverageBoard() {
         open={!!editAgent}
         onOpenChange={(o) => { if (!o) setEditAgent(null); }}
         title={`Expediente de ${editAgent?.name ?? ""}`}
-        description="Defina o expediente, almoço e se o agente participa da distribuição."
+        description="Defina o expediente, se aparece na lista e se participa da distribuição."
         submitLabel="Salvar"
         submitPending={saveOne.isPending}
         onSubmit={() => {
@@ -766,10 +957,26 @@ export function CoverageBoard() {
               userId: editAgent.id,
               schedule: editSchedule,
               participates: editParticipates,
+              visibleInCoverage: editVisible,
             });
           }
         }}
       >
+        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="font-body text-[13px] font-semibold text-[var(--text-primary)]">
+              Aparece na lista de cobertura
+            </p>
+            <p className="text-[11px] text-[var(--text-muted)]">
+              Desligado = some da grade (útil para admins que não atendem).
+            </p>
+          </div>
+          <SwitchGlass
+            checked={editVisible}
+            onChange={setEditVisible}
+            aria-label="Aparece na lista de cobertura"
+          />
+        </div>
         <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-2.5">
           <div className="min-w-0">
             <p className="font-body text-[13px] font-semibold text-[var(--text-primary)]">

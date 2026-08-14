@@ -36,7 +36,7 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: mikyxx1234/frontend_crm1
+  IMAGE_NAME: caiovpinheiro/frontend_crm1
 
 jobs:
   build-and-push:

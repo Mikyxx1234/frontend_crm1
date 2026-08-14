@@ -97,8 +97,11 @@ import {
   isSessionClosedError,
   SESSION_CLOSED_TOAST,
 } from "@/features/inbox-v2/extras/channel-switch-confirm";
-import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
-import { hasInboxServerFilters, normalizeInboxFilters } from "@/features/inbox-v2/api/types";
+import type { ConversationListRow, InboxTab } from "@/features/inbox-v2/api";
+import {
+  DEFAULT_INBOX_TAB,
+  useInboxFilterUrlState,
+} from "@/features/inbox-v2/hooks/use-inbox-filters-url-sync";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   useDealDetail,
@@ -184,46 +187,6 @@ function ContactTagsTray({
   );
 }
 
-const DEFAULT_FILTERS: InboxFilters = {};
-const INBOX_FILTERS_STORAGE_KEY = "inbox-v2:filters";
-
-function readStoredInboxFilters(): InboxFilters {
-  if (typeof window === "undefined") return DEFAULT_FILTERS;
-  try {
-    const raw = window.localStorage.getItem(INBOX_FILTERS_STORAGE_KEY);
-    if (!raw) return DEFAULT_FILTERS;
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return DEFAULT_FILTERS;
-    }
-    return normalizeInboxFilters(parsed as InboxFilters);
-  } catch {
-    return DEFAULT_FILTERS;
-  }
-}
-
-function writeStoredInboxFilters(filters: InboxFilters) {
-  try {
-    const normalized = normalizeInboxFilters(filters);
-    const empty =
-      !hasInboxServerFilters(normalized) &&
-      !normalized.sortBy &&
-      !normalized.sortOrder &&
-      !normalized.windowState &&
-      !normalized.lastMessageDirection;
-    if (empty) {
-      window.localStorage.removeItem(INBOX_FILTERS_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(
-      INBOX_FILTERS_STORAGE_KEY,
-      JSON.stringify(normalized),
-    );
-  } catch {
-    /* localStorage indisponível */
-  }
-}
-
 // Ordem das tabs alinhada ao legado (`conversation-list.tsx`
 // TAB_ORDER). "Automação" lista conversas cujo contato tem automação
 // RUNNING (fila de automação). "Erro" = OPEN + hasError (falha de envio);
@@ -237,31 +200,6 @@ const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "finalizados", label: "Encerradas" },
   { id: "erro", label: "Erro" },
 ];
-
-// Tab selecionada persiste em localStorage — sobrevive F5/navegação.
-// Default "esperando" (Aguardando): ao abrir sem escolha salva, evita cair
-// em "Todas". Se o usuário escolher "Todas" (ou outra), a escolha é mantida.
-const INBOX_TAB_STORAGE_KEY = "inbox-v2:tab";
-const DEFAULT_INBOX_TAB: InboxTab = "esperando";
-
-function readStoredInboxTab(): InboxTab {
-  if (typeof window === "undefined") return DEFAULT_INBOX_TAB;
-  try {
-    const raw = window.localStorage.getItem(INBOX_TAB_STORAGE_KEY);
-    if (raw && TABS.some((t) => t.id === raw)) return raw as InboxTab;
-    return DEFAULT_INBOX_TAB;
-  } catch {
-    return DEFAULT_INBOX_TAB;
-  }
-}
-
-function writeStoredInboxTab(tab: InboxTab) {
-  try {
-    window.localStorage.setItem(INBOX_TAB_STORAGE_KEY, tab);
-  } catch {
-    /* localStorage indisponível */
-  }
-}
 
 /**
  * Props opcionais — usadas para reaproveitar o chat dentro de um shell
@@ -327,41 +265,29 @@ export default function InboxV2ClientPage({
   );
 
   // ── Estado de UI local ─────────────────────────────────────────
-  // Default "esperando" (Aguardando). A escolha do usuário é salva em
-  // localStorage e restaurada no F5 (lê no effect, SSR-safe).
-  const [tab, setTab] = useState<InboxTab>(DEFAULT_INBOX_TAB);
-  const [tabHydrated, setTabHydrated] = useState(false);
-  // useLayoutEffect: restaura aba ANTES do paint (useEffect deixava
-  // 1 frame com default "Aguardando" + empty no F5).
-  useLayoutEffect(() => {
-    setTab(readStoredInboxTab());
-    setTabHydrated(true);
-  }, []);
-  useEffect(() => {
-    if (!tabHydrated) return;
-    writeStoredInboxTab(tab);
-  }, [tab, tabHydrated]);
-  // Se a aba salva não for permitida para o papel, cai na primeira visível.
+  // Aba, busca e filtros vivem na URL (`?tab=&q=&owner=…`) — o link da barra
+  // de endereço reproduz a visão no F5, no compartilhamento e no Voltar. Sem
+  // query, cai no localStorage (última visão do operador) e default
+  // "esperando" (Aguardando).
+  const {
+    tab,
+    setTab,
+    tabHydrated,
+    filters,
+    setFilters,
+    filtersHydrated,
+    search: searchInput,
+    setSearch: setSearchInput,
+  } = useInboxFilterUrlState();
+  // Se a aba da URL/localStorage não for permitida para o papel, cai na
+  // primeira visível.
   useEffect(() => {
     if (!tabHydrated || visibleTabs.length === 0) return;
     if (!visibleTabs.some((t) => t.id === tab)) {
       setTab(visibleTabs[0]?.id ?? DEFAULT_INBOX_TAB);
     }
-  }, [tabHydrated, visibleTabs, tab]);
+  }, [tabHydrated, visibleTabs, tab, setTab]);
 
-  // Filtros do painel persistem em localStorage — sobrevive navegação
-  // para outras páginas do CRM e refresh. Lê no effect (SSR-safe).
-  const [filters, setFilters] = useState<InboxFilters>(DEFAULT_FILTERS);
-  const [filtersHydrated, setFiltersHydrated] = useState(false);
-  useLayoutEffect(() => {
-    setFilters(readStoredInboxFilters());
-    setFiltersHydrated(true);
-  }, []);
-  useEffect(() => {
-    if (!filtersHydrated) return;
-    writeStoredInboxFilters(filters);
-  }, [filters, filtersHydrated]);
-  const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");

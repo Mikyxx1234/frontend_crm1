@@ -304,6 +304,26 @@ export async function fetchSavedFilters(entityType = "kanban_deals"): Promise<Sa
   return Array.isArray(data?.items) ? data.items : [];
 }
 
+/**
+ * Filtro salvo por id — usado pelo atalho `?filter=<id>` na URL, que expande
+ * o preset em params legíveis. Devolve `null` quando não existe/sem acesso
+ * (link antigo ou de outra org não pode travar a tela).
+ */
+export async function fetchSavedFilterById(id: string): Promise<SavedFilter | null> {
+  try {
+    const res = await fetch(apiUrl(`/api/saved-filters/${encodeURIComponent(id)}`), {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    if (!data || typeof data !== "object") return null;
+    return data as SavedFilter;
+  } catch {
+    return null;
+  }
+}
+
 export async function createSavedFilter(payload: {
   name: string;
   filterConfig: AdvancedDealFilters;

@@ -25,6 +25,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import {
   pageActionsMenuItemClass,
@@ -48,6 +49,7 @@ import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2
 import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import { useKanbanFilters } from "@/components/pipeline/kanban-filters/use-kanban-filters";
+import { usePipelineSearchSort } from "@/components/pipeline/kanban-filters/use-pipeline-search-sort";
 import {
   isEmptyFilters,
 } from "@/components/pipeline/kanban-filters/types";
@@ -91,18 +93,7 @@ import {
 } from "@/lib/search-query";
 
 const DEFAULT_PER_PAGE = 25;
-const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
-const PIPELINE_SORT_LS = "kanban-pipeline-sort:v1";
 const COLUMNS_STORAGE_KEY = "pipeline-list-columns:v1";
-
-type SortKey =
-  | "default"
-  | "interaction_newest"
-  | "interaction_oldest"
-  | "name_az"
-  | "name_za"
-  | "created_newest"
-  | "created_oldest";
 
 const STATUS_TABS: { id: DealListTab; label: string; icon: React.ReactNode }[] = [
   { id: "abertos", label: "Abertos", icon: <IconClock size={13} /> },
@@ -147,14 +138,8 @@ export default function V2PipelineListClientPage() {
     writePipelineViewPreference("list");
   }, []);
 
-  const [search, setSearch] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      return localStorage.getItem(PIPELINE_SEARCH_LS) ?? "";
-    } catch {
-      return "";
-    }
-  });
+  // `?q=` (busca) e `?sort=` na URL — link copiável reproduz a visão.
+  const { search, setSearch, sortKey, setSortKey } = usePipelineSearchSort();
   const [debounced, setDebounced] = useState(search);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
@@ -167,26 +152,6 @@ export default function V2PipelineListClientPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const { filters, setFilters, patch: patchFilters, clear: clearFilters } = useKanbanFilters();
-  const [sortKey, setSortKey] = useState<SortKey>(() => {
-    if (typeof window === "undefined") return "default";
-    try {
-      const raw = localStorage.getItem(PIPELINE_SORT_LS);
-      if (
-        raw === "default" ||
-        raw === "interaction_newest" ||
-        raw === "interaction_oldest" ||
-        raw === "name_az" ||
-        raw === "name_za" ||
-        raw === "created_newest" ||
-        raw === "created_oldest"
-      ) {
-        return raw;
-      }
-    } catch {
-      /* noop */
-    }
-    return "default";
-  });
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -195,22 +160,6 @@ export default function V2PipelineListClientPage() {
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [search]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIPELINE_SEARCH_LS, search);
-    } catch {
-      /* noop */
-    }
-  }, [search]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIPELINE_SORT_LS, sortKey);
-    } catch {
-      /* noop */
-    }
-  }, [sortKey]);
 
   useEffect(() => {
     try {
@@ -442,7 +391,7 @@ export default function V2PipelineListClientPage() {
         )}
 
         {dealsQuery.isLoading && rows.length === 0 ? (
-          <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
+          <AppLoading variant="inline" className="min-h-[400px]" />
         ) : dealsQuery.error ? (
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
             {dealsQuery.error instanceof Error

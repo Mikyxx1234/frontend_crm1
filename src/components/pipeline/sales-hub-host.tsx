@@ -42,10 +42,10 @@ import {
   normalizeSearchQuery,
 } from "@/lib/search-query";
 import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
-import type { PipelineSortKey } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import { useKanbanFilters } from "@/components/pipeline/kanban-filters/use-kanban-filters";
+import { usePipelineSearchSort } from "@/components/pipeline/kanban-filters/use-pipeline-search-sort";
 import {
   isEmptyFilters,
   hasServerSideFilters,
@@ -63,9 +63,6 @@ function stageHasMoreServer(s: {
 }
 
 const SALESHUB_QUEUE_SORT_LS = "saleshub-queue-sort:v1";
-/** Mesma chave do kanban — busca compartilha entre views. */
-const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
-const PIPELINE_SORT_LS = "kanban-pipeline-sort:v1";
 
 const AVATAR_SLUGS = [
   "blue",
@@ -112,27 +109,6 @@ function readQueueSort(): DealQueueSortMode {
   return "message_new";
 }
 
-function readPipelineSort(): PipelineSortKey {
-  if (typeof window === "undefined") return "default";
-  try {
-    const raw = localStorage.getItem(PIPELINE_SORT_LS);
-    if (
-      raw === "default" ||
-      raw === "interaction_newest" ||
-      raw === "interaction_oldest" ||
-      raw === "name_az" ||
-      raw === "name_za" ||
-      raw === "created_newest" ||
-      raw === "created_oldest"
-    ) {
-      return raw;
-    }
-  } catch {
-    /* noop */
-  }
-  return "default";
-}
-
 export type SalesHubHostProps = {
   /**
    * Quando true, mostra o rótulo "Sales Hub" na faixa secundária
@@ -155,15 +131,7 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     writePipelineViewPreference("flow");
   }, []);
 
-  const [search, setSearch] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      return localStorage.getItem(PIPELINE_SEARCH_LS) ?? "";
-    } catch {
-      return "";
-    }
-  });
-  const [sortKey, setSortKey] = useState<PipelineSortKey>(readPipelineSort);
+  const { search, setSearch, sortKey, setSortKey } = usePipelineSearchSort();
   const [sortMode, setSortMode] = useState<DealQueueSortMode>(readQueueSort);
   const { filters, setFilters, patch: patchFilters, clear: clearFilters } =
     useKanbanFilters();
@@ -184,22 +152,6 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const pipelinesQuery = usePipelines(isAuthenticated);
   const pipelines = pipelinesQuery.data;
   const { pipelineId, setPipelineId } = usePipelineUrlSync(pipelines);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIPELINE_SEARCH_LS, search);
-    } catch {
-      /* noop */
-    }
-  }, [search]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIPELINE_SORT_LS, sortKey);
-    } catch {
-      /* noop */
-    }
-  }, [sortKey]);
 
   useEffect(() => {
     try {

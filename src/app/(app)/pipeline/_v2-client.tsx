@@ -121,23 +121,12 @@ import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2
 import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import { useKanbanFilters } from "@/components/pipeline/kanban-filters/use-kanban-filters";
+import { usePipelineSearchSort } from "@/components/pipeline/kanban-filters/use-pipeline-search-sort";
 import {
   isEmptyFilters,
   hasServerSideFilters,
   type AdvancedDealFilters,
 } from "@/components/pipeline/kanban-filters/types";
-
-const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
-const PIPELINE_SORT_LS = "kanban-pipeline-sort:v1";
-
-type SortKey =
-  | "default"
-  | "interaction_newest"
-  | "interaction_oldest"
-  | "name_az"
-  | "name_za"
-  | "created_newest"
-  | "created_oldest";
 
 /**
  * Modelo Kommo: ganho/perdido são ESTÁGIOS fixos no fim do funil (não
@@ -218,14 +207,12 @@ export default function KanbanV2ClientPage({
   );
   const canChangeStage = useCan("deal:change_stage");
   const { filters, setFilters, patch: patchFilters, clear: clearFilters } = useKanbanFilters();
-  const [search, setSearch] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      return localStorage.getItem(PIPELINE_SEARCH_LS) ?? "";
-    } catch {
-      return "";
-    }
-  });
+  // Busca (`?q=`) e ordenação (`?sort=`) na URL — link copiável reproduz a
+  // visão. Ordenação: `created_*`/`interaction_*` são delegados ao backend
+  // (ver `boardSort`), porque ordenar só os deals já carregados (100/coluna)
+  // deixava cards presos em páginas posteriores. `name_*` segue client-side
+  // (o backend ainda não expõe esses campos como sort).
+  const { search, setSearch, sortKey, setSortKey } = usePipelineSearchSort();
   const kebabBtnRef = useRef<HTMLButtonElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
@@ -235,50 +222,6 @@ export default function KanbanV2ClientPage({
   const [importExportOpen, setImportExportOpen] = useState<"import" | "export" | null>(null);
   const [channelsModalOpen, setChannelsModalOpen] = useState(false);
   const bump = useImportExportBump();
-
-  // Ordenação dos cards dentro de cada etapa. Os sorts `created_*` e
-  // `interaction_*` são delegados ao backend (ver `boardSort` abaixo),
-  // porque ordenar só os deals já carregados (default 100/coluna)
-  // deixava cards "presos" em páginas posteriores quando a coluna tem
-  // >100 registros. Os sorts `name_*` continuam client-side (o backend
-  // ainda não expõe esses campos como sort) — limitação conhecida e
-  // documentada no AGENT.md.
-  const [sortKey, setSortKey] = useState<SortKey>(() => {
-    if (typeof window === "undefined") return "default";
-    try {
-      const raw = localStorage.getItem(PIPELINE_SORT_LS);
-      if (
-        raw === "default" ||
-        raw === "interaction_newest" ||
-        raw === "interaction_oldest" ||
-        raw === "name_az" ||
-        raw === "name_za" ||
-        raw === "created_newest" ||
-        raw === "created_oldest"
-      ) {
-        return raw;
-      }
-    } catch {
-      /* noop */
-    }
-    return "default";
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIPELINE_SEARCH_LS, search);
-    } catch {
-      /* noop */
-    }
-  }, [search]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIPELINE_SORT_LS, sortKey);
-    } catch {
-      /* noop */
-    }
-  }, [sortKey]);
 
   const status = BOARD_STATUS;
   const { data: pipelines } = usePipelines(isAuthenticated);

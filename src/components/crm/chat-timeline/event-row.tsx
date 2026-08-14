@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   ArrowRightLeft,
   CircleCheck,
+  ListChecks,
   LogIn,
   LogOut,
   FileText,
@@ -26,6 +27,7 @@ const ACTION_ICON: Record<ConversationEventAction, LucideIcon> = {
   distribuicao: UserPlus,
   transferencia: ArrowRightLeft,
   status: CircleCheck,
+  tabulacao: ListChecks,
   tag: Tag,
   entrada: LogIn,
   saida: LogOut,

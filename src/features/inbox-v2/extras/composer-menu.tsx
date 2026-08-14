@@ -21,10 +21,11 @@ import type { InternalTemplateContext } from "@/lib/internal-template-variables"
 import type { WhatsappTemplate } from "@/features/inbox-v2/api";
 
 import { FilePickerButton } from "./file-picker-button";
-import { TemplatePickerList, InternalTemplatePickerList } from "./template-picker-popover";
+import { TemplatePickerList } from "./template-picker-popover";
 import { ScheduleDialog } from "./schedule-dialog";
 import { TaskDialog } from "./task-dialog";
 import { AgentAutomationPickerModal } from "./agent-automation-picker-modal";
+import { InternalTemplatePickerModal } from "./internal-template-picker-modal";
 
 /**
  * Menu unificado "+" do composer (estilo WhatsApp). Reúne as ações
@@ -86,10 +87,11 @@ export function ComposerMenu({
   onOutboundBlocked?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"root" | "template" | "internal">("root");
+  const [view, setView] = useState<"root" | "template">("root");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const { handleToggleResolve: resolveFlow, toggleResolve, dialogs } =
     useResolveConversationFlow({
@@ -195,7 +197,10 @@ export function ComposerMenu({
 
               <button
                 type="button"
-                onClick={() => setView("internal")}
+                onClick={() => {
+                  setInternalOpen(true);
+                  closeMenu();
+                }}
                 className={itemClass}
               >
                 <IconMessageCode size={15} /> Modelos internos
@@ -270,13 +275,6 @@ export function ComposerMenu({
                 </>
               ) : null}
             </div>
-          ) : view === "internal" ? (
-            <InternalTemplatePickerList
-              conversationId={conversationId}
-              templateContext={templateContext}
-              onClose={closeMenu}
-              onPick={onPickInternal}
-            />
           ) : (
             <TemplatePickerList
               conversationId={conversationId}
@@ -306,6 +304,15 @@ export function ComposerMenu({
         conversationId={conversationId}
         contactId={contactId}
       />
+      {conversationId ? (
+        <InternalTemplatePickerModal
+          open={internalOpen}
+          onClose={() => setInternalOpen(false)}
+          conversationId={conversationId}
+          templateContext={templateContext}
+          onPick={onPickInternal}
+        />
+      ) : null}
     </div>
   );
 }

@@ -72,7 +72,7 @@ const CATEGORY_ALIASES: Record<string, keyof typeof CATEGORY_VISUAL> = {
   "follow-up": "flow",
   followup: "flow",
   email: "email",
-  e-mail: "email",
+  "e-mail": "email",
   botoes: "interactive",
   botões: "interactive",
   geral: "flow",

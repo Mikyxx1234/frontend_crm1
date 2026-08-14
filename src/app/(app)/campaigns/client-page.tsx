@@ -1,68 +1,40 @@
-"use client";
+use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   IconAdjustmentsHorizontal,
-  IconAlertCircle,
-  IconAlertTriangle,
-  IconBrandWhatsapp,
   IconCheck,
-  IconChevronRight,
-  IconCircleCheck,
-  IconEye,
   IconLayoutGrid,
-  IconMessageReply,
   IconPlus,
   IconRotateClockwise,
   IconSearch,
-  IconSend,
   IconSpeakerphone,
 } from "@tabler/icons-react";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { EmptyState } from "@/components/crm/empty-state";
-import { KpiSquareScroll } from "@/components/crm/kpi-card";
 import { PageActionsMenu, PagePrimaryButton, PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { cn } from "@/lib/utils";
 
+import { CampaignRow } from "@/features/campaigns/campaign-row";
 import { useCampaigns } from "@/features/campaigns/hooks";
 import { MOCK_CAMPAIGNS_PAGE, mockCampaignsPage } from "@/features/campaigns/mock-campaigns";
+import { CAMPAIGN_STATUS_FILTERS } from "@/features/campaigns/constants";
+import { SortControl } from "@/features/campaigns/sort-control";
+import type { CampaignStatus } from "@/features/campaigns/types";
+import { VolumeChart } from "@/features/campaigns/volume-chart";
 import {
-  CAMPAIGN_STATUS_FILTERS,
-  STATUS_META,
-  TONE_CLASSES,
-} from "@/features/campaigns/constants";
-import type { CampaignListItem, CampaignStatus } from "@/features/campaigns/types";
+  campaignDayKey,
+  sortCampaigns,
+  type CampaignSortKey,
+} from "@/features/campaigns/viz";
 import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
-function fmtDateBR(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("pt-BR");
-}
-
-function fmtDateTimeBR(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 const DEFAULT_PER_PAGE = 25;
-
-const SENDING_STATUSES: CampaignStatus[] = ["SENDING", "PROCESSING"];
 
 export default function CampaignsClientPage() {
   const router = useRouter();
@@ -73,6 +45,8 @@ export default function CampaignsClientPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
+  const [sortKey, setSortKey] = useState<CampaignSortKey>("readRate");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -137,7 +111,12 @@ export default function CampaignsClientPage() {
   const error = isDemoBase ? null : listQuery.error;
 
   const dashSource = isDemoBase ? MOCK_CAMPAIGNS_PAGE.items : realItems;
-  const hasFilters = Boolean(statusFilter) || search.trim().length > 0;
+  const visibleItems = useMemo(() => {
+    const source = selectedDate
+      ? dashSource.filter((c) => campaignDayKey(c.createdAt) === selectedDate)
+      : allItems;
+    return sortCampaigns(source, sortKey);
+  }, [allItems, dashSource, selectedDate, sortKey]);
   const clearFilters = () => {
     setStatusFilter("");
     setSearch("");
@@ -181,9 +160,16 @@ export default function CampaignsClientPage() {
           }
         />
 
-        <CampaignsMiniDash items={dashSource} />
+        <VolumeChart
+          items={dashSource}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+        />
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <SortControl value={sortKey} onChange={setSortKey} />
+          </div>
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
             {isLoading && allItems.length === 0 ? (
               <div className="flex flex-col gap-2.5">
@@ -198,364 +184,67 @@ export default function CampaignsClientPage() {
               <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
                 {error instanceof Error ? error.message : "Erro ao carregar."}
               </div>
-            ) : allItems.length === 0 ? (
+            ) : visibleItems.length === 0 ? (
               <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
                 <EmptyState
                   icon={<IconSpeakerphone size={28} />}
                   title="Nenhuma campanha"
                   description={
-                    debouncedSearch
-                      ? `Sem resultados para "${debouncedSearch}".`
-                      : statusFilter
-                        ? "Nenhuma campanha com esse status."
-                        : "Crie sua primeira campanha para disparar mensagens em massa."
+                    selectedDate
+                      ? "Nenhuma campanha neste dia."
+                      : debouncedSearch
+                        ? `Sem resultados para "${debouncedSearch}".`
+                        : statusFilter
+                          ? "Nenhuma campanha com esse status."
+                          : "Crie sua primeira campanha para disparar mensagens em massa."
                   }
                   action={
-                    <PagePrimaryButton href="/campaigns/new">
-                      <IconPlus size={15} stroke={2.4} /> Nova campanha
-                    </PagePrimaryButton>
+                    selectedDate ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDate(null)}
+                        className="font-display text-[12px] font-semibold text-[var(--brand-primary)] hover:underline"
+                      >
+                        Limpar filtro do gráfico
+                      </button>
+                    ) : (
+                      <PagePrimaryButton href="/campaigns/new">
+                        <IconPlus size={15} stroke={2.4} /> Nova campanha
+                      </PagePrimaryButton>
+                    )
                   }
                 />
               </div>
             ) : (
               <div className="flex flex-col gap-2.5 pb-3">
-                {allItems.map((c) => (
+                {visibleItems.map((c) => (
                   <CampaignRow key={c.id} campaign={c} />
                 ))}
               </div>
             )}
           </div>
 
-          <PaginationGlass
-            className="shrink-0"
-            total={total}
-            entityLabel="campanhas"
-            page={safePage}
-            lastPage={lastPage}
-            canPrev={safePage > 1}
-            canNext={safePage < lastPage}
-            onPrev={() => setPage((p) => Math.max(1, p - 1))}
-            onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
-            perPage={perPage}
-            onPerPageChange={(value) => {
-              setPerPage(value);
-              setPage(1);
-            }}
-          />
+          {!selectedDate && (
+            <PaginationGlass
+              className="shrink-0"
+              total={total}
+              entityLabel="campanhas"
+              page={safePage}
+              lastPage={lastPage}
+              canPrev={safePage > 1}
+              canNext={safePage < lastPage}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+              perPage={perPage}
+              onPerPageChange={(value) => {
+                setPerPage(value);
+                setPage(1);
+              }}
+            />
+          )}
         </div>
       </main>
     </div>
-  );
-}
-
-// Cor do dot de status — mapeada a partir do meta.tone (padrão Automações
-// usa dot simples). Também aplica pulse quando a campanha está enviando.
-const DOT_TONE: Record<string, string> = {
-  success: "bg-[var(--color-success)]",
-  brand: "bg-[var(--brand-primary)]",
-  info: "bg-[var(--color-info)]",
-  warning: "bg-[var(--color-warning)]",
-  danger: "bg-[var(--color-danger)]",
-  neutral: "bg-[var(--text-muted)] opacity-45",
-};
-
-function CampaignRow({ campaign }: { campaign: CampaignListItem }) {
-  const meta = STATUS_META[campaign.status] ?? STATUS_META.DRAFT;
-  const isSending = SENDING_STATUSES.includes(campaign.status);
-
-  const total = campaign.totalRecipients || 0;
-  const sent = campaign.sentCount || 0;
-  const failed = campaign.failedCount || 0;
-  const pctSent = total ? Math.round((sent / total) * 100) : 0;
-  const pctFailed = total ? Math.round((failed / total) * 100) : 0;
-
-  const noMetrics =
-    total === 0 ||
-    campaign.status === "DRAFT" ||
-    campaign.status === "SCHEDULED";
-
-  const listLabel =
-    campaign.segment?.name ?? campaign.channel?.name ?? "—";
-
-  const dateLabel =
-    campaign.status === "SCHEDULED" && campaign.scheduledAt
-      ? `Agendada p/ ${fmtDateTimeBR(campaign.scheduledAt)}`
-      : fmtDateBR(campaign.createdAt);
-
-  return (
-    <Link
-      href={`/campaigns/${campaign.id}`}
-      className="group flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus,rgba(91,111,245,0.50))] hover:shadow-[var(--glass-shadow)] sm:gap-4 sm:px-4"
-    >
-      {/* Bloco esquerdo — dot + nome + subtítulo (padrão Automações). */}
-      <div className="min-w-0 flex-1 lg:min-w-[240px] lg:flex-none lg:shrink-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <span
-            aria-hidden
-            className={cn(
-              "h-2 w-2 shrink-0 rounded-full",
-              DOT_TONE[meta.tone] ?? DOT_TONE.neutral,
-              isSending && "animate-pulse",
-            )}
-          />
-          <h3 className="min-w-0 truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
-            {campaign.name}
-          </h3>
-        </div>
-        <div className="mt-1 flex min-w-0 items-center gap-1.5 pl-4">
-          <IconBrandWhatsapp
-            size={13}
-            stroke={2.2}
-            className="shrink-0 text-[var(--color-wa-dark,#128c4b)]"
-          />
-          <span className="min-w-0 truncate font-body text-[12px] text-[var(--text-muted)] sm:text-[12.5px]">
-            {listLabel} · {dateLabel}
-          </span>
-        </div>
-      </div>
-
-      {/* Centro — pill de status compacta + progresso ou mensagem de espera. */}
-      <div className="hidden min-w-0 flex-1 items-center gap-3 lg:flex">
-        <span
-          className={cn(
-            "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 font-display text-[11px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
-            TONE_CLASSES[meta.tone],
-            isSending && "before:animate-pulse",
-          )}
-        >
-          {meta.label}
-        </span>
-        {noMetrics ? (
-          <p className="min-w-0 flex-1 truncate font-body text-[12px] italic text-[var(--text-muted)]">
-            {campaign.status === "SCHEDULED"
-              ? "Aguardando disparo — métricas após o início do envio."
-              : "Rascunho — configure e lance a campanha para ver métricas."}
-          </p>
-        ) : (
-          <div className="min-w-0 flex-1">
-            <div className="flex h-[6px] overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
-              <div
-                className="bg-[var(--color-success)] transition-all duration-500"
-                style={{ width: `${pctSent}%` }}
-              />
-              <div
-                className="bg-[var(--color-danger)] transition-all duration-500"
-                style={{ width: `${pctFailed}%` }}
-              />
-            </div>
-            <div className="mt-1 flex justify-between font-display text-[10.5px] font-bold">
-              <span className="text-[var(--color-success-dark,var(--color-success-text))]">
-                {pctSent}% enviado
-              </span>
-              {pctFailed > 0 && (
-                <span className="text-[var(--color-danger)]">
-                  {pctFailed}% falha
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Direita — métricas compactas no estilo Automações (icone/valor/label). */}
-      {!noMetrics && (
-        <div className="hidden shrink-0 items-center gap-6.5 min-[1100px]:flex">
-          <RowMetric
-            icon={<IconCircleCheck size={13} />}
-            value={total.toLocaleString("pt-BR")}
-            label="Total"
-          />
-          <RowMetric
-            icon={<IconSend size={13} />}
-            value={sent.toLocaleString("pt-BR")}
-            label="Enviado"
-          />
-          <RowMetric
-            icon={<IconEye size={13} />}
-            value={(campaign.readCount ?? 0).toLocaleString("pt-BR")}
-            label="Lido"
-          />
-          <RowMetric
-            icon={<IconMessageReply size={13} />}
-            value={(campaign.repliedCount ?? 0).toLocaleString("pt-BR")}
-            label="Resp."
-          />
-          <RowMetric
-            icon={<IconAlertCircle size={13} />}
-            value={failed.toLocaleString("pt-BR")}
-            label="Falha"
-          />
-        </div>
-      )}
-
-      {/* Fallback mobile — pill de status + chevron. */}
-      <div className="flex shrink-0 items-center gap-2 lg:hidden">
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-display text-[11px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
-            TONE_CLASSES[meta.tone],
-            isSending && "before:animate-pulse",
-          )}
-        >
-          {meta.label}
-        </span>
-        <IconChevronRight
-          size={16}
-          stroke={2.5}
-          className="text-[var(--brand-primary)]"
-        />
-      </div>
-
-      <IconChevronRight
-        size={16}
-        stroke={2.2}
-        className="hidden shrink-0 text-[var(--text-muted)] transition-all group-hover:translate-x-0.5 group-hover:text-[var(--brand-primary)] lg:block"
-      />
-    </Link>
-  );
-}
-
-// Métrica no formato Automações: ícone pequeno em cima, valor bold, label pequeno.
-function RowMetric({
-  icon,
-  value,
-  label,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  label: string;
-}) {
-  return (
-    <div className="min-w-[52px] text-center">
-      <div className="mb-0.5 flex items-center justify-center gap-1 text-[var(--text-muted)]">
-        {icon}
-      </div>
-      <p className="font-display text-[15px] font-extrabold leading-none text-[var(--text-primary)]">
-        {value}
-      </p>
-      <p className="mt-1 font-body text-[10px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
-        {label}
-      </p>
-    </div>
-  );
-}
-
-// ── Mini-dash de campanhas ───────────────────────────────────────────────
-
-const SENDING_SET: CampaignStatus[] = ["SENDING", "PROCESSING"];
-
-function CampaignsMiniDash({ items }: { items: CampaignListItem[] }) {
-  const stats = useMemo(() => {
-    let sending = 0;
-    let sent = 0;
-    let read = 0;
-    let failed = 0;
-    for (const c of items) {
-      if (SENDING_SET.includes(c.status)) sending++;
-      sent += c.sentCount || 0;
-      read += c.readCount || 0;
-      failed += c.failedCount || 0;
-    }
-    const readRate = sent > 0 ? Math.round((read / sent) * 100) : 0;
-    const failRate =
-      sent + failed > 0 ? Math.round((failed / (sent + failed)) * 100) : 0;
-    return { total: items.length, sending, sent, failed, readRate, failRate };
-  }, [items]);
-
-  const cards: {
-    key: string;
-    label: string;
-    shortLabel: string;
-    value: number;
-    percent?: number;
-    accent: string;
-    icon: React.ReactNode;
-  }[] = [
-    {
-      key: "total",
-      label: "Total de campanhas",
-      shortLabel: "Campanhas",
-      value: stats.total,
-      accent: "var(--brand-primary)",
-      icon: <IconSpeakerphone size={16} />,
-    },
-    {
-      key: "sending",
-      label: "Em envio agora",
-      shortLabel: "Em envio",
-      value: stats.sending,
-      accent: "var(--color-warning, #d97706)",
-      icon: <IconSend size={16} />,
-    },
-    {
-      key: "sent",
-      label: "Enviadas · taxa de leitura",
-      shortLabel: "Enviadas",
-      value: stats.sent,
-      percent: stats.readRate,
-      accent: "var(--color-success)",
-      icon: <IconCircleCheck size={16} />,
-    },
-    {
-      key: "failed",
-      label: "Falhas · taxa de erro",
-      shortLabel: "Falhas",
-      value: stats.failed,
-      percent: stats.failRate,
-      accent: "var(--color-danger, #dc2626)",
-      icon: <IconAlertTriangle size={16} />,
-    },
-  ];
-
-  return (
-    <section className="shrink-0" aria-label="Indicadores de campanhas">
-      <KpiSquareScroll
-        items={cards.map((c) => ({
-          key: c.key,
-          label: c.shortLabel,
-          value: c.value.toLocaleString("pt-BR"),
-          icon: c.icon,
-          accent: c.accent,
-          percent: c.percent,
-        }))}
-      />
-      <div className="hidden gap-3 lg:grid lg:grid-cols-4">
-        {cards.map((c) => (
-          <div
-            key={c.key}
-            className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-          >
-            <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-              style={{
-                background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
-                color: c.accent,
-              }}
-            >
-              {c.icon}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-display text-[11.5px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
-                {c.label}
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
-                  {c.value.toLocaleString("pt-BR")}
-                </span>
-                {c.percent !== undefined && (
-                  <span
-                    className="font-display text-[12px] font-bold tabular-nums"
-                    style={{ color: c.accent }}
-                  >
-                    {c.percent}%
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 

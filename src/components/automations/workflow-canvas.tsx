@@ -51,6 +51,7 @@ import type { ActionStepType } from "@/lib/automation-workflow";
 import { ActionNode } from "./action-node";
 import { AddStepNode } from "./add-step-node";
 import { BusinessHoursNode } from "./business-hours-node";
+import { CheckAgentStatusNode } from "./check-agent-status-node";
 import { DistributionNode } from "./distribution-node";
 import { StepPickerModal } from "./step-picker-modal";
 import { ConditionNode } from "./condition-node";
@@ -73,6 +74,7 @@ const nodeTypes = {
   condition: ConditionNode,
   roundRobin: RoundRobinNode,
   businessHours: BusinessHoursNode,
+  checkAgentStatus: CheckAgentStatusNode,
   distribution: DistributionNode,
   delay: DelayNode,
   question: QuestionNode,
@@ -109,6 +111,7 @@ function rfNodeType(stepType: string): keyof typeof nodeTypes {
   if (stepType === "condition") return "condition";
   if (stepType === "round_robin") return "roundRobin";
   if (stepType === "business_hours") return "businessHours";
+  if (stepType === "check_agent_status") return "checkAgentStatus";
   if (stepType === "execute_distribution") return "distribution";
   if (stepType === "delay") return "delay";
   if (stepType === "question") return "interactive";
@@ -180,6 +183,7 @@ const BRANCHING_STEP_TYPES = new Set([
   "round_robin",
   "wait_for_reply",
   "business_hours",
+  "check_agent_status",
   "question",
   "send_whatsapp_interactive",
   "send_whatsapp_list",
@@ -434,7 +438,7 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
       }
     }
 
-    if (a.type === "business_hours") {
+    if (a.type === "business_hours" || a.type === "check_agent_status") {
       if (typeof cfg.elseStepId === "string" && cfg.elseStepId && stepIds.has(cfg.elseStepId)) {
         out.push({
           id: `${a.id}-else-${cfg.elseStepId}`,
@@ -521,10 +525,14 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
     if (stepIds.has(explicit)) {
       const isMetaLinear =
         META_SEND_FAILURE_TYPES.has(a.type) && !isInteractiveStep(a);
+      const isBinaryTrue =
+        a.type === "business_hours" ||
+        a.type === "execute_distribution" ||
+        a.type === "check_agent_status";
       out.push({
         id: `${a.id}-next-${explicit}`,
         source: a.id, target: explicit,
-        ...(isMetaLinear ? { sourceHandle: "next" } : {}),
+        ...(isMetaLinear ? { sourceHandle: "next" } : isBinaryTrue ? { sourceHandle: "true" } : {}),
         animated: false, data: EDGE_DATA_DEFAULT, type: EDGE_TYPE,
         interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
       });
@@ -1421,7 +1429,7 @@ function WorkflowCanvasInner({
           return;
         }
 
-        if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution")) {
+        if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution" || srcStep.type === "check_agent_status")) {
           const cfg = { ...srcStep.config, elseStepId: target };
           onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
           return;
@@ -1642,7 +1650,7 @@ function WorkflowCanvasInner({
           return;
         }
 
-        if (sourceHandle === "false" && srcStep.type === "business_hours") {
+        if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "check_agent_status")) {
           const cfg = { ...srcStep.config, elseStepId: id };
           const updated = cur.map((s) =>
             s.id === sourceId ? { ...s, config: cfg } : s
@@ -1926,7 +1934,7 @@ function WorkflowCanvasInner({
         return;
       }
 
-      if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution")) {
+      if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution" || srcStep.type === "check_agent_status")) {
         const cfg = { ...srcStep.config } as Record<string, unknown>;
         delete cfg.elseStepId;
         onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));

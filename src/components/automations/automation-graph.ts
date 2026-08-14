@@ -45,6 +45,7 @@ const STEP_CHIP: Record<string, Chip> = {
   delay: "amber",
   condition: "amber",
   business_hours: "amber",
+  check_agent_status: "amber",
   webhook: "blue",
   transfer_to_ai_agent: "violet",
   ask_ai_agent: "violet",
@@ -185,7 +186,7 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
       }
     }
 
-    if (a.type === "business_hours" || a.type === "execute_distribution") {
+    if (a.type === "business_hours" || a.type === "execute_distribution" || a.type === "check_agent_status") {
       const elseId = typeof cfg.elseStepId === "string" ? cfg.elseStepId : ""
       if (elseId && stepIds.has(elseId)) {
         out.push(edge(`${a.id}-else-${elseId}`, a.id, elseId, "false", true))

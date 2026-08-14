@@ -17,6 +17,7 @@ import {
 import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import { cn } from "@/lib/utils";
 
+import { normalizeConversationEventText } from "./classify";
 import {
   isGenericHumanEventActor,
   resolveEventActorLabel,
@@ -65,6 +66,7 @@ export function EventRow({
     });
   }, [actor, actorId, teamUsers]);
   const Icon = ACTION_ICON[action] ?? Sparkles;
+  const displayText = normalizeConversationEventText(text, displayActor);
 
   return (
     <div
@@ -76,19 +78,19 @@ export function EventRow({
       <span className="h-px min-w-4 flex-1 bg-border" aria-hidden />
       <p
         className="flex min-w-0 max-w-[min(100%,36rem)] flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-center text-xs text-muted-foreground"
-        aria-label={text}
+        aria-label={displayText}
       >
         <Icon
           className="size-3.5 shrink-0 text-primary"
           strokeWidth={2}
           aria-hidden
         />
-        <span className="text-foreground/80">{text}</span>
+        <span className="text-foreground/80">{displayText}</span>
         {displayActor ? (
           <span className="text-muted-foreground">· {displayActor}</span>
         ) : null}
         {time ? (
-          <time className="font-mono text-[10px] tabular-nums text-muted-foreground">
+          <time className="text-[10px] tabular-nums text-muted-foreground">
             {time}
           </time>
         ) : null}

@@ -122,6 +122,7 @@ function isInternalOrSystemPreview(content: string | null | undefined): boolean 
     t.startsWith("conversa distribuída") ||
     t.startsWith("conversa enfileirada") ||
     t.startsWith("enfileirada em") ||
+    t.startsWith("enfileirada —") ||
     t.startsWith("aguardando consultor") ||
     t.startsWith("nota:") ||
     t.startsWith("nota interna")

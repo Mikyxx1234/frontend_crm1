@@ -8,6 +8,8 @@ export {
   classifyTimelineItem,
   inferEventActionFromText,
   isEventMessageType,
+  normalizeConversationEventText,
+  normalizeQueueEventText,
   parseEventActionFromMessageType,
 } from "./classify";
 export { EventRow } from "./event-row";

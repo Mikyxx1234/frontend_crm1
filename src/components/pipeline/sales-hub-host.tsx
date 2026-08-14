@@ -337,13 +337,23 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const queueHasMore =
     !hasServerBoard && (boardNormal.data ?? []).some(stageHasMoreServer);
 
+  // Sem snapshot ainda = pendente. `!data && (isPending||isFetching)` falhava
+  // no F5: query recém-ligada fica pending+idle (isFetching=false) e o
+  // host montava o Flow com fila vazia ("Todos 0").
   const boardPending =
     !pipelineId ||
     (!hasServerBoard
-      ? !boardNormal.data && (boardNormal.isPending || boardNormal.isFetching)
-      : !boardFiltered.data &&
-        !boardNormal.data &&
-        (boardFiltered.isPending || boardFiltered.isFetching));
+      ? !Array.isArray(boardNormal.data) &&
+        (boardNormal.isPending ||
+          boardNormal.isFetching ||
+          !boardNormal.isFetched)
+      : !Array.isArray(boardFiltered.data) &&
+        !Array.isArray(boardNormal.data) &&
+        (boardFiltered.isPending ||
+          boardFiltered.isFetching ||
+          boardNormal.isPending ||
+          boardNormal.isFetching ||
+          !(boardFiltered.isFetched || boardNormal.isFetched)));
 
   const boardRefreshing =
     filtersPendingDebounce ||
@@ -552,7 +562,7 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     pipelineId,
   ]);
 
-  if (sessionStatus === "loading" || !pipelineId) {
+  if (sessionStatus === "loading" || !pipelineId || boardPending) {
     return <FlowPendingShell />;
   }
 

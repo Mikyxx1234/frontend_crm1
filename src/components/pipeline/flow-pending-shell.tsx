@@ -1,9 +1,8 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
-import { PageLoading } from "@/components/crm/page-loading";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { StageRibbon } from "@/components/sales-hub/stage-ribbon";
 import {
@@ -26,7 +25,7 @@ function FlowSpinner({ label }: { label: string }) {
 /**
  * Chrome do Flow sem dados — ribbon + split com "…" e spinner.
  * Substitui o `PageLoading` genérico (4 cards) no hard refresh de
- * `/pipeline/flow`, no Suspense da page e no gate de sessão/pipelineId.
+ * `/pipeline/flow`, no Suspense da page e no gate de sessão/board.
  */
 export function FlowPendingShell() {
   const router = useRouter();
@@ -91,11 +90,4 @@ export function FlowPendingShell() {
       </main>
     </div>
   );
-}
-
-/** Fallback do `(app)/loading.tsx` — Flow na rota do Flow, skeleton genérico no resto. */
-export function AppRouteLoading() {
-  const pathname = usePathname();
-  if (pathname?.startsWith("/pipeline/flow")) return <FlowPendingShell />;
-  return <PageLoading />;
 }

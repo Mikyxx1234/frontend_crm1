@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { PipelineListItemDto } from "@/features/pipeline-v2/api/types";
 
@@ -210,7 +210,9 @@ export function useStageUrlSync(
     }
   }, [resetKey, setSelectedStageId]);
 
-  useEffect(() => {
+  // useLayoutEffect: restaura ?stage= antes do paint. useEffect deixava
+  // um frame com selectedStageId=null ("Todos") depois do board chegar.
+  useLayoutEffect(() => {
     if (hydrated || !stages.length) return;
 
     const urlKey = readUrlParam("stage");

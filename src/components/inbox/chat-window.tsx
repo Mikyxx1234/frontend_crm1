@@ -491,6 +491,7 @@ export function ChatWindow({
     name: string;
     label?: string;
     content: string;
+    language?: string;
     /** ID Graph Meta — usado para montar componente de botão FLOW no envio. */
     metaTemplateId?: string;
     /** Metadados das variáveis do corpo (Config → operator_variables). */

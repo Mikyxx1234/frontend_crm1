@@ -304,7 +304,7 @@ export default function InboxV2ClientPage({
           t.id === "todos" || t.id === "esperando" || t.id === "respondidas",
       );
     }
-    const allowed = new Set(
+    const allowed = new Set<string>(
       listAllowedInboxTabsForUser({
         grants: {},
         role,

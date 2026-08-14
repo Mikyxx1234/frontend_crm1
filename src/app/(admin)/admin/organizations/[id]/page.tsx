@@ -30,16 +30,16 @@ type OrgDetail = {
     id: string;
     name: string;
     email: string;
-    role: string;
+    role: "ADMIN" | "MANAGER" | "MEMBER";
     isSuperAdmin: boolean;
-    type: string;
+    type: "HUMAN" | "AI";
     isErased: boolean;
     createdAt: string;
   }>;
   invites: Array<{
     id: string;
     email: string;
-    role: string;
+    role: "ADMIN" | "MANAGER" | "MEMBER";
     token: string;
     expiresAt: string;
     createdAt: string;

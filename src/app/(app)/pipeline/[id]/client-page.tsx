@@ -203,20 +203,19 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
     // Campos personalizados — consome `dealPanelFields` (filtrados por
     // showInDealPanel no backend), mesma fonte do slide-over v2. Só exibe
     // os que têm valor preenchido para não poluir a página read-only.
-    const customFields: DealField[] = (deal.dealPanelFields ?? [])
-      .map((f) => {
-        const formatted = fmtCustomFieldValue(f.value, f.type);
-        if (formatted === undefined) return null;
-        const isChip = ["SELECT", "MULTI_SELECT"].includes(
-          (f.type ?? "").toUpperCase(),
-        );
-        return {
-          label: f.label || f.name,
-          value: formatted,
-          ...(isChip ? { type: "chip" as const } : {}),
-        } satisfies DealField;
-      })
-      .filter((f): f is DealField => f !== null);
+    const customFields: DealField[] = [];
+    for (const f of deal.dealPanelFields ?? []) {
+      const formatted = fmtCustomFieldValue(f.value, f.type);
+      if (formatted === undefined) continue;
+      const isChip = ["SELECT", "MULTI_SELECT"].includes(
+        (f.type ?? "").toUpperCase(),
+      );
+      customFields.push({
+        label: f.label || f.name,
+        value: formatted,
+        ...(isChip ? { type: "chip" as const } : {}),
+      });
+    }
 
     const dealNumber = deal.number;
     const numberLabel =

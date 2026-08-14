@@ -8,25 +8,27 @@
  */
 
 export type FlowDefinitionInputFieldMapping = {
-  fieldKey: string;
-  /** Caminho dentro do payload (ex: "screen_0.field_0"). */
-  mapsTo?: string | null;
+  targetKind: "CONTACT_NATIVE" | "DEAL_NATIVE" | "CUSTOM_FIELD";
+  nativeKey?: string | null;
+  customFieldId?: string | null;
 };
 
 export type FlowDefinitionInputField = {
   id?: string;
+  fieldKey: string;
   label: string;
-  /** Tipo do campo (TextInput, TextArea, RadioButtonsGroup, etc.). */
-  type: string;
+  fieldType: string;
+  options?: string[];
   required?: boolean;
-  config?: Record<string, unknown> | null;
-  mappings?: FlowDefinitionInputFieldMapping[];
+  sortOrder?: number;
+  mapping?: FlowDefinitionInputFieldMapping | null;
 };
 
 export type FlowDefinitionInputScreen = {
   id?: string;
   title: string;
   description?: string | null;
+  sortOrder?: number;
   fields: FlowDefinitionInputField[];
 };
 

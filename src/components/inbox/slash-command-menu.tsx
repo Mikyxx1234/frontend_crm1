@@ -945,15 +945,18 @@ export function SlashCommandMenu({
   onSearchChange,
   onSearchKeyDown,
   onToggleFavorite,
+  className: _className,
 }: {
   /** Controla a exibição da modal (com animação de entrada/saída). */
-  open: boolean;
+  open?: boolean;
   state: SlashMenuState;
   onSelectItem: (item: SlashItem) => void;
   /** Atualiza activeIndex quando o mouse passa por um item. */
   onHover?: (index: number) => void;
   /** Fecha a modal (backdrop / botão / ESC). */
-  onClose: () => void;
+  onClose?: () => void;
+  /** Aceito por callers legado (popover); a modal atual é portal no body. */
+  className?: string;
   /** Atualiza o texto de busca digitado no campo da modal. */
   onSearchChange?: (value: string) => void;
   /** Navegação por teclado quando o campo de busca está focado (↑/↓/Enter/Esc/Tab). */
@@ -961,6 +964,7 @@ export function SlashCommandMenu({
   /** Marca/desmarca favorito de um item (star toggle). */
   onToggleFavorite?: (item: SlashItem) => void;
 }) {
+  const isOpen = open ?? state.open;
   const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
 
   React.useEffect(() => {
@@ -970,16 +974,16 @@ export function SlashCommandMenu({
   // ESC fecha (paridade com a modal de automação). O composer também escuta
   // ESC/onKeyDown — chamadas duplicadas de onClose são idempotentes.
   React.useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        onClose?.();
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [isOpen, onClose]);
 
   // Agrupa os itens por tipo na ordem fixa KIND_ORDER, mantendo o
   // índice GLOBAL de cada item (essencial pra que ↑/↓ continuem
@@ -1020,7 +1024,7 @@ export function SlashCommandMenu({
 
   return createPortal(
     <AnimatePresence>
-      {open ? (
+      {isOpen ? (
         <>
           <motion.div
             key="slash-bg"
@@ -1028,7 +1032,7 @@ export function SlashCommandMenu({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            onMouseDown={onClose}
+            onMouseDown={() => onClose?.()}
             className="fixed inset-0 z-70 bg-black/30 backdrop-blur-sm"
             aria-hidden
           />
@@ -1421,7 +1425,7 @@ function SlashSearchBox({
   );
 }
 
-function SlashCloseButton({ onClose }: { onClose: () => void }) {
+function SlashCloseButton({ onClose }: { onClose?: () => void }) {
   return (
     <button
       type="button"

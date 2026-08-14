@@ -3,6 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiUrl } from "@/lib/api";
 
+export type DepartmentOperatingHours = {
+  start: string;
+  end: string;
+  weekdays: number[];
+};
+
 export interface Department {
   id: string;
   name: string;
@@ -12,6 +18,8 @@ export interface Department {
   requireTabulationOnClose?: boolean;
   isSupport?: boolean;
   distributionEnabled?: boolean;
+  /** Null = Seg–Sex 09:00–18:00. */
+  operatingHours?: DepartmentOperatingHours | null;
   _count?: { conversations?: number; members?: number };
 }
 
@@ -58,7 +66,7 @@ export function useCreateDepartment() {
 export function useUpdateDepartment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; name?: string; color?: string; icon?: string; requireTabulationOnClose?: boolean; isSupport?: boolean; distributionEnabled?: boolean }) => {
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; color?: string; icon?: string; requireTabulationOnClose?: boolean; isSupport?: boolean; distributionEnabled?: boolean; operatingHours?: DepartmentOperatingHours | null }) => {
       const res = await fetch(`/api/settings/departments/${id}`, {
         method: "PUT",
         credentials: "include",

@@ -16,8 +16,9 @@ export function inboxConversationHref(number: number): string {
 
 export function matchesConversationUrlRef(
   row: { id: string; number?: number | null },
-  ref: string,
+  ref: string | null | undefined,
 ): boolean {
+  if (!ref) return false;
   return row.id === ref || (row.number != null && String(row.number) === ref);
 }
 

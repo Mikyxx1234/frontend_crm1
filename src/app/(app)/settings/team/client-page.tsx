@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   IconKey,
   IconMail,
+  IconPencil,
   IconPlus,
   IconShield,
   IconTrash,
@@ -70,6 +71,7 @@ import {
   useSettingsHeaderSlots,
 } from "../_v2-shell";
 import { TelephonyToggle } from "@/features/telephony/telephony-toggle";
+import { EditUserDialog } from "./edit-user-dialog";
 
 type UserRole = "ADMIN" | "MANAGER" | "MEMBER";
 
@@ -81,6 +83,7 @@ type UserRow = {
   email: string;
   role: UserRole;
   avatarUrl?: string | null;
+  phone?: string | null;
   assignedRoles?: AssignedRole[];
 };
 
@@ -89,7 +92,7 @@ type CrmPermissionDraft = Record<CrmActionKey, boolean>;
 const DEFAULT_PER_PAGE = 25;
 
 /** Grid da lista de usuários: [check] | Usuário | E-mail | Função | Telefonia | Ações */
-const USER_LIST_GRID = "32px minmax(0,1.5fr) minmax(0,1.3fr) 200px 104px 88px";
+const USER_LIST_GRID = "32px minmax(0,1.5fr) minmax(0,1.3fr) 200px 104px 120px";
 
 const DEFAULT_INVITE_PERMISSIONS: CrmPermissionDraft = {
   editLeads: true,
@@ -229,6 +232,7 @@ function TeamContent() {
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
 
+  const [editTarget, setEditTarget] = React.useState<UserRow | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<UserRow | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = React.useState(false);
   const [bulkDeleting, setBulkDeleting] = React.useState(false);
@@ -609,6 +613,20 @@ function TeamContent() {
     );
   }, [activeTab, canManageDepartments]);
 
+  const editFnRole = editTarget
+    ? userFunctionRole(editTarget, adminRole?.id)
+    : undefined;
+  const editRoleOptions = React.useMemo(() => {
+    if (
+      editFnRole &&
+      editFnRole.id !== "__admin__" &&
+      !baseRoleOptions.some((o) => o.value === editFnRole.id)
+    ) {
+      return [{ value: editFnRole.id, label: editFnRole.name }, ...baseRoleOptions];
+    }
+    return baseRoleOptions;
+  }, [editFnRole, baseRoleOptions]);
+
   const actionsNode = React.useMemo(
     () => (
       <div className="flex items-center gap-2">
@@ -801,9 +819,19 @@ function TeamContent() {
                 <div className="flex min-w-0 items-center gap-2.5">
                   <UserAvatar size={32} name={u.name} imageUrl={u.avatarUrl} />
                   <div className="min-w-0 leading-tight">
-                    <span className="block max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
-                      {u.name}
-                    </span>
+                    {isAdmin ? (
+                      <button
+                        type="button"
+                        onClick={() => setEditTarget(u)}
+                        className="block max-w-full truncate text-left font-display text-[14px] font-bold text-[var(--text-primary)] hover:underline"
+                      >
+                        {u.name}
+                      </button>
+                    ) : (
+                      <span className="block max-w-full truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+                        {u.name}
+                      </span>
+                    )}
                     <span
                       className={cn(
                         "mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-px font-display text-[10px] font-bold",
@@ -853,6 +881,15 @@ function TeamContent() {
                     <>
                       <button
                         type="button"
+                        onClick={() => setEditTarget(u)}
+                        aria-label={`Editar ${u.name}`}
+                        title="Editar usuário"
+                        className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
+                      >
+                        <IconPencil size={14} />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => openPasswordDialog(u)}
                         aria-label={`Trocar senha de ${u.name}`}
                         title="Trocar senha"
@@ -896,6 +933,15 @@ function TeamContent() {
       ) : null}
       </>
       )}
+
+      <EditUserDialog
+        user={editTarget}
+        roleOptions={editRoleOptions}
+        roleId={editFnRole && editFnRole.id !== "__admin__" ? editFnRole.id : undefined}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+      />
 
       {/* ─── Dialog: criar usuário ─── */}
       <FormDialog

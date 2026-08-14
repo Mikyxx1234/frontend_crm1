@@ -89,7 +89,7 @@ import {
   InboxFilterButton,
   TagsPopover,
   TransferPopover,
-  TemplatePickerList,
+  WhatsappTemplatePickerModal,
   whatsappTemplateToPending,
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
@@ -1620,25 +1620,18 @@ export default function InboxV2ClientPage({
       <EmptyAside />
     );
 
-  const templateModalNode =
-    templateOpen && activeId ? (
-      <div
-        className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/40 backdrop-blur-sm"
-        onClick={() => setTemplateOpen(false)}
-      >
-        <div onClick={(e) => e.stopPropagation()}>
-          <TemplatePickerList
-            conversationId={activeId}
-            channelId={selectedChannelId}
-            onClose={() => setTemplateOpen(false)}
-            onPick={(tpl) => {
-              setExternalTemplate(whatsappTemplateToPending(tpl));
-              setTemplateOpen(false);
-            }}
-          />
-        </div>
-      </div>
-    ) : null;
+  const templateModalNode = (
+    <WhatsappTemplatePickerModal
+      open={templateOpen}
+      onClose={() => setTemplateOpen(false)}
+      conversationId={activeId}
+      channelId={selectedChannelId}
+      onPick={(tpl) => {
+        setExternalTemplate(whatsappTemplateToPending(tpl));
+        setTemplateOpen(false);
+      }}
+    />
+  );
 
   // Picker de duração do "Fixar" (24h/7d/30d) + painel "Mensagens
   // favoritas" — self-contained, plugados nos 4 pontos de retorno

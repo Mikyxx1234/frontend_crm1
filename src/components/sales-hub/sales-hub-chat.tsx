@@ -42,7 +42,7 @@ import {
 import {
   Composer,
   ConversationTimelineTab,
-  TemplatePickerList,
+  WhatsappTemplatePickerModal,
   whatsappTemplateToPending,
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
@@ -373,24 +373,16 @@ export function SalesHubChat({
         }
       />
 
-      {templateOpen ? (
-        <div
-          className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setTemplateOpen(false)}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <TemplatePickerList
-              conversationId={conversationId}
-              channelId={selectedChannelId}
-              onClose={() => setTemplateOpen(false)}
-              onPick={(tpl) => {
-                setExternalTemplate(whatsappTemplateToPending(tpl));
-                setTemplateOpen(false);
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
+      <WhatsappTemplatePickerModal
+        open={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+        conversationId={conversationId}
+        channelId={selectedChannelId}
+        onPick={(tpl) => {
+          setExternalTemplate(whatsappTemplateToPending(tpl));
+          setTemplateOpen(false);
+        }}
+      />
 
       {pinDurationDialog}
     </>

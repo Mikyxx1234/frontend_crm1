@@ -35,6 +35,7 @@ type AnalyticsResponse = {
   byTabulation: Array<{
     tabulationId: string;
     name: string;
+    number?: number | null;
     path: string;
     // A mesma folha existe em vários departamentos ("Sem Resposta"); sem isto
     // o ranking mostra linhas de texto idêntico. O id serve ao atalho de
@@ -51,6 +52,7 @@ type AnalyticsResponse = {
     contactName: string | null;
     actorName: string | null;
     tabulationPath: string | null;
+    tabulationNumber?: number | null;
     departmentName: string | null;
   }>;
 };
@@ -297,6 +299,7 @@ export function TabulationsDashboard() {
                       }
                     >
                       {row.path}
+                      {row.number != null ? ` (#${row.number})` : ""}
                       {row.departmentId && row.departmentName && (
                         <>
                           <span
@@ -436,9 +439,16 @@ export function TabulationsDashboard() {
                     <td className="px-4 py-2.5">{row.contactName ?? "—"}</td>
                     <td
                       className="max-w-[280px] truncate px-4 py-2.5"
-                      title={row.tabulationPath ?? ""}
+                      title={
+                        row.tabulationNumber != null && row.tabulationPath
+                          ? `${row.tabulationPath} (#${row.tabulationNumber})`
+                          : (row.tabulationPath ?? "")
+                      }
                     >
                       {row.tabulationPath ?? "—"}
+                      {row.tabulationNumber != null
+                        ? ` (#${row.tabulationNumber})`
+                        : ""}
                     </td>
                     <td className="px-4 py-2.5 text-[var(--text-muted)]">
                       {row.departmentName ?? "—"}

@@ -785,6 +785,7 @@ function LeadDistributedFields({
 
 type TabulationNodeApi = {
   id: string;
+  number?: number;
   parentId: string | null;
   name: string;
   color: string | null;

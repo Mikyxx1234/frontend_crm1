@@ -158,6 +158,8 @@ export interface TransferDistributionResult {
 
 export type TabulationNode = {
   id: string;
+  /** ID amigável sequencial por organização (não o CUID). */
+  number?: number;
   parentId: string | null;
   name: string;
   color: string | null;

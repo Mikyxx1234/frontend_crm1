@@ -54,6 +54,7 @@ import {
 
 type TabulationNode = {
   id: string;
+  number?: number;
   parentId: string | null;
   name: string;
   color: string | null;
@@ -1208,9 +1209,18 @@ function TreeCard(props: {
                     ? "text-[var(--text-primary)]"
                     : "text-[var(--text-muted)] line-through",
                 )}
-                title={node.name}
+                title={
+                  node.number != null
+                    ? `${node.name} (#${node.number})`
+                    : node.name
+                }
               >
                 {node.name}
+                {node.number != null ? (
+                  <span className="ml-1 font-body text-[11px] font-normal text-[var(--text-muted)]">
+                    #{node.number}
+                  </span>
+                ) : null}
               </span>
               <span className="truncate font-body text-[11px] text-[var(--text-muted)]">
                 {isLeaf

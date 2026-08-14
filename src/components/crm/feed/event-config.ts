@@ -610,8 +610,16 @@ export function eventDescription(ev: FeedEvent): string {
       return from && to ? `${from} → ${to}` : to || from;
     }
     case "CONVERSATION_TABULATED": {
-      const tabId = String(m.tabulationId ?? "").trim();
-      return tabId ? `tabulação ${tabId.slice(0, 8)}…` : "Tabulação registrada";
+      const name = String(m.tabulationName ?? m.tabulationLabel ?? "").trim();
+      const numRaw = m.tabulationNumber;
+      const num =
+        typeof numRaw === "number" && Number.isFinite(numRaw)
+          ? numRaw
+          : typeof numRaw === "string" && /^\d+$/.test(numRaw)
+            ? Number(numRaw)
+            : null;
+      if (name) return num != null ? `${name} (#${num})` : name;
+      return "Tabulação registrada";
     }
     case "AUTOMATION_EXECUTED": {
       const name = String(m.automationName ?? "Automação");

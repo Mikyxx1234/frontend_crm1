@@ -9,6 +9,7 @@ import { apiUrl } from "@/lib/api";
 
 type TabulationTreeNode = {
   id: string;
+  number?: number;
   name: string;
   children: TabulationTreeNode[];
 };
@@ -25,8 +26,10 @@ function flattenTabulationLeaves(
   const out: { id: string; label: string }[] = [];
   for (const n of nodes) {
     const path = prefix ? `${prefix} › ${n.name}` : n.name;
-    if (n.children.length === 0) out.push({ id: n.id, label: path });
-    else out.push(...flattenTabulationLeaves(n.children, path));
+    if (n.children.length === 0) {
+      const label = n.number != null ? `${path} (#${n.number})` : path;
+      out.push({ id: n.id, label });
+    } else out.push(...flattenTabulationLeaves(n.children, path));
   }
   return out;
 }

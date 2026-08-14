@@ -171,8 +171,8 @@ export function fetchRecipients(
 
 export function createCampaign(
   body: CreateCampaignBody,
-): Promise<{ campaign: { id: string } }> {
-  return sendJson<{ campaign: { id: string } }>(
+): Promise<{ campaign: { id: string; number?: number } }> {
+  return sendJson<{ campaign: { id: string; number?: number } }>(
     "/api/campaigns",
     "POST",
     body,

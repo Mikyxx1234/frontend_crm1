@@ -40,6 +40,7 @@ async function getJson<T>(path: string, errLabel: string): Promise<T> {
 
 export interface AutomationListItemDto {
   id: string;
+  number?: number;
   name: string;
   description: string | null;
   triggerType: string;

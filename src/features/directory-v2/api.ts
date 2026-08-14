@@ -197,6 +197,7 @@ export function fetchTagsWithCounts(): Promise<TagWithCountDto[]> {
 
 export interface DuplicateContactSnap {
   id: string;
+  number?: number;
   name: string;
   email: string | null;
   phone: string | null;

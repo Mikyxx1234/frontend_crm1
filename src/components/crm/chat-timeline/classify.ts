@@ -1,3 +1,7 @@
+import {
+  formatHumanEventActorName,
+  isGenericHumanEventActor,
+} from "./event-actor";
 import type {
   ClassifiedTimelineItem,
   ConversationEventAction,
@@ -59,6 +63,51 @@ function isSystemActor(input: TimelineClassifyInput): boolean {
   return SYSTEM_ACTORS.has(normalizeActor(input.senderName));
 }
 
+/** Encurta eventos de fila legados no display (texto já persistido). */
+export function normalizeQueueEventText(text: string): string {
+  let t = text
+    .replace(/\s*\([A-Z][A-Z0-9]*(_[A-Z0-9]+)+\)/g, "")
+    .replace(/\s+[A-Z][A-Z0-9]*(_[A-Z0-9]+)+(?=\s|$)/g, "")
+    .replace(/^Conversa enfileirada para\s+/i, "Enfileirada em ")
+    .replace(/aguardando consultor elegível/gi, "sem consultor elegível")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+[—–-]\s*$/g, "")
+    .trim();
+  if (/^aguardando consultor/i.test(t) || /^sem consultor elegível$/i.test(t)) {
+    return "Enfileirada — sem consultor elegível";
+  }
+  return t;
+}
+
+const LEAVE_EVENT_RE = /^(.+?)\s+(saiu|entrou|removida)\s+da conversa$/i;
+
+/**
+ * Encurta o nome no texto e, se o ator não for a pessoa do texto,
+ * troca "saiu" por "removida" (A removeu B).
+ */
+export function normalizeConversationEventText(
+  text: string,
+  actor?: string | null,
+): string {
+  const queued = normalizeQueueEventText(text);
+  const m = queued.match(LEAVE_EVENT_RE);
+  if (!m) return queued;
+  const who = formatHumanEventActorName(m[1]) || m[1].trim();
+  const verb = m[2].toLowerCase();
+  if (verb === "entrou") return `${who} entrou na conversa`;
+  if (verb === "removida") return `${who} removida da conversa`;
+  const actorShort = formatHumanEventActorName(actor);
+  const actorNorm = (actorShort || actor || "").trim().toLowerCase();
+  if (
+    actorNorm &&
+    actorNorm !== who.toLowerCase() &&
+    !isGenericHumanEventActor(actor)
+  ) {
+    return `${who} removida da conversa`;
+  }
+  return `${who} saiu da conversa`;
+}
+
 export function inferEventActionFromText(
   content: string | null | undefined,
 ): ConversationEventAction {
@@ -77,7 +126,7 @@ export function inferEventActionFromText(
   }
   if (/\btags?\b/.test(t)) return "tag";
   if (/entrou|entrada/.test(t)) return "entrada";
-  if (/saiu|sa[ií]da/.test(t)) return "saida";
+  if (/saiu|sa[ií]da|removid/.test(t)) return "saida";
   if (/iniciada por template/.test(t)) return "template";
   return "ia";
 }

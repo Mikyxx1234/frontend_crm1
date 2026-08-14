@@ -20,7 +20,7 @@ import { apiUrl } from "@/lib/api";
 import { avatarInitials } from "@/lib/avatar";
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
-import { DaySeparator, ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, StickyDayPill, useStickyDayLabel, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, StickyDayPill, useStickyDayLabel, type Message as BubbleMessage } from "@/components/crm/message-bubble";
 import { EventRow } from "@/components/crm/chat-timeline";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
@@ -573,7 +573,6 @@ export function useDealChatBinding(params: {
       </>
     );
   } else {
-    let lastDayLabel: string | null = null;
     // Marca troca de conexão só quando há 2+ contas distintas na conversa.
     const channelsMap = messagesResp?.channels ?? {};
     const distinctChannels = new Set(
@@ -601,8 +600,6 @@ export function useDealChatBinding(params: {
         return null;
       }
       const dayLabel = formatDayLabel(b.createdAt);
-      const showSeparator = dayLabel && dayLabel !== lastDayLabel;
-      if (showSeparator) lastDayLabel = dayLabel;
       let connLabel: string | null = null;
       if (showConnSwitches && b.channelId && b.channelId !== lastChannelId) {
         const ref = channelsMap[b.channelId];
@@ -613,7 +610,6 @@ export function useDealChatBinding(params: {
       const isEvent = b.kind === "event";
       return (
         <li key={b.id} className="list-none" data-day-label={dayLabel || undefined}>
-          {showSeparator && <DaySeparator date={dayLabel} />}
           {connLabel && <ConnectionDivider label={connLabel} />}
           <div
             data-message-id={b.id}

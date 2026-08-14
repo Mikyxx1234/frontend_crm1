@@ -1814,7 +1814,7 @@ export function DaySeparator({ date }: DaySeparatorProps) {
 /** Atributo nas linhas da timeline p/ o pill sticky rastrear o dia visível. */
 export const DAY_LABEL_ATTR = "data-day-label"
 
-const PILL_IDLE_MS = 700
+const PILL_IDLE_MS = 2200
 const PILL_ARM_MS = 450
 
 /**

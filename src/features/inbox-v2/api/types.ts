@@ -161,9 +161,10 @@ export interface InboxFilters {
   /** Sessões Meta ainda abertas que expiram entre agora e agora + X horas. */
   sessionExpiresWithinHours?: number;
   /**
-   * Ordenação e janela são aplicadas CLIENT-SIDE no /inbox-v2 (não vão
-   * para o backend). `sortBy` aceita "lastInboundAt" (padrão) ou
-   * "unreadCount"; `windowState` filtra a janela de 24h da Meta/WhatsApp.
+   * Ordenação é client-side. `windowState` (Aberta/Fechada = status
+   * OPEN vs RESOLVED) vai ao backend — lista, badges e bulk usam o
+   * mesmo recorte. `sortBy` aceita "lastInboundAt" (padrão) ou
+   * "unreadCount".
    */
   sortBy?: string;
   sortOrder?: "asc" | "desc";
@@ -198,7 +199,7 @@ export function normalizeInboxFilters(raw: InboxFilters): InboxFilters {
   };
 }
 
-/** Filtros enviados ao GET /api/conversations (exclui ordenação/status local). */
+/** Filtros enviados ao GET /api/conversations (exclui só ordenação/direção local). */
 export function hasInboxServerFilters(
   f: InboxFilters | null | undefined,
 ): boolean {
@@ -207,7 +208,6 @@ export function hasInboxServerFilters(
   const {
     sortBy: _sb,
     sortOrder: _so,
-    windowState: _ws,
     lastMessageDirection: _lmd,
     ...server
   } = n;
@@ -219,7 +219,9 @@ export function hasInboxServerFilters(
     (server.stageIds?.length ?? 0) > 0 ||
     (server.tagIds?.length ?? 0) > 0 ||
     (server.sources?.length ?? 0) > 0 ||
-    server.sessionExpiresWithinHours != null
+    server.sessionExpiresWithinHours != null ||
+    server.windowState === "open" ||
+    server.windowState === "closed"
   );
 }
 

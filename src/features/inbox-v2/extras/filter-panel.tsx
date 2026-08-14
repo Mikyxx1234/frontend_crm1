@@ -8,8 +8,9 @@
  *   Col 2 — Conversa | Negócio (abas)
  *   Col 3 — Tags
  *
- * Backend: ownerId, withoutOwner, channel, channelIds, stageId, tagIds, sources.
- * Client-side: sort + windowState.
+ * Backend: ownerId, withoutOwner, channel, channelIds, stageId, tagIds,
+ * sources, windowState (Aberta/Fechada).
+ * Client-side: sort + lastMessageDirection.
  */
 
 import * as React from "react";

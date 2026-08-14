@@ -238,6 +238,7 @@ export function useTabCounts(
         tagIds: filters.tagIds ?? [],
         sources: filters.sources ?? [],
         sessionExpiresWithinHours: filters.sessionExpiresWithinHours ?? null,
+        windowState: filters.windowState ?? null,
       }
     : null;
   return useQuery<TabCounts>({

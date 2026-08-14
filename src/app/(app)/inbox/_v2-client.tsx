@@ -497,12 +497,12 @@ export default function InboxV2ClientPage({
   }, [activeId, deepLinkHydrated]);
 
   // ── Dados ───────────────────────────────────────────────────────
-  // Ordem e janela são CLIENT-SIDE — não vão ao servidor (evita refetch
-  // ao mudar ordenação e a limitação do `sortBy` do backend).
+  // Ordenação e direção da última msg são CLIENT-SIDE (evita refetch).
+  // `windowState` (Aberta/Fechada) vai ao servidor — senão o badge Erro
+  // conta 233 e a lista filtra no cliente até ficar vazia.
   const {
     sortBy,
     sortOrder,
-    windowState,
     lastMessageDirection,
     ...serverFilters
   } = filters;
@@ -544,13 +544,6 @@ export default function InboxV2ClientPage({
   // original pra evitar `updatedAt`).
   const rows = useMemo(() => {
     let list = rawRows;
-    if (windowState === "open") {
-      // "Aberta" = conversa não resolvida (OPEN/PENDING/SNOOZED).
-      list = list.filter((r) => r.status !== "RESOLVED");
-    } else if (windowState === "closed") {
-      // "Fechada" = conversa resolvida.
-      list = list.filter((r) => r.status === "RESOLVED");
-    }
     if (lastMessageDirection) {
       list = list.filter((r) => {
         const direction = String(
@@ -573,7 +566,7 @@ export default function InboxV2ClientPage({
       }
       return sign * (lastActivityTs(a) - lastActivityTs(b));
     });
-  }, [rawRows, windowState, lastMessageDirection, sortBy, sortOrder]);
+  }, [rawRows, lastMessageDirection, sortBy, sortOrder]);
 
   const { data: tabCounts } = useTabCounts(
     isAuthenticated && tabHydrated && filtersHydrated,

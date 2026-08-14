@@ -43,6 +43,9 @@ function appendInboxServerFilters(
   if (p.sessionExpiresWithinHours != null) {
     q.set("sessionExpiresWithinHours", String(p.sessionExpiresWithinHours));
   }
+  if (p.windowState === "open" || p.windowState === "closed") {
+    q.set("windowState", p.windowState);
+  }
 }
 
 function buildConversationsUrl(p: ListConversationsParams): string {

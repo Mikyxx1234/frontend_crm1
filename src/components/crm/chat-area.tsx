@@ -9,7 +9,7 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { ChatAvatar } from "@/components/inbox/chat-avatar"
 import { AVATAR_SIZE, avatarInitials } from "@/lib/avatar"
-import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, StickyDayPill, useStickyDayLabel, type Message } from "./message-bubble"
+import { MessageBubble, ConnectionDivider, ConversationClosedMarker, TicketDivider, StickyDayPill, useStickyDayLabel, type Message } from "./message-bubble"
 import { EventRow } from "./chat-timeline"
 import { SessionAlert } from "./session-alert"
 import {
@@ -541,12 +541,8 @@ export function ChatArea({
         <StickyDayPill date={stickyDay} />
         <ul className="flex list-none flex-col gap-1.5">
         {(() => {
-          // Separador de dia ("Hoje" / "Ontem" / "DD/MM/AAAA") inserido
-          // automaticamente sempre que a data muda entre mensagens. Usa o
-          // `createdAt` (ISO) de cada mensagem; quando ausente, cai no prop
-          // `daySeparator` legado exibido uma única vez no topo.
-          let lastDayKey: string | null = null
-          let usedFallback = false
+          // Dia fica só no overlay (`StickyDayPill`); `data-day-label` alimenta
+          // o rastreio. Sem `createdAt`, cai no prop `daySeparator` legado.
           // Só marca troca de conexão quando a conversa tem 2+ contas distintas
           // (ex.: dois WhatsApps). Com uma só, o chip do header já basta.
           const distinctChannels = new Set(
@@ -571,18 +567,7 @@ export function ChatArea({
             if (message.type !== "incoming" && message.type !== "outgoing") {
               return null
             }
-            const dayKey = dayKeyFromISO(message.createdAt)
             const dayLabel = dayLabelFromISO(message.createdAt)
-            let separator: string | null = null
-            if (dayKey) {
-              if (dayKey !== lastDayKey) {
-                separator = dayLabel
-                lastDayKey = dayKey
-              }
-            } else if (daySeparator && !usedFallback) {
-              separator = daySeparator
-              usedFallback = true
-            }
             // Marcador de troca de conexão: aparece quando o channelId muda
             // em relação à última mensagem com canal conhecido.
             let connLabel: string | null = null
@@ -598,9 +583,8 @@ export function ChatArea({
               <li
                 key={message.id || index}
                 className="list-none"
-                data-day-label={dayLabel || separator || undefined}
+                data-day-label={dayLabel || daySeparator || undefined}
               >
-                {separator && <DaySeparator date={separator} />}
                 {connLabel && <ConnectionDivider label={connLabel} />}
                 <div
                   data-message-id={message.id}
@@ -797,15 +781,7 @@ function ChatTabsBar({
   )
 }
 
-/** Chave de dia estável (toDateString) usada para detectar troca de data. */
-function dayKeyFromISO(iso?: string): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toDateString()
-}
-
-/** Rótulo do separador: "Hoje", "Ontem" ou "DD/MM/AAAA". */
+/** Rótulo do dia: "Hoje", "Ontem" ou "DD/MM/AAAA". */
 function dayLabelFromISO(iso?: string): string | null {
   if (!iso) return null
   const d = new Date(iso)

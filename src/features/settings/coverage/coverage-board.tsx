@@ -18,7 +18,9 @@ import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { KpiCard } from "@/components/crm/kpi-card";
 import { KpiStrip } from "@/components/crm/kpi-strip";
+import { SwitchGlass } from "@/components/crm/switch-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { DISTRIBUTION_RESPONSIBLES_KEY } from "@/features/distribution/hooks";
 import {
   DEFAULT_SCHEDULE,
   ScheduleDialogShell,
@@ -42,6 +44,8 @@ type CoverageAgent = {
   role: string;
   avatarUrl?: string | null;
   schedule: Schedule | null;
+  /** Opt-in administrativo. Default true quando o GET não manda o campo. */
+  participates?: boolean;
   agentStatus: {
     status: AgentPresence;
     availableForVoiceCalls?: boolean;
@@ -58,7 +62,11 @@ type PresenceFilter = "" | AgentPresence;
 
 const SLOT_MINUTES = 30;
 /** Coluna fixa (sticky) com seleção + identidade do agente. */
-const AGENT_COL_PX = 280;
+const AGENT_COL_PX = 320;
+/** Largura mínima por slot de 30min — força scroll em vez de comprimir horas. */
+const SLOT_MIN_PX = 32;
+const DAY_START_MIN = 6 * 60;
+const DAY_END_MIN = 20 * 60;
 
 const SLOT_STYLES: Record<SlotState, string> = {
   work: "bg-[color-mix(in_srgb,var(--color-success)_58%,transparent)]",
@@ -87,12 +95,13 @@ function formatSlot(minutes: number): string {
 }
 
 /**
- * Estado do agente num slot de 30min. Espelha a elegibilidade de
- * distribuição (`eligibility.ts`): sem schedule = sem restrição (sempre
- * "work"); sábado usa janela própria sem almoço quando `saturdayEnabled`.
+ * Estado visual do slot. Sem expediente persistido = fora (barra vazia).
+ * Não pintar o dia inteiro como "work" — isso era o "Sempre elegível" /
+ * LIVRE esticando a barra verde de 06h às 20h. Sábado usa janela própria
+ * sem almoço quando `saturdayEnabled`.
  */
 function slotState(schedule: Schedule | null, weekday: number, slotMin: number): SlotState {
-  if (!schedule) return "work";
+  if (!schedule) return "off";
   if (weekday === 6) {
     if (!schedule.saturdayEnabled) return "off";
     const s = parseTime(schedule.saturdayStart ?? "09:00");
@@ -111,7 +120,7 @@ function slotState(schedule: Schedule | null, weekday: number, slotMin: number):
 
 /** Resumo textual do dia na coluna do agente (expediente + almoço explícitos). */
 function daySummary(schedule: Schedule | null, weekday: number): string {
-  if (!schedule) return "Sempre elegível";
+  if (!schedule) return "Sem expediente";
   if (weekday === 6) {
     return schedule.saturdayEnabled
       ? `Sáb ${schedule.saturdayStart ?? "09:00"}–${schedule.saturdayEnd ?? "13:00"}`
@@ -119,6 +128,19 @@ function daySummary(schedule: Schedule | null, weekday: number): string {
   }
   if (!schedule.weekdays.includes(weekday)) return "Folga";
   return `${schedule.startTime}–${schedule.endTime} · almoço ${schedule.lunchStart}–${schedule.lunchEnd}`;
+}
+
+/** Horários reais do expediente no dia (ignora quem não tem schedule). */
+function shiftBounds(schedule: Schedule, weekday: number): { start: number; end: number } | null {
+  if (weekday === 6) {
+    if (!schedule.saturdayEnabled) return null;
+    return {
+      start: parseTime(schedule.saturdayStart ?? "09:00"),
+      end: parseTime(schedule.saturdayEnd ?? "13:00"),
+    };
+  }
+  if (!schedule.weekdays.includes(weekday)) return null;
+  return { start: parseTime(schedule.startTime), end: parseTime(schedule.endTime) };
 }
 
 async function fetchCoverage(): Promise<CoverageAgent[]> {
@@ -146,6 +168,7 @@ export function CoverageBoard() {
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [editAgent, setEditAgent] = React.useState<CoverageAgent | null>(null);
   const [editSchedule, setEditSchedule] = React.useState<Schedule>(DEFAULT_SCHEDULE);
+  const [editParticipates, setEditParticipates] = React.useState(true);
   const [bulkOpen, setBulkOpen] = React.useState(false);
   const [bulkSchedule, setBulkSchedule] = React.useState<Schedule>(DEFAULT_SCHEDULE);
 
@@ -191,20 +214,28 @@ export function CoverageBoard() {
   }, [agents, deptFilter, presenceFilter, search]);
 
   // ── Range dinâmico da grade (hora cheia) ──────────────────────────────────
+  // Só horários persistidos. Sem schedule não infla o eixo (antes usava
+  // 08–18 fictício e pintava o dia inteiro). Eixo mínimo 06h–20h; estende
+  // até o fim real (ex.: 21h) e inclui a hora final como coluna rotulada.
 
   const { rangeStart, rangeEnd, slots } = React.useMemo(() => {
-    const starts = filtered.map((a) =>
-      a.schedule ? parseTime(a.schedule.startTime) : 8 * 60,
-    );
-    const ends = filtered.map((a) =>
-      a.schedule ? parseTime(a.schedule.endTime) : 18 * 60,
-    );
-    const start = Math.max(0, Math.floor(Math.min(...starts, 6 * 60) / 60) * 60);
-    const end = Math.min(24 * 60, Math.ceil(Math.max(...ends, 20 * 60) / 60) * 60);
+    const starts: number[] = [DAY_START_MIN];
+    const ends: number[] = [DAY_END_MIN];
+    for (const a of filtered) {
+      if (!a.schedule) continue;
+      const b = shiftBounds(a.schedule, weekday);
+      if (!b) continue;
+      starts.push(b.start);
+      ends.push(b.end);
+    }
+    if (isToday) ends.push(nowMinutes);
+    const start = Math.max(0, Math.floor(Math.min(...starts) / 60) * 60);
+    const latest = Math.max(...ends);
+    const end = Math.min(24 * 60, Math.max(21 * 60, Math.floor(latest / 60) * 60 + 60));
     const list: number[] = [];
     for (let m = start; m < end; m += SLOT_MINUTES) list.push(m);
     return { rangeStart: start, rangeEnd: end, slots: list };
-  }, [filtered]);
+  }, [filtered, weekday, isToday, nowMinutes]);
 
   // ── Cobertura por slot + KPIs ─────────────────────────────────────────────
 
@@ -213,6 +244,7 @@ export function CoverageBoard() {
       let work = 0;
       let lunch = 0;
       for (const a of filtered) {
+        if (a.participates === false) continue;
         const st = slotState(a.schedule, weekday, slotMin);
         if (st === "work") work++;
         else if (st === "lunch") lunch++;
@@ -231,17 +263,47 @@ export function CoverageBoard() {
   // ── Mutations ─────────────────────────────────────────────────────────────
 
   const saveOne = useMutation({
-    mutationFn: async ({ userId, schedule }: { userId: string; schedule: Schedule }) => {
+    mutationFn: async ({
+      userId,
+      schedule,
+      participates,
+    }: {
+      userId: string;
+      schedule: Schedule;
+      participates: boolean;
+    }) => {
       const res = await fetch(apiUrl(`/api/agents/${userId}/schedule`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(schedule),
+        body: JSON.stringify({ ...schedule, participates }),
       });
       if (!res.ok) throw new Error("Erro ao salvar horário");
-      return res.json();
+      return res.json() as Promise<Schedule & { participates?: boolean }>;
     },
-    onSuccess: () => {
+    onSuccess: (saved, vars) => {
+      qc.setQueryData<CoverageAgent[]>(["agents-coverage"], (prev) =>
+        prev?.map((a) =>
+          a.id === vars.userId
+            ? {
+                ...a,
+                schedule: {
+                  startTime: saved.startTime ?? vars.schedule.startTime,
+                  lunchStart: saved.lunchStart ?? vars.schedule.lunchStart,
+                  lunchEnd: saved.lunchEnd ?? vars.schedule.lunchEnd,
+                  endTime: saved.endTime ?? vars.schedule.endTime,
+                  timezone: saved.timezone ?? vars.schedule.timezone,
+                  weekdays: saved.weekdays ?? vars.schedule.weekdays,
+                  saturdayEnabled: vars.schedule.saturdayEnabled,
+                  saturdayStart: vars.schedule.saturdayStart,
+                  saturdayEnd: vars.schedule.saturdayEnd,
+                },
+                participates: saved.participates ?? vars.participates,
+              }
+            : a,
+        ),
+      );
       qc.invalidateQueries({ queryKey: ["agents-coverage"] });
+      qc.invalidateQueries({ queryKey: DISTRIBUTION_RESPONSIBLES_KEY });
       setEditAgent(null);
       toast.success("Expediente salvo.");
     },
@@ -266,6 +328,7 @@ export function CoverageBoard() {
     },
     onSuccess: ({ ok, fail }) => {
       qc.invalidateQueries({ queryKey: ["agents-coverage"] });
+      qc.invalidateQueries({ queryKey: DISTRIBUTION_RESPONSIBLES_KEY });
       setBulkOpen(false);
       setSelected(new Set());
       if (fail === 0) toast.success(`Expediente aplicado a ${ok} agente(s).`);
@@ -311,11 +374,12 @@ export function CoverageBoard() {
   const openEdit = (agent: CoverageAgent) => {
     setEditAgent(agent);
     setEditSchedule(agent.schedule ?? DEFAULT_SCHEDULE);
+    setEditParticipates(agent.participates !== false);
   };
 
-  // Slots fluidos (1fr) — a grade estica para preencher a largura disponível
-  // e só rola horizontalmente quando a tela é estreita demais.
-  const gridTemplate = `${AGENT_COL_PX}px repeat(${slots.length}, minmax(16px, 1fr))`;
+  // minmax com piso em px: a grade cresce além do container e rola no eixo X
+  // em vez de comprimir/cortar a última hora (20h, 21h…).
+  const gridTemplate = `${AGENT_COL_PX}px repeat(${slots.length}, minmax(${SLOT_MIN_PX}px, 1fr))`;
 
   // Posição (%) do marcador "agora" dentro da área de slots.
   const nowPct =
@@ -486,7 +550,7 @@ export function CoverageBoard() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]">
-          <div className="relative min-w-full">
+          <div className="relative w-max min-w-full pr-3">
             {/* Marcador "agora" — linha vertical sobre toda a grade */}
             {nowPct !== null && (
               <div
@@ -585,7 +649,7 @@ export function CoverageBoard() {
                       <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
                         {agent.name}
                       </p>
-                      <p className="truncate font-body text-[11px] font-semibold text-[var(--text-secondary)] tabular-nums">
+                      <p className="font-body text-[11px] font-semibold leading-snug text-[var(--text-secondary)] tabular-nums">
                         {daySummary(agent.schedule, weekday)}
                       </p>
                       <p className="flex items-center gap-1.5 truncate font-body text-[10px] text-[var(--text-muted)]">
@@ -601,13 +665,19 @@ export function CoverageBoard() {
                         )}
                       </p>
                     </div>
-                    {!agent.schedule && (
-                      <TooltipGlass label="Sem expediente definido — sempre elegível na distribuição" side="left">
+                    {agent.participates === false ? (
+                      <TooltipGlass label="Não participa da distribuição — não recebe leads" side="left">
                         <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
-                          Livre
+                          Inativo
                         </span>
                       </TooltipGlass>
-                    )}
+                    ) : !agent.schedule ? (
+                      <TooltipGlass label="Sem expediente definido — a barra só aparece depois de salvar o horário" side="left">
+                        <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
+                          Sem horário
+                        </span>
+                      </TooltipGlass>
+                    ) : null}
                     <TooltipGlass label="Editar horário" side="left">
                       <button
                         type="button"
@@ -687,13 +757,34 @@ export function CoverageBoard() {
         open={!!editAgent}
         onOpenChange={(o) => { if (!o) setEditAgent(null); }}
         title={`Expediente de ${editAgent?.name ?? ""}`}
-        description="Defina o expediente, almoço e dias de trabalho."
+        description="Defina o expediente, almoço e se o agente participa da distribuição."
         submitLabel="Salvar"
         submitPending={saveOne.isPending}
         onSubmit={() => {
-          if (editAgent) saveOne.mutate({ userId: editAgent.id, schedule: editSchedule });
+          if (editAgent) {
+            saveOne.mutate({
+              userId: editAgent.id,
+              schedule: editSchedule,
+              participates: editParticipates,
+            });
+          }
         }}
       >
+        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="font-body text-[13px] font-semibold text-[var(--text-primary)]">
+              Participa da distribuição
+            </p>
+            <p className="text-[11px] text-[var(--text-muted)]">
+              Desligado = inativo (não recebe leads).
+            </p>
+          </div>
+          <SwitchGlass
+            checked={editParticipates}
+            onChange={setEditParticipates}
+            aria-label="Participa da distribuição"
+          />
+        </div>
         <ScheduleFields schedule={editSchedule} onChange={setEditSchedule} />
       </ScheduleDialogShell>
 

@@ -44,6 +44,7 @@ import {
   useSelectedOutboundChannel,
   useSendMessage,
   useWhatsappChannels,
+  findLastPublicMessageChannelId,
 } from "@/features/inbox-v2/hooks";
 import {
   formatDayLabel,
@@ -204,11 +205,16 @@ export function useDealChatBinding(params: {
     !!effectiveConversationId,
   );
   const conversationChannelId = messagesResp?.channel?.id ?? null;
+  const lastMessageChannelId = useMemo(
+    () => findLastPublicMessageChannelId(messagesResp?.messages),
+    [messagesResp?.messages],
+  );
   const { selectedChannelId, setSelectedChannelId } = useSelectedOutboundChannel(
     {
       conversationId: effectiveConversationId,
       conversationChannelId,
       availableChannels: whatsappChannels,
+      lastMessageChannelId,
     },
   );
 
@@ -709,6 +715,7 @@ export function useDealChatBinding(params: {
       availableChannels={whatsappChannels}
       selectedChannelId={selectedChannelId}
       conversationChannelId={conversationChannelId}
+      lastMessageChannelId={lastMessageChannelId}
       onSelectChannel={setSelectedChannelId}
       replyTo={replyTo}
       onCancelReply={() => setReplyTo(null)}

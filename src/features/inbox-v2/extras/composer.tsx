@@ -96,6 +96,7 @@ export function Composer({
   availableChannels,
   selectedChannelId,
   conversationChannelId,
+  lastMessageChannelId,
   onSelectChannel,
   replyTo,
   onCancelReply,
@@ -142,6 +143,8 @@ export function Composer({
   selectedChannelId?: string | null;
   /** Canal "atual" da conversa (último inbound) — destacado como referência. */
   conversationChannelId?: string | null;
+  /** Canal da última mensagem pública — usado pra pré-selecionar no modal. */
+  lastMessageChannelId?: string | null;
   /** Callback quando o agente troca o canal de envio. */
   onSelectChannel?: (channelId: string) => void;
   /**
@@ -791,6 +794,7 @@ export function Composer({
           availableChannels={availableChannels}
           selectedChannelId={selectedChannelId ?? null}
           conversationChannelId={conversationChannelId ?? null}
+          lastMessageChannelId={lastMessageChannelId ?? null}
           onSelectChannel={onSelectChannel}
         />
       ) : null}

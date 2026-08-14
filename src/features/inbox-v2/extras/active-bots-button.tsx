@@ -43,14 +43,35 @@ import type {
   AutomationHistoryDto,
 } from "@/features/inbox-v2/api/conversations";
 import { useAutomation } from "@/features/automations-v2/hooks";
-import {
-  computePopoverPosition,
-  usePortalPopover,
-} from "@/features/pipeline-v2/extras/use-portal-popover";
+import { usePortalPopover } from "@/features/pipeline-v2/extras/use-portal-popover";
 import { AgentAutomationPickerModal } from "./agent-automation-picker-modal";
 
 const POPOVER_W = 380;
-const POPOVER_H = 440;
+const POPOVER_GAP = 8;
+const POPOVER_MARGIN = 8;
+
+/**
+ * Ancora o card acima do robô (`side="top"`) alinhado à direita do
+ * trigger (`align="end"`). Usa `bottom` em vez de altura estimada —
+ * o accordion varia e um `top` com 440px fictícios afastava o painel
+ * para o alto da tela.
+ */
+function computeAboveEndPosition(
+  rect: DOMRect | null,
+  popoverWidth: number,
+): { bottom: number; left: number } {
+  if (!rect) return { bottom: 0, left: 0 };
+  const viewportW = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const viewportH = typeof window !== "undefined" ? window.innerHeight : 800;
+
+  const bottom = Math.max(POPOVER_MARGIN, viewportH - rect.top + POPOVER_GAP);
+  let left = rect.right - popoverWidth;
+  left = Math.max(
+    POPOVER_MARGIN,
+    Math.min(left, viewportW - popoverWidth - POPOVER_MARGIN),
+  );
+  return { bottom, left };
+}
 
 type RowStatus = "RUNNING" | "PAUSED" | "COMPLETED" | "TIMED_OUT";
 
@@ -231,7 +252,7 @@ export function ActiveBotsButton({
 
   const count = active.length;
   const hasActive = count > 0;
-  const pos = computePopoverPosition(rect, POPOVER_H, POPOVER_W);
+  const pos = computeAboveEndPosition(rect, POPOVER_W);
 
   function openPicker() {
     close();
@@ -328,7 +349,7 @@ export function ActiveBotsButton({
               onClick={(e) => e.stopPropagation()}
               style={{
                 position: "fixed",
-                top: pos.top,
+                bottom: pos.bottom,
                 left: pos.left,
                 width: POPOVER_W,
                 isolation: "isolate",

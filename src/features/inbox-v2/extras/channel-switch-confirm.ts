@@ -9,6 +9,14 @@ export function isSessionClosedError(err: unknown): boolean {
   return err instanceof ApiError && err.code === "SESSION_CLOSED";
 }
 
+/** 409 do backend: canal de saída DISCONNECTED. */
+export function isDisconnectedChannelError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : "";
+  if (!/desconectado/i.test(message)) return false;
+  if (err instanceof ApiError) return err.status === 409;
+  return true;
+}
+
 /** Canal selecionado (Y) ≠ canal atual da conversa (X). */
 export function isChannelMismatch(
   selectedChannelId: string | null | undefined,

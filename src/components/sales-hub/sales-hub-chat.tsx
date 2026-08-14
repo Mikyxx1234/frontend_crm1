@@ -37,6 +37,7 @@ import {
   useSendMessage,
   useUnpinMessage,
   useWhatsappChannels,
+  findLastPublicMessageChannelId,
 } from "@/features/inbox-v2/hooks";
 import {
   Composer,
@@ -124,8 +125,17 @@ export function SalesHubChat({
 
   const { data: whatsappChannels } = useWhatsappChannels(!!conversationId);
   const conversationChannelId = messagesData?.channel?.id ?? null;
+  const lastMessageChannelId = useMemo(
+    () => findLastPublicMessageChannelId(messagesData?.messages),
+    [messagesData?.messages],
+  );
   const { selectedChannelId, setSelectedChannelId } = useSelectedOutboundChannel(
-    { conversationId, conversationChannelId, availableChannels: whatsappChannels },
+    {
+      conversationId,
+      conversationChannelId,
+      availableChannels: whatsappChannels,
+      lastMessageChannelId,
+    },
   );
 
   // Override de canal ativo: revalida a janela de 24h no canal de DESTINO
@@ -353,6 +363,7 @@ export function SalesHubChat({
             availableChannels={whatsappChannels}
             selectedChannelId={selectedChannelId}
             conversationChannelId={conversationChannelId}
+            lastMessageChannelId={lastMessageChannelId}
             onSelectChannel={setSelectedChannelId}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}

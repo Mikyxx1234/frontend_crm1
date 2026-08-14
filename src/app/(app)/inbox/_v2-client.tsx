@@ -74,6 +74,7 @@ import {
   useSendMessage,
   useTabCounts,
   useWhatsappChannels,
+  findLastPublicMessageChannelId,
   useInboxSoundMuted,
   useInboxUrlSync,
   matchesConversationUrlRef,
@@ -867,11 +868,16 @@ export default function InboxV2ClientPage({
   // aparece e o backend usa o canal "atual" da conversa (legacy).
   const { data: whatsappChannels } = useWhatsappChannels(isAuthenticated);
   const conversationChannelId = messagesData?.channel?.id ?? null;
+  const lastMessageChannelId = useMemo(
+    () => findLastPublicMessageChannelId(messagesData?.messages),
+    [messagesData?.messages],
+  );
   const { selectedChannelId, setSelectedChannelId } = useSelectedOutboundChannel(
     {
       conversationId: activeId,
       conversationChannelId,
       availableChannels: whatsappChannels,
+      lastMessageChannelId,
     },
   );
 
@@ -1527,6 +1533,7 @@ export default function InboxV2ClientPage({
             availableChannels={whatsappChannels}
             selectedChannelId={selectedChannelId}
             conversationChannelId={conversationChannelId}
+            lastMessageChannelId={lastMessageChannelId}
             onSelectChannel={setSelectedChannelId}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}

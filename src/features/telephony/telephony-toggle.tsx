@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 
 interface TelephonyToggleProps {
   userId: string;
+  /** Só o switch (+ retry se falhou). Sem labels Ativo/Falhou ao lado. */
+  compact?: boolean;
 }
 
 interface TelephonyStatus {
@@ -35,7 +37,7 @@ async function patchTelephony(userId: string, enabled: boolean) {
   return res.json();
 }
 
-export function TelephonyToggle({ userId }: TelephonyToggleProps) {
+export function TelephonyToggle({ userId, compact = false }: TelephonyToggleProps) {
   const queryClient = useQueryClient();
   const { confirm, dialog } = useConfirm();
 
@@ -110,31 +112,26 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
       {isProvisioning && (
         <span className="flex items-center gap-1 text-xs text-[var(--color-warning)]/80">
           <IconLoader2 size={11} className="animate-spin" />
-          {isDisabling ? "Removendo…" : "Provisionando…"}
+          {compact ? null : isDisabling ? "Removendo…" : "Provisionando…"}
         </span>
       )}
 
       {step === "FAILED" && (
-        <span className="flex items-center gap-1.5">
-          <span className="text-xs text-[var(--color-danger)]" title={error ?? undefined}>
-            Falhou
-          </span>
-          <button
-            type="button"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate(true)}
-            className="text-xs text-[var(--brand-primary)] underline-offset-2 hover:underline disabled:opacity-50"
-          >
-            Tentar de novo
-          </button>
-        </span>
+        <button
+          type="button"
+          disabled={mutation.isPending}
+          onClick={() => mutation.mutate(true)}
+          className="text-xs text-[var(--brand-primary)] underline-offset-2 hover:underline disabled:opacity-50"
+        >
+          Tentar de novo
+        </button>
       )}
 
-      {step === "ACTIVE" && enabled && !mutation.isPending && (
+      {!compact && step === "ACTIVE" && enabled && !mutation.isPending && (
         <span className="text-xs text-[var(--color-success)]/80">Ativo</span>
       )}
 
-      {mutation.isError && step !== "FAILED" && (
+      {!compact && mutation.isError && step !== "FAILED" && (
         <span className="max-w-[140px] truncate text-xs text-[var(--color-danger)]" title={error ?? undefined}>
           {error ?? "Erro"}
         </span>

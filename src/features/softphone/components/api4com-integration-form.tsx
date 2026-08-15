@@ -59,33 +59,36 @@ export function Api4ComIntegrationForm() {
 
   return (
     <form
-      className="grid gap-4"
+      className="flex flex-col gap-5"
       onSubmit={(e) => {
         e.preventDefault();
         mutation.mutate();
       }}
     >
       <div className="grid gap-1.5">
-        <Label>Token ADMIN</Label>
+        <Label className="text-[13px] font-semibold">Token ADMIN</Label>
         <PasswordInput
           value={token}
           onChange={(e) => setToken(e.target.value)}
-          placeholder={data.hasServiceToken ? "Salvo — cole outro para trocar" : "Cole o token"}
+          placeholder={tokenReady ? "••••••••••••••••" : "Cole o token"}
           autoComplete="off"
         />
+        {tokenReady ? (
+          <p className="text-[12px] text-[var(--text-muted)]">Salvo · cole outro para trocar</p>
+        ) : null}
       </div>
 
       <div className="grid gap-1.5">
-        <Label>Gateway</Label>
+        <Label className="text-[13px] font-semibold">Gateway</Label>
         <InputGlass
           value={gateway}
           onChange={(e) => setGateway(e.target.value)}
-          placeholder="crm-eduit"
+          placeholder="Api4Comm-Aad"
         />
       </div>
 
       <div className="grid gap-1.5">
-        <Label>Webhook</Label>
+        <Label className="text-[13px] font-semibold">Webhook</Label>
         <div className="flex min-w-0 items-center gap-2">
           <InputGlass
             readOnly
@@ -97,6 +100,9 @@ export function Api4ComIntegrationForm() {
             {copied ? "Copiado" : "Copiar"}
           </ButtonGlass>
         </div>
+        <p className="text-[12px] text-[var(--text-muted)]">
+          Configure este endereço no painel do provedor.
+        </p>
       </div>
 
       {mutation.isError && (
@@ -108,15 +114,14 @@ export function Api4ComIntegrationForm() {
         </p>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+      <div className="flex items-center justify-between gap-3 border-t border-[var(--glass-border-subtle)] pt-4">
         <span
-          className={`text-[12px] ${tokenReady ? "text-[var(--color-success)]/80" : "text-[var(--color-warning)]/80"}`}
+          className={`inline-flex items-center gap-1.5 text-[13px] font-medium ${
+            tokenReady ? "text-emerald-600" : "text-[var(--color-warning)]"
+          }`}
         >
-          {tokenReady
-            ? data.webhookRegistered
-              ? "Conectado"
-              : "Token salvo"
-            : "Token pendente"}
+          {tokenReady ? <IconCheck size={16} stroke={2.4} /> : null}
+          {tokenReady ? "Token salvo" : "Token pendente"}
         </span>
         <ButtonGlass type="submit" variant="primary" size="sm" disabled={mutation.isPending}>
           {mutation.isPending && <IconLoader2 size={12} className="animate-spin" />}

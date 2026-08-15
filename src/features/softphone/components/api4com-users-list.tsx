@@ -11,7 +11,7 @@ import { TelephonyToggle } from "@/features/telephony/telephony-toggle";
 import { listExtensions } from "../api/extensions";
 import type { SipExtension } from "../api/types";
 
-const GRID = "grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(80px,0.6fr)_minmax(0,1fr)]";
+const GRID = "grid-cols-[minmax(0,1.6fr)_minmax(72px,0.8fr)_minmax(88px,0.7fr)_minmax(88px,auto)]";
 
 function statusLabel(ext?: SipExtension) {
   if (!ext) return { text: "Não criado", cls: "text-[var(--text-muted)]" };
@@ -95,7 +95,9 @@ export function Api4ComUsersList() {
             <span className={`text-xs ${st.cls}`} title={ext?.provisioningError ?? undefined}>
               {st.text}
             </span>
-            <TelephonyToggle userId={user.id} />
+            <div className="flex min-w-[88px] shrink-0 items-center">
+              <TelephonyToggle userId={user.id} />
+            </div>
           </div>
         );
       })}

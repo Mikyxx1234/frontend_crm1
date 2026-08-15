@@ -92,8 +92,10 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
         disabled={mutation.isPending}
         onClick={() => void handleToggle()}
         className={cn(
-          "relative h-5 w-9 rounded-full transition-colors",
-          enabled ? "bg-[var(--color-success)]" : "bg-[var(--glass-border)]",
+          "relative h-5 w-9 shrink-0 rounded-full border transition-colors",
+          enabled
+            ? "border-[var(--color-success)] bg-[var(--color-success)]"
+            : "border-[var(--text-muted)] bg-[var(--text-muted)]/35",
           mutation.isPending && "opacity-50",
         )}
       >

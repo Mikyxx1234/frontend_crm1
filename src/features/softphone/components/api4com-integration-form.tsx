@@ -83,14 +83,15 @@ export function Api4ComIntegrationForm() {
       </div>
 
       <div className="grid gap-1.5">
-        <Label>Gateway da integração</Label>
+        <Label>Código da integração (gateway)</Label>
         <InputGlass
           value={gateway}
           onChange={(e) => setGateway(e.target.value)}
-          placeholder="crm-integrado"
+          placeholder="crm-eduit"
         />
         <p className="text-[12px] text-[var(--text-muted)]">
-          Identificador enviado no webhook e em cada discagem. Precisa ser o mesmo nos dois lados.
+          Você inventa este código aqui — não existe no painel da API4Comm. O CRM grava o mesmo valor
+          no webhook e em cada ligação. Ex.: <code>crm-eduit</code>.
         </p>
       </div>
 

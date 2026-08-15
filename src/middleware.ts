@@ -178,6 +178,7 @@ const PUBLIC_PATHS = new Set([
   "/health",
   "/accept-invite",
   "/test-bulk-bar",
+  "/dev/campaigns-cards-preview",
   // Cockpit: HTML estático; dados via Bearer token ou sessão CRM.
   "/cockpit-agente.html",
 ]);

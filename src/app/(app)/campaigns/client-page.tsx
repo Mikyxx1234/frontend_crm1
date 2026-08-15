@@ -7,6 +7,7 @@ import {
   IconAdjustmentsHorizontal,
   IconCheck,
   IconLayoutGrid,
+  IconLayoutList,
   IconPlus,
   IconRotateClockwise,
   IconSearch,
@@ -24,17 +25,22 @@ import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
+import { CampaignCards } from "@/features/campaigns/campaign-cards";
+import { CampaignDetailDrawer } from "@/features/campaigns/campaign-detail-drawer";
 import { CampaignRow } from "@/features/campaigns/campaign-row";
 import { CampaignsMiniDash } from "@/features/campaigns/mini-dash";
 import { useCampaigns, useDeleteCampaign } from "@/features/campaigns/hooks";
 import { MOCK_CAMPAIGNS_PAGE, mockCampaignsPage } from "@/features/campaigns/mock-campaigns";
 import { CAMPAIGN_STATUS_FILTERS } from "@/features/campaigns/constants";
-import { SortControl } from "@/features/campaigns/sort-control";
 import type { CampaignListItem, CampaignStatus } from "@/features/campaigns/types";
-import { sortCampaigns, type CampaignSortKey } from "@/features/campaigns/viz";
+import { SORT_KEYS, SORT_LABEL, sortCampaigns, type CampaignSortKey } from "@/features/campaigns/viz";
 import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
-const DEFAULT_PER_PAGE = 25;
+type ViewMode = "cards" | "lista";
+
+const CARD_PER_PAGE = [6, 12, 24] as const;
+const LIST_PER_PAGE = [25, 50, 100] as const;
+const DEFAULT_PER_PAGE = 6;
 
 export default function CampaignsClientPage() {
   const router = useRouter();
@@ -45,6 +51,8 @@ export default function CampaignsClientPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
+  const [view, setView] = useState<ViewMode>("cards");
+  const [selected, setSelected] = useState<CampaignListItem | null>(null);
   const [sortKey, setSortKey] = useState<CampaignSortKey>("readRate");
   const deleteMutation = useDeleteCampaign();
   const { confirm, dialog: confirmDialog } = useConfirm();
@@ -160,6 +168,8 @@ export default function CampaignsClientPage() {
               onSearch={setSearch}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
+              sortKey={sortKey}
+              onSortChange={setSortKey}
               statusCounts={statusCounts}
               total={dashSource.length}
               onClearAll={clearFilters}
@@ -179,6 +189,37 @@ export default function CampaignsClientPage() {
                   if (v === "automations") router.push("/automations");
                 }}
               />
+              <PageSegmentedControl
+                size="compact"
+                aria-label="Visualização das campanhas"
+                items={[
+                  {
+                    value: "cards",
+                    label: (
+                      <span className="flex items-center gap-1.5">
+                        <IconLayoutGrid size={13} aria-hidden />
+                        Cards
+                      </span>
+                    ),
+                  },
+                  {
+                    value: "lista",
+                    label: (
+                      <span className="flex items-center gap-1.5">
+                        <IconLayoutList size={13} aria-hidden />
+                        Lista
+                      </span>
+                    ),
+                  },
+                ]}
+                value={view}
+                onChange={(v) => {
+                  const next = v as ViewMode;
+                  setView(next);
+                  setPerPage(next === "cards" ? CARD_PER_PAGE[0] : LIST_PER_PAGE[0]);
+                  setPage(1);
+                }}
+              />
               <CampaignsActionsMenu />
             </div>
           }
@@ -187,8 +228,13 @@ export default function CampaignsClientPage() {
         <CampaignsMiniDash items={dashSource} />
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <SortControl value={sortKey} onChange={setSortKey} />
+          <div className="min-w-0 shrink-0">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">
+              Conversão das campanhas
+            </h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Leitura, resposta e falha de cada campanha em um relance. Clique em um card para ver os detalhes.
+            </p>
           </div>
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
             {isLoading && allItems.length === 0 ? (
@@ -216,6 +262,10 @@ export default function CampaignsClientPage() {
                   }
                 />
               </div>
+            ) : view === "cards" ? (
+              <div className="pb-3">
+                <CampaignCards items={visibleItems} onSelect={setSelected} />
+              </div>
             ) : (
               <div className="flex flex-col gap-2.5 pb-3">
                 {visibleItems.map((c) => (
@@ -236,6 +286,7 @@ export default function CampaignsClientPage() {
             onPrev={() => setPage((p) => Math.max(1, p - 1))}
             onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
             perPage={perPage}
+            perPageOptions={view === "cards" ? CARD_PER_PAGE : LIST_PER_PAGE}
             onPerPageChange={(value) => {
               setPerPage(value);
               setPage(1);
@@ -243,6 +294,7 @@ export default function CampaignsClientPage() {
           />
         </div>
       </main>
+      <CampaignDetailDrawer campaign={selected} onClose={() => setSelected(null)} />
       {confirmDialog}
     </div>
   );
@@ -264,6 +316,8 @@ function CampaignsSearchFilterBar({
   onSearch,
   statusFilter,
   onStatusChange,
+  sortKey,
+  onSortChange,
   statusCounts,
   total,
   onClearAll,
@@ -272,6 +326,8 @@ function CampaignsSearchFilterBar({
   onSearch: (v: string) => void;
   statusFilter: string;
   onStatusChange: (v: string) => void;
+  sortKey: CampaignSortKey;
+  onSortChange: (v: CampaignSortKey) => void;
   statusCounts: Partial<Record<CampaignStatus, number>>;
   total: number;
   onClearAll: () => void;
@@ -380,6 +436,35 @@ function CampaignsSearchFilterBar({
                   </button>
                 );
               })}
+            </div>
+
+            <div className="mt-4 border-t border-[var(--glass-border)] pt-3">
+              <p className="mb-2 font-display text-[12px] font-semibold text-[var(--text-muted)]">
+                Ordenar
+              </p>
+              <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="Ordenar campanhas">
+                {SORT_KEYS.map((key) => {
+                  const selected = sortKey === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => onSortChange(key)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                        selected
+                          ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                      )}
+                    >
+                      {selected && <IconCheck size={12} stroke={2.4} />}
+                      {SORT_LABEL[key]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

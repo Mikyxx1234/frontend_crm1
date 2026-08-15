@@ -61,7 +61,8 @@ import { DelayNode } from "./delay-node";
 import { FinishNode } from "./finish-node";
 import { GotoNode } from "./goto-node";
 import { InteractiveNode } from "./interactive-node";
-import { NodePalette, readPaletteDragType } from "./node-palette";
+import { NodePaletteDrawer } from "./node-palette-drawer";
+import { readPaletteDragType } from "./node-palette";
 import { QuestionNode } from "./question-node";
 import { WaitNode } from "./wait-node";
 import { TriggerNode } from "./trigger-node";
@@ -2049,9 +2050,9 @@ function WorkflowCanvasInner({
   }, []);
 
   return (
-    <div className={cn("automation-editor flex w-full", className)}>
-      {/* Palette — esquerda (antes do canvas) */}
-      <NodePalette className="hidden w-[240px] shrink-0 md:flex" />
+    <div className={cn("automation-editor relative flex w-full", className)}>
+      {/* Palette — gaveta esquerda (pin = dock; solta = overlay) */}
+      <NodePaletteDrawer />
 
       {/* Canvas area */}
       <div

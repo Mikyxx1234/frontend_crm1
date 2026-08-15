@@ -1,21 +1,17 @@
 import type { AutomationStep } from "@/lib/automation-workflow";
 
 const NONE = "__none__";
-// O nó do gatilho fica fixo em x=32 e tem até ~280px de largura. A 1ª
-// coluna de passos precisa começar DEPOIS dele (32 + 280 + folga), senão
-// o primeiro passo fica por baixo do gatilho após o auto-alinhar.
+// Gatilho em x=32 (card ~252px). 1ª coluna em x=452 pra não ficar
+// por baixo do gatilho após o auto-alinhar.
 const TRIGGER_X = 32;
-const TRIGGER_W = 280;
-// Folga horizontal fixa ENTRE colunas (somada à largura real do nó mais
-// largo de cada coluna). Compacta o bastante pra um fluxo ~15 nós
-// caber numa tela com fitView, sem colar handles.
+// Card recolhido é `--fx-node-width: 252px`. Folga até a 1ª coluna
+// (~168px) posiciona o 1º passo em x=452 — visível ao lado do gatilho
+// no zoom 1, sem sobrepor.
+const TRIGGER_W = 252;
 const COL_GAP = 100;
-const START_X = TRIGGER_X + TRIGGER_W + COL_GAP; // = 412
-// 27/mai/26 — START_Y agora bate com `NODE_Y` em `workflow-canvas.tsx`
-// (=300). Antes era 140, o que jogava todo o fluxo 160px acima do nó
-// do gatilho (que fica fixo em y=300). Visualmente parecia que o
-// auto-align "subia" o canvas todo.
-const START_Y = 300;
+export const ALIGN_TRIGGER_POS = { x: TRIGGER_X, y: 300 } as const;
+const START_X = TRIGGER_X + TRIGGER_W + COL_GAP; // = 452
+const START_Y = ALIGN_TRIGGER_POS.y;
 // Espaçamento entre lanes do happy-path. 200px acomoda o card recolhido
 // (~140–180) sem esticar o grafo pra fora da tela.
 const GAP_Y = 200;
@@ -27,7 +23,13 @@ const ERROR_STACK_Y = 120;
 // colunas de forma responsiva. Bate com os `max-w`/`w` de cada *-node.tsx.
 // A coluna usa o MAIOR nó nela; assim fluxos recolhidos ficam compactos e
 // nós largos (interactive, business_hours) ganham espaço automaticamente.
-const DEFAULT_NODE_W = 290;
+const DEFAULT_NODE_W = 252;
+const DEFAULT_NODE_H = 140;
+
+export function estimateStepNodeSize(type: string): { width: number; height: number } {
+  return { width: estStepWidth(type), height: DEFAULT_NODE_H };
+}
+
 function estStepWidth(type: string): number {
   switch (type) {
     case "condition":
@@ -108,6 +110,26 @@ function outgoingByKind(step: AutomationStep, stepIds: Set<string>): Outgoing {
     return { primary, error };
   }
 
+  // question / interactive / list: o canvas NÃO desenha nextStepId
+  // (só btn_N / rows / else / timeout). Incluir nextStepId no primary
+  // inventava uma cadeia fantasma i→i+1 (legado da migração) — longest
+  // path virava N colunas e o X ia pra milhares com edges horizontais
+  // longas entre nós que na verdade se conectam por botão.
+  if (
+    step.type === "question" ||
+    step.type === "send_whatsapp_interactive" ||
+    step.type === "send_whatsapp_list"
+  ) {
+    const choices = step.type === "send_whatsapp_list"
+      ? (Array.isArray(cfg.rows) ? (cfg.rows as Record<string, unknown>[]) : [])
+      : (Array.isArray(cfg.buttons) ? (cfg.buttons as Record<string, unknown>[]) : []);
+    for (const b of choices) push(primary, b.gotoStepId);
+    push(error, cfg.elseGotoStepId);
+    push(error, cfg.timeoutGotoStepId);
+    if (cfg.failureAction === "goto") push(error, cfg.failureGotoStepId);
+    return { primary, error };
+  }
+
   const choices = step.type === "send_whatsapp_list"
     ? (Array.isArray(cfg.rows) ? (cfg.rows as Record<string, unknown>[]) : [])
     : (Array.isArray(cfg.buttons) ? (cfg.buttons as Record<string, unknown>[]) : []);
@@ -141,7 +163,12 @@ function finitePos(x: number, y: number): { x: number; y: number } {
  *   coluna após o `maxDepth`.
  */
 export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[] {
-  if (steps.length <= 1) return steps;
+  if (steps.length === 0) return steps;
+  if (steps.length === 1) {
+    const cfg = { ...(steps[0].config ?? {}) } as Record<string, unknown>;
+    cfg.__rfPos = finitePos(START_X, START_Y);
+    return [{ ...steps[0], config: cfg }];
+  }
 
   const idsInOrder = steps.map((s) => s.id);
   const stepIds = new Set(idsInOrder);
@@ -164,26 +191,22 @@ export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[
   // criados via drop que nunca foram conectados) entram aqui também.
   const roots = idsInOrder.filter((id, i) => i === 0 || (indegree.get(id) ?? 0) === 0);
 
-  // Depth via LONGEST path no happy-path. Error edges só posicionam
-  // nós que o primary não alcançou (coluna = source+1, sem puxar o
-  // grafo inteiro pra direita).
+  // Depth = longest path no DAG do happy-path. Back-edges (ciclo,
+  // botão "voltar") são ignoradas — o relaxamento antigo incrementava
+  // depth até steps.length e empurrava colunas pra x=milhares.
   const depth = new Map<string, number>();
-  for (const r of roots) depth.set(r, 0);
-  for (let iter = 0; iter < steps.length + 1; iter++) {
-    let changed = false;
-    for (const step of steps) {
-      const d = depth.get(step.id);
-      if (d == null) continue;
-      for (const tgt of primaryOf.get(step.id) ?? []) {
-        const cur = depth.get(tgt);
-        if (cur == null || d + 1 > cur) {
-          depth.set(tgt, d + 1);
-          changed = true;
-        }
-      }
+  const walkPrimary = (id: string, d: number, ancestors: Set<string>): void => {
+    if (ancestors.has(id)) return;
+    const cur = depth.get(id);
+    if (cur != null && cur >= d) return;
+    depth.set(id, d);
+    const nextAnc = new Set(ancestors);
+    nextAnc.add(id);
+    for (const tgt of primaryOf.get(id) ?? []) {
+      walkPrimary(tgt, d + 1, nextAnc);
     }
-    if (!changed) break;
-  }
+  };
+  for (const root of roots) walkPrimary(root, 0, new Set());
 
   for (let iter = 0; iter < steps.length + 1; iter++) {
     let changed = false;

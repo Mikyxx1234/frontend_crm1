@@ -406,7 +406,14 @@ export function toMessageBubble(
   // `type` é irrelevante — o ChatArea verifica `messageType` antes de tentar
   // renderizar como bolha.
   if (dto.messageType === "ticket-separator") {
-    let info: { number: number; closedAt: string | null; isCurrent?: boolean } = {
+    let info: {
+      number: number
+      closedAt: string | null
+      isCurrent?: boolean
+      openedAt?: string | null
+      openedByName?: string | null
+      openedByUserId?: string | null
+    } = {
       number: 0,
       closedAt: null,
     };
@@ -423,6 +430,9 @@ export function toMessageBubble(
         number: info.number ?? 0,
         closedAt: info.closedAt ?? null,
         isCurrent: info.isCurrent,
+        openedAt: info.openedAt ?? null,
+        openedByName: info.openedByName ?? null,
+        openedByUserId: info.openedByUserId ?? null,
       },
     };
   }

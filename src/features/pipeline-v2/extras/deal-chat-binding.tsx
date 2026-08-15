@@ -590,6 +590,9 @@ export function useDealChatBinding(params: {
               number={b.ticketInfo.number}
               closedAt={b.ticketInfo.closedAt}
               isCurrent={b.ticketInfo.isCurrent}
+              openedAt={b.ticketInfo.openedAt}
+              openedByName={b.ticketInfo.openedByName}
+              openedByUserId={b.ticketInfo.openedByUserId}
             />
           </li>
         );

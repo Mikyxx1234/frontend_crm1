@@ -263,6 +263,9 @@ export interface Message {
     number: number
     closedAt: string | null
     isCurrent?: boolean
+    openedAt?: string | null
+    openedByName?: string | null
+    openedByUserId?: string | null
   }
 }
 
@@ -1981,6 +1984,9 @@ interface TicketDividerProps {
   closedAt: string | null
   /** Ticket em andamento (mais recente) — estilo ligeiramente diferente. */
   isCurrent?: boolean
+  openedAt?: string | null
+  openedByName?: string | null
+  openedByUserId?: string | null
 }
 
 /**
@@ -1999,14 +2005,22 @@ function closedEventTime(iso: string | null): string {
   return `${dd}/${mm} ${hh}:${mi}`
 }
 
-export function TicketDivider({ number, closedAt, isCurrent }: TicketDividerProps) {
+export function TicketDivider({
+  number,
+  closedAt,
+  isCurrent,
+  openedAt,
+  openedByName,
+  openedByUserId,
+}: TicketDividerProps) {
   if (isCurrent) {
     return (
       <EventRow
         action="entrada"
-        text="Abertura da conversa"
-        actor=""
-        time=""
+        text={`Conversa #${number} aberta`}
+        actor={openedByName ?? ""}
+        actorId={openedByUserId}
+        time={closedEventTime(openedAt ?? null)}
       />
     )
   }

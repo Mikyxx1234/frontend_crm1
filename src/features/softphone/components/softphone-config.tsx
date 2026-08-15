@@ -14,8 +14,7 @@ import { IconCloud, IconServer, IconUsers } from "@tabler/icons-react";
 import { PageSegmentedControl } from "@/components/crm/page-toolbar";
 import { Api4ComIntegrationForm } from "@/features/softphone/components/api4com-integration-form";
 import { Api4ComUsersList } from "@/features/softphone/components/api4com-users-list";
-import { ExtensionSettingsForm } from "@/features/softphone/components/extension-settings-form";
-import { ProviderConfigForm } from "@/features/softphone/components/provider-config-form";
+import { PbxSettingsForm } from "@/features/softphone/components/pbx-settings-form";
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
 
 type ConfigTab = "integracao" | "usuarios" | "pbx";
@@ -46,14 +45,6 @@ const TABS = [
     ),
   },
 ] as const;
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-3 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-      {children}
-    </p>
-  );
-}
 
 export function SoftphoneConfig() {
   const slots = useSettingsHeaderSlots();
@@ -95,18 +86,7 @@ export function SoftphoneConfig() {
 
       {tab === "usuarios" ? <Api4ComUsersList /> : null}
 
-      {tab === "pbx" ? (
-        <div className="flex flex-col gap-6">
-          <div>
-            <SectionLabel>Ramal SIP</SectionLabel>
-            <ExtensionSettingsForm />
-          </div>
-          <div>
-            <SectionLabel>Webhook do PBX</SectionLabel>
-            <ProviderConfigForm />
-          </div>
-        </div>
-      ) : null}
+      {tab === "pbx" ? <PbxSettingsForm /> : null}
     </div>
   );
 }

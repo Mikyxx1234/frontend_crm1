@@ -48,10 +48,11 @@ export function Api4ComIntegrationForm() {
   }
 
   const tokenReady = data.hasServiceToken || data.hasEnvToken;
+  const webhookUrl = data.webhookUrl;
 
   async function copyUrl() {
-    if (!data.webhookUrl) return;
-    await navigator.clipboard.writeText(data.webhookUrl);
+    if (!webhookUrl) return;
+    await navigator.clipboard.writeText(webhookUrl);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   }
@@ -88,7 +89,7 @@ export function Api4ComIntegrationForm() {
         <div className="flex min-w-0 items-center gap-2">
           <InputGlass
             readOnly
-            value={data.webhookUrl || "Defina NEXT_PUBLIC_APP_URL para gerar a URL"}
+            value={webhookUrl || "Defina NEXT_PUBLIC_APP_URL para gerar a URL"}
             className="min-w-0 flex-1 font-mono text-[12px]"
           />
           <ButtonGlass type="button" variant="glass" size="sm" onClick={() => void copyUrl()} className="shrink-0">

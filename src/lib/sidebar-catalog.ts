@@ -5,6 +5,7 @@ import {
   IconLayoutKanban,
   IconLayoutDashboard,
   IconMail,
+  IconMap2,
   IconMessageCircle,
   IconRobot,
   IconUsers,
@@ -117,6 +118,15 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     description: "Tarefas, follow-ups e agenda.",
     locked: false,
     requiredPermission: "nav:activities",
+  },
+  {
+    key: "demands",
+    title: "Demandas",
+    href: "/demands",
+    icon: IconMap2,
+    description: "Roadmap interno, bugs e solicitações do time.",
+    locked: false,
+    requiredPermission: "nav:demands",
   },
   {
     key: "automations",

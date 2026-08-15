@@ -10,7 +10,12 @@ import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { ChatAvatar } from "@/components/inbox/chat-avatar"
 import { AVATAR_SIZE, avatarInitials } from "@/lib/avatar"
 import { MessageBubble, ConnectionDivider, ConversationClosedMarker, TicketDivider, StickyDayPill, useStickyDayLabel, type Message } from "./message-bubble"
-import { EventRow } from "./chat-timeline"
+import {
+  EventRow,
+  isConversationCloseEventText,
+  isConversationOpenEventText,
+  isRedundantOpenStatusEvent,
+} from "./chat-timeline"
 import { SessionAlert } from "./session-alert"
 import {
   formatConnectionLabel,
@@ -550,24 +555,47 @@ export function ChatArea({
           )
           const showConnSwitches = distinctChannels.size >= 2
           let lastChannelId: string | null = null
+          const sectionHasEvent = (
+            from: number,
+            pred: (content: string) => boolean,
+          ) => {
+            for (let i = from + 1; i < messages.length; i++) {
+              const m = messages[i]
+              if (m.messageType === "ticket-separator") break
+              if (m.kind === "event" && pred(m.content ?? "")) return true
+            }
+            return false
+          }
           return messages.map((message, index) => {
             // Separador de ticket — item sintético injetado pelo backend
             // quando `?history=1`. Não é uma bolha; renderiza diretamente.
             if (message.messageType === "ticket-separator" && message.ticketInfo) {
+              const info = message.ticketInfo
+              const hideDivider = info.isCurrent
+                ? sectionHasEvent(index, (c) =>
+                    isConversationOpenEventText(c, info.number),
+                  )
+                : sectionHasEvent(index, isConversationCloseEventText)
+              if (hideDivider) return null
               return (
                 <li key={message.id || `sep-${index}`} className="list-none">
                   <TicketDivider
-                    number={message.ticketInfo.number}
-                    closedAt={message.ticketInfo.closedAt}
-                    isCurrent={message.ticketInfo.isCurrent}
-                    openedAt={message.ticketInfo.openedAt}
-                    openedByName={message.ticketInfo.openedByName}
-                    openedByUserId={message.ticketInfo.openedByUserId}
+                    number={info.number}
+                    closedAt={info.closedAt}
+                    isCurrent={info.isCurrent}
+                    openedAt={info.openedAt}
+                    openedByName={info.openedByName}
+                    openedByUserId={info.openedByUserId}
+                    closedByName={info.closedByName}
+                    closedByUserId={info.closedByUserId}
                   />
                 </li>
               )
             }
             if (message.type !== "incoming" && message.type !== "outgoing") {
+              return null
+            }
+            if (message.kind === "event" && isRedundantOpenStatusEvent(message.content)) {
               return null
             }
             const dayLabel = dayLabelFromISO(message.createdAt)
@@ -630,8 +658,14 @@ export function ChatArea({
             o padrao visual do DaySeparator/ConnectionDivider. Fica visivel
             de dentro do proprio chat, sem card lateral, atendendo ao
             pedido "simples/minimalista dentro do chat". */}
-        {conversationResolved && (
-          <ConversationClosedMarker closedAt={conversationClosedAt ?? null} />
+        {conversationResolved &&
+          !messages.some(
+            (m) => m.kind === "event" && isConversationCloseEventText(m.content),
+          ) && (
+          <ConversationClosedMarker
+            closedAt={conversationClosedAt ?? null}
+            conversationNumber={conversationNumber}
+          />
         )}
       </div>
 

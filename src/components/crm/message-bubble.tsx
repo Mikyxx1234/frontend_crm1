@@ -266,6 +266,8 @@ export interface Message {
     openedAt?: string | null
     openedByName?: string | null
     openedByUserId?: string | null
+    closedByName?: string | null
+    closedByUserId?: string | null
   }
 }
 
@@ -1987,6 +1989,8 @@ interface TicketDividerProps {
   openedAt?: string | null
   openedByName?: string | null
   openedByUserId?: string | null
+  closedByName?: string | null
+  closedByUserId?: string | null
 }
 
 /**
@@ -2012,6 +2016,8 @@ export function TicketDivider({
   openedAt,
   openedByName,
   openedByUserId,
+  closedByName,
+  closedByUserId,
 }: TicketDividerProps) {
   if (isCurrent) {
     return (
@@ -2026,9 +2032,10 @@ export function TicketDivider({
   }
   return (
     <EventRow
-      action="status"
+      action="saida"
       text={`Conversa #${number} encerrada`}
-      actor=""
+      actor={closedByName ?? ""}
+      actorId={closedByUserId}
       time={closedEventTime(closedAt)}
     />
   )
@@ -2037,6 +2044,9 @@ export function TicketDivider({
 interface ConversationClosedMarkerProps {
   /** ISO da data de encerramento — quando ausente, mostra so "Conversa encerrada". */
   closedAt?: string | null
+  conversationNumber?: number | null
+  closedByName?: string | null
+  closedByUserId?: string | null
 }
 
 /**
@@ -2044,12 +2054,22 @@ interface ConversationClosedMarkerProps {
  * Mesmo padrão visual de `EventRow` (linha de evento, sem pill).
  * Usado no inbox (via ChatArea) e no pipeline (via DealChatBinding).
  */
-export function ConversationClosedMarker({ closedAt }: ConversationClosedMarkerProps) {
+export function ConversationClosedMarker({
+  closedAt,
+  conversationNumber,
+  closedByName,
+  closedByUserId,
+}: ConversationClosedMarkerProps) {
+  const label =
+    typeof conversationNumber === "number" && conversationNumber > 0
+      ? `Conversa #${conversationNumber} encerrada`
+      : "Conversa encerrada"
   return (
     <EventRow
-      action="status"
-      text="Conversa encerrada"
-      actor=""
+      action="saida"
+      text={label}
+      actor={closedByName ?? ""}
+      actorId={closedByUserId}
       time={closedEventTime(closedAt ?? null)}
     />
   )

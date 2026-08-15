@@ -81,6 +81,43 @@ export function normalizeQueueEventText(text: string): string {
 
 const LEAVE_EVENT_RE = /^(.+?)\s+(saiu|entrou|removida)\s+da conversa$/i;
 
+const LIFECYCLE_OPEN_RE = /^Conversa(?:\s+#\d+)?\s+aberta$/i;
+const LIFECYCLE_CLOSE_RE = /^Conversa(?:\s+#\d+)?\s+encerrada$/i;
+const LEGACY_CLOSE_STATUS_RE = /^Status alterado para Encerrada$/i;
+const LEGACY_OPEN_STATUS_RE = /^Status alterado para (?:Em atendimento|Aberta)$/i;
+
+/** Status "Encerrada"/"Aberta" legado — o evento de conversa já cobre. */
+export function isRedundantOpenStatusEvent(
+  text: string | null | undefined,
+): boolean {
+  return LEGACY_OPEN_STATUS_RE.test((text ?? "").trim());
+}
+
+export function isConversationCloseEventText(
+  text: string | null | undefined,
+): boolean {
+  const t = (text ?? "").trim();
+  return LIFECYCLE_CLOSE_RE.test(t) || LEGACY_CLOSE_STATUS_RE.test(t);
+}
+
+export function isConversationOpenEventText(
+  text: string | null | undefined,
+  number?: number | null,
+): boolean {
+  const t = (text ?? "").trim();
+  if (typeof number === "number" && number > 0) {
+    return new RegExp(`^Conversa\\s+#${number}\\s+aberta`, "i").test(t);
+  }
+  return LIFECYCLE_OPEN_RE.test(t) || /^Conversa\s+#\d+\s+aberta/i.test(t);
+}
+
+export function isConversationLifecycleText(
+  text: string | null | undefined,
+): boolean {
+  const t = (text ?? "").trim();
+  return LIFECYCLE_OPEN_RE.test(t) || LIFECYCLE_CLOSE_RE.test(t);
+}
+
 /**
  * Encurta o nome no texto e, se o ator não for a pessoa do texto,
  * troca "saiu" por "removida" (A removeu B).
@@ -90,6 +127,7 @@ export function normalizeConversationEventText(
   actor?: string | null,
 ): string {
   const queued = normalizeQueueEventText(text);
+  if (LEGACY_CLOSE_STATUS_RE.test(queued)) return "Conversa encerrada";
   const m = queued.match(LEAVE_EVENT_RE);
   if (!m) return queued;
   const who = formatHumanEventActorName(m[1]) || m[1].trim();
@@ -112,6 +150,13 @@ export function inferEventActionFromText(
   content: string | null | undefined,
 ): ConversationEventAction {
   const t = (content ?? "").toLowerCase();
+  if (/conversa(?:\s+#\d+)?\s+aberta/.test(t)) return "entrada";
+  if (
+    /conversa(?:\s+#\d+)?\s+encerrada/.test(t) ||
+    /status alterado para encerrada/.test(t)
+  ) {
+    return "saida";
+  }
   if (
     /distribu[ií]d|enfileirad|atribu[ií]d/.test(t)
   ) {
@@ -120,7 +165,7 @@ export function inferEventActionFromText(
   if (/transfer/.test(t)) return "transferencia";
   if (/tabulad/.test(t)) return "tabulacao";
   if (
-    /status|encerrad|reabert|resolvid/.test(t)
+    /status|reabert|resolvid/.test(t)
   ) {
     return "status";
   }
@@ -150,11 +195,14 @@ export function classifyTimelineItem(
     const inferred = inferEventActionFromText(input.content);
     return {
       kind: "event",
-      // Legado: tabulação era gravada como event:status
+      // Legado: tabulação era gravada como event:status;
+      // abrir/encerrar gravados como event:status viram entrada/saida.
       action:
         inferred === "tabulacao"
           ? "tabulacao"
-          : parseEventActionFromMessageType(mt) ?? inferred,
+          : inferred === "entrada" || inferred === "saida"
+            ? inferred
+            : parseEventActionFromMessageType(mt) ?? inferred,
     };
   }
 

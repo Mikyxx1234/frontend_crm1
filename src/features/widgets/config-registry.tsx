@@ -28,7 +28,9 @@ export interface WidgetConfigEntry {
   icon: ReactNode;
   size: WidgetConfigSize;
   requiredPermission: string;
-  Component: ComponentType;
+  Component: ComponentType<{ onClose?: () => void }>;
+  /** Modal próprio (header/abas/overlay). Não usa o FormDialog da Central. */
+  standalone?: boolean;
 }
 
 // Componentes carregados sob demanda — configs pesadas (Distribuição em
@@ -38,10 +40,10 @@ const DistributionConfig = dynamic(
   { ssr: false },
 );
 
-const SoftphoneConfig = dynamic(
+const TelephonyModal = dynamic(
   () =>
-    import("@/features/softphone/components/softphone-config").then(
-      (m) => m.SoftphoneConfig,
+    import("@/features/softphone/components/telefonia/telephony-modal").then(
+      (m) => m.TelephonyModal,
     ),
   { ssr: false },
 );
@@ -61,7 +63,8 @@ export const WIDGET_CONFIG_REGISTRY: Record<string, WidgetConfigEntry> = {
     icon: <IconPhone size={20} />,
     size: "xl",
     requiredPermission: "sip_extension:manage",
-    Component: SoftphoneConfig,
+    Component: TelephonyModal,
+    standalone: true,
   },
 };
 

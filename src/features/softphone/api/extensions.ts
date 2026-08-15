@@ -66,7 +66,12 @@ export async function getMyCredentialsOrNull(): Promise<SipCredentials | null> {
   if (!res.ok) {
     throw new Error(body.message ?? `HTTP ${res.status}`);
   }
-  return body.credentials ?? null;
+  const creds = body.credentials ?? null;
+  if (!creds) return null;
+  if (!creds.wsServer?.trim() || !creds.sipUri?.trim() || !creds.authUser?.trim()) {
+    return null;
+  }
+  return creds;
 }
 
 export type ConnectApi4ComResponse = {

@@ -137,14 +137,25 @@ export function useSoftphone() {
 
     try {
       const creds = await getMyCredentials();
-      moduleCredentials = creds;
+      const sipUri = /^sip:/i.test(creds.sipUri.trim())
+        ? creds.sipUri.trim()
+        : creds.sipUri.includes("@")
+          ? `sip:${creds.sipUri.trim()}`
+          : creds.sipUri.trim();
+      const wsServer = creds.wsServer.trim();
+      if (!wsServer || !/^wss?:\/\//i.test(wsServer) || !sipUri || !creds.authUser.trim()) {
+        throw new Error(
+          "Ramal SIP incompleto. Reative a telefonia em Widgets → Telefonia IP → Usuários.",
+        );
+      }
+      moduleCredentials = { ...creds, sipUri, wsServer };
 
       const JsSIP = await import("jssip");
-      const socket = new JsSIP.WebSocketInterface(creds.wsServer);
+      const socket = new JsSIP.WebSocketInterface(wsServer);
 
       const config = {
         sockets: [socket],
-        uri: creds.sipUri,
+        uri: sipUri,
         authorization_user: creds.authUser,
         password: creds.authPassword,
         register: true,
@@ -267,10 +278,14 @@ export function useSoftphone() {
       ua.start();
       moduleUA = ua;
     } catch (e) {
+      const raw = e instanceof Error ? e.message : "Erro ao conectar";
+      const error = raw.startsWith("Invalid argument")
+        ? "Ramal SIP incompleto. Reative a telefonia em Widgets → Telefonia IP → Usuários."
+        : raw;
       setSharedState((s) => ({
         ...s,
         status: "error",
-        error: e instanceof Error ? e.message : "Erro ao conectar",
+        error,
       }));
     }
   }, [startTimer]);

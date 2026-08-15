@@ -91,20 +91,30 @@ export function TelephonyToggle({ userId, compact = false }: TelephonyToggleProp
         type="button"
         role="switch"
         aria-checked={enabled}
+        aria-label="Telefonia"
         disabled={mutation.isPending}
         onClick={() => void handleToggle()}
         className={cn(
-          "relative h-5 w-9 shrink-0 rounded-full border transition-colors",
-          enabled
-            ? "border-[var(--color-success)] bg-[var(--color-success)]"
-            : "border-[var(--text-muted)] bg-[var(--text-muted)]/35",
+          compact
+            ? "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
+            : "relative h-5 w-9 shrink-0 rounded-full border transition-colors",
+          compact
+            ? enabled
+              ? "bg-primary"
+              : "bg-muted-foreground/30"
+            : enabled
+              ? "border-[var(--color-success)] bg-[var(--color-success)]"
+              : "border-[var(--text-muted)] bg-[var(--text-muted)]/35",
           mutation.isPending && "opacity-50",
         )}
       >
         <span
           className={cn(
-            "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform",
-            enabled && "translate-x-4",
+            "rounded-full transition-transform",
+            compact
+              ? "inline-block size-5 bg-background shadow-sm"
+              : "absolute top-0.5 left-0.5 h-4 w-4 bg-white",
+            compact ? (enabled ? "translate-x-[22px]" : "translate-x-0.5") : enabled && "translate-x-4",
           )}
         />
       </button>

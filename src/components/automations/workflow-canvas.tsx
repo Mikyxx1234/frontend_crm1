@@ -34,6 +34,7 @@ import {
   summarizeTriggerConfig,
   triggerTypeLabel,
 } from "@/lib/automation-workflow";
+import { ALIGN_TRIGGER_POS, estimateStepNodeSize } from "@/lib/automation-layout";
 import { useConnectedStepChannels } from "./step-channel-picker";
 import {
   normalizeConditionConfig,
@@ -100,14 +101,33 @@ const NODE_Y = 300;
 // precisam de folga maior que 300 pra não cobrir o próximo step.
 const GAP_X = 480;
 
+function asFiniteNumber(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
 function readRfPos(config: unknown): RfPos | null {
   if (typeof config !== "object" || config === null) return null;
   const c = config as Record<string, unknown>;
   if (typeof c.__rfPos !== "object" || c.__rfPos === null) return null;
   const p = c.__rfPos as Record<string, unknown>;
-  if (typeof p.x !== "number" || typeof p.y !== "number") return null;
-  if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) return null;
-  return { x: p.x, y: p.y };
+  const x = asFiniteNumber(p.x);
+  const y = asFiniteNumber(p.y);
+  if (x == null || y == null) return null;
+  return { x, y };
+}
+
+/** Dimensões iniciais p/ fitView não pular nós ainda não medidos. */
+function withFitSize(node: Node, width: number, height: number): Node {
+  return {
+    ...node,
+    initialWidth: width,
+    initialHeight: height,
+  };
 }
 
 function rfNodeType(stepType: string): keyof typeof nodeTypes {
@@ -745,10 +765,10 @@ function WorkflowCanvasInner({
       // posição via `onNodeDragStop` (canvas avisa a page por
       // `onTriggerConfigChange`).
       const triggerSavedPos = readRfPos(triggerConfig);
-      const triggerNode: Node = {
+      const triggerNode: Node = withFitSize({
         id: TRIGGER_ID,
         type: "trigger",
-        position: triggerSavedPos ?? { x: 32, y: NODE_Y },
+        position: triggerSavedPos ?? { ...ALIGN_TRIGGER_POS },
         data: {
           label: triggerTypeLabel(triggerType),
           summary: triggerSummary,
@@ -761,7 +781,7 @@ function WorkflowCanvasInner({
         },
         draggable: true,
         deletable: false,
-      };
+      }, 252, 140);
 
       const stepIndexById = new Map<string, number>();
       list.forEach((s, i) => stepIndexById.set(s.id, i + 1));
@@ -897,11 +917,14 @@ function WorkflowCanvasInner({
           position: pos,
           data: baseData,
         } as Node;
+      }).map((n, i) => {
+        const size = estimateStepNodeSize(list[i].type);
+        return withFitSize(n, size.width, size.height);
       });
 
       // Lista vazia: pílula "Adicionar próximo passo" sai do trigger.
       if (list.length === 0) {
-        const addStepNode: Node = {
+        const addStepNode: Node = withFitSize({
           id: ADD_STEP_ID,
           type: "addStep",
           position: { x: START_X, y: NODE_Y + 20 },
@@ -914,7 +937,7 @@ function WorkflowCanvasInner({
             afterStepId: null,
             onSelectType: onAddStep,
           },
-        };
+        }, 180, 40);
         return [triggerNode, addStepNode];
       }
 
@@ -928,7 +951,7 @@ function WorkflowCanvasInner({
         const idx = list.indexOf(step);
         const x = pos ? pos.x + GAP_X : START_X + (idx + 1) * GAP_X;
         const y = pos ? pos.y + 20 : NODE_Y + 20;
-        addStepNodes.push({
+        addStepNodes.push(withFitSize({
           id: `${ADD_STEP_ID}:${step.id}`,
           type: "addStep",
           position: { x, y },
@@ -939,7 +962,7 @@ function WorkflowCanvasInner({
             afterStepId: step.id,
             onSelectType: onAddStep,
           },
-        });
+        }, 180, 40));
       }
 
       return [triggerNode, ...stepNodes, ...addStepNodes];
@@ -1270,44 +1293,72 @@ function WorkflowCanvasInner({
   const lastAlignFitRef = useRef(0);
 
   useEffect(() => {
+    const isAlign =
+      !!autoAlignVersion && lastAlignFitRef.current !== autoAlignVersion;
+
     // Edição inline já patchou o node — não rebuildar (preserva foco).
-    if (skipStepsSyncRef.current) {
+    // Auto-alinhar NÃO pode pular: senão `__rfPos` muda nos steps e o
+    // RF fica com `node.position` antigo (canvas vazio + edges longas).
+    if (skipStepsSyncRef.current && !isAlign) {
       skipStepsSyncRef.current = false;
       return;
     }
-    // Rebuild preservando `selected` (React Flow guarda seleção no
-    // próprio node object; se recriamos os nós do zero, a seleção do
-    // card editado some ao soltar o mouse quando algum re-render
-    // dispara este effect).
+    skipStepsSyncRef.current = false;
+
     setNodes((prev) => {
       const selectedIds = new Set(
         prev.filter((n) => n.selected).map((n) => n.id)
       );
-      const next = buildNodes(steps, removeStep, addStepAfter);
-      if (selectedIds.size === 0) return next;
-      return next.map((n) =>
-        selectedIds.has(n.id) ? { ...n, selected: true } : n
-      );
+      const prevById = new Map(prev.map((n) => [n.id, n]));
+      const built = buildNodes(steps, removeStep, addStepAfter);
+
+      return built.map((n) => {
+        const old = prevById.get(n.id);
+        if (isAlign && old) {
+          // `__rfPos` → `position` no mesmo tick. Preserva `measured`
+          // pra fitView não pular nós recém-recriados (xyflow trata
+          // width/height 0 como "ainda não existe").
+          return {
+            ...old,
+            ...n,
+            position: n.position,
+            measured: old.measured,
+            width: old.measured?.width ?? old.width ?? n.initialWidth,
+            height: old.measured?.height ?? old.height ?? n.initialHeight,
+            selected: selectedIds.has(n.id),
+          };
+        }
+        return selectedIds.has(n.id) ? { ...n, selected: true } : n;
+      });
     });
 
-    // fitView DEPOIS do setNodes + paint. O effect paralelo em
-    // `autoAlignVersion` rodava no mesmo commit — antes do RF aplicar
-    // `__rfPos` — e com minZoom 0.35 num grafo esticado o viewport
-    // centrava no vazio (só 2–3 edges longas).
-    if (!autoAlignVersion || lastAlignFitRef.current === autoAlignVersion) return;
+    if (!isAlign) return;
     lastAlignFitRef.current = autoAlignVersion;
+
+    const fitTargets = [
+      { id: TRIGGER_ID },
+      ...steps.map((s) => ({ id: s.id })),
+    ];
+    const fitOpts = {
+      nodes: fitTargets,
+      duration: 380,
+      padding: 0.2,
+      maxZoom: 1,
+      minZoom: 0.15,
+    };
+
     let cancelled = false;
     let didFit = false;
     const runFit = () => {
       if (cancelled || didFit) return;
       didFit = true;
-      void fitView({ duration: 380, padding: 0.18, maxZoom: 1, minZoom: 0.2 });
+      void fitView(fitOpts);
     };
     let raf2 = 0;
     const raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(runFit);
     });
-    const timer = window.setTimeout(runFit, 80);
+    const timer = window.setTimeout(runFit, 120);
     return () => {
       cancelled = true;
       cancelAnimationFrame(raf1);

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSession } from "next-auth/react";
-import { IconChevronDown, IconColumns, IconLayoutKanban, IconPlus, IconRoute } from "@tabler/icons-react";
+import { IconChevronDown, IconColumns, IconLayoutKanban, IconPlus, IconRocket } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
@@ -122,7 +122,7 @@ export default function DemandsClientPage({
       {navRail ?? <NavRailSpacer />}
       <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
           <PageHeader
-            icon={<IconRoute size={20} />}
+            icon={<IconRocket size={20} />}
             title="Demandas"
             titleAccessory={
               boards.length > 0 ? (

@@ -92,9 +92,14 @@ export function Api4ComUsersList() {
                 <p className="truncate text-[11px] text-[var(--text-muted)]">{ext.sipUri}</p>
               ) : null}
             </div>
-            <span className={`text-xs ${st.cls}`} title={ext?.provisioningError ?? undefined}>
-              {st.text}
-            </span>
+            <div className="min-w-0">
+              <span className={`text-xs ${st.cls}`}>{st.text}</span>
+              {ext?.provisioningError ? (
+                <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-[var(--color-danger)]" title={ext.provisioningError}>
+                  {ext.provisioningError}
+                </p>
+              ) : null}
+            </div>
             <div className="flex min-w-[88px] shrink-0 items-center">
               <TelephonyToggle userId={user.id} />
             </div>

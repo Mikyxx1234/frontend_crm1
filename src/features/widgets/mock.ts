@@ -33,9 +33,13 @@ export const MOCK_WIDGETS_RESPONSE: WidgetsResponse = {
     {
       slug: "calls_history",
       name: "Ligações",
-      description:
-        "Softphone integrado, histórico de chamadas e botão de ligar nos cards. Inclui integração com Api4Com.",
-      features: ["Softphone SIP", "Histórico de chamadas", "Discagem 1-clique"],
+      description: "Softphone SIP, histórico de chamadas e discagem nos cards do pipeline.",
+      features: [
+        "Softphone integrado (Api4Com / SIP)",
+        "Histórico de chamadas",
+        "Discagem nos cards do pipeline",
+        "Gravações automáticas via webhook",
+      ],
       icon: "phone",
       category: "Comunicação",
       availability: "available",

@@ -70,6 +70,8 @@ const INTERNAL_ROUTE_BY_SLUG: Record<string, string> = {
 };
 
 const CALLS_CARD_COPY = {
+  name: "Ligações",
+  category: "Comunicação",
   description: "Softphone SIP, histórico de chamadas e discagem nos cards do pipeline.",
   features: [
     "Softphone integrado (Api4Com / SIP)",
@@ -121,9 +123,11 @@ export function WidgetCard({
       ? `/widgets/${widget.slug}`
       : INTERNAL_ROUTE_BY_SLUG[widget.slug] ?? `/widgets/${widget.slug}`;
 
-  const description =
-    widget.slug === "calls_history" ? CALLS_CARD_COPY.description : widget.description;
-  const features = widget.slug === "calls_history" ? CALLS_CARD_COPY.features : widget.features;
+  const isCalls = widget.slug === "calls_history";
+  const name = isCalls ? CALLS_CARD_COPY.name : widget.name;
+  const category = isCalls ? CALLS_CARD_COPY.category : widget.category;
+  const description = isCalls ? CALLS_CARD_COPY.description : widget.description;
+  const features = isCalls ? CALLS_CARD_COPY.features : widget.features;
 
   const solidBtn =
     "inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-[#2563eb] px-4 py-2.5 font-display text-[13px] font-bold text-white transition-colors hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50";
@@ -157,10 +161,10 @@ export function WidgetCard({
       {/* Categoria + título */}
       <div className="px-5 pt-4">
         <p className="font-display text-[10px] font-bold uppercase tracking-[1.2px] text-slate-400">
-          {widget.category}
+          {category}
         </p>
         <h3 className="mt-1 min-w-0 break-words font-display text-[17px] font-bold tracking-[-0.2px] text-slate-900">
-          {widget.name}
+          {name}
         </h3>
       </div>
 

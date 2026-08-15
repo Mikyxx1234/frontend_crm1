@@ -95,7 +95,7 @@ export function Api4ComUsersList() {
             <div className="min-w-0">
               <span className={`text-xs ${st.cls}`}>{st.text}</span>
               {ext?.provisioningError ? (
-                <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-[var(--color-danger)]" title={ext.provisioningError}>
+                <p className="mt-0.5 break-words text-[10px] leading-snug text-[var(--color-danger)]" title={ext.provisioningError}>
                   {ext.provisioningError}
                 </p>
               ) : null}

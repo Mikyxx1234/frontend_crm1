@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconCheck, IconCopy, IconLoader2, IconWebhook } from "@tabler/icons-react";
+import { IconCheck, IconCopy, IconLoader2 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { InputGlass } from "@/components/crm/input-glass";
@@ -42,101 +42,84 @@ export function Api4ComIntegrationForm() {
     return (
       <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
         <IconLoader2 size={14} className="animate-spin" />
-        Carregando integração da organização…
+        Carregando…
       </div>
     );
   }
 
-  const webhookUrl = data.webhookUrl;
   const tokenReady = data.hasServiceToken || data.hasEnvToken;
 
   async function copyUrl() {
-    if (!webhookUrl) return;
-    await navigator.clipboard.writeText(webhookUrl);
+    if (!data.webhookUrl) return;
+    await navigator.clipboard.writeText(data.webhookUrl);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   }
 
   return (
     <form
-      className="flex min-w-0 flex-col gap-4"
+      className="grid gap-4"
       onSubmit={(e) => {
         e.preventDefault();
         mutation.mutate();
       }}
     >
       <div className="grid gap-1.5">
-        <Label>Token ADMIN da API4Comm</Label>
+        <Label>Token ADMIN</Label>
         <PasswordInput
           value={token}
           onChange={(e) => setToken(e.target.value)}
-          placeholder={data.hasServiceToken ? "Token salvo nesta org — cole outro para trocar" : "Cole o token ADMIN (ttl -1)"}
+          placeholder={data.hasServiceToken ? "Salvo — cole outro para trocar" : "Cole o token"}
           autoComplete="off"
         />
-        <p className="text-[12px] text-[var(--text-muted)]">
-          {data.hasServiceToken
-            ? "Token da organização já está salvo. O valor não é exibido de novo."
-            : data.hasEnvToken
-              ? "Nenhum token nesta org — o backend ainda usa o token do ambiente como fallback."
-              : "Obrigatório para criar usuários e ramais pelo CRM. Gere em POST /users/accessTokens com ttl -1."}
-        </p>
       </div>
 
       <div className="grid gap-1.5">
-        <Label>Código da integração (gateway)</Label>
+        <Label>Gateway</Label>
         <InputGlass
           value={gateway}
           onChange={(e) => setGateway(e.target.value)}
           placeholder="crm-eduit"
         />
-        <p className="text-[12px] text-[var(--text-muted)]">
-          Você inventa este código aqui — não existe no painel da API4Comm. O CRM grava o mesmo valor
-          no webhook e em cada ligação. Ex.: <code>crm-eduit</code>.
-        </p>
       </div>
 
       <div className="grid gap-1.5">
-        <Label>Webhook desta organização</Label>
-        <div className="flex min-w-0 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-2">
-          <IconWebhook size={14} className="shrink-0 text-[var(--text-muted)]" />
-          <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-[var(--text-primary)]">
-            {webhookUrl || "URL ainda sem domínio público (NEXT_PUBLIC_APP_URL)"}
-          </code>
+        <Label>Webhook</Label>
+        <div className="flex min-w-0 items-center gap-2">
+          <InputGlass
+            readOnly
+            value={data.webhookUrl || "Defina NEXT_PUBLIC_APP_URL para gerar a URL"}
+            className="min-w-0 flex-1 font-mono text-[12px]"
+          />
           <ButtonGlass type="button" variant="glass" size="sm" onClick={() => void copyUrl()} className="shrink-0">
-            {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
+            {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
             {copied ? "Copiado" : "Copiar"}
           </ButtonGlass>
         </div>
-        <p className="text-[12px] text-[var(--text-muted)]">
-          Criado automaticamente para esta org. Ao salvar o token, o CRM registra essa URL na API4Comm
-          (eventos channel-answer e channel-hangup).
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className={`text-xs ${tokenReady ? "text-[var(--color-success)]/80" : "text-[var(--color-warning)]/80"}`}
-        >
-          {tokenReady ? "Token pronto" : "Token pendente"}
-        </span>
-        {data.webhookRegistered === true && (
-          <span className="text-xs text-[var(--color-success)]/80">Webhook registrado na API4Comm</span>
-        )}
-        {data.webhookError && (
-          <span className="text-xs text-[var(--color-danger)]" title={data.webhookError}>
-            Falha ao registrar webhook
-          </span>
-        )}
       </div>
 
       {mutation.isError && (
-        <p className="text-[11px] text-[var(--color-danger)]">{(mutation.error as Error).message}</p>
+        <p className="text-[12px] text-[var(--color-danger)]">{(mutation.error as Error).message}</p>
+      )}
+      {data.webhookError && (
+        <p className="text-[12px] text-[var(--color-danger)]" title={data.webhookError}>
+          Falha ao registrar webhook
+        </p>
       )}
 
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <span
+          className={`text-[12px] ${tokenReady ? "text-[var(--color-success)]/80" : "text-[var(--color-warning)]/80"}`}
+        >
+          {tokenReady
+            ? data.webhookRegistered
+              ? "Conectado"
+              : "Token salvo"
+            : "Token pendente"}
+        </span>
         <ButtonGlass type="submit" variant="primary" size="sm" disabled={mutation.isPending}>
           {mutation.isPending && <IconLoader2 size={12} className="animate-spin" />}
-          Salvar integração
+          Salvar
         </ButtonGlass>
       </div>
     </form>

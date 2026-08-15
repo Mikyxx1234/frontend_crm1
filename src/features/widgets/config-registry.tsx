@@ -57,7 +57,7 @@ export const WIDGET_CONFIG_REGISTRY: Record<string, WidgetConfigEntry> = {
   },
   calls_history: {
     title: "Telefonia IP",
-    description: "Integração API4Comm, webhook da org e ramais",
+    description: "Token, webhook e ramais da equipe",
     icon: <IconPhone size={20} />,
     size: "xl",
     requiredPermission: "sip_extension:manage",

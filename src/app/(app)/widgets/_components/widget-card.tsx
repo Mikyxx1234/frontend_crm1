@@ -184,7 +184,7 @@ export function WidgetCard({
             <span
               className={cn(
                 "font-display text-[10px] font-bold uppercase tracking-[0.6px]",
-                serviceOnline ? "text-amber-500" : "text-slate-400",
+                serviceOnline ? "text-emerald-600" : "text-slate-400",
               )}
             >
               {serviceOnline ? "Online" : "Offline"}
@@ -194,7 +194,7 @@ export function WidgetCard({
             <div
               className={cn(
                 "h-full rounded-full",
-                serviceOnline ? "w-[85%] bg-amber-400" : "w-[8%] bg-slate-300",
+                serviceOnline ? "w-full bg-emerald-500" : "w-[8%] bg-slate-300",
               )}
             />
           </div>
@@ -306,8 +306,8 @@ function StatusBadge({
   }
   if (installed) {
     return (
-      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 font-display text-[10px] font-bold text-amber-700">
-        <span className="size-1.5 rounded-full bg-amber-500" />
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 font-display text-[10px] font-bold text-emerald-700">
+        <span className="size-1.5 rounded-full bg-emerald-500" />
         Instalado
       </span>
     );

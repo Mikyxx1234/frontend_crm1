@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/tooltip"
 import { StatusTicks } from "@/components/crm/status-ticks"
 import { EventRow, NoteRow, type ConversationEventAction } from "@/components/crm/chat-timeline"
+import { PhoneIncoming, PhoneOff, PhoneOutgoing } from "lucide-react"
 import {
   IconRobot,
   IconClipboardList,
@@ -28,9 +29,6 @@ import {
   IconPin,
   IconPinFilled,
   IconArrowsExchange,
-  IconPhoneIncoming,
-  IconPhoneOutgoing,
-  IconPhoneOff,
   IconArrowBackUp,
   IconShare2,
   IconMoodPlus,
@@ -1332,33 +1330,20 @@ export function MessageBubble({
     return <FormBubble message={message} className={className} />
   }
 
-  // Aviso de ligação (SIP/Api4com): linha centralizada com ícone — distingue
-  // recebida/realizada/não-atendida. Renderizado igual no inbox e no pipeline
-  // (ambos usam MessageBubble).
+  // Ligação (SIP/Api4com): mesmo EventRow dos demais eventos da timeline.
   if (message.messageType === "sip_call") {
     const inbound = message.type === "incoming"
-    const missed = /n[ãa]o atendida/i.test(message.content)
+    const missed = /n[ãa]o atendida/i.test(message.content ?? "")
+    const [title, ...rest] = (message.content ?? "").split(" · ")
+    const detail = rest.join(" · ").trim()
     return (
-      <div className={cn("flex w-full items-center justify-center py-1", className)}>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[11px] font-semibold",
-            missed
-              ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/8 text-[var(--color-danger)]"
-              : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
-          )}
-        >
-          {missed ? (
-            <IconPhoneOff size={12} />
-          ) : inbound ? (
-            <IconPhoneIncoming size={12} />
-          ) : (
-            <IconPhoneOutgoing size={12} />
-          )}
-          <span>{message.content}</span>
-          <span className="text-[var(--text-muted)]">· {message.time}</span>
-        </span>
-      </div>
+      <EventRow
+        icon={missed ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
+        text={title || (inbound ? "Ligação recebida" : "Ligação realizada")}
+        actor={detail}
+        time={message.time}
+        className={className}
+      />
     )
   }
 

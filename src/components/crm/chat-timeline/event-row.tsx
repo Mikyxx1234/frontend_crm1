@@ -37,7 +37,9 @@ const ACTION_ICON: Record<ConversationEventAction, LucideIcon> = {
 };
 
 export type EventRowProps = {
-  action: ConversationEventAction;
+  action?: ConversationEventAction;
+  /** Override do ícone (ex.: ligação atendida / não atendida). */
+  icon?: LucideIcon;
   text: string;
   actor: string;
   /** User.id do agente — usado quando `actor` veio genérico ("Agente"). */
@@ -48,15 +50,18 @@ export type EventRowProps = {
 
 export function EventRow({
   action,
+  icon,
   text,
   actor,
   actorId,
   time,
   className,
 }: EventRowProps) {
-  const needsLookup = isGenericHumanEventActor(actor) && Boolean(actorId);
+  const hasActor = Boolean(actor.trim()) || Boolean(actorId);
+  const needsLookup = hasActor && isGenericHumanEventActor(actor) && Boolean(actorId);
   const { data: teamUsers } = useTeamUsersQuery(needsLookup);
   const displayActor = useMemo(() => {
+    if (!hasActor) return "";
     const fromUser = actorId
       ? teamUsers?.find((u) => u.id === actorId)
       : undefined;
@@ -64,8 +69,8 @@ export function EventRow({
       name: fromUser?.name,
       email: fromUser?.email,
     });
-  }, [actor, actorId, teamUsers]);
-  const Icon = ACTION_ICON[action] ?? Sparkles;
+  }, [actor, actorId, hasActor, teamUsers]);
+  const Icon = icon ?? (action ? ACTION_ICON[action] : undefined) ?? Sparkles;
   const displayText = normalizeConversationEventText(text, displayActor);
 
   return (

@@ -69,6 +69,16 @@ const INTERNAL_ROUTE_BY_SLUG: Record<string, string> = {
   calls_history: "/widgets/calls",
 };
 
+const CALLS_CARD_COPY = {
+  description: "Softphone SIP, histórico de chamadas e discagem nos cards do pipeline.",
+  features: [
+    "Softphone integrado (Api4Com / SIP)",
+    "Histórico de chamadas",
+    "Discagem nos cards do pipeline",
+    "Gravações automáticas via webhook",
+  ],
+};
+
 interface WidgetCardProps {
   widget: WidgetDto;
   canManage: boolean;
@@ -111,10 +121,9 @@ export function WidgetCard({
       ? `/widgets/${widget.slug}`
       : INTERNAL_ROUTE_BY_SLUG[widget.slug] ?? `/widgets/${widget.slug}`;
 
-  // Bloco "STATUS DO SERVIÇO" (mockup) — só no widget de Ligações, que tem
-  // serviço externo (Api4Com/SIP). Mapeado do marketplaceStatus real.
-  const showServiceStatus = widget.slug === "calls_history" && installed;
-  const serviceOnline = widget.marketplaceStatus === "ONLINE" && !disabled;
+  const description =
+    widget.slug === "calls_history" ? CALLS_CARD_COPY.description : widget.description;
+  const features = widget.slug === "calls_history" ? CALLS_CARD_COPY.features : widget.features;
 
   const solidBtn =
     "inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-[#2563eb] px-4 py-2.5 font-display text-[13px] font-bold text-white transition-colors hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50";
@@ -156,13 +165,13 @@ export function WidgetCard({
       </div>
 
       <p className="min-w-0 break-words text-pretty px-5 pt-2 font-body text-[12.5px] leading-[1.6] text-slate-500">
-        {widget.description}
+        {description}
       </p>
 
       {/* Recursos — check circular verde */}
-      {widget.features.length > 0 && (
+      {features.length > 0 && (
         <ul className="flex flex-col gap-2 px-5 pt-4">
-          {widget.features.map((feature) => (
+          {features.map((feature) => (
             <li
               key={feature}
               className="flex items-center gap-2 font-body text-[12px] text-slate-700"
@@ -172,33 +181,6 @@ export function WidgetCard({
             </li>
           ))}
         </ul>
-      )}
-
-      {/* Bloco "STATUS DO SERVIÇO" (ref. mockup — card Ligações) */}
-      {showServiceStatus && (
-        <div className="mx-5 mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-display text-[9px] font-bold uppercase tracking-[0.8px] text-slate-500">
-              Status do serviço
-            </span>
-            <span
-              className={cn(
-                "font-display text-[10px] font-bold uppercase tracking-[0.6px]",
-                serviceOnline ? "text-emerald-600" : "text-slate-400",
-              )}
-            >
-              {serviceOnline ? "Online" : "Offline"}
-            </span>
-          </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-            <div
-              className={cn(
-                "h-full rounded-full",
-                serviceOnline ? "w-full bg-emerald-500" : "w-[8%] bg-slate-300",
-              )}
-            />
-          </div>
-        </div>
       )}
 
       {/* Rodapé: ação primária + excluir */}

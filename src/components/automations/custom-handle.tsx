@@ -1,6 +1,6 @@
 "use client";
 
-import { Handle, type HandleProps } from "@xyflow/react";
+import { Handle, Position, type HandleProps } from "@xyflow/react";
 
 /**
  * Handle com limite de conexões (padrão React Flow connection-limit).
@@ -22,9 +22,12 @@ export function CustomHandle({
   const connectable: boolean | number =
     typeof isConnectable === "boolean" ? isConnectable : connectionLimit;
 
+  const isErrorPort = Boolean(className?.includes("fx-port--error"));
+
   return (
     <Handle
       {...props}
+      position={isErrorPort ? Position.Bottom : props.position}
       isConnectable={connectable as HandleProps["isConnectable"]}
       className={
         className

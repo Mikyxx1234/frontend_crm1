@@ -262,7 +262,7 @@ export function FlowNodeStats({
         <b>{warning}</b>
         <span>Alertas</span>
       </div>
-      <div className="fx-stat fx-stat--err">
+      <div className="fx-stat fx-stat--err" data-has-error={error > 0 ? "" : undefined}>
         <b>{error}</b>
         <span>Erros</span>
       </div>

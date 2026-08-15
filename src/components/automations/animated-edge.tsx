@@ -28,6 +28,8 @@ export type AnimatedEdgeData = {
   energized?: boolean;
   /** Preferir kind semântico (flow|error|cond). */
   kind?: OutputKind;
+  /** Hover: esmaece arestas que não tocam o nó. */
+  dimmed?: boolean;
 };
 
 function variantToKind(variant: AnimatedEdgeVariant): OutputKind {
@@ -84,7 +86,7 @@ function AnimatedEdgeImpl(props: EdgeProps) {
         id={id}
         path={path}
         markerEnd={markerEnd}
-        className={`fx-edge fx-edge--${kind}${selected ? " is-selected" : ""}`}
+        className={`fx-edge fx-edge--${kind}${selected ? " is-selected" : ""}${edgeData?.dimmed ? " is-dimmed" : ""}`}
         style={{
           fill: "none",
           cursor: "pointer",

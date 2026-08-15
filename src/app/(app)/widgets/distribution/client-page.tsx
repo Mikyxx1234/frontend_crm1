@@ -311,7 +311,7 @@ export default function DistributionClientPage({
 
       <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden pb-3 sm:gap-4 sm:pb-4">
         <PageHeader
-          icon={<DistributionIcon size={22} />}
+          icon={<IconArrowsShuffle size={22} />}
           title="Distribuição"
           center={
             smartInstalled && view === "team" ? (

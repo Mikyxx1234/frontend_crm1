@@ -2379,6 +2379,8 @@ export function ChatWindow({
             const isPinned = pinnedNoteId === String(m.id);
             const isAudioOnly =
               !isNote && detectMediaKind(m) === "audio" && !msgText(m);
+            const isTemplate =
+              String(m.messageType ?? "").toLowerCase() === "template";
 
             return (
               <React.Fragment key={m.id}>
@@ -2742,14 +2744,22 @@ export function ChatWindow({
                                 ) : null}
                               </div>
                             ) : (
-                              <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 ring-1 ring-black/10">
-                                <Bot
-                                  className="size-3 text-[var(--color-ink-soft)]"
-                                  strokeWidth={2.4}
-                                />
-                                <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground">
-                                  {m.senderName ?? "Automação"}
-                                </span>
+                              <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                                <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 ring-1 ring-black/10">
+                                  <Bot
+                                    className="size-3 text-[var(--color-ink-soft)]"
+                                    strokeWidth={2.4}
+                                  />
+                                  <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground">
+                                    {m.senderName ?? "Automação"}
+                                  </span>
+                                </div>
+                                {isTemplate ? (
+                                  <TemplateBadge
+                                    content={m.content ?? ""}
+                                    className="mb-0"
+                                  />
+                                ) : null}
                               </div>
                             )
                           ) : null
@@ -2784,8 +2794,8 @@ export function ChatWindow({
                       operador de que a assinatura faça parte da mensagem.
                     */}
 
-                        {String(m.messageType ?? "").toLowerCase() ===
-                          "template" && (
+                        {isTemplate &&
+                          !(out && isBot && !isAudioOnly && !isCampaign) && (
                           <TemplateBadge content={m.content ?? ""} />
                         )}
 
@@ -4332,7 +4342,13 @@ export function ChatWindow({
   );
 }
 
-function TemplateBadge({ content }: { content: string }) {
+function TemplateBadge({
+  content,
+  className,
+}: {
+  content: string;
+  className?: string;
+}) {
   const meta = parseTemplateMeta(content);
   const cat = meta?.category?.toLowerCase() ?? null;
   const isMkt = cat === "marketing";
@@ -4358,7 +4374,7 @@ function TemplateBadge({ content }: { content: string }) {
       : "border-primary/40/60 bg-primary-soft text-primary-dark dark:border-primary/40/50 dark:bg-[var(--brand-secondary)]/25 dark:text-[var(--brand-secondary)]";
 
   return (
-    <div className="group/tpl relative mb-1.5">
+    <div className={cn("group/tpl relative mb-1.5", className)}>
       <span
         className={cn(
           "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide shadow-[var(--glass-shadow-sm)] backdrop-blur",

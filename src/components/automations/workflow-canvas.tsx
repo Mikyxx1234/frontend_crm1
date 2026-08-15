@@ -106,6 +106,7 @@ function readRfPos(config: unknown): RfPos | null {
   if (typeof c.__rfPos !== "object" || c.__rfPos === null) return null;
   const p = c.__rfPos as Record<string, unknown>;
   if (typeof p.x !== "number" || typeof p.y !== "number") return null;
+  if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) return null;
   return { x: p.x, y: p.y };
 }
 
@@ -1266,6 +1267,8 @@ function WorkflowCanvasInner({
 
   onAddStepRef.current = addStepAfter;
 
+  const lastAlignFitRef = useRef(0);
+
   useEffect(() => {
     // Edição inline já patchou o node — não rebuildar (preserva foco).
     if (skipStepsSyncRef.current) {
@@ -1286,24 +1289,35 @@ function WorkflowCanvasInner({
         selectedIds.has(n.id) ? { ...n, selected: true } : n
       );
     });
-  }, [steps, buildNodes, removeStep, addStepAfter, setNodes]);
 
-  // Recentraliza o viewport após "Auto alinhar". Espera o React Flow
-  // aplicar as novas posições (setNodes é assíncrono). `maxZoom: 1`
-  // evita zoom-in excessivo em fluxos curtos (empurrava o fluxo pra
-  // baixo da tela no shell v2 com CSS zoom).
-  useEffect(() => {
-    if (!autoAlignVersion) return;
+    // fitView DEPOIS do setNodes + paint. O effect paralelo em
+    // `autoAlignVersion` rodava no mesmo commit — antes do RF aplicar
+    // `__rfPos` — e com minZoom 0.35 num grafo esticado o viewport
+    // centrava no vazio (só 2–3 edges longas).
+    if (!autoAlignVersion || lastAlignFitRef.current === autoAlignVersion) return;
+    lastAlignFitRef.current = autoAlignVersion;
     let cancelled = false;
-    const timer = window.setTimeout(() => {
-      if (cancelled) return;
-      void fitView({ duration: 380, padding: 0.22, maxZoom: 1, minZoom: 0.35 });
-    }, 200);
+    let didFit = false;
+    const runFit = () => {
+      if (cancelled || didFit) return;
+      didFit = true;
+      void fitView({ duration: 380, padding: 0.18, maxZoom: 1, minZoom: 0.2 });
+    };
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(runFit);
+    });
+    const timer = window.setTimeout(runFit, 80);
     return () => {
       cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
       clearTimeout(timer);
+      if (!didFit && lastAlignFitRef.current === autoAlignVersion) {
+        lastAlignFitRef.current = 0;
+      }
     };
-  }, [autoAlignVersion, fitView]);
+  }, [steps, buildNodes, removeStep, addStepAfter, setNodes, autoAlignVersion, fitView]);
 
   const edges = useMemo(
     () => buildEdges(steps, triggerDisconnected),

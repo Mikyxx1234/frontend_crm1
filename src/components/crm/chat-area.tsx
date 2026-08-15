@@ -560,6 +560,9 @@ export function ChatArea({
                     number={message.ticketInfo.number}
                     closedAt={message.ticketInfo.closedAt}
                     isCurrent={message.ticketInfo.isCurrent}
+                    openedAt={message.ticketInfo.openedAt}
+                    openedByName={message.ticketInfo.openedByName}
+                    openedByUserId={message.ticketInfo.openedByUserId}
                   />
                 </li>
               )

@@ -7,8 +7,7 @@ import {
   IconArrowsShuffle,
   IconBolt,
   IconMail,
-  IconMessageCircle,
-  IconUsers,
+  IconMessage,  IconUsers,
   type Icon,
 } from "@tabler/icons-react";
 
@@ -104,7 +103,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "inbox",
     title: "Inbox",
     href: "/inbox",
-    icon: IconMessageCircle,
+    icon: IconMessage,
     description: "Central de conversas e atendimento.",
     locked: false,
     requiredPermission: "nav:inbox",

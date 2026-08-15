@@ -4,15 +4,15 @@ import {
   IconClipboardList,
   IconLayoutKanban,
   IconLayoutDashboard,
+  IconArrowsShuffle,
+  IconBolt,
   IconMail,
   IconRocket,
   IconMessageCircle,
-  IconRobot,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
 
-import { DistributionIcon } from "@/components/icons/distribution-icon";
 import { WidgetsIcon } from "@/components/icons/widgets-icon";
 import type { AppUserRole } from "@/lib/auth-types";
 
@@ -132,7 +132,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "automations",
     title: "Automações",
     href: "/automations",
-    icon: IconRobot,
+    icon: IconBolt,
     description: "Fluxos automáticos e gatilhos (inclui campanhas).",
     locked: false,
     allowedRoles: ["ADMIN", "MANAGER"],
@@ -142,7 +142,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "distribution",
     title: "Distribuição",
     href: "/widgets/distribution",
-    icon: DistributionIcon,
+    icon: IconArrowsShuffle,
     description: "Distribuição inteligente de leads entre consultores.",
     locked: false,
     allowedRoles: ["ADMIN", "MANAGER"],

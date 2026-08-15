@@ -228,14 +228,6 @@ export default function CampaignsClientPage() {
         <CampaignsMiniDash items={dashSource} />
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-          <div className="min-w-0 shrink-0">
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">
-              Conversão das campanhas
-            </h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Leitura, resposta e falha de cada campanha em um relance. Clique em um card para ver os detalhes.
-            </p>
-          </div>
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
             {isLoading && allItems.length === 0 ? (
               <AppLoading variant="inline" className="min-h-[320px]" />

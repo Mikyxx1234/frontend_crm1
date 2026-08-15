@@ -47,7 +47,6 @@ import { cn } from "@/lib/utils";
 import { useSoftphone } from "../hooks/use-softphone";
 import { useCallsWidget } from "../hooks/use-calls-widget";
 import { getMyCredentialsOrNull } from "../api/extensions";
-import { SOFTPHONE_EXPAND_EVENT } from "./softphone-nav-icon";
 
 function formatDuration(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -81,8 +80,6 @@ export function SoftphoneWidget() {
 
   const softphone = useSoftphone();
   const [hidden, setHidden] = React.useState(false);
-  /** Detalhe do softphone (ramal/erro) só sob demanda — ícone idle vive na NavRail. */
-  const [detailOpen, setDetailOpen] = React.useState(false);
 
   // Auto-connect quando temos credenciais E ainda não estamos conectados.
   // `useSoftphone` é idempotente: chamar `connect()` com `moduleUA` já
@@ -96,20 +93,6 @@ export function SoftphoneWidget() {
     // status volta a `disconnected` (ex.: erro de rede que matou o UA).
   }, [credentialsQuery.data, softphone.status, softphone]);
 
-  // NavRail dispara expand do detalhe (ícone de telefonia ao lado do wifi).
-  React.useEffect(() => {
-    const onExpand = () => {
-      setHidden(false);
-      setDetailOpen(true);
-    };
-    window.addEventListener(SOFTPHONE_EXPAND_EVENT, onExpand);
-    return () => window.removeEventListener(SOFTPHONE_EXPAND_EVENT, onExpand);
-  }, []);
-
-  // Erro: mostra o detalhe automaticamente pra o operador ver a falha.
-  React.useEffect(() => {
-    if (softphone.status === "error") setDetailOpen(true);
-  }, [softphone.status]);
 
   if (sessionStatus !== "authenticated") return null;
   if (callsWidget.enabled !== true) return null;
@@ -125,11 +108,8 @@ export function SoftphoneWidget() {
     softphone.status === "call_active" ||
     softphone.status === "call_held";
 
-  // Idle registrado: sem FAB no canto — status fica na NavRail (wifi | phone).
-  // Detalhe (ramal) só quando o ícone da rail pede expand ou há erro/chamada.
   const showIdleDetail =
-    !hasActiveCall &&
-    (detailOpen || softphone.status === "error" || softphone.status === "connecting");
+    !hasActiveCall && (softphone.status === "error" || softphone.status === "connecting");
 
   return (
     <div
@@ -158,10 +138,7 @@ export function SoftphoneWidget() {
           ramal={ramal}
           error={softphone.error}
           onReconnect={() => void softphone.connect()}
-          onHide={() => {
-            setHidden(false);
-            setDetailOpen(false);
-          }}
+          onHide={() => setHidden(true)}
         />
       )}
     </div>

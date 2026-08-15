@@ -4,6 +4,8 @@
 @source "../lib/design-tokens.ts";
 /* Cópias de backup no root: não participam do scan (evita utilitários "fantasma" / cache inválido). */
 @source not "../../arquivos_modificados";
+@source not "../../.next-verify";
+@source not "../../.next-verify2";
 
 /* ──────────────────────────────────────────────────────────────────
    DARK MODE — variant baseado em classe (não em media query)
@@ -1128,4 +1130,30 @@
   .app-loading-halo { opacity: 0.5; }
   /* Sem movimento a faixa vira uma barra estática de progresso. */
   .app-loading-track { width: 100%; }
+}
+
+/* Modal Telefonia IP — paleta sólida (light/dark) alinhada ao mockup */
+.telefonia-ip-theme {
+  --color-card: #ffffff;
+  --color-card-foreground: #1e2a3b;
+  --color-secondary: oklch(0.955 0.012 255);
+  --color-secondary-foreground: #1e2a3b;
+  --color-muted: oklch(0.955 0.012 255);
+  --color-muted-foreground: oklch(0.45 0.025 260);
+  --color-border: oklch(0.91 0.012 255);
+  --color-background: #ffffff;
+  --color-foreground: #1e2a3b;
+}
+
+.dark .telefonia-ip-theme,
+.v2-dark .telefonia-ip-theme {
+  --color-card: oklch(0.24 0.03 264);
+  --color-card-foreground: oklch(0.95 0.01 255);
+  --color-secondary: oklch(0.3 0.03 264);
+  --color-secondary-foreground: oklch(0.95 0.01 255);
+  --color-muted: oklch(0.28 0.025 264);
+  --color-muted-foreground: oklch(0.72 0.02 258);
+  --color-border: oklch(1 0 0 / 12%);
+  --color-background: oklch(0.24 0.03 264);
+  --color-foreground: oklch(0.95 0.01 255);
 }

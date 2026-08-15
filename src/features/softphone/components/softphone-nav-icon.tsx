@@ -11,19 +11,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { IconPhone } from "@tabler/icons-react";
 
+import { toast } from "sonner";
+
 import { DockButton } from "@/components/crm/floating-dock";
 import { cn } from "@/lib/utils";
 import { useSoftphone } from "../hooks/use-softphone";
 import { useCallsWidget } from "../hooks/use-calls-widget";
 import { getMyCredentialsOrNull } from "../api/extensions";
-
-/** Evento pra o SoftphoneWidget expandir o chip de detalhes (ramal / erro). */
-export const SOFTPHONE_EXPAND_EVENT = "crm:softphone-expand";
-
-export function requestSoftphoneExpand() {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent(SOFTPHONE_EXPAND_EVENT));
-}
 
 export function SoftphoneNavIcon({
   expanded = false,
@@ -73,13 +67,19 @@ export function SoftphoneNavIcon({
     softphone.status === "call_held";
   const isConnected = softphone.status === "registered" || isOnCall;
 
-  const title = isError
-    ? `Softphone: erro — ${softphone.error ?? "falha"}`
-    : isConnecting
-      ? "Softphone: conectando…"
-      : isOnCall
-        ? `Softphone • Em chamada (Ramal ${ramal})`
-        : `Softphone • Ramal ${ramal}`;
+  const title = isConnected ? "Telefonia online" : "Telefonia offline";
+
+  function onIconClick() {
+    if (isError) {
+      toast.error(softphone.error ?? "Telefonia offline");
+      return;
+    }
+    if (isConnecting) {
+      toast.message("Telefonia offline — conectando…");
+      return;
+    }
+    toast.success(ramal ? `Ramal ${ramal}` : "Telefonia online");
+  }
 
   // Telefone simples em verde. O estado vive no dot: verde esmaecendo (pulse
   // suave de opacidade) quando online, vermelho estático quando offline/erro.
@@ -111,7 +111,7 @@ export function SoftphoneNavIcon({
     return (
       <DockButton
         title={title}
-        onClick={requestSoftphoneExpand}
+        onClick={onIconClick}
         disablePop
         className={cn("group", className)}
       >
@@ -123,7 +123,7 @@ export function SoftphoneNavIcon({
   const phoneBtn = (
     <button
       type="button"
-      onClick={requestSoftphoneExpand}
+      onClick={onIconClick}
       aria-label={title}
       title={title}
       className={cn(

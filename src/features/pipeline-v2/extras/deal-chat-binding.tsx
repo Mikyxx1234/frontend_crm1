@@ -21,7 +21,12 @@ import { avatarInitials } from "@/lib/avatar";
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
 import { ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, StickyDayPill, useStickyDayLabel, type Message as BubbleMessage } from "@/components/crm/message-bubble";
-import { EventRow } from "@/components/crm/chat-timeline";
+import {
+  EventRow,
+  isConversationCloseEventText,
+  isConversationOpenEventText,
+  isRedundantOpenStatusEvent,
+} from "@/components/crm/chat-timeline";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
 import { formatConnectionLabel, type ConnectionRef } from "@/lib/connection-label";
@@ -568,7 +573,12 @@ export function useDealChatBinding(params: {
         <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-muted,#718096)]">
           Nenhuma mensagem ainda.
         </div>
-        {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
+        {isResolved && (
+          <ConversationClosedMarker
+            closedAt={closedAt ?? null}
+            conversationNumber={conversationNumber}
+          />
+        )}
         <div ref={bottomRef} />
       </>
     );
@@ -580,19 +590,42 @@ export function useDealChatBinding(params: {
     );
     const showConnSwitches = distinctChannels.size >= 2;
     let lastChannelId: string | null = null;
+    const hasPersistedClose = bubbles.some(
+      (m) => m.kind === "event" && isConversationCloseEventText(m.content),
+    );
+    const sectionHasEvent = (
+      from: number,
+      pred: (content: string) => boolean,
+    ) => {
+      for (let i = from + 1; i < bubbles.length; i++) {
+        const m = bubbles[i];
+        if (m.messageType === "ticket-separator") break;
+        if (m.kind === "event" && pred(m.content ?? "")) return true;
+      }
+      return false;
+    };
     const bubbleNodes = bubbles.map((b, index) => {
       // Separador de ticket sintético (?history=1) — mesma lógica do ChatArea
       // do inbox. Sem isto o item vira uma BOLHA VAZIA no chat do deal.
       if (b.messageType === "ticket-separator" && b.ticketInfo) {
+        const info = b.ticketInfo;
+        const hideDivider = info.isCurrent
+          ? sectionHasEvent(index, (c) =>
+              isConversationOpenEventText(c, info.number),
+            )
+          : sectionHasEvent(index, isConversationCloseEventText);
+        if (hideDivider) return null;
         return (
           <li key={b.id || `sep-${index}`} className="list-none">
             <TicketDivider
-              number={b.ticketInfo.number}
-              closedAt={b.ticketInfo.closedAt}
-              isCurrent={b.ticketInfo.isCurrent}
-              openedAt={b.ticketInfo.openedAt}
-              openedByName={b.ticketInfo.openedByName}
-              openedByUserId={b.ticketInfo.openedByUserId}
+              number={info.number}
+              closedAt={info.closedAt}
+              isCurrent={info.isCurrent}
+              openedAt={info.openedAt}
+              openedByName={info.openedByName}
+              openedByUserId={info.openedByUserId}
+              closedByName={info.closedByName}
+              closedByUserId={info.closedByUserId}
             />
           </li>
         );
@@ -600,6 +633,9 @@ export function useDealChatBinding(params: {
       // Só renderiza bolhas reais (incoming/outgoing). Descarta itens
       // sintéticos/desconhecidos que, sem conteúdo, apareciam em branco.
       if (b.type !== "incoming" && b.type !== "outgoing") {
+        return null;
+      }
+      if (b.kind === "event" && isRedundantOpenStatusEvent(b.content)) {
         return null;
       }
       const dayLabel = formatDayLabel(b.createdAt);
@@ -668,7 +704,12 @@ export function useDealChatBinding(params: {
         <ul className="flex list-none flex-col gap-1.5">
           {bubbleNodes}
         </ul>
-        {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
+        {isResolved && !hasPersistedClose && (
+          <ConversationClosedMarker
+            closedAt={closedAt ?? null}
+            conversationNumber={conversationNumber}
+          />
+        )}
         <div ref={bottomRef} />
         {showScrollDown && (
           <div className="pointer-events-none sticky bottom-2 z-20 -mb-2 flex justify-end">

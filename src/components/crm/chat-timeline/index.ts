@@ -7,7 +7,11 @@ export type {
 export {
   classifyTimelineItem,
   inferEventActionFromText,
+  isConversationCloseEventText,
+  isConversationLifecycleText,
+  isConversationOpenEventText,
   isEventMessageType,
+  isRedundantOpenStatusEvent,
   normalizeConversationEventText,
   normalizeQueueEventText,
   parseEventActionFromMessageType,

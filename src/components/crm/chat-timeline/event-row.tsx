@@ -17,7 +17,10 @@ import {
 import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import { cn } from "@/lib/utils";
 
-import { normalizeConversationEventText } from "./classify";
+import {
+  isConversationLifecycleText,
+  normalizeConversationEventText,
+} from "./classify";
 import {
   isGenericHumanEventActor,
   resolveEventActorLabel,
@@ -72,6 +75,7 @@ export function EventRow({
   }, [actor, actorId, hasActor, teamUsers]);
   const Icon = icon ?? (action ? ACTION_ICON[action] : undefined) ?? Sparkles;
   const displayText = normalizeConversationEventText(text, displayActor);
+  const actorSep = isConversationLifecycleText(displayText) ? "por" : "·";
 
   return (
     <div
@@ -83,7 +87,9 @@ export function EventRow({
       <span className="h-px min-w-4 flex-1 bg-border" aria-hidden />
       <p
         className="flex min-w-0 max-w-[min(100%,36rem)] flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-center text-xs text-muted-foreground"
-        aria-label={displayText}
+        aria-label={
+          displayActor ? `${displayText} ${actorSep} ${displayActor}` : displayText
+        }
       >
         <Icon
           className="size-3.5 shrink-0 text-primary"
@@ -92,7 +98,9 @@ export function EventRow({
         />
         <span className="text-foreground/80">{displayText}</span>
         {displayActor ? (
-          <span className="text-muted-foreground">· {displayActor}</span>
+          <span className="text-muted-foreground">
+            {actorSep} {displayActor}
+          </span>
         ) : null}
         {time ? (
           <time className="text-[10px] tabular-nums text-muted-foreground">

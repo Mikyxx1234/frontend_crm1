@@ -413,6 +413,8 @@ export function toMessageBubble(
       openedAt?: string | null
       openedByName?: string | null
       openedByUserId?: string | null
+      closedByName?: string | null
+      closedByUserId?: string | null
     } = {
       number: 0,
       closedAt: null,
@@ -433,6 +435,8 @@ export function toMessageBubble(
         openedAt: info.openedAt ?? null,
         openedByName: info.openedByName ?? null,
         openedByUserId: info.openedByUserId ?? null,
+        closedByName: info.closedByName ?? null,
+        closedByUserId: info.closedByUserId ?? null,
       },
     };
   }

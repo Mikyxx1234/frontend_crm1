@@ -61,7 +61,7 @@ import {
 import { dt } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { MetaSendErrorBalloon } from "@/components/crm/meta-send-error-balloon";
-import { EventRow, classifyTimelineItem } from "@/components/crm/chat-timeline";
+import { EventRow, classifyTimelineItem, isRedundantOpenStatusEvent } from "@/components/crm/chat-timeline";
 
 /** Texto da nota em uma linha (banner fixado estilo WhatsApp). */
 function notePreviewOneLine(content: string, maxChars = 140): string {
@@ -2338,6 +2338,7 @@ export function ChatWindow({
                 direction: m.direction,
               });
               if (classified.kind === "event") {
+                if (isRedundantOpenStatusEvent(m.content)) return null;
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}

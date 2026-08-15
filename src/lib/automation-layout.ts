@@ -7,18 +7,21 @@ const NONE = "__none__";
 const TRIGGER_X = 32;
 const TRIGGER_W = 280;
 // Folga horizontal fixa ENTRE colunas (somada à largura real do nó mais
-// largo de cada coluna). Mantém respiro pra edge/handles sem depender de
-// um GAP_X único que ora sobra (nós recolhidos), ora falta (expandidos).
-const COL_GAP = 140;
-const START_X = TRIGGER_X + TRIGGER_W + COL_GAP; // = 452
+// largo de cada coluna). Compacta o bastante pra um fluxo ~15 nós
+// caber numa tela com fitView, sem colar handles.
+const COL_GAP = 100;
+const START_X = TRIGGER_X + TRIGGER_W + COL_GAP; // = 412
 // 27/mai/26 — START_Y agora bate com `NODE_Y` em `workflow-canvas.tsx`
 // (=300). Antes era 140, o que jogava todo o fluxo 160px acima do nó
 // do gatilho (que fica fixo em y=300). Visualmente parecia que o
 // auto-align "subia" o canvas todo.
 const START_Y = 300;
-// Espaçamento entre lanes — acomoda nodes altos (condition multi-branch,
-// wait_for_reply + painel inline, interactive com muitos botões).
-const GAP_Y = 280;
+// Espaçamento entre lanes do happy-path. 200px acomoda o card recolhido
+// (~140–180) sem esticar o grafo pra fora da tela.
+const GAP_Y = 200;
+// Error/timeout/else compartilham uma faixa embaixo; empilhados na
+// mesma coluna usam este gap menor.
+const ERROR_STACK_Y = 120;
 
 // Largura estimada (recolhida) por tipo de step — usada pra espaçar as
 // colunas de forma responsiva. Bate com os `max-w`/`w` de cada *-node.tsx.
@@ -56,53 +59,86 @@ function isRealTarget(target: unknown, stepIds: Set<string>): target is string {
   return typeof target === "string" && target !== "" && target !== NONE && stepIds.has(target);
 }
 
-function outgoingTargets(step: AutomationStep, stepIds: Set<string>): string[] {
-  const cfg = (step.config ?? {}) as Record<string, unknown>;
-  const out: string[] = [];
+type Outgoing = { primary: string[]; error: string[] };
 
-  const push = (v: unknown) => {
-    if (isRealTarget(v, stepIds) && !out.includes(v)) out.push(v);
+/**
+ * Separa saídas do happy-path (definem colunas/lanes) das saídas de
+ * erro. Timeout/failure/else NÃO podem cada um alocar uma lane nova —
+ * num fluxo com wait/interactive/Meta send isso explodia o Y pra
+ * milhares de px e o fitView (minZoom 0.35) mostrava um canvas vazio
+ * com 2–3 edges diagonais longas.
+ *
+ * `nextStepId` vai primeiro no primary (antes era o último push, então
+ * o timeout "roubava" a lane 0 e o fluxo principal ia pra baixo).
+ */
+function outgoingByKind(step: AutomationStep, stepIds: Set<string>): Outgoing {
+  const cfg = (step.config ?? {}) as Record<string, unknown>;
+  const primary: string[] = [];
+  const error: string[] = [];
+
+  const seen = new Set<string>();
+  const push = (list: string[], v: unknown) => {
+    if (!isRealTarget(v, stepIds) || seen.has(v)) return;
+    seen.add(v);
+    list.push(v);
   };
 
   if (step.type === "condition") {
     const branches = Array.isArray(cfg.branches) ? (cfg.branches as Record<string, unknown>[]) : [];
-    for (const b of branches) push(b.nextStepId);
-    push(cfg.elseStepId);
-    return out;
+    for (const b of branches) push(primary, b.nextStepId);
+    push(error, cfg.elseStepId);
+    return { primary, error };
   }
 
   if (step.type === "wait_for_reply") {
-    push(cfg.receivedGotoStepId);
-    push(cfg.timeoutGotoStepId);
-    return out;
+    push(primary, cfg.receivedGotoStepId);
+    push(error, cfg.timeoutGotoStepId);
+    return { primary, error };
+  }
+
+  if (step.type === "round_robin") {
+    const options = Array.isArray(cfg.options) ? (cfg.options as Record<string, unknown>[]) : [];
+    for (const o of options) push(primary, o.nextStepId);
+    return { primary, error };
   }
 
   if (step.type === "business_hours" || step.type === "check_agent_status") {
-    push(cfg.elseStepId);
+    push(primary, cfg.nextStepId);
+    push(error, cfg.elseStepId);
+    return { primary, error };
   }
 
-  const buttons = Array.isArray(cfg.buttons) ? (cfg.buttons as Record<string, unknown>[]) : [];
-  for (const b of buttons) push(b.gotoStepId);
-  push(cfg.elseGotoStepId);
-  push(cfg.timeoutGotoStepId);
-  push(cfg.nextStepId);
-  if (cfg.failureAction === "goto") push(cfg.failureGotoStepId);
+  const choices = step.type === "send_whatsapp_list"
+    ? (Array.isArray(cfg.rows) ? (cfg.rows as Record<string, unknown>[]) : [])
+    : (Array.isArray(cfg.buttons) ? (cfg.buttons as Record<string, unknown>[]) : []);
+  for (const b of choices) push(primary, b.gotoStepId);
 
-  return out;
+  push(primary, cfg.nextStepId);
+  push(error, cfg.elseGotoStepId);
+  push(error, cfg.timeoutGotoStepId);
+  if (cfg.failureAction === "goto") push(error, cfg.failureGotoStepId);
+
+  return { primary, error };
+}
+
+function finitePos(x: number, y: number): { x: number; y: number } {
+  return {
+    x: Number.isFinite(x) ? x : START_X,
+    y: Number.isFinite(y) ? y : START_Y,
+  };
 }
 
 /**
  * Auto-organiza o fluxo preservando a lógica das conexões.
  *
  * Coordenadas:
- * - `X` por profundidade (distância máxima do nó raiz). Usar o
- *   caminho mais longo é importante em fluxos convergentes (diamond
- *   pattern A→B→D, A→C→D): o `D` precisa estar na coluna após o
- *   ramo mais longo, senão a edge volta pra trás.
- * - `Y` por lane: filhos herdam a lane do pai (linear vira linha
- *   horizontal), mas ramificações alocam lanes novas pras saídas
- *   adicionais. Orphans (steps desconectados) vão pra lanes próprias
- *   abaixo, na coluna após o `maxDepth`.
+ * - `X` por profundidade (distância máxima do nó raiz) via happy-path.
+ *   Caminho mais longo evita edge pra trás em diamonds (A→B→D, A→C→D).
+ * - `Y` por lane só no primary: filho[0] herda a lane; ramos extras
+ *   (branches/botões) ganham lane nova. Timeout/failure/else NÃO
+ *   incrementam lane — nós só-erro compartilham uma faixa inferior.
+ * - Orphans (steps desconectados) vão pra lanes próprias abaixo, na
+ *   coluna após o `maxDepth`.
  */
 export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[] {
   if (steps.length <= 1) return steps;
@@ -110,14 +146,17 @@ export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[
   const idsInOrder = steps.map((s) => s.id);
   const stepIds = new Set(idsInOrder);
 
-  const outgoing = new Map<string, string[]>();
+  const primaryOf = new Map<string, string[]>();
+  const errorOf = new Map<string, string[]>();
   const indegree = new Map<string, number>();
   for (const id of idsInOrder) indegree.set(id, 0);
 
   for (const step of steps) {
-    const out = outgoingTargets(step, stepIds);
-    outgoing.set(step.id, out);
-    for (const tgt of out) indegree.set(tgt, (indegree.get(tgt) ?? 0) + 1);
+    const { primary, error } = outgoingByKind(step, stepIds);
+    primaryOf.set(step.id, primary);
+    errorOf.set(step.id, error);
+    for (const tgt of primary) indegree.set(tgt, (indegree.get(tgt) ?? 0) + 1);
+    for (const tgt of error) indegree.set(tgt, (indegree.get(tgt) ?? 0) + 1);
   }
 
   // Roots: primeiro step (entrada vinda do gatilho) + qualquer step
@@ -125,9 +164,9 @@ export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[
   // criados via drop que nunca foram conectados) entram aqui também.
   const roots = idsInOrder.filter((id, i) => i === 0 || (indegree.get(id) ?? 0) === 0);
 
-  // Depth via LONGEST path. Iteramos até estabilizar. Limite =
-  // steps.length+1 pra evitar loop infinito em ciclos (raros, mas
-  // possíveis via `goto`).
+  // Depth via LONGEST path no happy-path. Error edges só posicionam
+  // nós que o primary não alcançou (coluna = source+1, sem puxar o
+  // grafo inteiro pra direita).
   const depth = new Map<string, number>();
   for (const r of roots) depth.set(r, 0);
   for (let iter = 0; iter < steps.length + 1; iter++) {
@@ -135,8 +174,7 @@ export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[
     for (const step of steps) {
       const d = depth.get(step.id);
       if (d == null) continue;
-      const out = outgoing.get(step.id) ?? [];
-      for (const tgt of out) {
+      for (const tgt of primaryOf.get(step.id) ?? []) {
         const cur = depth.get(tgt);
         if (cur == null || d + 1 > cur) {
           depth.set(tgt, d + 1);
@@ -147,31 +185,39 @@ export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[
     if (!changed) break;
   }
 
-  // Orphans não alcançáveis a partir dos roots — colocamos na coluna
-  // após o `maxDepth` (todos juntos, cada um numa lane diferente).
-  const reachedMax = Math.max(0, ...Array.from(depth.values()));
-  const orphans: string[] = [];
-  for (const id of idsInOrder) {
-    if (!depth.has(id)) {
-      depth.set(id, reachedMax + 1);
-      orphans.push(id);
+  for (let iter = 0; iter < steps.length + 1; iter++) {
+    let changed = false;
+    for (const step of steps) {
+      const d = depth.get(step.id);
+      if (d == null) continue;
+      for (const tgt of errorOf.get(step.id) ?? []) {
+        if (depth.has(tgt)) continue;
+        depth.set(tgt, d + 1);
+        changed = true;
+      }
     }
+    if (!changed) break;
   }
 
-  // Atribuição de lanes: filho herda lane do pai (cadeia linear =
-  // linha horizontal), ramificações alocam lanes novas. Uma branch
-  // que converge num nó já posicionado não realoca — fica com a
-  // lane atribuída no primeiro alcance.
+  // Orphans não alcançáveis — coluna após o maxDepth do que já tem depth.
+  const reachedMax = Math.max(0, ...Array.from(depth.values()));
+  for (const id of idsInOrder) {
+    if (!depth.has(id)) depth.set(id, reachedMax + 1);
+  }
+
+  // Lanes só no primary. Error targets já posicionados no happy-path
+  // ficam onde estão; os demais vão pra faixa inferior compartilhada.
   const laneById = new Map<string, number>();
   let nextLane = 0;
 
   const assignLanes = (id: string, currentLane: number): void => {
     if (laneById.has(id)) return;
     laneById.set(id, currentLane);
-    const out = outgoing.get(id) ?? [];
+    const out = primaryOf.get(id) ?? [];
     if (out.length === 0) return;
     assignLanes(out[0], currentLane);
     for (let i = 1; i < out.length; i++) {
+      if (laneById.has(out[i])) continue;
       nextLane++;
       assignLanes(out[i], nextLane);
     }
@@ -184,15 +230,23 @@ export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[
     }
   }
 
-  // Orphans isolados (sem children) podem ter caído fora do
-  // `assignLanes` acima quando o root deles é eles mesmos — já
-  // tratados. Mas se algum step não tiver lane por bug de grafo,
-  // garante uma.
+  const maxPrimaryLane = Math.max(0, ...Array.from(laneById.values()), nextLane - 1);
+  const errorBaseLane = maxPrimaryLane + 1;
+  const errorStackInCol = new Map<number, number>();
+  const yById = new Map<string, number>();
+
   for (const id of idsInOrder) {
-    if (!laneById.has(id)) {
-      laneById.set(id, nextLane);
-      nextLane++;
+    if (laneById.has(id)) {
+      yById.set(id, START_Y + (laneById.get(id) ?? 0) * GAP_Y);
     }
+  }
+
+  for (const id of idsInOrder) {
+    if (yById.has(id)) continue;
+    const d = depth.get(id) ?? 0;
+    const slot = errorStackInCol.get(d) ?? 0;
+    errorStackInCol.set(d, slot + 1);
+    yById.set(id, START_Y + errorBaseLane * GAP_Y + slot * ERROR_STACK_Y);
   }
 
   // Largura máxima de cada coluna (profundidade) → X responsivo. Colunas
@@ -215,10 +269,10 @@ export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[
     const cfg = (step.config ?? {}) as Record<string, unknown>;
     const nextCfg = { ...cfg };
     const d = depth.get(step.id) ?? 0;
-    nextCfg.__rfPos = {
-      x: colX.get(d) ?? START_X,
-      y: START_Y + (laneById.get(step.id) ?? 0) * GAP_Y,
-    };
+    nextCfg.__rfPos = finitePos(
+      colX.get(d) ?? START_X,
+      yById.get(step.id) ?? START_Y,
+    );
     return { ...step, config: nextCfg };
   });
 }

@@ -20,6 +20,7 @@ import "@xyflow/react/dist/style.css";
 import "./flow-editor.css";
 
 import { AnimatedEdge, AnimatedEdgeDefs, type AnimatedEdgeData } from "./animated-edge";
+import { FlowCanvasToolbar } from "./flow-canvas-toolbar";
 import { useFlowClipboard } from "./use-flow-clipboard";
 
 import {
@@ -236,6 +237,12 @@ const EDGE_DATA_BUTTON: AnimatedEdgeData = { variant: "button", energized: true 
 const EDGE_DATA_ELSE: AnimatedEdgeData = { variant: "else", energized: false };
 const EDGE_DATA_TIMEOUT: AnimatedEdgeData = { variant: "timeout", energized: false };
 const EDGE_DATA_ADD: AnimatedEdgeData = { variant: "add", energized: false };
+
+function isErrorEdge(e: Edge): boolean {
+  const d = e.data as AnimatedEdgeData | undefined;
+  if (d?.kind === "error") return true;
+  return d?.variant === "else" || d?.variant === "timeout";
+}
 
 const NONE = "__none__";
 const INTERACT_W = 20;
@@ -638,6 +645,9 @@ function WorkflowCanvasInner({
     typeof triggerConfig === "object" &&
     triggerConfig !== null &&
     (triggerConfig as Record<string, unknown>).__entryDisconnected === true;
+
+  const [showErrors, setShowErrors] = useState(true);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   const migratedRef = useRef(false);
   useEffect(() => {
@@ -1298,6 +1308,19 @@ function WorkflowCanvasInner({
     () => buildEdges(steps, triggerDisconnected),
     [steps, triggerDisconnected]
   );
+
+  const displayEdges = useMemo(() => {
+    const visible = showErrors ? edges : edges.filter((e) => !isErrorEdge(e));
+    if (!hoveredNodeId) return visible;
+    return visible.map((e) => {
+      const dimmed = e.source !== hoveredNodeId && e.target !== hoveredNodeId;
+      if (!dimmed) return e;
+      return {
+        ...e,
+        data: { ...(e.data as AnimatedEdgeData | undefined), dimmed: true },
+      };
+    });
+  }, [edges, showErrors, hoveredNodeId]);
 
   /** Limite 1 conexão por sourceHandle. Espelha CustomHandle / connection-limit. */
   const isValidConnection = useCallback(
@@ -2039,10 +2062,14 @@ function WorkflowCanvasInner({
         {/* Defs SVG globais (gradientes nomeados das edges) — uma vez
             só por canvas, não por edge, pra performance. */}
         <AnimatedEdgeDefs />
+        <FlowCanvasToolbar
+          showErrors={showErrors}
+          onToggleErrors={() => setShowErrors((v) => !v)}
+        />
 
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={displayEdges}
           onNodesChange={onNodesChange}
           onConnect={onConnect}
           onConnectStart={onConnectStart}
@@ -2052,6 +2079,8 @@ function WorkflowCanvasInner({
           onNodeClick={onNodeClick}
           onNodeContextMenu={onNodeContextMenu}
           onNodeDragStart={onNodeDragStart}
+          onNodeMouseEnter={(_e, node) => setHoveredNodeId(node.id)}
+          onNodeMouseLeave={() => setHoveredNodeId(null)}
           onPaneClick={closeNodeMenu}
           onMoveStart={closeNodeMenu}
           onEdgeClick={onEdgeClick}

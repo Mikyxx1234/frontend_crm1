@@ -161,6 +161,11 @@
 .automation-editor .react-flow__edge-path.fx-edge--flow { stroke:var(--fx-flow); stroke-dasharray:none; }
 .automation-editor .react-flow__edge-path.fx-edge--error { stroke:var(--fx-error); stroke-dasharray:5 5; }
 .automation-editor .react-flow__edge-path.fx-edge--cond { stroke:var(--fx-cond); stroke-dasharray:none; }
+.automation-editor .react-flow__edge-path.fx-edge.is-dimmed { opacity:.12; }
+.automation-editor .fx-node:has([data-has-error]) {
+  border-color: color-mix(in srgb, var(--fx-error) 50%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fx-error) 22%, transparent);
+}
 
 /* Canvas suave */
 .automation-editor .automation-canvas,

@@ -133,27 +133,11 @@ export function DemandKanban({
 
   const boardRef = React.useRef<HTMLDivElement>(null);
 
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    const el = boardRef.current;
-    if (!el || el.scrollWidth <= el.clientWidth + 2) return;
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-    const col = (e.target as HTMLElement | null)?.closest(".kanban-scroll");
-    if (col instanceof HTMLElement && col.scrollHeight > col.clientHeight) {
-      const atTop = col.scrollTop <= 0 && e.deltaY < 0;
-      const atBottom =
-        col.scrollTop + col.clientHeight >= col.scrollHeight - 1 && e.deltaY > 0;
-      if (!atTop && !atBottom) return;
-    }
-    e.preventDefault();
-    el.scrollLeft += e.deltaY;
-  };
-
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <div
         ref={boardRef}
-        onWheel={onWheel}
         className="kanban-board-hscroll flex h-full min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden"
       >
         {board.stages.map((stage) => {

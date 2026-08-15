@@ -192,10 +192,13 @@ export default function DemandsClientPage({
           />
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {status === "loading" ||
-            boardsQuery.isLoading ||
-            (!!activeId && boardQuery.isLoading) ? (
-              <p className="text-[13px] text-[var(--text-muted)]">Carregando boards…</p>
+            {(status === "loading" ||
+              boardsQuery.isPending ||
+              (!!activeId && boardQuery.isPending)) &&
+            !filteredBoard ? (
+              <p className="flex flex-1 items-center justify-center text-[13px] text-[var(--text-muted)]">
+                Carregando
+              </p>
             ) : boardsQuery.isError || boardQuery.isError ? (
               <div className="space-y-2">
                 <p className="text-[13px] text-[var(--text-muted)]">

@@ -96,6 +96,7 @@ export function CreateChannelDialog({
   const [accessToken, setAccessToken] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [businessAccountId, setBusinessAccountId] = useState("");
+  const [instagramUserId, setInstagramUserId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signupWarning, setSignupWarning] = useState<string | null>(null);
@@ -136,6 +137,7 @@ export function CreateChannelDialog({
     setAccessToken("");
     setPhoneNumberId("");
     setBusinessAccountId("");
+    setInstagramUserId("");
     setError(null);
     setSignupWarning(null);
     setSubmitting(false);
@@ -166,7 +168,10 @@ export function CreateChannelDialog({
       const res = await fetch(apiUrl("/api/channels/meta/webhook-info"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || undefined }),
+        body: JSON.stringify({
+          name: name.trim() || undefined,
+          type: channelType === "INSTAGRAM" ? "INSTAGRAM" : "WHATSAPP",
+        }),
       });
       const data = (await res.json()) as {
         channelId?: string;
@@ -380,6 +385,62 @@ export function CreateChannelDialog({
     }
     const prov = providerForType(channelType, provider);
 
+    if (channelType === "INSTAGRAM") {
+      if (!accessToken.trim()) {
+        setError("Preencha o Token de acesso.");
+        return;
+      }
+      if (!webhookInfo) {
+        setError(
+          "Clique em Webhook, cole a URL no App Meta e o App Secret antes de criar o canal.",
+        );
+        return;
+      }
+      if (!appSecret.trim()) {
+        setError(
+          "Cole o App Secret do seu App Meta no botão Webhook antes de criar o canal.",
+        );
+        return;
+      }
+      setSubmitting(true);
+      setError(null);
+      try {
+        const res = await fetch(apiUrl("/api/channels/instagram/manual"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name.trim(),
+            accessToken: accessToken.trim(),
+            instagramUserId: instagramUserId.trim() || undefined,
+            channelId: webhookInfo.channelId,
+            verifyToken: webhookInfo.verifyToken,
+            webhookId: webhookInfo.webhookId,
+            appSecret: appSecret.trim(),
+          }),
+        });
+        const data = (await res.json()) as {
+          message?: string;
+          webhookSubscribed?: boolean;
+        };
+        if (!res.ok) {
+          throw new Error(data.message ?? "Erro ao conectar Instagram.");
+        }
+        onCreated?.();
+        if (data.webhookSubscribed === false) {
+          setSignupWarning(
+            "Canal criado, mas a Meta nao assinou o webhook (subscribed_apps). Confira o token e o campo messages no App.",
+          );
+          return;
+        }
+        handleOpenChange(false);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Erro ao conectar Instagram.");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     // Meta Cloud API manual: usa a rota dedicada que provisiona o webhook
     // automaticamente (subscribed_apps no App Meta global do CRM) e retorna
     // o canal ja CONNECTED. Sem App Secret e sem passos manuais no painel Meta.
@@ -491,8 +552,9 @@ export function CreateChannelDialog({
       ) : null}
       <div className="flex flex-1 flex-wrap justify-end gap-2">
         {step === 3 &&
-        effectiveProvider === "META_CLOUD_API" &&
-        channelType === "WHATSAPP" ? (
+        ((effectiveProvider === "META_CLOUD_API" &&
+          channelType === "WHATSAPP") ||
+          channelType === "INSTAGRAM") ? (
           <Button
             type="button"
             variant="outline"
@@ -527,8 +589,7 @@ export function CreateChannelDialog({
             Continuar
           </Button>
         ) : (showEmbeddedSignup && !showManualConfig) ||
-          channelType === "FACEBOOK" ||
-          channelType === "INSTAGRAM" ? null : (
+          channelType === "FACEBOOK" ? null : (
           <Button type="button" onClick={() => void submit()} disabled={submitting}>
             {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
             Criar canal
@@ -669,6 +730,41 @@ export function CreateChannelDialog({
                         </svg>
                         Entrar com Instagram
                       </Button>
+                    </div>
+
+                    <div className="space-y-3 rounded-lg border bg-[var(--glass-bg-overlay)] p-3">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        Ou configure manualmente (App da empresa)
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Mesmo fluxo do WhatsApp: crie o App Meta da org, clique em
+                        Webhook, cole a URL no produto Instagram e o App Secret.
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="ch-ig-token">Access Token</Label>
+                        <Input
+                          id="ch-ig-token"
+                          type="password"
+                          autoComplete="off"
+                          value={accessToken}
+                          onChange={(e) => setAccessToken(e.target.value)}
+                          placeholder="Token da conta Instagram Business"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ch-ig-uid">Instagram User ID</Label>
+                        <Input
+                          id="ch-ig-uid"
+                          value={instagramUserId}
+                          onChange={(e) => setInstagramUserId(e.target.value)}
+                          placeholder="Opcional se o token for da propria conta"
+                        />
+                      </div>
+                      {signupWarning ? (
+                        <p className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-2 text-xs text-[var(--color-warning)]">
+                          {signupWarning}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 ) : channelType === "FACEBOOK" ? (
@@ -923,7 +1019,8 @@ export function CreateChannelDialog({
               Webhook
             </DialogTitle>
             <DialogDescription>
-              Visualizar webhook da conexão
+              Cole a URL e o token no produto Instagram → Webhooks (ou WhatsApp
+              → Configuração). Depois informe o App Secret abaixo.
             </DialogDescription>
           </DialogHeader>
 

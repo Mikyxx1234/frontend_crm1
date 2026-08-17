@@ -92,6 +92,8 @@ interface DropdownGlassProps {
   searchable?: boolean
   /** Placeholder do campo de busca (quando `searchable`). */
   searchPlaceholder?: string
+  /** Nome + detalhe em duas linhas, sem cortar com reticências. */
+  wrapLabels?: boolean
 }
 
 /**
@@ -120,6 +122,7 @@ export function DropdownGlass({
   disabled,
   searchable,
   searchPlaceholder,
+  wrapLabels,
 }: DropdownGlassProps) {
   const selected = options.find((o) => o.value === value)
   // Quando dentro de um <dialog> modal (top-layer), portamos o menu pra dentro
@@ -170,7 +173,16 @@ export function DropdownGlass({
             )}
           >
             {selected?.icon && <span className="shrink-0">{selected.icon}</span>}
-            <span className="min-w-0 flex-1 truncate text-left">{selected?.label ?? placeholder}</span>
+            <span
+              className={cn(
+                "min-w-0 flex-1 text-left",
+                wrapLabels ? "whitespace-normal" : "truncate",
+              )}
+            >
+              <span className={wrapLabels ? "block leading-tight" : undefined}>
+                {selected?.label ?? placeholder}
+              </span>
+            </span>
             <IconChevronDown
               size={15}
               className="ml-auto shrink-0 text-current opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180"
@@ -243,9 +255,16 @@ export function DropdownGlass({
                   </span>
                 )}
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate">{option.label}</span>
+                  <span className={wrapLabels ? "whitespace-normal break-words leading-tight" : "truncate"}>
+                    {option.label}
+                  </span>
                   {option.description && (
-                    <span className="truncate font-body text-[11px] font-normal text-[var(--text-muted)]">
+                    <span
+                      className={cn(
+                        "font-body text-[11px] font-normal text-[var(--text-muted)]",
+                        wrapLabels ? "mt-0.5 whitespace-normal break-words" : "truncate",
+                      )}
+                    >
                       {option.description}
                     </span>
                   )}

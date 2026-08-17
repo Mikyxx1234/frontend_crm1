@@ -380,7 +380,7 @@ export function TemplateComposePanel({
             type="button"
             onClick={() => setPickOpen(true)}
             disabled={sendMutation.isPending}
-            className="mr-auto inline-flex max-w-[240px] items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-1 text-[11.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-50"
+            className="mr-auto inline-flex max-w-none items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-1 text-[11.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-50"
           >
             {selectedLabel ?? "Escolher canal"}
           </button>

@@ -20,7 +20,7 @@ import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { AUTOMATION_TRIGGER_TYPES, triggerTypeLabel } from "@/lib/automation-workflow";
 
-import { useTagOptions } from "./editor-data";
+import { useTagOptions, useChannelOptions } from "./editor-data";
 
 type Props = {
   triggerType: string;
@@ -258,6 +258,156 @@ function StageMultiSelect({
           </DropdownPrimitive.Content>
         </DropdownPrimitive.Portal>
       </DropdownPrimitive.Root>
+      {helper ? (
+        <p className="text-xs text-muted-foreground">{helper}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function readChannelIdsFromConfig(value: Record<string, unknown>): string[] {
+  const raw = value.channelIds;
+  if (Array.isArray(raw)) {
+    return raw.filter((x): x is string => typeof x === "string" && x.trim() !== "");
+  }
+  const one = typeof value.channelId === "string" ? value.channelId.trim() : "";
+  return one ? [one] : [];
+}
+
+function ChannelMultiSelect({
+  id,
+  label,
+  helper,
+  values,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  helper?: string;
+  values: string[];
+  onChange: (channelIds: string[]) => void;
+}) {
+  const { options, isLoading } = useChannelOptions();
+  const portalContainer = useModalPortalContainer();
+  const [q, setQ] = React.useState("");
+
+  const toggle = (cid: string) => {
+    onChange(
+      values.includes(cid) ? values.filter((v) => v !== cid) : [...values, cid],
+    );
+  };
+
+  const triggerLabel =
+    values.length === 0
+      ? "Todas as conexões"
+      : values.length === 1
+        ? options.find((o) => o.value === values[0])?.label ?? "1 conexão"
+        : `${values.length} conexões selecionadas`;
+
+  const visible = options.filter((o) => {
+    if (!q.trim()) return true;
+    const hay = `${o.label} ${o.group ?? ""}`.toLowerCase();
+    return hay.includes(q.trim().toLowerCase());
+  });
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      {isLoading ? (
+        <p className="text-xs text-muted-foreground">Carregando canais…</p>
+      ) : (
+        <DropdownPrimitive.Root
+          modal={false}
+          onOpenChange={(o) => {
+            if (!o) setQ("");
+          }}
+        >
+          <DropdownPrimitive.Trigger asChild suppressHydrationWarning>
+            <button
+              type="button"
+              className={cn(
+                FILTER_FIELD_TRIGGER_CLASS,
+                "group",
+                values.length > 0 && "text-[var(--text-primary)]",
+              )}
+            >
+              <span className="min-w-0 flex-1 truncate text-left">
+                {triggerLabel}
+              </span>
+              <IconChevronDown
+                size={15}
+                className="ml-auto shrink-0 text-current opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180"
+              />
+            </button>
+          </DropdownPrimitive.Trigger>
+          <DropdownPrimitive.Portal container={portalContainer ?? undefined}>
+            <DropdownPrimitive.Content
+              align="start"
+              sideOffset={6}
+              className={cn(
+                FILTER_FIELD_MENU_CLASS,
+                "min-w-[var(--radix-dropdown-menu-trigger-width)]",
+              )}
+            >
+              {options.length > 4 ? (
+                <div className="p-1 pb-1.5">
+                  <input
+                    autoFocus
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (!["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(e.key))
+                        e.stopPropagation();
+                    }}
+                    placeholder="Buscar conexão…"
+                    className={FILTER_FIELD_INPUT_CLASS}
+                  />
+                </div>
+              ) : null}
+              {values.length > 0 ? (
+                <DropdownPrimitive.Item
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    onChange([]);
+                  }}
+                  className={cn(FILTER_FIELD_ITEM_CLASS, "text-[var(--text-muted)]")}
+                >
+                  Todas as conexões
+                </DropdownPrimitive.Item>
+              ) : null}
+              {visible.map((o) => {
+                const checked = values.includes(o.value);
+                return (
+                  <DropdownPrimitive.CheckboxItem
+                    key={o.value}
+                    checked={checked}
+                    onSelect={(e) => e.preventDefault()}
+                    onCheckedChange={() => toggle(o.value)}
+                    className={FILTER_FIELD_ITEM_CLASS}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                        checked
+                          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                          : "border-[var(--glass-border)]",
+                      )}
+                    >
+                      {checked ? <IconCheck size={12} /> : null}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{o.label}</span>
+                    {o.group ? (
+                      <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
+                        {o.group}
+                      </span>
+                    ) : null}
+                  </DropdownPrimitive.CheckboxItem>
+                );
+              })}
+            </DropdownPrimitive.Content>
+          </DropdownPrimitive.Portal>
+        </DropdownPrimitive.Root>
+      )}
       {helper ? (
         <p className="text-xs text-muted-foreground">{helper}</p>
       ) : null}
@@ -579,15 +729,30 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
     case "message_sent":
       return (
         <div className="space-y-3">
+          <ChannelMultiSelect
+            id="tc-conn"
+            label="Conexão (opcional)"
+            helper={
+              triggerType === "message_received"
+                ? "Dispara só quando a mensagem chega nestas conexões. Vazio = qualquer canal da org."
+                : "Dispara só quando a mensagem sai nestas conexões. Vazio = qualquer canal da org."
+            }
+            values={readChannelIdsFromConfig(value)}
+            onChange={(ids) =>
+              patch({ channelIds: ids, channelId: ids.length === 1 ? ids[0] : "" })
+            }
+          />
           <div className="space-y-2">
-            <Label htmlFor="tc-ch">Canal (opcional)</Label>
+            <Label htmlFor="tc-ch">Tipo de canal (opcional)</Label>
             <DropdownGlass
               triggerClassName="w-full"
-              placeholder="Todos os canais"
+              placeholder="Todos os tipos"
               value={String(value.channel ?? "")}
               options={[
-                { value: "", label: "Todos os canais" },
+                { value: "", label: "Todos os tipos" },
                 { value: "whatsapp", label: "WhatsApp" },
+                { value: "instagram", label: "Instagram" },
+                { value: "messenger", label: "Messenger" },
                 { value: "email", label: "E-mail" },
               ]}
               onValueChange={(v) => set("channel", v)}

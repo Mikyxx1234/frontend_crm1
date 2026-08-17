@@ -295,7 +295,18 @@ export function summarizeTriggerConfig(
     case "message_received":
     case "message_sent": {
       const parts: string[] = [];
-      if (c.channel) parts.push(`Canal: ${String(c.channel)}`);
+      const ids = Array.isArray(c.channelIds)
+        ? c.channelIds.filter((x): x is string => typeof x === "string" && x.trim() !== "")
+        : typeof c.channelId === "string" && c.channelId.trim()
+          ? [c.channelId.trim()]
+          : [];
+      if (ids.length === 1) {
+        const id = ids[0];
+        parts.push(`Conexão: ${lookup?.[id] ?? id.slice(0, 8)}`);
+      } else if (ids.length > 1) {
+        parts.push(`${ids.length} conexões`);
+      }
+      if (c.channel) parts.push(`Tipo: ${String(c.channel)}`);
       if (c.pipelineId) {
         const id = String(c.pipelineId);
         parts.push(`Pipeline: ${lookup?.[id] ?? id}`);
@@ -891,7 +902,7 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
       return { toAgentId: "" };
     case "message_received":
     case "message_sent":
-      return { channel: "", pipelineId: "", stageId: "", dealStatus: "" };
+      return { channel: "", channelIds: [], pipelineId: "", stageId: "", dealStatus: "" };
     case "call_received":
     case "call_made":
       return { status: "" };

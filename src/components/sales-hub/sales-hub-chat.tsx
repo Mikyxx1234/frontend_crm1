@@ -138,17 +138,16 @@ export function SalesHubChat({
     },
   );
 
-  // Override de canal ativo: revalida a janela de 24h no canal de DESTINO
-  // (o `session` do GET messages reflete só o canal da conversa).
   const channelOverrideActive =
     !!selectedChannelId &&
     !!conversationChannelId &&
     selectedChannelId !== conversationChannelId;
-  const { data: overrideSession } = useChannelSession(
-    conversationId,
-    channelOverrideActive ? selectedChannelId : null,
-    channelOverrideActive,
-  );
+  const { data: selectedSession, isFetched: selectedSessionFetched } =
+    useChannelSession(
+      conversationId,
+      selectedChannelId,
+      !!conversationId && !!selectedChannelId,
+    );
 
   const pinnedMessageIds = useMemo(
     () => messagesData?.pinnedMessageIds ?? [],
@@ -189,12 +188,12 @@ export function SalesHubChat({
       ? !sessionInfo.active
       : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundAt ?? null)
     : false;
-  // Com override de canal, manda a sessão do canal de DESTINO; enquanto a
-  // query carrega, mantém o valor da conversa (evita flicker do composer).
   const sessionExpiredEffective =
-    channelOverrideActive && overrideSession
-      ? !overrideSession.active
-      : sessionExpired;
+    selectedChannelId && selectedSessionFetched
+      ? selectedSession?.active !== true
+      : channelOverrideActive
+        ? false
+        : sessionExpired;
   const canReply = messagesData?.canReply ?? true;
   const isResolved = conversationStatus === "RESOLVED";
 

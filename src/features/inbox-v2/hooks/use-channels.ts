@@ -74,10 +74,8 @@ export function useWhatsappChannels(enabled = true) {
 }
 
 /**
- * Janela de 24h do contato NO canal selecionado — usada quando o agente
- * troca o canal de envio no composer (selectedChannelId ≠ canal da
- * conversa), caso que o `session` do GET messages não cobre. Habilite
- * SOMENTE nesse cenário; sem override, o sessionInfo da conversa basta.
+ * Janela de 24h do contato no canal do composer. A Meta separa CSV e
+ * Acadêmico; o ticket só guarda o channelId do último inbound.
  */
 export function useChannelSession(
   conversationId: string | null,

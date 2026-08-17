@@ -887,11 +887,11 @@ export default function InboxV2ClientPage({
     !!selectedChannelId &&
     !!conversationChannelId &&
     selectedChannelId !== conversationChannelId;
-  const { data: overrideSession } = useChannelSession(
-    activeId,
-    channelOverrideActive ? selectedChannelId : null,
-    channelOverrideActive,
-  );
+  // Sempre a sessão do número escolhido no composer. Sem isso, inbound no
+  // Acadêmico vira o channelId do ticket e o CSV (persistido) aparece
+  // "24h encerrada" mesmo com janela aberta naquele chip.
+  const { data: selectedSession, isFetched: selectedSessionFetched } =
+    useChannelSession(activeId, selectedChannelId, !!activeId && !!selectedChannelId);
 
   function handleSelect(id: string) {
     setActiveId(id);
@@ -991,12 +991,12 @@ export default function InboxV2ClientPage({
       ? !sessionActiveFromBackend
       : isSessionExpired(sessionInfo?.lastInboundAt ?? activeRow.lastInboundAt)
     : false;
-  // Com override de canal, manda a sessão do canal de DESTINO; enquanto a
-  // query carrega, mantém o valor da conversa (evita flicker do composer).
   const sessionExpiredEffective =
-    channelOverrideActive && overrideSession
-      ? !overrideSession.active
-      : sessionExpired;
+    selectedChannelId && selectedSessionFetched
+      ? selectedSession?.active !== true
+      : channelOverrideActive
+        ? false
+        : sessionExpired;
   // Bloco C (25/jun/26): backend pode setar `canReply:false` quando o
   // usuário não tem `channel.send`. Default true preserva compat com
   // backend antigo (que não envia o campo).

@@ -50,6 +50,7 @@ import {
   useSendMessage,
   useWhatsappChannels,
   findLastPublicMessageChannelId,
+  useChannelSession,
 } from "@/features/inbox-v2/hooks";
 import {
   formatDayLabel,
@@ -222,32 +223,35 @@ export function useDealChatBinding(params: {
       lastMessageChannelId,
     },
   );
+  const { data: selectedSession, isFetched: selectedSessionFetched } =
+    useChannelSession(
+      effectiveConversationId ?? null,
+      selectedChannelId,
+      !!effectiveConversationId && !!selectedChannelId,
+    );
 
-  // Deriva sessionExpired da mesma fonte do /inbox: prioriza `session.active`
-  // do backend; se o objeto `session` não vier, cai no heurístico de 24h
-  // baseado em `lastInboundAt`. O override por prop continua válido (ex.:
-  // testes ou casos onde o caller já tem o sinal).
+  // Deriva sessionExpired da mesma fonte do /inbox: prioriza a sessão do
+  // número escolhido no composer (CSV vs Acadêmico são janelas distintas).
   const sessionInfo = messagesResp?.session;
   const sessionActiveFromBackend = sessionInfo?.active;
-  // Última mensagem inbound carregada na lista (rede de segurança caso o
-  // backend não envie `session.lastInboundAt`). `direction === "in"` é o
-  // valor canônico do backend (vide MessageDirection em api/types.ts).
   const lastInboundFromMessages =
     (messagesResp?.messages ?? [])
       .filter((m) => m.direction === "in")
       .map((m) => m.createdAt)
       .sort()
       .pop() ?? null;
-  // Só decide depois que o fetch responder, senão `isSessionExpired(null)`
-  // dispara um falso positivo durante o loading inicial.
+  const sessionExpiredFromConversation =
+    !messagesResp
+      ? false
+      : sessionActiveFromBackend !== undefined
+        ? !sessionActiveFromBackend
+        : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundFromMessages);
   const sessionExpiredDerived =
     sessionExpiredOverride !== undefined
       ? sessionExpiredOverride
-      : !messagesResp
-        ? false
-        : sessionActiveFromBackend !== undefined
-          ? !sessionActiveFromBackend
-          : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundFromMessages);
+      : selectedChannelId && selectedSessionFetched
+        ? selectedSession?.active !== true
+        : sessionExpiredFromConversation;
   const sessionExpired = !!effectiveConversationId && sessionExpiredDerived;
   // Bloco C (25/jun/26): respeita `canReply` exposto pelo backend
   // (mesma fonte que o /inbox). Compat: default true quando ausente.

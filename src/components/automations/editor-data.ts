@@ -152,9 +152,31 @@ export function useTagOptions() {
   return { options: q.data ?? [], isLoading: q.isLoading }
 }
 
-type RawChannel = { id: string; name?: string; type?: string; status?: string }
+type RawChannel = {
+  id: string
+  name?: string
+  type?: string
+  status?: string
+  phoneNumber?: string | null
+}
 
-/** Canais da org (para condições de gatilho "Se canal = X"). value: channelId. */
+const CHANNEL_TYPE_LABEL: Record<string, string> = {
+  WHATSAPP: "WhatsApp",
+  INSTAGRAM: "Instagram",
+  FACEBOOK: "Messenger",
+  EMAIL: "E-mail",
+  WEBCHAT: "Webchat",
+}
+
+function formatChannelOptionLabel(c: RawChannel): string {
+  const name = c.name?.trim() || "Canal"
+  const phone = typeof c.phoneNumber === "string" ? c.phoneNumber.trim() : ""
+  const type = CHANNEL_TYPE_LABEL[String(c.type ?? "").toUpperCase()] ?? ""
+  const base = phone ? `${name} · ${phone}` : name
+  return type ? `${base} (${type})` : base
+}
+
+/** Canais da org. value: channelId. Preferência: CONNECTED primeiro. */
 export function useChannelOptions() {
   const q = useQuery({
     queryKey: ["editor-channels"],
@@ -168,9 +190,11 @@ export function useChannelOptions() {
             ? (json as { channels: unknown[] }).channels
             : asArray(json)
       ) as RawChannel[]
-      return list.map((c) => ({
+      const connected = list.filter((c) => String(c.status ?? "").toUpperCase() === "CONNECTED")
+      const rest = list.filter((c) => String(c.status ?? "").toUpperCase() !== "CONNECTED")
+      return [...connected, ...rest].map((c) => ({
         value: c.id,
-        label: c.name || c.id,
+        label: formatChannelOptionLabel(c),
         group: c.type || undefined,
       }))
     },

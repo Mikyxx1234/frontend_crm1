@@ -37,6 +37,7 @@ import {
   WEEKDAYS,
   type Schedule,
 } from "@/features/settings/schedules/schedule-shared";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -75,6 +76,13 @@ type PresenceFilter = "" | AgentPresence;
 const SLOT_MINUTES = 30;
 /** Coluna fixa (sticky) com seleção + identidade do agente. */
 const AGENT_COL_PX = 320;
+/**
+ * Largura da coluna fixa no mobile depois que a grade começa a ser arrastada.
+ * A coluna cheia ocupa quase toda a viewport estreita e esconde o gráfico.
+ */
+const AGENT_COL_COMPACT_PX = 124;
+/** Folga antes de recolher — evita alternar a cada micro-scroll acidental. */
+const COMPACT_SCROLL_THRESHOLD_PX = 8;
 /** Largura mínima por slot de 30min — força scroll em vez de comprimir horas. */
 const SLOT_MIN_PX = 32;
 const DAY_START_MIN = 6 * 60;
@@ -168,6 +176,11 @@ function slotState(schedule: Schedule | null, weekday: number, slotMin: number):
   const le = parseTime(schedule.lunchEnd);
   if (slotMin >= ls && slotMin < le) return "lunch";
   return "work";
+}
+
+/** Primeiro nome — única informação textual mantida na coluna recolhida. */
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] || name;
 }
 
 /** Resumo textual do dia na coluna do agente (expediente + almoço explícitos). */
@@ -584,9 +597,24 @@ export function CoverageBoard({
     setEditVisible(agent.visibleInCoverage !== false);
   };
 
+  // ── Coluna do agente recolhível (mobile) ──────────────────────────────────
+  // Em tela estreita a coluna cheia cobre a grade. Assim que o usuário arrasta
+  // a grade para o lado, a coluna encolhe para só o primeiro nome; ao voltar ao
+  // início (grade novamente oculta) os dados completos reaparecem.
+
+  const isMdUp = useMediaQuery("(min-width: 768px)", true);
+  const [gridScrolled, setGridScrolled] = React.useState(false);
+  const compactAgentCol = !isMdUp && gridScrolled;
+  const agentColPx = compactAgentCol ? AGENT_COL_COMPACT_PX : AGENT_COL_PX;
+
+  const handleGridScroll = React.useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const next = e.currentTarget.scrollLeft > COMPACT_SCROLL_THRESHOLD_PX;
+    setGridScrolled((prev) => (prev === next ? prev : next));
+  }, []);
+
   // minmax com piso em px: a grade cresce além do container e rola no eixo X
   // em vez de comprimir/cortar a última hora (20h, 21h…).
-  const gridTemplate = `${AGENT_COL_PX}px repeat(${slots.length}, minmax(${SLOT_MIN_PX}px, 1fr))`;
+  const gridTemplate = `${agentColPx}px repeat(${slots.length}, minmax(${SLOT_MIN_PX}px, 1fr))`;
 
   // Posição (%) do marcador "agora" dentro da área de slots.
   const nowPct =
@@ -711,7 +739,10 @@ export function CoverageBoard({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]">
+        <div
+          onScroll={handleGridScroll}
+          className="overflow-x-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
+        >
           <div className="relative w-max min-w-full pr-3">
             {/* Marcador "agora" — linha vertical sobre toda a grade */}
             {nowPct !== null && (
@@ -719,7 +750,7 @@ export function CoverageBoard({
                 aria-hidden
                 className="pointer-events-none absolute inset-y-0 z-20 w-0.5 bg-[var(--color-danger)]"
                 style={{
-                  left: `calc(${AGENT_COL_PX}px + (100% - ${AGENT_COL_PX}px) * ${nowPct / 100})`,
+                  left: `calc(${agentColPx}px + (100% - ${agentColPx}px) * ${nowPct / 100})`,
                 }}
               >
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-[var(--radius-sm)] bg-[var(--color-danger)] px-1.5 py-0.5 font-display text-[9px] font-bold text-white tabular-nums">
@@ -730,12 +761,19 @@ export function CoverageBoard({
 
             {/* Header de horas */}
             <div className="grid border-b border-[var(--glass-border)]" style={{ gridTemplateColumns: gridTemplate }}>
-              <div className="sticky left-0 z-10 flex items-center gap-2 border-r border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-2.5">
-                <CheckboxGlass
-                  checked={allFilteredSelected}
-                  onChange={toggleSelectAll}
-                  aria-label="Selecionar todos os agentes filtrados"
-                />
+              <div
+                className={cn(
+                  "sticky left-0 z-10 flex items-center gap-2 border-r border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-2.5",
+                  compactAgentCol ? "px-2" : "px-3",
+                )}
+              >
+                {!compactAgentCol && (
+                  <CheckboxGlass
+                    checked={allFilteredSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Selecionar todos os agentes filtrados"
+                  />
+                )}
                 <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
                   Agente
                 </span>
@@ -796,80 +834,109 @@ export function CoverageBoard({
                 >
                   <div
                     className={cn(
-                      "sticky left-0 z-10 flex items-center gap-2.5 border-r border-[var(--glass-border)] px-3 py-2 group-hover:bg-[var(--glass-bg-panel)]",
+                      "sticky left-0 z-10 flex items-center border-r border-[var(--glass-border)] py-2 group-hover:bg-[var(--glass-bg-panel)]",
+                      compactAgentCol ? "gap-2 px-2" : "gap-2.5 px-3",
                       inactive
                         ? "bg-[color-mix(in_srgb,var(--text-muted)_8%,var(--glass-bg-base))]"
                         : "bg-[var(--glass-bg-base)]",
                     )}
                   >
-                    <CheckboxGlass
-                      checked={selected.has(agent.id)}
-                      onChange={() => toggleSelected(agent.id)}
-                      aria-label={`Selecionar ${agent.name}`}
-                    />
-                    <UserAvatar
-                      size={32}
-                      name={agent.name}
-                      imageUrl={agent.avatarUrl}
-                      status={
-                        presence === "ONLINE"
-                          ? "online"
-                          : presence === "AWAY"
-                            ? "away"
-                            : "offline"
-                      }
-                    />
-                    <div className="min-w-0 flex-1 leading-tight">
-                      <p
-                        className={cn(
-                          "truncate font-display text-[13px] font-bold",
-                          inactive ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]",
-                        )}
-                      >
-                        {agent.name}
-                      </p>
-                      <p className="font-body text-[11px] font-semibold leading-snug text-[var(--text-secondary)] tabular-nums">
-                        {daySummary(agent.schedule, weekday)}
-                      </p>
-                      <p className="flex items-center gap-1.5 truncate font-body text-[10px] text-[var(--text-muted)]">
-                        {agent.departments.length > 0 ? (
-                          agent.departments.map((d) => (
-                            <span key={d.id} className="inline-flex items-center gap-1">
-                              <span
-                                className={cn("size-1.5 rounded-full", inactive && "opacity-50")}
-                                style={{ backgroundColor: d.color }}
-                              />
-                              {d.name}
+                    {compactAgentCol ? (
+                      <>
+                        <UserAvatar
+                          size={24}
+                          name={agent.name}
+                          imageUrl={agent.avatarUrl}
+                          status={
+                            presence === "ONLINE"
+                              ? "online"
+                              : presence === "AWAY"
+                                ? "away"
+                                : "offline"
+                          }
+                        />
+                        <p
+                          title={agent.name}
+                          className={cn(
+                            "min-w-0 flex-1 truncate font-display text-[12px] font-bold",
+                            inactive ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]",
+                          )}
+                        >
+                          {firstName(agent.name)}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <CheckboxGlass
+                          checked={selected.has(agent.id)}
+                          onChange={() => toggleSelected(agent.id)}
+                          aria-label={`Selecionar ${agent.name}`}
+                        />
+                        <UserAvatar
+                          size={32}
+                          name={agent.name}
+                          imageUrl={agent.avatarUrl}
+                          status={
+                            presence === "ONLINE"
+                              ? "online"
+                              : presence === "AWAY"
+                                ? "away"
+                                : "offline"
+                          }
+                        />
+                        <div className="min-w-0 flex-1 leading-tight">
+                          <p
+                            className={cn(
+                              "truncate font-display text-[13px] font-bold",
+                              inactive ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]",
+                            )}
+                          >
+                            {agent.name}
+                          </p>
+                          <p className="font-body text-[11px] font-semibold leading-snug text-[var(--text-secondary)] tabular-nums">
+                            {daySummary(agent.schedule, weekday)}
+                          </p>
+                          <p className="flex items-center gap-1.5 truncate font-body text-[10px] text-[var(--text-muted)]">
+                            {agent.departments.length > 0 ? (
+                              agent.departments.map((d) => (
+                                <span key={d.id} className="inline-flex items-center gap-1">
+                                  <span
+                                    className={cn("size-1.5 rounded-full", inactive && "opacity-50")}
+                                    style={{ backgroundColor: d.color }}
+                                  />
+                                  {d.name}
+                                </span>
+                              ))
+                            ) : (
+                              <span>Sem área</span>
+                            )}
+                          </p>
+                        </div>
+                        {inactive ? (
+                          <TooltipGlass label="Não participa da distribuição — não recebe leads" side="left">
+                            <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
+                              Inativo
                             </span>
-                          ))
-                        ) : (
-                          <span>Sem área</span>
-                        )}
-                      </p>
-                    </div>
-                    {inactive ? (
-                      <TooltipGlass label="Não participa da distribuição — não recebe leads" side="left">
-                        <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
-                          Inativo
-                        </span>
-                      </TooltipGlass>
-                    ) : !agent.schedule ? (
-                      <TooltipGlass label="Sem expediente definido — a barra só aparece depois de salvar o horário" side="left">
-                        <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
-                          Sem horário
-                        </span>
-                      </TooltipGlass>
-                    ) : null}
-                    <TooltipGlass label="Editar horário" side="left">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(agent)}
-                        aria-label={`Editar horário de ${agent.name}`}
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--color-primary-soft)]"
-                      >
-                        <IconPencil size={13} />
-                      </button>
-                    </TooltipGlass>
+                          </TooltipGlass>
+                        ) : !agent.schedule ? (
+                          <TooltipGlass label="Sem expediente definido — a barra só aparece depois de salvar o horário" side="left">
+                            <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
+                              Sem horário
+                            </span>
+                          </TooltipGlass>
+                        ) : null}
+                        <TooltipGlass label="Editar horário" side="left">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(agent)}
+                            aria-label={`Editar horário de ${agent.name}`}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--color-primary-soft)]"
+                          >
+                            <IconPencil size={13} />
+                          </button>
+                        </TooltipGlass>
+                      </>
+                    )}
                   </div>
                   {slots.map((slotMin) => {
                     const st = slotState(agent.schedule, weekday, slotMin);

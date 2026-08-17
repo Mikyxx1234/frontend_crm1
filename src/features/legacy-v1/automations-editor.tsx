@@ -25,7 +25,7 @@ import {
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import type { AutomationStats } from "@/lib/automation-stats-types";
@@ -92,6 +92,31 @@ function firstMessageChannelError(
   const count = steps[idx].type === "send_email" ? connectedEmailCount : connectedWaCount;
   const code = validateFirstMessageChannel(steps, count);
   return code ? (CHANNEL_VALIDATION_MESSAGES[code] ?? code) : null;
+}
+
+function uniqueStepsById(steps: AutomationStep[]): AutomationStep[] {
+  const seen = new Set<string>();
+  const out: AutomationStep[] = [];
+  for (const step of steps) {
+    if (step.id && seen.has(step.id)) continue;
+    if (step.id) seen.add(step.id);
+    out.push(step);
+  }
+  return out;
+}
+
+function hydrateTriggerConfig(
+  triggerType: string,
+  triggerConfig: unknown,
+): Record<string, unknown> {
+  if (
+    typeof triggerConfig === "object" &&
+    triggerConfig !== null &&
+    !Array.isArray(triggerConfig)
+  ) {
+    return { ...(triggerConfig as Record<string, unknown>) };
+  }
+  return defaultTriggerConfig(triggerType);
 }
 
 type AutomationDetail = {
@@ -800,25 +825,42 @@ export default function AutomationDetailPage() {
     setStepLogsId(stepId);
   }, []);
 
-  useEffect(() => {
-    const d = detailQuery.data;
-    if (!d) return;
+  const dirtyRef = useRef(false);
+  dirtyRef.current = dirty;
+  const hydratedRef = useRef(false);
+  const stepsRef = useRef(steps);
+  stepsRef.current = steps;
+  const nameRef = useRef(name);
+  nameRef.current = name;
+  const descriptionRef = useRef(description);
+  descriptionRef.current = description;
+  const triggerTypeRef = useRef(triggerType);
+  triggerTypeRef.current = triggerType;
+  const triggerConfigRef = useRef(triggerConfig);
+  triggerConfigRef.current = triggerConfig;
+  const allowManualRunRef = useRef(allowManualRun);
+  allowManualRunRef.current = allowManualRun;
+
+  const applyServerAutomation = useCallback((d: AutomationDetail) => {
     setName(d.name);
     setDescription(d.description ?? "");
     setTriggerType(d.triggerType);
-    const tc =
-      typeof d.triggerConfig === "object" &&
-      d.triggerConfig !== null &&
-      !Array.isArray(d.triggerConfig)
-        ? { ...(d.triggerConfig as Record<string, unknown>) }
-        : defaultTriggerConfig(d.triggerType);
-    setTriggerConfig(tc);
-    setSteps(apiStepsToWorkflow(d.steps));
+    setTriggerConfig(hydrateTriggerConfig(d.triggerType, d.triggerConfig));
+    setSteps(uniqueStepsById(apiStepsToWorkflow(d.steps ?? [])));
     setActive(d.active);
     setAllowManualRun(d.allowManualRun ?? false);
     setHydrated(true);
+    hydratedRef.current = true;
     setDirty(false);
-  }, [detailQuery.data]);
+  }, []);
+
+  useEffect(() => {
+    const d = detailQuery.data;
+    if (!d) return;
+    // Não sobrescreve o canvas com um refetch enquanto o operador edita.
+    if (dirtyRef.current && hydratedRef.current) return;
+    applyServerAutomation(d);
+  }, [applyServerAutomation, detailQuery.data]);
 
   const onTriggerTypeChange = useCallback((t: string) => {
     setTriggerType(t);
@@ -843,24 +885,24 @@ export default function AutomationDetailPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || null,
-          triggerType,
-          triggerConfig,
-          allowManualRun,
-          steps: workflowStepsToPayload(steps),
+          name: nameRef.current.trim(),
+          description: descriptionRef.current.trim() || null,
+          triggerType: triggerTypeRef.current,
+          triggerConfig: triggerConfigRef.current,
+          allowManualRun: allowManualRunRef.current,
+          steps: workflowStepsToPayload(uniqueStepsById(stepsRef.current)),
         }),
       });
       if (!res.ok) throw new Error(await readErrorMessage(res));
       return (await res.json()) as AutomationDetail;
     },
     onSuccess: (data) => {
+      applyServerAutomation(data);
       queryClient.setQueryData(["automation", id], data);
       void queryClient.invalidateQueries({ queryKey: ["automations"] });
       void queryClient.invalidateQueries({
         queryKey: ["automation-logs", id],
       });
-      setDirty(false);
     },
   });
 
@@ -897,15 +939,16 @@ export default function AutomationDetailPage() {
   });
 
   const handleSaveClick = useCallback(() => {
+    if (saveMutation.isPending) return;
     if (active) {
-      const err = firstMessageChannelError(steps, connectedWaChannels.length, connectedEmailChannels.length);
+      const err = firstMessageChannelError(stepsRef.current, connectedWaChannels.length, connectedEmailChannels.length);
       if (err) {
         toast.error(err);
         return;
       }
     }
     saveMutation.mutate();
-  }, [active, steps, connectedWaChannels, connectedEmailChannels, saveMutation]);
+  }, [active, connectedWaChannels, connectedEmailChannels, saveMutation]);
 
   const handleToggleClick = useCallback(() => {
     if (!active) {

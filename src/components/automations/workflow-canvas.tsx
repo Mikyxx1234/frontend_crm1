@@ -636,7 +636,8 @@ function WorkflowCanvasInner({
   autoAlignVersion,
   className,
 }: InnerProps) {
-  const { screenToFlowPosition, fitView, getIntersectingNodes } = useReactFlow();
+  const { screenToFlowPosition, fitView, getIntersectingNodes, setCenter, getZoom } =
+    useReactFlow();
   const { theme } = useThemeV2();
   const isDark = theme === "dark";
   const stepsRef = useRef(steps);
@@ -2170,7 +2171,10 @@ function WorkflowCanvasInner({
           />
           <Controls className="m-3!" showInteractive={false} />
           <MiniMap
-            className="m-3!"
+            className="m-3! cursor-pointer"
+            pannable
+            zoomable
+            ariaLabel="Mapa do fluxo — clique para ir à região"
             maskColor={isDark ? "rgba(0,0,0,0.30)" : "rgba(13,27,62,0.06)"}
             nodeColor={(n) => {
               if (isAddStepNodeId(n.id)) return "transparent";
@@ -2180,6 +2184,22 @@ function WorkflowCanvasInner({
             nodeStrokeColor={isDark ? "rgba(15,22,35,0.8)" : "rgba(255,255,255,0.7)"}
             nodeStrokeWidth={1.5}
             nodeBorderRadius={4}
+            onClick={(_event, position) => {
+              // `position` já vem em coordenadas do fluxo — centraliza a
+              // viewport nesse ponto mantendo o zoom atual.
+              setCenter(position.x, position.y, {
+                zoom: getZoom(),
+                duration: 420,
+              });
+            }}
+            onNodeClick={(_event, node) => {
+              const w = node.measured?.width ?? node.width ?? 240;
+              const h = node.measured?.height ?? node.height ?? 96;
+              setCenter(node.position.x + w / 2, node.position.y + h / 2, {
+                zoom: getZoom(),
+                duration: 420,
+              });
+            }}
           />
         </ReactFlow>
 

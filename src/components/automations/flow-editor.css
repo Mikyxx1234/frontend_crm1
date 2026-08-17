@@ -2013,6 +2013,10 @@
   background: var(--wf-node-bg) !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
   backdrop-filter: none !important;
+  cursor: pointer;
+}
+.automation-editor .react-flow__minimap svg {
+  cursor: pointer;
 }
 .automation-editor .react-flow__edge-path {
   stroke-linecap: round;

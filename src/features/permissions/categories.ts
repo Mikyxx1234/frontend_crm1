@@ -52,7 +52,7 @@ export const PERMISSION_CATEGORIES: CategoryDef[] = [
   {
     id: "catalog",
     label: "Catálogo & Produtos",
-    resources: ["product", "inventory", "catalog", "job_opening", "org_unit"],
+    resources: ["product", "inventory", "catalog", "job_opening", "org_unit", "demand"],
   },
   {
     id: "data",
@@ -92,6 +92,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   catalog: "Catálogos",
   job_opening: "Vagas",
   org_unit: "Unidades",
+  demand: "Demandas",
   tag: "Tags",
   segment: "Segmentos",
   settings: "Configurações",

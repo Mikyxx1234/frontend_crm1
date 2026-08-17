@@ -7,7 +7,9 @@ import {
   IconArrowsShuffle,
   IconBolt,
   IconMail,
-  IconMessage,  IconUsers,
+  IconRocket,
+  IconMessage,
+  IconUsers,
   type Icon,
 } from "@tabler/icons-react";
 
@@ -116,6 +118,15 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     description: "Tarefas, follow-ups e agenda.",
     locked: false,
     requiredPermission: "nav:activities",
+  },
+  {
+    key: "demands",
+    title: "Demandas",
+    href: "/demands",
+    icon: IconRocket,
+    description: "Roadmap interno, bugs e solicitações do time.",
+    locked: false,
+    requiredPermission: "nav:demands",
   },
   {
     key: "automations",

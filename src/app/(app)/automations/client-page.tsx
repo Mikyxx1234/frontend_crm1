@@ -19,6 +19,7 @@ import {
   IconUpload,
 } from "@tabler/icons-react"
 
+import { AppLoading } from "@/components/crm/app-loading"
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer"
 import { RestrictedScreen } from "@/components/crm/restricted-screen"
 import { useRequireManager } from "@/hooks/use-user-role"
@@ -301,7 +302,7 @@ export default function V2AutomationsClientPage() {
             stepErr instanceof Error ? stepErr.message : "erro desconhecido"
           }. Abra no editor para revisar.`,
         )
-        router.push(`/automations/${created.id}`)
+        router.push(`/automations/${created.number ?? created.id}`)
         return
       }
 
@@ -310,7 +311,7 @@ export default function V2AutomationsClientPage() {
           steps.length === 1 ? "passo" : "passos"
         }).`,
       )
-      router.push(`/automations/${created.id}`)
+      router.push(`/automations/${created.number ?? created.id}`)
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Erro ao importar automação.",
@@ -400,7 +401,7 @@ export default function V2AutomationsClientPage() {
         )}
 
         {isLoading ? (
-          <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
+          <AppLoading variant="inline" className="min-h-[400px]" />
         ) : isError ? (
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
             {listQuery.error instanceof Error

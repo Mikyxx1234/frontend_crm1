@@ -22,15 +22,16 @@ import {
 import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   useAssignConversation,
-  useToggleConversationResolve,
 } from "@/features/inbox-v2/hooks";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { useExecuteDistribution } from "@/features/distribution/hooks";
 import { apiUrl } from "@/lib/api";
-import { TabulationDialog } from "./tabulation-dialog";
+import { useResolveConversationFlow } from "./use-resolve-conversation-flow";
 
 interface ConversationActionsMenuProps {
   conversationId: string | null;
+  /** Ticket sequencial — o link copiado usa `?c=<number>`, nunca o CUID. */
+  conversationNumber?: number | null;
   contactId?: string | null;
   isResolved: boolean;
   disabled?: boolean;
@@ -61,10 +62,16 @@ interface ConversationActionsMenuProps {
   }) => void;
   assigneeId?: string | null;
   assigneeType?: string | null;
+  /**
+   * Quando true, esconde/bloqueia "Devolver à IA" (ex.: lead no
+   * Acolhimento — campanha com botão / fluxo humano).
+   */
+  blockReturnToAi?: boolean;
 }
 
 export function ConversationActionsMenu({
   conversationId,
+  conversationNumber,
   contactId,
   isResolved,
   disabled,
@@ -77,30 +84,25 @@ export function ConversationActionsMenu({
   onDepartmentChanged,
   assigneeId: _assigneeId,
   assigneeType,
+  blockReturnToAi = false,
 }: ConversationActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [deptMenuOpen, setDeptMenuOpen] = useState(false);
-  const [tabulationOpen, setTabulationOpen] = useState(false);
-  /** Departamento vindo do erro TABULATION_REQUIRED (flag FE desatualizado). */
-  const [tabulationDeptId, setTabulationDeptId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const currentUserId =
     (session?.user as { id?: string } | undefined)?.id ?? null;
   const assign = useAssignConversation();
   const isAiAssignee = (assigneeType ?? "").toUpperCase() === "AI";
-  const effectiveTabulationDeptId = tabulationDeptId ?? departmentId ?? null;
-  const toggleResolve = useToggleConversationResolve({
-    onNewConversation: (newId) => {
-      onReopenNewConversation?.(newId);
-    },
-    onResolved: (id) => onResolved?.(id),
-    onTabulationRequired: ({ departmentId: deptFromApi }) => {
-      setOpen(false);
-      setTabulationDeptId(deptFromApi ?? departmentId ?? null);
-      setTabulationOpen(true);
-    },
-  });
+  const { handleToggleResolve: resolveFlow, toggleResolve, dialogs } =
+    useResolveConversationFlow({
+      conversationId,
+      isResolved,
+      departmentId,
+      requireTabulationOnClose,
+      onReopenNewConversation,
+      onResolved,
+    });
   const executeDist = useExecuteDistribution();
 
   const departmentsQuery = useQuery({
@@ -178,30 +180,8 @@ export function ConversationActionsMenu({
   }, [open]);
 
   function handleToggleResolve() {
-    if (!conversationId) return;
-    // Encerramento MANUAL com departamento que exige tabulacao -> abre modal.
-    // Encerramentos de bot/automação não passam por este menu.
-    if (!isResolved && requireTabulationOnClose && departmentId) {
-      setOpen(false);
-      setTabulationDeptId(departmentId);
-      setTabulationOpen(true);
-      return;
-    }
-    toggleResolve.mutate(
-      {
-        conversationId,
-        action: isResolved ? "reopen" : "resolve",
-      },
-      { onSuccess: () => setOpen(false) },
-    );
-  }
-
-  function handleConfirmTabulation(tabulationId: string) {
-    if (!conversationId) return;
-    toggleResolve.mutate(
-      { conversationId, action: "resolve", tabulationId },
-      { onSuccess: () => setTabulationOpen(false) },
-    );
+    setOpen(false);
+    resolveFlow();
   }
 
   function handleSearch() {
@@ -213,12 +193,14 @@ export function ConversationActionsMenu({
     }
   }
 
-  // Copia o link absoluto da conversa (?c=<id>) para compartilhar — ex.:
-  // enviar a um supervisor para ele abrir direto esta conversa.
+  // Copia o link absoluto da conversa (?c=<number>) para compartilhar.
   async function handleCopyLink() {
     setOpen(false);
-    if (!conversationId) return;
-    const url = `${window.location.origin}/inbox?c=${conversationId}`;
+    if (conversationNumber == null) {
+      toast.error("Número da conversa indisponível.");
+      return;
+    }
+    const url = `${window.location.origin}/inbox?c=${conversationNumber}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link da conversa copiado.");
@@ -249,7 +231,6 @@ export function ConversationActionsMenu({
             name: dept.name,
             requireTabulationOnClose: dept.requireTabulationOnClose,
           });
-          setTabulationDeptId(dept.id);
           if (result.success) {
             toast.success(
               result.selectedUserName
@@ -289,6 +270,12 @@ export function ConversationActionsMenu({
 
   function handleReturnToAi() {
     if (!conversationId) return;
+    if (blockReturnToAi) {
+      toast.error(
+        "IA não atende leads no Acolhimento. Use um consultor humano.",
+      );
+      return;
+    }
     const agent = aiAgentsQuery.data?.[0];
     if (!agent?.userId) {
       toast.error("Nenhum agente IA ativo encontrado.");
@@ -351,6 +338,20 @@ export function ConversationActionsMenu({
                 />
               )}
               <span>Assumir conversa</span>
+            </button>
+          ) : blockReturnToAi ? (
+            <button
+              type="button"
+              disabled
+              title="IA não atende leads no Acolhimento"
+              className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left text-[13px] font-medium text-[var(--text-muted)] opacity-60"
+            >
+              <IconRobot
+                size={16}
+                className="shrink-0 text-[var(--text-muted)]"
+                stroke={2}
+              />
+              <span>IA indisponível (Acolhimento)</span>
             </button>
           ) : (
             <button
@@ -486,13 +487,7 @@ export function ConversationActionsMenu({
           </RequirePermission>
         </div>
       )}
-      <TabulationDialog
-        open={tabulationOpen}
-        onOpenChange={setTabulationOpen}
-        departmentId={effectiveTabulationDeptId}
-        submitting={toggleResolve.isPending}
-        onConfirm={handleConfirmTabulation}
-      />
+      {dialogs}
     </div>
   );
 }

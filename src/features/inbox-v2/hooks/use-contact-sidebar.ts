@@ -14,6 +14,6 @@ export function useContactSidebar(contactId: string | null | undefined) {
     queryKey: ["contact-sidebar", contactId ?? "__none__"],
     queryFn: () => getContact(contactId as string),
     enabled: !!contactId,
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 }

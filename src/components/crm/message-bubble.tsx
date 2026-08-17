@@ -13,6 +13,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { StatusTicks } from "@/components/crm/status-ticks"
+import { EventRow, NoteRow, type ConversationEventAction } from "@/components/crm/chat-timeline"
+import { PhoneIncoming, PhoneOff, PhoneOutgoing } from "lucide-react"
 import {
   IconRobot,
   IconClipboardList,
@@ -22,16 +24,11 @@ import {
   IconCopy,
   IconPlayerPlay,
   IconPlayerPause,
-  IconLock,
   IconLoader2,
   IconTextCaption,
   IconPin,
   IconPinFilled,
-  IconListCheck,
   IconArrowsExchange,
-  IconPhoneIncoming,
-  IconPhoneOutgoing,
-  IconPhoneOff,
   IconArrowBackUp,
   IconShare2,
   IconMoodPlus,
@@ -161,6 +158,8 @@ export interface Message {
   senderImageUrl?: string | null
   /** Nome completo do agente ou automação que enviou a mensagem. */
   senderName?: string
+  /** User.id do agente no EVENT — fallback quando senderName é "Agente". */
+  senderUserId?: string | null
   /** Mensagem enviada por bot/automação — exibe badge "AUTOMAÇÃO" */
   isBot?: boolean
   /**
@@ -192,6 +191,15 @@ export interface Message {
   buttons?: string[]
   /** Tipo de mídia: "audio", "image", "document", "video", "text" etc. */
   messageType?: string
+  /**
+   * Discriminante da timeline do chat: mensagem, nota humana ou evento
+   * automático (sistema/IA). Quando ausente, `isNote` continua valendo.
+   */
+  kind?: "message" | "note" | "event"
+  /**
+   * Ação do evento (ícone). Só relevante quando `kind === "event"`.
+   */
+  eventAction?: ConversationEventAction
   /**
    * Nota interna — não enviada ao cliente. Quando true, a bolha é
    * renderizada com estilo diferenciado (fundo amarelo, borda lateral,
@@ -255,6 +263,11 @@ export interface Message {
     number: number
     closedAt: string | null
     isCurrent?: boolean
+    openedAt?: string | null
+    openedByName?: string | null
+    openedByUserId?: string | null
+    closedByName?: string | null
+    closedByUserId?: string | null
   }
 }
 
@@ -426,10 +439,19 @@ function FormBubble({ message, className }: { message: Message; className?: stri
                   <p className="font-display text-[9.5px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-none mb-0.5">
                     {f.label}
                   </p>
-                  {/* No último campo, o timestamp flutua no canto inferior direito — padrão WhatsApp */}
+                  {/* Último campo: spacer flutuante reserva só a largura do horário
+                      (padrão WhatsApp) — sem padding-right fixo que abre um vão. */}
                   <div className="relative">
-                    <p className="font-body text-[12.5px] leading-snug text-[var(--text-primary)] pr-11">
+                    <p className="flow-root font-body text-[12.5px] leading-snug text-[var(--text-primary)]">
                       {f.value}
+                      {isLast && (
+                        <span
+                          aria-hidden
+                          className="invisible float-right ml-1.5 font-body text-[10px] leading-none"
+                        >
+                          {message.time}
+                        </span>
+                      )}
                     </p>
                     {isLast && (
                       <span className="pointer-events-none absolute bottom-0 right-0 select-none font-body text-[10px] leading-none text-[var(--text-muted)]">
@@ -606,7 +628,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
         transcript.status === "done" ? "pb-2" : "pb-1",
       )}
     >
-      {url && <audio ref={audioRef} src={url} preload="metadata" aria-hidden="true" />}
+      {url && <audio ref={audioRef} src={url} preload="none" aria-hidden="true" />}
 
       <div className="flex items-center gap-2">
         <button
@@ -722,8 +744,46 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
   )
 }
 
+/**
+ * Reserva invisível no fluxo do texto para o horário (+ ticks).
+ * `float: right` empurra o slot para o fim da última linha quando cabe;
+ * se não cabe, a linha seguinte fica só com o horário à direita — sem o
+ * vão horizontal que `padding-right` fixo + `position: absolute` abrem
+ * quando a bolha é larga (asides fechados / coluna central larga).
+ */
+function MetaReserve({
+  time,
+  isOutgoing,
+  status,
+  isFavorited,
+}: {
+  time: string
+  isOutgoing: boolean
+  status?: Message["status"]
+  isFavorited?: boolean
+}) {
+  return (
+    <span
+      aria-hidden
+      className="invisible float-right ml-1.5 inline-flex items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none"
+    >
+      {isFavorited && <IconStarFilled size={10} />}
+      {time}
+      {isOutgoing && status ? <StatusTicks status={status} onLightBg={false} /> : null}
+    </span>
+  )
+}
+
 /** Renderiza o corpo da bolha: player de mídia quando houver, senão texto. */
-function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing: boolean }) {
+function MessageContent({
+  message,
+  isOutgoing,
+  metaReserve,
+}: {
+  message: Message
+  isOutgoing: boolean
+  metaReserve?: ReactNode
+}) {
   const kind = detectMediaKind(message.messageType, message.mediaUrl)
   const url = resolveMediaUrl(message.mediaUrl)
   const content = message.content ?? ""
@@ -737,7 +797,14 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
 
   // ── Imagem / sticker ───────────────────────────────────────────
   if (kind === "image" && url) {
-    return <ImageMedia url={url} caption={caption} isOutgoing={isOutgoing} />
+    return (
+      <ImageMedia
+        url={url}
+        caption={caption}
+        isOutgoing={isOutgoing}
+        metaReserve={metaReserve}
+      />
+    )
   }
 
   // ── Vídeo ──────────────────────────────────────────────────────
@@ -746,11 +813,13 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
       <div className="flex flex-col gap-1.5">
         <video
           controls
-          preload="metadata"
+          preload="none"
           src={url}
           className="max-h-[320px] w-full min-w-[220px] rounded-[var(--radius-md)] bg-black"
         />
-        {caption && <CaptionText caption={caption} isOutgoing={isOutgoing} />}
+        {caption && (
+          <CaptionText caption={caption} isOutgoing={isOutgoing} metaReserve={metaReserve} />
+        )}
       </div>
     )
   }
@@ -812,25 +881,18 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
       : null
   if (unsupportedText) {
     return (
-      <span className={cn("break-words italic", isOutgoing ? "text-white/80" : "text-[var(--text-muted)]")}>
+      <span className={cn("flow-root break-words italic [overflow-wrap:anywhere]", isOutgoing ? "text-white/80" : "text-[var(--text-muted)]")}>
         {unsupportedText}
-        <span
-          aria-hidden
-          className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
-        />
+        {metaReserve}
       </span>
     )
   }
 
   // ── Texto ──────────────────────────────────────────────────────
   return (
-    <span className="break-words">
+    <span className="flow-root break-words [overflow-wrap:anywhere]">
       {formatWhatsapp(content)}
-      {/* Espaço reservado p/ horário (+ ticks quando outgoing). */}
-      <span
-        aria-hidden
-        className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
-      />
+      {metaReserve}
     </span>
   )
 }
@@ -843,10 +905,12 @@ function ImageMedia({
   url,
   caption,
   isOutgoing,
+  metaReserve,
 }: {
   url: string
   caption: string
   isOutgoing: boolean
+  metaReserve?: ReactNode
 }) {
   const [open, setOpen] = useState(false)
   return (
@@ -866,7 +930,9 @@ function ImageMedia({
             loading="lazy"
           />
         </button>
-        {caption && <CaptionText caption={caption} isOutgoing={isOutgoing} />}
+        {caption && (
+          <CaptionText caption={caption} isOutgoing={isOutgoing} metaReserve={metaReserve} />
+        )}
       </div>
       <ImageLightbox src={url} alt={caption} open={open} onOpenChange={setOpen} />
     </>
@@ -874,14 +940,24 @@ function ImageMedia({
 }
 
 /** Legenda exibida abaixo de imagem/vídeo, com espaço reservado pro timestamp. */
-function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boolean }) {
+function CaptionText({
+  caption,
+  isOutgoing,
+  metaReserve,
+}: {
+  caption: string
+  isOutgoing: boolean
+  metaReserve?: ReactNode
+}) {
   return (
-    <span className={cn("break-words text-[13px]", !isOutgoing && "text-[var(--chat-bubble-received-text)]")}>
+    <span
+      className={cn(
+        "flow-root break-words text-[13px] [overflow-wrap:anywhere]",
+        !isOutgoing && "text-[var(--chat-bubble-received-text)]",
+      )}
+    >
       {formatWhatsapp(caption)}
-      <span
-        aria-hidden
-        className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
-      />
+      {metaReserve}
     </span>
   )
 }
@@ -1259,147 +1335,62 @@ export function MessageBubble({
     return <FormBubble message={message} className={className} />
   }
 
-  // Aviso de ligação (SIP/Api4com): linha centralizada com ícone — distingue
-  // recebida/realizada/não-atendida. Renderizado igual no inbox e no pipeline
-  // (ambos usam MessageBubble).
+  // Ligação (SIP/Api4com): mesmo EventRow dos demais eventos da timeline.
   if (message.messageType === "sip_call") {
     const inbound = message.type === "incoming"
-    const missed = /n[ãa]o atendida/i.test(message.content)
+    const missed = /n[ãa]o atendida/i.test(message.content ?? "")
+    const [title, ...rest] = (message.content ?? "").split(" · ")
+    const detail = rest.join(" · ").trim()
     return (
-      <div className={cn("flex w-full items-center justify-center py-1", className)}>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[11px] font-semibold",
-            missed
-              ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/8 text-[var(--color-danger)]"
-              : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
-          )}
-        >
-          {missed ? (
-            <IconPhoneOff size={12} />
-          ) : inbound ? (
-            <IconPhoneIncoming size={12} />
-          ) : (
-            <IconPhoneOutgoing size={12} />
-          )}
-          <span>{message.content}</span>
-          <span className="text-[var(--text-muted)]">· {message.time}</span>
-        </span>
-      </div>
+      <EventRow
+        icon={missed ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
+        text={title || (inbound ? "Ligação recebida" : "Ligação realizada")}
+        actor={detail}
+        time={message.time}
+        className={className}
+      />
     )
   }
 
-  // Nota interna: card neutro (cinza claro) com acento indigo no rótulo
-  // "NOTA" — modelo alinhado ao screenshot (antes era gradiente âmbar).
-  // Layout: [🔒 NOTA] [texto flex-1] [ações hover] [agente] [hora]
+  // Nota interna humana — card com cadeado + rótulo "NOTA".
+  // Eventos automáticos NÃO passam por aqui (`kind === "event"`).
   if (isNote) {
-    const hasNoteActions = !!(onPinNote || onAddToLog)
     return (
-      <div
-        className={cn(
-          "group relative flex w-full items-center gap-2.5 rounded-[var(--radius-lg)] border px-3.5 py-2 text-sm leading-[1.45] transition-colors",
-          isPinned
-            ? "border-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,var(--glass-bg-base))]"
-            : "border-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] bg-[color-mix(in_srgb,var(--text-muted)_7%,var(--glass-bg-base))]",
-          className,
-        )}
-      >
-        {/* Indicador de nota fixada */}
-        {isPinned && (
-          <span className="absolute -top-1.5 right-8 flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_15%,var(--glass-bg-base))] px-1.5 py-0.5">
-            <IconPinFilled size={9} className="text-[var(--brand-primary)]" />
-            <span className="font-display text-[8px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-              fixada
-            </span>
-          </span>
-        )}
-
-        {/* Ícone + badge "NOTA" */}
-        <span className="flex shrink-0 items-center gap-1.5">
-          <IconLock size={13} className="text-[var(--brand-primary)]" />
-          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-[var(--brand-primary)]">
-            Nota
-          </span>
-        </span>
-
-        {/* Separador */}
-        <span className="h-3.5 w-px shrink-0 bg-[color-mix(in_srgb,var(--text-muted)_25%,transparent)]" />
-
-        {/* Conteúdo da mensagem */}
-        <span className="min-w-0 flex-1 text-[var(--text-primary)]">
-          <MessageContent message={message} isOutgoing={false} />
-        </span>
-
-        {/* Ações hover (fixar + log) */}
-        {hasNoteActions && (
-          <span className="ml-1 flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-            {onPinNote && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      isPinned ? onPinNote(null) : onPinNote(message.id)
-                    }
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] hover:text-[var(--brand-primary)]"
-                    aria-label={isPinned ? "Desafixar nota" : "Fixar nota"}
-                  >
-                    {isPinned ? (
-                      <IconPinFilled size={13} />
-                    ) : (
-                      <IconPin size={13} />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-[11px]">
-                  {isPinned ? "Desafixar nota" : "Fixar nota"}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {onAddToLog && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onAddToLog(message.content)}
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] hover:text-[var(--brand-primary)]"
-                    aria-label="Adicionar ao log do negócio"
-                  >
-                    <IconListCheck size={13} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-[11px]">
-                  Adicionar ao log do negócio
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </span>
-        )}
-
-        {/* Agente + hora */}
-        <span className="ml-auto flex shrink-0 items-center gap-2">
-          {senderName && (
-            <span className="font-display text-[11px] font-semibold text-[var(--text-secondary)]">
-              {senderName}
-            </span>
-          )}
-          <span className="font-body text-[10.5px] text-[var(--text-muted)]">
-            {message.time}
-          </span>
-        </span>
-      </div>
+      <NoteRow
+        className={className}
+        content={<MessageContent message={message} isOutgoing={false} />}
+        senderName={senderName}
+        time={message.time}
+        isPinned={isPinned}
+        noteId={message.id}
+        logContent={message.content}
+        onPinNote={onPinNote}
+        onAddToLog={onAddToLog}
+      />
     )
   }
+
+  const metaReserve =
+    !hasButtons && !timeOverMedia ? (
+      <MetaReserve
+        time={message.time}
+        isOutgoing={isOutgoing}
+        status={isOutgoing ? message.status : undefined}
+        isFavorited={message.isFavorited}
+      />
+    ) : null
+  const hasReactions = !!(message.reactions && message.reactions.length > 0)
 
   return (
     <div
       className={cn(
-        "flex max-w-[75%] flex-col gap-0.5",
+        "flex w-fit max-w-[75%] flex-col gap-0.5 overflow-visible",
         isOutgoing ? "ml-auto items-end" : "items-start",
+        hasReactions && "relative z-[2] mb-3",
         className,
       )}
     >
-      <div className={cn("group flex items-end gap-2.5", isOutgoing && "flex-row-reverse")}>
+      <div className={cn("group flex max-w-full items-end gap-2.5 overflow-visible", isOutgoing && "flex-row-reverse")}>
         {/* Avatar: robô para bot, iniciais para agente — com tooltip do nome.
             Automação manual (colab): robô + chip de iniciais do agente que
             acionou, sobreposto no canto inferior direito. */}
@@ -1503,7 +1494,9 @@ export function MessageBubble({
         )}
         <div
           className={cn(
-            "relative min-w-0 rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
+            "relative min-w-0 overflow-visible rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
+            hasReactions && "z-[2]",
+            isOutgoing ? "chat-bubble-sent" : "chat-bubble-received",
             isOutgoing
               ? isCampaign
                 ? "rounded-br border shadow-[0_3px_12px_rgba(13,148,136,0.18)]"
@@ -1636,22 +1629,22 @@ export function MessageBubble({
             />
           )}
           {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
-          <MessageContent message={message} isOutgoing={isOutgoing} />
+          <MessageContent message={message} isOutgoing={isOutgoing} metaReserve={metaReserve} />
           {/* Botões de resposta rápida (interactive/template) — cards
               empilhados abaixo do corpo, estilo WhatsApp/V0. */}
           {message.buttons && message.buttons.length > 0 && (
             <MessageButtons buttons={message.buttons} onLightBg={!isOutgoing} />
           )}
-          {/* Horário + ticks. Sem botões, flutua no canto inferior direito
-              (padrão WhatsApp). COM botões, entra em fluxo abaixo deles,
-              alinhado à direita — senão o horário/ticks ficam cortados por
-              cima do último botão. */}
+          {/* Horário + ticks. Sem botões, overlay no spacer flutuante
+              (canto inferior direito do conteúdo — padrão WhatsApp).
+              `bottom`/`right` batem com py-2 / px-3.5 pra cobrir o spacer.
+              COM botões, entra em fluxo abaixo deles. */}
           <span
             className={cn(
               "pointer-events-none select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
               hasButtons
                 ? "mt-1.5 flex w-full justify-end"
-                : "absolute bottom-1.5 right-2.5 inline-flex",
+                : "absolute bottom-2 right-3.5 inline-flex",
               timeOverMedia &&
                 "rounded px-1 py-0.5 text-white shadow-[0_1px_2px_rgba(0,0,0,0.55)] [text-shadow:0_1px_2px_rgba(0,0,0,0.75)] bg-black/35",
               !timeOverMedia && isOutgoing && isBot && !isCampaign && "text-white/70",
@@ -1687,9 +1680,9 @@ export function MessageBubble({
               <StatusTicks status={message.status} onLightBg={false} />
             ) : null}
           </span>
-          {/* Badge de reação flutuante: emoji do cliente sobre o canto
-              inferior da bolha (padrão WhatsApp Web). Quando há múltiplas
-              reações distintas, exibe as duas primeiras + contador. */}
+          {/* Badge de reação: sobrepõe a borda inferior (não o horário, que
+              fica à direita). z-index acima do card seguinte; o parent tem
+              overflow visible + margem pra não clipar. */}
           {message.reactions && message.reactions.length > 0 && (
             <ReactionBadge
               reactions={message.reactions}
@@ -1774,7 +1767,9 @@ function ReactionBadge({
   return (
     <div
       className={cn(
-        "pointer-events-none absolute -bottom-2 flex items-center gap-0.5 rounded-full border border-black/5 bg-white px-1.5 py-0.5 shadow-[0_2px_6px_rgba(15,20,40,0.18)]",
+        // top-full -mt-1: pílula na frente da borda, ~4px sobre o card —
+        // abaixo do horário (bottom-2) pra não cobrir time/ticks.
+        "pointer-events-none absolute top-full z-20 -mt-1 flex items-center gap-0.5 overflow-visible rounded-full border border-black/5 bg-white px-1.5 py-0.5 shadow-[0_2px_6px_rgba(15,20,40,0.18)]",
         anchor === "left" ? "left-1" : "right-1",
       )}
       title={reactions.map((r) => r.emoji).join(" ")}
@@ -1803,6 +1798,161 @@ export function DaySeparator({ date }: DaySeparatorProps) {
       {date}
     </div>
   )
+}
+
+/** Atributo nas linhas da timeline p/ o pill sticky rastrear o dia visível. */
+export const DAY_LABEL_ATTR = "data-day-label"
+
+const PILL_IDLE_MS = 2200
+const PILL_ARM_MS = 450
+
+/**
+ * Pill fixo no topo da lista rolável (estilo WhatsApp). `h-0` para não
+ * empurrar as bolhas; o texto atualiza via `useStickyDayLabel`.
+ * Só aparece enquanto o usuário rola; some com fade após idle.
+ */
+export function StickyDayPill({ date }: { date: string | null }) {
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [scrolling, setScrolling] = useState(false)
+  const lastDateRef = useRef<string | null>(null)
+  if (date) lastDateRef.current = date
+  const shown = date ?? lastDateRef.current
+
+  useEffect(() => {
+    const node = rootRef.current
+    if (!node) return
+
+    let scrollRoot: HTMLElement | null = node.parentElement
+    while (scrollRoot) {
+      const oy = getComputedStyle(scrollRoot).overflowY
+      if (oy === "auto" || oy === "scroll") break
+      scrollRoot = scrollRoot.parentElement
+    }
+    if (!scrollRoot) return
+
+    let idleTimer = 0
+    let armed = false
+    const armTimer = window.setTimeout(() => {
+      armed = true
+    }, PILL_ARM_MS)
+
+    const onScroll = () => {
+      if (!armed) return
+      setScrolling(true)
+      window.clearTimeout(idleTimer)
+      idleTimer = window.setTimeout(() => setScrolling(false), PILL_IDLE_MS)
+    }
+
+    scrollRoot.addEventListener("scroll", onScroll, { passive: true })
+    return () => {
+      window.clearTimeout(armTimer)
+      window.clearTimeout(idleTimer)
+      scrollRoot.removeEventListener("scroll", onScroll)
+    }
+  }, [])
+
+  return (
+    <div
+      ref={rootRef}
+      className="pointer-events-none sticky top-0 z-[15] h-0 min-h-0 w-full shrink-0 overflow-visible"
+      aria-hidden
+    >
+      {shown ? (
+        <div
+          className={cn(
+            "flex justify-center transition-opacity duration-300 ease-out",
+            scrolling ? "opacity-100" : "opacity-0",
+          )}
+        >
+          <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/92 px-2.5 py-0.5 font-display text-[10px] font-semibold text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+            {shown}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function resolveStickyRoot(
+  root: { current: HTMLElement | null } | (() => HTMLElement | null),
+): HTMLElement | null {
+  return typeof root === "function" ? root() : root.current
+}
+
+/** Dia da primeira mensagem visível no container rolável. */
+export function useStickyDayLabel(
+  root: { current: HTMLElement | null } | (() => HTMLElement | null),
+  resetKey: unknown,
+): string | null {
+  const [label, setLabel] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    let observer: IntersectionObserver | null = null
+    let scrollRoot: HTMLElement | null = null
+    let retryId = 0
+    let rafId = 0
+    let attempts = 0
+    let onScroll: (() => void) | null = null
+
+    const pickLabel = (items: NodeListOf<HTMLElement>) => {
+      if (!scrollRoot || items.length === 0) return null
+      const top = scrollRoot.getBoundingClientRect().top + 2
+      for (const el of items) {
+        if (el.getBoundingClientRect().bottom > top) {
+          return el.getAttribute(DAY_LABEL_ATTR)
+        }
+      }
+      return items[items.length - 1]?.getAttribute(DAY_LABEL_ATTR) ?? null
+    }
+
+    const bind = () => {
+      if (cancelled) return
+      scrollRoot = resolveStickyRoot(root)
+      if (!scrollRoot) {
+        if (attempts++ < 16) retryId = requestAnimationFrame(bind)
+        return
+      }
+      const items = scrollRoot.querySelectorAll<HTMLElement>(`[${DAY_LABEL_ATTR}]`)
+      if (items.length === 0) {
+        setLabel(null)
+        return
+      }
+
+      const apply = () => {
+        if (rafId) return
+        rafId = requestAnimationFrame(() => {
+          rafId = 0
+          const next = pickLabel(items)
+          if (next) setLabel(next)
+        })
+      }
+      onScroll = apply
+
+      observer = new IntersectionObserver(apply, {
+        root: scrollRoot,
+        threshold: [0, 0.01],
+      })
+      items.forEach((el) => observer!.observe(el))
+      scrollRoot.addEventListener("scroll", apply, { passive: true })
+      // Depois do auto-scroll ao fim (deal usa 2 rAFs).
+      requestAnimationFrame(() => requestAnimationFrame(apply))
+    }
+
+    bind()
+
+    return () => {
+      cancelled = true
+      if (retryId) cancelAnimationFrame(retryId)
+      if (rafId) cancelAnimationFrame(rafId)
+      observer?.disconnect()
+      if (scrollRoot && onScroll) {
+        scrollRoot.removeEventListener("scroll", onScroll)
+      }
+    }
+  }, [root, resetKey])
+
+  return label
 }
 
 interface ConnectionDividerProps {
@@ -1836,6 +1986,11 @@ interface TicketDividerProps {
   closedAt: string | null
   /** Ticket em andamento (mais recente) — estilo ligeiramente diferente. */
   isCurrent?: boolean
+  openedAt?: string | null
+  openedByName?: string | null
+  openedByUserId?: string | null
+  closedByName?: string | null
+  closedByUserId?: string | null
 }
 
 /**
@@ -1843,67 +1998,79 @@ interface TicketDividerProps {
  * Aparece no início de cada ticket quando `history=1` está ativo,
  * distinguindo ciclos de atendimento distintos sem esconder o histórico.
  */
-export function TicketDivider({ number, closedAt, isCurrent }: TicketDividerProps) {
-  let dateLabel = ""
-  if (closedAt) {
-    const d = new Date(closedAt)
-    if (!Number.isNaN(d.getTime())) {
-      const dd = String(d.getDate()).padStart(2, "0")
-      const mm = String(d.getMonth() + 1).padStart(2, "0")
-      const yyyy = d.getFullYear()
-      dateLabel = ` · encerrado ${dd}/${mm}/${yyyy}`
-    }
+function closedEventTime(iso: string | null): string {
+  if (!iso) return ""
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ""
+  const dd = String(d.getDate()).padStart(2, "0")
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const hh = String(d.getHours()).padStart(2, "0")
+  const mi = String(d.getMinutes()).padStart(2, "0")
+  return `${dd}/${mm} ${hh}:${mi}`
+}
+
+export function TicketDivider({
+  number,
+  closedAt,
+  isCurrent,
+  openedAt,
+  openedByName,
+  openedByUserId,
+  closedByName,
+  closedByUserId,
+}: TicketDividerProps) {
+  if (isCurrent) {
+    return (
+      <EventRow
+        action="entrada"
+        text={`Conversa #${number} aberta`}
+        actor={openedByName ?? ""}
+        actorId={openedByUserId}
+        time={closedEventTime(openedAt ?? null)}
+      />
+    )
   }
   return (
-    <div className="my-3 flex items-center gap-2 self-stretch">
-      <span className="h-px flex-1 bg-[var(--glass-border)]" />
-      <span
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[10.5px] font-semibold",
-          isCurrent
-            ? "border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
-            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
-        )}
-      >
-        {isCurrent ? "Conversa atual" : `#${number}${dateLabel}`}
-      </span>
-      <span className="h-px flex-1 bg-[var(--glass-border)]" />
-    </div>
+    <EventRow
+      action="saida"
+      text={`Conversa #${number} encerrada`}
+      actor={closedByName ?? ""}
+      actorId={closedByUserId}
+      time={closedEventTime(closedAt)}
+    />
   )
 }
 
 interface ConversationClosedMarkerProps {
   /** ISO da data de encerramento — quando ausente, mostra so "Conversa encerrada". */
   closedAt?: string | null
+  conversationNumber?: number | null
+  closedByName?: string | null
+  closedByUserId?: string | null
 }
 
 /**
  * Marcador no fim da timeline indicando que a conversa foi encerrada.
- * Mesmo padrao visual do `ConnectionDivider`/`DaySeparator` (chip pill
- * centralizado com bordas hairline) — minimalista, dentro do proprio
- * chat, sem card lateral. Usado no inbox (via ChatArea) e no pipeline
- * (via messagesSlot do DealDetailPanel).
+ * Mesmo padrão visual de `EventRow` (linha de evento, sem pill).
+ * Usado no inbox (via ChatArea) e no pipeline (via DealChatBinding).
  */
-export function ConversationClosedMarker({ closedAt }: ConversationClosedMarkerProps) {
-  let label: string | null = null
-  if (closedAt) {
-    const d = new Date(closedAt)
-    if (!Number.isNaN(d.getTime())) {
-      const dd = String(d.getDate()).padStart(2, "0")
-      const mm = String(d.getMonth() + 1).padStart(2, "0")
-      const hh = String(d.getHours()).padStart(2, "0")
-      const mi = String(d.getMinutes()).padStart(2, "0")
-      label = `${dd}/${mm} às ${hh}:${mi}`
-    }
-  }
+export function ConversationClosedMarker({
+  closedAt,
+  conversationNumber,
+  closedByName,
+  closedByUserId,
+}: ConversationClosedMarkerProps) {
+  const label =
+    typeof conversationNumber === "number" && conversationNumber > 0
+      ? `Conversa #${conversationNumber} encerrada`
+      : "Conversa encerrada"
   return (
-    <div className="my-2 flex items-center justify-center gap-2 self-center">
-      <span className="h-px w-6 bg-[var(--glass-border)]" />
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
-        <IconLock size={12} className="text-[var(--text-muted)]" />
-        Conversa encerrada{label ? ` · ${label}` : ""}
-      </span>
-      <span className="h-px w-6 bg-[var(--glass-border)]" />
-    </div>
+    <EventRow
+      action="saida"
+      text={label}
+      actor={closedByName ?? ""}
+      actorId={closedByUserId}
+      time={closedEventTime(closedAt ?? null)}
+    />
   )
 }

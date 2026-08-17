@@ -22,6 +22,10 @@ export function WidgetConfigDrawer({ slug, onClose }: WidgetConfigDrawerProps) {
   const open = !!slug && !!entry;
   const Component = entry?.Component;
 
+  if (entry?.standalone && Component) {
+    return open ? <Component onClose={onClose} /> : null;
+  }
+
   return (
     <FormDialog
       open={open}

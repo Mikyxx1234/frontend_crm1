@@ -78,10 +78,12 @@ export type FilterOptionsResponse = {
   pipelines: {
     id: string;
     name: string;
+    number?: number;
     slug?: string;
     stages: {
       id: string;
       name: string;
+      number?: number;
       slug?: string;
       color: string;
       position: number;

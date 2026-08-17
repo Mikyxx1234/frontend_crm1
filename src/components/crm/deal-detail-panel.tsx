@@ -50,10 +50,9 @@ import {
   formatConnectionShort,
   type ConnectionRef,
 } from "@/lib/connection-label"
-import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
+import { useResolveConversationFlow } from "@/features/inbox-v2/extras/use-resolve-conversation-flow"
 import { RequirePermission } from "@/components/auth/require-permission"
 import { FavoritesPanel } from "@/components/crm/favorites-panel"
-import { TabulationDialog } from "@/features/inbox-v2/extras/tabulation-dialog"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
 import { resolveCustomFieldGroups, type CustomFieldDef } from "@/lib/field-layout"
@@ -1685,18 +1684,14 @@ function TabsBar({
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
-  const [tabulationOpen, setTabulationOpen] = useState(false)
-  const [tabulationDeptId, setTabulationDeptId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const effectiveTabulationDeptId =
-    tabulationDeptId ?? conversationDepartmentId ?? null
-  const toggleResolve = useToggleConversationResolve({
-    onTabulationRequired: ({ departmentId: deptFromApi }) => {
-      setMenuOpen(false)
-      setTabulationDeptId(deptFromApi ?? conversationDepartmentId ?? null)
-      setTabulationOpen(true)
-    },
-  })
+  const { handleToggleResolve, toggleResolve, dialogs } =
+    useResolveConversationFlow({
+      conversationId: conversationId ?? null,
+      isResolved,
+      departmentId: conversationDepartmentId,
+      requireTabulationOnClose: conversationRequiresTabulation,
+    })
 
   /* Fecha kebab ao clicar fora */
   useEffect(() => {
@@ -1860,20 +1855,8 @@ function TabsBar({
                       type="button"
                       disabled={toggleResolve.isPending}
                       onClick={() => {
-                        if (
-                          !isResolved &&
-                          conversationRequiresTabulation &&
-                          conversationDepartmentId
-                        ) {
-                          setMenuOpen(false)
-                          setTabulationDeptId(conversationDepartmentId)
-                          setTabulationOpen(true)
-                          return
-                        }
-                        toggleResolve.mutate(
-                          { conversationId, action: isResolved ? "reopen" : "resolve" },
-                          { onSuccess: () => setMenuOpen(false) },
-                        )
+                        setMenuOpen(false)
+                        handleToggleResolve()
                       }}
                       className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-subtle)] disabled:opacity-50"
                     >
@@ -1896,19 +1879,7 @@ function TabsBar({
         onOpenChange={setFavoritesOpen}
         conversationId={conversationId ?? null}
       />
-      <TabulationDialog
-        open={tabulationOpen}
-        onOpenChange={setTabulationOpen}
-        departmentId={effectiveTabulationDeptId}
-        submitting={toggleResolve.isPending}
-        onConfirm={(tabulationId) => {
-          if (!conversationId) return
-          toggleResolve.mutate(
-            { conversationId, action: "resolve", tabulationId },
-            { onSuccess: () => setTabulationOpen(false) },
-          )
-        }}
-      />
+      {dialogs}
     </div>
   )
 }

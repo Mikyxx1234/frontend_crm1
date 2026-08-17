@@ -55,7 +55,7 @@ export interface SettingsTransitionProps {
 
 // `inert` só entrou na tipagem HTML do React em 19+. Cast pra evitar
 // friction em bases mais antigas — comportamento nativo é preservado.
-type InertProps = { inert?: "" };
+type InertProps = { inert?: boolean };
 
 export function SettingsTransition({
   isOpen,
@@ -107,7 +107,7 @@ export function SettingsTransition({
     };
   }, [isOpen]);
 
-  const inertProps: InertProps = isOpen ? { inert: "" } : {};
+  const inertProps: InertProps = isOpen ? { inert: true } : {};
 
   return (
     <div className="relative min-h-screen">

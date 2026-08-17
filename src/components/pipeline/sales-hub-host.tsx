@@ -1,26 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconSettings } from "@tabler/icons-react";
 
 import { RequirePermission } from "@/components/auth/require-permission";
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PageActionsMenu } from "@/components/crm/page-toolbar";
 import type { DealDetail } from "@/components/crm/deal-detail-panel";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
-import { PageLoading } from "@/components/crm/page-loading";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { SalesHubView } from "@/components/pipeline/sales-hub-view";
 import type { DealQueueSortMode } from "@/components/sales-hub/deal-queue";
 import { avatarInitials } from "@/features/inbox-v2/adapters";
 import { useContactSidebar } from "@/features/inbox-v2/hooks";
+import { useStuckTimeout } from "@/hooks/use-stuck-timeout";
 import type { BoardSortParam } from "@/features/pipeline-v2/api";
 import {
   useBoard,
   useBoardFiltered,
+  boardKey,
+  BOARD_PAGE_SIZE,
   useDealDeepLink,
   useDealDetail,
   usePipelineRealtime,
@@ -33,22 +37,32 @@ import {
   pathForPipelineView,
   writePipelineViewPreference,
 } from "@/lib/pipeline-view-preference";
+import {
+  SEARCH_DEBOUNCE_MS,
+  normalizeSearchQuery,
+} from "@/lib/search-query";
 import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
-import type { PipelineSortKey } from "@/components/pipeline/kanban-filters/v2/search-filter-bar";
 import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import { useKanbanFilters } from "@/components/pipeline/kanban-filters/use-kanban-filters";
+import { usePipelineSearchSort } from "@/components/pipeline/kanban-filters/use-pipeline-search-sort";
 import {
   isEmptyFilters,
   hasServerSideFilters,
   type AdvancedDealFilters,
-  type FilterOptionsResponse,
 } from "@/components/pipeline/kanban-filters/types";
 
+/** Restante no servidor: flag `hasMore` OU `totalCount > deals.length`. */
+function stageHasMoreServer(s: {
+  hasMore?: boolean;
+  totalCount?: number;
+  deals: { length: number };
+}): boolean {
+  if (s.hasMore === true) return true;
+  return typeof s.totalCount === "number" && s.deals.length < s.totalCount;
+}
+
 const SALESHUB_QUEUE_SORT_LS = "saleshub-queue-sort:v1";
-/** Mesma chave do kanban — busca compartilha entre views. */
-const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
-const PIPELINE_SORT_LS = "kanban-pipeline-sort:v1";
 
 const AVATAR_SLUGS = [
   "blue",
@@ -95,27 +109,6 @@ function readQueueSort(): DealQueueSortMode {
   return "message_new";
 }
 
-function readPipelineSort(): PipelineSortKey {
-  if (typeof window === "undefined") return "default";
-  try {
-    const raw = localStorage.getItem(PIPELINE_SORT_LS);
-    if (
-      raw === "default" ||
-      raw === "interaction_newest" ||
-      raw === "interaction_oldest" ||
-      raw === "name_az" ||
-      raw === "name_za" ||
-      raw === "created_newest" ||
-      raw === "created_oldest"
-    ) {
-      return raw;
-    }
-  } catch {
-    /* noop */
-  }
-  return "default";
-}
-
 export type SalesHubHostProps = {
   /**
    * Quando true, mostra o rótulo "Sales Hub" na faixa secundária
@@ -138,43 +131,27 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     writePipelineViewPreference("flow");
   }, []);
 
-  const [search, setSearch] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      return localStorage.getItem(PIPELINE_SEARCH_LS) ?? "";
-    } catch {
-      return "";
-    }
-  });
-  const [sortKey, setSortKey] = useState<PipelineSortKey>(readPipelineSort);
+  const { search, setSearch, sortKey, setSortKey } = usePipelineSearchSort();
   const [sortMode, setSortMode] = useState<DealQueueSortMode>(readQueueSort);
   const { filters, setFilters, patch: patchFilters, clear: clearFilters } =
     useKanbanFilters();
-  const [filterOptions, setFilterOptions] =
-    useState<FilterOptionsResponse | null>(null);
-  const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
+  const filterOptionsQuery = useQuery({
+    queryKey: ["kanban-filter-options"],
+    queryFn: fetchFilterOptions,
+    enabled: isAuthenticated,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+  const filterOptions = filterOptionsQuery.data ?? null;
+  const filterOptionsLoading = filterOptionsQuery.isLoading;
 
   const { activeDealId, setActiveDeal, normalizeDealId, syncDealNumber } =
     useDealDeepLink();
 
-  const { data: pipelines } = usePipelines(isAuthenticated);
+  const pipelinesQuery = usePipelines(isAuthenticated);
+  const pipelines = pipelinesQuery.data;
   const { pipelineId, setPipelineId } = usePipelineUrlSync(pipelines);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIPELINE_SEARCH_LS, search);
-    } catch {
-      /* noop */
-    }
-  }, [search]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIPELINE_SORT_LS, sortKey);
-    } catch {
-      /* noop */
-    }
-  }, [sortKey]);
 
   useEffect(() => {
     try {
@@ -183,25 +160,6 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
       /* noop */
     }
   }, [sortMode]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let cancelled = false;
-    setFilterOptionsLoading(true);
-    fetchFilterOptions()
-      .then((opts) => {
-        if (!cancelled) setFilterOptions(opts);
-      })
-      .catch(() => {
-        /* mantém opções já carregadas */
-      })
-      .finally(() => {
-        if (!cancelled) setFilterOptionsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated]);
 
   // Flow inclui abas Ganho/Perdido — precisa de ALL, senão WON/LOST
   // nunca entram no board e as contagens ficam em 0.
@@ -222,7 +180,7 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const rawSearch = (filters.search ?? search).trim();
   const [debouncedSearch, setDebouncedSearch] = useState(rawSearch);
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(rawSearch), 300);
+    const t = setTimeout(() => setDebouncedSearch(rawSearch), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [rawSearch]);
 
@@ -248,7 +206,8 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
 
   const queryFilters = useMemo(() => {
     const f: AdvancedDealFilters = { ...debouncedAdvanced };
-    if (debouncedSearch.length >= 2) f.search = debouncedSearch;
+    const q = normalizeSearchQuery(debouncedSearch);
+    if (q) f.search = q;
     return f;
   }, [debouncedAdvanced, debouncedSearch]);
 
@@ -258,14 +217,14 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
   const filtersPendingDebounce =
     advancedKey !== JSON.stringify(debouncedAdvanced);
 
-  const boardNormal = useBoard({
-    pipelineId,
-    status,
-    sort: boardSort,
-    // Desliga o GET com filtros ativos (economiza rede); o cache do
-    // query ainda alimenta o fallback visual no 1º POST.
-    enabled: isAuthenticated && !hasServerBoard,
-  });
+  // "Carregar mais" da fila: stageId → extras cumulativos além da página
+  // inicial (50). A fila do Flow é FLAT (mistura etapas), então cada
+  // disparo expande TODAS as colunas com hasMore de uma vez — mesmo
+  // padrão do kanban (`_v2-client`): com ≥1 offset o board passa a vir
+  // do POST /board (única rota que aceita offset) na mesma queryKey.
+  const [boardExtraByStage, setBoardExtraByStage] = useState<Record<string, number>>({});
+  const [loadingMoreQueue, setLoadingMoreQueue] = useState(false);
+
   const boardFiltered = useBoardFiltered({
     pipelineId,
     status,
@@ -273,8 +232,125 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     sort: boardSort,
     enabled: isAuthenticated && hasServerBoard,
   });
+  const boardNormal = useBoard({
+    pipelineId,
+    status,
+    sort: boardSort,
+    // Mantém o GET até o POST filtrado resolver — senão LS de filtros
+    // desliga o board normal no mount e a fila abre vazia ("Todos 0").
+    enabled: isAuthenticated && (!hasServerBoard || !boardFiltered.data),
+    perStage: BOARD_PAGE_SIZE,
+    offsetByStage: boardExtraByStage,
+  });
 
   usePipelineRealtime(isAuthenticated);
+
+  const queryClient = useQueryClient();
+
+  // Expansões "Carregar mais": cada disparo soma +50 nas etapas com
+  // hasMore e refaz o board (POST com offsetByStage — o queryFn já
+  // enxerga o estado novo no render que segue o setState).
+  const extrasKey = JSON.stringify(boardExtraByStage);
+  useEffect(() => {
+    if (Object.keys(boardExtraByStage).length === 0) return;
+    queryClient
+      .refetchQueries({
+        queryKey: boardKey(pipelineId ?? "pl-1", status, boardSort),
+        exact: true,
+      })
+      .finally(() => setLoadingMoreQueue(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extrasKey]);
+
+  // Troca de funil/status/ordenação/filtro → expansões voltam a 50.
+  useEffect(() => {
+    setBoardExtraByStage({});
+    setLoadingMoreQueue(false);
+  }, [pipelineId, status, boardSort, hasServerBoard]);
+
+  const handleQueueLoadMore = useCallback((stageId?: string | null) => {
+    const stages = boardNormal.data ?? [];
+    const targets = (
+      stageId ? stages.filter((s) => s.id === stageId) : stages
+    ).filter(stageHasMoreServer);
+    if (targets.length === 0) return;
+    setLoadingMoreQueue(true);
+    setBoardExtraByStage((prev) => {
+      const next = { ...prev };
+      for (const s of targets) {
+        next[s.id] = (next[s.id] ?? 0) + BOARD_PAGE_SIZE;
+      }
+      return next;
+    });
+  }, [boardNormal.data]);
+
+  // Com filtros server-side o boardFiltered segue perStage 200 — sem
+  // load-more de rede (espelha o kanban, que esconde o botão).
+  // Não depende só de `hasMore === true`: badge usa totalCount e o
+  // flag às vezes falta no cache — restante = total − loaded.
+  const queueHasMore =
+    !hasServerBoard && (boardNormal.data ?? []).some(stageHasMoreServer);
+
+  const boardHasSnapshot =
+    Array.isArray(boardNormal.data) || Array.isArray(boardFiltered.data);
+  const boardFetching =
+    boardNormal.isFetching ||
+    boardNormal.isLoading ||
+    boardFiltered.isFetching ||
+    boardFiltered.isLoading;
+  const boardError =
+    !boardHasSnapshot &&
+    !boardFetching &&
+    (hasServerBoard ? boardFiltered.isError : boardNormal.isError);
+
+  // Query recém-enabled fica 1 tick em pending+idle (`refetchOnMount: false`).
+  // Sem o hold, esse tick renderiza a UI real com board vazio ("Nenhum deal").
+  // 50ms é teto rígido: se o fetch nunca disparar, solta — nunca vira gate
+  // eterno (era o que `!isFetched` fazia no host antigo).
+  const [idleHold, setIdleHold] = useState(true);
+  useEffect(() => {
+    if (!pipelineId) {
+      setIdleHold(true);
+      return;
+    }
+    if (boardHasSnapshot || boardError || boardFetching) {
+      setIdleHold(false);
+      return;
+    }
+    const t = window.setTimeout(() => setIdleHold(false), 50);
+    return () => window.clearTimeout(t);
+  }, [pipelineId, boardHasSnapshot, boardError, boardFetching]);
+
+  const normalIdleUnfetched =
+    !boardNormal.data &&
+    boardNormal.fetchStatus === "idle" &&
+    !boardNormal.isFetched &&
+    !boardNormal.isError;
+  const filteredIdleUnfetched =
+    !boardFiltered.data &&
+    boardFiltered.fetchStatus === "idle" &&
+    !boardFiltered.isFetched &&
+    !boardFiltered.isError;
+
+  useLayoutEffect(() => {
+    if (!pipelineId || !isAuthenticated) return;
+    if (normalIdleUnfetched) void boardNormal.refetch();
+    if (hasServerBoard && filteredIdleUnfetched) void boardFiltered.refetch();
+    // refetch() é estável o bastante; objetos do useQuery mudam todo render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    pipelineId,
+    isAuthenticated,
+    hasServerBoard,
+    normalIdleUnfetched,
+    filteredIdleUnfetched,
+  ]);
+
+  const boardPending =
+    !!pipelineId &&
+    !boardHasSnapshot &&
+    !boardError &&
+    (boardFetching || idleHold);
 
   const boardRefreshing =
     filtersPendingDebounce ||
@@ -333,6 +409,17 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     normalizeDealId(dealDetail?.id);
     syncDealNumber((dealDetail as { number?: number } | undefined)?.number);
   }, [dealDetail, normalizeDealId, syncDealNumber]);
+
+  // Rede de segurança: o shell do Flow depende de `pipelineId`, que só sai
+  // de null com a lista de funis. Query travada (idle que nunca dispara,
+  // resposta que nunca chega) não tem `isError` — sem o timeout a tela
+  // girava para sempre.
+  const pipelinesEmpty = Array.isArray(pipelines) && pipelines.length === 0;
+  const pipelinesStuck = useStuckTimeout(
+    isAuthenticated && !pipelineId && !pipelinesQuery.isError && !pipelinesEmpty,
+  );
+  const pipelinesFailed =
+    !pipelineId && (pipelinesQuery.isError || pipelinesEmpty || pipelinesStuck);
 
   const boardDealSeed = useMemo(() => {
     if (!activeDealId) return null;
@@ -483,12 +570,33 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
     pipelineId,
   ]);
 
-  if (sessionStatus === "loading" || !pipelineId) {
-    return <PageLoading />;
+  // Sem sessão o middleware redireciona; renderizar o shell aqui prendia a
+  // tela para sempre, porque `usePipelines` fica desligada e `pipelineId`
+  // nunca sai de null (o `!isAuthenticated` abaixo era inalcançável).
+  if (sessionStatus === "unauthenticated") {
+    return null;
   }
 
-  if (!isAuthenticated) {
-    return null;
+  // `pipelineId` só existe depois de `GET /api/pipelines`. Se essa query
+  // falha (500/timeout) ou volta vazia, não há caminho para o Flow — vira
+  // erro com retry em vez de spinner infinito.
+  if (pipelinesFailed) {
+    return (
+      <AppLoading
+        error={
+          pipelinesEmpty
+            ? "Nenhum funil configurado nesta organização."
+            : "Não foi possível carregar os funis."
+        }
+        onRetry={() => void pipelinesQuery.refetch()}
+      />
+    );
+  }
+
+  // Só sessão/funil. NÃO esperar isFetched do board — query disabled/idle
+  // nunca fica fetched e o Flow ficava preso no loading para sempre.
+  if (sessionStatus === "loading" || !pipelineId) {
+    return <AppLoading />;
   }
 
   const hasActiveFilters = !isEmptyFilters(filters) || !!search.trim();
@@ -615,6 +723,10 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
             searchQuery={hasServerBoard ? "" : search}
             sortMode={sortMode}
             onSortModeChange={setSortMode}
+            queueHasMore={queueHasMore}
+            queueLoadingMore={loadingMoreQueue}
+            onQueueLoadMore={handleQueueLoadMore}
+            queueBoardPending={boardPending}
             activeDealId={resolvedDealId}
             onActiveDealChange={setActiveDeal}
             detailDeal={detailDeal}

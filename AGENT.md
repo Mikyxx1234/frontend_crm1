@@ -5,6 +5,26 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-08-14 — Node `check_agent_status` (Status do agente)
+
+**Modelo usado.** Cursor Grok 4.6.
+
+**Decisão.** Bloco de lógica no canvas com o mesmo card binário de
+`business_hours`: handle `true` = Disponível, handle `false` = Offline
+(`elseStepId`). Sem formulário extra — verifica o responsável da conversa.
+
+**Contexto.** O runtime vive no backend; o canvas precisa do tipo na
+palette e das arestas `true`/`false` para o operador montar o ramo de
+transferência quando o dono está offline.
+
+**Alternativas descartadas.** Reusar `ConditionNode` (N ramos); reusar
+`BusinessHoursNode` com labels genéricos (acopla dois conceitos).
+
+**Impacto.** Palette Lógica, workflow-canvas, auditor/layout/workflow
+espelhados do backend.
+
+---
+
 ### 2026-08-07 — Node `send_whatsapp_list` (Lista / menu interativo)
 
 **Modelo usado.** Cursor Grok 4.5.
@@ -2161,3 +2181,8 @@ aplicada com SQL aditivo idempotente em
 - Modelo: Cursor Grok 4.5
 - Decisão: incluir `automations` em `DEFAULT_ENABLED` (FE+BE) e garantir no `MobileMoreSheet` via `MORE_SHEET_ENSURE`, para layouts já salvos sem o módulo. Restrito a ADMIN/MANAGER (`allowedRoles`), paridade com a sidebar. Continua fora do bottom nav padrão — só em "Mais seções".
 - Alternativas descartadas: só alterar o Layout Builder (orgs com row salva não veriam); pinar Automações na barra inferior (ocupa slot de core).
+
+### 2026-08-13 — Tema escuro do editor de automações
+- Modelo: Cursor Grok 4.5
+- Decisão: tokenizar as cores fixas do editor em `--fx-*` (novos: `--fx-surface-2`, `--fx-input-bg`, `--fx-divider-strong`, `--fx-surface-err`, `--fx-border-err`, `--fx-out-label*`, `--fx-text-label`, `--fx-accent-ink`, `--fx-warn-*`), com os hex claros atuais como valor padrão, e concentrar o dark em um único bloco `.v2-dark .automation-editor`. Canvas passa de `#0e1524` para `#1a2334`–`#1f2a40` (azul escuro suave, família do `--bg-mesh` do CRM); cards em `#26314a`, campos recuados em `#1e2740`. O glifo `⊘` do ramo "senão" virou `IconBan` (Tabler) — a fonte do app não tem U+2298 e renderizava tofu.
+- Alternativas descartadas: sobrescrever cada seletor em `.v2-dark` (duplica regra e desincroniza com o claro); manter o remapeamento por utilitário Tailwind em `globals-v2.css` como única estratégia (não alcança as classes `cfg-*`/`fx-*`, que são CSS puro).

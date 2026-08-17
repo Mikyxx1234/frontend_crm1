@@ -35,7 +35,13 @@ type AnalyticsResponse = {
   byTabulation: Array<{
     tabulationId: string;
     name: string;
+    number?: number | null;
     path: string;
+    // A mesma folha existe em vários departamentos ("Sem Resposta"); sem isto
+    // o ranking mostra linhas de texto idêntico. O id serve ao atalho de
+    // filtro na própria linha.
+    departmentId: string | null;
+    departmentName: string | null;
     count: number;
   }>;
   byUser: Array<{ userId: string; name: string; count: number }>;
@@ -46,6 +52,7 @@ type AnalyticsResponse = {
     contactName: string | null;
     actorName: string | null;
     tabulationPath: string | null;
+    tabulationNumber?: number | null;
     departmentName: string | null;
   }>;
 };
@@ -131,6 +138,14 @@ export function TabulationsDashboard() {
     ],
     [usersQuery.data],
   );
+  // Atalho do ranking. Clicar no departamento já selecionado limpa o filtro:
+  // sem o toggle o operador entra no recorte e não acha a saída sem voltar ao
+  // dropdown do topo.
+  const toggleDepartment = (id: string) => {
+    setDepartmentId((prev) => (prev === id ? "" : id));
+    setPage(1);
+  };
+
   const departmentOptions = useMemo(
     () => [
       { value: "", label: "Todos" },
@@ -245,7 +260,14 @@ export function TabulationsDashboard() {
           label="Top motivo"
           value={data?.byTabulation[0]?.name ?? loadingValue}
           hint={
-            data?.byTabulation[0] ? `${data.byTabulation[0].count}×` : undefined
+            data?.byTabulation[0]
+              ? [
+                  `${data.byTabulation[0].count}×`,
+                  data.byTabulation[0].departmentName,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : undefined
           }
           icon={<IconTrophy size={20} stroke={2.2} />}
         />
@@ -270,9 +292,48 @@ export function TabulationsDashboard() {
                   <div className="flex min-w-0 items-baseline justify-between gap-2 text-[12.5px]">
                     <span
                       className="min-w-0 flex-1 truncate text-[var(--text-primary)]"
-                      title={row.path}
+                      title={
+                        row.departmentName
+                          ? `${row.path} / ${row.departmentName}`
+                          : row.path
+                      }
                     >
                       {row.path}
+                      {row.number != null ? ` (#${row.number})` : ""}
+                      {row.departmentId && row.departmentName && (
+                        <>
+                          <span
+                            className="mx-1 text-[var(--text-muted)]"
+                            aria-hidden
+                          >
+                            /
+                          </span>
+                          {/* Só o nome do departamento é clicável — se a linha
+                              ganhar comportamento próprio depois, o clique
+                              daqui não escapa pra ela. */}
+                          <button
+                            type="button"
+                            aria-pressed={departmentId === row.departmentId}
+                            aria-label={
+                              departmentId === row.departmentId
+                                ? `Limpar filtro de ${row.departmentName}`
+                                : `Filtrar por ${row.departmentName}`
+                            }
+                            title={
+                              departmentId === row.departmentId
+                                ? `Limpar filtro de ${row.departmentName}`
+                                : `Filtrar por ${row.departmentName}`
+                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleDepartment(row.departmentId as string);
+                            }}
+                            className="cursor-pointer text-[11px] text-[var(--text-muted)] underline-offset-2 transition-colors hover:text-[var(--text-primary)] hover:underline focus-visible:text-[var(--text-primary)] focus-visible:underline focus-visible:outline-none"
+                          >
+                            {row.departmentName}
+                          </button>
+                        </>
+                      )}
                     </span>
                     <span className="shrink-0 font-medium text-[var(--text-muted)]">
                       {row.count}
@@ -378,9 +439,16 @@ export function TabulationsDashboard() {
                     <td className="px-4 py-2.5">{row.contactName ?? "—"}</td>
                     <td
                       className="max-w-[280px] truncate px-4 py-2.5"
-                      title={row.tabulationPath ?? ""}
+                      title={
+                        row.tabulationNumber != null && row.tabulationPath
+                          ? `${row.tabulationPath} (#${row.tabulationNumber})`
+                          : (row.tabulationPath ?? "")
+                      }
                     >
                       {row.tabulationPath ?? "—"}
+                      {row.tabulationNumber != null
+                        ? ` (#${row.tabulationNumber})`
+                        : ""}
                     </td>
                     <td className="px-4 py-2.5 text-[var(--text-muted)]">
                       {row.departmentName ?? "—"}

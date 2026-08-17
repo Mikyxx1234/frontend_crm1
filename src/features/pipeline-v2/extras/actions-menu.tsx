@@ -13,14 +13,16 @@ import {
   IconCircleCheck,
   IconRefresh,
 } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
-import { useDeleteDeal, useSetDealStatus } from "@/features/pipeline-v2/hooks";
+import {
+  useDeleteDeal,
+  usePipelineLossReasons,
+  useSetDealStatus,
+} from "@/features/pipeline-v2/hooks";
 import type { DealStatus, StatusFilter } from "@/features/pipeline-v2/api";
-import { apiUrl } from "@/lib/api";
 
 interface DealActionsMenuProps {
   dealId: string | null;
@@ -50,18 +52,7 @@ export function DealActionsMenu({
   const deleteDealMut = useDeleteDeal(pipelineId, statusFilter);
   const { confirm, dialog } = useConfirm();
 
-  const { data: lossMeta } = useQuery({
-    queryKey: ["pipeline-loss-reasons", pipelineId],
-    queryFn: async () => {
-      const res = await fetch(
-        apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),
-      );
-      if (!res.ok) return { lossReasonRequired: false };
-      return res.json() as Promise<{ lossReasonRequired?: boolean }>;
-    },
-    enabled: !!pipelineId,
-    staleTime: 30_000,
-  });
+  const { data: lossMeta } = usePipelineLossReasons(pipelineId);
   const lossReasonsActive = Boolean(lossMeta?.lossReasonRequired);
 
   useEffect(() => {

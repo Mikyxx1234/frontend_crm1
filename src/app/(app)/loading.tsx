@@ -1,8 +1,11 @@
-import { PageLoading } from "@/components/crm/page-loading";
+import { AppLoading } from "@/components/crm/app-loading";
 
-/** Fallback de Suspense para as rotas de `(app)` — skeleton com placeholder
- *  da NavRail + conteúdo. Seções com layout próprio (ex.: settings) têm o
- *  seu próprio `loading.tsx`. */
+/**
+ * Fallback de Suspense do route group `(app)` — um único loading para TODAS
+ * as rotas. Sem ramificação por path (antes o header `x-pathname` escolhia
+ * um shell específico do Flow): o loader não imita mais o layout de destino,
+ * então não há o que ramificar.
+ */
 export default function Loading() {
-  return <PageLoading />;
+  return <AppLoading />;
 }

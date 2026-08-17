@@ -1,6 +1,6 @@
 /*
  * Camada de API das Campanhas v2 (frontend). Bate nas rotas já existentes:
- *   GET   /api/campaigns?status&type&page&perPage
+ *   GET   /api/campaigns?status&type&search&page&perPage
  *   GET   /api/campaigns/[id]
  *   GET   /api/campaigns/[id]/stats
  *   GET   /api/campaigns/[id]/recipients?status&page&perPage
@@ -27,6 +27,7 @@ import {
 } from "./mock-campaigns";
 
 import type {
+  AutomationRow,
   CampaignAction,
   CampaignDetail,
   CampaignFilters,
@@ -98,6 +99,7 @@ async function sendJson<T>(
 export interface FetchCampaignsParams {
   status?: string;
   type?: string;
+  search?: string;
   page?: number;
   perPage?: number;
 }
@@ -111,6 +113,7 @@ export function fetchCampaigns(
   const sp = new URLSearchParams();
   if (params.status) sp.set("status", params.status);
   if (params.type) sp.set("type", params.type);
+  if (params.search) sp.set("search", params.search);
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
   const qs = sp.toString();
@@ -168,8 +171,8 @@ export function fetchRecipients(
 
 export function createCampaign(
   body: CreateCampaignBody,
-): Promise<{ campaign: { id: string } }> {
-  return sendJson<{ campaign: { id: string } }>(
+): Promise<{ campaign: { id: string; number?: number } }> {
+  return sendJson<{ campaign: { id: string; number?: number } }>(
     "/api/campaigns",
     "POST",
     body,
@@ -186,6 +189,15 @@ export function runCampaignAction(
     "POST",
     {},
     "Erro ao executar ação na campanha.",
+  );
+}
+
+export function deleteCampaign(id: string): Promise<{ ok: boolean }> {
+  return sendJson<{ ok: boolean }>(
+    `/api/campaigns/${id}`,
+    "DELETE",
+    undefined,
+    "Erro ao excluir campanha.",
   );
 }
 
@@ -223,6 +235,16 @@ export function fetchSegments(): Promise<SegmentRow[]> {
     "/api/segments",
     "Erro ao carregar segmentos.",
   ).then((d) => d.segments ?? []);
+}
+
+export function fetchAutomations(): Promise<AutomationRow[]> {
+  if (isPageMockMode()) {
+    return Promise.resolve([]);
+  }
+  return getJson<{ items?: AutomationRow[]; automations?: AutomationRow[] }>(
+    "/api/automations?perPage=100",
+    "Erro ao carregar automações.",
+  ).then((d) => d.items ?? d.automations ?? []);
 }
 
 export async function fetchTemplates(channelId?: string | null): Promise<TemplateRow[]> {

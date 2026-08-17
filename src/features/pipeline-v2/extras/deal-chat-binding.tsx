@@ -9,7 +9,7 @@
  * pra serem plugados nas props correspondentes do DealDetailPanel.
  */
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,13 +20,19 @@ import { apiUrl } from "@/lib/api";
 import { avatarInitials } from "@/lib/avatar";
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
-import { DaySeparator, ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, StickyDayPill, useStickyDayLabel, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import {
+  EventRow,
+  isConversationCloseEventText,
+  isConversationOpenEventText,
+  isRedundantOpenStatusEvent,
+} from "@/components/crm/chat-timeline";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
 import { formatConnectionLabel, type ConnectionRef } from "@/lib/connection-label";
 import {
   Composer,
-  TemplatePickerList,
+  WhatsappTemplatePickerModal,
   whatsappTemplateToPending,
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
@@ -43,6 +49,7 @@ import {
   useSelectedOutboundChannel,
   useSendMessage,
   useWhatsappChannels,
+  findLastPublicMessageChannelId,
 } from "@/features/inbox-v2/hooks";
 import {
   formatDayLabel,
@@ -149,7 +156,11 @@ export function useDealChatBinding(params: {
       const res = await fetch(apiUrl("/api/conversations/create"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: cid, skipSend: true }),
+        body: JSON.stringify({
+          contactId: cid,
+          skipSend: true,
+          source: "deal_chat",
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message ?? "Erro ao iniciar conversa");
@@ -158,6 +169,8 @@ export function useDealChatBinding(params: {
     onSuccess: (conv) => {
       setEnsuredId(conv.id);
       if (contactId) qc.invalidateQueries({ queryKey: ["contact", contactId] });
+      qc.invalidateQueries({ queryKey: ["conversation-timeline", conv.id] });
+      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
     },
     onError: (err: Error) => toast.error(err.message || "Falha ao iniciar conversa"),
   });
@@ -197,11 +210,16 @@ export function useDealChatBinding(params: {
     !!effectiveConversationId,
   );
   const conversationChannelId = messagesResp?.channel?.id ?? null;
+  const lastMessageChannelId = useMemo(
+    () => findLastPublicMessageChannelId(messagesResp?.messages),
+    [messagesResp?.messages],
+  );
   const { selectedChannelId, setSelectedChannelId } = useSelectedOutboundChannel(
     {
       conversationId: effectiveConversationId,
       conversationChannelId,
       availableChannels: whatsappChannels,
+      lastMessageChannelId,
     },
   );
 
@@ -316,6 +334,11 @@ export function useDealChatBinding(params: {
     }
     return null;
   }, []);
+
+  const stickyDay = useStickyDayLabel(
+    findScrollEl,
+    `${effectiveConversationId ?? ""}:${bubbles[0]?.id ?? ""}:${bubbles[bubbles.length - 1]?.id ?? ""}:${bubbles.length}`,
+  );
 
   const scrollToEnd = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -550,12 +573,16 @@ export function useDealChatBinding(params: {
         <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-muted,#718096)]">
           Nenhuma mensagem ainda.
         </div>
-        {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
+        {isResolved && (
+          <ConversationClosedMarker
+            closedAt={closedAt ?? null}
+            conversationNumber={conversationNumber}
+          />
+        )}
         <div ref={bottomRef} />
       </>
     );
   } else {
-    let lastDayLabel: string | null = null;
     // Marca troca de conexão só quando há 2+ contas distintas na conversa.
     const channelsMap = messagesResp?.channels ?? {};
     const distinctChannels = new Set(
@@ -563,17 +590,44 @@ export function useDealChatBinding(params: {
     );
     const showConnSwitches = distinctChannels.size >= 2;
     let lastChannelId: string | null = null;
+    const hasPersistedClose = bubbles.some(
+      (m) => m.kind === "event" && isConversationCloseEventText(m.content),
+    );
+    const sectionHasEvent = (
+      from: number,
+      pred: (content: string) => boolean,
+    ) => {
+      for (let i = from + 1; i < bubbles.length; i++) {
+        const m = bubbles[i];
+        if (m.messageType === "ticket-separator") break;
+        if (m.kind === "event" && pred(m.content ?? "")) return true;
+      }
+      return false;
+    };
     const bubbleNodes = bubbles.map((b, index) => {
       // Separador de ticket sintético (?history=1) — mesma lógica do ChatArea
       // do inbox. Sem isto o item vira uma BOLHA VAZIA no chat do deal.
       if (b.messageType === "ticket-separator" && b.ticketInfo) {
+        const info = b.ticketInfo;
+        const hideDivider = info.isCurrent
+          ? sectionHasEvent(index, (c) =>
+              isConversationOpenEventText(c, info.number),
+            )
+          : sectionHasEvent(index, isConversationCloseEventText);
+        if (hideDivider) return null;
         return (
-          <TicketDivider
-            key={b.id || `sep-${index}`}
-            number={b.ticketInfo.number}
-            closedAt={b.ticketInfo.closedAt}
-            isCurrent={b.ticketInfo.isCurrent}
-          />
+          <li key={b.id || `sep-${index}`} className="list-none">
+            <TicketDivider
+              number={info.number}
+              closedAt={info.closedAt}
+              isCurrent={info.isCurrent}
+              openedAt={info.openedAt}
+              openedByName={info.openedByName}
+              openedByUserId={info.openedByUserId}
+              closedByName={info.closedByName}
+              closedByUserId={info.closedByUserId}
+            />
+          </li>
         );
       }
       // Só renderiza bolhas reais (incoming/outgoing). Descarta itens
@@ -581,9 +635,10 @@ export function useDealChatBinding(params: {
       if (b.type !== "incoming" && b.type !== "outgoing") {
         return null;
       }
+      if (b.kind === "event" && isRedundantOpenStatusEvent(b.content)) {
+        return null;
+      }
       const dayLabel = formatDayLabel(b.createdAt);
-      const showSeparator = dayLabel && dayLabel !== lastDayLabel;
-      if (showSeparator) lastDayLabel = dayLabel;
       let connLabel: string | null = null;
       if (showConnSwitches && b.channelId && b.channelId !== lastChannelId) {
         const ref = channelsMap[b.channelId];
@@ -591,9 +646,9 @@ export function useDealChatBinding(params: {
         lastChannelId = b.channelId;
       }
       const isNoteBubble = b.isNote === true;
+      const isEvent = b.kind === "event";
       return (
-        <Fragment key={b.id}>
-          {showSeparator && <DaySeparator date={dayLabel} />}
+        <li key={b.id} className="list-none" data-day-label={dayLabel || undefined}>
           {connLabel && <ConnectionDivider label={connLabel} />}
           <div
             data-message-id={b.id}
@@ -603,6 +658,15 @@ export function useDealChatBinding(params: {
                 : "flex flex-col scroll-mt-24 rounded-[var(--radius-lg)] transition-[background-color,box-shadow] duration-500"
             }
           >
+          {isEvent ? (
+            <EventRow
+              action={b.eventAction ?? "ia"}
+              text={b.content}
+              actor={b.senderName ?? ""}
+              actorId={b.senderUserId}
+              time={b.time}
+            />
+          ) : (
           <MessageBubble
             message={b}
             agentInitials={agentInitials}
@@ -629,14 +693,23 @@ export function useDealChatBinding(params: {
             onPinMessage={isNoteBubble ? undefined : handlePinMessage}
             onFavoriteMessage={isNoteBubble ? undefined : handleFavorite}
           />
+          )}
           </div>
-        </Fragment>
+        </li>
       );
     });
     messagesNode = (
       <>
-        {bubbleNodes}
-        {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
+        <StickyDayPill date={stickyDay} />
+        <ul className="flex list-none flex-col gap-1.5">
+          {bubbleNodes}
+        </ul>
+        {isResolved && !hasPersistedClose && (
+          <ConversationClosedMarker
+            closedAt={closedAt ?? null}
+            conversationNumber={conversationNumber}
+          />
+        )}
         <div ref={bottomRef} />
         {showScrollDown && (
           <div className="pointer-events-none sticky bottom-2 z-20 -mb-2 flex justify-end">
@@ -681,11 +754,14 @@ export function useDealChatBinding(params: {
       contactId={contactId}
       externalTemplate={externalTemplate}
       onExternalTemplateConsumed={() => setExternalTemplate(null)}
+      onRequestTemplate={() => setTemplateOpen(true)}
+      sessionExpired={!!sessionExpired}
       signatureAllowed={convFeatures.agentSignatureEnabled}
       signatureEditable={convFeatures.agentSignatureEditable}
       availableChannels={whatsappChannels}
       selectedChannelId={selectedChannelId}
       conversationChannelId={conversationChannelId}
+      lastMessageChannelId={lastMessageChannelId}
       onSelectChannel={setSelectedChannelId}
       replyTo={replyTo}
       onCancelReply={() => setReplyTo(null)}
@@ -704,24 +780,16 @@ export function useDealChatBinding(params: {
   // ── template picker modal ───────────────────────────────────
   const templateModal = (
     <>
-      {templateOpen && effectiveConversationId ? (
-        <div
-          className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setTemplateOpen(false)}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <TemplatePickerList
-              conversationId={effectiveConversationId}
-              channelId={selectedChannelId}
-              onClose={() => setTemplateOpen(false)}
-              onPick={(tpl) => {
-                setExternalTemplate(whatsappTemplateToPending(tpl));
-                setTemplateOpen(false);
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
+      <WhatsappTemplatePickerModal
+        open={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+        conversationId={effectiveConversationId ?? null}
+        channelId={selectedChannelId}
+        onPick={(tpl) => {
+          setExternalTemplate(whatsappTemplateToPending(tpl));
+          setTemplateOpen(false);
+        }}
+      />
       {/* Picker de duração do "Fixar" (24h/7d/30d, estilo WhatsApp) —
           o painel "Mensagens favoritas" fica no kebab do DealDetailPanel
           (TabsBar), que já tem `conversationId` disponível. */}

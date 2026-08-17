@@ -31,6 +31,10 @@ import {
   pathForPipelineView,
   writePipelineViewPreference,
 } from "@/lib/pipeline-view-preference";
+import {
+  SEARCH_DEBOUNCE_MS,
+  normalizeSearchQuery,
+} from "@/lib/search-query";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
@@ -57,6 +61,7 @@ import {
   ExportPanel,
   ImportPanel,
   useImportExportBump,
+  type ExportScope,
 } from "@/features/pipeline-v2/import-export";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { avatarInitials } from "@/features/inbox-v2/adapters";
@@ -64,11 +69,14 @@ import { useContactSidebar } from "@/features/inbox-v2/hooks";
 import {
   useBoard,
   useBoardFiltered,
+  boardKey,
+  BOARD_PAGE_SIZE,
   useDealDetail,
   useEntityViewers,
   useMoveDeal,
   usePipelineRealtime,
   usePipelineUrlSync,
+  usePipelineLossReasons,
   usePipelines,
   useTeamUsers,
   type MoveVars,
@@ -85,7 +93,6 @@ import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
 import type { BulkScopeContext } from "@/components/pipeline/bulk-edit-fields-dialog";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
-import { apiUrl } from "@/lib/api";
 import type {
   BoardDealDto,
   BoardSortParam,
@@ -114,23 +121,12 @@ import { PipelineSearchFilterBar } from "@/components/pipeline/kanban-filters/v2
 import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import { useKanbanFilters } from "@/components/pipeline/kanban-filters/use-kanban-filters";
+import { usePipelineSearchSort } from "@/components/pipeline/kanban-filters/use-pipeline-search-sort";
 import {
   isEmptyFilters,
   hasServerSideFilters,
   type AdvancedDealFilters,
 } from "@/components/pipeline/kanban-filters/types";
-
-const PIPELINE_SEARCH_LS = "kanban-pipeline-search:v1";
-const PIPELINE_SORT_LS = "kanban-pipeline-sort:v1";
-
-type SortKey =
-  | "default"
-  | "interaction_newest"
-  | "interaction_oldest"
-  | "name_az"
-  | "name_za"
-  | "created_newest"
-  | "created_oldest";
 
 /**
  * Modelo Kommo: ganho/perdido são ESTÁGIOS fixos no fim do funil (não
@@ -211,16 +207,12 @@ export default function KanbanV2ClientPage({
   );
   const canChangeStage = useCan("deal:change_stage");
   const { filters, setFilters, patch: patchFilters, clear: clearFilters } = useKanbanFilters();
-  const [search, setSearch] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      return localStorage.getItem(PIPELINE_SEARCH_LS) ?? "";
-    } catch {
-      return "";
-    }
-  });
-  const [filterOptions, setFilterOptions] = useState<import("@/components/pipeline/kanban-filters/types").FilterOptionsResponse | null>(null);
-  const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
+  // Busca (`?q=`) e ordenação (`?sort=`) na URL — link copiável reproduz a
+  // visão. Ordenação: `created_*`/`interaction_*` são delegados ao backend
+  // (ver `boardSort`), porque ordenar só os deals já carregados (100/coluna)
+  // deixava cards presos em páginas posteriores. `name_*` segue client-side
+  // (o backend ainda não expõe esses campos como sort).
+  const { search, setSearch, sortKey, setSortKey } = usePipelineSearchSort();
   const kebabBtnRef = useRef<HTMLButtonElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
@@ -231,53 +223,9 @@ export default function KanbanV2ClientPage({
   const [channelsModalOpen, setChannelsModalOpen] = useState(false);
   const bump = useImportExportBump();
 
-  // Ordenação dos cards dentro de cada etapa. Os sorts `created_*` e
-  // `interaction_*` são delegados ao backend (ver `boardSort` abaixo),
-  // porque ordenar só os deals já carregados (default 100/coluna)
-  // deixava cards "presos" em páginas posteriores quando a coluna tem
-  // >100 registros. Os sorts `name_*` continuam client-side (o backend
-  // ainda não expõe esses campos como sort) — limitação conhecida e
-  // documentada no AGENT.md.
-  const [sortKey, setSortKey] = useState<SortKey>(() => {
-    if (typeof window === "undefined") return "default";
-    try {
-      const raw = localStorage.getItem(PIPELINE_SORT_LS);
-      if (
-        raw === "default" ||
-        raw === "interaction_newest" ||
-        raw === "interaction_oldest" ||
-        raw === "name_az" ||
-        raw === "name_za" ||
-        raw === "created_newest" ||
-        raw === "created_oldest"
-      ) {
-        return raw;
-      }
-    } catch {
-      /* noop */
-    }
-    return "default";
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIPELINE_SEARCH_LS, search);
-    } catch {
-      /* noop */
-    }
-  }, [search]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIPELINE_SORT_LS, sortKey);
-    } catch {
-      /* noop */
-    }
-  }, [sortKey]);
-
   const status = BOARD_STATUS;
   const { data: pipelines } = usePipelines(isAuthenticated);
-  // URL `?pipeline=<slug>` + LS interno; nunca CUID na query.
+  // URL `?pipeline=<number>` + LS interno; nunca CUID/slug na query.
   const { pipelineId, setPipelineId } = usePipelineUrlSync(pipelines);
 
   const boardSort = useMemo<BoardSortParam | undefined>(() => {
@@ -295,23 +243,33 @@ export default function KanbanV2ClientPage({
   const rawSearch = (filters.search ?? search).trim();
   const [debouncedSearch, setDebouncedSearch] = useState(rawSearch);
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(rawSearch), 300);
+    const t = setTimeout(() => setDebouncedSearch(rawSearch), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [rawSearch]);
 
   const mergedFilters = useMemo(() => {
     const f: AdvancedDealFilters = { ...filters };
-    if (debouncedSearch.length >= 2) f.search = debouncedSearch;
+    const q = normalizeSearchQuery(debouncedSearch);
+    if (q) f.search = q;
+    else delete f.search;
     return f;
   }, [filters, debouncedSearch]);
 
   const hasServerBoard = hasServerSideFilters(mergedFilters);
+
+  // "Carregar mais" por coluna: stageId → extras cumulativos além da
+  // página inicial (50). Com ≥1 expansão o board passa a vir do POST
+  // /board (única rota que aceita offset) — ver `useBoard`.
+  const [boardExtraByStage, setBoardExtraByStage] = useState<Record<string, number>>({});
+  const [loadingMoreStageId, setLoadingMoreStageId] = useState<string | null>(null);
 
   const boardNormal = useBoard({
     pipelineId,
     status,
     sort: boardSort,
     enabled: isAuthenticated && !hasServerBoard,
+    perStage: BOARD_PAGE_SIZE,
+    offsetByStage: boardExtraByStage,
   });
   const boardFiltered = useBoardFiltered({
     pipelineId,
@@ -331,23 +289,8 @@ export default function KanbanV2ClientPage({
   // Ativa (pipelines.lossReasonRequired). Cancelar = não move.
   const [pendingLostMove, setPendingLostMove] = useState<MoveVars | null>(null);
 
-  // Chave dedicada — o LossReasonDialog usa ["pipeline-loss-reasons", pipelineId]
-  // com refetchOnMount:"always" e shape distinto ({ reasons, required, allowOther }).
-  // Compartilhar a mesma key aqui poluia o cache e fazia lossReasonRequired virar
-  // undefined depois da primeira abertura do modal, resultando em POST /move sem
-  // lostReason no segundo mover-para-Perdido → 400.
-  const lossMetaQuery = useQuery({
-    queryKey: ["pipeline-loss-meta", pipelineId],
-    queryFn: async () => {
-      const res = await fetch(
-        apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),
-      );
-      if (!res.ok) return { lossReasonRequired: false };
-      return res.json() as Promise<{ lossReasonRequired?: boolean }>;
-    },
-    enabled: !!pipelineId,
-    staleTime: 30_000,
-  });
+  // Key compartilhada com LossReasonDialog / actions-menu / bulk-bar.
+  const lossMetaQuery = usePipelineLossReasons(pipelineId);
   const lossReasonsActive = Boolean(lossMetaQuery.data?.lossReasonRequired);
 
   const requestMove = useCallback(
@@ -382,7 +325,11 @@ export default function KanbanV2ClientPage({
    * modo limpa a seleção atual.
    */
   const [selectionMode, setSelectionMode] = useState(false);
-  const { data: teamUsers = [] } = useTeamUsers(isAuthenticated);
+  // Só busca /api/users quando a barra de massa precisa (modo seleção).
+  // AssigneePopover/filters carregam sob demanda com a mesma query key.
+  const { data: teamUsers = [] } = useTeamUsers(
+    isAuthenticated && (selectionMode || selectedIds.size > 0),
+  );
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -419,21 +366,18 @@ export default function KanbanV2ClientPage({
     setSelectedIds(new Set());
   }, [pipelineId]);
 
-  // Recarrega as options de filtro toda vez que o painel é aberto.
-  // Antes buscava só uma vez (guard `filterOptions !== null`), o que
-  // cacheava listas vazias da org — ex.: motivos de perda criados depois
-  // da primeira abertura nunca apareciam sem dar reload na página.
-  // Mantém as opções anteriores em caso de erro (não pisca pra vazio).
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let cancelled = false;
-    setFilterOptionsLoading(true);
-    fetchFilterOptions()
-      .then((opts) => { if (!cancelled) setFilterOptions(opts); })
-      .catch(() => { /* mantém opções já carregadas */ })
-      .finally(() => { if (!cancelled) setFilterOptionsLoading(false); });
-    return () => { cancelled = true; };
-  }, [isAuthenticated]);
+  // Options de filtro: cache RQ compartilhado com Flow (mesmo key).
+  // staleTime alto — lista muda pouco; invalidar após criar tags/campos.
+  const filterOptionsQuery = useQuery({
+    queryKey: ["kanban-filter-options"],
+    queryFn: fetchFilterOptions,
+    enabled: isAuthenticated,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+  const filterOptions = filterOptionsQuery.data ?? null;
+  const filterOptionsLoading = filterOptionsQuery.isLoading;
 
   // Aplica filtros client-side ANTES de virar colunas.
   const filteredBoard = useMemo(() => {
@@ -559,16 +503,53 @@ export default function KanbanV2ClientPage({
     [stageGrantsFiltered],
   );
 
+  // ── Contagem total do board ──────────────────────────────────────
+  // Soma os `totalCount` das colunas visíveis para o operador não precisar
+  // somar etapa por etapa. Com filtro server-side o backend devolve o total
+  // real por etapa (groupBy respeitando o filtro), não só os cards carregados.
+  const filteredTotal = useMemo(
+    () =>
+      stageGrantsFiltered.reduce(
+        (acc, s) => acc + (s.totalCount ?? s.deals.length),
+        0,
+      ),
+    [stageGrantsFiltered],
+  );
+
+  // Total do funil SEM filtro. Vem do board não filtrado, que o React Query
+  // mantém em cache mesmo enquanto o board filtrado está ativo — por isso não
+  // custa requisição extra. `null` quando o usuário abriu a página já com
+  // filtro e o board cheio nunca foi carregado.
+  const pipelineTotalUnfiltered = useMemo(() => {
+    const data = boardNormal.data;
+    if (!data) return null;
+    const grants = myPerms?.stageGrants ?? [];
+    const stages =
+      grants.length > 0 ? data.filter((s) => grants.includes(s.id)) : data;
+    return stages.reduce((acc, s) => acc + (s.totalCount ?? s.deals.length), 0);
+  }, [boardNormal.data, myPerms?.stageGrants]);
+
+  // `mergedFilters` e não `filters` + `rawSearch`: é o recorte que o board de
+  // fato pediu ao servidor (busca já com debounce e mínimo de caracteres).
+  const isFiltering = !isEmptyFilters(mergedFilters);
+  const boardPending = hasServerBoard
+    ? boardFiltered.isPending
+    : boardNormal.isPending;
+  const totalLabel = boardPending
+    ? "Contando…"
+    : isFiltering &&
+        pipelineTotalUnfiltered != null &&
+        pipelineTotalUnfiltered !== filteredTotal
+      ? `${filteredTotal.toLocaleString("pt-BR")} de ${pipelineTotalUnfiltered.toLocaleString("pt-BR")} negócios`
+      : `${filteredTotal.toLocaleString("pt-BR")} ${filteredTotal === 1 ? "negócio" : "negócios"}`;
+
   // Contexto para "selecionar todos que batem no filtro" na edição em massa.
   // Permite editar além dos ~100 cards carregados por coluna: o servidor
   // resolve os IDs a partir do mesmo filtro/visibilidade do board.
   const scopeContext = useMemo<BulkScopeContext | undefined>(() => {
     if (!pipelineId) return undefined;
     const boardForScope = stageGrantsFiltered;
-    const pipelineTotal = boardForScope.reduce(
-      (acc, s) => acc + (s.totalCount ?? s.deals.length),
-      0,
-    );
+    const pipelineTotal = filteredTotal;
     // Habilita o escopo "etapa" só quando TODA a seleção está numa única etapa.
     let stage: { id: string; name: string; total: number } | null = null;
     if (selectedIds.size > 0) {
@@ -580,9 +561,15 @@ export default function KanbanV2ClientPage({
         stage = { id: s.id, name: s.name, total: s.totalCount ?? s.deals.length };
       }
     }
-    const scopeFilters = { ...filters, ...(rawSearch ? { search: rawSearch } : {}) };
-    return { pipelineId, status, filters: scopeFilters, pipelineTotal, stage };
-  }, [pipelineId, stageGrantsFiltered, selectedIds, filters, rawSearch, status]);
+    return { pipelineId, status, filters: mergedFilters, pipelineTotal, stage };
+  }, [
+    pipelineId,
+    stageGrantsFiltered,
+    selectedIds,
+    mergedFilters,
+    status,
+    filteredTotal,
+  ]);
 
   // Lookup ownerId / tags reais por dealId. O `Deal` (v0) que chega no
   // renderDeal só tem `owner.name`, não o `ownerId` nem `tagIds`. Esse
@@ -599,6 +586,35 @@ export default function KanbanV2ClientPage({
 
   const { data: dealDetail } = useDealDetail(activeDealId);
   const queryClient = useQueryClient();
+
+  // Expansões "Carregar mais": cada clique soma +50 na coluna e refaz o
+  // board (POST com offsetByStage — o queryFn já enxerga o estado novo
+  // porque o observer é atualizado no render que segue o setState).
+  const extrasKey = JSON.stringify(boardExtraByStage);
+  useEffect(() => {
+    if (Object.keys(boardExtraByStage).length === 0) return;
+    queryClient
+      .refetchQueries({
+        queryKey: boardKey(pipelineId ?? "pl-1", status, boardSort),
+        exact: true,
+      })
+      .finally(() => setLoadingMoreStageId(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extrasKey]);
+
+  // Troca de funil/status/ordenação/filtro → colunas expandidas voltam a 50.
+  useEffect(() => {
+    setBoardExtraByStage({});
+    setLoadingMoreStageId(null);
+  }, [pipelineId, status, sortKey, hasServerBoard]);
+
+  const handleLoadMoreColumn = useCallback((stageId: string) => {
+    setLoadingMoreStageId(stageId);
+    setBoardExtraByStage((prev) => ({
+      ...prev,
+      [stageId]: (prev[stageId] ?? 0) + BOARD_PAGE_SIZE,
+    }));
+  }, []);
 
   // Presença "quem está vendo" (estilo Kommo) — chaveada pelo CUID real do
   // deal (não pelo ?deal=<número>), pra ambas as janelas baterem na mesma sala.
@@ -908,25 +924,54 @@ export default function KanbanV2ClientPage({
           onClose={() => setKebabOpen(false)}
         />
 
-        {!isEmptyFilters(filters) && (
-          <div className="flex flex-wrap items-center gap-2 px-0.5">
-            <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
-              Filtros ativos
-            </span>
-            <FilterChips
-              filters={filters}
-              options={filterOptions}
-              onPatch={patchFilters}
-            />
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="font-display text-[11px] font-semibold text-[var(--text-muted)] underline-offset-2 hover:text-[var(--brand-primary)] hover:underline"
-            >
-              Limpar todos
-            </button>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2 px-0.5">
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[11.5px] font-bold",
+              isFiltering
+                ? "border-[var(--brand-primary)]/30 bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)]",
+            )}
+            aria-live="polite"
+          >
+            {totalLabel}
+          </span>
+
+          {/* `filters.search` tem precedência sobre a barra (ver `rawSearch`) e
+              já ganha chip próprio no FilterChips — não duplicar. */}
+          {!filters.search?.trim() && search.trim() && (
+            <TooltipGlass label="Limpar busca" side="top">
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="group inline-flex items-center gap-1 rounded-full border border-primary/25 bg-[var(--color-primary-soft)] px-2.5 py-0.5 text-[11px] font-medium text-primary transition-all hover:border-[var(--color-danger)]/35 hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
+              >
+                <span>Buscar: {search.trim()}</span>
+                <IconX className="size-3 opacity-60 group-hover:opacity-100" />
+              </button>
+            </TooltipGlass>
+          )}
+
+          {!isEmptyFilters(filters) && (
+            <>
+              <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+                Filtros ativos
+              </span>
+              <FilterChips
+                filters={filters}
+                options={filterOptions}
+                onPatch={patchFilters}
+              />
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="font-display text-[11px] font-semibold text-[var(--text-muted)] underline-offset-2 hover:text-[var(--brand-primary)] hover:underline"
+              >
+                Limpar todos
+              </button>
+            </>
+          )}
+        </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -934,7 +979,13 @@ export default function KanbanV2ClientPage({
             ref={boardRef}
             className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden"
           >
-            {columns.map((col) => (
+            {columns.map((col) => {
+              const rawStage = boardNormal.data?.find((s) => s.id === col.stageId);
+              const remaining = Math.max(
+                0,
+                (rawStage?.totalCount ?? 0) - (rawStage?.deals.length ?? 0),
+              );
+              return (
               <DroppableColumn
                 key={col.stageId}
                 column={col}
@@ -957,8 +1008,18 @@ export default function KanbanV2ClientPage({
                 }
                 onCloseAddDeal={() => setAddStage(null)}
                 canChangeStage={canChangeStage}
+                loadMore={
+                  !hasServerBoard && rawStage?.hasMore && remaining > 0
+                    ? {
+                        remaining,
+                        loading: loadingMoreStageId === col.stageId,
+                        onClick: () => handleLoadMoreColumn(col.stageId),
+                      }
+                    : undefined
+                }
               />
-            ))}
+              );
+            })}
             {columns.length === 0 ? (
               <EmptyBoard isAuthenticated={isAuthenticated} />
             ) : null}
@@ -979,6 +1040,13 @@ export default function KanbanV2ClientPage({
           activeTab={importExportOpen}
           onClose={() => setImportExportOpen(null)}
           bump={bump}
+          exportScope={{
+            pipelineId,
+            filters: mergedFilters,
+            status,
+            filteredTotal,
+            pipelineTotal: pipelineTotalUnfiltered,
+          }}
         />
       )}
 
@@ -1684,6 +1752,7 @@ function DroppableColumn({
   onToggleSelectAllInColumn,
   onRequestMove,
   canChangeStage,
+  loadMore,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
@@ -1705,6 +1774,7 @@ function DroppableColumn({
     toPipelineId?: string | null;
   }) => void;
   canChangeStage: boolean;
+  loadMore?: { remaining: number; loading: boolean; onClick: () => void };
 }) {
   // Estado de seleção em massa restrito aos deals JÁ CARREGADOS desta
   // coluna. Replica o comportamento do kanban antigo.
@@ -1752,6 +1822,7 @@ function DroppableColumn({
             enabled: selectionMode && canChangeStage,
           }}
           dealsContainerRef={provided.innerRef}
+          loadMore={loadMore}
           dealsContainerProps={{
             ...provided.droppableProps,
             "aria-label": `Coluna ${column.title}`,
@@ -2129,9 +2200,11 @@ interface ImportExportModalProps {
   activeTab: "import" | "export";
   onClose: () => void;
   bump: () => void;
+  /** Funil + filtros ativos: habilita "exportar só a base filtrada". */
+  exportScope?: ExportScope;
 }
 
-function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps) {
+function ImportExportModal({ activeTab, onClose, bump, exportScope }: ImportExportModalProps) {
   return (
     <div
       className="fixed inset-0 z-(--z-modal) flex items-center justify-center bg-black/25 px-4 py-4 backdrop-blur-[2px] sm:px-6 sm:py-6"
@@ -2176,7 +2249,7 @@ function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps)
         <div className="p-6 sm:p-8">
           {activeTab === "import"
             ? <ImportPanel fixedEntity="deals" onDone={() => { bump(); onClose(); }} />
-            : <ExportPanel />
+            : <ExportPanel scope={exportScope} />
           }
         </div>
       </div>

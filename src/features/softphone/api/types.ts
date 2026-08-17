@@ -76,4 +76,19 @@ export interface SipExtension {
   wsServer: string;
   status: string;
   userId: string;
+  telephonyEnabled?: boolean;
+  provisioningStep?: string;
+  provisioningError?: string | null;
+  provisionedAt?: string | null;
+  user?: { id: string; name: string; email: string } | null;
+}
+
+export interface Api4ComIntegration {
+  webhookUrl: string;
+  hasServiceToken: boolean;
+  hasEnvToken: boolean;
+  gateway: string;
+  isActive: boolean;
+  webhookRegistered: boolean | null;
+  webhookError: string | null;
 }

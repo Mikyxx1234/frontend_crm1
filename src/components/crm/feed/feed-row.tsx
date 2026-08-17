@@ -11,6 +11,7 @@ import {
   EVENT_CONFIG,
   FALLBACK_CONFIG,
   actorDisplay,
+  automationOrigin,
   eventDescription,
   type FeedEvent,
 } from "./event-config";
@@ -74,6 +75,10 @@ export function FeedRow({
   const desc = eventDescription(event);
   const at = parseISO(event.occurredAt);
   const actor = actorDisplay(event);
+  // Origem da acao automatica (automacao + no do card). Nao renderiza
+  // quando o evento e antigo/manual. Sem link aqui: a linha inteira do
+  // feed pode ja ser um <Link> (href), e link dentro de link e invalido.
+  const origin = automationOrigin(event.meta);
 
   const body = (
     <>
@@ -115,6 +120,9 @@ export function FeedRow({
           <span>por {actor.label}</span>
           {actor.sublabel && (
             <span className="text-muted-foreground/70">• {actor.sublabel}</span>
+          )}
+          {origin && origin.stepNumber != null && (
+            <span className="text-muted-foreground/70">• {origin.text}</span>
           )}
         </p>
       </div>

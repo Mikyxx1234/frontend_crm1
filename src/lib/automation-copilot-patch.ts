@@ -47,8 +47,8 @@ function setHandleTarget(
     return;
   }
   if (handle === "else") {
-    // business_hours usa elseStepId; demais usam elseGotoStepId
-    if (step.type === "business_hours") {
+    // business_hours / check_agent_status usam elseStepId; demais usam elseGotoStepId
+    if (step.type === "business_hours" || step.type === "check_agent_status") {
       cfg.elseStepId = targetStepId;
     } else if (step.type === "condition") {
       const cond = normalizeConditionConfig(step.config);
@@ -183,7 +183,7 @@ export function applyCopilotPatch(
       const src = byId.get(op.fromStepId);
       if (!src) continue;
       if (!byId.has(op.toStepId)) continue;
-      setHandleTarget(src, op.handle, op.toStepId);
+      setHandleTarget(src, op.handle ?? "next", op.toStepId);
       src.config.__hasExplicitEdges = true;
       continue;
     }

@@ -11,10 +11,13 @@
 
 import type { Conversation, LastMessageType } from "@/components/crm/conversation-card";
 import type { Message, FormField } from "@/components/crm/message-bubble";
+import { classifyTimelineItem } from "@/components/crm/chat-timeline";
 import { normalizeDeliveryStatus } from "@/components/crm/status-ticks";
 import { avatarInitials as avatarInitialsFromLib } from "@/lib/avatar";
 import type { ConnectionRef } from "@/lib/connection-label";
 import { sanitizeContactName } from "@/lib/display-name";
+
+import { prettifyChatMessageBody } from "@/lib/whatsapp-outbound-template-label";
 
 import type {
   ContactDetail,
@@ -133,18 +136,20 @@ export type ConversationBadge = "enterprise" | "lead" | "success";
 
 /**
  * Tempo restante ate a janela de 24h da Meta/WhatsApp expirar.
- * Espelha a logica do legado (chat-window): backend e' source of truth,
- * mas para o CARD da lista nao temos `session.active` por conversa —
- * computamos a partir de `lastInboundAt`. Aceitamos divergencia de
- * minutos com o ChatArea (a Meta tem alguma folga).
+ * Espelha a logica do chat: 24h a partir do ultimo inbound do contato.
+ * Sem inbound (null) = sessao fechada → pill "Expirada" no card (paridade
+ * com o banner do composer).
  */
 export function sessionRemainingFromInbound(
   lastInboundAt: string | null | undefined,
   windowHours = 24,
 ): { label: string | null; expired: boolean } {
-  if (!lastInboundAt) return { label: null, expired: true };
+  // Sem inbound (ex.: ticket aberto só com template): sessão Meta fechada.
+  // Precisa de label "Expirada" — senão o card não renderiza o pill
+  // (`sessionExpiresIn && …`) enquanto o composer já bloqueia envio.
+  if (!lastInboundAt) return { label: "Expirada", expired: true };
   const d = new Date(lastInboundAt);
-  if (Number.isNaN(d.getTime())) return { label: null, expired: true };
+  if (Number.isNaN(d.getTime())) return { label: "Expirada", expired: true };
   const deadline = d.getTime() + windowHours * 3600_000;
   const ms = deadline - Date.now();
   if (ms <= 0) return { label: "Expirada", expired: true };
@@ -238,10 +243,11 @@ export function toConversationCard(
   // `preview`) quanto `lastMessagePreview` (forma atual, com `content`
   // + `messageType`). Preferimos o que tiver dado real; se nenhum
   // tiver, cai pra string vazia (mostra apenas o tipo, se conhecido).
-  const previewText =
+  const previewText = prettifyChatMessageBody(
     row.lastMessage?.preview ??
-    row.lastMessagePreview?.content ??
-    "";
+      row.lastMessagePreview?.content ??
+      "",
+  );
   const lastMessageType = inferLastMessageType(
     previewText,
     row.lastMessagePreview?.messageType ?? null,
@@ -400,7 +406,16 @@ export function toMessageBubble(
   // `type` é irrelevante — o ChatArea verifica `messageType` antes de tentar
   // renderizar como bolha.
   if (dto.messageType === "ticket-separator") {
-    let info: { number: number; closedAt: string | null; isCurrent?: boolean } = {
+    let info: {
+      number: number
+      closedAt: string | null
+      isCurrent?: boolean
+      openedAt?: string | null
+      openedByName?: string | null
+      openedByUserId?: string | null
+      closedByName?: string | null
+      closedByUserId?: string | null
+    } = {
       number: 0,
       closedAt: null,
     };
@@ -417,6 +432,11 @@ export function toMessageBubble(
         number: info.number ?? 0,
         closedAt: info.closedAt ?? null,
         isCurrent: info.isCurrent,
+        openedAt: info.openedAt ?? null,
+        openedByName: info.openedByName ?? null,
+        openedByUserId: info.openedByUserId ?? null,
+        closedByName: info.closedByName ?? null,
+        closedByUserId: info.closedByUserId ?? null,
       },
     };
   }
@@ -465,9 +485,9 @@ export function toMessageBubble(
   // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
   const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;
 
-  // Botões de mensagem interativa/template (outbound) — separa o corpo
-  // do marcador `[Botões: ...]` gravado pelo backend.
-  const btnParsed = !formParsed ? parseInteractiveButtons(dto.content ?? "") : null;
+  // Abre `[Template: nome]` / cabeçalho 📋 e depois separa `[Botões: ...]`.
+  const prettyContent = prettifyChatMessageBody(dto.content ?? "");
+  const btnParsed = !formParsed ? parseInteractiveButtons(prettyContent) : null;
 
   return {
     id: dto.id,
@@ -489,6 +509,7 @@ export function toMessageBubble(
     // Campanha: mantém o valor original ("Campanha: {nome}"); a UI usa
     // `campaignName` no destaque.
     senderName: !isInbound && dto.senderName ? dto.senderName : undefined,
+    senderUserId: dto.senderUserId ?? undefined,
     // Foto do agente remetente (resolvida no backend). Só outbound humano.
     senderImageUrl: !isInbound && !isBot ? (dto.senderImageUrl ?? undefined) : undefined,
     isBot: isBot || isAutomationRun || isCampaign || undefined,
@@ -502,17 +523,30 @@ export function toMessageBubble(
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
     messageType: dto.messageType ?? undefined,
-    // Nota interna: backend serializa `isPrivate` (Prisma) e o composer
-    // legado mandava `private: true`. Detectamos pelos três sinais —
-    // qualquer um true marca como nota e dispara o estilo dedicado no
-    // MessageBubble (sem isso a nota era renderizada como balão de saída
-    // azul, indistinguível de mensagem enviada ao cliente).
-    isNote:
-      (!isAutomationRun &&
-        (dto.isPrivate === true ||
-          dto.private === true ||
-          dto.messageType === "note")) ||
-      undefined,
+    // Timeline: event (log automático) vs note (anotação humana).
+    // Legado: notas do sistema/Agente IA viram event. ai_draft fica fora.
+    ...(() => {
+      const classified = classifyTimelineItem({
+        messageType: dto.messageType,
+        isPrivate: dto.isPrivate,
+        private: dto.private,
+        authorType: dto.authorType,
+        senderName: dto.senderName,
+        content: dto.content,
+        direction: dto.direction,
+      });
+      if (classified.kind === "event") {
+        return {
+          kind: "event" as const,
+          eventAction: classified.action,
+          isNote: undefined,
+        };
+      }
+      if (classified.kind === "note" && !isAutomationRun) {
+        return { kind: "note" as const, isNote: true as const };
+      }
+      return { kind: "message" as const, isNote: undefined };
+    })(),
     mediaUrl: dto.mediaUrl ?? dto.media?.url ?? undefined,
     // Ticks de entrega (estilo WhatsApp) — apenas para mensagens out.
     status: isInbound ? undefined : toBubbleStatus(dto),

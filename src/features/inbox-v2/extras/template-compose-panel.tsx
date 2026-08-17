@@ -12,14 +12,29 @@
  *    montando `components` no formato da Cloud API (evita code=132000).
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconLock, IconSend, IconX } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconLock,
+  IconSend,
+  IconX,
+} from "@tabler/icons-react";
 
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { sendTemplate, type WhatsappTemplate } from "@/features/inbox-v2/api";
 import { emitConversationReopened, messagesKey } from "@/features/inbox-v2/hooks";
+import type { OutboundChannelOption } from "@/features/inbox-v2/hooks/use-channels";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
+
+import { ChannelPickModal } from "./channel-pick-modal";
+import {
+  channelSwitchConfirmOptions,
+  isChannelMismatch,
+  isDisconnectedChannelError,
+} from "./channel-switch-confirm";
+import { ChannelSelector } from "./channel-selector";
 
 /** Template selecionado, pronto para validação/envio. */
 export interface PendingTemplate {
@@ -80,14 +95,76 @@ export function TemplateComposePanel({
   template,
   onCancel,
   onSent,
+  availableChannels,
+  selectedChannelId,
+  conversationChannelId,
+  lastMessageChannelId,
+  onSelectChannel,
 }: {
   conversationId: string;
   template: PendingTemplate;
   onCancel: () => void;
   onSent?: () => void;
+  /**
+   * Canais WhatsApp CONNECTED da org. Quando presente, o painel exibe um
+   * seletor para o operador escolher por qual número enviar — importante
+   * quando o canal original da conversa está DISCONNECTED (a Meta pode
+   * invalidar o token do lado dela).
+   */
+  availableChannels?: OutboundChannelOption[];
+  /** Canal escolhido para envio (controlado pelo pai). */
+  selectedChannelId?: string | null;
+  /** Canal "atual" da conversa (último inbound) — destacado como referência. */
+  conversationChannelId?: string | null;
+  /** Canal da última mensagem pública — pré-seleção se ainda CONNECTED. */
+  lastMessageChannelId?: string | null;
+  onSelectChannel?: (channelId: string) => void;
 }) {
   const qc = useQueryClient();
   const [vars, setVars] = useState<Record<string, string>>({});
+  const [pickOpen, setPickOpen] = useState(false);
+  const [confirmedChannelId, setConfirmedChannelId] = useState<string | null>(null);
+  const retryAfterPickRef = useRef(false);
+  const pendingSendRef = useRef(false);
+  const { confirm: confirmDialog, dialog: confirmDialogNode } = useConfirm();
+
+  // Canal gravado na conversa ausente ou fora da lista CONNECTED →
+  // não identificado. Exige modal de confirmação antes do envio.
+  const channelsReady = availableChannels !== undefined;
+  const conversationChannelConnected = Boolean(
+    conversationChannelId &&
+      availableChannels?.some((c) => c.id === conversationChannelId),
+  );
+  const channelUnidentified = channelsReady && !conversationChannelConnected;
+  const needsChannelPick =
+    channelUnidentified && (availableChannels?.length ?? 0) > 0;
+
+  const suggestedChannelId = useMemo(() => {
+    if (!availableChannels?.length) return null;
+    if (lastMessageChannelId && availableChannels.some((c) => c.id === lastMessageChannelId)) {
+      return lastMessageChannelId;
+    }
+    return null;
+  }, [availableChannels, lastMessageChannelId]);
+
+  const effectiveChannelId = confirmedChannelId ?? selectedChannelId ?? null;
+
+  const showChannelSelector = Boolean(
+    !needsChannelPick &&
+      availableChannels &&
+      availableChannels.length > 0 &&
+      onSelectChannel,
+  );
+
+  useEffect(() => {
+    setConfirmedChannelId(null);
+    retryAfterPickRef.current = false;
+    pendingSendRef.current = false;
+  }, [conversationId, template.name]);
+
+  useEffect(() => {
+    if (needsChannelPick && !confirmedChannelId) setPickOpen(true);
+  }, [needsChannelPick, confirmedChannelId]);
 
   const placeholders = useMemo(
     () => extractPlaceholders(template.content, template.operatorVariables),
@@ -116,7 +193,8 @@ export function TemplateComposePanel({
   const allFilled = placeholders.every((k) => vars[k]?.trim().length);
 
   const sendMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: (channelOverride?: string | null) => {
+      const channelId = channelOverride ?? effectiveChannelId;
       const components = placeholders.length
         ? [
             {
@@ -134,6 +212,9 @@ export function TemplateComposePanel({
         languageCode: template.language ?? "pt_BR",
         components,
         templateGraphId: template.metaTemplateId ?? null,
+        // Sempre envia o id quando o canal da conversa está morto —
+        // omitir faz o backend cair no `conv.channelRef` desconectado.
+        channelId: needsChannelPick ? channelId : (channelId ?? null),
       });
     },
     onSuccess: (data) => {
@@ -147,11 +228,65 @@ export function TemplateComposePanel({
       }
       onSent?.();
     },
-    onError: (err: Error) => toast.error(err.message || "Falha ao enviar template"),
+    onError: (err: Error) => {
+      if (isDisconnectedChannelError(err) && (availableChannels?.length ?? 0) > 0) {
+        toast.error(err.message || "Canal desconectado");
+        retryAfterPickRef.current = true;
+        setConfirmedChannelId(null);
+        setPickOpen(true);
+        return;
+      }
+      toast.error(err.message || "Falha ao enviar template");
+    },
   });
+
+  function handleConfirmChannel(id: string) {
+    onSelectChannel?.(id);
+    setConfirmedChannelId(id);
+    setPickOpen(false);
+    const shouldSend = retryAfterPickRef.current || pendingSendRef.current;
+    retryAfterPickRef.current = false;
+    pendingSendRef.current = false;
+    if (shouldSend) sendMutation.mutate(id);
+  }
+
+  async function handleSendClick() {
+    if (needsChannelPick && !confirmedChannelId) {
+      pendingSendRef.current = true;
+      setPickOpen(true);
+      return;
+    }
+    const outboundId = confirmedChannelId ?? selectedChannelId ?? null;
+    if (
+      !needsChannelPick &&
+      isChannelMismatch(outboundId, conversationChannelId) &&
+      outboundId &&
+      conversationChannelId
+    ) {
+      const ok = await confirmDialog(
+        channelSwitchConfirmOptions(
+          availableChannels,
+          outboundId,
+          conversationChannelId,
+        ),
+      );
+      if (!ok) return;
+    }
+    sendMutation.mutate(outboundId);
+  }
+
+  const selectedLabel = useMemo(() => {
+    const id = confirmedChannelId ?? selectedChannelId;
+    const ch = availableChannels?.find((c) => c.id === id);
+    if (!ch) return null;
+    return ch.phoneNumber ? `${ch.name} · ${ch.phoneNumber}` : ch.name;
+  }, [availableChannels, confirmedChannelId, selectedChannelId]);
+
+  const sendBlockedByChannel = channelUnidentified && !confirmedChannelId;
 
   return (
     <div className="absolute bottom-full left-0 mb-2 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      {confirmDialogNode}
       <div className="flex items-start gap-2">
         <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-success)]/12 text-[var(--color-success-text)]">
           <IconLock size={13} />
@@ -228,7 +363,37 @@ export function TemplateComposePanel({
         </button>
       </div>
 
-      <div className="mt-3 flex items-center justify-end gap-2">
+      {channelUnidentified ? (
+        <div className="mt-3 flex items-start gap-2 rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--text-primary)]">
+          <IconAlertTriangle size={14} className="mt-px shrink-0 text-[var(--color-warn)]" />
+          <p>
+            O canal desta conversa não está identificado ou está{" "}
+            <span className="font-semibold">desconectado</span>. Escolha
+            um WhatsApp conectado da organização para enviar o template.
+          </p>
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+        {needsChannelPick ? (
+          <button
+            type="button"
+            onClick={() => setPickOpen(true)}
+            disabled={sendMutation.isPending}
+            className="mr-auto inline-flex max-w-[240px] items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-1 text-[11.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-50"
+          >
+            {selectedLabel ?? "Escolher canal"}
+          </button>
+        ) : showChannelSelector ? (
+          <ChannelSelector
+            channels={availableChannels ?? []}
+            selectedChannelId={selectedChannelId ?? null}
+            conversationChannelId={conversationChannelId ?? null}
+            onSelect={onSelectChannel!}
+            disabled={sendMutation.isPending}
+            className="mr-auto"
+          />
+        ) : null}
         <button
           type="button"
           onClick={onCancel}
@@ -238,15 +403,32 @@ export function TemplateComposePanel({
         </button>
         <button
           type="button"
-          disabled={sendMutation.isPending || !allFilled}
-          title={!allFilled ? "Preencha todas as variáveis primeiro" : "Enviar template"}
-          onClick={() => sendMutation.mutate()}
+          disabled={sendMutation.isPending || !allFilled || sendBlockedByChannel}
+          title={
+            sendBlockedByChannel
+              ? "Escolha um canal conectado para enviar"
+              : !allFilled
+                ? "Preencha todas as variáveis primeiro"
+                : "Enviar template"
+          }
+          onClick={() => void handleSendClick()}
           className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-1.5 text-[12px] font-semibold text-white shadow-[var(--glass-shadow-sm)] transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           <IconSend size={14} />
           {sendMutation.isPending ? "Enviando…" : "Enviar template"}
         </button>
       </div>
+
+      {needsChannelPick || pickOpen ? (
+        <ChannelPickModal
+          open={pickOpen}
+          onOpenChange={setPickOpen}
+          channels={availableChannels ?? []}
+          selectedChannelId={confirmedChannelId ?? selectedChannelId ?? null}
+          suggestedChannelId={suggestedChannelId}
+          onConfirm={handleConfirmChannel}
+        />
+      ) : null}
     </div>
   );
 }

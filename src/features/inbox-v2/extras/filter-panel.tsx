@@ -8,8 +8,9 @@
  *   Col 2 — Conversa | Negócio (abas)
  *   Col 3 — Tags
  *
- * Backend: ownerId, withoutOwner, channel, stageId, tagIds, sources.
- * Client-side: sort + windowState.
+ * Backend: ownerId, withoutOwner, channel, channelIds, stageId, tagIds,
+ * sources, windowState (Aberta/Fechada).
+ * Client-side: sort + lastMessageDirection.
  */
 
 import * as React from "react";
@@ -37,12 +38,14 @@ import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { useTeamUsers } from "@/features/inbox-v2/hooks";
 import {
   getPipelineBoard,
-  listChannels,
+  listInboxFilterChannels,
   listPipelines,
   listTags,
+  type InboxFilterChannel,
   type InboxFilters,
 } from "@/features/inbox-v2/api";
 import { normalizeInboxFilters } from "@/features/inbox-v2/api/types";
+import { formatConnectionPhone } from "@/lib/connection-label";
 import { SOURCE_NONE } from "@/components/pipeline/kanban-filters/types";
 import { useContactSources } from "@/hooks/use-contact-sources";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
@@ -68,14 +71,43 @@ interface InboxSearchFilterBarProps {
   className?: string;
 }
 
-const CHANNEL_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: "whatsapp", label: "WhatsApp" },
-  { value: "instagram", label: "Instagram" },
-  { value: "meta", label: "Messenger" },
-  { value: "telegram", label: "Telegram" },
-  { value: "email", label: "E-mail" },
-  { value: "webchat", label: "Webchat / Formulário" },
-];
+const CHANNEL_TYPE_LABELS: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  meta: "Messenger",
+  facebook: "Messenger",
+  telegram: "Telegram",
+  email: "E-mail",
+  webchat: "Webchat / Formulário",
+};
+
+function hasChannelFilter(f: InboxFilters): boolean {
+  return Boolean(f.channel) || (f.channelIds?.length ?? 0) > 0;
+}
+
+function selectedChannelIds(f: InboxFilters): string[] {
+  if (f.channelIds?.length) return f.channelIds;
+  return f.channel ? [f.channel] : [];
+}
+
+function channelStatusBadge(ch: InboxFilterChannel): string | null {
+  if (ch.deleted || ch.status === "DELETED") return "Excluído";
+  if (ch.status === "CONNECTED") return null;
+  return "Desativado";
+}
+
+function channelGrantIds(grants: unknown): string[] {
+  if (!Array.isArray(grants) || grants.length === 0) return [];
+  return grants
+    .map((g) => {
+      if (typeof g === "string") return g;
+      if (g && typeof g === "object" && "id" in g) {
+        return String((g as { id: unknown }).id ?? "");
+      }
+      return "";
+    })
+    .filter(Boolean);
+}
 
 const SORT_OPTIONS: ReadonlyArray<{
   id: string;
@@ -108,7 +140,7 @@ function sortIdFromFilters(f: InboxFilters): string {
 function countActive(f: InboxFilters): number {
   let n = 0;
   if ((f.ownerIds?.length ?? 0) > 0 || f.ownerId || f.withoutOwner) n += 1;
-  if (f.channel) n += 1;
+  if (hasChannelFilter(f)) n += 1;
   if ((f.stageIds?.length ?? 0) > 0 || f.stageId) n += 1;
   if (f.tagIds && f.tagIds.length > 0) n += 1;
   if (f.sources && f.sources.length > 0) n += 1;
@@ -123,7 +155,7 @@ function middleTabCount(id: MiddleTab, f: InboxFilters): number {
   if (id === "conversa") {
     return (
       ((f.ownerIds?.length ?? 0) > 0 || f.ownerId || f.withoutOwner ? 1 : 0) +
-      (f.channel ? 1 : 0) +
+      (hasChannelFilter(f) ? 1 : 0) +
       (f.sessionExpiresWithinHours != null ? 1 : 0)
     );
   }
@@ -474,7 +506,7 @@ function InboxActiveFilterChips({
   const hasOwnerish =
     (filters.ownerIds?.length ?? 0) > 0 || Boolean(filters.ownerId);
   const hasTags = (filters.tagIds?.length ?? 0) > 0;
-  const hasChannel = Boolean(filters.channel);
+  const hasChannel = hasChannelFilter(filters);
   const hasStages =
     (filters.stageIds?.length ?? 0) > 0 || Boolean(filters.stageId);
   const hasSources = (filters.sources?.length ?? 0) > 0;
@@ -487,8 +519,8 @@ function InboxActiveFilterChips({
     staleTime: 60_000,
   });
   const { data: channels = [] } = useQuery({
-    queryKey: ["channels", "filter-chips"],
-    queryFn: listChannels,
+    queryKey: ["channels", "inbox-filter"],
+    queryFn: listInboxFilterChannels,
     enabled: hasChannel,
     staleTime: 60_000,
   });
@@ -530,13 +562,18 @@ function InboxActiveFilterChips({
 
   // Canal
   if (hasChannel) {
-    const canonicalLabel =
-      CHANNEL_OPTIONS.find((c) => c.value === filters.channel)?.label ??
-      channels.find((c) => c.kind?.toLowerCase() === filters.channel?.toLowerCase())?.name ??
-      filters.channel;
+    const ids = selectedChannelIds(filters);
+    const names = ids
+      .map((id) => {
+        const instance = channels.find((c) => c.id === id);
+        if (instance) return instance.name;
+        return CHANNEL_TYPE_LABELS[id.toLowerCase()] ?? id;
+      })
+      .join(", ");
     chips.push({
-      label: `Canal: ${canonicalLabel}`,
-      onRemove: () => onChange({ ...filters, channel: undefined }),
+      label: `Canal: ${names || "—"}`,
+      onRemove: () =>
+        onChange({ ...filters, channel: undefined, channelIds: undefined }),
     });
   }
 
@@ -687,8 +724,8 @@ export function InboxFilterButton({
     staleTime: 60_000,
   });
   const { data: channels = [] } = useQuery({
-    queryKey: ["channels", "filter-panel"],
-    queryFn: listChannels,
+    queryKey: ["channels", "inbox-filter"],
+    queryFn: listInboxFilterChannels,
     enabled: open,
     staleTime: 60_000,
   });
@@ -710,20 +747,18 @@ export function InboxFilterButton({
   const { data: myPerms } = useMyPermissions();
 
   const channelOptions = React.useMemo(() => {
-    const channelGrants = myPerms?.channelGrants ?? [];
-    const kinds = new Set(
-      channels.map((c) => (c.kind ?? "").toLowerCase()).filter(Boolean),
-    );
-    const filtered = CHANNEL_OPTIONS.filter((o) => {
-      if (kinds.size > 0 && !kinds.has(o.value)) return false;
-      if (channelGrants.length > 0) {
-        return channelGrants.some(
-          (g) => g === o.value || g.startsWith(`${o.value}:`),
-        );
-      }
-      return true;
+    const grantIds = channelGrantIds(myPerms?.channelGrants);
+    if (grantIds.length === 0) return channels;
+    const allowed = new Set(grantIds);
+    const filtered = channels.filter((c) => {
+      if (c.deleted) return true;
+      if (allowed.has(c.id)) return true;
+      const type = (c.type ?? "").toLowerCase();
+      return grantIds.some(
+        (g) => g === type || g === c.type || g.startsWith(`${type}:`),
+      );
     });
-    return filtered.length > 0 ? filtered : CHANNEL_OPTIONS;
+    return filtered.length > 0 ? filtered : channels;
   }, [channels, myPerms?.channelGrants]);
 
   const selectedTagIds = draft.tagIds ?? [];
@@ -887,21 +922,51 @@ export function InboxFilterButton({
 
       <FieldCard
         label="Canal"
-        active={Boolean(draft.channel)}
-        onClear={() => setDraft((d) => ({ ...d, channel: undefined }))}
+        active={hasChannelFilter(draft)}
+        onClear={() =>
+          setDraft((d) => ({ ...d, channel: undefined, channelIds: undefined }))
+        }
       >
         <DropdownGlass
           placeholder="Selecionar canal…"
-          options={channelOptions.map((o) => ({
-            value: o.value,
-            label: o.label,
-          }))}
-          value={draft.channel}
+          searchable={channelOptions.length > 6}
+          searchPlaceholder="Buscar canal…"
+          options={channelOptions.map((ch) => {
+            const badge = channelStatusBadge(ch);
+            const phone = formatConnectionPhone(ch.phoneNumber);
+            return {
+              value: ch.id,
+              searchText: [ch.name, phone, ch.type, badge]
+                .filter(Boolean)
+                .join(" "),
+              description: phone ?? undefined,
+              label: (
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <span className="min-w-0 truncate">{ch.name}</span>
+                  {badge && (
+                    <span
+                      className={
+                        badge === "Excluído"
+                          ? "shrink-0 rounded-full bg-[var(--color-danger)]/10 px-1.5 py-0.5 font-display text-[9px] font-bold uppercase tracking-wide text-[var(--color-danger)]"
+                          : "shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase tracking-wide text-[var(--text-muted)]"
+                      }
+                    >
+                      {badge}
+                    </span>
+                  )}
+                </span>
+              ),
+            };
+          })}
+          value={selectedChannelIds(draft)[0]}
           onValueChange={(v) =>
-            setDraft((d) => ({
-              ...d,
-              channel: d.channel === v ? undefined : v,
-            }))
+            setDraft((d) => {
+              const current = selectedChannelIds(d)[0];
+              if (current === v) {
+                return { ...d, channel: undefined, channelIds: undefined };
+              }
+              return { ...d, channel: undefined, channelIds: [v] };
+            })
           }
         />
       </FieldCard>

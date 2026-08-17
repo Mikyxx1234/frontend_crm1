@@ -7,25 +7,13 @@ import {
   EdgeLabelRenderer,
   getBezierPath,
   type EdgeProps,
-} from "reactflow";
+} from "@xyflow/react";
+
+import type { OutputKind } from "./flow-node";
 
 /**
- * AnimatedEdge — custom edge type registrado em `edgeTypes` do
- * <ReactFlow>. Curva Bezier com gradiente brand.
- *
- * Variantes (passadas em `data.variant`):
- *  - "default"  → fluxo principal (azul brand → cyan brand)
- *  - "button"   → resposta de botão de Question/Interactive (azul → verde)
- *  - "else"     → caminho alternativo (âmbar pontilhado)
- *  - "timeout"  → cronômetro (cinza pontilhado)
- *  - "add"      → handle pro AddStepNode (cinza ultra-claro pontilhado)
- *
- * Label "✕" continua sendo passada via `label` no `buildEdges()` — só
- * estilizamos visualmente como pílula clicável de excluir.
- *
- * NOTE: o "pulso elétrico" (animateMotion) foi removido por feedback
- * dos usuários — era ruído visual e consumia CPU com muitas edges.
- * `data.energized` segue no tipo só por compatibilidade e é ignorado.
+ * Edge Suave — cor semântica via classe `fx-edge--{kind}`.
+ * Sem stroke hard-coded no JS.
  */
 
 export type AnimatedEdgeVariant =
@@ -38,55 +26,32 @@ export type AnimatedEdgeVariant =
 export type AnimatedEdgeData = {
   variant?: AnimatedEdgeVariant;
   energized?: boolean;
+  /** Preferir kind semântico (flow|error|cond). */
+  kind?: OutputKind;
+  /** Hover: esmaece arestas que não tocam o nó. */
+  dimmed?: boolean;
 };
 
-const VARIANT_STROKE: Record<AnimatedEdgeVariant, string> = {
-  default: "url(#edge-grad-default)",
-  button: "url(#edge-grad-button)",
-  else: "var(--color-warning)",
-  timeout: "#94a3b8",
-  add: "#cbd5e1",
-};
-
-const VARIANT_WIDTH: Record<AnimatedEdgeVariant, number> = {
-  default: 2.2,
-  button: 2.2,
-  else: 1.8,
-  timeout: 1.8,
-  add: 1.5,
-};
-
-const VARIANT_DASH: Record<AnimatedEdgeVariant, string | undefined> = {
-  default: undefined,
-  button: undefined,
-  else: "6 4",
-  timeout: "6 4",
-  add: "5 4",
-};
-
-/**
- * Defs SVG globais (gradientes nomeados) — renderizar UMA vez no canvas
- * pai. Se renderizar dentro de cada edge, o `<linearGradient>` repete N
- * vezes e o navegador penaliza. Mantemos aqui pra colocação manual.
- */
-export function AnimatedEdgeDefs() {
-  return (
-    <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden>
-      <defs>
-        <linearGradient id="edge-grad-default" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="var(--color-primary)" />
-          <stop offset="100%" stopColor="var(--color-cyan)" />
-        </linearGradient>
-        <linearGradient id="edge-grad-button" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="var(--color-primary)" />
-          <stop offset="100%" stopColor="#22c55e" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
+function variantToKind(variant: AnimatedEdgeVariant): OutputKind {
+  switch (variant) {
+    case "button":
+      return "cond";
+    case "else":
+    case "timeout":
+      return "error";
+    case "add":
+    case "default":
+    default:
+      return "flow";
+  }
 }
 
-function AnimatedEdgeImpl(props: EdgeProps<AnimatedEdgeData>) {
+/** Mantido por compat — defs vazios (gradientes removidos). */
+export function AnimatedEdgeDefs() {
+  return null;
+}
+
+function AnimatedEdgeImpl(props: EdgeProps) {
   const {
     id,
     sourceX,
@@ -101,7 +66,9 @@ function AnimatedEdgeImpl(props: EdgeProps<AnimatedEdgeData>) {
     selected,
   } = props;
 
-  const variant: AnimatedEdgeVariant = data?.variant ?? "default";
+  const edgeData = data as AnimatedEdgeData | undefined;
+  const variant: AnimatedEdgeVariant = edgeData?.variant ?? "default";
+  const kind = edgeData?.kind ?? variantToKind(variant);
 
   const [path, labelX, labelY] = getBezierPath({
     sourceX,
@@ -110,14 +77,8 @@ function AnimatedEdgeImpl(props: EdgeProps<AnimatedEdgeData>) {
     targetX,
     targetY,
     targetPosition,
-    curvature: 0.32,
+    curvature: 0.28,
   });
-
-  const stroke = VARIANT_STROKE[variant];
-  const strokeWidth = selected
-    ? VARIANT_WIDTH[variant] + 0.6
-    : VARIANT_WIDTH[variant];
-  const dash = VARIANT_DASH[variant];
 
   return (
     <>
@@ -125,19 +86,13 @@ function AnimatedEdgeImpl(props: EdgeProps<AnimatedEdgeData>) {
         id={id}
         path={path}
         markerEnd={markerEnd}
+        className={`fx-edge fx-edge--${kind}${selected ? " is-selected" : ""}${edgeData?.dimmed ? " is-dimmed" : ""}`}
         style={{
-          stroke,
-          strokeWidth,
-          strokeDasharray: dash,
           fill: "none",
           cursor: "pointer",
+          strokeWidth: selected ? 3.1 : undefined,
         }}
       />
-
-      {/* NOTE: pulso elétrico animado (animateMotion) foi removido —
-          consumia CPU com muitas edges e trazia mais ruído do que valor
-          visual. Se um dia quisermos reativar, usar condicional a
-          `data.energized` + preferência do usuário. */}
 
       {label != null && label !== "" && (
         <EdgeLabelRenderer>
@@ -148,7 +103,7 @@ function AnimatedEdgeImpl(props: EdgeProps<AnimatedEdgeData>) {
                 transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
                 pointerEvents: "all",
               }}
-              className="nodrag nopan flex size-5 items-center justify-center rounded-full border border-border bg-[var(--color-bg-card)] text-[10px] font-bold text-[var(--color-ink-muted)] shadow-sm transition-all hover:border-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] hover:shadow-[0_4px_12px_-4px_rgba(244,63,94,0.4)]"
+              className="fx-edge-delete nodrag nopan"
             >
               {label}
             </div>

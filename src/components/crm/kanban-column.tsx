@@ -9,6 +9,7 @@ import {
   IconSquareMinus,
 } from "@tabler/icons-react"
 import type { HTMLAttributes, ReactNode } from "react"
+import { useEffect, useRef } from "react"
 import { DealCard, type Deal } from "./deal-card"
 
 export type ColumnColor = "novo" | "quali" | "proposta" | "nego" | "fecha"
@@ -65,6 +66,15 @@ interface KanbanColumnProps {
   selection?: KanbanColumnSelection
   /** Formulário inline de criação de deal — renderizado acima do botão "Adicionar negócio". */
   addFormSlot?: ReactNode
+  /**
+   * Botão "Carregar mais" ao fim da lista — exibido quando o board pagina
+   * (50/coluna) e a etapa tem mais deals no servidor (`hasMore`).
+   */
+  loadMore?: {
+    remaining: number
+    loading: boolean
+    onClick: () => void
+  }
 }
 
 const colorMap: Record<ColumnColor, string> = {
@@ -98,11 +108,37 @@ export function KanbanColumn({
   placeholderSlot,
   selection,
   addFormSlot,
+  loadMore,
 }: KanbanColumnProps) {
   const showSelectAll =
     !!selection &&
     selection.totalInColumn > 0 &&
     selection.enabled !== false
+
+  // Auto-load: sentinel no fim da lista dispara o "Carregar mais" ao
+  // entrar no viewport (200px de margem). O botão manual permanece como
+  // fallback acessível. Refs evitam recriar o observer a cada render
+  // (onClick é inline no pai) e bloqueiam double-fire durante o fetch.
+  const loadMoreOnClickRef = useRef(loadMore?.onClick)
+  loadMoreOnClickRef.current = loadMore?.onClick
+  const loadMoreLoadingRef = useRef(loadMore?.loading ?? false)
+  loadMoreLoadingRef.current = loadMore?.loading ?? false
+  const hasLoadMore = !!loadMore && loadMore.remaining > 0
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasLoadMore) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !loadMoreLoadingRef.current) {
+          loadMoreOnClickRef.current?.()
+        }
+      },
+      { root: el.parentElement, rootMargin: "200px" },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [hasLoadMore])
 
   // Cor efetiva do estágio: hex do backend > preset. Badge usa
   // color-mix inline para gerar background 15% da cor do estágio
@@ -233,6 +269,21 @@ export function KanbanColumn({
           ),
         )}
         {placeholderSlot}
+
+        {hasLoadMore ? (
+          <div ref={sentinelRef} aria-hidden className="h-px shrink-0" />
+        ) : null}
+
+        {loadMore && loadMore.remaining > 0 ? (
+          <button
+            type="button"
+            disabled={loadMore.loading}
+            onClick={loadMore.onClick}
+            className="mt-0.5 flex shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-dashed border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/5 py-2 text-[11px] font-medium text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-primary)]/50 hover:bg-[var(--brand-primary)]/10 disabled:opacity-60"
+          >
+            {loadMore.loading ? "Carregando..." : `Carregar mais (${loadMore.remaining})`}
+          </button>
+        ) : null}
       </div>
     </section>
   )

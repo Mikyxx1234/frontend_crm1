@@ -26,6 +26,7 @@ export type RecipientStatus =
 
 export interface CampaignListItem {
   id: string;
+  number?: number;
   name: string;
   type: CampaignType;
   status: CampaignStatus;
@@ -58,6 +59,10 @@ export interface CampaignDetail extends CampaignListItem {
   textContent?: string | null;
   sendRate: number;
   automation?: { id: string; name: string } | null;
+  /** Filtros ad-hoc gravados na criação (inclui tagIds do disparo). */
+  filters?: CampaignFilters | null;
+  /** Tags resolvidas no backend (quando o GET já enriquece). */
+  audienceTags?: { id: string; name: string }[];
 }
 
 export interface CampaignStats {
@@ -127,6 +132,12 @@ export interface SegmentRow {
   id: string;
   name: string;
   filters: Record<string, unknown>;
+}
+
+export interface AutomationRow {
+  id: string;
+  name: string;
+  active: boolean;
 }
 
 export interface TemplateRow {

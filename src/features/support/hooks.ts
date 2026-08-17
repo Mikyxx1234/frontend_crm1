@@ -16,6 +16,7 @@ import {
   resolveSupportTicket,
   sendSupportMessage,
 } from "./api";
+import { subscribeSSEEvents } from "@/hooks/use-sse";
 import type { SupportScope } from "./types";
 
 const TICKETS_KEY = "support-tickets";
@@ -35,7 +36,9 @@ export function useSupportTickets(scope: SupportScope, enabled = true) {
     queryKey: [TICKETS_KEY, scope],
     queryFn: () => listSupportTickets(scope),
     enabled,
-    refetchInterval: 20_000,
+    // Realtime vem do SSE (useSupportRealtime). O interval é só safety-net
+    // para queda silenciosa da stream.
+    refetchInterval: 120_000,
   });
 }
 
@@ -44,7 +47,8 @@ export function useSupportMessages(ticketId: string | null) {
     queryKey: [MESSAGES_KEY, ticketId],
     queryFn: () => listSupportMessages(ticketId as string),
     enabled: !!ticketId,
-    refetchInterval: 10_000,
+    // Idem: SSE `support_message` invalida esta key; interval é safety-net.
+    refetchInterval: 120_000,
   });
 }
 
@@ -100,8 +104,6 @@ export function useSupportRealtime(activeTicketId: string | null, enabled = true
 
   useEffect(() => {
     if (!enabled) return;
-    let es: EventSource | null = null;
-    let retry: ReturnType<typeof setTimeout>;
     let lastInvalidate = 0;
 
     const invalidateTickets = () => {
@@ -111,9 +113,9 @@ export function useSupportRealtime(activeTicketId: string | null, enabled = true
       qc.invalidateQueries({ queryKey: [TICKETS_KEY] });
     };
 
-    const onMessage = (raw: string) => {
+    const onMessage = (raw: unknown) => {
       try {
-        const data = JSON.parse(raw) as { ticketId?: string };
+        const data = raw as { ticketId?: string };
         invalidateTickets();
         if (data.ticketId) {
           qc.invalidateQueries({ queryKey: [MESSAGES_KEY, data.ticketId] });
@@ -123,20 +125,10 @@ export function useSupportRealtime(activeTicketId: string | null, enabled = true
       }
     };
 
-    function connect() {
-      es = new EventSource("/api/sse/messages");
-      es.addEventListener("support_ticket_new", () => invalidateTickets());
-      es.addEventListener("support_ticket_updated", () => invalidateTickets());
-      es.addEventListener("support_message", (e) => onMessage((e as MessageEvent).data));
-      es.onerror = () => {
-        es?.close();
-        retry = setTimeout(connect, 5_000);
-      };
-    }
-    connect();
-    return () => {
-      es?.close();
-      clearTimeout(retry);
-    };
+    return subscribeSSEEvents("/api/sse/messages", {
+      support_ticket_new: () => invalidateTickets(),
+      support_ticket_updated: () => invalidateTickets(),
+      support_message: onMessage,
+    });
   }, [qc, enabled]);
 }

@@ -83,6 +83,8 @@ export interface ServiceOverview {
 export interface PipelineOption {
   id: string;
   name: string;
+  number?: number;
+  slug?: string;
   isDefault?: boolean;
 }
 

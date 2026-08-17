@@ -17,7 +17,7 @@ import {
   IconRefresh,
   type Icon as TablerIcon,
 } from "@tabler/icons-react"
-import { Skeleton } from "@/components/ui/skeleton"
+import { AppLoading } from "@/components/crm/app-loading"
 import { InputGlass } from "./input-glass"
 import { type TabItem } from "./tabs-glass"
 import { TooltipGlass } from "./tooltip-glass"
@@ -473,12 +473,20 @@ export function ConversationColumn({
       {selectionMode && (() => {
         const allDisplayedSelected =
           displayed.length > 0 && displayed.every((c) => selectedIds?.has(c.id))
-        const hasMoreThanLoaded =
-          typeof totalCount === "number" && totalCount > displayed.length
+        const filterTotal =
+          typeof totalCount === "number" && totalCount >= 0
+            ? totalCount
+            : displayed.length
+        const hasMoreThanLoaded = filterTotal > displayed.length
         // Oferece "todas do filtro" quando a página está toda marcada e há
         // mais conversas além das carregadas (ou o modo já está ativo).
         const showFilterSelect =
           !!onSelectAllFilterChange && (selectAllFilter || (allDisplayedSelected && hasMoreThanLoaded))
+        const selectedLabel = selectAllFilter
+          ? `${filterTotal.toLocaleString("pt-BR")} de ${filterTotal.toLocaleString("pt-BR")} selecionada${filterTotal !== 1 ? "s" : ""}`
+          : selectedIds?.size
+            ? `${selectedIds.size} de ${filterTotal.toLocaleString("pt-BR")} selecionada${selectedIds.size > 1 ? "s" : ""}`
+            : `Selecionar todas (${displayed.length})`
         return (
         <div className="@container mb-2.5 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2">
           <div className="flex items-center justify-between gap-2 @max-[520px]:flex-col @max-[520px]:items-stretch">
@@ -497,11 +505,7 @@ export function ConversationColumn({
                 aria-label="Selecionar todas as conversas"
               />
               <span className="truncate font-display text-[12px] font-semibold text-[var(--text-secondary)]">
-                {selectAllFilter && typeof totalCount === "number"
-                  ? `${totalCount.toLocaleString("pt-BR")} selecionada${totalCount > 1 ? "s" : ""} (todo o filtro)`
-                  : selectedIds?.size
-                    ? `${selectedIds.size} de ${displayed.length} selecionada${selectedIds.size > 1 ? "s" : ""}`
-                    : `Selecionar todas (${displayed.length})`}
+                {selectedLabel}
               </span>
             </label>
             {bulkActionsSlot}
@@ -514,7 +518,7 @@ export function ConversationColumn({
             >
               {selectAllFilter
                 ? "Limpar seleção do filtro"
-                : `Selecionar todas as ${(totalCount ?? 0).toLocaleString("pt-BR")} conversas do filtro`}
+                : `Selecionar todas as ${filterTotal.toLocaleString("pt-BR")} conversas do filtro`}
             </button>
           )}
         </div>
@@ -529,18 +533,7 @@ export function ConversationColumn({
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5 [-webkit-overflow-scrolling:touch]">
         <div className="flex flex-col gap-1.5">
         {isLoading ? (
-          Array.from({ length: 6 }, (_, i) => (
-            <div
-              key={i}
-              className="flex shrink-0 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-3"
-            >
-              <Skeleton className="size-10 shrink-0 rounded-full" />
-              <div className="min-w-0 flex-1 space-y-2">
-                <Skeleton className="h-3.5 w-2/3 rounded" />
-                <Skeleton className="h-3 w-full rounded" />
-              </div>
-            </div>
-          ))
+          <AppLoading variant="inline" className="min-h-[280px]" />
         ) : (
           <>
             {displayed.map((conversation) => {

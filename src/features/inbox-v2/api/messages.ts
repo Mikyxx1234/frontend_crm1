@@ -3,22 +3,51 @@
  * Espelham as linhas 15-22, 28-31, 49-50 do contrato Fase 1.
  */
 
-import { apiUrl, parseApiResponse } from "@/lib/api";
+import { apiUrl, ApiError, parseApiResponse } from "@/lib/api";
 
 import type {
   InboxMessageDto,
   MessagesResponse,
   ReactionDto,
+  SessionInfo,
 } from "./types";
 
-/** GET /api/conversations/:id/messages */
+/** GET /api/conversations/:id/session?channelId=X — janela de 24h do
+ *  contato NO canal informado (o `session` do GET messages reflete só o
+ *  canal da conversa). Alimenta o bloqueio do composer ao trocar de canal. */
+export async function getChannelSession(
+  conversationId: string,
+  channelId: string,
+): Promise<SessionInfo> {
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/session?channelId=${encodeURIComponent(channelId)}`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao consultar sessão do canal",
+    );
+  }
+  return {
+    active: data.active === true,
+    lastInboundAt: data.lastInboundAt ?? null,
+    expiresAt: data.expiresAt ?? null,
+  };
+}
+
+/** GET /api/conversations/:id/messages
+ *  `history` default false no cold path — ticket atual pinta rápido;
+ *  o hook faz um segundo fetch com history=1 e mescla no cache.
+ */
 export async function getMessages(
   conversationId: string,
+  opts?: { history?: boolean },
 ): Promise<MessagesResponse> {
-  // history=1: inclui mensagens de tickets anteriores do mesmo contato,
-  // com separadores de ticket injetados pelo backend. Sempre ativo no
-  // inbox v2 para exibir a linha do tempo contínua (comportamento Kommo).
-  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages?history=1`));
+  const history = opts?.history === true;
+  const q = history ? "?history=1" : "";
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/messages${q}`),
+  );
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(
@@ -112,8 +141,10 @@ export async function sendAttachment(
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(
+    throw new ApiError(
       typeof data?.message === "string" ? data.message : "Erro ao enviar anexo",
+      res.status,
+      typeof data?.code === "string" ? data.code : undefined,
     );
   }
   if (data.metaError) {
@@ -186,6 +217,11 @@ export async function sendTemplate(
     flowToken?: string | null;
     flowActionData?: Record<string, unknown> | null;
     templateGraphId?: string | null;
+    /**
+     * Override do canal de saída. Usado quando o canal original da conversa
+     * está DISCONNECTED e o operador escolhe outro WhatsApp da mesma org.
+     */
+    channelId?: string | null;
   },
 ): Promise<{ message: InboxMessageDto; reopenedConversationId?: string }> {
   const body = JSON.stringify({
@@ -200,6 +236,7 @@ export async function sendTemplate(
       ? { flowActionData: vars.flowActionData }
       : {}),
     ...(vars.templateGraphId ? { templateGraphId: vars.templateGraphId } : {}),
+    ...(vars.channelId ? { channelId: vars.channelId } : {}),
   });
 
   const postOnce = () =>

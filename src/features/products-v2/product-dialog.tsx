@@ -6,6 +6,7 @@ import {
   IconBriefcase,
   IconBuildingStore,
   IconCash,
+  IconCertificate,
   IconLoader2,
   IconPlus,
   IconSchool,
@@ -68,12 +69,34 @@ const CREATE_TYPES: { kind: ProductKind; label: string }[] = [
   { kind: "COURSE", label: "Curso" },
 ];
 
+/** Balão Graduação / Pós — só quando kind = COURSE (topo, abaixo do tipo). */
+const COURSE_LEVEL_OPTIONS: {
+  level: CourseLevel;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    level: "GRADUATION",
+    label: COURSE_LEVEL_LABEL.GRADUATION,
+    icon: <IconSchool size={16} />,
+  },
+  {
+    level: "POSTGRADUATE",
+    label: COURSE_LEVEL_LABEL.POSTGRADUATE,
+    icon: <IconCertificate size={16} />,
+  },
+];
+
 type PricingRow = {
   key: string;
   price: string;
   channel: string;
   discount: string;
   priceWithDiscount: string;
+  /** Parcelas (pós-graduação). */
+  installments: string;
+  /** Meses da cota (pós-graduação). */
+  months: string;
 };
 
 function newPricingRow(partial?: Partial<PricingRow>): PricingRow {
@@ -83,6 +106,8 @@ function newPricingRow(partial?: Partial<PricingRow>): PricingRow {
     channel: "",
     discount: "",
     priceWithDiscount: "",
+    installments: "",
+    months: "",
     ...partial,
   };
 }
@@ -167,6 +192,18 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
     [],
   );
 
+  /** Pós: preço base é único — propaga pra todas as cotas. */
+  const setCourseBasePrice = React.useCallback((nextPrice: string) => {
+    setPrice(nextPrice);
+    setPricingRows((rows) =>
+      rows.map((r) => ({
+        ...r,
+        price: nextPrice,
+        priceWithDiscount: discountedFrom(nextPrice, r.discount),
+      })),
+    );
+  }, []);
+
   // Reset/seed ao abrir
   React.useEffect(() => {
     if (!open) return;
@@ -214,16 +251,29 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
     const opts = Array.isArray(detail.courseConfig?.pricingOptions)
       ? detail.courseConfig!.pricingOptions!
       : [];
+    const semesterFallback =
+      detail.courseConfig?.semester != null
+        ? String(detail.courseConfig.semester)
+        : "";
     if (opts.length > 0) {
       setPricingRows(
-        opts.map((o) => {
+        opts.map((o, i) => {
           const p = String(Number(o.price) || 0);
           const d = o.discountPercent != null ? String(Number(o.discountPercent)) : "";
+          const monthsFromOpt =
+            o.months != null && Number.isFinite(Number(o.months))
+              ? String(Number(o.months))
+              : "";
           return newPricingRow({
             price: p,
             channel: o.channel ?? "",
             discount: d,
             priceWithDiscount: discountedFrom(p, d),
+            installments:
+              o.installments != null && Number.isFinite(Number(o.installments))
+                ? String(Number(o.installments))
+                : "",
+            months: monthsFromOpt || (i === 0 ? semesterFallback : ""),
           });
         }),
       );
@@ -240,6 +290,7 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
           channel: detail.courseConfig?.channel ?? "",
           discount,
           priceWithDiscount: discountedFrom(basePrice, discount),
+          months: semesterFallback,
         }),
       ]);
     }
@@ -270,16 +321,43 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
       }));
     }
     if (kind === "COURSE") {
-      const pricingOptions = pricingRows.map((r) => ({
-        price: Number(r.price) || 0,
-        channel: r.channel.trim() || null,
-        discountPercent: r.discount === "" ? null : Number(r.discount),
-      }));
+      const isPostgrad = courseLevel === "POSTGRADUATE";
+      const pricingOptions = pricingRows.map((r) => {
+        const inst = r.installments === "" ? null : Number(r.installments);
+        const monthsNum = r.months === "" ? null : Number(r.months);
+        return {
+          price: Number(r.price) || 0,
+          channel: r.channel.trim() || null,
+          discountPercent: r.discount === "" ? null : Number(r.discount),
+          installments:
+            isPostgrad &&
+            inst != null &&
+            Number.isFinite(inst) &&
+            Number.isInteger(inst) &&
+            inst > 0
+              ? inst
+              : null,
+          months:
+            isPostgrad &&
+            monthsNum != null &&
+            Number.isFinite(monthsNum) &&
+            Number.isInteger(monthsNum) &&
+            monthsNum > 0
+              ? monthsNum
+              : null,
+        };
+      });
       const first = pricingOptions[0];
+      const semesterFromRows =
+        first?.months != null ? first.months : null;
       body.course = {
         level: courseLevel || null,
         grau: courseGrau.trim() || null,
-        semester: courseSemester === "" ? null : Number(courseSemester),
+        semester: isPostgrad
+          ? semesterFromRows
+          : courseSemester === ""
+            ? null
+            : Number(courseSemester),
         mode: courseMode,
         postSalePipelineId: postSalePipelineId || null,
         classes: classes.map((c) => ({
@@ -423,7 +501,13 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
                       <button
                         key={k}
                         type="button"
-                        onClick={() => setKind(k)}
+                        onClick={() => {
+                          setKind(k);
+                          // Ao escolher Curso, já destaca Graduação (pode trocar no balão).
+                          if (k === "COURSE") {
+                            setCourseLevel((prev) => prev || "GRADUATION");
+                          }
+                        }}
                         className={[
                           "flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2.5 text-sm font-medium transition-colors",
                           selected
@@ -448,13 +532,55 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
             )}
           </div>
 
+          {/* Nível do curso — balão só com kind = COURSE, logo abaixo do tipo */}
+          {kind === "COURSE" && (
+            <div className={sectionClass}>
+              <p className={sectionTitleClass}>Nível do curso</p>
+              <div
+                className="grid grid-cols-2 gap-2"
+                role="radiogroup"
+                aria-label="Nível do curso"
+              >
+                {COURSE_LEVEL_OPTIONS.map(({ level, label, icon }) => {
+                  const selected = courseLevel === level;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setCourseLevel(level)}
+                      className={[
+                        "flex items-center justify-center gap-2 rounded-[var(--radius-md)] border px-3 py-2.5 text-sm font-medium transition-colors",
+                        selected
+                          ? "border-[var(--brand-primary)] bg-[var(--glass-bg-strong)] text-[var(--brand-primary)] shadow-[0_0_0_1px_var(--brand-primary)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                      ].join(" ")}
+                    >
+                      {icon}
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[11px] text-[var(--text-secondary)]">
+                Graduação e pós-graduação usam campos e regras de cadastro
+                diferentes.
+              </p>
+            </div>
+          )}
+
           {/* Campos base */}
           <div className={sectionClass}>
             <p className={sectionTitleClass}>Dados gerais</p>
             <div
               className={[
                 "grid gap-3",
-                kind === "COURSE" ? "sm:grid-cols-3" : "sm:grid-cols-2",
+                kind === "COURSE" && courseLevel === "POSTGRADUATE"
+                  ? "sm:grid-cols-2 lg:grid-cols-4"
+                  : kind === "COURSE"
+                    ? "sm:grid-cols-3"
+                    : "sm:grid-cols-2",
               ].join(" ")}
             >
               <div>
@@ -467,6 +593,19 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
                   <Input
                     value={courseGrau}
                     onChange={(e) => setCourseGrau(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              )}
+              {kind === "COURSE" && courseLevel === "POSTGRADUATE" && (
+                <div>
+                  <Label>Preço base (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={pricingRows[0]?.price ?? price}
+                    onChange={(e) => setCourseBasePrice(e.target.value)}
                     className="mt-1"
                   />
                 </div>
@@ -489,19 +628,48 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
               <div className="mt-3 space-y-3">
                 {pricingRows.map((row, idx) => (
                   <div key={row.key} className="space-y-2">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]">
-                      <div className="min-w-0">
-                        {idx === 0 && <Label>Preço base (R$)</Label>}
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={row.price}
-                          onChange={(e) => updatePricingRow(row.key, { price: e.target.value })}
-                          className={idx === 0 ? "mt-1" : undefined}
-                          aria-label={`Preço base linha ${idx + 1}`}
-                        />
-                      </div>
+                    <div
+                      className={[
+                        "grid grid-cols-1 gap-3 sm:grid-cols-2",
+                        courseLevel === "POSTGRADUATE"
+                          ? "lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"
+                          : "lg:grid-cols-[1fr_1fr_1fr_1fr_auto]",
+                      ].join(" ")}
+                    >
+                      {courseLevel === "POSTGRADUATE" ? (
+                        <div className="min-w-0">
+                          {idx === 0 && <Label>Meses</Label>}
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            step={1}
+                            value={row.months}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === "" || /^\d+$/.test(v)) {
+                                updatePricingRow(row.key, { months: v });
+                              }
+                            }}
+                            className={idx === 0 ? "mt-1" : undefined}
+                            placeholder="ex.: 18"
+                            aria-label={`Meses linha ${idx + 1}`}
+                          />
+                        </div>
+                      ) : (
+                        <div className="min-w-0">
+                          {idx === 0 && <Label>Preço base (R$)</Label>}
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.price}
+                            onChange={(e) => updatePricingRow(row.key, { price: e.target.value })}
+                            className={idx === 0 ? "mt-1" : undefined}
+                            aria-label={`Preço base linha ${idx + 1}`}
+                          />
+                        </div>
+                      )}
                       <div className="min-w-0">
                         {idx === 0 && <Label>Cota</Label>}
                         <Input
@@ -539,6 +707,27 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
                           aria-label={`Valor com desconto linha ${idx + 1}`}
                         />
                       </div>
+                      {courseLevel === "POSTGRADUATE" && (
+                        <div className="min-w-0">
+                          {idx === 0 && <Label>Parcelas</Label>}
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            step={1}
+                            value={row.installments}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === "" || /^\d+$/.test(v)) {
+                                updatePricingRow(row.key, { installments: v });
+                              }
+                            }}
+                            className={idx === 0 ? "mt-1" : undefined}
+                            placeholder="ex.: 12"
+                            aria-label={`Parcelas linha ${idx + 1}`}
+                          />
+                        </div>
+                      )}
                       <div className={idx === 0 ? "flex items-end" : "flex items-center"}>
                         <Button
                           type="button"
@@ -563,7 +752,21 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
                     variant="outline"
                     size="sm"
                     className="gap-1.5"
-                    onClick={() => setPricingRows((rows) => [...rows, newPricingRow()])}
+                    onClick={() =>
+                      setPricingRows((rows) => [
+                        ...rows,
+                        courseLevel === "POSTGRADUATE"
+                          ? newPricingRow({
+                              // Pós: nova cota herda o preço base único
+                              price: rows[0]?.price ?? "",
+                              priceWithDiscount: discountedFrom(
+                                rows[0]?.price ?? "",
+                                "",
+                              ),
+                            })
+                          : newPricingRow(),
+                      ])
+                    }
                   >
                     <IconPlus size={14} />
                     Adicionar preço / cota
@@ -778,22 +981,12 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
               <p className={sectionTitleClass}>
                 <IconSchool size={14} /> Curso
               </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                  <Label>Nível</Label>
-                  <DropdownGlass
-                    options={[
-                      { value: "", label: "— Selecione —" } as DropdownOption,
-                      ...(Object.keys(COURSE_LEVEL_LABEL) as CourseLevel[]).map((l) => ({
-                        value: l,
-                        label: COURSE_LEVEL_LABEL[l],
-                      })),
-                    ]}
-                    value={courseLevel}
-                    onValueChange={(v) => setCourseLevel((v as CourseLevel) || "")}
-                    triggerClassName="mt-1 h-9 w-full"
-                  />
-                </div>
+              <div
+                className={[
+                  "grid gap-3 sm:grid-cols-2",
+                  courseLevel !== "POSTGRADUATE" ? "lg:grid-cols-3" : "",
+                ].join(" ")}
+              >
                 <div>
                   <Label>Modalidade</Label>
                   <DropdownGlass
@@ -806,22 +999,24 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
                     triggerClassName="mt-1 h-9 w-full"
                   />
                 </div>
-                <div>
-                  <Label>Semestre</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    step={1}
-                    value={courseSemester}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "" || /^\d+$/.test(v)) setCourseSemester(v);
-                    }}
-                    className="mt-1"
-                    placeholder="ex.: 1"
-                  />
-                </div>
+                {courseLevel !== "POSTGRADUATE" && (
+                  <div>
+                    <Label>Semestre</Label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      step={1}
+                      value={courseSemester}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "" || /^\d+$/.test(v)) setCourseSemester(v);
+                      }}
+                      className="mt-1"
+                      placeholder="ex.: 1"
+                    />
+                  </div>
+                )}
                 <div>
                   <Label>Funil pós-venda</Label>
                   <DropdownGlass

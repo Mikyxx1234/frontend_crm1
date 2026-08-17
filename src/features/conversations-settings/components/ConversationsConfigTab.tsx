@@ -7,6 +7,7 @@ import {
   IconMail,
   IconMicrophone,
   IconPencil,
+  IconRobot,
   IconShieldCheck,
   IconSignature,
   IconUser,
@@ -231,6 +232,14 @@ export function ConversationsConfigTab() {
             description="Mostra a barra lilás «aguardando resposta» nos cards do funil e da inbox quando a última mensagem veio do cliente."
             checked={settings.showInboundSignal}
             onChange={(v) => save("showInboundSignal", v)}
+            disabled={busy}
+          />
+          <ToggleRow
+            icon={<IconRobot size={20} />}
+            label="Contar resposta de agente/automação"
+            description="Quando ligado, mensagens enviadas por automação ou IA atualizam a última direção da conversa e contam como respondidas nos filtros da inbox (Aguardando/Respondidas) e do funil — como se fossem de um atendente humano."
+            checked={settings.countAgentReplyAsAnswered}
+            onChange={(v) => save("countAgentReplyAsAnswered", v)}
             disabled={busy}
           />
         </div>

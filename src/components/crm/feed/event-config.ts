@@ -412,6 +412,18 @@ const FIELD_LABEL: Record<string, string> = {
 
 /// Descricao textual do evento (linha 2 do FeedRow), no formato
 /// "antigo → novo" / "rotulo do alvo" / "preview" conforme o tipo.
+function formatCreatedAtLabel(iso: string | null | undefined): string {
+  if (!iso) return "";
+  try {
+    const d =
+      typeof iso === "string" && iso.includes("T") ? parseISO(iso) : new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return format(d, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  } catch {
+    return "";
+  }
+}
+
 export function eventDescription(ev: FeedEvent): string {
   const m = ev.meta ?? {};
 
@@ -426,6 +438,12 @@ export function eventDescription(ev: FeedEvent): string {
   };
 
   switch (ev.type) {
+    case "CREATED": {
+      const when =
+        formatCreatedAtLabel(String(m.createdAt ?? "")) ||
+        formatCreatedAtLabel(ev.occurredAt);
+      return when ? `Criado em ${when}` : String(ev.entityLabel ?? "");
+    }
     case "STAGE_CHANGED": {
       const from = (m.from as { name?: string })?.name ?? ev.oldValue ?? "?";
       const to = (m.to as { name?: string })?.name ?? ev.newValue ?? "?";
@@ -509,8 +527,15 @@ export function eventDescription(ev: FeedEvent): string {
       const from = (m.from as { name?: string })?.name ?? "";
       return from;
     }
-    case "CONTACT_CREATED":
-      return String(m.preview ?? m.source ?? "");
+    case "CONTACT_CREATED": {
+      const when =
+        formatCreatedAtLabel(String(m.createdAt ?? "")) ||
+        formatCreatedAtLabel(ev.occurredAt);
+      const who = String(m.name ?? m.preview ?? ev.entityLabel ?? "").trim();
+      if (when && who) return `${who} · criado em ${when}`;
+      if (when) return `Criado em ${when}`;
+      return who || String(m.source ?? "");
+    }
     case "CONTACT_DELETED":
     case "DEAL_DELETED":
       return String(ev.entityLabel ?? m.name ?? m.title ?? "");
@@ -562,8 +587,21 @@ export function eventDescription(ev: FeedEvent): string {
       const to = (m.toDepartmentName as string) ?? ev.newValue ?? "Nenhum";
       return `${from} → ${to}`;
     }
-    case "CONVERSATION_CREATED":
-      return String(m.channel ?? "");
+    case "CONVERSATION_CREATED": {
+      const source = String(m.source ?? "");
+      const openedEmpty = m.openedWithoutMessage === true;
+      if (openedEmpty || source === "ui_skip_send" || source === "deal_chat" || source === "deal_workspace" || source === "deal_panel") {
+        const where =
+          source === "deal_chat" || source === "deal_workspace" || source === "deal_panel"
+            ? "pelo negócio"
+            : "pela interface";
+        return `Atendimento aberto sem mensagem (${where})`;
+      }
+      if (source === "reopen") return "Novo ticket após reabertura";
+      if (source === "outbound_reopen") return "Novo ticket ao responder conversa encerrada";
+      const channel = String(m.channel ?? "").trim();
+      return channel ? `Canal ${channel}` : "";
+    }
     case "CONVERSATION_CLOSED":
     case "CONVERSATION_REOPENED":
     case "CONVERSATION_STATUS_CHANGED": {
@@ -572,8 +610,16 @@ export function eventDescription(ev: FeedEvent): string {
       return from && to ? `${from} → ${to}` : to || from;
     }
     case "CONVERSATION_TABULATED": {
-      const tabId = String(m.tabulationId ?? "").trim();
-      return tabId ? `tabulação ${tabId.slice(0, 8)}…` : "Tabulação registrada";
+      const name = String(m.tabulationName ?? m.tabulationLabel ?? "").trim();
+      const numRaw = m.tabulationNumber;
+      const num =
+        typeof numRaw === "number" && Number.isFinite(numRaw)
+          ? numRaw
+          : typeof numRaw === "string" && /^\d+$/.test(numRaw)
+            ? Number(numRaw)
+            : null;
+      if (name) return num != null ? `${name} (#${num})` : name;
+      return "Tabulação registrada";
     }
     case "AUTOMATION_EXECUTED": {
       const name = String(m.automationName ?? "Automação");
@@ -643,6 +689,69 @@ export function eventDescription(ev: FeedEvent): string {
     default:
       return genericDiff() ?? "";
   }
+}
+
+/**
+ * Origem de automacao do evento — "qual card fez isso".
+ *
+ * O backend grava `meta.automationOrigin` em todo evento produzido dentro
+ * de um passo de automacao (ver `lib/automation-origin.ts` +
+ * `withAutomationOriginMeta`). O `stepNumber` e o MESMO numero exibido no
+ * badge do card no editor de automacoes, entao o operador consegue abrir
+ * o fluxo e achar o passo que, por exemplo, distribuiu o lead.
+ *
+ * Eventos ANTIGOS (pre-feature) nao tem a chave: retornamos `null` e a UI
+ * simplesmente nao renderiza a linha. Como fallback, aceitamos o
+ * `meta.automationId`/`automationName` que alguns eventos (STAGE_CHANGED,
+ * STATUS_CHANGED, AUTOMATION_EXECUTED) ja gravavam sem o numero do card.
+ */
+export type AutomationOriginInfo = {
+  automationId: string | null;
+  automationName: string | null;
+  stepNumber: number | null;
+  stepLabel: string | null;
+  /// Texto pronto, ex.: `via automação «Boas-vindas» · card #3 (Executar distribuição)`.
+  text: string;
+};
+
+export function automationOrigin(
+  meta: Record<string, unknown> | null | undefined,
+): AutomationOriginInfo | null {
+  const m = meta ?? {};
+  const raw = m.automationOrigin;
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : null;
+
+  const automationId =
+    typeof o?.automationId === "string"
+      ? o.automationId
+      : typeof m.automationId === "string"
+        ? m.automationId
+        : null;
+  const automationName =
+    typeof o?.automationName === "string" && o.automationName.trim()
+      ? o.automationName.trim()
+      : typeof m.automationName === "string" && m.automationName.trim()
+        ? (m.automationName as string).trim()
+        : null;
+  const stepNumber =
+    typeof o?.stepNumber === "number" && Number.isFinite(o.stepNumber)
+      ? o.stepNumber
+      : null;
+  const stepLabel =
+    typeof o?.stepLabel === "string" && o.stepLabel.trim() ? o.stepLabel.trim() : null;
+
+  if (!automationId && !automationName) return null;
+
+  const namePart = automationName ? `«${automationName}»` : "";
+  const cardPart = stepNumber != null ? ` · card #${stepNumber}` : "";
+  const labelPart = stepLabel ? ` (${stepLabel})` : "";
+  return {
+    automationId,
+    automationName,
+    stepNumber,
+    stepLabel,
+    text: `via automação ${namePart}${cardPart}${labelPart}`.replace(/\s+/g, " ").trim(),
+  };
 }
 
 /// Label de exibicao do ator (com fallback razoavel).

@@ -7,7 +7,7 @@
  * popovers, realtime SSE) é reaproveitada exatamente como está.
  */
 
-import { IconMessageCircle } from "@tabler/icons-react";
+import { IconMessage } from "@tabler/icons-react";
 
 import InboxV2ClientPage from "./_v2-client";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
@@ -19,7 +19,7 @@ export default function V2InboxPage() {
     <InboxV2ClientPage
       navRail={<NavRailSpacer />}
       pageHeader={{
-        icon: <IconMessageCircle size={22} />,
+        icon: <IconMessage size={22} />,
         title: "Caixa de entrada",
       }}
     />

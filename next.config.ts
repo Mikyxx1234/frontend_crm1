@@ -75,7 +75,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_TIME: appRevision.builtAt ?? "",
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
     ignoreDuringBuilds: true,

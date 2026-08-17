@@ -53,8 +53,8 @@ const FUNNEL = [
 const TABS = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle, count: 1 },
   { id: "atividades", label: "Tarefas", icon: IconChecklist, count: 3 },
-  { id: "notas", label: "Notas", icon: IconNote },
-  { id: "timeline", label: "Timeline", icon: IconClock },
+  { id: "notas", label: "Notas", icon: IconNote, count: undefined },
+  { id: "timeline", label: "Timeline", icon: IconClock, count: undefined },
 ] as const
 
 type TabId = (typeof TABS)[number]["id"]

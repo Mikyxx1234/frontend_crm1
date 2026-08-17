@@ -1,65 +1,46 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   IconAdjustmentsHorizontal,
-  IconAlertCircle,
-  IconAlertTriangle,
-  IconBrandWhatsapp,
   IconCheck,
-  IconChevronRight,
-  IconCircleCheck,
-  IconEye,
   IconLayoutGrid,
-  IconMessageReply,
+  IconLayoutList,
   IconPlus,
   IconRotateClockwise,
   IconSearch,
-  IconSend,
   IconSpeakerphone,
 } from "@tabler/icons-react";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { EmptyState } from "@/components/crm/empty-state";
-import { KpiSquareScroll } from "@/components/crm/kpi-card";
 import { PageActionsMenu, PagePrimaryButton, PageSegmentedControl } from "@/components/crm/page-toolbar";
+import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { cn } from "@/lib/utils";
 
-import { useCampaigns } from "@/features/campaigns/hooks";
-import { MOCK_CAMPAIGNS_PAGE } from "@/features/campaigns/mock-campaigns";
-import {
-  CAMPAIGN_STATUS_FILTERS,
-  STATUS_META,
-  TONE_CLASSES,
-} from "@/features/campaigns/constants";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
+
+import { CampaignCards } from "@/features/campaigns/campaign-cards";
+import { CampaignDetailDrawer } from "@/features/campaigns/campaign-detail-drawer";
+import { CampaignRow } from "@/features/campaigns/campaign-row";
+import { CampaignsMiniDash } from "@/features/campaigns/mini-dash";
+import { useCampaigns, useDeleteCampaign } from "@/features/campaigns/hooks";
+import { MOCK_CAMPAIGNS_PAGE, mockCampaignsPage } from "@/features/campaigns/mock-campaigns";
+import { CAMPAIGN_STATUS_FILTERS } from "@/features/campaigns/constants";
 import type { CampaignListItem, CampaignStatus } from "@/features/campaigns/types";
-import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
+import { SORT_KEYS, SORT_LABEL, sortCampaigns, type CampaignSortKey } from "@/features/campaigns/viz";
+import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
-function fmtDateBR(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("pt-BR");
-}
+type ViewMode = "cards" | "lista";
 
-function fmtDateTimeBR(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-const SENDING_STATUSES: CampaignStatus[] = ["SENDING", "PROCESSING"];
+const CARD_PER_PAGE = [6, 12, 24] as const;
+const LIST_PER_PAGE = [25, 50, 100] as const;
+const DEFAULT_PER_PAGE = 6;
 
 export default function CampaignsClientPage() {
   const router = useRouter();
@@ -67,29 +48,64 @@ export default function CampaignsClientPage() {
   const isAuthenticated = authStatus === "authenticated";
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
+  const [view, setView] = useState<ViewMode>("cards");
+  const [selected, setSelected] = useState<CampaignListItem | null>(null);
+  const [sortKey, setSortKey] = useState<CampaignSortKey>("readRate");
+  const deleteMutation = useDeleteCampaign();
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
-  const allQuery = useCampaigns({ perPage: 200 }, isAuthenticated);
-  const realItems = allQuery.data?.items ?? [];
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter, perPage]);
+
+  // Lista paginada de verdade (API: status/search/page/perPage/total).
+  const listQuery = useCampaigns(
+    {
+      page,
+      perPage,
+      status: statusFilter || undefined,
+      search: debouncedSearch || undefined,
+    },
+    isAuthenticated,
+  );
+
+  // KPIs e contagens do popover — lote amplo, sem os filtros da lista.
+  const metricsQuery = useCampaigns({ page: 1, perPage: 200 }, isAuthenticated);
+  const realItems = metricsQuery.data?.items ?? [];
 
   const isDemoBase = shouldAutoDemoEmpty({
     realCount: realItems.length,
     hasFilters: false,
-    isLoading: allQuery.isLoading,
-    isError: allQuery.isError,
+    isLoading: metricsQuery.isLoading,
+    isError: metricsQuery.isError,
   });
 
-  const allItems = useMemo(() => {
-    const base = isDemoBase ? MOCK_CAMPAIGNS_PAGE.items : realItems;
-    const q = search.trim().toLowerCase();
-    return base
-      .filter((c) => !statusFilter || c.status === statusFilter)
-      .filter(
-        (c) =>
-          !q ||
-          c.name.toLowerCase().includes(q) ||
-          (c.segment?.name ?? "").toLowerCase().includes(q),
-      );
-  }, [isDemoBase, realItems, statusFilter, search]);
+  // Em modo demo a paginação roda sobre o mock com os mesmos params da API.
+  const demoPage = useMemo(
+    () =>
+      isDemoBase
+        ? mockCampaignsPage({
+            page,
+            perPage,
+            status: statusFilter || undefined,
+            search: debouncedSearch || undefined,
+          })
+        : null,
+    [isDemoBase, page, perPage, statusFilter, debouncedSearch],
+  );
+
+  const allItems = demoPage ? demoPage.items : listQuery.data?.items ?? [];
+  const total = demoPage ? demoPage.total : listQuery.data?.total ?? 0;
+  const lastPage = Math.max(1, Math.ceil(total / perPage));
+  const safePage = Math.min(page, lastPage);
 
   const statusCounts = useMemo(() => {
     const source = isDemoBase ? MOCK_CAMPAIGNS_PAGE.items : realItems;
@@ -100,14 +116,42 @@ export default function CampaignsClientPage() {
     return map;
   }, [isDemoBase, realItems]);
 
-  const isLoading = allQuery.isLoading;
-  const error = allQuery.error && !isDemoBase;
+  const isLoading = listQuery.isLoading;
+  const error = isDemoBase ? null : listQuery.error;
 
   const dashSource = isDemoBase ? MOCK_CAMPAIGNS_PAGE.items : realItems;
-  const hasFilters = Boolean(statusFilter) || search.trim().length > 0;
+  const visibleItems = useMemo(
+    () => sortCampaigns(allItems, sortKey),
+    [allItems, sortKey],
+  );
   const clearFilters = () => {
     setStatusFilter("");
     setSearch("");
+  };
+
+  const handleDelete = async (campaign: CampaignListItem) => {
+    if (isDemoBase || isPageMockMode() || campaign.id.startsWith("camp-")) {
+      toast.info("Modo demonstração — exclusão indisponível.");
+      return;
+    }
+    const ok = await confirm({
+      title: "Excluir campanha?",
+      description: (
+        <>
+          Tem certeza que deseja excluir <strong>{campaign.name}</strong>? Esta
+          ação não pode ser desfeita.
+        </>
+      ),
+      confirmLabel: "Excluir",
+      cancelLabel: "Cancelar",
+      destructive: true,
+    });
+    if (!ok) return;
+    deleteMutation.mutate(campaign.id, {
+      onSuccess: () => toast.success(`Campanha "${campaign.name}" excluída.`),
+      onError: (err) =>
+        toast.error(err instanceof Error ? err.message : "Erro ao excluir campanha."),
+    });
   };
 
   return (
@@ -124,6 +168,8 @@ export default function CampaignsClientPage() {
               onSearch={setSearch}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
+              sortKey={sortKey}
+              onSortChange={setSortKey}
               statusCounts={statusCounts}
               total={dashSource.length}
               onClearAll={clearFilters}
@@ -143,6 +189,37 @@ export default function CampaignsClientPage() {
                   if (v === "automations") router.push("/automations");
                 }}
               />
+              <PageSegmentedControl
+                size="compact"
+                aria-label="Visualização das campanhas"
+                items={[
+                  {
+                    value: "cards",
+                    label: (
+                      <span className="flex items-center gap-1.5">
+                        <IconLayoutGrid size={13} aria-hidden />
+                        Cards
+                      </span>
+                    ),
+                  },
+                  {
+                    value: "lista",
+                    label: (
+                      <span className="flex items-center gap-1.5">
+                        <IconLayoutList size={13} aria-hidden />
+                        Lista
+                      </span>
+                    ),
+                  },
+                ]}
+                value={view}
+                onChange={(v) => {
+                  const next = v as ViewMode;
+                  setView(next);
+                  setPerPage(next === "cards" ? CARD_PER_PAGE[0] : LIST_PER_PAGE[0]);
+                  setPage(1);
+                }}
+              />
               <CampaignsActionsMenu />
             </div>
           }
@@ -153,27 +230,22 @@ export default function CampaignsClientPage() {
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
             {isLoading && allItems.length === 0 ? (
-              <div className="flex flex-col gap-2.5">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-[72px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]"
-                  />
-                ))}
-              </div>
+              <AppLoading variant="inline" className="min-h-[320px]" />
             ) : error ? (
               <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
                 {error instanceof Error ? error.message : "Erro ao carregar."}
               </div>
-            ) : allItems.length === 0 ? (
+            ) : visibleItems.length === 0 ? (
               <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
                 <EmptyState
                   icon={<IconSpeakerphone size={28} />}
                   title="Nenhuma campanha"
                   description={
-                    statusFilter
-                      ? "Nenhuma campanha com esse status."
-                      : "Crie sua primeira campanha para disparar mensagens em massa."
+                    debouncedSearch
+                      ? `Sem resultados para "${debouncedSearch}".`
+                      : statusFilter
+                        ? "Nenhuma campanha com esse status."
+                        : "Crie sua primeira campanha para disparar mensagens em massa."
                   }
                   action={
                     <PagePrimaryButton href="/campaigns/new">
@@ -182,328 +254,41 @@ export default function CampaignsClientPage() {
                   }
                 />
               </div>
+            ) : view === "cards" ? (
+              <div className="pb-3">
+                <CampaignCards items={visibleItems} onSelect={setSelected} />
+              </div>
             ) : (
               <div className="flex flex-col gap-2.5 pb-3">
-                {allItems.map((c) => (
-                  <CampaignRow key={c.id} campaign={c} />
+                {visibleItems.map((c) => (
+                  <CampaignRow key={c.id} campaign={c} onDelete={handleDelete} />
                 ))}
               </div>
             )}
           </div>
+
+          <PaginationGlass
+            className="shrink-0"
+            total={total}
+            entityLabel="campanhas"
+            page={safePage}
+            lastPage={lastPage}
+            canPrev={safePage > 1}
+            canNext={safePage < lastPage}
+            onPrev={() => setPage((p) => Math.max(1, p - 1))}
+            onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+            perPage={perPage}
+            perPageOptions={view === "cards" ? CARD_PER_PAGE : LIST_PER_PAGE}
+            onPerPageChange={(value) => {
+              setPerPage(value);
+              setPage(1);
+            }}
+          />
         </div>
       </main>
+      <CampaignDetailDrawer campaign={selected} onClose={() => setSelected(null)} />
+      {confirmDialog}
     </div>
-  );
-}
-
-// Cor do dot de status — mapeada a partir do meta.tone (padrão Automações
-// usa dot simples). Também aplica pulse quando a campanha está enviando.
-const DOT_TONE: Record<string, string> = {
-  success: "bg-[var(--color-success)]",
-  brand: "bg-[var(--brand-primary)]",
-  info: "bg-[var(--color-info)]",
-  warning: "bg-[var(--color-warning)]",
-  danger: "bg-[var(--color-danger)]",
-  neutral: "bg-[var(--text-muted)] opacity-45",
-};
-
-function CampaignRow({ campaign }: { campaign: CampaignListItem }) {
-  const meta = STATUS_META[campaign.status] ?? STATUS_META.DRAFT;
-  const isSending = SENDING_STATUSES.includes(campaign.status);
-
-  const total = campaign.totalRecipients || 0;
-  const sent = campaign.sentCount || 0;
-  const failed = campaign.failedCount || 0;
-  const pctSent = total ? Math.round((sent / total) * 100) : 0;
-  const pctFailed = total ? Math.round((failed / total) * 100) : 0;
-
-  const noMetrics =
-    total === 0 ||
-    campaign.status === "DRAFT" ||
-    campaign.status === "SCHEDULED";
-
-  const listLabel =
-    campaign.segment?.name ?? campaign.channel?.name ?? "—";
-
-  const dateLabel =
-    campaign.status === "SCHEDULED" && campaign.scheduledAt
-      ? `Agendada p/ ${fmtDateTimeBR(campaign.scheduledAt)}`
-      : fmtDateBR(campaign.createdAt);
-
-  return (
-    <Link
-      href={`/campaigns/${campaign.id}`}
-      className="group flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--input-border-focus,rgba(91,111,245,0.50))] hover:shadow-[var(--glass-shadow)] sm:gap-4 sm:px-4"
-    >
-      {/* Bloco esquerdo — dot + nome + subtítulo (padrão Automações). */}
-      <div className="min-w-0 flex-1 lg:min-w-[240px] lg:flex-none lg:shrink-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <span
-            aria-hidden
-            className={cn(
-              "h-2 w-2 shrink-0 rounded-full",
-              DOT_TONE[meta.tone] ?? DOT_TONE.neutral,
-              isSending && "animate-pulse",
-            )}
-          />
-          <h3 className="min-w-0 truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
-            {campaign.name}
-          </h3>
-        </div>
-        <div className="mt-1 flex min-w-0 items-center gap-1.5 pl-4">
-          <IconBrandWhatsapp
-            size={13}
-            stroke={2.2}
-            className="shrink-0 text-[var(--color-wa-dark,#128c4b)]"
-          />
-          <span className="min-w-0 truncate font-body text-[12px] text-[var(--text-muted)] sm:text-[12.5px]">
-            {listLabel} · {dateLabel}
-          </span>
-        </div>
-      </div>
-
-      {/* Centro — pill de status compacta + progresso ou mensagem de espera. */}
-      <div className="hidden min-w-0 flex-1 items-center gap-3 lg:flex">
-        <span
-          className={cn(
-            "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 font-display text-[11px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
-            TONE_CLASSES[meta.tone],
-            isSending && "before:animate-pulse",
-          )}
-        >
-          {meta.label}
-        </span>
-        {noMetrics ? (
-          <p className="min-w-0 flex-1 truncate font-body text-[12px] italic text-[var(--text-muted)]">
-            {campaign.status === "SCHEDULED"
-              ? "Aguardando disparo — métricas após o início do envio."
-              : "Rascunho — configure e lance a campanha para ver métricas."}
-          </p>
-        ) : (
-          <div className="min-w-0 flex-1">
-            <div className="flex h-[6px] overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
-              <div
-                className="bg-[var(--color-success)] transition-all duration-500"
-                style={{ width: `${pctSent}%` }}
-              />
-              <div
-                className="bg-[var(--color-danger)] transition-all duration-500"
-                style={{ width: `${pctFailed}%` }}
-              />
-            </div>
-            <div className="mt-1 flex justify-between font-display text-[10.5px] font-bold">
-              <span className="text-[var(--color-success-dark,var(--color-success-text))]">
-                {pctSent}% enviado
-              </span>
-              {pctFailed > 0 && (
-                <span className="text-[var(--color-danger)]">
-                  {pctFailed}% falha
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Direita — métricas compactas no estilo Automações (icone/valor/label). */}
-      {!noMetrics && (
-        <div className="hidden shrink-0 items-center gap-6.5 min-[1100px]:flex">
-          <RowMetric
-            icon={<IconCircleCheck size={13} />}
-            value={total.toLocaleString("pt-BR")}
-            label="Total"
-          />
-          <RowMetric
-            icon={<IconSend size={13} />}
-            value={sent.toLocaleString("pt-BR")}
-            label="Enviado"
-          />
-          <RowMetric
-            icon={<IconEye size={13} />}
-            value={(campaign.readCount ?? 0).toLocaleString("pt-BR")}
-            label="Lido"
-          />
-          <RowMetric
-            icon={<IconMessageReply size={13} />}
-            value={(campaign.repliedCount ?? 0).toLocaleString("pt-BR")}
-            label="Resp."
-          />
-          <RowMetric
-            icon={<IconAlertCircle size={13} />}
-            value={failed.toLocaleString("pt-BR")}
-            label="Falha"
-          />
-        </div>
-      )}
-
-      {/* Fallback mobile — pill de status + chevron. */}
-      <div className="flex shrink-0 items-center gap-2 lg:hidden">
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-display text-[11px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
-            TONE_CLASSES[meta.tone],
-            isSending && "before:animate-pulse",
-          )}
-        >
-          {meta.label}
-        </span>
-        <IconChevronRight
-          size={16}
-          stroke={2.5}
-          className="text-[var(--brand-primary)]"
-        />
-      </div>
-
-      <IconChevronRight
-        size={16}
-        stroke={2.2}
-        className="hidden shrink-0 text-[var(--text-muted)] transition-all group-hover:translate-x-0.5 group-hover:text-[var(--brand-primary)] lg:block"
-      />
-    </Link>
-  );
-}
-
-// Métrica no formato Automações: ícone pequeno em cima, valor bold, label pequeno.
-function RowMetric({
-  icon,
-  value,
-  label,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  label: string;
-}) {
-  return (
-    <div className="min-w-[52px] text-center">
-      <div className="mb-0.5 flex items-center justify-center gap-1 text-[var(--text-muted)]">
-        {icon}
-      </div>
-      <p className="font-display text-[15px] font-extrabold leading-none text-[var(--text-primary)]">
-        {value}
-      </p>
-      <p className="mt-1 font-body text-[10px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
-        {label}
-      </p>
-    </div>
-  );
-}
-
-// ── Mini-dash de campanhas ───────────────────────────────────────────────
-
-const SENDING_SET: CampaignStatus[] = ["SENDING", "PROCESSING"];
-
-function CampaignsMiniDash({ items }: { items: CampaignListItem[] }) {
-  const stats = useMemo(() => {
-    let sending = 0;
-    let sent = 0;
-    let read = 0;
-    let failed = 0;
-    for (const c of items) {
-      if (SENDING_SET.includes(c.status)) sending++;
-      sent += c.sentCount || 0;
-      read += c.readCount || 0;
-      failed += c.failedCount || 0;
-    }
-    const readRate = sent > 0 ? Math.round((read / sent) * 100) : 0;
-    const failRate =
-      sent + failed > 0 ? Math.round((failed / (sent + failed)) * 100) : 0;
-    return { total: items.length, sending, sent, failed, readRate, failRate };
-  }, [items]);
-
-  const cards: {
-    key: string;
-    label: string;
-    shortLabel: string;
-    value: number;
-    percent?: number;
-    accent: string;
-    icon: React.ReactNode;
-  }[] = [
-    {
-      key: "total",
-      label: "Total de campanhas",
-      shortLabel: "Campanhas",
-      value: stats.total,
-      accent: "var(--brand-primary)",
-      icon: <IconSpeakerphone size={16} />,
-    },
-    {
-      key: "sending",
-      label: "Em envio agora",
-      shortLabel: "Em envio",
-      value: stats.sending,
-      accent: "var(--color-warning, #d97706)",
-      icon: <IconSend size={16} />,
-    },
-    {
-      key: "sent",
-      label: "Enviadas · taxa de leitura",
-      shortLabel: "Enviadas",
-      value: stats.sent,
-      percent: stats.readRate,
-      accent: "var(--color-success)",
-      icon: <IconCircleCheck size={16} />,
-    },
-    {
-      key: "failed",
-      label: "Falhas · taxa de erro",
-      shortLabel: "Falhas",
-      value: stats.failed,
-      percent: stats.failRate,
-      accent: "var(--color-danger, #dc2626)",
-      icon: <IconAlertTriangle size={16} />,
-    },
-  ];
-
-  return (
-    <section className="shrink-0" aria-label="Indicadores de campanhas">
-      <KpiSquareScroll
-        items={cards.map((c) => ({
-          key: c.key,
-          label: c.shortLabel,
-          value: c.value.toLocaleString("pt-BR"),
-          icon: c.icon,
-          accent: c.accent,
-          percent: c.percent,
-        }))}
-      />
-      <div className="hidden gap-3 lg:grid lg:grid-cols-4">
-        {cards.map((c) => (
-          <div
-            key={c.key}
-            className="flex items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-          >
-            <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-              style={{
-                background: `color-mix(in srgb, ${c.accent} 14%, transparent)`,
-                color: c.accent,
-              }}
-            >
-              {c.icon}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-display text-[11.5px] font-semibold tracking-[0.01em] text-[var(--text-muted)]">
-                {c.label}
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="font-display text-[22px] font-bold leading-none text-[var(--text-primary)] tabular-nums">
-                  {c.value.toLocaleString("pt-BR")}
-                </span>
-                {c.percent !== undefined && (
-                  <span
-                    className="font-display text-[12px] font-bold tabular-nums"
-                    style={{ color: c.accent }}
-                  >
-                    {c.percent}%
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -523,6 +308,8 @@ function CampaignsSearchFilterBar({
   onSearch,
   statusFilter,
   onStatusChange,
+  sortKey,
+  onSortChange,
   statusCounts,
   total,
   onClearAll,
@@ -531,6 +318,8 @@ function CampaignsSearchFilterBar({
   onSearch: (v: string) => void;
   statusFilter: string;
   onStatusChange: (v: string) => void;
+  sortKey: CampaignSortKey;
+  onSortChange: (v: CampaignSortKey) => void;
   statusCounts: Partial<Record<CampaignStatus, number>>;
   total: number;
   onClearAll: () => void;
@@ -639,6 +428,35 @@ function CampaignsSearchFilterBar({
                   </button>
                 );
               })}
+            </div>
+
+            <div className="mt-4 border-t border-[var(--glass-border)] pt-3">
+              <p className="mb-2 font-display text-[12px] font-semibold text-[var(--text-muted)]">
+                Ordenar
+              </p>
+              <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="Ordenar campanhas">
+                {SORT_KEYS.map((key) => {
+                  const selected = sortKey === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => onSortChange(key)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-bold transition-colors",
+                        selected
+                          ? "border-[var(--brand-primary)] bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                          : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+                      )}
+                    >
+                      {selected && <IconCheck size={12} stroke={2.4} />}
+                      {SORT_LABEL[key]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

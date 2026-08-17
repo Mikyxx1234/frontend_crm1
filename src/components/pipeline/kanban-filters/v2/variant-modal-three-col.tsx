@@ -119,6 +119,7 @@ function TagsChipColumn({
   const allTags = React.useMemo(() => options?.tags ?? [], [options?.tags]);
   const selectedIds = draft.tagIds ?? [];
   const selected = new Set(selectedIds);
+  const exclude = draft.tagMode === "none";
 
   const filtered = React.useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -132,6 +133,7 @@ function TagsChipColumn({
       : [...selectedIds, id];
     setDraftField("tagIds", next.length ? next : undefined);
     setDraftField("withoutTags", undefined);
+    if (next.length === 0) setDraftField("tagMode", undefined);
   }
 
   return (
@@ -142,8 +144,42 @@ function TagsChipColumn({
             Tags
           </span>
           <span className="font-display text-[10.5px] font-bold text-[var(--brand-primary)]">
-            {selectedIds.length} selecionadas
+            {selectedIds.length === 0
+              ? "0 selecionadas"
+              : exclude
+                ? `${selectedIds.length} excluídas`
+                : `${selectedIds.length} selecionadas`}
           </span>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {(
+            [
+              { value: "any" as const, label: "Contém" },
+              { value: "none" as const, label: "Não contém" },
+            ] as const
+          ).map((option) => {
+            const active = option.value === "none" ? exclude : !exclude;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  setDraftField(
+                    "tagMode",
+                    option.value === "none" ? "none" : undefined,
+                  )
+                }
+                className={cn(
+                  "rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11px] font-semibold transition-colors",
+                  active
+                    ? "bg-[var(--brand-primary)] text-white"
+                    : "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)]",
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
         <input
           type="search"
@@ -158,6 +194,7 @@ function TagsChipColumn({
             onClick={() => {
               setDraftField("tagIds", undefined);
               setDraftField("withoutTags", undefined);
+              setDraftField("tagMode", undefined);
             }}
             className="font-display text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--brand-primary)]"
           >
@@ -173,7 +210,10 @@ function TagsChipColumn({
             onClick={() => {
               const next = !draft.withoutTags;
               setDraftField("withoutTags", next || undefined);
-              if (next) setDraftField("tagIds", undefined);
+              if (next) {
+                setDraftField("tagIds", undefined);
+                setDraftField("tagMode", undefined);
+              }
             }}
             className={cn(
               "inline-flex items-center rounded-[7px] border px-2 py-1 font-display text-[11.5px] font-semibold transition-colors",

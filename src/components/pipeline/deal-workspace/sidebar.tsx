@@ -13,6 +13,7 @@ import { DealCustomFieldsSection } from "@/components/pipeline/deal-custom-field
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
 import { TagChipOptionsList } from "@/components/crm/tag-chip-options-list";
 import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
+import { dealDetailKey } from "@/features/pipeline-v2/hooks/use-deal-detail";
 import { SortableSidebar } from "@/components/ui/sortable-sidebar";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -30,12 +31,13 @@ import {
   tagPillStyle,
 } from "@/lib/utils";
 
-import type {
-  CatalogProduct,
-  ContactDetail,
-  DealDetailData,
-  DealProductItem,
-  UserOption,
+import {
+  catalogProductSubtitle,
+  type CatalogProduct,
+  type ContactDetail,
+  type DealDetailData,
+  type DealProductItem,
+  type UserOption,
 } from "./shared";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -314,7 +316,7 @@ export function WorkspaceSidebar({
       if (!res.ok) throw new Error("Erro ao adicionar tag");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["deal", deal.id] });
+      queryClient.invalidateQueries({ queryKey: dealDetailKey(deal.id) });
       queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
       setTagInput("");
       setShowTagComposer(false);
@@ -331,7 +333,7 @@ export function WorkspaceSidebar({
       if (!res.ok) throw new Error("Erro ao remover tag");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["deal", deal.id] });
+      queryClient.invalidateQueries({ queryKey: dealDetailKey(deal.id) });
       queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
     },
   });
@@ -1482,7 +1484,7 @@ function ProductsCard({
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: itemsKey });
-    queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
+    queryClient.invalidateQueries({ queryKey: dealDetailKey(dealId) });
     queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
   };
 
@@ -1555,22 +1557,28 @@ function ProductsCard({
             {catalog.length === 0 ? (
               <p className="px-3 py-3 text-center text-xs text-[var(--color-ink-muted)]">Nenhum produto encontrado</p>
             ) : (
-              catalog.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => addMutation.mutate(p.id)}
-                  disabled={addMutation.isPending}
-                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)]"
-                >
-                  <span className="min-w-0 flex-1 truncate font-semibold tracking-tight text-foreground">
-                    {p.name}
-                  </span>
-                  <span className="shrink-0 font-bold tabular-nums text-success">
-                    {formatCurrency(Number(p.price))}
-                  </span>
-                </button>
-              ))
+              catalog.map((p) => {
+                const subtitle = catalogProductSubtitle(p);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => addMutation.mutate(p.id)}
+                    disabled={addMutation.isPending}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)]"
+                  >
+                    <span className="min-w-0 flex-1 truncate font-semibold tracking-tight text-foreground">
+                      {p.name}
+                      {subtitle ? (
+                        <span className="ml-1 font-normal text-muted-foreground">({subtitle})</span>
+                      ) : null}
+                    </span>
+                    <span className="shrink-0 font-bold tabular-nums text-success">
+                      {formatCurrency(Number(p.price))}
+                    </span>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>

@@ -56,7 +56,7 @@ export const TagChip = React.forwardRef<HTMLElement, TagChipProps>(function TagC
   return (
     <Comp
       {...rest}
-      ref={ref}
+      ref={ref as React.Ref<HTMLButtonElement>}
       type={onClick ? "button" : undefined}
       onClick={onClick}
       aria-pressed={ariaPressed ?? (onClick ? selected : undefined)}

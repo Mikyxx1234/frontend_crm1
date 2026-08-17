@@ -17,28 +17,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiUrl } from "@/lib/api";
 
-declare global {
-  interface Window {
-    FB?: {
-      init: (params: {
-        appId: string;
-        autoLogAppEvents: boolean;
-        xfbml: boolean;
-        version: string;
-      }) => void;
-      login: (
-        callback: (response: FBLoginResponse) => void,
-        options: {
-          config_id: string;
-          response_type: string;
-          override_default_response_type: boolean;
-          extras: { setup: Record<string, unknown> };
-        },
-      ) => void;
-    };
-    fbAsyncInit?: () => void;
-  }
-}
+// Window.FB / fbAsyncInit já declarados em use-embedded-signup.ts
+// (mesmo SDK). Redecclarar aqui com tipo local de FBLoginResponse
+// quebra o merge de `interface Window` (TS2717).
 
 type FBLoginResponse = {
   authResponse?: { code?: string } | null;

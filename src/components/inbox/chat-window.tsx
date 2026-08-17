@@ -5,6 +5,7 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSSE } from "@/hooks/use-sse";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { useUserRole } from "@/hooks/use-user-role";
 import { IconAlertCircle as AlertCircle, IconAlertTriangle as AlertTriangle, IconArrowRight as ArrowRight, IconRobot as Bot, IconChecks as CheckCheck, IconCircleCheck as CheckCircle2, IconSquareCheck as CheckSquare, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconClock as Clock, IconDownload as Download, IconFileText as FileText, IconTemplate as LayoutTemplate, IconLoader2 as Loader2, IconLock as Lock, IconSpeakerphone as Megaphone, IconDots as MoreHorizontal, IconPaperclip as Paperclip, IconPlayerPause as Pause, IconPencil as Pencil, IconPhone as Phone, IconPhoneIncoming as PhoneIncoming, IconPhoneOff as PhoneOff, IconPhoneOutgoing as PhoneOutgoing, IconPin as Pin, IconPlayerPlay as Play, IconPlus as Plus, IconArrowBackUp as Reply, IconRotate2 as RotateCcw, IconDeviceFloppy as Save, IconSearch as Search, IconSend as Send, IconShare2 as Share2, IconShieldCheck as ShieldCheck, IconMoodSmile as Smile, IconDeviceMobile as Smartphone, IconUpload as Upload, IconVolume as Volume2, IconTool as Wrench, IconX as X } from "@tabler/icons-react";
 import { AIDraftCard } from "@/components/inbox/ai-draft-card";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
@@ -21,7 +22,11 @@ import {
 } from "@/components/inbox/slash-command-menu";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 import { getContact } from "@/features/inbox-v2/api/misc";
-import { emitConversationReopened } from "@/features/inbox-v2/hooks";
+import {
+  emitConversationReopened,
+  messagesKey as inboxMessagesKey,
+} from "@/features/inbox-v2/hooks";
+import { ResolveConfirmDialog } from "@/features/inbox-v2/extras/skip-automations-option";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +61,7 @@ import {
 import { dt } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { MetaSendErrorBalloon } from "@/components/crm/meta-send-error-balloon";
+import { EventRow, classifyTimelineItem, isRedundantOpenStatusEvent } from "@/components/crm/chat-timeline";
 
 /** Texto da nota em uma linha (banner fixado estilo WhatsApp). */
 function notePreviewOneLine(content: string, maxChars = 140): string {
@@ -76,6 +82,8 @@ type InboxMessageDto = {
   messageType: string | number | undefined;
   isPrivate?: boolean;
   senderName?: string | null;
+  senderUserId?: string | null;
+  authorType?: "human" | "bot" | "system" | string | null;
   senderImageUrl?: string | null;
   mediaUrl?: string | null;
   replyToId?: string | null;
@@ -200,11 +208,17 @@ async function postReaction(messageId: string, emoji: string) {
 async function postConversationAction(
   conversationId: string,
   action: "resolve" | "reopen",
+  extra?: { skipAutomations?: boolean },
 ) {
   const res = await fetch(apiUrl(`/api/conversations/${conversationId}/actions`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action }),
+    body: JSON.stringify({
+      action,
+      ...(action === "resolve" && extra?.skipAutomations
+        ? { skipAutomations: true }
+        : {}),
+    }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok)
@@ -438,6 +452,9 @@ export function ChatWindow({
 }) {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const { role, isSuperAdmin } = useUserRole();
+  const canSkipAutomations = isSuperAdmin || role === "ADMIN";
+  const [resolveConfirmOpen, setResolveConfirmOpen] = React.useState(false);
   const agentName = session?.user?.name ?? session?.user?.email ?? "Agente";
   // Mobile breakpoint < 768px — usado pra copy progressiva no
   // placeholder do composer ("Mensagem ou /" curto vs versao
@@ -488,6 +505,7 @@ export function ChatWindow({
     name: string;
     label?: string;
     content: string;
+    language?: string;
     /** ID Graph Meta — usado para montar componente de botão FLOW no envio. */
     metaTemplateId?: string;
     /** Metadados das variáveis do corpo (Config → operator_variables). */
@@ -594,7 +612,11 @@ export function ChatWindow({
   const typingTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const messagesKey = ["conversation-messages", conversationId] as const;
+  // Mesma key do inbox v2: as duas telas buscam a MESMA URL
+  // (`/messages?history=1`), então compartilhar a entrada de cache evita
+  // refetch ao alternar entre inbox e painel do negócio, e faz as
+  // invalidações de um lado valerem no outro.
+  const messagesKey = inboxMessagesKey(conversationId);
 
   const rowMax = compactChrome
     ? "mx-auto w-full max-w-full"
@@ -610,9 +632,9 @@ export function ChatWindow({
     queryKey: messagesKey,
     queryFn: () => fetchMessages(conversationId!),
     enabled: !!conversationId,
-    staleTime: 4_000,
+    staleTime: 20_000,
     gcTime: 5 * 60_000,
-    refetchInterval: conversationId ? 30_000 : false,
+    refetchInterval: conversationId ? 45_000 : false,
   });
   const messages = messagesData?.messages ?? [];
   const pinnedNoteId = messagesData?.pinnedNoteId ?? null;
@@ -1155,7 +1177,7 @@ export function ChatWindow({
       return postForward(targetId, conversationId, messageRef);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["conversation-messages"] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
       setForwardingMessage(null);
       setForwardSearch("");
@@ -1198,9 +1220,14 @@ export function ChatWindow({
     });
   }, [forwardPickData, forwardSearch, conversationId]);
   const statusMutation = useMutation({
-    mutationFn: (action: "resolve" | "reopen") =>
-      postConversationAction(conversationId!, action),
-    onSuccess: (data, action) => {
+    mutationFn: (vars: {
+      action: "resolve" | "reopen";
+      skipAutomations?: boolean;
+    }) =>
+      postConversationAction(conversationId!, vars.action, {
+        skipAutomations: vars.skipAutomations,
+      }),
+    onSuccess: (data, vars) => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
       // Pipeline v2 (`_v2-client.tsx`) lê `contact.conversations[0]` do
@@ -1215,7 +1242,8 @@ export function ChatWindow({
       queryClient.invalidateQueries({ queryKey: ["deal-timeline-v2"] });
       queryClient.invalidateQueries({ queryKey: ["deal"] });
       queryClient.invalidateQueries({ queryKey: ["contact"] });
-      if (action === "resolve") {
+      if (vars.action === "resolve") {
+        setResolveConfirmOpen(false);
         onResolve?.(data.conversation.status);
       } else {
         // Reopen no modelo de ticket: backend cria NOVA conversa e devolve
@@ -1230,6 +1258,20 @@ export function ChatWindow({
       }
     },
   });
+
+  function handleToggleResolve() {
+    if (!conversationId) return;
+    if (conversationStatus === "RESOLVED") {
+      statusMutation.mutate({ action: "reopen" });
+      return;
+    }
+    if (canSkipAutomations) {
+      setResolveConfirmOpen(true);
+      return;
+    }
+    statusMutation.mutate({ action: "resolve" });
+  }
+
   const pinNoteMutation = useMutation({
     mutationFn: async (noteId: string | null) => {
       const res = await fetch(apiUrl(`/api/conversations/${conversationId}/pin-note`), {
@@ -2286,6 +2328,32 @@ export function ChatWindow({
                   </React.Fragment>
                 );
               }
+
+              const classified = classifyTimelineItem({
+                messageType: String(m.messageType ?? ""),
+                isPrivate: m.isPrivate,
+                authorType: m.authorType,
+                senderName: m.senderName,
+                content: m.content,
+                direction: m.direction,
+              });
+              if (classified.kind === "event") {
+                if (isRedundantOpenStatusEvent(m.content)) return null;
+                return (
+                  <React.Fragment key={m.id}>
+                    {showDate && <DateSep date={m.createdAt} />}
+                    <div data-msg-idx={idx}>
+                      <EventRow
+                        action={classified.action ?? "ia"}
+                        text={m.content}
+                        actor={m.senderName ?? ""}
+                        actorId={m.senderUserId}
+                        time={m.createdAt ? chatTime(m.createdAt) : ""}
+                      />
+                    </div>
+                  </React.Fragment>
+                );
+              }
             }
 
             const out = m.direction === "out";
@@ -2312,6 +2380,8 @@ export function ChatWindow({
             const isPinned = pinnedNoteId === String(m.id);
             const isAudioOnly =
               !isNote && detectMediaKind(m) === "audio" && !msgText(m);
+            const isTemplate =
+              String(m.messageType ?? "").toLowerCase() === "template";
 
             return (
               <React.Fragment key={m.id}>
@@ -2675,14 +2745,22 @@ export function ChatWindow({
                                 ) : null}
                               </div>
                             ) : (
-                              <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 ring-1 ring-black/10">
-                                <Bot
-                                  className="size-3 text-[var(--color-ink-soft)]"
-                                  strokeWidth={2.4}
-                                />
-                                <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground">
-                                  {m.senderName ?? "Automação"}
-                                </span>
+                              <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                                <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 ring-1 ring-black/10">
+                                  <Bot
+                                    className="size-3 text-[var(--color-ink-soft)]"
+                                    strokeWidth={2.4}
+                                  />
+                                  <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground">
+                                    {m.senderName ?? "Automação"}
+                                  </span>
+                                </div>
+                                {isTemplate ? (
+                                  <TemplateBadge
+                                    content={m.content ?? ""}
+                                    className="mb-0"
+                                  />
+                                ) : null}
                               </div>
                             )
                           ) : null
@@ -2717,8 +2795,8 @@ export function ChatWindow({
                       operador de que a assinatura faça parte da mensagem.
                     */}
 
-                        {String(m.messageType ?? "").toLowerCase() ===
-                          "template" && (
+                        {isTemplate &&
+                          !(out && isBot && !isAudioOnly && !isCampaign) && (
                           <TemplateBadge content={m.content ?? ""} />
                         )}
 
@@ -3843,9 +3921,7 @@ export function ChatWindow({
                 }}
                 isResolved={isResolved}
                 statusPending={statusMutation.isPending}
-                onToggleResolve={() =>
-                  statusMutation.mutate(isResolved ? "reopen" : "resolve")
-                }
+                onToggleResolve={handleToggleResolve}
               />
               <input
                 ref={fileInputRef}
@@ -4041,9 +4117,7 @@ export function ChatWindow({
                   }}
                   isResolved={isResolved}
                   statusPending={statusMutation.isPending}
-                  onToggleResolve={() =>
-                    statusMutation.mutate(isResolved ? "reopen" : "resolve")
-                  }
+                  onToggleResolve={handleToggleResolve}
                 />
                 <input
                   ref={fileInputRef}
@@ -4206,6 +4280,14 @@ export function ChatWindow({
       </Dialog>
 
       {/* Modal: Edição de assinatura */}
+      <ResolveConfirmDialog
+        open={resolveConfirmOpen}
+        onOpenChange={setResolveConfirmOpen}
+        submitting={statusMutation.isPending}
+        onConfirm={(skipAutomations) =>
+          statusMutation.mutate({ action: "resolve", skipAutomations })
+        }
+      />
       <Dialog open={signatureModalOpen} onOpenChange={setSignatureModalOpen}>
         <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
@@ -4261,7 +4343,13 @@ export function ChatWindow({
   );
 }
 
-function TemplateBadge({ content }: { content: string }) {
+function TemplateBadge({
+  content,
+  className,
+}: {
+  content: string;
+  className?: string;
+}) {
   const meta = parseTemplateMeta(content);
   const cat = meta?.category?.toLowerCase() ?? null;
   const isMkt = cat === "marketing";
@@ -4287,7 +4375,7 @@ function TemplateBadge({ content }: { content: string }) {
       : "border-primary/40/60 bg-primary-soft text-primary-dark dark:border-primary/40/50 dark:bg-[var(--brand-secondary)]/25 dark:text-[var(--brand-secondary)]";
 
   return (
-    <div className="group/tpl relative mb-1.5">
+    <div className={cn("group/tpl relative mb-1.5", className)}>
       <span
         className={cn(
           "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide shadow-[var(--glass-shadow-sm)] backdrop-blur",

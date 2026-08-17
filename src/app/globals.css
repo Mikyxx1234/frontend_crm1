@@ -4,6 +4,8 @@
 @source "../lib/design-tokens.ts";
 /* Cópias de backup no root: não participam do scan (evita utilitários "fantasma" / cache inválido). */
 @source not "../../arquivos_modificados";
+@source not "../../.next-verify";
+@source not "../../.next-verify2";
 
 /* ──────────────────────────────────────────────────────────────────
    DARK MODE — variant baseado em classe (não em media query)
@@ -477,6 +479,46 @@
   --chat-bubble-sent-time: rgba(255, 255, 255, 0.7);
   --chat-bubble-sent-check-read: #38bdf8;
   --chat-bg: transparent;
+}
+
+/* Seleção de texto nas bolhas — o ::selection global (texto #3d52e8 +
+   overlay primary 20%) some no fundo azul/primary das enviadas.
+   ::selection e ::-moz-selection em regras separadas: o Firefox descarta
+   o bloco inteiro se um prefixo for desconhecido. */
+.chat-bubble-sent::selection,
+.chat-bubble-sent *::selection {
+  background: var(--color-foreground);
+  color: var(--color-primary-foreground);
+}
+.chat-bubble-sent::-moz-selection,
+.chat-bubble-sent *::-moz-selection {
+  background: var(--color-foreground);
+  color: var(--color-primary-foreground);
+}
+.dark .chat-bubble-sent::selection,
+.dark .chat-bubble-sent *::selection,
+.v2-dark .chat-bubble-sent::selection,
+.v2-dark .chat-bubble-sent *::selection {
+  background: var(--color-background);
+  color: var(--color-primary-foreground);
+}
+.dark .chat-bubble-sent::-moz-selection,
+.dark .chat-bubble-sent *::-moz-selection,
+.v2-dark .chat-bubble-sent::-moz-selection,
+.v2-dark .chat-bubble-sent *::-moz-selection {
+  background: var(--color-background);
+  color: var(--color-primary-foreground);
+}
+
+.chat-bubble-received::selection,
+.chat-bubble-received *::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-foreground);
+}
+.chat-bubble-received::-moz-selection,
+.chat-bubble-received *::-moz-selection {
+  background: var(--color-primary-soft);
+  color: var(--color-foreground);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1022,4 +1064,96 @@
 .audio-wave-bar {
   animation: audioWave 0.6s ease-in-out infinite alternate;
   transform-origin: center;
+}
+
+/* Stripe animada da barra de envio em campanhas (tokens do CRM). */
+@keyframes sending-stripes {
+  from { background-position: 0 0; }
+  to { background-position: 2rem 0; }
+}
+
+.sending-bar {
+  background-image: linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--color-primary-foreground, #fff) 22%, transparent) 25%,
+    transparent 25%,
+    transparent 50%,
+    color-mix(in srgb, var(--color-primary-foreground, #fff) 22%, transparent) 50%,
+    color-mix(in srgb, var(--color-primary-foreground, #fff) 22%, transparent) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 2rem 2rem;
+  animation: sending-stripes 0.9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sending-bar {
+    animation: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AppLoading — estado de carregamento único do app (ver
+   components/crm/app-loading.tsx). Respiro suave da marca + faixa
+   indeterminada; nada que imite o layout final.
+   ══════════════════════════════════════════════════════════════════ */
+@keyframes app-loading-halo {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50%      { opacity: 0.8;  transform: scale(1.1); }
+}
+@keyframes app-loading-mark {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-2px) scale(1.02); }
+}
+@keyframes app-loading-track {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(320%); }
+}
+
+.app-loading-halo {
+  animation: app-loading-halo 2.4s ease-in-out infinite;
+}
+.app-loading-mark {
+  animation: app-loading-mark 2.4s ease-in-out infinite;
+}
+.app-loading-track {
+  animation: app-loading-track 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-loading-halo,
+  .app-loading-mark,
+  .app-loading-track {
+    animation: none;
+  }
+  .app-loading-halo { opacity: 0.5; }
+  /* Sem movimento a faixa vira uma barra estática de progresso. */
+  .app-loading-track { width: 100%; }
+}
+
+/* Modal Telefonia IP — paleta sólida (light/dark) alinhada ao mockup */
+.telefonia-ip-theme {
+  --color-card: #ffffff;
+  --color-card-foreground: #1e2a3b;
+  --color-secondary: oklch(0.955 0.012 255);
+  --color-secondary-foreground: #1e2a3b;
+  --color-muted: oklch(0.955 0.012 255);
+  --color-muted-foreground: oklch(0.45 0.025 260);
+  --color-border: oklch(0.91 0.012 255);
+  --color-background: #ffffff;
+  --color-foreground: #1e2a3b;
+}
+
+.dark .telefonia-ip-theme,
+.v2-dark .telefonia-ip-theme {
+  --color-card: oklch(0.24 0.03 264);
+  --color-card-foreground: oklch(0.95 0.01 255);
+  --color-secondary: oklch(0.3 0.03 264);
+  --color-secondary-foreground: oklch(0.95 0.01 255);
+  --color-muted: oklch(0.28 0.025 264);
+  --color-muted-foreground: oklch(0.72 0.02 258);
+  --color-border: oklch(1 0 0 / 12%);
+  --color-background: oklch(0.24 0.03 264);
+  --color-foreground: oklch(0.95 0.01 255);
 }

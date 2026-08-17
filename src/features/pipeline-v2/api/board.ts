@@ -71,11 +71,12 @@ export interface BoardSortParam {
   direction: "asc" | "desc";
 }
 
-/** GET /api/pipelines/:id/board?status=OPEN[&sort=createdAt&direction=desc] */
+/** GET /api/pipelines/:id/board?status=OPEN[&sort=createdAt&direction=desc][&perStage=50] */
 export async function getBoard(
   pipelineId: string,
   status: StatusFilter = "OPEN",
   sort?: BoardSortParam,
+  perStage?: number,
 ): Promise<BoardStageDto[]> {
   const params = new URLSearchParams();
   if (status !== "OPEN") params.set("status", status);
@@ -83,6 +84,7 @@ export async function getBoard(
     params.set("sort", sort.field);
     params.set("direction", sort.direction);
   }
+  if (perStage) params.set("perStage", String(perStage));
   const q = params.toString();
   const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/board${q ? `?${q}` : ""}`));
   const data = await res.json().catch(() => ({}));
@@ -107,7 +109,7 @@ export async function getBoard(
  * achados que o filtro client-side jamais conseguiria.
  *
  * Modo de uso (de `useBoardSearch`): ativar SÓ quando há termo de busca
- * digitado (≥2 chars + debounce). Sem busca, continuar usando `getBoard`.
+ * digitado (≥3 chars + debounce). Sem busca, continuar usando `getBoard`.
  */
 export async function getBoardFiltered(
   pipelineId: string,
@@ -116,6 +118,8 @@ export async function getBoardFiltered(
     filters?: AdvancedDealFilters;
     sort?: BoardSortParam;
     perStage?: number;
+    /** "Carregar mais" cumulativo: stageId → quantos cards além de `perStage`. */
+    offsetByStage?: Record<string, number>;
     signal?: AbortSignal;
   },
 ): Promise<BoardStageDto[]> {
@@ -129,6 +133,9 @@ export async function getBoardFiltered(
     body.direction = opts.sort.direction;
   }
   if (opts.perStage) body.perStage = opts.perStage;
+  if (opts.offsetByStage && Object.keys(opts.offsetByStage).length > 0) {
+    body.offsetByStage = opts.offsetByStage;
+  }
 
   const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/board`), {
     method: "POST",

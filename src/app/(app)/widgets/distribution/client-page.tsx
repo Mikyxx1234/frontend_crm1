@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   IconAdjustmentsHorizontal,
@@ -34,6 +35,7 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { UserAvatar } from "@/components/crm/user-avatar";
 import { AgentStatusDot } from "@/components/crm/agent-status-dot";
@@ -82,9 +84,17 @@ import {
   MOCK_DISTRIBUTION_PENDING,
   MOCK_DISTRIBUTION_RESPONSIBLES,
 } from "@/features/distribution/mock";
+import { CoverageBoard } from "@/features/settings/coverage/coverage-board";
+import { CoverageSearchFilterBar } from "@/features/settings/coverage/search-filter-bar";
 import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const SMART_DISTRIBUTION_SLUG = "smart_distribution";
+
+function inboxConversationHref(number: number | null | undefined, fallbackId?: string | null) {
+  if (number != null) return `/inbox?c=${number}`;
+  if (fallbackId) return `/inbox?c=${encodeURIComponent(fallbackId)}`;
+  return "/inbox";
+}
 
 /**
  * Ambiente onde os dados de exemplo (EduIT ilustrativo) PODEM aparecer:
@@ -104,7 +114,18 @@ function isDevDemoEnv(): boolean {
   );
 }
 
-type DistributionView = "team" | "queue" | "logs";
+type DistributionView = "team" | "coverage" | "queue" | "logs";
+
+/**
+ * Deep-link de aba (`?tab=coverage`). Usado pelo redirect da rota antiga
+ * `/settings/coverage`, que virou a aba "Cobertura" aqui ao lado de "Equipe".
+ */
+function parseViewParam(raw: string | null): DistributionView | null {
+  if (raw === "team" || raw === "coverage" || raw === "queue" || raw === "logs") {
+    return raw;
+  }
+  return null;
+}
 
 /** Presença efetiva de um responsável (para badge + filtro). */
 type PresenceKey = "ONLINE" | "AWAY" | "OFFLINE" | "INACTIVE";
@@ -151,13 +172,18 @@ export default function DistributionClientPage({
   const [deptConfigOpen, setDeptConfigOpen] = useState(false);
 
   // ── Estado de UI: aba, busca, filtros ──
-  const [view, setView] = useState<DistributionView>("team");
+  const searchParams = useSearchParams();
+  const viewFromUrl = parseViewParam(searchParams.get("tab"));
+  const [view, setView] = useState<DistributionView>(viewFromUrl ?? "team");
   const [search, setSearch] = useState("");
   const [presence, setPresence] = useState<PresenceKey[]>([]);
   const [eligibility, setEligibility] = useState<("eligible" | "blocked")[]>([]);
   const [types, setTypes] = useState<string[]>([]);
   /** ADMINs ficam ocultos na lista por padrão (não poluem a equipe). */
   const [showAdmins, setShowAdmins] = useState(false);
+  const [coverageSearch, setCoverageSearch] = useState("");
+  const [coverageDeptIds, setCoverageDeptIds] = useState<string[]>([]);
+  const [coverageShowHidden, setCoverageShowHidden] = useState(false);
 
   const realResponsibles = respQuery.data?.responsibles ?? [];
   const realPending = pendingQuery.data?.pending ?? [];
@@ -241,7 +267,10 @@ export default function DistributionClientPage({
         if (res.resolved > 0) {
           toast.success(`${res.resolved} lead(s) distribuído(s).`);
         } else if (res.pending > 0) {
-          toast.warning("Ainda não há responsável elegível para a fila.");
+          toast.warning(
+            res.skipMessage ||
+              "Ainda não há responsável elegível para a fila.",
+          );
         } else {
           toast.info("Fila de espera vazia.");
         }
@@ -282,7 +311,7 @@ export default function DistributionClientPage({
 
       <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden pb-3 sm:gap-4 sm:pb-4">
         <PageHeader
-          icon={<DistributionIcon size={22} />}
+          icon={<IconArrowsShuffle size={22} />}
           title="Distribuição"
           center={
             smartInstalled && view === "team" ? (
@@ -298,10 +327,19 @@ export default function DistributionClientPage({
                 typeOptions={typeOptions}
                 onClearAll={clearFilters}
               />
+            ) : view === "coverage" ? (
+              <CoverageSearchFilterBar
+                search={coverageSearch}
+                onSearch={setCoverageSearch}
+                deptIds={coverageDeptIds}
+                onDeptIdsChange={setCoverageDeptIds}
+                showHidden={coverageShowHidden}
+                onShowHiddenChange={setCoverageShowHidden}
+              />
             ) : undefined
           }
           actions={
-            smartInstalled ? (
+            smartInstalled || view === "coverage" ? (
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <PageSegmentedControl
                   size="compact"
@@ -312,6 +350,13 @@ export default function DistributionClientPage({
                       label: (
                         <SegLabel label="Equipe" count={teamListCount} />
                       ),
+                    },
+                    {
+                      // Grade de expedientes/gaps — antes vivia em
+                      // /settings/coverage, agora ao lado de "Equipe"
+                      // (a cobertura é o que define quem está elegível).
+                      value: "coverage",
+                      label: <span>Cobertura</span>,
                     },
                     {
                       value: "queue",
@@ -373,7 +418,20 @@ export default function DistributionClientPage({
           }
         />
 
-        {widgetsQuery.isLoading ? (
+        {/* Cobertura não depende do widget `smart_distribution`: a grade
+            de expedientes valia para qualquer org quando morava em
+            /settings/coverage. Fica fora do gating pra não perder acesso. */}
+        {view === "coverage" ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <CoverageBoard
+                search={coverageSearch}
+                deptIds={coverageDeptIds}
+                showHidden={coverageShowHidden}
+              />
+            </div>
+          </div>
+        ) : widgetsQuery.isLoading ? (
           <SkeletonState />
         ) : !smartInstalled ? (
           <NotEnabledState />
@@ -1812,7 +1870,7 @@ function PendingQueueCards({
           {pending.map((p) => (
             <li key={p.id}>
               <Link
-                href={`/inbox?c=${encodeURIComponent(p.id)}`}
+                href={inboxConversationHref(p.number, p.id)}
                 className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
                 title="Abrir conversa no inbox"
               >
@@ -2544,6 +2602,7 @@ function LogMobileCard({
     contactName: string | null;
     contactPhone: string | null;
     conversationId: string | null;
+    conversationNumber?: number | null;
     departmentName: string | null;
   };
   resultLabel: string;
@@ -2651,7 +2710,7 @@ function LogMobileCard({
           <LogDetail label="ID do log" value={log.id} mono />
           {log.conversationId ? (
             <Link
-              href={`/inbox?c=${encodeURIComponent(log.conversationId)}`}
+              href={inboxConversationHref(log.conversationNumber, log.conversationId)}
               className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 font-display text-[12px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
             >
               Abrir conversa
@@ -2682,6 +2741,7 @@ function LogTableRows({
     contactName: string | null;
     contactPhone: string | null;
     conversationId: string | null;
+    conversationNumber?: number | null;
     departmentId: string | null;
     departmentName: string | null;
   };
@@ -2780,7 +2840,7 @@ function LogTableRows({
               <LogDetail label="ID do log" value={log.id} mono />
               {log.conversationId ? (
                 <Link
-                  href={`/inbox?c=${encodeURIComponent(log.conversationId)}`}
+                  href={inboxConversationHref(log.conversationNumber, log.conversationId)}
                   onClick={(event) => event.stopPropagation()}
                   className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 font-display text-[11.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
                 >
@@ -3778,13 +3838,6 @@ function ErrorState({ message }: { message: string }) {
 
 function SkeletonState() {
   return (
-    <div className="space-y-3">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div
-          key={i}
-          className="h-16 animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md"
-        />
-      ))}
-    </div>
+    <AppLoading variant="inline" className="min-h-[280px]" />
   );
 }

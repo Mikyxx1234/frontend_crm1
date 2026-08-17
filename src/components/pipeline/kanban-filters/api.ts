@@ -63,10 +63,14 @@ async function fetchPipelinesFallback(): Promise<FilterOptionsResponse["pipeline
     return data.map((p: Record<string, unknown>) => ({
       id: String(p.id ?? ""),
       name: String(p.name ?? ""),
+      number: typeof p.number === "number" ? p.number : undefined,
+      slug: typeof p.slug === "string" ? p.slug : undefined,
       stages: Array.isArray(p.stages)
         ? (p.stages as Record<string, unknown>[]).map((s, i) => ({
             id: String(s.id ?? ""),
             name: String(s.name ?? ""),
+            number: typeof s.number === "number" ? s.number : undefined,
+            slug: typeof s.slug === "string" ? s.slug : undefined,
             color: String(s.color ?? "#94a3b8"),
             position: typeof s.position === "number" ? s.position : i,
           }))
@@ -298,6 +302,26 @@ export async function fetchSavedFilters(entityType = "kanban_deals"): Promise<Sa
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.message ?? "Erro ao listar filtros.");
   return Array.isArray(data?.items) ? data.items : [];
+}
+
+/**
+ * Filtro salvo por id — usado pelo atalho `?filter=<id>` na URL, que expande
+ * o preset em params legíveis. Devolve `null` quando não existe/sem acesso
+ * (link antigo ou de outra org não pode travar a tela).
+ */
+export async function fetchSavedFilterById(id: string): Promise<SavedFilter | null> {
+  try {
+    const res = await fetch(apiUrl(`/api/saved-filters/${encodeURIComponent(id)}`), {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    if (!data || typeof data !== "object") return null;
+    return data as SavedFilter;
+  } catch {
+    return null;
+  }
 }
 
 export async function createSavedFilter(payload: {

@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import { SUBTLE_SPRING } from "@/lib/design-system";
+import { AppLoading } from "@/components/crm/app-loading";
 import { Chip } from "@/components/crm/chip";
 import { DealCard } from "@/components/crm/deal-card";
 import { TagChip } from "@/components/crm/tag-chip";
@@ -255,6 +256,18 @@ type DealQueueProps = {
   /** Quando muda, a fila volta ao topo para a nova ordem ficar visível. */
   sortMode?: DealQueueSortMode;
   /**
+   * Paginação de rede (board em 50/etapa): true quando alguma etapa
+   * ainda tem deals no servidor. Esgotada a janela local, o sentinel
+   * dispara `onLoadMore` em vez de só crescer a janela.
+   */
+  hasMoreServer?: boolean;
+  /** Cards que ainda faltam no servidor (totalCount − loaded). */
+  remainingCount?: number;
+  loadingMore?: boolean;
+  /** Board sem dados ainda — skeleton em vez de "Nenhum deal encontrado". */
+  isLoading?: boolean;
+  onLoadMore?: () => void;
+  /**
    * Etapa filtrada (`null` = Todos). Quando muda, a fila volta ao topo
    * e o auto-select do primeiro lead não dispara scrollIntoView.
    */
@@ -416,6 +429,11 @@ export function DealQueue({
   onSelectDeal,
   recentlyMovedDealId,
   sortMode,
+  hasMoreServer = false,
+  remainingCount = 0,
+  loadingMore = false,
+  isLoading = false,
+  onLoadMore,
   selectedStageId,
   stageSwitchToken = 0,
   pipelineId,
@@ -516,6 +534,85 @@ export function DealQueue({
 
   const visibleDeals = isStageSwitching ? [] : deals;
 
+  // Windowing: monta no DOM só o início da fila e cresce +60 quando o
+  // sentinel entra no viewport. Com funis grandes (500+ deals), evita
+  // montar centenas de cards (e suas mídias/avatars) de uma vez — a
+  // fila renderiza sob demanda conforme o scroll.
+  const QUEUE_PAGE = 60;
+  const [renderLimit, setRenderLimit] = useState(QUEUE_PAGE);
+  const lastNetworkLoadAtCountRef = useRef(-1);
+  // Troca de etapa/ordenação já rola pro topo — a janela volta ao início.
+  useEffect(() => {
+    setRenderLimit(QUEUE_PAGE);
+    lastNetworkLoadAtCountRef.current = -1;
+  }, [stageListKey, sortMode]);
+  // Deep-link/navegação por teclado: garante que o deal ativo esteja
+  // dentro da janela renderizada (senão o scrollIntoView não tem alvo).
+  const activeIdx = activeDealId
+    ? deals.findIndex((d) => d.id === activeDealId)
+    : -1;
+  const effectiveLimit = Math.max(renderLimit, activeIdx + 1);
+  const windowedDeals = visibleDeals.slice(0, effectiveLimit);
+  const hasMoreToRender = visibleDeals.length > effectiveLimit;
+  const queueSentinelRef = useRef<HTMLDivElement>(null);
+  // Dois níveis: 1º janela local (+60); depois rede (+50/etapa).
+  // Sentinel permanece montado durante o fetch (antes sumia e o IO
+  // era destruído). Scroll listener cobre o caso em que o root do
+  // observer não é o scroller real ou o alvo h-px não intersecta.
+  const showQueueSentinel = hasMoreToRender || hasMoreServer;
+  const hasMoreToRenderRef = useRef(hasMoreToRender);
+  hasMoreToRenderRef.current = hasMoreToRender;
+  const hasMoreServerRef = useRef(hasMoreServer);
+  hasMoreServerRef.current = hasMoreServer;
+  const loadingMoreRef = useRef(loadingMore);
+  loadingMoreRef.current = loadingMore;
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
+  const visibleCountRef = useRef(visibleDeals.length);
+  visibleCountRef.current = visibleDeals.length;
+  useEffect(() => {
+    const root = scrollerRef.current;
+    if (!root || !showQueueSentinel) return;
+
+    const maybeLoad = () => {
+      if (hasMoreToRenderRef.current) {
+        setRenderLimit((n) => n + QUEUE_PAGE);
+        return;
+      }
+      if (!hasMoreServerRef.current || loadingMoreRef.current) return;
+      if (lastNetworkLoadAtCountRef.current === visibleCountRef.current) return;
+      lastNetworkLoadAtCountRef.current = visibleCountRef.current;
+      onLoadMoreRef.current?.();
+    };
+
+    const onScroll = () => {
+      const gap = root.scrollHeight - root.scrollTop - root.clientHeight;
+      if (gap < 360) maybeLoad();
+    };
+    root.addEventListener("scroll", onScroll, { passive: true });
+
+    const el = queueSentinelRef.current;
+    const io = el
+      ? new IntersectionObserver(
+          (entries) => {
+            if (entries[0]?.isIntersecting) maybeLoad();
+          },
+          { root, rootMargin: "400px 0px", threshold: 0 },
+        )
+      : null;
+    if (el && io) io.observe(el);
+
+    const raf = requestAnimationFrame(() => {
+      if (root.scrollHeight <= root.clientHeight + 8) maybeLoad();
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      root.removeEventListener("scroll", onScroll);
+      io?.disconnect();
+    };
+  }, [showQueueSentinel, windowedDeals.length, visibleDeals.length]);
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-transparent">
       <div
@@ -526,20 +623,15 @@ export function DealQueue({
         <div className="flex flex-col gap-2" key={stageListKey}>
           {isStageSwitching ? (
             <div
-              className="flex flex-col gap-2 py-1"
+              className="flex min-h-[200px] items-center justify-center py-8"
               aria-busy="true"
               aria-label="Carregando etapa"
             >
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-[72px] animate-pulse rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]"
-                />
-              ))}
+              <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
           ) : (
             <AnimatePresence initial={softEnterWave}>
-              {visibleDeals.map((deal) => {
+              {windowedDeals.map((deal) => {
                 const isActive = activeDealId === deal.id;
                 const isExpanded = expandedDealId === deal.id;
                 const wasRecentlyMoved = recentlyMovedDealId === deal.id;
@@ -569,10 +661,37 @@ export function DealQueue({
               })}
             </AnimatePresence>
           )}
+          {!isStageSwitching && showQueueSentinel && (
+            <div ref={queueSentinelRef} className="shrink-0 pt-1">
+              {hasMoreServer && !hasMoreToRender ? (
+                <button
+                  type="button"
+                  disabled={loadingMore}
+                  onClick={() => {
+                    lastNetworkLoadAtCountRef.current = -1;
+                    onLoadMore?.();
+                  }}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 py-2 text-[11px] font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 disabled:opacity-60"
+                >
+                  {loadingMore
+                    ? "Carregando…"
+                    : remainingCount > 0
+                      ? `Carregar mais (${remainingCount})`
+                      : "Carregar mais"}
+                </button>
+              ) : (
+                <div aria-hidden className="h-8" />
+              )}
+            </div>
+          )}
           {!isStageSwitching && visibleDeals.length === 0 && (
-            <p className="px-2 py-8 text-center text-xs text-[var(--text-muted)]">
-              Nenhum deal encontrado
-            </p>
+            isLoading ? (
+              <AppLoading variant="inline" label="Carregando fila" />
+            ) : (
+              <p className="px-2 py-8 text-center text-xs text-[var(--text-muted)]">
+                Nenhum deal encontrado
+              </p>
+            )
           )}
         </div>
       </div>

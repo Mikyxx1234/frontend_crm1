@@ -29,7 +29,9 @@ async function fetchStats(): Promise<DailyStats> {
  * ele já produziu hoje.
  *
  * Visualmente discreto (chips compactos, no header) pra não competir
- * com o conteúdo. Refetch a cada 30s — barato (3 counts indexados).
+ * com o conteúdo. Atualização vem do SSE (`useInboxRealtime` invalida
+ * ["inbox","daily-stats"] com debounce de 5s em new_message /
+ * conversation_updated); o refetch de 3min é só safety-net.
  *
  * Cada chip pode disparar uma ação de filtro futuramente (ex.: clicar
  * em "5 críticas" filtra a lista). Por enquanto exibe só.
@@ -46,7 +48,7 @@ export function DailyStatsChips({
   const { data } = useQuery({
     queryKey: ["inbox", "daily-stats"],
     queryFn: fetchStats,
-    refetchInterval: 30_000,
+    refetchInterval: 180_000,
     staleTime: 15_000,
   });
 

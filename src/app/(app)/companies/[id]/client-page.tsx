@@ -24,6 +24,7 @@ import {
   useUpdateCompany,
 } from "@/features/directory-v2/hooks";
 import { useConfirm } from "@/hooks/use-confirm";
+import { entityPath, rewriteNumericPath } from "@/lib/public-path";
 
 type EditState = {
   name: string;
@@ -56,6 +57,7 @@ export default function CompanyDetailClientPage({ id }: { id: string }) {
 
   useEffect(() => {
     if (!query.data) return;
+    rewriteNumericPath("/companies", id, query.data.number);
     setEdit({
       name: query.data.name ?? "",
       domain: query.data.domain ?? "",
@@ -236,7 +238,7 @@ export default function CompanyDetailClientPage({ id }: { id: string }) {
                         className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2"
                       >
                         <Link
-                          href={`/contacts/${c.id}`}
+                          href={entityPath("/contacts", c.number, c.id)}
                           className="min-w-0 flex-1 truncate font-body text-[13px] text-[var(--text-primary)] hover:underline"
                         >
                           {c.name}

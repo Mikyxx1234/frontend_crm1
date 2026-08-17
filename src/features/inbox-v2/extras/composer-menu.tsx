@@ -16,16 +16,16 @@ import {
 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
-import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
+import { useResolveConversationFlow } from "./use-resolve-conversation-flow";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 import type { WhatsappTemplate } from "@/features/inbox-v2/api";
 
 import { FilePickerButton } from "./file-picker-button";
-import { TemplatePickerList, InternalTemplatePickerList } from "./template-picker-popover";
+import { WhatsappTemplatePickerModal } from "./template-picker-popover";
 import { ScheduleDialog } from "./schedule-dialog";
 import { TaskDialog } from "./task-dialog";
 import { AgentAutomationPickerModal } from "./agent-automation-picker-modal";
-import { TabulationDialog } from "./tabulation-dialog";
+import { InternalTemplatePickerModal } from "./internal-template-picker-modal";
 
 /**
  * Menu unificado "+" do composer (estilo WhatsApp). Reúne as ações
@@ -52,6 +52,9 @@ export function ComposerMenu({
   onResolved,
   departmentId,
   requireTabulationOnClose,
+  outboundDisabled,
+  beforeOutboundSend,
+  onOutboundBlocked,
 }: {
   conversationId: string | null;
   /** Canal de envio atual — filtra templates WhatsApp da WABA correta. */
@@ -78,31 +81,30 @@ export function ComposerMenu({
   /** Departamento vinculado — abre modal de tabulacao quando encerrar. */
   departmentId?: string | null;
   requireTabulationOnClose?: boolean;
+  /** Bloqueia anexos/foto/agenda de texto livre (sessão 24h encerrada). Templates seguem ok. */
+  outboundDisabled?: boolean;
+  beforeOutboundSend?: () => boolean | Promise<boolean>;
+  onOutboundBlocked?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"root" | "template" | "internal">("root");
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false);
-  const [tabulationOpen, setTabulationOpen] = useState(false);
-  const [tabulationDeptId, setTabulationDeptId] = useState<string | null>(null);
+  const [internalOpen, setInternalOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const effectiveTabulationDeptId = tabulationDeptId ?? departmentId ?? null;
-  const toggleResolve = useToggleConversationResolve({
-    onNewConversation: (newId) => {
-      onReopenNewConversation?.(newId);
-    },
-    onResolved: (id) => onResolved?.(id),
-    onTabulationRequired: ({ departmentId: deptFromApi }) => {
-      closeMenu();
-      setTabulationDeptId(deptFromApi ?? departmentId ?? null);
-      setTabulationOpen(true);
-    },
-  });
+  const { handleToggleResolve: resolveFlow, toggleResolve, dialogs } =
+    useResolveConversationFlow({
+      conversationId,
+      isResolved,
+      departmentId,
+      requireTabulationOnClose,
+      onReopenNewConversation,
+      onResolved,
+    });
 
   function closeMenu() {
     setOpen(false);
-    setView("root");
   }
 
   useEffect(() => {
@@ -127,25 +129,8 @@ export function ComposerMenu({
   }, [open]);
 
   function handleToggleResolve() {
-    if (!conversationId) return;
-    if (!isResolved && requireTabulationOnClose && departmentId) {
-      closeMenu();
-      setTabulationDeptId(departmentId);
-      setTabulationOpen(true);
-      return;
-    }
-    toggleResolve.mutate(
-      { conversationId, action: isResolved ? "reopen" : "resolve" },
-      { onSuccess: closeMenu },
-    );
-  }
-
-  function handleConfirmTabulation(tabulationId: string) {
-    if (!conversationId) return;
-    toggleResolve.mutate(
-      { conversationId, action: "resolve", tabulationId },
-      { onSuccess: () => setTabulationOpen(false) },
-    );
+    closeMenu();
+    resolveFlow();
   }
 
   const itemClass =
@@ -161,7 +146,6 @@ export function ComposerMenu({
         onClick={(e) => {
           e.stopPropagation();
           setOpen((v) => !v);
-          setView("root");
         }}
         onMouseDown={(e) => e.stopPropagation()}
         disabled={!conversationId}
@@ -177,13 +161,15 @@ export function ComposerMenu({
           role="menu"
           onMouseDown={(e) => e.stopPropagation()}
         >
-          {view === "root" ? (
-            <div
-              style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
-              className="flex w-56 flex-col gap-px rounded-[var(--radius-lg)] border border-border p-1.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
-            >
+          <div
+            style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
+            className="flex w-56 flex-col gap-px rounded-[var(--radius-lg)] border border-border p-1.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
+          >
               <FilePickerButton
                 conversationId={conversationId}
+                disabled={outboundDisabled}
+                beforeSend={beforeOutboundSend}
+                onBlocked={onOutboundBlocked}
                 className="w-full justify-start rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] transition-colors hover:bg-primary/8 hover:text-primary [&>svg]:transition-colors hover:[&>svg]:text-primary"
               >
                 <span className="inline-flex items-center gap-2.5">
@@ -196,6 +182,9 @@ export function ComposerMenu({
                 accept="image/*"
                 capture="environment"
                 onOpen={closeMenu}
+                disabled={outboundDisabled}
+                beforeSend={beforeOutboundSend}
+                onBlocked={onOutboundBlocked}
                 className="w-full justify-start rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] transition-colors hover:bg-primary/8 hover:text-primary [&>svg]:transition-colors hover:[&>svg]:text-primary"
               >
                 <span className="inline-flex items-center gap-2.5">
@@ -205,7 +194,10 @@ export function ComposerMenu({
 
               <button
                 type="button"
-                onClick={() => setView("internal")}
+                onClick={() => {
+                  setInternalOpen(true);
+                  closeMenu();
+                }}
                 className={itemClass}
               >
                 <IconMessageCode size={15} /> Modelos internos
@@ -213,7 +205,10 @@ export function ComposerMenu({
 
               <button
                 type="button"
-                onClick={() => setView("template")}
+                onClick={() => {
+                  setTemplateModalOpen(true);
+                  closeMenu();
+                }}
                 className={itemClass}
               >
                 <IconFileText size={15} /> Templates WhatsApp
@@ -235,6 +230,10 @@ export function ComposerMenu({
               <button
                 type="button"
                 onClick={() => {
+                  if (outboundDisabled) {
+                    onOutboundBlocked?.();
+                    return;
+                  }
                   setScheduleOpen(true);
                   closeMenu();
                 }}
@@ -276,21 +275,6 @@ export function ComposerMenu({
                 </>
               ) : null}
             </div>
-          ) : view === "internal" ? (
-            <InternalTemplatePickerList
-              conversationId={conversationId}
-              templateContext={templateContext}
-              onClose={closeMenu}
-              onPick={onPickInternal}
-            />
-          ) : (
-            <TemplatePickerList
-              conversationId={conversationId}
-              channelId={channelId}
-              onClose={closeMenu}
-              onPick={onPickTemplate}
-            />
-          )}
         </div>
       ) : null}
 
@@ -305,18 +289,28 @@ export function ComposerMenu({
         conversationId={conversationId}
         contactId={contactId}
       />
-      <TabulationDialog
-        open={tabulationOpen}
-        onOpenChange={setTabulationOpen}
-        departmentId={effectiveTabulationDeptId}
-        submitting={toggleResolve.isPending}
-        onConfirm={handleConfirmTabulation}
-      />
+      {dialogs}
       <AgentAutomationPickerModal
         open={automationOpen}
         onClose={() => setAutomationOpen(false)}
         conversationId={conversationId}
         contactId={contactId}
+      />
+      {conversationId ? (
+        <InternalTemplatePickerModal
+          open={internalOpen}
+          onClose={() => setInternalOpen(false)}
+          conversationId={conversationId}
+          templateContext={templateContext}
+          onPick={onPickInternal}
+        />
+      ) : null}
+      <WhatsappTemplatePickerModal
+        open={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        conversationId={conversationId}
+        channelId={channelId}
+        onPick={onPickTemplate}
       />
     </div>
   );

@@ -67,9 +67,9 @@ const STATUS_OPTIONS: { value: "OPEN" | "WON" | "LOST"; label: string; tone: "in
 ];
 
 const TAG_MODE_OPTIONS: { value: TagMode; label: string }[] = [
-  { value: "any", label: "Qualquer uma" },
-  { value: "all", label: "Todas" },
-  { value: "none", label: "Nenhuma das informadas" },
+  { value: "any", label: "Contém (qualquer uma)" },
+  { value: "all", label: "Contém todas" },
+  { value: "none", label: "Não contém" },
 ];
 
 const CUSTOM_OPERATORS: { value: CustomFieldOperator; label: string; needsValue: boolean }[] = [
@@ -102,6 +102,8 @@ export const QUICK_FILTERS: { label: string; dot?: string; filters: AdvancedDeal
   { label: "Leads ganhos", dot: "var(--color-success)", filters: { statuses: ["WON"] } },
   { label: "Leads perdidos", dot: "var(--color-danger)", filters: { statuses: ["LOST"] } },
   { label: "Sem responsável", dot: "var(--color-warning)", filters: { withoutOwner: true } },
+  { label: "Mensagem recebida", dot: "#0ea5e9", filters: { lastMessageDirection: "in" } },
+  { label: "Mensagem enviada", dot: "#8b5cf6", filters: { lastMessageDirection: "out" } },
 ];
 
 // ─── Hook de estado (apply imediato, estilo Kommo) ──────────────────────────────
@@ -1209,7 +1211,10 @@ export function TagsSection({ draft, options, setDraftField }: SectionProps) {
     if (id === "__none__") {
       const next = !draft.withoutTags;
       setDraftField("withoutTags", next || undefined);
-      if (next) setDraftField("tagIds", undefined);
+      if (next) {
+        setDraftField("tagIds", undefined);
+        setDraftField("tagMode", undefined);
+      }
       return;
     }
     const next = selectedIds.includes(id)
@@ -1217,6 +1222,7 @@ export function TagsSection({ draft, options, setDraftField }: SectionProps) {
       : [...selectedIds, id];
     setDraftField("tagIds", next.length ? next : undefined);
     setDraftField("withoutTags", undefined);
+    if (next.length === 0) setDraftField("tagMode", undefined);
   }
 
   return (
@@ -1226,14 +1232,17 @@ export function TagsSection({ draft, options, setDraftField }: SectionProps) {
       onClear={() => {
         setDraftField("tagIds", undefined);
         setDraftField("withoutTags", undefined);
+        setDraftField("tagMode", undefined);
       }}
     >
       <div className="space-y-2">
-        {selectedIds.length > 1 && (
+        {selectedIds.length > 0 && (
           <DropdownGlass
             options={TAG_MODE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
             value={draft.tagMode ?? "any"}
-            onValueChange={(v) => setDraftField("tagMode", v as TagMode)}
+            onValueChange={(v) =>
+              setDraftField("tagMode", v === "any" ? undefined : (v as TagMode))
+            }
           />
         )}
         <MultiSelectDropdown

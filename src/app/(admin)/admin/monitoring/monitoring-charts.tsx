@@ -142,7 +142,7 @@ function ChartCard({
               <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={spec.format} width={60} tickLine={false} axisLine={false} />
               <Tooltip
                 labelFormatter={(t) => new Date((t as number) * 1000).toLocaleString()}
-                formatter={(v: number) => spec.format(v)}
+                formatter={(v) => spec.format(Number(v))}
                 contentStyle={{
                   borderRadius: 10,
                   fontSize: 12,

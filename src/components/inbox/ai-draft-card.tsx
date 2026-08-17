@@ -2,6 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { messagesKey } from "@/features/inbox-v2/hooks/use-messages";
 import { IconRobot as Bot, IconCheck as Check, IconLoader2 as Loader2, IconPencil as Pencil, IconX as X } from "@tabler/icons-react";
 import * as React from "react";
 
@@ -50,9 +51,7 @@ export function AIDraftCard({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["conversation-messages", conversationId],
-      });
+      queryClient.invalidateQueries({ queryKey: messagesKey(conversationId) });
     },
     onError: (err) => setError(err instanceof Error ? err.message : "Erro"),
   });
@@ -65,9 +64,7 @@ export function AIDraftCard({
       if (!res.ok) throw new Error("Falha ao descartar.");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["conversation-messages", conversationId],
-      });
+      queryClient.invalidateQueries({ queryKey: messagesKey(conversationId) });
     },
   });
 

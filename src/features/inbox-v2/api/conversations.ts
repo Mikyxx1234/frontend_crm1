@@ -34,13 +34,17 @@ function appendInboxServerFilters(
   if (p.withoutOwner) q.set("withoutOwner", "1");
   else if (p.ownerIds?.length) q.set("ownerIds", p.ownerIds.join(","));
   else if (p.ownerId) q.set("ownerId", p.ownerId);
-  if (p.channel) q.set("channel", p.channel);
+  if (p.channelIds?.length) q.set("channelIds", p.channelIds.join(","));
+  else if (p.channel) q.set("channel", p.channel);
   if (p.stageIds?.length) q.set("stageIds", p.stageIds.join(","));
   else if (p.stageId) q.set("stageId", p.stageId);
   if (p.tagIds?.length) q.set("tagIds", p.tagIds.join(","));
   if (p.sources?.length) q.set("sources", p.sources.join(","));
   if (p.sessionExpiresWithinHours != null) {
     q.set("sessionExpiresWithinHours", String(p.sessionExpiresWithinHours));
+  }
+  if (p.windowState === "open" || p.windowState === "closed") {
+    q.set("windowState", p.windowState);
   }
 }
 
@@ -99,10 +103,9 @@ export async function fetchTabCounts(
 }
 
 /**
- * GET /api/conversations/:id — busca UMA conversa pelo id.
- * Usado pelo deep-link (?c=<id>): quando a conversa não está na lista/aba
- * carregada (ex.: um supervisor abrindo o link de outra pessoa), buscamos
- * a conversa direto para abri-la mesmo assim. 404 = não existe ou sem acesso.
+ * GET /api/conversations/:id — busca UMA conversa (dígitos = number da org;
+ * senão CUID). Usado pelo deep-link (?c=<number>): quando a conversa não
+ * está na lista/aba carregada, buscamos direto. 404 = não existe ou sem acesso.
  */
 export async function getConversation(
   conversationId: string,
@@ -134,7 +137,12 @@ export async function listConversationsForForwardPicker(): Promise<ConversationL
 }
 
 export type ConversationActionPayload =
-  | { action: "resolve"; tabulationId?: string | null }
+  | {
+      action: "resolve";
+      tabulationId?: string | null;
+      /** Só o backend aceita se o user for ADMIN. Agentes: ignorado. */
+      skipAutomations?: boolean;
+    }
   | { action: "reopen" }
   | { action: "assign"; assignedToId: string | null }
   | {
@@ -153,6 +161,8 @@ export interface TransferDistributionResult {
 
 export type TabulationNode = {
   id: string;
+  /** ID amigável sequencial por organização (não o CUID). */
+  number?: number;
   parentId: string | null;
   name: string;
   color: string | null;

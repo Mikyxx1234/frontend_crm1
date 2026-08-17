@@ -127,7 +127,13 @@ export function MobileMoreSheet({
 
         <div className="flex items-center gap-3 border-b border-[var(--glass-border)] px-5 pb-4 pt-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[11px] font-bold text-white">
-            {initials}
+            {initials || (
+              <span
+                aria-hidden
+                className="app-loading-halo block size-2 rounded-full"
+                style={{ background: "rgba(255, 255, 255, 0.7)" }}
+              />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate font-display text-sm font-bold text-[var(--text-primary)]">

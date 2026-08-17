@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiUrl } from "@/lib/api";
 
+import { getChannelSession, type SessionInfo } from "../api";
+
 /**
  * Conexão WhatsApp da org (forma reduzida). Usado pelo seletor de canal
  * acima do composer (Inbox / Deal). O campo `phoneNumber` é exibido como
@@ -72,6 +74,31 @@ export function useWhatsappChannels(enabled = true) {
 }
 
 /**
+ * Janela de 24h do contato NO canal selecionado — usada quando o agente
+ * troca o canal de envio no composer (selectedChannelId ≠ canal da
+ * conversa), caso que o `session` do GET messages não cobre. Habilite
+ * SOMENTE nesse cenário; sem override, o sessionInfo da conversa basta.
+ */
+export function useChannelSession(
+  conversationId: string | null,
+  channelId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<SessionInfo>({
+    queryKey: [
+      "channel-session",
+      conversationId ?? "__none__",
+      channelId ?? "__none__",
+    ],
+    queryFn: () =>
+      getChannelSession(conversationId as string, channelId as string),
+    enabled: enabled && !!conversationId && !!channelId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
  * Estado controlado do canal de envio para uma conversa:
  *   - persiste a escolha do agente em localStorage por conversationId
  *     (a próxima vez que o agente abrir esta mesma conversa, lembra do
@@ -85,15 +112,44 @@ export function useWhatsappChannels(enabled = true) {
  */
 const SELECTED_CHANNEL_STORAGE_PREFIX = "eduit:inbox:selected-channel:";
 
+/** Última mensagem pública (não-nota/evento) com `channelId`. */
+export function findLastPublicMessageChannelId(
+  messages:
+    | Array<{
+        channelId?: string | null;
+        isPrivate?: boolean;
+        private?: boolean;
+        messageType?: string;
+      }>
+    | undefined,
+): string | null {
+  if (!messages?.length) return null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.isPrivate || m.private) continue;
+    const t = (m.messageType ?? "").toLowerCase();
+    if (t === "note" || t === "event") continue;
+    if (m.channelId) return m.channelId;
+  }
+  return null;
+}
+
 export function useSelectedOutboundChannel(args: {
   conversationId: string | null;
   conversationChannelId: string | null | undefined;
   availableChannels: OutboundChannelOption[] | undefined;
+  /** Canal da última msg pública — preferido quando o da conversa está morto. */
+  lastMessageChannelId?: string | null;
 }): {
   selectedChannelId: string | null;
   setSelectedChannelId: (id: string) => void;
 } {
-  const { conversationId, conversationChannelId, availableChannels } = args;
+  const {
+    conversationId,
+    conversationChannelId,
+    availableChannels,
+    lastMessageChannelId,
+  } = args;
 
   const storageKey = useMemo(
     () =>
@@ -110,9 +166,10 @@ export function useSelectedOutboundChannel(args: {
   // Re-inicializa o seletor quando a conversa muda ou quando a lista de
   // canais disponíveis chega/atualiza. Ordem de fallback:
   //   1) escolha persistida em localStorage (se ainda válida)
-  //   2) canal "atual" da conversa (último inbound) — se ainda válido
-  //   3) primeiro canal disponível (org com canais mas conversa sem channelId)
-  //   4) null (sem canais → composer mostra fallback do header padrão)
+  //   2) última mensagem pública (se o canal ainda está CONNECTED)
+  //   3) canal "atual" da conversa — se ainda válido
+  //   4) primeiro canal disponível
+  //   5) null (sem canais → composer mostra fallback do header padrão)
   useEffect(() => {
     if (!conversationId || !availableChannels) {
       setSelectedChannelIdState(null);
@@ -129,6 +186,9 @@ export function useSelectedOutboundChannel(args: {
         /* ignore */
       }
     }
+    if (!next && lastMessageChannelId && validIds.has(lastMessageChannelId)) {
+      next = lastMessageChannelId;
+    }
     if (!next && conversationChannelId && validIds.has(conversationChannelId)) {
       next = conversationChannelId;
     }
@@ -136,7 +196,13 @@ export function useSelectedOutboundChannel(args: {
       next = availableChannels[0].id;
     }
     setSelectedChannelIdState(next);
-  }, [conversationId, conversationChannelId, availableChannels, storageKey]);
+  }, [
+    conversationId,
+    conversationChannelId,
+    lastMessageChannelId,
+    availableChannels,
+    storageKey,
+  ]);
 
   const setSelectedChannelId = useCallback(
     (id: string) => {

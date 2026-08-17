@@ -48,6 +48,7 @@ import {
   useSettingsHeaderSlots,
 } from "../_v2-shell";
 import { apiUrl } from "@/lib/api";
+import { AppLoading } from "@/components/crm/app-loading";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────
@@ -439,14 +440,7 @@ function TagsPage() {
 
       {/* ── Lista ── */}
       {isLoading ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[64px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
-            />
-          ))}
-        </div>
+        <AppLoading variant="inline" className="min-h-[320px]" />
       ) : sorted.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16">
           <IconTag size={40} className="text-[var(--text-muted)] opacity-40" />

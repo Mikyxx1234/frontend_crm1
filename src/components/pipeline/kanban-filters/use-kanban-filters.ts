@@ -1,23 +1,55 @@
 /**
- * Hook que centraliza estado dos filtros avançados do Kanban.
+ * Hook que centraliza estado dos filtros avançados do Pipeline.
  *
- * - Mantém em memória + URL (`?f=<base64url>`) + localStorage (fallback).
- * - Não dispara reidratação cega: prioridade é URL > localStorage > vazio.
- * - Reidrata uma vez no mount, depois grava nos dois.
+ * A URL é a fonte da verdade e é COMPARTILHÁVEL: cada critério vira um param
+ * legível (`?status=OPEN&created=today&owner=...`), estilo Kommo. O
+ * localStorage continua como fallback para quem abre `/pipeline` sem query.
  *
- * O serializador usa base64url(JSON) — compacto e seguro pra URL longa.
+ * Prioridade na hidratação:
+ *   1. params legíveis (`status`, `created`, …)
+ *   2. `?f=<base64>` legado (links antigos / export CSV) → reescrito em params
+ *   3. `?filter=<savedFilterId>` → expandido em params
+ *   4. localStorage
+ *
+ * Escrita: History API (`pushState` quando o usuário mexe no filtro — o botão
+ * Voltar desfaz; `replaceState` na normalização inicial). Não usamos
+ * `router.replace` porque a página é RSC e cada replace refazia o payload do
+ * servidor, apagando os deep-links `?pipeline=&stage=&deal=`.
  */
 
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import {
+  applyUrlParams,
+  readLiveParams,
+  useUrlPopstate,
+} from "@/lib/url-state";
+
+import { fetchSavedFilterById } from "./api";
+import { SEARCH_URL_PARAM, SORT_URL_PARAM } from "./use-pipeline-search-sort";
 import type { AdvancedDealFilters } from "./types";
 import { isEmptyFilters } from "./types";
+import {
+  DEAL_FILTER_URL_KEYS,
+  LEGACY_FILTERS_PARAM,
+  SAVED_FILTER_PARAM,
+  dealFiltersFromUrlParams,
+  dealFiltersToUrlParams,
+  hasDealFilterUrlParams,
+} from "./url-codec";
 
 const LS_KEY = "kanban-advanced-filters";
-const URL_PARAM = "f";
+
+/**
+ * Serializa filtros para o parâmetro `f` da API (base64url do JSON).
+ * Exportado porque a exportação de CSV manda os mesmos filtros para
+ * `/api/deals/export?f=…`. A URL do navegador NÃO usa mais esse formato.
+ */
+export function encodeFiltersParam(filters: AdvancedDealFilters): string {
+  return encode(filters);
+}
 
 function encode(filters: AdvancedDealFilters): string {
   try {
@@ -46,6 +78,19 @@ function decode(value: string | null | undefined): AdvancedDealFilters | null {
   }
 }
 
+function readStoredFilters(): AdvancedDealFilters | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const filters = parsed as AdvancedDealFilters;
+    return isEmptyFilters(filters) ? null : filters;
+  } catch {
+    return null;
+  }
+}
+
 export type UseKanbanFiltersResult = {
   filters: AdvancedDealFilters;
   setFilters: (next: AdvancedDealFilters | ((prev: AdvancedDealFilters) => AdvancedDealFilters)) => void;
@@ -56,81 +101,97 @@ export type UseKanbanFiltersResult = {
 };
 
 export function useKanbanFilters(): UseKanbanFiltersResult {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const [filters, setFiltersState] = React.useState<AdvancedDealFilters>({});
-  const hydrated = React.useRef(false);
+  // `hydrated` é ESTADO (não ref) de propósito: o efeito de escrita precisa
+  // rodar no mesmo commit em que os filtros chegam. Com ref, o efeito passivo
+  // do 1º commit rodava com `{}` e apagava da URL os params que acabamos de
+  // ler (o F5 perdia o filtro).
+  const [hydrated, setHydrated] = React.useState(false);
+  const didHydrate = React.useRef(false);
+  // `?filter=<id>` é assíncrono: até resolver, não mexemos na URL (senão o
+  // efeito de escrita apagaria o param antes do fetch terminar).
+  const [resolvingSaved, setResolvingSaved] = React.useState(false);
+  // Só ação do usuário empilha histórico; normalização/popstate usa replace.
+  const userEdit = React.useRef(false);
 
-  // Refs estáveis p/ acessar dependências dentro do callback sem reanexar
-  // o setter a cada render (estabilidade do `setFilters` é importante pois
-  // ele é prop de muitos componentes filhos).
-  const pathnameRef = React.useRef(pathname);
-  pathnameRef.current = pathname;
-  const searchParamsRef = React.useRef(searchParams);
-  searchParamsRef.current = searchParams;
-  const routerRef = React.useRef(router);
-  routerRef.current = router;
+  React.useLayoutEffect(() => {
+    if (didHydrate.current) return;
+    didHydrate.current = true;
+    const params = readLiveParams();
 
-  // Reidrata uma vez (URL > localStorage)
-  React.useEffect(() => {
-    if (hydrated.current) return;
-    hydrated.current = true;
-    const fromUrl = decode(searchParams.get(URL_PARAM));
-    if (fromUrl && !isEmptyFilters(fromUrl)) {
-      setFiltersState(fromUrl);
+    if (hasDealFilterUrlParams(params)) {
+      setFiltersState(dealFiltersFromUrlParams(params));
+      setHydrated(true);
       return;
     }
-    try {
-      const fromLs = localStorage.getItem(LS_KEY);
-      if (fromLs) {
-        const parsed = JSON.parse(fromLs);
-        if (parsed && typeof parsed === "object" && !isEmptyFilters(parsed)) {
-          setFiltersState(parsed as AdvancedDealFilters);
-        }
-      }
-    } catch {
-      /* noop */
-    }
-  }, [searchParams]);
 
-  // Sincroniza URL e localStorage como SIDE-EFFECT depois do commit. Antes
-  // chamávamos `router.replace` dentro do updater de `setState`, o que
-  // disparava o aviso "Cannot update a component (Router) while rendering
-  // a different component (PipelinePage)" no React 18+/StrictMode — porque
-  // o updater pode ser executado durante render (replay para detecção de
-  // efeitos). Mover para useEffect garante que router.replace acontece
-  // SEMPRE fora da fase de render.
+    const legacy = decode(params.get(LEGACY_FILTERS_PARAM));
+    if (legacy && !isEmptyFilters(legacy)) {
+      setFiltersState(legacy);
+      setHydrated(true);
+      return;
+    }
+
+    const savedId = params.get(SAVED_FILTER_PARAM)?.trim();
+    if (savedId) {
+      setResolvingSaved(true);
+      setHydrated(true);
+      void fetchSavedFilterById(savedId)
+        .then((saved) => {
+          const config = saved?.filterConfig;
+          if (config && typeof config === "object" && !isEmptyFilters(config)) {
+            setFiltersState(config);
+          }
+        })
+        .finally(() => setResolvingSaved(false));
+      return;
+    }
+
+    // Link compartilhado precisa ser determinístico: se a URL já descreve a
+    // visão (busca/ordenação), não misturamos os filtros que ESTE usuário
+    // tinha salvos no localStorage.
+    const urlDescribesView =
+      (params.get(SEARCH_URL_PARAM) ?? "").trim() !== "" ||
+      (params.get(SORT_URL_PARAM) ?? "").trim() !== "";
+    if (!urlDescribesView) {
+      const stored = readStoredFilters();
+      if (stored) setFiltersState(stored);
+    }
+    setHydrated(true);
+  }, []);
+
+  // URL + localStorage como SIDE-EFFECT depois do commit (nunca durante o
+  // render: `history.pushState` em fase de render dispara warning do Router).
   React.useEffect(() => {
-    if (!hydrated.current) return;
-    // URL
-    const params = new URLSearchParams(searchParamsRef.current.toString());
-    if (isEmptyFilters(filters)) {
-      params.delete(URL_PARAM);
-    } else {
-      const encoded = encode(filters);
-      if (encoded) params.set(URL_PARAM, encoded);
-    }
-    const qs = params.toString();
-    const nextUrl = qs ? `${pathnameRef.current}?${qs}` : pathnameRef.current;
-    // Evita push redundante quando a URL já reflete o estado.
-    const current = `${pathnameRef.current}${
-      searchParamsRef.current.toString() ? `?${searchParamsRef.current.toString()}` : ""
-    }`;
-    if (nextUrl !== current) {
-      routerRef.current.replace(nextUrl, { scroll: false });
-    }
-    // localStorage
+    if (!hydrated || resolvingSaved) return;
+    const patchParams: Record<string, string | null> = dealFiltersToUrlParams(filters);
+    // Link antigo/atalho já foi expandido nos params legíveis acima.
+    patchParams[LEGACY_FILTERS_PARAM] = null;
+    patchParams[SAVED_FILTER_PARAM] = null;
+    applyUrlParams(patchParams, userEdit.current ? "push" : "replace");
+    userEdit.current = false;
     try {
       if (isEmptyFilters(filters)) localStorage.removeItem(LS_KEY);
       else localStorage.setItem(LS_KEY, JSON.stringify(filters));
     } catch {
       /* noop */
     }
-  }, [filters]);
+  }, [filters, hydrated, resolvingSaved]);
+
+  // Voltar/avançar: a URL manda. Estado volta ao que ela descreve (sem
+  // reescrever nada — o efeito acima vira no-op porque a URL já casa).
+  const onPop = React.useCallback(() => {
+    const params = readLiveParams();
+    userEdit.current = false;
+    setFiltersState(
+      hasDealFilterUrlParams(params) ? dealFiltersFromUrlParams(params) : {},
+    );
+  }, []);
+  useUrlPopstate(onPop);
 
   const setFilters = React.useCallback<UseKanbanFiltersResult["setFilters"]>(
     (next) => {
+      userEdit.current = true;
       setFiltersState((prev) =>
         typeof next === "function" ? next(prev) : next,
       );
@@ -155,3 +216,23 @@ export function useKanbanFilters(): UseKanbanFiltersResult {
     isEmpty: isEmptyFilters(filters),
   };
 }
+
+/** Link compartilhável do pipeline com os filtros atuais aplicados. */
+export function pipelineFiltersHref(
+  pathname: string,
+  filters: AdvancedDealFilters,
+  extra?: Record<string, string | null | undefined>,
+): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries({
+    ...dealFiltersToUrlParams(filters),
+    ...(extra ?? {}),
+  })) {
+    if (value != null && value !== "") params.set(key, value);
+  }
+  const qs = params.toString();
+  return qs ? `${pathname}?${qs}` : pathname;
+}
+
+/** Chaves de filtro que vivem na URL (útil para limpar a query). */
+export { DEAL_FILTER_URL_KEYS };

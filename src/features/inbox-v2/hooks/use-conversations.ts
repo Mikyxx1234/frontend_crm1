@@ -29,10 +29,11 @@ import { isPreviewMode } from "@/lib/preview-mode";
 
 /**
  * Page size pedido por request. O backend tem cap em 200 (ver
- * `_backend/src/services/conversations.ts`). Mantemos 60 pra latência
- * baixa do primeiro paint — o infinite scroll cobre o resto.
+ * `_backend/src/services/conversations.ts`). Mantemos 25 pra latência
+ * baixa do primeiro paint (~2-3 viewports de conversas) — o infinite
+ * scroll cobre o resto.
  */
-const PAGE_SIZE = 60;
+const PAGE_SIZE = 25;
 
 /**
  * Lista paginada (infinite) de conversas da aba ativa.
@@ -64,13 +65,26 @@ export function useConversations(params: {
     getNextPageParam: (last) => {
       const page = last.page ?? 1;
       const perPage = last.perPage ?? PAGE_SIZE;
+      const itemCount = last.items?.length ?? 0;
+      // Página incompleta = fim. Não use `total === perPage+1` (sentinela
+      // antiga: 25+1=26) para parar o scroll — Automação com badge 421
+      // parava na 1ª/2ª página.
+      if (itemCount < perPage) return undefined;
+      if (last.hasMore === false) return undefined;
+      if (last.hasMore === true) return page + 1;
       const total = last.total ?? 0;
       const loaded = page * perPage;
-      return loaded < total ? page + 1 : undefined;
+      if (total > perPage + 1) return loaded < total ? page + 1 : undefined;
+      // total ausente ou sentinela (≤ pageSize+1) + página cheia → continua
+      return page + 1;
     },
     enabled: isPreviewMode() ? true : (params.enabled ?? true),
-    refetchInterval: 20_000,
-    staleTime: 5_000,
+    // SSE (`useInboxRealtime`) já invalida esta query em new_message /
+    // conversation_updated. Polling fica só como safety-net.
+    refetchInterval: 60_000,
+    staleTime: 45_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Agrega todas as páginas carregadas em um único `items[]` pra
@@ -115,6 +129,7 @@ export function useConversations(params: {
       total: last.total,
       page: last.page,
       perPage: last.perPage,
+      hasMore: last.hasMore,
     };
   }, [query.data]);
 
@@ -132,7 +147,7 @@ export function useConversations(params: {
 }
 
 /**
- * Busca UMA conversa pelo id (deep-link `?c=<id>`). Só habilita quando a
+ * Busca UMA conversa pelo `?c=` (número ou CUID legado). Só habilita quando a
  * conversa alvo NÃO está na lista carregada — assim o link abre a conversa
  * mesmo fora da aba/filtro/página atual do usuário. `retry:false` para que
  * um 404 (sem acesso / inexistente) propague rápido e o inbox trate o erro.
@@ -228,16 +243,24 @@ export function useTabCounts(
         ownerIds: filters.ownerIds ?? (filters.ownerId ? [filters.ownerId] : []),
         withoutOwner: filters.withoutOwner ?? false,
         channel: filters.channel ?? null,
+        channelIds: filters.channelIds ?? [],
         stageIds: filters.stageIds ?? (filters.stageId ? [filters.stageId] : []),
         tagIds: filters.tagIds ?? [],
         sources: filters.sources ?? [],
         sessionExpiresWithinHours: filters.sessionExpiresWithinHours ?? null,
+        windowState: filters.windowState ?? null,
       }
     : null;
   return useQuery<TabCounts>({
     queryKey: ["conversations", "tab-counts", filterKey, searchKey],
     queryFn: () => fetchTabCounts(filters, searchKey),
-    refetchInterval: 15_000,
+    // Contadores das abas: SSE invalida em tempo real; 60s cobre gaps.
+    // staleTime alinhado ao cache Redis do backend (45s) pra não
+    // re-disparar counts×N no mount/StrictMode/prefs hydrate.
+    refetchInterval: 60_000,
+    staleTime: 45_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     enabled: isPreviewMode() ? true : enabled,
   });
 }

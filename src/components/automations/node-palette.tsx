@@ -1,7 +1,8 @@
 "use client";
 
-import { IconPlus as Plus } from "@tabler/icons-react";
+import { IconPin, IconPinFilled, IconPlus as Plus } from "@tabler/icons-react";
 
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { cn } from "@/lib/utils";
 import type { ActionStepType } from "@/lib/automation-workflow";
 import { stepTypeLabel } from "@/lib/automation-workflow";
@@ -54,7 +55,7 @@ const GROUPS: { title: string; items: PaletteItem[] }[] = [
   },
   {
     title: "Lógica",
-    items: [{ type: "delay" }, { type: "condition" }, { type: "round_robin" }],
+    items: [{ type: "delay" }, { type: "condition" }, { type: "round_robin" }, { type: "business_hours" }, { type: "check_agent_status" }],
   },
   {
     title: "WhatsApp",
@@ -82,7 +83,15 @@ const GROUPS: { title: string; items: PaletteItem[] }[] = [
  * arrastáveis. Visual glass + ícones por tipo (mesma `stepColor` do
  * AddStepNode/ActionNode).
  */
-export function NodePalette({ className }: { className?: string }) {
+export function NodePalette({
+  className,
+  pinned,
+  onTogglePin,
+}: {
+  className?: string;
+  pinned?: boolean;
+  onTogglePin?: () => void;
+}) {
   return (
     <div
       className={cn(
@@ -90,13 +99,37 @@ export function NodePalette({ className }: { className?: string }) {
         className
       )}
     >
-      <div className="border-b border-[var(--glass-border-subtle)] pb-3">
-        <p className="font-heading text-[15px] font-extrabold tracking-tighter text-[var(--text-primary)]">
-          Blocos
-        </p>
-        <p className="mt-0.5 text-[11px] font-medium tracking-tight text-[var(--text-muted)]">
-          Arraste para o canvas
-        </p>
+      <div className="flex items-start justify-between gap-2 border-b border-[var(--glass-border-subtle)] pb-3">
+        <div className="min-w-0">
+          <p className="font-heading text-[15px] font-extrabold tracking-tighter text-[var(--text-primary)]">
+            Blocos
+          </p>
+          <p className="mt-0.5 text-[11px] font-medium tracking-tight text-[var(--text-muted)]">
+            Arraste para o canvas
+          </p>
+        </div>
+        {onTogglePin ? (
+          <TooltipGlass label={pinned ? "Desafixar" : "Fixar"} side="bottom">
+            <button
+              type="button"
+              aria-label={pinned ? "Desafixar" : "Fixar"}
+              aria-pressed={!!pinned}
+              onClick={onTogglePin}
+              className={cn(
+                "flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-colors",
+                pinned
+                  ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+              )}
+            >
+              {pinned ? (
+                <IconPinFilled size={16} stroke={1.7} />
+              ) : (
+                <IconPin size={16} stroke={1.7} />
+              )}
+            </button>
+          </TooltipGlass>
+        ) : null}
       </div>
       {GROUPS.map((g) => (
         <div key={g.title}>

@@ -8,6 +8,10 @@ import { useBulkOperation, isBulkOperationFinished } from "@/hooks/use-bulk-oper
 import { RequirePermission } from "@/components/auth/require-permission";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { listAllowedInboxTabsForUser } from "@/lib/authz/scope-grants-shared";
+import {
+  SEARCH_DEBOUNCE_MS,
+  normalizeSearchQuery,
+} from "@/lib/search-query";
 import { toast } from "sonner";
 import {
   IconArrowLeft,
@@ -54,6 +58,7 @@ import {
 } from "@/features/inbox-v2/adapters";
 import {
   useBulkConversationAction,
+  useChannelSession,
   useConversationById,
   useConversationFeatures,
   useConversations,
@@ -69,7 +74,10 @@ import {
   useSendMessage,
   useTabCounts,
   useWhatsappChannels,
+  findLastPublicMessageChannelId,
   useInboxSoundMuted,
+  useInboxUrlSync,
+  matchesConversationUrlRef,
   CONVERSATION_REOPENED_EVENT,
 } from "@/features/inbox-v2/hooks";
 import {
@@ -81,17 +89,24 @@ import {
   InboxFilterButton,
   TagsPopover,
   TransferPopover,
-  TemplatePickerList,
+  WhatsappTemplatePickerModal,
   whatsappTemplateToPending,
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
 import { InboxSearchFilterBar } from "@/features/inbox-v2/extras/filter-panel";
-import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
-import { hasInboxServerFilters, normalizeInboxFilters } from "@/features/inbox-v2/api/types";
+import {
+  isSessionClosedError,
+  SESSION_CLOSED_TOAST,
+} from "@/features/inbox-v2/extras/channel-switch-confirm";
+import type { ConversationListRow, InboxTab } from "@/features/inbox-v2/api";
+import {
+  DEFAULT_INBOX_TAB,
+  useInboxFilterUrlState,
+} from "@/features/inbox-v2/hooks/use-inbox-filters-url-sync";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
-  useBoard,
   useDealDetail,
+  usePipelines,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
 import { MoveToStageMenu } from "@/features/pipeline-v2/extras/move-to-stage-menu";
@@ -101,7 +116,7 @@ import { CallHistoryList } from "@/features/softphone/components/call-history-li
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { DealNotesTab } from "@/features/pipeline-v2/extras";
-import type { BoardStageDto } from "@/features/pipeline-v2/api";
+import type { PipelineListStageDto } from "@/features/pipeline-v2/api";
 
 // ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover.
 // Mostra as 2 primeiras; a lista completa fica no popover ("Selecionadas").
@@ -173,49 +188,10 @@ function ContactTagsTray({
   );
 }
 
-const DEFAULT_FILTERS: InboxFilters = {};
-const INBOX_FILTERS_STORAGE_KEY = "inbox-v2:filters";
-
-function readStoredInboxFilters(): InboxFilters {
-  if (typeof window === "undefined") return DEFAULT_FILTERS;
-  try {
-    const raw = window.localStorage.getItem(INBOX_FILTERS_STORAGE_KEY);
-    if (!raw) return DEFAULT_FILTERS;
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return DEFAULT_FILTERS;
-    }
-    return normalizeInboxFilters(parsed as InboxFilters);
-  } catch {
-    return DEFAULT_FILTERS;
-  }
-}
-
-function writeStoredInboxFilters(filters: InboxFilters) {
-  try {
-    const normalized = normalizeInboxFilters(filters);
-    const empty =
-      !hasInboxServerFilters(normalized) &&
-      !normalized.sortBy &&
-      !normalized.sortOrder &&
-      !normalized.windowState &&
-      !normalized.lastMessageDirection;
-    if (empty) {
-      window.localStorage.removeItem(INBOX_FILTERS_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(
-      INBOX_FILTERS_STORAGE_KEY,
-      JSON.stringify(normalized),
-    );
-  } catch {
-    /* localStorage indisponível */
-  }
-}
-
 // Ordem das tabs alinhada ao legado (`conversation-list.tsx`
 // TAB_ORDER). "Automação" lista conversas cujo contato tem automação
-// RUNNING (fila de automação). "Erro" = hasError=true (webhook/send).
+// RUNNING (fila de automação). "Erro" = OPEN + hasError (falha de envio);
+// encerradas não entram — hasError sticky em RESOLVED poluía a aba.
 const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "todos", label: "Todas" },
   { id: "entrada", label: "Entrada" },
@@ -225,31 +201,6 @@ const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "finalizados", label: "Encerradas" },
   { id: "erro", label: "Erro" },
 ];
-
-// Tab selecionada persiste em localStorage — sobrevive F5/navegação.
-// Default "esperando" (Aguardando): ao abrir sem escolha salva, evita cair
-// em "Todas". Se o usuário escolher "Todas" (ou outra), a escolha é mantida.
-const INBOX_TAB_STORAGE_KEY = "inbox-v2:tab";
-const DEFAULT_INBOX_TAB: InboxTab = "esperando";
-
-function readStoredInboxTab(): InboxTab {
-  if (typeof window === "undefined") return DEFAULT_INBOX_TAB;
-  try {
-    const raw = window.localStorage.getItem(INBOX_TAB_STORAGE_KEY);
-    if (raw && TABS.some((t) => t.id === raw)) return raw as InboxTab;
-    return DEFAULT_INBOX_TAB;
-  } catch {
-    return DEFAULT_INBOX_TAB;
-  }
-}
-
-function writeStoredInboxTab(tab: InboxTab) {
-  try {
-    window.localStorage.setItem(INBOX_TAB_STORAGE_KEY, tab);
-  } catch {
-    /* localStorage indisponível */
-  }
-}
 
 /**
  * Props opcionais — usadas para reaproveitar o chat dentro de um shell
@@ -294,7 +245,7 @@ export default function InboxV2ClientPage({
           t.id === "todos" || t.id === "esperando" || t.id === "respondidas",
       );
     }
-    const allowed = new Set(
+    const allowed = new Set<string>(
       listAllowedInboxTabsForUser({
         grants: {},
         role,
@@ -315,41 +266,29 @@ export default function InboxV2ClientPage({
   );
 
   // ── Estado de UI local ─────────────────────────────────────────
-  // Default "esperando" (Aguardando). A escolha do usuário é salva em
-  // localStorage e restaurada no F5 (lê no effect, SSR-safe).
-  const [tab, setTab] = useState<InboxTab>(DEFAULT_INBOX_TAB);
-  const [tabHydrated, setTabHydrated] = useState(false);
-  // useLayoutEffect: restaura aba ANTES do paint (useEffect deixava
-  // 1 frame com default "Aguardando" + empty no F5).
-  useLayoutEffect(() => {
-    setTab(readStoredInboxTab());
-    setTabHydrated(true);
-  }, []);
-  useEffect(() => {
-    if (!tabHydrated) return;
-    writeStoredInboxTab(tab);
-  }, [tab, tabHydrated]);
-  // Se a aba salva não for permitida para o papel, cai na primeira visível.
+  // Aba, busca e filtros vivem na URL (`?tab=&q=&owner=…`) — o link da barra
+  // de endereço reproduz a visão no F5, no compartilhamento e no Voltar. Sem
+  // query, cai no localStorage (última visão do operador) e default
+  // "esperando" (Aguardando).
+  const {
+    tab,
+    setTab,
+    tabHydrated,
+    filters,
+    setFilters,
+    filtersHydrated,
+    search: searchInput,
+    setSearch: setSearchInput,
+  } = useInboxFilterUrlState();
+  // Se a aba da URL/localStorage não for permitida para o papel, cai na
+  // primeira visível.
   useEffect(() => {
     if (!tabHydrated || visibleTabs.length === 0) return;
     if (!visibleTabs.some((t) => t.id === tab)) {
       setTab(visibleTabs[0]?.id ?? DEFAULT_INBOX_TAB);
     }
-  }, [tabHydrated, visibleTabs, tab]);
+  }, [tabHydrated, visibleTabs, tab, setTab]);
 
-  // Filtros do painel persistem em localStorage — sobrevive navegação
-  // para outras páginas do CRM e refresh. Lê no effect (SSR-safe).
-  const [filters, setFilters] = useState<InboxFilters>(DEFAULT_FILTERS);
-  const [filtersHydrated, setFiltersHydrated] = useState(false);
-  useLayoutEffect(() => {
-    setFilters(readStoredInboxFilters());
-    setFiltersHydrated(true);
-  }, []);
-  useEffect(() => {
-    if (!filtersHydrated) return;
-    writeStoredInboxFilters(filters);
-  }, [filters, filtersHydrated]);
-  const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -404,6 +343,7 @@ export default function InboxV2ClientPage({
   // Encerramento em massa roda no leads-worker (async). Guardamos o id da
   // BulkOperation pra pollar progresso e dar feedback ao terminar.
   const [bulkOpId, setBulkOpId] = useState<string | null>(null);
+  const bulkSkippedRef = useRef(0);
 
   function exitSelectionMode() {
     setSelectionMode(false);
@@ -446,46 +386,25 @@ export default function InboxV2ClientPage({
     };
   }, []);
 
-  // Debounce do search (300ms). Evita refetch a cada tecla.
+  // Debounce do search (~350ms) + min 3 chars no query (ver searchForQuery).
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
+    const t = setTimeout(
+      () => setDebouncedSearch(searchInput.trim()),
+      SEARCH_DEBOUNCE_MS,
+    );
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // ── Deep-link por URL (?c=<conversationId>) ─────────────────────
-  // Permite compartilhar o link de uma conversa específica (ex.: enviar a
-  // um supervisor). Na montagem, lê o `?c=` e seleciona a conversa. Depois,
-  // qualquer troca de `activeId` reflete no querystring (history.replaceState,
-  // sem navegação/scroll) — assim a URL da barra é sempre "copiável".
-  const [deepLinkHydrated, setDeepLinkHydrated] = useState(false);
-  useEffect(() => {
-    try {
-      const c = new URLSearchParams(window.location.search).get("c");
-      if (c) setActiveId(c);
-    } catch {
-      /* window indisponível */
-    }
-    setDeepLinkHydrated(true);
-  }, []);
-  useEffect(() => {
-    if (!deepLinkHydrated || typeof window === "undefined") return;
-    try {
-      const url = new URL(window.location.href);
-      if (activeId) url.searchParams.set("c", activeId);
-      else url.searchParams.delete("c");
-      window.history.replaceState(null, "", url.toString());
-    } catch {
-      /* URL indisponível */
-    }
-  }, [activeId, deepLinkHydrated]);
+  // Só dispara list/counts com ≥3 chars — ILIKE curto é caro e pouco útil.
+  const searchForQuery = normalizeSearchQuery(debouncedSearch);
 
   // ── Dados ───────────────────────────────────────────────────────
-  // Ordem e janela são CLIENT-SIDE — não vão ao servidor (evita refetch
-  // ao mudar ordenação e a limitação do `sortBy` do backend).
+  // Ordenação e direção da última msg são CLIENT-SIDE (evita refetch).
+  // `windowState` (Aberta/Fechada) vai ao servidor — senão o badge Erro
+  // conta 233 e a lista filtra no cliente até ficar vazia.
   const {
     sortBy,
     sortOrder,
-    windowState,
     lastMessageDirection,
     ...serverFilters
   } = filters;
@@ -499,7 +418,7 @@ export default function InboxV2ClientPage({
   } = useConversations({
     tab,
     filters: serverFilters,
-    search: debouncedSearch,
+    search: searchForQuery,
     // Só busca depois da sessão + prefs (tab/filtros do localStorage).
     // Sem isso: (1) query disabled → isLoading=false → empty flash;
     // (2) fetch com tab default "esperando" antes de hidratar a aba salva.
@@ -527,13 +446,6 @@ export default function InboxV2ClientPage({
   // original pra evitar `updatedAt`).
   const rows = useMemo(() => {
     let list = rawRows;
-    if (windowState === "open") {
-      // "Aberta" = conversa não resolvida (OPEN/PENDING/SNOOZED).
-      list = list.filter((r) => r.status !== "RESOLVED");
-    } else if (windowState === "closed") {
-      // "Fechada" = conversa resolvida.
-      list = list.filter((r) => r.status === "RESOLVED");
-    }
     if (lastMessageDirection) {
       list = list.filter((r) => {
         const direction = String(
@@ -556,13 +468,21 @@ export default function InboxV2ClientPage({
       }
       return sign * (lastActivityTs(a) - lastActivityTs(b));
     });
-  }, [rawRows, windowState, lastMessageDirection, sortBy, sortOrder]);
+  }, [rawRows, lastMessageDirection, sortBy, sortOrder]);
 
   const { data: tabCounts } = useTabCounts(
-    isAuthenticated && filtersHydrated,
-    filters,
-    debouncedSearch,
+    isAuthenticated && tabHydrated && filtersHydrated,
+    serverFilters,
+    searchForQuery,
   );
+
+  // Uma fonte: badge da aba = select-all N. `list.total` ainda pode ser o
+  // sentinela pageSize+1 (26) se a API antiga estiver no ar.
+  const badgeTotal = tabCounts?.[tab];
+  const filterTotal =
+    typeof badgeTotal === "number" && badgeTotal > 0
+      ? badgeTotal
+      : listData?.total;
 
   // ── Sticky activeRow ────────────────────────────────────────────
   // A `rows` reflete o filtro da aba atual (ex.: "entrada"). Se o
@@ -575,7 +495,10 @@ export default function InboxV2ClientPage({
 
   // Conversa ativa presente na lista carregada da aba/filtro atual?
   const foundActiveRow = useMemo(
-    () => (activeId ? rows.find((r) => r.id === activeId) ?? null : null),
+    () =>
+      activeId
+        ? rows.find((r) => matchesConversationUrlRef(r, activeId)) ?? null
+        : null,
     [rows, activeId],
   );
 
@@ -590,7 +513,7 @@ export default function InboxV2ClientPage({
   const needsDeepLinkFetch =
     Boolean(activeId) &&
     !foundActiveRow &&
-    stickyRow?.id !== activeId;
+    !(stickyRow && matchesConversationUrlRef(stickyRow, activeId));
   const {
     data: deepLinkRow,
     error: deepLinkError,
@@ -603,17 +526,19 @@ export default function InboxV2ClientPage({
     }
     if (foundActiveRow) {
       setStickyRow(foundActiveRow);
+      if (foundActiveRow.id !== activeId) setActiveId(foundActiveRow.id);
       return;
     }
-    // Não está na lista: usa a conversa buscada pelo id (deep-link), desde
-    // que seja a mesma que está ativa. Enquanto carrega, preserva o snapshot
-    // anterior — NÃO sobrescreve com null.
-    if (deepLinkRow && deepLinkRow.id === activeId) {
+    // Não está na lista: usa a conversa buscada pelo id/número (deep-link).
+    if (deepLinkRow && matchesConversationUrlRef(deepLinkRow, activeId)) {
       setStickyRow(deepLinkRow);
+      if (deepLinkRow.id !== activeId) setActiveId(deepLinkRow.id);
       return;
     }
     // Reabrir (novo ticket) / troca de id: não manter header do ticket antigo.
-    setStickyRow((prev) => (prev?.id === activeId ? prev : null));
+    setStickyRow((prev) =>
+      prev && matchesConversationUrlRef(prev, activeId) ? prev : null,
+    );
   }, [activeId, foundActiveRow, deepLinkRow]);
 
   // Deep-link inválido (id inexistente ou sem permissão): avisa e limpa a
@@ -629,7 +554,7 @@ export default function InboxV2ClientPage({
   // do filtro da aba (Encerrar), não é deep-link inválido.
   useEffect(() => {
     if (needsDeepLinkFetch && deepLinkError && listData !== undefined) {
-      if (stickyRow?.id === activeId) return;
+      if (stickyRow && matchesConversationUrlRef(stickyRow, activeId)) return;
       toast.error(
         deepLinkError.message || "Conversa não encontrada ou sem permissão.",
       );
@@ -638,6 +563,7 @@ export default function InboxV2ClientPage({
   }, [needsDeepLinkFetch, deepLinkError, listData, stickyRow, activeId]);
 
   const activeRow = stickyRow;
+  useInboxUrlSync(activeId, setActiveId, activeRow?.number, activeRow?.id);
   const activeContactId = activeRow?.contact?.id ?? null;
 
   // Se não há conversa ativa, o aside não tem o que mostrar — força
@@ -652,10 +578,12 @@ export default function InboxV2ClientPage({
   const { data: contactDetail } = useContactSidebar(activeContactId);
 
   // ── Realtime ────────────────────────────────────────────────────
+  // Só após prefs (tab/filtros) — evita invalidate lista+counts no
+  // connect enquanto a query key ainda está mudando no hydrate.
   useInboxRealtime({
     activeConversationId: activeId,
     currentUserId: session?.user?.id ?? null,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && tabHydrated && filtersHydrated,
   });
 
   /**
@@ -782,20 +710,22 @@ export default function InboxV2ClientPage({
     const useAllInFilter = selectAllFilter && action === "resolve";
     if (!useAllInFilter && ids.length === 0) return;
 
-    const filterTotal = listData?.total ?? ids.length;
+    const confirmTotal = filterTotal ?? ids.length;
 
     if (useAllInFilter) {
+      const isAdminRole = sessionRole === "ADMIN";
       const ok = await confirmDialog({
-        title: `Encerrar ${filterTotal.toLocaleString("pt-BR")} conversa${filterTotal > 1 ? "s" : ""}?`,
-        description:
-          "Todas as conversas do filtro atual (todas as páginas) serão encerradas em segundo plano pelo worker. Esta ação não pode ser desfeita em massa.",
+        title: `Encerrar ${confirmTotal.toLocaleString("pt-BR")} conversa${confirmTotal > 1 ? "s" : ""}?`,
+        description: isAdminRole
+          ? "Todas as conversas do filtro atual (todas as páginas) serão encerradas em segundo plano, inclusive as que exigem tabulação — sem tabular. Esta ação não pode ser desfeita em massa."
+          : "Todas as conversas do filtro atual (todas as páginas) serão encerradas em segundo plano pelo worker. Conversas que exigem tabulação não entram neste lote. Esta ação não pode ser desfeita em massa.",
         confirmLabel: "Encerrar todas",
         destructive: true,
       });
       if (!ok) return;
     }
 
-    const count = useAllInFilter ? filterTotal : ids.length;
+    const count = useAllInFilter ? confirmTotal : ids.length;
     bulkAction.mutate(
       useAllInFilter
         ? {
@@ -803,27 +733,45 @@ export default function InboxV2ClientPage({
             action,
             allInFilter: true,
             tab,
-            search: debouncedSearch,
+            search: searchForQuery,
             filters: serverFilters as Record<string, unknown>,
           }
         : { ids, action },
       {
         onSuccess: (result) => {
+          const skipped = Array.isArray(result?.skipped)
+            ? result.skipped.length
+            : 0;
           // Encerrar roda no worker (async): guarda o operationId pra pollar
-          // e mostra feedback de "em segundo plano". O toast final (sucesso/
-          // parcial/falha) vem do efeito de polling abaixo.
+          // e mostra UM único toast. O toast final (sucesso/parcial/falha)
+          // vem do efeito de polling abaixo.
           if (result?.operationId) {
+            bulkSkippedRef.current = skipped;
             setBulkOpId(result.operationId);
             const total = result.total ?? count;
-            toast.info(
-              `Encerrando ${total} conversa${total > 1 ? "s" : ""} em segundo plano…`,
-            );
+            if (skipped > 0) {
+              toast.warning(
+                `Encerrando ${total} conversa${total > 1 ? "s" : ""} em segundo plano. ${skipped} exigem tabulação e não foram encerradas — encerre individualmente.`,
+                { id: `inbox-bulk-resolve-${result.operationId}` },
+              );
+            } else {
+              toast.success(
+                `Encerrando ${total} conversa${total > 1 ? "s" : ""} em segundo plano…`,
+                { id: `inbox-bulk-resolve-${result.operationId}` },
+              );
+            }
             exitSelectionMode();
             return;
           }
           // Sem operationId → nada a processar (já encerradas / exigem tabulação).
           if (action === "resolve") {
-            toast.info("Nenhuma conversa para encerrar.");
+            if (skipped > 0) {
+              toast.warning(
+                `${skipped} conversa(s) exigem tabulação e não foram encerradas. Encerre individualmente.`,
+              );
+            } else {
+              toast.warning("Nenhuma conversa para encerrar.");
+            }
           } else {
             toast.success(
               `${count} conversa${count > 1 ? "s" : ""} reaberta${count > 1 ? "s" : ""}`,
@@ -839,6 +787,33 @@ export default function InboxV2ClientPage({
 
   // ── Polling do encerramento em massa (leads-worker) ─────────────
   const qc = useQueryClient();
+
+  // Alinha o card da lista com a sessão do chat (GET messages = contact+canal).
+  // Ticket só-template / lastInbound denormalizado stale ficava sem "Expirada"
+  // no card enquanto o composer já bloqueava envio.
+  useEffect(() => {
+    if (!activeId || !sessionInfo) return;
+    const nextInbound = sessionInfo.lastInboundAt ?? null;
+    qc.setQueriesData<{
+      pages: { items: { id: string; lastInboundAt: string | null }[] }[];
+      pageParams: unknown[];
+    }>({ queryKey: ["inbox-conversations"] }, (old) => {
+      if (!old?.pages) return old;
+      let changed = false;
+      const pages = old.pages.map((page) => {
+        const items = (page.items ?? []).map((row) => {
+          if (row.id !== activeId) return row;
+          const prev = row.lastInboundAt ?? null;
+          if (prev === nextInbound) return row;
+          changed = true;
+          return { ...row, lastInboundAt: nextInbound };
+        });
+        return { ...page, items };
+      });
+      return changed ? { ...old, pages } : old;
+    });
+  }, [activeId, sessionInfo, sessionInfo?.lastInboundAt, sessionInfo?.active, qc]);
+
   const [inboxRefreshing, setInboxRefreshing] = useState(false);
   const refreshInboxQueue = async () => {
     if (inboxRefreshing) return;
@@ -858,12 +833,29 @@ export default function InboxV2ClientPage({
     if (!bulkOpId || !isBulkOperationFinished(bulkOpStatus)) return;
     const d = bulkOp.data;
     if (d) {
+      const toastId = `inbox-bulk-resolve-${bulkOpId}`;
+      const skipped = bulkSkippedRef.current;
       if (bulkOpStatus === "COMPLETED") {
-        toast.success(`${d.succeeded} conversa${d.succeeded > 1 ? "s" : ""} encerrada${d.succeeded > 1 ? "s" : ""}`);
+        if (skipped > 0) {
+          toast.warning(
+            `${d.succeeded} encerrada(s). ${skipped} exigem tabulação e não foram encerradas — encerre individualmente.`,
+            { id: toastId },
+          );
+        } else {
+          toast.success(
+            `${d.succeeded} conversa${d.succeeded > 1 ? "s" : ""} encerrada${d.succeeded > 1 ? "s" : ""}`,
+            { id: toastId },
+          );
+        }
       } else if (bulkOpStatus === "PARTIAL") {
-        toast.warning(`${d.succeeded} encerrada(s), ${d.failed} falharam`);
+        toast.warning(
+          skipped > 0
+            ? `${d.succeeded} encerrada(s), ${d.failed} falharam. ${skipped} exigem tabulação — encerre individualmente.`
+            : `${d.succeeded} encerrada(s), ${d.failed} falharam`,
+          { id: toastId },
+        );
       } else if (bulkOpStatus === "FAILED") {
-        toast.error("Falha ao encerrar as conversas em massa.");
+        toast.error("Falha ao encerrar as conversas em massa.", { id: toastId });
       }
     }
     qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
@@ -876,12 +868,29 @@ export default function InboxV2ClientPage({
   // aparece e o backend usa o canal "atual" da conversa (legacy).
   const { data: whatsappChannels } = useWhatsappChannels(isAuthenticated);
   const conversationChannelId = messagesData?.channel?.id ?? null;
+  const lastMessageChannelId = useMemo(
+    () => findLastPublicMessageChannelId(messagesData?.messages),
+    [messagesData?.messages],
+  );
   const { selectedChannelId, setSelectedChannelId } = useSelectedOutboundChannel(
     {
       conversationId: activeId,
       conversationChannelId,
       availableChannels: whatsappChannels,
+      lastMessageChannelId,
     },
+  );
+
+  // Override de canal ativo: revalida a janela de 24h no canal de DESTINO
+  // (o `session` do GET messages reflete só o canal da conversa).
+  const channelOverrideActive =
+    !!selectedChannelId &&
+    !!conversationChannelId &&
+    selectedChannelId !== conversationChannelId;
+  const { data: overrideSession } = useChannelSession(
+    activeId,
+    channelOverrideActive ? selectedChannelId : null,
+    channelOverrideActive,
   );
 
   function handleSelect(id: string) {
@@ -912,7 +921,17 @@ export default function InboxV2ClientPage({
         handleReopenNewConversation(data.reopenedConversationId);
       }
     } catch (err) {
-      toast.error((err as Error)?.message || "Falha ao enviar");
+      // Corrida: a sessão de 24h expirou enquanto o agente digitava (o
+      // backend bloqueia com 409 antes de criar a mensagem). Em vez do
+      // toast genérico, mostra o aviso de sessão e abre o fluxo de template.
+      if (isSessionClosedError(err)) {
+        toast.error(SESSION_CLOSED_TOAST, {
+          action: { label: "Usar Template", onClick: () => setTemplateOpen(true) },
+        });
+        setTemplateOpen(true);
+      } else {
+        toast.error((err as Error)?.message || "Falha ao enviar");
+      }
       throw err;
     }
   }
@@ -972,11 +991,17 @@ export default function InboxV2ClientPage({
       ? !sessionActiveFromBackend
       : isSessionExpired(sessionInfo?.lastInboundAt ?? activeRow.lastInboundAt)
     : false;
+  // Com override de canal, manda a sessão do canal de DESTINO; enquanto a
+  // query carrega, mantém o valor da conversa (evita flicker do composer).
+  const sessionExpiredEffective =
+    channelOverrideActive && overrideSession
+      ? !overrideSession.active
+      : sessionExpired;
   // Bloco C (25/jun/26): backend pode setar `canReply:false` quando o
   // usuário não tem `channel.send`. Default true preserva compat com
   // backend antigo (que não envia o campo).
   const canReply = messagesData?.canReply ?? true;
-  const composerDisabled = !canReply || sessionExpired;
+  const composerDisabled = !canReply || sessionExpiredEffective;
   const composerPlaceholder = !canReply
     ? "Você não tem permissão para enviar mensagens neste canal."
     : undefined;
@@ -997,7 +1022,7 @@ export default function InboxV2ClientPage({
 
   // Com busca ativa: só exibe badge nos status que têm match (esconde 0).
   // Sem busca: badges globais/filtrados por funil como antes.
-  const searchActive = debouncedSearch.trim().length > 0;
+  const searchActive = searchForQuery.length > 0;
 
   const inboxSearchFilterNode = (
     <InboxSearchFilterBar
@@ -1125,7 +1150,9 @@ export default function InboxV2ClientPage({
   const conversationColumnNode = (
     <ConversationColumn
       conversations={conversationCards}
-      activeConversationId={activeId ?? undefined}
+      activeConversationId={
+        foundActiveRow?.id ?? stickyRow?.id ?? activeId ?? undefined
+      }
       onSelectConversation={handleSelect}
       searchValue={searchInput}
       onSearchChange={setSearchInput}
@@ -1149,7 +1176,7 @@ export default function InboxV2ClientPage({
         setSelectAllFilter(false);
         setSelectedIds(new Set(ids));
       }}
-      totalCount={listData?.total}
+      totalCount={filterTotal}
       selectAllFilter={selectAllFilter}
       onSelectAllFilterChange={(v) => {
         setSelectAllFilter(v);
@@ -1265,43 +1292,48 @@ export default function InboxV2ClientPage({
     </div>
   );
 
-  // ── Funil real do primeiro deal do contato ──────────────────────
+  // ── Funil do primeiro deal ──────────────────────────────────────
+  // pipelineId já vem achatado no GET contact (?view=inbox). Não espera
+  // useDealDetail nem carrega o board completo (~150KB) — só stages via
+  // GET /api/pipelines (~3KB, staleTime 5min).
   const firstDeal = contactAsideView?.deals?.[0] ?? null;
   const firstDealId = firstDeal?.id ?? null;
   const { data: firstDealDetail } = useDealDetail(firstDealId);
-  // O detail do deal (/api/deals/:id) devolve pipeline e stage ANINHADOS
-  // em `deal.stage.pipeline.id` / `deal.stage.id` — não no topo. Ler o
-  // caminho errado deixava pipelineId nulo, o board nunca carregava e a
-  // aside mostrava "Sem estágio" sem dropdown de troca de fase.
   const dealStage = (
     firstDealDetail as
       | { stage?: { id?: string; pipeline?: { id?: string; name?: string } } }
       | undefined
   )?.stage;
-  const firstDealPipelineId = dealStage?.pipeline?.id ?? firstDeal?.pipelineId ?? null;
-  const firstDealPipelineName = dealStage?.pipeline?.name ?? null;
-  const { data: boardStages } = useBoard({
-    pipelineId: firstDealPipelineId,
-    enabled: !!firstDealPipelineId,
-  });
+  const firstDealPipelineId =
+    firstDeal?.pipelineId ?? dealStage?.pipeline?.id ?? null;
+  const firstDealPipelineName =
+    firstDeal?.pipelineName ?? dealStage?.pipeline?.name ?? null;
+  const { data: pipelinesLite } = usePipelines(
+    isAuthenticated && !!firstDealPipelineId,
+  );
+  const boardStages: PipelineListStageDto[] = useMemo(() => {
+    if (!firstDealPipelineId || !pipelinesLite) return [];
+    const pipe = pipelinesLite.find((p) => p.id === firstDealPipelineId);
+    return pipe?.stages ?? [];
+  }, [pipelinesLite, firstDealPipelineId]);
 
   // Monta funnelSegments e stageDropdownSlot para o primeiro deal.
   // Os demais deals ficam com fallback (sem barra + stageName estático).
-  const firstDealFunnelSegments = boardStages?.map((s) => ({
+  const firstDealFunnelSegments = boardStages.map((s) => ({
     id: s.id,
     name: s.name,
     color: s.color ?? "var(--brand-primary)",
     position: s.position,
   }));
-  const firstDealStageId = dealStage?.id ?? firstDeal?.stageId ?? null;
+  const firstDealStageId = firstDeal?.stageId ?? dealStage?.id ?? null;
   const firstDealStageName =
-    boardStages?.find((s) => s.id === firstDealStageId)?.name ??
+    boardStages.find((s) => s.id === firstDealStageId)?.name ??
     firstDeal?.stageName ??
     null;
 
   // Injeta funnelSegments + stageDropdownSlot + assigneeSlot apenas no primeiro deal.
   const dealsWithSlots = (contactAsideView?.deals ?? []).map((d, idx) => {
-    if (idx !== 0 || !boardStages?.length) return d;
+    if (idx !== 0 || !boardStages.length) return d;
     return {
       ...d,
       stageId: firstDealStageId ?? d.stageId,
@@ -1408,7 +1440,7 @@ export default function InboxV2ClientPage({
         contact={chatContact}
         messages={messageBubbles}
         stages={stagePillsView}
-        showSessionAlert={sessionExpired}
+        showSessionAlert={sessionExpiredEffective}
         connection={messagesData?.channel ?? null}
         connections={messagesData?.channels}
         conversationNumber={activeRow?.number ?? null}
@@ -1435,10 +1467,16 @@ export default function InboxV2ClientPage({
             />
             <ConversationActionsMenu
               conversationId={activeId}
+              conversationNumber={activeRow?.number}
               contactId={activeContactId}
               isResolved={activeRow.status === "RESOLVED"}
               assigneeId={activeRow.assignedTo?.id ?? null}
               assigneeType={activeRow.assignedTo?.type ?? null}
+              blockReturnToAi={(contactAsideView?.deals ?? []).some((d) =>
+                /acolh/i.test(
+                  `${d.pipelineName ?? ""} ${d.stageName ?? ""} ${firstDealPipelineName ?? ""} ${firstDealStageName ?? ""}`,
+                ),
+              )}
               onOpenFavorites={() => setFavoritesOpen(true)}
               onReopenNewConversation={handleReopenNewConversation}
               onResolved={(id) => {
@@ -1488,11 +1526,14 @@ export default function InboxV2ClientPage({
             contactId={activeContactId}
             externalTemplate={externalTemplate}
             onExternalTemplateConsumed={() => setExternalTemplate(null)}
+            onRequestTemplate={() => setTemplateOpen(true)}
+            sessionExpired={sessionExpiredEffective}
             signatureAllowed={convFeatures.agentSignatureEnabled}
             signatureEditable={convFeatures.agentSignatureEditable}
             availableChannels={whatsappChannels}
             selectedChannelId={selectedChannelId}
             conversationChannelId={conversationChannelId}
+            lastMessageChannelId={lastMessageChannelId}
             onSelectChannel={setSelectedChannelId}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
@@ -1579,25 +1620,18 @@ export default function InboxV2ClientPage({
       <EmptyAside />
     );
 
-  const templateModalNode =
-    templateOpen && activeId ? (
-      <div
-        className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/40 backdrop-blur-sm"
-        onClick={() => setTemplateOpen(false)}
-      >
-        <div onClick={(e) => e.stopPropagation()}>
-          <TemplatePickerList
-            conversationId={activeId}
-            channelId={selectedChannelId}
-            onClose={() => setTemplateOpen(false)}
-            onPick={(tpl) => {
-              setExternalTemplate(whatsappTemplateToPending(tpl));
-              setTemplateOpen(false);
-            }}
-          />
-        </div>
-      </div>
-    ) : null;
+  const templateModalNode = (
+    <WhatsappTemplatePickerModal
+      open={templateOpen}
+      onClose={() => setTemplateOpen(false)}
+      conversationId={activeId}
+      channelId={selectedChannelId}
+      onPick={(tpl) => {
+        setExternalTemplate(whatsappTemplateToPending(tpl));
+        setTemplateOpen(false);
+      }}
+    />
+  );
 
   // Picker de duração do "Fixar" (24h/7d/30d) + painel "Mensagens
   // favoritas" — self-contained, plugados nos 4 pontos de retorno
@@ -1972,7 +2006,7 @@ function InboxStageDropdown({
   canMove = true,
   onSelect,
 }: {
-  stages: BoardStageDto[];
+  stages: PipelineListStageDto[];
   currentStageId: string | null;
   currentPipelineId: string | null;
   isPending: boolean;

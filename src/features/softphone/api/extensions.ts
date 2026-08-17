@@ -1,4 +1,5 @@
 import type {
+  Api4ComIntegration,
   DialApi4ComContext,
   ListCallsFilters,
   ListCallsResponse,
@@ -22,11 +23,55 @@ export async function listExtensions(): Promise<SipExtension[]> {
   return data.extensions;
 }
 
+export async function getApi4ComIntegration(): Promise<Api4ComIntegration> {
+  return fetchJson<Api4ComIntegration>(`${BASE}/call-provider-configs/api4com`);
+}
+
+export async function updateApi4ComIntegration(input: {
+  serviceToken?: string | null;
+  gateway?: string;
+}): Promise<Api4ComIntegration> {
+  return fetchJson<Api4ComIntegration>(`${BASE}/call-provider-configs/api4com`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export async function getMyCredentials(): Promise<SipCredentials> {
-  const data = await fetchJson<{ credentials: SipCredentials }>(
+  const data = await fetchJson<{ credentials: SipCredentials | null }>(
     `${BASE}/sip-extensions/me/credentials`,
   );
+  if (!data.credentials) {
+    throw new Error("Nenhum ramal SIP configurado para este usuário.");
+  }
   return data.credentials;
+}
+
+/**
+ * Variante pra queries de "feature gate" (widgets que só verificam se o
+ * usuário tem ramal): 404 resolve `null` em vez de lançar. Sem isso o
+ * React Query trata como erro (sempre stale) e refaz o 404 a cada
+ * mount/navegação fria. O fluxo de conexão SIP (`use-softphone`)
+ * continua usando `getMyCredentials` (que lança) — lá o erro importa.
+ */
+export async function getMyCredentialsOrNull(): Promise<SipCredentials | null> {
+  const res = await fetch(`${BASE}/sip-extensions/me/credentials`);
+  // 404 = backend antigo (pré 200-null); mantido p/ compat em rolling deploy.
+  if (res.status === 404) return null;
+  const body = (await res.json().catch(() => ({}))) as {
+    credentials?: SipCredentials | null;
+    message?: string;
+  };
+  if (!res.ok) {
+    throw new Error(body.message ?? `HTTP ${res.status}`);
+  }
+  const creds = body.credentials ?? null;
+  if (!creds) return null;
+  if (!creds.wsServer?.trim() || !creds.sipUri?.trim() || !creds.authUser?.trim()) {
+    return null;
+  }
+  return creds;
 }
 
 export type ConnectApi4ComResponse = {

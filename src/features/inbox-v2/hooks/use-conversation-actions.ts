@@ -92,7 +92,7 @@ export function useTransferConversation() {
  * o backend cria uma nova conversa (#N+1) vinculada ao mesmo contato/canal
  * e retorna o id novo em `data.conversation.id`. Callers podem passar
  * `onNewConversation` para redirecionar/selecionar a nova conversa na UI
- * (ex.: inbox seta `?c=<newId>`; pipeline confia na invalidacao do
+ * (ex.: inbox seleciona o id novo e a URL vira `?c=<number>`; pipeline confia na invalidacao do
  * `deal-detail-v2` que ja traz `conversations[0]` mais recente).
  */
 export function useToggleConversationResolve(
@@ -118,13 +118,19 @@ export function useToggleConversationResolve(
       conversationId: string;
       action: "resolve" | "reopen";
       tabulationId?: string | null;
+      /** Encerrar sem disparar automações (só ADMIN; backend ignora o resto). */
+      skipAutomations?: boolean;
     }
   >({
     mutationFn: (vars) =>
       postConversationAction(
         vars.conversationId,
         vars.action === "resolve"
-          ? { action: "resolve", tabulationId: vars.tabulationId ?? null }
+          ? {
+              action: "resolve",
+              tabulationId: vars.tabulationId ?? null,
+              ...(vars.skipAutomations ? { skipAutomations: true } : {}),
+            }
           : { action: vars.action },
       ),
     onSuccess: (data, vars) => {
@@ -208,13 +214,39 @@ export function useToggleConversationResolve(
 /** Marcar conversa como lida (swipe / ao abrir). */
 export function useMarkConversationRead() {
   const qc = useQueryClient();
-  return useMutation<void, Error, string>({
+  return useMutation<
+    void,
+    Error,
+    string,
+    { previous: Array<[unknown, unknown]> }
+  >({
     mutationFn: (conversationId) => markConversationRead(conversationId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+    onMutate: async (conversationId) => {
+      await qc.cancelQueries({ queryKey: ["inbox-conversations"] });
+      const previous = qc.getQueriesData({ queryKey: ["inbox-conversations"] });
+      qc.setQueriesData(
+        { queryKey: ["inbox-conversations"] },
+        (old: { pages?: Array<{ items?: Array<{ id: string; unreadCount?: number }> }> } | undefined) => {
+          if (!old?.pages) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items?.map((item) =>
+                item.id === conversationId ? { ...item, unreadCount: 0 } : item,
+              ),
+            })),
+          };
+        },
+      );
+      return { previous };
     },
-    onError: () => {
+    onError: (_err, _id, ctx) => {
       // silencioso — marcar como lida não deve incomodar o operador
+      if (!ctx?.previous) return;
+      for (const [key, data] of ctx.previous) {
+        qc.setQueryData(key as Parameters<typeof qc.setQueryData>[0], data);
+      }
     },
   });
 }
@@ -248,18 +280,11 @@ export function useBulkConversationAction() {
             }
           : undefined,
       ),
-    onSuccess: (result, vars) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
       qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
-      if (
-        vars.action === "resolve" &&
-        Array.isArray(result?.skipped) &&
-        result.skipped.length > 0
-      ) {
-        toast.info(
-          `${result.skipped.length} conversa(s) exigem tabulação e não foram encerradas. Encerre individualmente.`,
-        );
-      }
+      // Toast do resultado fica no caller (`handleBulkAction`) para não
+      // empilhar com "Nenhuma conversa para encerrar" / "em segundo plano".
     },
     onError: (err) => toast.error(err.message),
   });

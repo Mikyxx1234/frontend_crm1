@@ -40,7 +40,7 @@ function StageChevron({
   onClick,
 }: {
   label: string;
-  count: number;
+  count: number | string;
   color: string;
   active: boolean;
   first: boolean;
@@ -63,7 +63,7 @@ function StageChevron({
         color: active ? "#ffffff" : color,
       }}
       className={cn(
-        "relative flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 font-display font-semibold tracking-tight transition-[filter,opacity] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1",
+        "relative flex w-[132px] shrink-0 items-center justify-center gap-1.5 font-display font-semibold tracking-tight transition-[filter,opacity] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1 md:w-auto md:min-w-0 md:flex-1 md:basis-0",
         first ? "pl-2.5 pr-4 sm:pl-3 sm:pr-5" : "pl-4 pr-4 sm:pl-5 sm:pr-5",
         compact ? "h-8 text-[11.5px] sm:h-9 sm:text-[12px]" : "h-9 text-[12px] sm:h-10 sm:text-[12.5px]",
         active ? "z-[1]" : "hover:brightness-[0.97]",
@@ -107,7 +107,7 @@ export function StageRibbon({
       )}
     >
       <div
-        className="flex w-full min-w-0 items-stretch gap-1"
+        className="flex w-full min-w-0 items-stretch gap-1 overflow-x-auto scrollbar-none md:overflow-visible"
         role="tablist"
         aria-label="Filtrar por etapa"
       >

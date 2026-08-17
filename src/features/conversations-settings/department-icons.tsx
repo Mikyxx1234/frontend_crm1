@@ -70,8 +70,8 @@ export const DEPARTMENT_ICON_REGISTRY: Record<string, IconComponent> = {
 /**
  * Renderiza o glifo de um departamento a partir da string `icon`:
  *  - nome de componente conhecido → ícone Tabler
- *  - string curta que NÃO começa com "Icon" → tratada como emoji (texto)
- *  - qualquer outro caso → ícone genérico (prédio)
+ *  - string sem letra/dígito ASCII (emoji) → o próprio glifo
+ *  - qualquer outro caso → ícone genérico (prédio). Nunca o identificador.
  */
 export function DeptGlyph({
   icon,
@@ -96,15 +96,22 @@ export function DeptGlyph({
       />
     );
   }
-  // Emoji salvo em orgs antigas (não é nome de componente).
-  if (name && !name.startsWith("Icon")) {
+  // Emoji salvo em orgs antigas. A decisão é pelo FORMATO do conteúdo, não por
+  // "não começa com Icon": qualquer identificador desconhecido — "IconMoodX",
+  // "icon-headset", "MessageCircle" — vazava como texto cru na UI com a regra
+  // antiga. Emoji não tem letra nem dígito ASCII e cabe em poucos code units
+  // (sequências com ZWJ chegam a ~8).
+  const trimmed = name.trim();
+  const looksLikeEmoji =
+    trimmed.length > 0 && trimmed.length <= 8 && !/[A-Za-z0-9]/.test(trimmed);
+  if (looksLikeEmoji) {
     return (
       <span
         className={className}
         style={{ fontSize: size, lineHeight: 1, color }}
         aria-hidden
       >
-        {name}
+        {trimmed}
       </span>
     );
   }

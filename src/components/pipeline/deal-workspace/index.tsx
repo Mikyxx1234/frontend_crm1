@@ -31,6 +31,8 @@ import { ActivitiesPanel } from "./panels/activities";
 import { NotesPanel } from "./panels/notes";
 import { TimelinePanel } from "./panels/timeline";
 import { CONVERSATION_REOPENED_EVENT } from "@/features/inbox-v2/hooks";
+import { dealDetailKey } from "@/features/pipeline-v2/hooks/use-deal-detail";
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import type {
   ContactDetail,
   ConversationRow,
@@ -53,17 +55,9 @@ async function fetchContact(id: string): Promise<ContactDetail> {
   return res.json();
 }
 
-async function fetchUsers(): Promise<UserOption[]> {
-  const res = await fetch(apiUrl("/api/users"));
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.items ?? data) as UserOption[];
-}
-
 // ── Main ────────────────────────────────────────────────────────────────────
 
 const boardKey = (pipelineId: string) => ["pipeline-board", pipelineId] as const;
-const dealKey = (id: string) => ["deal", id] as const;
 type DealWorkspaceProps = {
   dealId: string | null;
   open: boolean;
@@ -89,8 +83,10 @@ export function DealWorkspace({
   const [convListOpen, setConvListOpen] = React.useState(false);
   const inConversationSearchRef = React.useRef<{ open: () => void } | null>(null);
 
+  // Key canônica do deal (mesma do DealDetailPanel v2) — dedupe GET
+  // /api/deals/:id e faz as invalidações de mutations valerem pros dois.
   const { data: deal, isLoading: dealLoading } = useQuery({
-    queryKey: dealId ? dealKey(dealId) : ["deal", "none"],
+    queryKey: dealDetailKey(dealId),
     queryFn: () => fetchDeal(dealId!),
     enabled: open && !!dealId,
   });
@@ -110,7 +106,7 @@ export function DealWorkspace({
   const manualSelectionRef = React.useRef(false);
 
   const invalidateAll = React.useCallback(() => {
-    if (dealId) queryClient.invalidateQueries({ queryKey: dealKey(dealId) });
+    if (dealId) queryClient.invalidateQueries({ queryKey: dealDetailKey(dealId) });
     if (contactId) queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
     queryClient.invalidateQueries({ queryKey: boardKey(pipelineId) });
   }, [dealId, contactId, queryClient]);
@@ -135,7 +131,11 @@ export function DealWorkspace({
       const res = await fetch(apiUrl("/api/conversations/create"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId, skipSend: true }),
+        body: JSON.stringify({
+          contactId,
+          skipSend: true,
+          source: "deal_workspace",
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao criar conversa");
@@ -252,12 +252,7 @@ export function DealWorkspace({
     },
   });
 
-  const { data: users = [] } = useQuery({
-    queryKey: ["users-list"],
-    queryFn: fetchUsers,
-    staleTime: 5 * 60_000,
-    enabled: open,
-  });
+  const { data: users = [] } = useTeamUsersQuery<UserOption>(open);
 
   // ── Atribuição de conversa (mesma API do Inbox/SalesHub) ──
   const { data: sessionData } = useSession();
@@ -265,17 +260,9 @@ export function DealWorkspace({
   const myRole = (sessionData?.user as { role?: "ADMIN" | "MANAGER" | "MEMBER" } | undefined)?.role;
   const canManageAssignee = myRole === "ADMIN" || myRole === "MANAGER";
 
-  const { data: teamUsers = [] } = useQuery<TransferControlUser[]>({
-    queryKey: ["users", "assign-picker"],
-    queryFn: async () => {
-      const res = await fetch(apiUrl("/api/users"));
-      const data = await res.json().catch(() => []);
-      if (!res.ok) throw new Error("Erro ao carregar equipe");
-      return Array.isArray(data) ? data : [];
-    },
-    enabled: open && canManageAssignee && !!selectedConv,
-    staleTime: 60_000,
-  });
+  const { data: teamUsers = [] } = useTeamUsersQuery<TransferControlUser>(
+    open && canManageAssignee && !!selectedConv,
+  );
 
   const [assignLoading, setAssignLoading] = React.useState(false);
   const assignConversation = React.useCallback(
@@ -507,7 +494,7 @@ export function DealWorkspace({
                     activities={deal.activities}
                     dealId={deal.id}
                     onCreated={() => {
-                      if (dealId) queryClient.invalidateQueries({ queryKey: dealKey(dealId) });
+                      if (dealId) queryClient.invalidateQueries({ queryKey: dealDetailKey(dealId) });
                       queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
                     }}
                   />

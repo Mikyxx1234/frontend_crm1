@@ -9,7 +9,6 @@ import {
   deleteDeal,
   getDealTimeline,
   listTags,
-  listTeamUsers,
   moveDeal,
   removeDealTag,
   setDealStatus,
@@ -26,6 +25,8 @@ import {
 } from "../api";
 import { boardKey } from "./use-board";
 import { dealDetailKey } from "./use-deal-detail";
+
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 
 export interface MoveVars {
   dealId: string;
@@ -563,13 +564,9 @@ export function useDeleteDeal(pipelineId: string | null, status: StatusFilter = 
 }
 
 export function useTeamUsers(enabled: boolean = true, opts?: { includeAi?: boolean }) {
-  const includeAi = opts?.includeAi === true;
-  return useQuery<TeamUser[]>({
-    queryKey: ["team-users-v2", includeAi ? "with-ai" : "human"],
-    queryFn: () => listTeamUsers({ includeAi }),
-    enabled,
-    staleTime: 60_000,
-  });
+  // Key canônica compartilhada (inbox-v2, settings, automações…) — dedupe
+  // GET /api/users quando várias telas montam juntas.
+  return useTeamUsersQuery<TeamUser>(enabled, opts);
 }
 
 // ─────────────────────────────────────────────────────────────────

@@ -112,6 +112,9 @@ const MOCK_COMPANIES: CompanyListItemDto[] = Array.from({ length: TOTAL_COMPANIE
     size: pick(SIZES, r()),
     phone: `(11) 3${String(1000 + Math.floor(r() * 8999)).slice(0, 3)}-${String(1000 + Math.floor(r() * 8999)).slice(0, 4)}`,
     address: pick(CITIES, r()),
+    cep: null,
+    city: pick(CITIES, r()),
+    state: null,
     createdAt: new Date(Date.now() - i * 86_400_000 * 3).toISOString(),
     _count: { contacts: 1 + Math.floor(r() * 12) },
   };
@@ -133,9 +136,13 @@ const MOCK_CONTACTS: ContactListItemDto[] = Array.from({ length: TOTAL_CONTACTS 
     avatarUrl: null,
     leadScore: Math.floor(r() * 100),
     lifecycleStage: pick(STAGES, r()),
+    source: null,
     createdAt: new Date(Date.now() - i * 86_400_000).toISOString(),
+    updatedAt: new Date(Date.now() - i * 86_400_000).toISOString(),
+    assignedTo: null,
     company: co ? { id: co.id, name: co.name, domain: co.domain } : null,
     tags,
+    customFields: {},
   };
 });
 

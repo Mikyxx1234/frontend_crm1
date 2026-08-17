@@ -124,9 +124,12 @@ export interface ConversationListRow {
 
 export interface ConversationListResponse {
   items: ConversationListRow[];
+  /** COUNT real do filtro (mesmo das badges). Nunca pageSize+1. */
   total?: number;
   page?: number;
   perPage?: number;
+  /** Há mais páginas no servidor. Independente do `total`. */
+  hasMore?: boolean;
 }
 
 export interface TabCounts {
@@ -147,7 +150,10 @@ export interface InboxFilters {
   ownerIds?: string[];
   /** true = só conversas sem responsável (`assignedToId` null). */
   withoutOwner?: boolean;
+  /** @deprecated Tipo de plataforma (whatsapp, instagram…). Preferir `channelIds`. */
   channel?: string;
+  /** IDs de instância de canal (Channel.id ou sentinela de canal excluído). */
+  channelIds?: string[];
   /** @deprecated Preferir `stageIds`. Mantido para localStorage antigo. */
   stageId?: string;
   /** Multi-seleção de etapas do negócio. */
@@ -158,9 +164,10 @@ export interface InboxFilters {
   /** Sessões Meta ainda abertas que expiram entre agora e agora + X horas. */
   sessionExpiresWithinHours?: number;
   /**
-   * Ordenação e janela são aplicadas CLIENT-SIDE no /inbox-v2 (não vão
-   * para o backend). `sortBy` aceita "lastInboundAt" (padrão) ou
-   * "unreadCount"; `windowState` filtra a janela de 24h da Meta/WhatsApp.
+   * Ordenação é client-side. `windowState` (Aberta/Fechada = status
+   * OPEN vs RESOLVED) vai ao backend — lista, badges e bulk usam o
+   * mesmo recorte. `sortBy` aceita "lastInboundAt" (padrão) ou
+   * "unreadCount".
    */
   sortBy?: string;
   sortOrder?: "asc" | "desc";
@@ -177,6 +184,9 @@ export function normalizeInboxFilters(raw: InboxFilters): InboxFilters {
   const stageIds = Array.from(
     new Set([...(raw.stageIds ?? []), ...(raw.stageId ? [raw.stageId] : [])].filter(Boolean)),
   );
+  const channelIds = Array.from(
+    new Set((raw.channelIds ?? []).filter(Boolean)),
+  );
   const sessionHours = Number(raw.sessionExpiresWithinHours);
   const sessionExpiresWithinHours =
     Number.isFinite(sessionHours) && sessionHours > 0 && sessionHours < 24
@@ -186,12 +196,13 @@ export function normalizeInboxFilters(raw: InboxFilters): InboxFilters {
   return {
     ...rest,
     ownerIds: ownerIds.length ? ownerIds : undefined,
+    channelIds: channelIds.length ? channelIds : undefined,
     stageIds: stageIds.length ? stageIds : undefined,
     sessionExpiresWithinHours,
   };
 }
 
-/** Filtros enviados ao GET /api/conversations (exclui ordenação/status local). */
+/** Filtros enviados ao GET /api/conversations (exclui só ordenação/direção local). */
 export function hasInboxServerFilters(
   f: InboxFilters | null | undefined,
 ): boolean {
@@ -200,7 +211,6 @@ export function hasInboxServerFilters(
   const {
     sortBy: _sb,
     sortOrder: _so,
-    windowState: _ws,
     lastMessageDirection: _lmd,
     ...server
   } = n;
@@ -208,10 +218,13 @@ export function hasInboxServerFilters(
     (server.ownerIds?.length ?? 0) > 0 ||
     Boolean(server.withoutOwner) ||
     Boolean(server.channel) ||
+    (server.channelIds?.length ?? 0) > 0 ||
     (server.stageIds?.length ?? 0) > 0 ||
     (server.tagIds?.length ?? 0) > 0 ||
     (server.sources?.length ?? 0) > 0 ||
-    server.sessionExpiresWithinHours != null
+    server.sessionExpiresWithinHours != null ||
+    server.windowState === "open" ||
+    server.windowState === "closed"
   );
 }
 
@@ -232,7 +245,7 @@ export interface InboxMessageDto {
   conversationId: string;
   direction: MessageDirection;
   content: string;
-  messageType?: "text" | "note" | "image" | "audio" | "video" | "file" | "template" | string;
+  messageType?: "text" | "note" | "event" | "image" | "audio" | "video" | "file" | "template" | string;
   // Backend serializa como `isPrivate` (Prisma). Mantemos `private` como
   // alias por compat com chamadas legadas — adapter consulta os dois.
   isPrivate?: boolean;
@@ -267,6 +280,8 @@ export interface InboxMessageDto {
    * automation-executor: bot grava `senderName === "Automação"`.
    */
   senderName?: string | null;
+  /** User.id do agente humano no EVENT (legado "Agente" resolve por este id). */
+  senderUserId?: string | null;
   /**
    * Foto de perfil do agente que assinou a mensagem out (resolvida no
    * backend via match `senderName` → `User.avatarUrl`). NULL quando não

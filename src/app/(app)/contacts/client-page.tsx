@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 import { useCan } from "@/hooks/use-my-permissions";
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { pagePrimaryButtonClass, PageActionsMenu, PageSegmentedControl } from "@/components/crm/page-toolbar";
@@ -677,7 +678,7 @@ export default function V2ContactsClientPage() {
 
         {/* Estados: loading / erro / vazio */}
         {isLoading ? (
-          <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
+          <AppLoading variant="inline" className="min-h-[400px]" />
         ) : hasError ? (
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
             {query.error instanceof Error ? query.error.message : "Erro ao carregar."}
@@ -1395,7 +1396,7 @@ function DuplicateContactRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Link
-            href={`/contacts/${contact.id}`}
+            href={`/contacts/${contact.number ?? contact.id}`}
             className="truncate font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
           >
             {contact.name}

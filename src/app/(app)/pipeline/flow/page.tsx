@@ -5,14 +5,14 @@
 
 import { Suspense } from "react";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { SalesHubHost } from "@/components/pipeline/sales-hub-host";
-import { PageLoading } from "@/components/crm/page-loading";
 
 export const dynamic = "force-dynamic";
 
 export default function PipelineFlowPage() {
   return (
-    <Suspense fallback={<PageLoading />}>
+    <Suspense fallback={<AppLoading />}>
       <SalesHubHost />
     </Suspense>
   );

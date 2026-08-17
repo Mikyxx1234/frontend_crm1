@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -8,17 +10,11 @@ import { IconAlertTriangle, IconBrandWhatsapp, IconX } from "@tabler/icons-react
 
 import {
   listAgentEnabledTemplates,
-  sendInternalTemplateSequence,
   sendTemplate,
   type WhatsappTemplate,
 } from "@/features/inbox-v2/api";
 import { emitConversationReopened, messagesKey, useMessages } from "@/features/inbox-v2/hooks";
 import type { InboxMessageDto } from "@/features/inbox-v2/api/types";
-import {
-  interpolateInternalTemplate,
-  type InternalTemplateContext,
-} from "@/lib/internal-template-variables";
-import { apiUrl } from "@/lib/api";
 
 /* ─────────────────────────────────────────────────────────────
    Detecção de envio anterior de template nesta conversa
@@ -240,190 +236,6 @@ function TemplateItemWithConfirm({
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Modelos Internos do CRM
-───────────────────────────────────────────────────────────── */
-
-interface InternalTemplateAttachment {
-  url: string;
-  mimeType?: string | null;
-  name?: string | null;
-  /** Texto enviado ANTES deste arquivo (só faz sentido para índice >= 1). */
-  messageBefore?: string | null;
-}
-
-interface InternalTemplate {
-  id: string;
-  name: string;
-  content: string;
-  category: string | null;
-  channelType: string | null;
-  mediaUrl?: string | null;
-  mediaType?: string | null;
-  mediaName?: string | null;
-  attachments?: InternalTemplateAttachment[] | null;
-}
-
-async function fetchInternalTemplates(): Promise<InternalTemplate[]> {
-  const res = await fetch(apiUrl("/api/templates"));
-  if (!res.ok) return [];
-  const data = await res.json().catch(() => []);
-  return Array.isArray(data) ? data : [];
-}
-
-/**
- * Anexos efetivos de um modelo interno: usa `attachments` (multi-arquivo)
- * quando presente/não-vazio; senão cai no `mediaUrl` legado (1 arquivo) —
- * mantém compat com modelos criados antes do multi-anexo.
- */
-function getTemplateAttachments(
-  tpl: InternalTemplate,
-): Array<{ url: string; name: string | null; messageBefore: string | null }> {
-  if (Array.isArray(tpl.attachments) && tpl.attachments.length > 0) {
-    return tpl.attachments.map((a) => ({
-      url: a.url,
-      name: a.name ?? null,
-      messageBefore: a.messageBefore ?? null,
-    }));
-  }
-  if (tpl.mediaUrl) return [{ url: tpl.mediaUrl, name: tpl.mediaName ?? null, messageBefore: null }];
-  return [];
-}
-
-/**
- * Lista templates internos do CRM e insere o texto interpolado
- * diretamente na conversa ao clicar.
- */
-export function InternalTemplatePickerList({
-  conversationId,
-  templateContext,
-  onClose,
-  onPick,
-}: {
-  conversationId: string;
-  templateContext?: InternalTemplateContext;
-  onClose?: () => void;
-  /**
-   * Quando fornecido, clicar no modelo INSERE o texto interpolado no composer
-   * (editável, envio pelo botão) em vez de enviar na hora. Se o modelo tiver
-   * mídia, ela é repassada para o composer "encostar" o anexo no envio.
-   */
-  onPick?: (
-    text: string,
-    media?: Array<{ url: string; name: string | null; messageBefore: string | null }> | null,
-  ) => void;
-}) {
-  const qc = useQueryClient();
-  const { data, isLoading } = useQuery<InternalTemplate[]>({
-    queryKey: ["internal-templates"],
-    queryFn: fetchInternalTemplates,
-    staleTime: 5 * 60_000,
-  });
-
-  const sendMutation = useMutation({
-    mutationFn: async (tpl: InternalTemplate) => {
-      const text = interpolateInternalTemplate(tpl.content, templateContext ?? {});
-      const attachments = getTemplateAttachments(tpl);
-      await sendInternalTemplateSequence({ conversationId, content: text, attachments });
-    },
-    onSuccess: () => {
-      toast.success("Modelo enviado");
-      qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
-      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
-      onClose?.();
-    },
-    onError: (err: Error) =>
-      toast.error(err.message || "Falha ao enviar modelo"),
-  });
-
-  /* agrupa por categoria */
-  const byCategory = (data ?? []).reduce<Record<string, InternalTemplate[]>>(
-    (acc, tpl) => {
-      const key = tpl.category ?? "Geral";
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(tpl);
-      return acc;
-    },
-    {},
-  );
-
-  return (
-    <div
-      style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
-      className="w-80 max-h-96 overflow-y-auto rounded-[var(--radius-lg)] border border-border p-2 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
-    >
-      <div className="mb-2 flex items-center justify-between px-1">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-          Modelos internos do CRM
-        </span>
-        {onClose ? (
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-          >
-            Fechar
-          </button>
-        ) : null}
-      </div>
-
-      {isLoading ? (
-        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
-          Carregando...
-        </div>
-      ) : !data?.length ? (
-        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
-          Nenhum modelo interno cadastrado.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {Object.entries(byCategory).map(([category, templates]) => (
-            <div key={category}>
-              <div className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                {category}
-              </div>
-              {templates.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  disabled={sendMutation.isPending}
-                  onClick={() => {
-                    if (onPick) {
-                      const media = getTemplateAttachments(tpl);
-                      onPick(
-                        interpolateInternalTemplate(tpl.content, templateContext ?? {}),
-                        media.length > 0 ? media : null,
-                      );
-                      onClose?.();
-                    } else {
-                      sendMutation.mutate(tpl);
-                    }
-                  }}
-                  className="block w-full rounded-[var(--radius-sm)] px-2 py-2 text-left hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[var(--text-primary)]">
-                      {tpl.name}
-                    </span>
-                    {getTemplateAttachments(tpl).length > 0 && (
-                      <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-px text-[9.5px] text-[var(--text-muted)]">
-                        📎{getTemplateAttachments(tpl).length > 1 ? ` ${getTemplateAttachments(tpl).length}` : ""}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-0.5 line-clamp-2 text-[11.5px] text-[var(--text-muted)]">
-                    {tpl.content}
-                  </div>
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /**
  * Lista templates WhatsApp habilitados para o agente e dispara
  * `sendTemplate` ao clicar. Mostra badge "enviado/respondido" quando
@@ -567,5 +379,83 @@ export function TemplatePickerList({
       )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Modal central do picker de templates WhatsApp — o mesmo card
+ * ("Templates do WhatsApp" + ícone verde + N modelos) usado no menu "+"
+ * e no CTA de sessão 24h encerrada.
+ */
+export function WhatsappTemplatePickerModal({
+  open,
+  onClose,
+  conversationId,
+  channelId,
+  onPick,
+}: {
+  open: boolean;
+  onClose: () => void;
+  conversationId: string | null;
+  channelId?: string | null;
+  onPick?: (tpl: WhatsappTemplate) => void;
+}) {
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPortalTarget(document.body);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!portalTarget || !conversationId) return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {open ? (
+        <>
+          <motion.div
+            key="wa-tpl-bg"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={onClose}
+            className="fixed inset-0 z-70 bg-black/30 backdrop-blur-sm"
+            aria-hidden
+          />
+          <motion.div
+            key="wa-tpl-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Templates do WhatsApp"
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed left-1/2 top-1/2 z-71 -translate-x-1/2 -translate-y-1/2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <TemplatePickerList
+              conversationId={conversationId}
+              channelId={channelId}
+              onClose={onClose}
+              onPick={onPick}
+            />
+          </motion.div>
+        </>
+      ) : null}
+    </AnimatePresence>,
+    portalTarget,
   );
 }

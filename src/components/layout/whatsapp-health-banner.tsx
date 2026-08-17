@@ -99,7 +99,7 @@ export function WhatsAppHealthBanner() {
   if (data.severity === "ok" || data.severity === "unknown") return null;
   if (hidden) return null;
 
-  const isCritical = data.severity === "critical";
+  const isCritical = data.severity === "error";
   const Icon = isCritical ? ShieldAlert : AlertTriangle;
 
   const handleForce = async () => {

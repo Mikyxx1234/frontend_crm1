@@ -1,11 +1,15 @@
 "use client";
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { IconTrash as Trash2, IconVariable as Variable } from "@tabler/icons-react";
+import { Position, type Node, type NodeProps } from "@xyflow/react";
+import { IconVariable as Variable } from "@tabler/icons-react";
 
-import { TooltipHost } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { NodeInlineConfig } from "./node-inline-config";
+import { CustomHandle } from "./custom-handle";
+import {
+  FlowNodeDeleteButton,
+  FlowNodeHeader,
+  FlowNodeShell,
+} from "./flow-node-shell";
 
 export type VariableNodeData = {
   label: string;
@@ -18,59 +22,26 @@ export type VariableNodeData = {
   onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
-/**
- * VariableNode — set/update de variável do contexto. Accent fuchsia
- * pra distinguir de actions (azul/verde) e de lógica (cyan/orange).
- */
-export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
+type VariableRF = Node<VariableNodeData, "variable">;
+
+export function VariableNode({ data, selected }: NodeProps<VariableRF>) {
   return (
-    <div
-      className={cn(
-        "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
-        selected ? "min-w-[340px] max-w-[400px]" : "min-w-[210px] max-w-[270px]",
-        selected
-          ? "border-fuchsia-400/60 ring-2 ring-fuchsia-300/30 shadow-[0_10px_30px_-10px_rgba(217,70,239,0.4)]"
-          : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-fuchsia-300/50 hover:shadow-[0_10px_30px_-10px_rgba(217,70,239,0.3)]"
-      )}
+    <FlowNodeShell
+      selected={selected}
+      type="fields"
+      accent="violet"
+      stepIndex={data.stepIndex}
+      expanded={selected}
     >
-      {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[var(--brand-gradient-end)] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
-          {data.stepIndex}
-        </span>
-      )}
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
+      <CustomHandle type="target" position={Position.Left} connectionLimit={1} />
+      <FlowNodeHeader
+        icon={<Variable className="size-3.5" strokeWidth={2.4} aria-hidden />}
+        title={data.label}
+        subtitle={data.summary}
+        actions={
+          <FlowNodeDeleteButton onDelete={data.onDelete} label="Remover variável" />
+        }
       />
-      <div className="node-drag-handle flex cursor-grab items-start gap-3 px-3.5 py-3 active:cursor-grabbing">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-fuchsia-soft)] text-[var(--color-fuchsia)] ring-1 ring-[var(--color-fuchsia-soft)]">
-          <Variable className="size-4" strokeWidth={2.4} aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-[var(--text-primary)]">
-            {data.label}
-          </p>
-          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
-            {data.summary}
-          </p>
-        </div>
-        {data.onDelete && (
-          <TooltipHost label="Remover variável" side="top">
-            <button
-              type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
-              onClick={(e) => {
-                e.stopPropagation();
-                data.onDelete?.();
-              }}
-              aria-label="Remover variável"
-            >
-              <Trash2 className="size-3.5" strokeWidth={2.2} />
-            </button>
-          </TooltipHost>
-        )}
-      </div>
       <NodeInlineConfig
         selected={selected}
         stepType={data.stepType ?? "set_variable"}
@@ -78,11 +49,7 @@ export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
         stepOptions={data.stepOptions ?? []}
         onChange={(next) => data.onConfigChange?.(next)}
       />
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="size-3! border-2! border-white! bg-fuchsia-500!"
-      />
-    </div>
+      <CustomHandle type="source" position={Position.Right} connectionLimit={1} />
+    </FlowNodeShell>
   );
 }

@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getBoard,
   getBoardFiltered,
-  listPipelines,
   type BoardSortParam,
   type BoardStageDto,
   type PipelineListItemDto,
@@ -16,15 +15,15 @@ import type { AdvancedDealFilters } from "@/components/pipeline/kanban-filters/t
 import { hasServerSideFilters } from "@/components/pipeline/kanban-filters/types";
 
 import { isPreviewMode } from "@/lib/preview-mode";
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
+import { normalizeSearchQuery } from "@/lib/search-query";
 
-/** Lista de pipelines (dropdown do header). */
+/** Página de cards por coluna no Kanban ("Carregar mais" soma +50). */
+export const BOARD_PAGE_SIZE = 50;
+
+/** Lista de pipelines (dropdown do header) — key canônica compartilhada. */
 export function usePipelines(enabled = true) {
-  return useQuery<PipelineListItemDto[]>({
-    queryKey: ["pipelines-v2"],
-    queryFn: listPipelines,
-    enabled: isPreviewMode() ? true : enabled,
-    staleTime: 5 * 60_000,
-  });
+  return usePipelinesQuery<PipelineListItemDto>(enabled);
 }
 
 /**
@@ -52,18 +51,44 @@ export function useBoard(params: {
   status?: StatusFilter;
   sort?: BoardSortParam;
   enabled?: boolean;
+  /** Cards por coluna (default: 100 do backend). Kanban v2 passa 50. */
+  perStage?: number;
+  /**
+   * Expansões cumulativas por coluna ("Carregar mais"): stageId → extras
+   * além de `perStage`. Quando há pelo menos 1 expansão, o board passa a
+   * vir do POST /board (única rota que aceita offset) — mesma queryKey,
+   * então invalidações de mutações/SSE continuam valendo e a expansão
+   * sobrevive aos refetches de 60s.
+   */
+  offsetByStage?: Record<string, number>;
 }) {
   const status = params.status ?? "OPEN";
   const sort = params.sort;
+  const perStage = params.perStage;
+  const offsetByStage = params.offsetByStage;
+  const hasOffsets = !!offsetByStage && Object.keys(offsetByStage).length > 0;
   const preview = isPreviewMode();
   return useQuery<BoardStageDto[]>({
     queryKey: boardKey(params.pipelineId ?? "pl-1", status, sort),
-    queryFn: () => getBoard(params.pipelineId ?? "pl-1", status, sort),
+    queryFn: () =>
+      hasOffsets
+        ? getBoardFiltered(params.pipelineId ?? "pl-1", {
+            status,
+            sort,
+            perStage,
+            offsetByStage,
+          })
+        : getBoard(params.pipelineId ?? "pl-1", status, sort, perStage),
     enabled: preview ? true : ((params.enabled ?? true) && !!params.pipelineId),
-    staleTime: 10_000,
-    refetchInterval: 30_000,
+    // Alinhado ao cache Redis do board (45s) + padrão inbox-v2.
+    // SSE (`usePipelineRealtime`) invalida em new_message/conversation_updated;
+    // polling fica só como safety-net — evita refetch storm no remount.
+    staleTime: 45_000,
+    refetchInterval: 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     // [jul/26] Mantém o quadro anterior VISÍVEL enquanto refaz o fetch
-    // (troca de funil/ordenação, refetch de 30s, invalidação pós-move).
+    // (troca de funil/ordenação, refetch de 60s, invalidação pós-move).
     // Evita o "flash" de tela vazia/"Carregando..." — a query mais cara do
     // app leva ~1-2s, então sem isso o board pisca em branco a cada refetch.
     placeholderData: (prev) => prev,
@@ -74,7 +99,7 @@ export function useBoard(params: {
  * Board com busca server-side via POST /api/pipelines/:id/board.
  *
  * Roda em paralelo com `useBoard` — ativado SOMENTE quando há termo de
- * busca (≥2 chars, já debounced pelo caller). Tem queryKey própria pra
+ * busca (≥3 chars, já debounced pelo caller). Tem queryKey própria pra
  * NÃO invalidar o cache do board normal: ao limpar a busca, o paginado
  * volta sem flicker.
  *
@@ -90,7 +115,7 @@ export function useBoardSearch(params: {
   enabled?: boolean;
   perStage?: number;
 }) {
-  const term = params.search.trim();
+  const term = normalizeSearchQuery(params.search);
   const sortKey = params.sort
     ? `${params.sort.field}:${params.sort.direction}`
     : "default";
@@ -113,10 +138,10 @@ export function useBoardSearch(params: {
         signal,
       }),
     enabled:
-      (params.enabled ?? true) && !!params.pipelineId && term.length >= 2,
-    staleTime: 10_000,
-    // Evita fan-out: troca rápida de termo cancela o POST anterior.
+      (params.enabled ?? true) && !!params.pipelineId && term.length > 0,
+    staleTime: 30_000,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
     retry: 1,
     // [jul/26] Preserva os resultados anteriores enquanto o novo termo é
     // buscado — sem piscar em branco entre teclas (já debounced no caller).
@@ -167,6 +192,7 @@ export function useBoardFiltered(params: {
     enabled: (params.enabled ?? true) && !!params.pipelineId && active,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
     retry: 1,
     // Troca rápida de critério cancela o POST anterior (signal no queryFn).
     // [jul/26] Mantém o quadro filtrado anterior enquanto reaplica filtros

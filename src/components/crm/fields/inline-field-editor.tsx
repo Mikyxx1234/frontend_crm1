@@ -161,10 +161,15 @@ export function InlineFieldEditor({
       }
     };
 
+    // Wrap > ellipsis: `truncate` + ícones shrink-0 (mesmo invisíveis)
+    // cortava CPF/Polo/e-mail com folga vazia ao lado. Ícones saem do fluxo.
+    const valueWrapClass =
+      "min-w-0 w-full max-w-full whitespace-normal break-words [overflow-wrap:anywhere] text-left leading-snug";
+
     const row = (
       <div
         className={cn(
-          "group flex w-full min-w-0 max-w-full items-center gap-1.5 transition-colors",
+          "group relative flex w-full min-w-0 max-w-full items-start overflow-visible transition-colors",
           isEmpty
             ? "font-display text-[11px] text-[var(--text-muted)] opacity-60 italic"
             : textClassName ??
@@ -176,21 +181,19 @@ export function InlineFieldEditor({
             type="button"
             onClick={startEdit}
             aria-label={`Editar ${fieldId}`}
-            className="min-w-0 max-w-full flex-1 truncate text-left"
+            className={cn(valueWrapClass, editMode && "pr-4")}
           >
             {displayValue}
           </button>
         ) : (
-          <span className="min-w-0 max-w-full flex-1 truncate text-left">
-            {displayValue}
-          </span>
+          <span className={valueWrapClass}>{displayValue}</span>
         )}
         {!isEmpty && (
           <button
             type="button"
             onClick={handleCopy}
             aria-label="Copiar"
-            className="shrink-0 opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100"
+            className="absolute right-0 top-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100"
           >
             <IconCopy size={12} />
           </button>
@@ -199,7 +202,8 @@ export function InlineFieldEditor({
           <IconPencil
             size={12}
             className={cn(
-              "mt-px shrink-0 transition-opacity group-hover:opacity-60",
+              "pointer-events-none absolute top-0.5 shrink-0 transition-opacity group-hover:opacity-60",
+              !isEmpty ? "right-3.5" : "right-0",
               editMode ? "opacity-40" : "opacity-0",
             )}
           />

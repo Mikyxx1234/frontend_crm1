@@ -3,21 +3,28 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
+import { subscribeSSEEvents } from "@/hooks/use-sse";
+import { isEventMessageType } from "@/components/crm/chat-timeline";
 import { messagesKey } from "./use-messages";
 import { playInboxPing } from "./use-inbox-sound";
+import type { ConversationListRow } from "../api";
 
 /**
  * SSE em /api/sse/messages — preserva exatamente o comportamento do
  * legado (`useSSE` + `scheduleInboxRefresh`):
  *
  *  - 1 EventSource só, compartilhado pela página.
- *  - Eventos new_message / message_status / conversation_updated
- *    invalidam list + counts.
+ *  - Eventos new_message / conversation_updated invalidam list + counts.
+ *  - message_status NÃO invalida lista/counts (só ticks da bolha) — evita
+ *    refetch storm em cold-load / rajadas de delivery receipts.
  *  - new_message / whatsapp_call invalidam mensagens da conversa
  *    ativa quando o conversationId casa.
- *  - contact_updated invalida lista + sidebar do contato.
- *  - Throttle de 250ms: rajadas de eventos não viram refetch×N.
+ *  - contact_updated passa pelo mesmo debounce da lista.
+ *  - Throttle de 1000ms: rajadas de eventos não viram refetch×N.
+ *  - message_status: update otimista do tick; refetch só em `failed`
+ *    (delivered/read não disparam GET messages de novo).
  *  - Reconexão automática com backoff fixo de 5s em onerror.
+ *    NÃO invalida lista no connect/reconnect (só em eventos reais).
  *
  * Aviso sonoro: só em inbound destinado a este operador (assignedToId),
  * para não tocar em quem tem a inbox vazia / não é responsável.
@@ -26,6 +33,111 @@ import { playInboxPing } from "./use-inbox-sound";
 type InfiniteInboxPage = {
   items?: Array<{ id: string; assignedToId?: string | null }>;
 };
+
+type NewMessagePayload = {
+  conversationId?: string;
+  direction?: string;
+  assignedToId?: string | null;
+  content?: string;
+  timestamp?: string;
+  messageType?: string;
+};
+
+/**
+ * Patch in-place do card da conversa no cache da lista (P0-1): um
+ * `new_message` atualiza preview/direção/unread do card JÁ carregado em
+ * vez de invalidar a lista inteira (35KB) a cada evento da org.
+ *
+ * Retorna true quando a conversa foi encontrada em alguma página
+ * cacheada. Quando não foi (conversa nova ou fora da página/filtro
+ * atual), o chamador deve invalidar a lista — é uma mudança estrutural.
+ *
+ * Não reordena páginas (risco de quebrar o infinite scroll); a posição
+ * do card se ajusta no próximo refetch (poll de 60s / troca de aba).
+ */
+function patchInboxConversationCard(
+  qc: QueryClient,
+  data: NewMessagePayload,
+): boolean {
+  if (!data.conversationId) return false;
+  // Eventos de timeline (distribuição, etc.) não substituem o preview do card.
+  if (isEventMessageType(data.messageType)) {
+    const entries = qc.getQueriesData<{ pages?: Array<{ items?: ConversationListRow[] }> }>({
+      queryKey: ["inbox-conversations"],
+    });
+    for (const [, cached] of entries) {
+      if (!cached?.pages) continue;
+      for (const page of cached.pages) {
+        if (page?.items?.some((c) => c?.id === data.conversationId)) return true;
+      }
+    }
+    return false;
+  }
+  const direction =
+    data.direction === "in" || data.direction === "out" ? data.direction : null;
+  const ts =
+    typeof data.timestamp === "string" && data.timestamp
+      ? data.timestamp
+      : new Date().toISOString();
+  const content = typeof data.content === "string" ? data.content : "";
+
+  const entries = qc.getQueriesData<{ pages?: Array<{ items?: ConversationListRow[] }> }>({
+    queryKey: ["inbox-conversations"],
+  });
+  let found = false;
+  for (const [queryKey, cached] of entries) {
+    if (!cached?.pages) continue;
+    let touched = false;
+    const pages = cached.pages.map((page) => {
+      const items = page?.items;
+      if (!items) return page;
+      const idx = items.findIndex((c) => c?.id === data.conversationId);
+      if (idx < 0) return page;
+      found = true;
+      touched = true;
+      const conv = items[idx];
+      const nextItems = items.slice();
+      nextItems[idx] = {
+        ...conv,
+        lastMessageAt: ts,
+        updatedAt: ts,
+        ...(direction === "in"
+          ? {
+              lastInboundAt: ts,
+              unreadCount: (conv.unreadCount ?? 0) + 1,
+            }
+          : {}),
+        ...(data.assignedToId !== undefined
+          ? { assignedToId: data.assignedToId }
+          : {}),
+        // messageType "" força o adapter a re-inferir o ícone pelo
+        // placeholder do content ("[Áudio]", "📎 ...") da nova mensagem.
+        lastMessagePreview: {
+          content,
+          messageType: "",
+          mediaUrl: null,
+          direction: direction ?? conv.lastMessagePreview?.direction ?? "",
+          sendStatus: direction === "out" ? "sent" : null,
+          sendError: null,
+        },
+        // Campo "futuro" tem precedência no adapter — se existir na row,
+        // precisa acompanhar o patch pra não exibir preview velho.
+        ...(conv.lastMessage
+          ? {
+              lastMessage: {
+                ...conv.lastMessage,
+                preview: content,
+                direction: direction ?? conv.lastMessage.direction,
+              },
+            }
+          : {}),
+      };
+      return { ...page, items: nextItems };
+    });
+    if (touched) qc.setQueryData(queryKey, { ...cached, pages });
+  }
+  return found;
+}
 
 function shouldPlayInboundPing(
   qc: QueryClient,
@@ -79,6 +191,8 @@ export function useInboxRealtime(options: {
   userIdRef.current = currentUserId;
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dailyStatsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
@@ -94,22 +208,34 @@ export function useInboxRealtime(options: {
         refreshTimerRef.current = null;
         qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
         qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
-      }, 250);
+      }, 1000);
     }
 
-    let es: EventSource | null = null;
-    let retry: ReturnType<typeof setTimeout> | undefined;
+    // Counts com debounce maior (P0-1): o patch in-place já atualiza o
+    // card; os badges das abas podem ficar até 5s defasados em rajada
+    // (o GET de counts é barato — cache Redis de 45s no backend).
+    function scheduleCountsRefresh() {
+      if (countsTimerRef.current) return;
+      countsTimerRef.current = setTimeout(() => {
+        countsTimerRef.current = null;
+        qc.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
+      }, 5000);
+    }
 
-    function connect() {
-      es = new EventSource("/api/sse/messages");
+    // Chips do painel do dia (P1-8): o poll longo (3min) é safety-net; a
+    // atualização perceptível vem daqui, com o mesmo debounce dos counts.
+    function scheduleDailyStatsRefresh() {
+      if (dailyStatsTimerRef.current) return;
+      dailyStatsTimerRef.current = setTimeout(() => {
+        dailyStatsTimerRef.current = null;
+        qc.invalidateQueries({ queryKey: ["inbox", "daily-stats"] });
+      }, 5000);
+    }
 
-      es.addEventListener("new_message", (e) => {
+    const unsubscribe = subscribeSSEEvents("/api/sse/messages", {
+      new_message: (raw: unknown) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
-            conversationId?: string;
-            direction?: string;
-            assignedToId?: string | null;
-          };
+          const data = raw as NewMessagePayload;
           if (shouldPlayInboundPing(qc, userIdRef.current, data)) {
             playInboxPing();
           }
@@ -126,15 +252,23 @@ export function useInboxRealtime(options: {
               });
             }
           }
-          scheduleInboxRefresh();
+          // Patch in-place do card quando a conversa está na página
+          // cacheada; invalidação da lista só quando ela NÃO está
+          // (conversa nova/fora da página = mudança estrutural).
+          if (patchInboxConversationCard(qc, data)) {
+            scheduleCountsRefresh();
+          } else {
+            scheduleInboxRefresh();
+          }
+          scheduleDailyStatsRefresh();
         } catch {
           /* ignore */
         }
-      });
+      },
 
-      es.addEventListener("message_status", (e) => {
+      message_status: (raw: unknown) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
+          const data = raw as {
             conversationId?: string;
             /** Id da bolha (= externalId/wamid no Meta). */
             messageId?: string;
@@ -172,43 +306,54 @@ export function useInboxRealtime(options: {
                 );
               }
             }
-            // Refetch forçado na conversa aberta — invalidate sozinho
-            // às vezes não dispara a tempo do tick azul.
-            if (data.conversationId === activeRef.current) {
-              void qc.refetchQueries({
-                queryKey: messagesKey(data.conversationId),
-              });
-            } else {
+            // Tick já atualizado de forma otimista acima. Refetch só em
+            // failed (precisa sendError completo); delivered/read não
+            // disparam GET messages — evita spam na conversa aberta.
+            const statusLc = (data.status ?? "").toLowerCase();
+            if (statusLc === "failed") {
+              if (data.conversationId === activeRef.current) {
+                void qc.refetchQueries({
+                  queryKey: messagesKey(data.conversationId),
+                });
+              } else {
+                qc.invalidateQueries({
+                  queryKey: messagesKey(data.conversationId),
+                  refetchType: "none",
+                });
+              }
+            } else if (data.conversationId !== activeRef.current) {
               qc.invalidateQueries({
                 queryKey: messagesKey(data.conversationId),
                 refetchType: "none",
               });
             }
             // Leitura (ticks azuis): atualiza timeline do deal e feed /logs.
-            if ((data.status ?? "").toLowerCase() === "read") {
+            if (statusLc === "read") {
               qc.invalidateQueries({ queryKey: ["deal-timeline-v2"] });
               qc.invalidateQueries({ queryKey: ["deal-timeline"] });
               qc.invalidateQueries({ queryKey: ["activity-feed"] });
               qc.invalidateQueries({ queryKey: ["activity-feed-stats"] });
             }
           }
-          scheduleInboxRefresh();
+          // Delivery receipts não mudam a lista/counts — só ticks na bolha.
+          // Evita cold-load storm quando o SSE despeja message_status em lote.
         } catch {
           /* ignore */
         }
-      });
+      },
 
-      es.addEventListener("conversation_updated", () => {
+      conversation_updated: () => {
         scheduleInboxRefresh();
-      });
+        scheduleDailyStatsRefresh();
+      },
 
       // Timeline (chatter) da conversa — encerramento/reabertura empurrados
       // pelo backend. Invalida ["conversation-timeline", id] p/ o
       // ConversationTimelineTab exibir o evento na hora, mesmo quando a
       // acao veio de outro agente/automacao (sem mutation local).
-      es.addEventListener("conversation_timeline_updated", (e) => {
+      conversation_timeline_updated: (raw: unknown) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
+          const data = raw as {
             conversationId?: string;
           };
           if (data.conversationId) {
@@ -219,25 +364,25 @@ export function useInboxRealtime(options: {
         } catch {
           /* ignore */
         }
-      });
+      },
 
-      es.addEventListener("contact_updated", (e) => {
+      contact_updated: (raw: unknown) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
+          const data = raw as {
             contactId?: string;
           };
-          qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+          scheduleInboxRefresh();
           if (data.contactId) {
             qc.invalidateQueries({ queryKey: ["contact-sidebar", data.contactId] });
           }
         } catch {
           /* ignore */
         }
-      });
+      },
 
-      es.addEventListener("whatsapp_call", (e) => {
+      whatsapp_call: (raw: unknown) => {
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
+          const data = raw as {
             conversationId?: string;
           };
           if (data.conversationId && data.conversationId === activeRef.current) {
@@ -246,22 +391,22 @@ export function useInboxRealtime(options: {
         } catch {
           /* ignore */
         }
-      });
+      },
 
-      es.addEventListener("presence_update", () => {
+      presence_update: () => {
         qc.invalidateQueries({ queryKey: ["my-agent-status"] });
-      });
+      },
 
       // Ciclo de vida de automações (robô iniciou/avançou/terminou) —
       // atualiza o chip "robô em execução" do chat aberto. O evento traz
       // contactId (contexto não referencia conversa), então invalidamos a
       // query da conversa ativa; se o contato não for o mesmo, o refetch
       // é barato e o resultado idêntico.
-      es.addEventListener("automation_state", (e) => {
+      automation_state: (raw: unknown) => {
         // Invalida o botão "Robôs ativos" (por contato) do evento e,
         // por compat, o chip antigo (por conversa ativa).
         try {
-          const data = JSON.parse((e as MessageEvent).data) as {
+          const data = raw as {
             contactId?: string;
           };
           if (data.contactId) {
@@ -280,21 +425,17 @@ export function useInboxRealtime(options: {
             queryKey: ["active-automations", activeRef.current],
           });
         }
-      });
-
-      es.onerror = () => {
-        es?.close();
-        retry = setTimeout(connect, 5_000);
-      };
-    }
-
-    connect();
+      },
+    });
 
     return () => {
-      es?.close();
-      if (retry) clearTimeout(retry);
+      unsubscribe();
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = null;
+      if (countsTimerRef.current) clearTimeout(countsTimerRef.current);
+      countsTimerRef.current = null;
+      if (dailyStatsTimerRef.current) clearTimeout(dailyStatsTimerRef.current);
+      dailyStatsTimerRef.current = null;
     };
   }, [enabled, qc]);
 }

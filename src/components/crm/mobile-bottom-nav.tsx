@@ -33,7 +33,7 @@ const MOBILE_MODULE_MAP = new Map(MOBILE_MODULES.map((m) => [m.id, m] as const))
 
 function computeInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "··";
+  if (!parts.length) return "";
   return parts
     .map((p) => p[0])
     .slice(0, 2)
@@ -80,7 +80,8 @@ function MobileBottomNavClassic() {
       typeof document !== "undefined" &&
       document.documentElement.dataset.mobileChatOpen === "1",
   );
-  const [initials, setInitials] = useState("··");
+  // Vazio até a sessão resolver — nada de "··" preso na barra.
+  const [initials, setInitials] = useState("");
   const [displayName, setDisplayName] = useState("Usuário");
   const [email, setEmail] = useState<string | null>(null);
 

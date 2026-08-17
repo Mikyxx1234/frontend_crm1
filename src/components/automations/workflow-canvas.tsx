@@ -3,7 +3,8 @@
 import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import ReactFlow, {
+import {
+  ReactFlow,
   Background,
   BackgroundVariant,
   Controls,
@@ -14,11 +15,13 @@ import ReactFlow, {
   type Connection,
   type Edge,
   type Node,
-} from "reactflow";
-import "reactflow/dist/style.css";
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 import "./flow-editor.css";
 
 import { AnimatedEdge, AnimatedEdgeDefs, type AnimatedEdgeData } from "./animated-edge";
+import { FlowCanvasToolbar } from "./flow-canvas-toolbar";
+import { useFlowClipboard } from "./use-flow-clipboard";
 
 import {
   type AutomationStep,
@@ -31,6 +34,7 @@ import {
   summarizeTriggerConfig,
   triggerTypeLabel,
 } from "@/lib/automation-workflow";
+import { ALIGN_TRIGGER_POS, estimateStepNodeSize } from "@/lib/automation-layout";
 import { useConnectedStepChannels } from "./step-channel-picker";
 import {
   normalizeConditionConfig,
@@ -49,6 +53,7 @@ import type { ActionStepType } from "@/lib/automation-workflow";
 import { ActionNode } from "./action-node";
 import { AddStepNode } from "./add-step-node";
 import { BusinessHoursNode } from "./business-hours-node";
+import { CheckAgentStatusNode } from "./check-agent-status-node";
 import { DistributionNode } from "./distribution-node";
 import { StepPickerModal } from "./step-picker-modal";
 import { ConditionNode } from "./condition-node";
@@ -57,7 +62,8 @@ import { DelayNode } from "./delay-node";
 import { FinishNode } from "./finish-node";
 import { GotoNode } from "./goto-node";
 import { InteractiveNode } from "./interactive-node";
-import { NodePalette, readPaletteDragType } from "./node-palette";
+import { NodePaletteDrawer } from "./node-palette-drawer";
+import { readPaletteDragType } from "./node-palette";
 import { QuestionNode } from "./question-node";
 import { WaitNode } from "./wait-node";
 import { TriggerNode } from "./trigger-node";
@@ -71,6 +77,7 @@ const nodeTypes = {
   condition: ConditionNode,
   roundRobin: RoundRobinNode,
   businessHours: BusinessHoursNode,
+  checkAgentStatus: CheckAgentStatusNode,
   distribution: DistributionNode,
   delay: DelayNode,
   question: QuestionNode,
@@ -94,19 +101,40 @@ const NODE_Y = 300;
 // precisam de folga maior que 300 pra não cobrir o próximo step.
 const GAP_X = 480;
 
+function asFiniteNumber(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
 function readRfPos(config: unknown): RfPos | null {
   if (typeof config !== "object" || config === null) return null;
   const c = config as Record<string, unknown>;
   if (typeof c.__rfPos !== "object" || c.__rfPos === null) return null;
   const p = c.__rfPos as Record<string, unknown>;
-  if (typeof p.x !== "number" || typeof p.y !== "number") return null;
-  return { x: p.x, y: p.y };
+  const x = asFiniteNumber(p.x);
+  const y = asFiniteNumber(p.y);
+  if (x == null || y == null) return null;
+  return { x, y };
+}
+
+/** Dimensões iniciais p/ fitView não pular nós ainda não medidos. */
+function withFitSize(node: Node, width: number, height: number): Node {
+  return {
+    ...node,
+    initialWidth: width,
+    initialHeight: height,
+  };
 }
 
 function rfNodeType(stepType: string): keyof typeof nodeTypes {
   if (stepType === "condition") return "condition";
   if (stepType === "round_robin") return "roundRobin";
   if (stepType === "business_hours") return "businessHours";
+  if (stepType === "check_agent_status") return "checkAgentStatus";
   if (stepType === "execute_distribution") return "distribution";
   if (stepType === "delay") return "delay";
   if (stepType === "question") return "interactive";
@@ -178,6 +206,7 @@ const BRANCHING_STEP_TYPES = new Set([
   "round_robin",
   "wait_for_reply",
   "business_hours",
+  "check_agent_status",
   "question",
   "send_whatsapp_interactive",
   "send_whatsapp_list",
@@ -206,21 +235,10 @@ function collectLeafStepIds(steps: AutomationStep[]): Set<string> {
   const leaves = new Set<string>();
   for (const step of steps) {
     if (TERMINAL_STEP_TYPES.has(step.type)) continue;
-    if (isInteractiveStep(step)) {
-      const cfg = step.config as Record<string, unknown>;
-      const buttons = interactiveChoiceItems(step.type, cfg) as {
-        gotoStepId?: string;
-      }[];
-      const hasAnyValidGoto = buttons.some(
-        (b) => b.gotoStepId && b.gotoStepId !== "__none__" && stepIds.has(b.gotoStepId)
-      );
-      const elseGoto = typeof cfg.elseGotoStepId === "string"
-        && cfg.elseGotoStepId
-        && cfg.elseGotoStepId !== "__none__"
-        && stepIds.has(cfg.elseGotoStepId);
-      if (!hasAnyValidGoto && !elseGoto) leaves.add(step.id);
-      continue;
-    }
+    // Interactive tem handles por opção (+ next/else/timeout) e onConnectEnd
+    // ao arrastar do handle — não recebe a pílula "+ Adicionar próximo passo"
+    // (evita aresta fantasma pontilhada sem sourceHandle).
+    if (isInteractiveStep(step)) continue;
     if (BRANCHING_STEP_TYPES.has(step.type)) continue;
     const next = readNextStepId(step.config);
     const hasRealNext = next && next !== NONE && stepIds.has(next);
@@ -241,6 +259,12 @@ const EDGE_DATA_BUTTON: AnimatedEdgeData = { variant: "button", energized: true 
 const EDGE_DATA_ELSE: AnimatedEdgeData = { variant: "else", energized: false };
 const EDGE_DATA_TIMEOUT: AnimatedEdgeData = { variant: "timeout", energized: false };
 const EDGE_DATA_ADD: AnimatedEdgeData = { variant: "add", energized: false };
+
+function isErrorEdge(e: Edge): boolean {
+  const d = e.data as AnimatedEdgeData | undefined;
+  if (d?.kind === "error") return true;
+  return d?.variant === "else" || d?.variant === "timeout";
+}
 
 const NONE = "__none__";
 const INTERACT_W = 20;
@@ -320,19 +344,39 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
         gotoStepId?: string;
       }[];
 
-      buttons.forEach((btn, idx) => {
+      const validGotos = buttons.map((btn) => {
         const gotoId = btn.gotoStepId && btn.gotoStepId !== "__none__"
           ? btn.gotoStepId
           : undefined;
-        if (!gotoId || !stepIds.has(gotoId)) return;
+        return gotoId && stepIds.has(gotoId) ? gotoId : null;
+      });
+      const allSameGoto =
+        buttons.length > 0 &&
+        validGotos.every((g) => g != null) &&
+        new Set(validGotos).size === 1;
+
+      if (allSameGoto) {
+        const gotoId = validGotos[0] as string;
         out.push({
-          id: `${a.id}-btn_${idx}-${gotoId}`,
+          id: `${a.id}-next-${gotoId}`,
           source: a.id, target: gotoId,
-          sourceHandle: `btn_${idx}`,
+          sourceHandle: "next",
           animated: false, data: EDGE_DATA_BUTTON, type: EDGE_TYPE,
           interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
         });
-      });
+      } else {
+        buttons.forEach((btn, idx) => {
+          const gotoId = validGotos[idx];
+          if (!gotoId) return;
+          out.push({
+            id: `${a.id}-btn_${idx}-${gotoId}`,
+            source: a.id, target: gotoId,
+            sourceHandle: `btn_${idx}`,
+            animated: false, data: EDGE_DATA_BUTTON, type: EDGE_TYPE,
+            interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
+          });
+        });
+      }
 
       if (typeof cfg.elseGotoStepId === "string" && cfg.elseGotoStepId && stepIds.has(cfg.elseGotoStepId)) {
         out.push({
@@ -423,7 +467,7 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
       }
     }
 
-    if (a.type === "business_hours") {
+    if (a.type === "business_hours" || a.type === "check_agent_status") {
       if (typeof cfg.elseStepId === "string" && cfg.elseStepId && stepIds.has(cfg.elseStepId)) {
         out.push({
           id: `${a.id}-else-${cfg.elseStepId}`,
@@ -510,10 +554,14 @@ function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[
     if (stepIds.has(explicit)) {
       const isMetaLinear =
         META_SEND_FAILURE_TYPES.has(a.type) && !isInteractiveStep(a);
+      const isBinaryTrue =
+        a.type === "business_hours" ||
+        a.type === "execute_distribution" ||
+        a.type === "check_agent_status";
       out.push({
         id: `${a.id}-next-${explicit}`,
         source: a.id, target: explicit,
-        ...(isMetaLinear ? { sourceHandle: "next" } : {}),
+        ...(isMetaLinear ? { sourceHandle: "next" } : isBinaryTrue ? { sourceHandle: "true" } : {}),
         animated: false, data: EDGE_DATA_DEFAULT, type: EDGE_TYPE,
         interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
       });
@@ -620,6 +668,9 @@ function WorkflowCanvasInner({
     triggerConfig !== null &&
     (triggerConfig as Record<string, unknown>).__entryDisconnected === true;
 
+  const [showErrors, setShowErrors] = useState(true);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
   const migratedRef = useRef(false);
   useEffect(() => {
     if (migratedRef.current || steps.length === 0) return;
@@ -714,10 +765,10 @@ function WorkflowCanvasInner({
       // posição via `onNodeDragStop` (canvas avisa a page por
       // `onTriggerConfigChange`).
       const triggerSavedPos = readRfPos(triggerConfig);
-      const triggerNode: Node = {
+      const triggerNode: Node = withFitSize({
         id: TRIGGER_ID,
         type: "trigger",
-        position: triggerSavedPos ?? { x: 32, y: NODE_Y },
+        position: triggerSavedPos ?? { ...ALIGN_TRIGGER_POS },
         data: {
           label: triggerTypeLabel(triggerType),
           summary: triggerSummary,
@@ -729,7 +780,8 @@ function WorkflowCanvasInner({
           onStatsClick: () => onStepLogsOpenRef.current?.("trigger"),
         },
         draggable: true,
-      };
+        deletable: false,
+      }, 252, 140);
 
       const stepIndexById = new Map<string, number>();
       list.forEach((s, i) => stepIndexById.set(s.id, i + 1));
@@ -865,11 +917,14 @@ function WorkflowCanvasInner({
           position: pos,
           data: baseData,
         } as Node;
+      }).map((n, i) => {
+        const size = estimateStepNodeSize(list[i].type);
+        return withFitSize(n, size.width, size.height);
       });
 
       // Lista vazia: pílula "Adicionar próximo passo" sai do trigger.
       if (list.length === 0) {
-        const addStepNode: Node = {
+        const addStepNode: Node = withFitSize({
           id: ADD_STEP_ID,
           type: "addStep",
           position: { x: START_X, y: NODE_Y + 20 },
@@ -877,11 +932,12 @@ function WorkflowCanvasInner({
           // abre o seletor (ver onNodeDragStop). Clique abre o seletor.
           draggable: true,
           selectable: false,
+          deletable: false,
           data: {
             afterStepId: null,
             onSelectType: onAddStep,
           },
-        };
+        }, 180, 40);
         return [triggerNode, addStepNode];
       }
 
@@ -895,17 +951,18 @@ function WorkflowCanvasInner({
         const idx = list.indexOf(step);
         const x = pos ? pos.x + GAP_X : START_X + (idx + 1) * GAP_X;
         const y = pos ? pos.y + 20 : NODE_Y + 20;
-        addStepNodes.push({
+        addStepNodes.push(withFitSize({
           id: `${ADD_STEP_ID}:${step.id}`,
           type: "addStep",
           position: { x, y },
           draggable: true,
           selectable: false,
+          deletable: false,
           data: {
             afterStepId: step.id,
             onSelectType: onAddStep,
           },
-        });
+        }, 180, 40));
       }
 
       return [triggerNode, ...stepNodes, ...addStepNodes];
@@ -913,7 +970,7 @@ function WorkflowCanvasInner({
     [triggerConfig, triggerType, stats, stageNameLookup, connectedWaCount, connectedEmailCount]
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
 
   const patchStepConfig = useCallback(
     (stepId: string, next: Record<string, unknown>) => {
@@ -1054,6 +1111,83 @@ function WorkflowCanvasInner({
     [onStepsChange]
   );
 
+  const removeSteps = useCallback(
+    (ids: string[]) => {
+      const idSet = new Set(ids.filter((id) => id && id !== TRIGGER_ID && !isAddStepNodeId(id)));
+      if (idSet.size === 0) return;
+      // Remove one-by-one via shared cleaner (order: filter all, then clear pointers)
+      let remaining = stepsRef.current.filter((s) => !idSet.has(s.id));
+      remaining = remaining.map((s) => {
+        const cfg = { ...(s.config as Record<string, unknown>) };
+        let changed = false;
+        for (const id of idSet) {
+          if (cfg.nextStepId === id) {
+            cfg.nextStepId = NONE;
+            changed = true;
+          }
+          if (cfg.elseGotoStepId === id) {
+            delete cfg.elseGotoStepId;
+            changed = true;
+          }
+          if (cfg.elseStepId === id) {
+            delete cfg.elseStepId;
+            changed = true;
+          }
+          if (cfg.timeoutGotoStepId === id) {
+            delete cfg.timeoutGotoStepId;
+            changed = true;
+          }
+          if (cfg.receivedGotoStepId === id) {
+            delete cfg.receivedGotoStepId;
+            changed = true;
+          }
+          if (cfg.failureGotoStepId === id) {
+            delete cfg.failureGotoStepId;
+            cfg.failureAction = "stop";
+            changed = true;
+          }
+          if (Array.isArray(cfg.buttons)) {
+            cfg.buttons = (cfg.buttons as Record<string, unknown>[]).map((b) =>
+              b.gotoStepId === id ? { ...b, gotoStepId: undefined } : b
+            );
+            changed = true;
+          }
+          if (Array.isArray(cfg.rows)) {
+            cfg.rows = (cfg.rows as Record<string, unknown>[]).map((r) =>
+              r.gotoStepId === id ? { ...r, gotoStepId: undefined } : r
+            );
+            changed = true;
+          }
+          if (s.type === "condition" && Array.isArray(cfg.branches)) {
+            cfg.branches = (cfg.branches as Record<string, unknown>[]).map((b) =>
+              b.nextStepId === id ? { ...b, nextStepId: undefined } : b
+            );
+            changed = true;
+          }
+          if (s.type === "round_robin" && Array.isArray(cfg.options)) {
+            cfg.options = (cfg.options as Record<string, unknown>[]).map((o) =>
+              o.nextStepId === id ? { ...o, nextStepId: undefined } : o
+            );
+            changed = true;
+          }
+        }
+        return changed ? { ...s, config: cfg } : s;
+      });
+      onStepsChange(remaining);
+    },
+    [onStepsChange]
+  );
+
+  useFlowClipboard({
+    getSelectedStepIds: () =>
+      nodes
+        .filter((n) => n.selected && n.id !== TRIGGER_ID && !isAddStepNodeId(n.id))
+        .map((n) => n.id),
+    getSteps: () => stepsRef.current,
+    onStepsChange,
+    removeSteps,
+  });
+
   // Duplica um passo como nó INDEPENDENTE: copia a config (textos,
   // opções, etc.) mas zera todas as saídas (nextStepId/else/timeout/
   // received/buttons/branches) pra não recriar as conexões do original.
@@ -1156,48 +1290,124 @@ function WorkflowCanvasInner({
 
   onAddStepRef.current = addStepAfter;
 
+  const lastAlignFitRef = useRef(0);
+
   useEffect(() => {
+    const isAlign =
+      !!autoAlignVersion && lastAlignFitRef.current !== autoAlignVersion;
+
     // Edição inline já patchou o node — não rebuildar (preserva foco).
-    if (skipStepsSyncRef.current) {
+    // Auto-alinhar NÃO pode pular: senão `__rfPos` muda nos steps e o
+    // RF fica com `node.position` antigo (canvas vazio + edges longas).
+    if (skipStepsSyncRef.current && !isAlign) {
       skipStepsSyncRef.current = false;
       return;
     }
-    // Rebuild preservando `selected` (React Flow guarda seleção no
-    // próprio node object; se recriamos os nós do zero, a seleção do
-    // card editado some ao soltar o mouse quando algum re-render
-    // dispara este effect).
+    skipStepsSyncRef.current = false;
+
     setNodes((prev) => {
       const selectedIds = new Set(
         prev.filter((n) => n.selected).map((n) => n.id)
       );
-      const next = buildNodes(steps, removeStep, addStepAfter);
-      if (selectedIds.size === 0) return next;
-      return next.map((n) =>
-        selectedIds.has(n.id) ? { ...n, selected: true } : n
-      );
-    });
-  }, [steps, buildNodes, removeStep, addStepAfter, setNodes]);
+      const prevById = new Map(prev.map((n) => [n.id, n]));
+      const built = buildNodes(steps, removeStep, addStepAfter);
 
-  // Recentraliza o viewport após "Auto alinhar". Espera o React Flow
-  // aplicar as novas posições (setNodes é assíncrono). `maxZoom: 1`
-  // evita zoom-in excessivo em fluxos curtos (empurrava o fluxo pra
-  // baixo da tela no shell v2 com CSS zoom).
-  useEffect(() => {
-    if (!autoAlignVersion) return;
+      return built.map((n) => {
+        const old = prevById.get(n.id);
+        if (isAlign && old) {
+          // `__rfPos` → `position` no mesmo tick. Preserva `measured`
+          // pra fitView não pular nós recém-recriados (xyflow trata
+          // width/height 0 como "ainda não existe").
+          return {
+            ...old,
+            ...n,
+            position: n.position,
+            measured: old.measured,
+            width: old.measured?.width ?? old.width ?? n.initialWidth,
+            height: old.measured?.height ?? old.height ?? n.initialHeight,
+            selected: selectedIds.has(n.id),
+          };
+        }
+        return selectedIds.has(n.id) ? { ...n, selected: true } : n;
+      });
+    });
+
+    if (!isAlign) return;
+    lastAlignFitRef.current = autoAlignVersion;
+
+    const fitTargets = [
+      { id: TRIGGER_ID },
+      ...steps.map((s) => ({ id: s.id })),
+    ];
+    const fitOpts = {
+      nodes: fitTargets,
+      duration: 380,
+      padding: 0.2,
+      maxZoom: 1,
+      minZoom: 0.15,
+    };
+
     let cancelled = false;
-    const timer = window.setTimeout(() => {
-      if (cancelled) return;
-      void fitView({ duration: 380, padding: 0.22, maxZoom: 1, minZoom: 0.35 });
-    }, 200);
+    let didFit = false;
+    const runFit = () => {
+      if (cancelled || didFit) return;
+      didFit = true;
+      void fitView(fitOpts);
+    };
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(runFit);
+    });
+    const timer = window.setTimeout(runFit, 120);
     return () => {
       cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
       clearTimeout(timer);
+      if (!didFit && lastAlignFitRef.current === autoAlignVersion) {
+        lastAlignFitRef.current = 0;
+      }
     };
-  }, [autoAlignVersion, fitView]);
+  }, [steps, buildNodes, removeStep, addStepAfter, setNodes, autoAlignVersion, fitView]);
 
   const edges = useMemo(
     () => buildEdges(steps, triggerDisconnected),
     [steps, triggerDisconnected]
+  );
+
+  const displayEdges = useMemo(() => {
+    const visible = showErrors ? edges : edges.filter((e) => !isErrorEdge(e));
+    if (!hoveredNodeId) return visible;
+    return visible.map((e) => {
+      const dimmed = e.source !== hoveredNodeId && e.target !== hoveredNodeId;
+      if (!dimmed) return e;
+      return {
+        ...e,
+        data: { ...(e.data as AnimatedEdgeData | undefined), dimmed: true },
+      };
+    });
+  }, [edges, showErrors, hoveredNodeId]);
+
+  /** Limite 1 conexão por sourceHandle. Espelha CustomHandle / connection-limit. */
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      const source = connection.source;
+      const target = connection.target;
+      const sourceHandle = connection.sourceHandle ?? null;
+      if (!source || !target) return false;
+      if (target === TRIGGER_ID || isAddStepNodeId(target)) return false;
+      if (source === target) return false;
+
+      const occupied = edges.some(
+        (e) =>
+          e.source === source &&
+          (e.sourceHandle ?? null) === sourceHandle &&
+          // permite "reconectar" ao mesmo target (noop)
+          e.target !== target
+      );
+      return !occupied;
+    },
+    [edges]
   );
 
   const onConnect = useCallback(
@@ -1241,9 +1451,25 @@ function WorkflowCanvasInner({
           if (buttons[idx]) {
             buttons[idx] = { ...buttons[idx], gotoStepId: target };
             cfg[key] = buttons;
+            cfg.__hasExplicitEdges = true;
             onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
             return;
           }
+        }
+
+        // Handle `next` → todas as opções do interactive apontam pro mesmo destino
+        if (sourceHandle === "next" && isInteractiveStep(srcStep)) {
+          const cfg = { ...srcStep.config } as Record<string, unknown>;
+          const key = interactiveChoiceKey(srcStep.type);
+          const buttons = interactiveChoiceItems(srcStep.type, cfg).map((b) => ({
+            ...b,
+            gotoStepId: target,
+          }));
+          cfg[key] = buttons;
+          cfg.nextStepId = target;
+          cfg.__hasExplicitEdges = true;
+          onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
+          return;
         }
 
         // Handle `branch:<id>` → atribui destino a uma branch do condition
@@ -1292,7 +1518,7 @@ function WorkflowCanvasInner({
           return;
         }
 
-        if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution")) {
+        if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution" || srcStep.type === "check_agent_status")) {
           const cfg = { ...srcStep.config, elseStepId: target };
           onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
           return;
@@ -1430,12 +1656,30 @@ function WorkflowCanvasInner({
           if (buttons[idx]) {
             buttons[idx] = { ...buttons[idx], gotoStepId: id };
             cfg[key] = buttons;
+            cfg.__hasExplicitEdges = true;
             const updated = cur.map((s) =>
               s.id === sourceId ? { ...s, config: cfg } : s
             );
             onStepsChange([...updated, step]);
             return;
           }
+        }
+
+        if (sourceHandle === "next" && isInteractiveStep(srcStep)) {
+          const cfg = { ...srcStep.config } as Record<string, unknown>;
+          const key = interactiveChoiceKey(srcStep.type);
+          const buttons = interactiveChoiceItems(srcStep.type, cfg).map((b) => ({
+            ...b,
+            gotoStepId: id,
+          }));
+          cfg[key] = buttons;
+          cfg.nextStepId = id;
+          cfg.__hasExplicitEdges = true;
+          const updated = cur.map((s) =>
+            s.id === sourceId ? { ...s, config: cfg } : s
+          );
+          onStepsChange([...updated, step]);
+          return;
         }
 
         // Condition multi-branch: handle branch:<id> ou else
@@ -1495,7 +1739,7 @@ function WorkflowCanvasInner({
           return;
         }
 
-        if (sourceHandle === "false" && srcStep.type === "business_hours") {
+        if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "check_agent_status")) {
           const cfg = { ...srcStep.config, elseStepId: id };
           const updated = cur.map((s) =>
             s.id === sourceId ? { ...s, config: cfg } : s
@@ -1719,6 +1963,20 @@ function WorkflowCanvasInner({
         }
       }
 
+      if (sourceHandle === "next" && isInteractiveStep(srcStep)) {
+        const cfg = { ...srcStep.config } as Record<string, unknown>;
+        const key = interactiveChoiceKey(srcStep.type);
+        const buttons = interactiveChoiceItems(srcStep.type, cfg).map((b) => {
+          const next = { ...b };
+          delete next.gotoStepId;
+          return next;
+        });
+        cfg[key] = buttons;
+        delete cfg.nextStepId;
+        onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
+        return;
+      }
+
       // Condition multi-branch: handle `branch:<id>` ou `else`
       const branchMatch = sourceHandle?.match(/^branch:(.+)$/);
       if (branchMatch && srcStep.type === "condition") {
@@ -1765,7 +2023,7 @@ function WorkflowCanvasInner({
         return;
       }
 
-      if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution")) {
+      if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution" || srcStep.type === "check_agent_status")) {
         const cfg = { ...srcStep.config } as Record<string, unknown>;
         delete cfg.elseStepId;
         onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
@@ -1857,31 +2115,38 @@ function WorkflowCanvasInner({
   }, []);
 
   return (
-    <div className={cn("automation-editor flex w-full", className)}>
-      {/* Palette — esquerda (antes do canvas) */}
-      <NodePalette className="hidden w-[240px] shrink-0 md:flex" />
+    <div className={cn("automation-editor relative flex w-full", className)}>
+      {/* Palette — gaveta esquerda (pin = dock; solta = overlay) */}
+      <NodePaletteDrawer />
 
       {/* Canvas area */}
       <div
-        className="automation-canvas relative min-h-0 min-w-0 flex-1 bg-[var(--bg-base)]"
+        className="automation-canvas relative min-h-0 min-w-0 flex-1"
         onDrop={onDrop}
         onDragOver={onDragOver}
       >
         {/* Defs SVG globais (gradientes nomeados das edges) — uma vez
             só por canvas, não por edge, pra performance. */}
         <AnimatedEdgeDefs />
+        <FlowCanvasToolbar
+          showErrors={showErrors}
+          onToggleErrors={() => setShowErrors((v) => !v)}
+        />
 
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={displayEdges}
           onNodesChange={onNodesChange}
           onConnect={onConnect}
           onConnectStart={onConnectStart}
           onConnectEnd={onConnectEnd as unknown as (event: MouseEvent | TouchEvent) => void}
+          isValidConnection={isValidConnection}
           onNodeDragStop={onNodeDragStop}
           onNodeClick={onNodeClick}
           onNodeContextMenu={onNodeContextMenu}
           onNodeDragStart={onNodeDragStart}
+          onNodeMouseEnter={(_e, node) => setHoveredNodeId(node.id)}
+          onNodeMouseLeave={() => setHoveredNodeId(null)}
           onPaneClick={closeNodeMenu}
           onMoveStart={closeNodeMenu}
           onEdgeClick={onEdgeClick}
@@ -1889,24 +2154,23 @@ function WorkflowCanvasInner({
           edgeTypes={edgeTypes}
           fitView
           fitViewOptions={{ padding: 0.2 }}
-          // Card inteiro arrasta; o threshold evita que o clique de
-          // seleção (com 1-2px de tremida) vire um micro-drag.
           nodeDragThreshold={4}
+          deleteKeyCode={null}
+          multiSelectionKeyCode="Shift"
           proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={{ style: { cursor: "pointer" } }}
+          colorMode={isDark ? "dark" : "light"}
         >
           <Background
             id="auto-dots"
             variant={BackgroundVariant.Dots}
-            gap={24}
-            size={1.4}
-            color={isDark ? "#33405c" : "#cbd5e1"}
+            gap={26}
+            size={1.2}
+            color={isDark ? "rgba(120, 140, 180, 0.16)" : "#E1E5F2"}
           />
-          <Controls
-            className="m-4! overflow-hidden rounded-2xl! border! border-[var(--glass-border)]! bg-[var(--glass-bg-base)]! shadow-[var(--shadow-lg)]! backdrop-blur-xl! [&>button]:border-0! [&>button]:bg-transparent! [&>button]:text-[var(--color-ink-soft)]! [&>button:hover]:bg-primary/10! [&>button:hover]:text-primary!"
-          />
+          <Controls className="m-3!" showInteractive={false} />
           <MiniMap
-            className="m-4! overflow-hidden rounded-2xl! border! border-[var(--glass-border)]! bg-[var(--glass-bg-overlay)]! shadow-[var(--shadow-lg)]! backdrop-blur-xl!"
+            className="m-3!"
             maskColor={isDark ? "rgba(0,0,0,0.30)" : "rgba(13,27,62,0.06)"}
             nodeColor={(n) => {
               if (isAddStepNodeId(n.id)) return "transparent";
@@ -1914,8 +2178,8 @@ function WorkflowCanvasInner({
               return isDark ? "#64748b" : "#94a3b8";
             }}
             nodeStrokeColor={isDark ? "rgba(15,22,35,0.8)" : "rgba(255,255,255,0.7)"}
-            nodeStrokeWidth={2}
-            nodeBorderRadius={6}
+            nodeStrokeWidth={1.5}
+            nodeBorderRadius={4}
           />
         </ReactFlow>
 

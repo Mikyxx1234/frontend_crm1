@@ -88,6 +88,7 @@ export const ACTION_STEP_TYPES = [
   "finish_conversation",
   "tabulate_conversation",
   "business_hours",
+  "check_agent_status",
   "ask_ai_agent",
   "transfer_to_ai_agent",
   "consume_stock",
@@ -199,6 +200,7 @@ export function stepTypeLabel(t: string): string {
     finish_conversation: "Encerrar conversa",
     tabulate_conversation: "Tabular conversa",
     business_hours: "Horário comercial",
+    check_agent_status: "Status do agente",
     ask_ai_agent: "Perguntar ao agente IA",
     transfer_to_ai_agent: "Transferir para agente IA",
     consume_stock: "Baixar estoque",
@@ -501,6 +503,8 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
       const tz = c.timezone ? String(c.timezone) : "America/Sao_Paulo";
       return `Fuso: ${tz}`;
     }
+    case "check_agent_status":
+      return "Responsável da conversa";
     case "ask_ai_agent": {
       const agentName = c.agentLabel ?? c.agentName;
       if (agentName) return `Agente: ${String(agentName)}`;
@@ -716,6 +720,8 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
         timezone: "America/Sao_Paulo",
         elseStepId: "",
       };
+    case "check_agent_status":
+      return { elseStepId: "" };
     case "ask_ai_agent":
       return {
         agentId: "",

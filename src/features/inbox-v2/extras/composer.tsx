@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmojiPicker } from "@/components/inbox/emoji-picker";
 import {
   useSlashMenu,
@@ -47,6 +48,11 @@ import {
 import { ActiveBotsButton } from "./active-bots-button";
 import { AudioRecorderButton, type AudioRecordState } from "./audio-recorder-button";
 import { ChannelSelector } from "./channel-selector";
+import {
+  SESSION_CLOSED_TOAST,
+  channelSwitchConfirmOptions,
+  isChannelMismatch,
+} from "./channel-switch-confirm";
 import { ComposerMenu } from "./composer-menu";
 import { ConversationResolveButton } from "./conversation-resolve-button";
 import {
@@ -90,6 +96,7 @@ export function Composer({
   availableChannels,
   selectedChannelId,
   conversationChannelId,
+  lastMessageChannelId,
   onSelectChannel,
   replyTo,
   onCancelReply,
@@ -99,6 +106,8 @@ export function Composer({
   onResolved,
   conversationNumber,
   transferSlot,
+  onRequestTemplate,
+  sessionExpired,
 }: {
   conversationId: string | null;
   value: string;
@@ -134,6 +143,8 @@ export function Composer({
   selectedChannelId?: string | null;
   /** Canal "atual" da conversa (último inbound) — destacado como referência. */
   conversationChannelId?: string | null;
+  /** Canal da última mensagem pública — usado pra pré-selecionar no modal. */
+  lastMessageChannelId?: string | null;
   /** Callback quando o agente troca o canal de envio. */
   onSelectChannel?: (channelId: string) => void;
   /**
@@ -163,7 +174,12 @@ export function Composer({
   conversationNumber?: number | null;
   /** Slot à esquerda das tabs (ex.: TransferPopover). */
   transferSlot?: ReactNode;
+  /** Abre o fluxo de template (sessão 24h encerrada). */
+  onRequestTemplate?: () => void;
+  /** Janela de 24h da Meta encerrada — aviso dedicado + CTA de template. */
+  sessionExpired?: boolean;
 }) {
+  const { confirm: confirmDialog, dialog: confirmDialogNode } = useConfirm();
   const [noteMode, setNoteMode] = useState(false);
   const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
   const isAudioActive = audioRecState !== "idle";
@@ -262,13 +278,13 @@ export function Composer({
   );
 
   // ── Contexto para interpolação de templates internos ─────────────
-  // Busca dados do contato quando contactId está disponível, para
-  // substituir tokens {{contato.nome}}, {{negocio.valor}} etc.
+  // Reusa a mesma queryKey do ContactAside — evita GET /contacts ×2
+  // ao abrir a conversa (sidebar + composer).
   const { data: contactData } = useQuery({
-    queryKey: ["contact-for-template", contactId],
+    queryKey: ["contact-sidebar", contactId ?? "__none__"],
     queryFn: () => getContact(contactId!),
     enabled: !!contactId,
-    staleTime: 2 * 60_000,
+    staleTime: 60_000,
   });
 
   // Ref para o textarea — exigido pelo useSlashMenu para movimentar o cursor
@@ -585,6 +601,38 @@ export function Composer({
   // `onSendNote=undefined`.
   const inputDisabled = noteMode ? false : !!disabled;
 
+  function warnOutboundBlocked() {
+    if (sessionExpired) {
+      toast.error(SESSION_CLOSED_TOAST, {
+        action: onRequestTemplate
+          ? { label: "Usar Template", onClick: () => onRequestTemplate() }
+          : undefined,
+      });
+      onRequestTemplate?.();
+      return;
+    }
+    toast.error(
+      placeholder || "Você não tem permissão para enviar mensagens neste canal.",
+    );
+  }
+
+  async function confirmChannelSwitchIfNeeded(): Promise<boolean> {
+    if (
+      !isChannelMismatch(selectedChannelId, conversationChannelId) ||
+      !selectedChannelId ||
+      !conversationChannelId
+    ) {
+      return true;
+    }
+    return confirmDialog(
+      channelSwitchConfirmOptions(
+        availableChannels,
+        selectedChannelId,
+        conversationChannelId,
+      ),
+    );
+  }
+
   // Envia os anexos encostados (mídia de modelo/mensagem rápida) logo após o
   // texto do Enter — via o helper compartilhado (SEQUENCIAL, com toast em
   // falha intermediária). Lê de `pendingMediaListRef` (não do state direto)
@@ -623,15 +671,20 @@ export function Composer({
     // Permite enviar quando há texto OU algum anexo encostado (modelo ou imagem colada).
     if (
       (!trimmed && pendingMediaList.length === 0 && pendingFiles.length === 0) ||
-      busy ||
-      inputDisabled
-    )
+      busy
+    ) {
       return;
+    }
+    if (inputDisabled) {
+      warnOutboundBlocked();
+      return;
+    }
     if (noteMode && onSendNote) {
       // Nota interna não carrega anexo de modelo/imagem.
       if (trimmed) onSendNote(trimmed);
       return;
     }
+    if (!(await confirmChannelSwitchIfNeeded())) return;
     // Aguarda o texto sair antes dos anexos — evita race (arquivo aparecer
     // antes da 1ª mensagem) e garante ordem: texto → arq1 → msg2 → arq2…
     if (trimmed) {
@@ -668,7 +721,18 @@ export function Composer({
   // no composer (com preview). NÃO envia: só vai no próximo clique em enviar
   // / Enter, junto com o texto. Paste de texto normal segue intacto.
   function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>) {
-    if (inputDisabled || busy) return;
+    if (busy) return;
+    if (inputDisabled) {
+      const items = e.clipboardData?.items;
+      const hasImage = items
+        ? Array.from(items).some((item) => item.kind === "file" && item.type.startsWith("image/"))
+        : false;
+      if (hasImage) {
+        e.preventDefault();
+        warnOutboundBlocked();
+      }
+      return;
+    }
     const items = e.clipboardData?.items;
     if (!items) return;
 
@@ -719,6 +783,7 @@ export function Composer({
 
   return (
     <div ref={rootRef} className="relative mx-3 mb-1 max-md:mx-2 max-md:mb-1 sm:mx-4">
+      {confirmDialogNode}
       {/* Painel de validação do template do WhatsApp — flutua acima do composer */}
       {pendingTemplate && conversationId ? (
         <TemplateComposePanel
@@ -726,6 +791,11 @@ export function Composer({
           template={pendingTemplate}
           onCancel={() => setPendingTemplate(null)}
           onSent={() => setPendingTemplate(null)}
+          availableChannels={availableChannels}
+          selectedChannelId={selectedChannelId ?? null}
+          conversationChannelId={conversationChannelId ?? null}
+          lastMessageChannelId={lastMessageChannelId ?? null}
+          onSelectChannel={onSelectChannel}
         />
       ) : null}
 
@@ -1054,6 +1124,9 @@ export function Composer({
               requireTabulationOnClose={requireTabulationOnClose}
               onReopenNewConversation={onReopenNewConversation}
               onResolved={onResolved}
+              outboundDisabled={inputDisabled}
+              beforeOutboundSend={confirmChannelSwitchIfNeeded}
+              onOutboundBlocked={warnOutboundBlocked}
             />
             <div ref={emojiWrapRef} className="relative">
               <TooltipGlass label="Emoji" side="top">
@@ -1134,12 +1207,19 @@ export function Composer({
             conversationId={conversationId}
             className="h-9 w-9 shrink-0"
             onStateChange={setAudioRecState}
+            disabled={inputDisabled}
+            beforeSend={confirmChannelSwitchIfNeeded}
+            onBlocked={warnOutboundBlocked}
           />
         )}
 
         {/* Automações em execução — botão ao lado do enviar (inbox e deal). */}
         {!isAudioActive && contactId && (
-          <ActiveBotsButton inline contactId={contactId} />
+          <ActiveBotsButton
+            inline
+            contactId={contactId}
+            conversationId={conversationId}
+          />
         )}
 
         {/* Botão enviar — oculto durante gravação (AudioRecorderButton tem o seu próprio) */}

@@ -285,9 +285,10 @@ export function DealCard({ deal, onClick, tagsSlot, tagsAddSlot, ownerSlot, move
                 <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
                   <IconMessage size={9} />
                 </span>
-                {/* Ticks de entrega (outbound) — mesma linguagem do conversation-card. */}
+                {/* Tick de falha (outbound) — enviada/entregue/lida não
+                    aparecem mais no preview do card. */}
                 {deal.message.direction === "out" &&
-                  (deal.message.status === "failed" ? (
+                  deal.message.status === "failed" && (
                     <TooltipGlass
                       label={
                         summarizeSendError(deal.message.sendError) ||
@@ -299,19 +300,7 @@ export function DealCard({ deal, onClick, tagsSlot, tagsAddSlot, ownerSlot, move
                         <StatusTicks status="failed" onLightBg size="card" />
                       </span>
                     </TooltipGlass>
-                  ) : deal.message.status ? (
-                    <span className="mt-px inline-flex shrink-0 not-italic">
-                      <StatusTicks
-                        status={deal.message.status}
-                        onLightBg
-                        size="card"
-                      />
-                    </span>
-                  ) : (
-                    <span className="mt-px inline-flex shrink-0 not-italic">
-                      <StatusTicks status="sent" onLightBg size="card" />
-                    </span>
-                  ))}
+                  )}
                 <TooltipGlass
                   plain
                   label={

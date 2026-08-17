@@ -5,6 +5,7 @@
  * GET /api/deals/:id/timeline.
  */
 
+import Link from "next/link";
 import {
   IconBolt,
   IconCircleCheck,
@@ -29,6 +30,7 @@ import { useDealTimeline } from "@/features/pipeline-v2/hooks";
 import type { DealTimelineEvent } from "@/features/pipeline-v2/api";
 import {
   EVENT_CONFIG,
+  automationOrigin,
   eventDescription,
   type FeedEvent,
 } from "@/components/crm/feed/event-config";
@@ -66,6 +68,7 @@ const TYPE_META: Record<
   TAG_REMOVED: { label: "Tag removida", icon: IconTagOff, color: "var(--color-danger)" },
   // Tags do CONTATO (logadas com contactId) — antes caíam no fallback com
   // ícone de relógio. Agora têm ícone/label/cor próprios.
+  CONTACT_CREATED: { label: "Contato criado", icon: IconUser, color: "var(--brand-primary)" },
   CONTACT_TAG_ADDED: { label: "Tag adicionada ao contato", icon: IconTag, color: "var(--color-info)" },
   CONTACT_TAG_REMOVED: { label: "Tag removida do contato", icon: IconTagOff, color: "var(--color-danger)" },
   CONTACT_FIELD_CHANGED: { label: "Campo do contato alterado", icon: IconEdit, color: "var(--text-muted)" },
@@ -159,6 +162,11 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
         };
         const Icon = meta.icon;
         const desc = describe(ev);
+        // "Por que essa pessoa foi distribuída?" — origem da ação
+        // automática (automação + nº do card do editor). Ausente em
+        // eventos antigos e em ações manuais: a linha simplesmente não
+        // é renderizada.
+        const origin = automationOrigin(ev.meta);
         return (
           <div
             key={ev.id}
@@ -194,6 +202,20 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
               {ev.user?.name ? (
                 <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
                   por {ev.user.name}
+                </div>
+              ) : null}
+              {origin ? (
+                <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+                  {origin.automationId ? (
+                    <Link
+                      href={`/automations/${origin.automationId}`}
+                      className="underline decoration-dotted underline-offset-2 hover:text-[var(--text-secondary)]"
+                    >
+                      {origin.text}
+                    </Link>
+                  ) : (
+                    origin.text
+                  )}
                 </div>
               ) : null}
             </div>

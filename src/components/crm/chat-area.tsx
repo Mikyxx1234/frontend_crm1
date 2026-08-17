@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useRef, useState, useEffect, useCallback, useMemo, type FormEvent } from "react"
+import { useRef, useState, useEffect, useCallback, useMemo, type FormEvent } from "react"
 import { useSession } from "next-auth/react"
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions"
 import { cn } from "@/lib/utils"
@@ -9,7 +9,13 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { ChatAvatar } from "@/components/inbox/chat-avatar"
 import { AVATAR_SIZE, avatarInitials } from "@/lib/avatar"
-import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, TicketDivider, type Message } from "./message-bubble"
+import { MessageBubble, ConnectionDivider, ConversationClosedMarker, TicketDivider, StickyDayPill, useStickyDayLabel, type Message } from "./message-bubble"
+import {
+  EventRow,
+  isConversationCloseEventText,
+  isConversationOpenEventText,
+  isRedundantOpenStatusEvent,
+} from "./chat-timeline"
 import { SessionAlert } from "./session-alert"
 import {
   formatConnectionLabel,
@@ -373,6 +379,12 @@ export function ChatArea({
     }
   }, [messages])
 
+  const getMessagesRoot = useCallback(() => messagesRef.current, [])
+  const stickyDay = useStickyDayLabel(
+    getMessagesRoot,
+    `${messages[0]?.id ?? ""}:${messages[messages.length - 1]?.id ?? ""}:${messages.length}`,
+  )
+
   const effectiveDisabled = inputDisabled ?? showSessionAlert
   const value = inputValue ?? ""
 
@@ -530,14 +542,12 @@ export function ChatArea({
       })()}
       {/* MESSAGES — única área rolável; min-h-0 permite encolher e manter
           o footer (composer) sempre visível na base. */}
-      <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-7 py-6 max-md:px-3">
+      <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-7 pt-6 pb-8 max-md:px-3">
+        <StickyDayPill date={stickyDay} />
+        <ul className="flex list-none flex-col gap-1.5">
         {(() => {
-          // Separador de dia ("Hoje" / "Ontem" / "DD/MM/AAAA") inserido
-          // automaticamente sempre que a data muda entre mensagens. Usa o
-          // `createdAt` (ISO) de cada mensagem; quando ausente, cai no prop
-          // `daySeparator` legado exibido uma única vez no topo.
-          let lastDayKey: string | null = null
-          let usedFallback = false
+          // Dia fica só no overlay (`StickyDayPill`); `data-day-label` alimenta
+          // o rastreio. Sem `createdAt`, cai no prop `daySeparator` legado.
           // Só marca troca de conexão quando a conversa tem 2+ contas distintas
           // (ex.: dois WhatsApps). Com uma só, o chip do header já basta.
           const distinctChannels = new Set(
@@ -545,33 +555,50 @@ export function ChatArea({
           )
           const showConnSwitches = distinctChannels.size >= 2
           let lastChannelId: string | null = null
+          const sectionHasEvent = (
+            from: number,
+            pred: (content: string) => boolean,
+          ) => {
+            for (let i = from + 1; i < messages.length; i++) {
+              const m = messages[i]
+              if (m.messageType === "ticket-separator") break
+              if (m.kind === "event" && pred(m.content ?? "")) return true
+            }
+            return false
+          }
           return messages.map((message, index) => {
             // Separador de ticket — item sintético injetado pelo backend
             // quando `?history=1`. Não é uma bolha; renderiza diretamente.
             if (message.messageType === "ticket-separator" && message.ticketInfo) {
+              const info = message.ticketInfo
+              const hideDivider = info.isCurrent
+                ? sectionHasEvent(index, (c) =>
+                    isConversationOpenEventText(c, info.number),
+                  )
+                : sectionHasEvent(index, isConversationCloseEventText)
+              if (hideDivider) return null
               return (
-                <TicketDivider
-                  key={message.id || `sep-${index}`}
-                  number={message.ticketInfo.number}
-                  closedAt={message.ticketInfo.closedAt}
-                  isCurrent={message.ticketInfo.isCurrent}
-                />
+                <li key={message.id || `sep-${index}`} className="list-none">
+                  <TicketDivider
+                    number={info.number}
+                    closedAt={info.closedAt}
+                    isCurrent={info.isCurrent}
+                    openedAt={info.openedAt}
+                    openedByName={info.openedByName}
+                    openedByUserId={info.openedByUserId}
+                    closedByName={info.closedByName}
+                    closedByUserId={info.closedByUserId}
+                  />
+                </li>
               )
             }
             if (message.type !== "incoming" && message.type !== "outgoing") {
               return null
             }
-            const dayKey = dayKeyFromISO(message.createdAt)
-            let separator: string | null = null
-            if (dayKey) {
-              if (dayKey !== lastDayKey) {
-                separator = dayLabelFromISO(message.createdAt)
-                lastDayKey = dayKey
-              }
-            } else if (daySeparator && !usedFallback) {
-              separator = daySeparator
-              usedFallback = true
+            if (message.kind === "event" && isRedundantOpenStatusEvent(message.content)) {
+              return null
             }
+            const dayLabel = dayLabelFromISO(message.createdAt)
             // Marcador de troca de conexão: aparece quando o channelId muda
             // em relação à última mensagem com canal conhecido.
             let connLabel: string | null = null
@@ -582,42 +609,63 @@ export function ChatArea({
                 lastChannelId = message.channelId
               }
             }
+            const isEvent = message.kind === "event"
             return (
-              <Fragment key={message.id || index}>
-                {separator && <DaySeparator date={separator} />}
+              <li
+                key={message.id || index}
+                className="list-none"
+                data-day-label={dayLabel || daySeparator || undefined}
+              >
                 {connLabel && <ConnectionDivider label={connLabel} />}
                 <div
                   data-message-id={message.id}
                   className={cn(
-                    "flex flex-col scroll-mt-24 rounded-[var(--radius-lg)] transition-[background-color,box-shadow] duration-500",
+                    "flex flex-col overflow-visible scroll-mt-24 rounded-[var(--radius-lg)] transition-[background-color,box-shadow] duration-500",
                     highlightId === message.id &&
                       "bg-[var(--brand-primary)]/10 shadow-[0_0_0_2px_var(--brand-primary)]",
                   )}
                 >
-                  <MessageBubble
-                    message={message}
-                    agentInitials={agentInitials}
-                    agentName={agentName}
-                    agentImageUrl={selfAgentImage}
-                    senderPhotoByName={senderPhotoByName}
-                    onReplyMessage={onReplyMessage}
-                    onForwardMessage={onForwardMessage}
-                    onReactMessage={onReactMessage}
-                    onPinMessage={onPinMessage}
-                    onFavoriteMessage={onFavoriteMessage}
-                  />
+                  {isEvent ? (
+                    <EventRow
+                      action={message.eventAction ?? "ia"}
+                      text={message.content}
+                      actor={message.senderName ?? ""}
+                      actorId={message.senderUserId}
+                      time={message.time}
+                    />
+                  ) : (
+                    <MessageBubble
+                      message={message}
+                      agentInitials={agentInitials}
+                      agentName={agentName}
+                      agentImageUrl={selfAgentImage}
+                      senderPhotoByName={senderPhotoByName}
+                      onReplyMessage={onReplyMessage}
+                      onForwardMessage={onForwardMessage}
+                      onReactMessage={onReactMessage}
+                      onPinMessage={onPinMessage}
+                      onFavoriteMessage={onFavoriteMessage}
+                    />
+                  )}
                 </div>
-              </Fragment>
+              </li>
             )
           })
         })()}
+        </ul>
 
         {/* Marcador de encerramento — ultimo item da lista, alinhado com
             o padrao visual do DaySeparator/ConnectionDivider. Fica visivel
             de dentro do proprio chat, sem card lateral, atendendo ao
             pedido "simples/minimalista dentro do chat". */}
-        {conversationResolved && (
-          <ConversationClosedMarker closedAt={conversationClosedAt ?? null} />
+        {conversationResolved &&
+          !messages.some(
+            (m) => m.kind === "event" && isConversationCloseEventText(m.content),
+          ) && (
+          <ConversationClosedMarker
+            closedAt={conversationClosedAt ?? null}
+            conversationNumber={conversationNumber}
+          />
         )}
       </div>
 
@@ -770,15 +818,7 @@ function ChatTabsBar({
   )
 }
 
-/** Chave de dia estável (toDateString) usada para detectar troca de data. */
-function dayKeyFromISO(iso?: string): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toDateString()
-}
-
-/** Rótulo do separador: "Hoje", "Ontem" ou "DD/MM/AAAA". */
+/** Rótulo do dia: "Hoje", "Ontem" ou "DD/MM/AAAA". */
 function dayLabelFromISO(iso?: string): string | null {
   if (!iso) return null
   const d = new Date(iso)

@@ -13,6 +13,7 @@ import {
   IconTag,
   IconUserCircle,
   IconStack2,
+  IconBolt,
 } from "@tabler/icons-react";
 
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
@@ -24,6 +25,7 @@ import { MultiSelectPopover } from "@/features/dashboard-v2/components/multi-sel
 
 import {
   useAudienceOptions,
+  useAutomations,
   useChannels,
   useCreateCampaign,
   usePreviewAudience,
@@ -71,6 +73,7 @@ export default function NewCampaignClientPage() {
   const [templateName, setTemplateName] = useState("");
   const [templateLanguage, setTemplateLanguage] = useState("pt_BR");
   const [textContent, setTextContent] = useState("");
+  const [automationId, setAutomationId] = useState("");
 
   // Agendamento
   const [sendRate, setSendRate] = useState(80);
@@ -83,11 +86,13 @@ export default function NewCampaignClientPage() {
     isAuth && type === "TEMPLATE" && Boolean(channelId),
     channelId || null,
   );
+  const automationsQuery = useAutomations(isAuth && type === "AUTOMATION");
   const preview = usePreviewAudience();
   const createMutation = useCreateCampaign();
 
+  // AUTOMATION exige Cloud API: o executor envia template/mídia via Meta.
   const providerRequired =
-    type === "TEMPLATE" ? "META_CLOUD_API" : type === "TEXT" ? "BAILEYS_MD" : null;
+    type === "TEXT" ? "BAILEYS_MD" : "META_CLOUD_API";
 
   const availableChannels = useMemo(
     () =>
@@ -133,6 +138,7 @@ export default function NewCampaignClientPage() {
       case 3:
         if (type === "TEMPLATE") return !!templateName;
         if (type === "TEXT") return !!textContent.trim();
+        if (type === "AUTOMATION") return !!automationId;
         return true;
       default:
         return true;
@@ -154,11 +160,12 @@ export default function NewCampaignClientPage() {
       body.templateLanguage = templateLanguage;
     }
     if (type === "TEXT") body.textContent = textContent;
+    if (type === "AUTOMATION") body.automationId = automationId;
     if (scheduledAt) body.scheduledAt = new Date(scheduledAt).toISOString();
 
     createMutation.mutate(body, {
       onSuccess: (data) => {
-        router.push(`/campaigns/${data.campaign.id}`);
+        router.push(`/campaigns/${data.campaign.number ?? data.campaign.id}`);
       },
       onError: (err) =>
         setError(err instanceof Error ? err.message : "Erro ao criar campanha."),
@@ -201,7 +208,7 @@ export default function NewCampaignClientPage() {
                 </Field>
 
                 <Field label="Tipo">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <TypeCard
                       active={type === "TEMPLATE"}
                       title="Template Meta"
@@ -217,6 +224,16 @@ export default function NewCampaignClientPage() {
                       desc="Mensagem de texto (janela 24h)"
                       onClick={() => {
                         setType("TEXT");
+                        setChannelId("");
+                      }}
+                    />
+                    <TypeCard
+                      active={type === "AUTOMATION"}
+                      title="Automação"
+                      desc="Fluxo com botões, tags e etapas"
+                      icon={<IconBolt size={16} />}
+                      onClick={() => {
+                        setType("AUTOMATION");
                         setChannelId("");
                       }}
                     />
@@ -436,6 +453,28 @@ export default function NewCampaignClientPage() {
                       />
                     </Field>
                   </>
+                ) : type === "AUTOMATION" ? (
+                  <Field label="Automação">
+                    {automationsQuery.isLoading ? (
+                      <div className="h-10 animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-subtle)]" />
+                    ) : (
+                      <>
+                        <DropdownGlass
+                          options={(automationsQuery.data ?? [])
+                            .filter((a) => a.active)
+                            .map((a) => ({ value: a.id, label: a.name }))}
+                          value={automationId || undefined}
+                          onValueChange={setAutomationId}
+                          placeholder="Selecione uma automação ativa"
+                          triggerClassName="w-full"
+                        />
+                        <p className="mt-1 font-body text-[11.5px] text-[var(--text-muted)]">
+                          Cada contato da audiência entra no fluxo ao receber o disparo.
+                          O envio sai pelo canal escolhido no passo 1.
+                        </p>
+                      </>
+                    )}
+                  </Field>
                 ) : (
                   <Field label="Mensagem">
                     <Textarea
@@ -475,7 +514,16 @@ export default function NewCampaignClientPage() {
 
                 <div className="space-y-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
                   <ReviewRow label="Nome" value={name} />
-                  <ReviewRow label="Tipo" value={type === "TEMPLATE" ? "Template Meta" : "Texto livre"} />
+                  <ReviewRow
+                    label="Tipo"
+                    value={
+                      type === "TEMPLATE"
+                        ? "Template Meta"
+                        : type === "AUTOMATION"
+                          ? "Automação"
+                          : "Texto livre"
+                    }
+                  />
                   <ReviewRow
                     label="Audiência"
                     value={
@@ -488,6 +536,14 @@ export default function NewCampaignClientPage() {
                   />
                   {type === "TEMPLATE" ? (
                     <ReviewRow label="Template" value={templateName} />
+                  ) : null}
+                  {type === "AUTOMATION" ? (
+                    <ReviewRow
+                      label="Automação"
+                      value={
+                        (automationsQuery.data ?? []).find((a) => a.id === automationId)?.name ?? ""
+                      }
+                    />
                   ) : null}
                   <ReviewRow
                     label="Agendamento"

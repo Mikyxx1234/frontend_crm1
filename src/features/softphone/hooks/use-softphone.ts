@@ -40,6 +40,36 @@ let moduleSyncTimer: ReturnType<typeof setTimeout> | null = null;
 let moduleDialWatchdog: ReturnType<typeof setTimeout> | null = null;
 const DIAL_WATCHDOG_MS = 40_000;
 
+const INITIAL_STATE: SoftphoneState = {
+  status: "disconnected",
+  muted: false,
+  held: false,
+  error: null,
+  remoteNumber: null,
+  callDirection: null,
+  durationMs: 0,
+};
+
+type SoftphoneListener = (state: SoftphoneState) => void;
+
+let sharedState: SoftphoneState = { ...INITIAL_STATE };
+const listeners = new Set<SoftphoneListener>();
+
+function setSharedState(
+  updater: SoftphoneState | ((prev: SoftphoneState) => SoftphoneState),
+) {
+  sharedState = typeof updater === "function" ? updater(sharedState) : updater;
+  for (const listener of listeners) listener(sharedState);
+}
+
+function subscribeSoftphone(listener: SoftphoneListener) {
+  listeners.add(listener);
+  listener(sharedState);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 function clearDialWatchdog() {
   if (moduleDialWatchdog) {
     clearTimeout(moduleDialWatchdog);
@@ -75,15 +105,9 @@ if (typeof window !== "undefined") {
 }
 
 export function useSoftphone() {
-  const [state, setState] = useState<SoftphoneState>({
-    status: moduleUA ? "registered" : "disconnected",
-    muted: false,
-    held: false,
-    error: null,
-    remoteNumber: null,
-    callDirection: null,
-    durationMs: 0,
-  });
+  const [state, setLocalState] = useState<SoftphoneState>(sharedState);
+
+  useEffect(() => subscribeSoftphone(setLocalState), []);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -92,7 +116,7 @@ export function useSoftphone() {
     startTimeRef.current = Date.now();
     timerRef.current = setInterval(() => {
       if (startTimeRef.current) {
-        setState((s) => ({ ...s, durationMs: Date.now() - startTimeRef.current! }));
+        setSharedState((s) => ({ ...s, durationMs: Date.now() - startTimeRef.current! }));
       }
     }, 1000);
   }, []);
@@ -105,22 +129,33 @@ export function useSoftphone() {
 
   const connect = useCallback(async () => {
     if (moduleUA) {
-      setState((s) => ({ ...s, status: "registered", error: null }));
+      setSharedState((s) => ({ ...s, status: "registered", error: null }));
       return;
     }
 
-    setState((s) => ({ ...s, status: "connecting", error: null }));
+    setSharedState((s) => ({ ...s, status: "connecting", error: null }));
 
     try {
       const creds = await getMyCredentials();
-      moduleCredentials = creds;
+      const sipUri = /^sip:/i.test(creds.sipUri.trim())
+        ? creds.sipUri.trim()
+        : creds.sipUri.includes("@")
+          ? `sip:${creds.sipUri.trim()}`
+          : creds.sipUri.trim();
+      const wsServer = creds.wsServer.trim();
+      if (!wsServer || !/^wss?:\/\//i.test(wsServer) || !sipUri || !creds.authUser.trim()) {
+        throw new Error(
+          "Ramal SIP incompleto. Reative a telefonia em Widgets → Telefonia IP → Usuários.",
+        );
+      }
+      moduleCredentials = { ...creds, sipUri, wsServer };
 
       const JsSIP = await import("jssip");
-      const socket = new JsSIP.WebSocketInterface(creds.wsServer);
+      const socket = new JsSIP.WebSocketInterface(wsServer);
 
       const config = {
         sockets: [socket],
-        uri: creds.sipUri,
+        uri: sipUri,
         authorization_user: creds.authUser,
         password: creds.authPassword,
         register: true,
@@ -130,11 +165,11 @@ export function useSoftphone() {
       const ua = new JsSIP.UA(config);
 
       ua.on("registered", () => {
-        setState((s) => ({ ...s, status: "registered", error: null }));
+        setSharedState((s) => ({ ...s, status: "registered", error: null }));
       });
 
       ua.on("registrationFailed", (e: { cause?: string }) => {
-        setState((s) => ({
+        setSharedState((s) => ({
           ...s,
           status: "error",
           error: `Registro SIP falhou: ${e.cause ?? "unknown"}`,
@@ -189,7 +224,7 @@ export function useSoftphone() {
             session.on("accepted", () => {
               moduleSession = session;
               moduleInSession = null;
-              setState((s) => ({ ...s, status: "call_active" }));
+              setSharedState((s) => ({ ...s, status: "call_active" }));
               startTimer();
               attachAudio(session.connection);
             });
@@ -198,7 +233,7 @@ export function useSoftphone() {
             // tivéssemos disparado um dial() antes. Mostra UI de
             // atender/recusar com o número do chamador.
             const remoteNumber = session.remote_identity?.uri?.user ?? "Desconhecido";
-            setState((s) => ({
+            setSharedState((s) => ({
               ...s,
               status: "call_ringing",
               remoteNumber,
@@ -208,7 +243,7 @@ export function useSoftphone() {
             session.on("accepted", () => {
               moduleSession = session;
               moduleInSession = null;
-              setState((s) => ({ ...s, status: "call_active" }));
+              setSharedState((s) => ({ ...s, status: "call_active" }));
               startTimer();
               attachAudio(session.connection);
             });
@@ -216,7 +251,7 @@ export function useSoftphone() {
         } else {
           moduleSession = session;
           const remoteNumber = session.remote_identity?.uri?.user ?? "";
-          setState((s) => ({
+          setSharedState((s) => ({
             ...s,
             status: "call_active",
             remoteNumber,
@@ -243,10 +278,14 @@ export function useSoftphone() {
       ua.start();
       moduleUA = ua;
     } catch (e) {
-      setState((s) => ({
+      const raw = e instanceof Error ? e.message : "Erro ao conectar";
+      const error = raw.startsWith("Invalid argument")
+        ? "Ramal SIP incompleto. Reative a telefonia em Widgets → Telefonia IP → Usuários."
+        : raw;
+      setSharedState((s) => ({
         ...s,
         status: "error",
-        error: e instanceof Error ? e.message : "Erro ao conectar",
+        error,
       }));
     }
   }, [startTimer]);
@@ -254,9 +293,10 @@ export function useSoftphone() {
   const cleanup = useCallback(() => {
     moduleSession = null;
     moduleInSession = null;
+    modulePendingApi4ComDial = false;
     clearDialWatchdog();
     stopTimer();
-    setState((s) => ({
+    setSharedState((s) => ({
       ...s,
       status: moduleUA ? "registered" : "disconnected",
       muted: false,
@@ -274,7 +314,7 @@ export function useSoftphone() {
     moduleUA = null;
     moduleCredentials = null;
     cleanup();
-    setState((s) => ({ ...s, status: "disconnected" }));
+    setSharedState((s) => ({ ...s, status: "disconnected" }));
   }, [cleanup]);
 
   const startOutboundDial = useCallback(
@@ -285,7 +325,7 @@ export function useSoftphone() {
       // em "registered" até o Api4com originar a chamada de volta pro
       // nosso ramal (1-3s), e depois pisca "Atender/Recusar" no meio
       // tempo entre `newRTCSession` e `session.on("accepted")`.
-      setState((s) => ({
+      setSharedState((s) => ({
         ...s,
         status: "call_ringing",
         callDirection: "outbound",
@@ -301,7 +341,7 @@ export function useSoftphone() {
         moduleDialWatchdog = null;
         if (moduleSession || moduleInSession) return;
         modulePendingApi4ComDial = false;
-        setState((s) =>
+        setSharedState((s) =>
           s.status === "call_ringing" && s.callDirection === "outbound"
             ? {
                 ...s,
@@ -320,7 +360,7 @@ export function useSoftphone() {
           modulePendingApi4ComDial = false;
           clearDialWatchdog();
           // Reverte o estado "discando" e mostra erro pro usuário.
-          setState((s) => ({
+          setSharedState((s) => ({
             ...s,
             status: moduleUA ? "registered" : "disconnected",
             callDirection: null,
@@ -347,7 +387,7 @@ export function useSoftphone() {
           const msg = permission.error
             ? `${permission.error} Não foi possível ligar.`
             : "Não foi possível acessar o microfone. Verifique se há um microfone conectado.";
-          setState((s) => ({
+          setSharedState((s) => ({
             ...s,
             status: moduleUA ? "registered" : "disconnected",
             callDirection: null,
@@ -385,10 +425,10 @@ export function useSoftphone() {
     };
     if (session.isMuted().audio) {
       session.unmute();
-      setState((s) => ({ ...s, muted: false }));
+      setSharedState((s) => ({ ...s, muted: false }));
     } else {
       session.mute();
-      setState((s) => ({ ...s, muted: true }));
+      setSharedState((s) => ({ ...s, muted: true }));
     }
   }, []);
 
@@ -401,10 +441,10 @@ export function useSoftphone() {
     };
     if (session.isOnHold().local) {
       session.unhold();
-      setState((s) => ({ ...s, held: false, status: "call_active" }));
+      setSharedState((s) => ({ ...s, held: false, status: "call_active" }));
     } else {
       session.hold();
-      setState((s) => ({ ...s, held: true, status: "call_held" }));
+      setSharedState((s) => ({ ...s, held: true, status: "call_held" }));
     }
   }, []);
 

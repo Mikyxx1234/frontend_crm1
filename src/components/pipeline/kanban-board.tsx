@@ -9,7 +9,7 @@ import {
   type DragStart,
   type DragUpdate,
 } from "@hello-pangea/dnd";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { IconTrash as Trash2 } from "@tabler/icons-react";
 
@@ -20,6 +20,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useTeamUsersQuery } from "@/features/shared/queries/team-users";
 import { cn, dealNumericValue, pipelineDealMatchesSearch } from "@/lib/utils";
 
 const DELETE_DROPPABLE_ID = "__delete_zone__";
@@ -27,6 +28,8 @@ const DELETE_DROPPABLE_ID = "__delete_zone__";
 export type BoardStage = {
   id: string;
   name: string;
+  /** Número sequencial no funil para `?stage=3`. */
+  number?: number;
   slug?: string;
   color: string;
   position: number;
@@ -95,13 +98,6 @@ type BoardUserOption = {
     updatedAt?: string;
   } | null;
 };
-
-async function fetchUsers(): Promise<BoardUserOption[]> {
-  const res = await fetch(apiUrl("/api/users"));
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.items ?? data) as BoardUserOption[];
-}
 
 const TERMINAL_STAGE_NAMES = ["fechado", "perdido", "ganho", "won", "lost", "closed"];
 
@@ -193,11 +189,7 @@ export function KanbanBoard({
   // vem `null`. Guardamos SOMENTE se o usuário estava sobre a lixeira,
   // sem interferir no drop normal entre colunas/etapas.
   const wasOverDeleteZoneRef = React.useRef(false);
-  const { data: users = [] } = useQuery({
-    queryKey: ["users-list"],
-    queryFn: fetchUsers,
-    staleTime: 5 * 60_000,
-  });
+  const { data: users = [] } = useTeamUsersQuery<BoardUserOption>();
 
   const filteredStages = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();

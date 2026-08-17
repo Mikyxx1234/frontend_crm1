@@ -61,7 +61,9 @@ export interface BoardDealDto {
 export interface BoardStageDto {
   id: string;
   name: string;
-  /** Slug público para `?stage=` (único no funil). */
+  /** Número sequencial no funil para `?stage=3`. */
+  number?: number;
+  /** Slug legado — leitura de bookmarks antigos; não gravar na URL. */
   slug?: string;
   color: string;
   position: number;
@@ -84,7 +86,9 @@ export interface BoardStageDto {
 export interface PipelineListItemDto {
   id: string;
   name: string;
-  /** Slug público para `?pipeline=` (único na org). */
+  /** Número sequencial por org para `?pipeline=12`. */
+  number?: number;
+  /** Slug legado — leitura de bookmarks antigos; não gravar na URL. */
   slug?: string;
   isDefault?: boolean;
   /**
@@ -98,6 +102,9 @@ export interface PipelineListItemDto {
 export interface PipelineListStageDto {
   id: string;
   name: string;
+  /** Número sequencial no funil para `?stage=3`. */
+  number?: number;
+  /** Slug legado — leitura de bookmarks antigos; não gravar na URL. */
   slug?: string;
   color: string | null;
   position: number;

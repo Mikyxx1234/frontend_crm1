@@ -1,11 +1,15 @@
 "use client";
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { IconCornerDownRight as CornerDownRight, IconTrash as Trash2 } from "@tabler/icons-react";
+import { Position, type Node, type NodeProps } from "@xyflow/react";
+import { IconCornerDownRight as CornerDownRight } from "@tabler/icons-react";
 
-import { TooltipHost } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { NodeInlineConfig } from "./node-inline-config";
+import { CustomHandle } from "./custom-handle";
+import {
+  FlowNodeDeleteButton,
+  FlowNodeHeader,
+  FlowNodeShell,
+} from "./flow-node-shell";
 
 export type GotoNodeData = {
   label: string;
@@ -18,60 +22,24 @@ export type GotoNodeData = {
   onConfigChange?: (next: Record<string, unknown>) => void;
 };
 
-/**
- * GotoNode — salto pra outro passo da automação (terminal: sem handle
- * de saída visível, o "goto" já carrega o destino). Accent sky pra
- * sinalizar redirecionamento.
- */
-export function GotoNode({ data, selected }: NodeProps<GotoNodeData>) {
+type GotoRF = Node<GotoNodeData, "goto">;
+
+export function GotoNode({ data, selected }: NodeProps<GotoRF>) {
   return (
-    <div
-      className={cn(
-        "group/node relative rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
-        selected ? "min-w-[340px] max-w-[400px]" : "min-w-[210px] max-w-[270px]",
-        selected
-          ? "border-sky-400/60 ring-2 ring-sky-300/30 shadow-[0_10px_30px_-10px_rgba(14,165,233,0.4)]"
-          : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-sky-300/50 hover:shadow-[0_10px_30px_-10px_rgba(14,165,233,0.3)]"
-      )}
+    <FlowNodeShell
+      selected={selected}
+      type="action"
+      accent="cyan"
+      stepIndex={data.stepIndex}
+      expanded={selected}
     >
-      {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[var(--brand-gradient-end)] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
-          {data.stepIndex}
-        </span>
-      )}
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
+      <CustomHandle type="target" position={Position.Left} connectionLimit={1} />
+      <FlowNodeHeader
+        icon={<CornerDownRight className="size-3.5" strokeWidth={2.4} aria-hidden />}
+        title={data.label}
+        subtitle={data.summary}
+        actions={<FlowNodeDeleteButton onDelete={data.onDelete} />}
       />
-      <div className="node-drag-handle flex cursor-grab items-start gap-3 px-3.5 py-3 active:cursor-grabbing">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-sky-soft)] text-[var(--color-sky)] ring-1 ring-[var(--color-sky-soft)]">
-          <CornerDownRight className="size-4" strokeWidth={2.4} aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-[var(--text-primary)]">
-            {data.label}
-          </p>
-          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
-            {data.summary}
-          </p>
-        </div>
-        {data.onDelete && (
-          <TooltipHost label="Remover passo" side="top">
-            <button
-              type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
-              onClick={(e) => {
-                e.stopPropagation();
-                data.onDelete?.();
-              }}
-              aria-label="Remover passo"
-            >
-              <Trash2 className="size-3.5" strokeWidth={2.2} />
-            </button>
-          </TooltipHost>
-        )}
-      </div>
       <NodeInlineConfig
         selected={selected}
         stepType={data.stepType ?? "goto"}
@@ -79,6 +47,6 @@ export function GotoNode({ data, selected }: NodeProps<GotoNodeData>) {
         stepOptions={data.stepOptions ?? []}
         onChange={(next) => data.onConfigChange?.(next)}
       />
-    </div>
+    </FlowNodeShell>
   );
 }

@@ -25,14 +25,16 @@ export type CopilotPatchOp =
       stepId: string;
     }
   | {
-      op: "update_step";
+      op: "update_step_config";
       stepId: string;
       config: Record<string, unknown>;
+      /** false = substitui o config; default merge. */
+      merge?: boolean;
     }
   | {
       op: "connect";
-      fromStep: string;
-      toStep: string;
+      fromStepId: string;
+      toStepId: string;
       handle?:
         | "next"
         | "received"
@@ -43,8 +45,8 @@ export type CopilotPatchOp =
     }
   | {
       op: "disconnect";
-      fromStep: string;
-      toStep: string;
+      fromStepId: string;
+      toStepId: string;
     };
 
 export type CopilotPatch = {

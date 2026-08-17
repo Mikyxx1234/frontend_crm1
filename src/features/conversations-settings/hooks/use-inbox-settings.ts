@@ -16,6 +16,11 @@ export interface InboxSettings {
    * última mensagem é inbound. Default ligado.
    */
   showInboundSignal: boolean;
+  /**
+   * Contar outbound de agente/automação/IA como respondida nos filtros
+   * (inbox + direção no funil). Default desligado.
+   */
+  countAgentReplyAsAnswered: boolean;
 }
 
 const DEFAULTS: InboxSettings = {
@@ -27,11 +32,19 @@ const DEFAULTS: InboxSettings = {
   audioTranscription: "none",
   transcriptionLanguage: "pt-BR",
   showInboundSignal: true,
+  countAgentReplyAsAnswered: false,
 };
 
-const QUERY_KEY = ["org-settings", "inbox"];
+/**
+ * Key canônica de GET /api/settings/org?prefix=conversation. (P1-2) —
+ * compartilhada com `useConversationFeatures` (que faz `select` sobre
+ * este cache). Antes cada hook tinha sua key e o endpoint baixava 2×.
+ */
+export const INBOX_SETTINGS_QUERY_KEY = ["org-settings", "inbox"] as const;
 
-async function fetchInboxSettings(): Promise<InboxSettings> {
+const QUERY_KEY = INBOX_SETTINGS_QUERY_KEY;
+
+export async function fetchInboxSettings(): Promise<InboxSettings> {
   const res = await fetch(apiUrl("/api/settings/org?prefix=conversation."), {
     credentials: "include",
   });
@@ -48,6 +61,8 @@ async function fetchInboxSettings(): Promise<InboxSettings> {
     transcriptionLanguage: (data["conversation.transcriptionLanguage"] as InboxSettings["transcriptionLanguage"]) ?? "pt-BR",
     // Default ligado: ausência da chave mantém o comportamento atual.
     showInboundSignal: data["conversation.showInboundSignal"] !== "false",
+    countAgentReplyAsAnswered:
+      data["conversation.countAgentReplyAsAnswered"] === "true",
   };
 }
 
@@ -80,8 +95,6 @@ export function useSaveInboxSetting() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
-      // Also invalidate legacy key used by other components
-      qc.invalidateQueries({ queryKey: ["org-settings", "conversation"] });
     },
   });
 }

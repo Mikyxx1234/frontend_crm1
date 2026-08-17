@@ -24,7 +24,7 @@ type Common = {
 }
 
 export type EditorField =
-  | (Common & { kind: "text" })
+  | (Common & { kind: "text"; variables?: boolean })
   | (Common & { kind: "media" })
   | (Common & { kind: "tag" })
   | (Common & { kind: "textarea" })
@@ -49,7 +49,9 @@ export type EditorField =
   | { kind: "sendProductConfig" }
   /** Departamento + motivo (folha) do passo tabulate_conversation. */
   | { kind: "tabulationPicker" }
-  | { kind: "builder"; key: string; builder: "buttons" | "buttonsTitle" | "listRows" | "condition" | "schedule" | "headers" }
+  // `Common` e não `{ key: string }`: todas as entradas passam `label`, e o
+  // renderizador inline lê `field.label` no cabeçalho do construtor.
+  | (Common & { kind: "builder"; builder: "buttons" | "buttonsTitle" | "listRows" | "condition" | "schedule" | "headers" })
 
 const ACTIVITY_TYPES: Opt[] = [
   { value: "TASK", label: "Tarefa" },
@@ -228,6 +230,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
       label: "Botão que abre a lista",
       placeholder: "Ver opções",
       hint: "Máx. 20 caracteres (limite da Meta).",
+      variables: true,
     },
     {
       kind: "text",
@@ -235,9 +238,10 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
       label: "Título da seção",
       optional: true,
       placeholder: "Opções",
+      variables: true,
     },
-    { kind: "text", key: "header", label: "Cabeçalho", optional: true },
-    { kind: "text", key: "footer", label: "Rodapé", optional: true },
+    { kind: "text", key: "header", label: "Cabeçalho", optional: true, variables: true },
+    { kind: "text", key: "footer", label: "Rodapé", optional: true, variables: true },
     {
       kind: "builder",
       builder: "listRows",
@@ -305,6 +309,12 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "builder", builder: "schedule", key: "schedule", label: "Horários de funcionamento" },
     { kind: "text", key: "timezone", label: "Fuso horário", placeholder: "America/Sao_Paulo" },
     { kind: "step", key: "elseStepId", label: "Fora do horário → ir para", optional: true },
+  ],
+  check_agent_status: [
+    {
+      kind: "info",
+      text: "Verifica se o responsável da conversa está ONLINE. Sem responsável, AWAY ou OFFLINE seguem pelo ramo Offline.",
+    },
   ],
   ask_ai_agent: [
     { kind: "source", source: "aiAgentId", key: "agentId", label: "Agente de IA" },

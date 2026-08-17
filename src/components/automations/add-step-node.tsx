@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Handle, Position, type NodeProps } from "reactflow";
-import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconRobotFace as BotMessageSquare, IconBriefcase as Briefcase, IconCalendarPlus as CalendarPlus, IconCircleCheck as CheckCircle2, IconChecklist as Checklist, IconCircleX as CircleX, IconClock as Clock, IconCornerDownRight as CornerDownRight, IconFileText as FileText, IconGitBranch as GitBranch, IconGlobe as Globe, IconPhoto as Image, IconListDetails as ListDetails, IconMail as Mail, IconMessageQuestion as MessageCircleQuestion, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPackageOff as PackageMinus, IconPlayerPause as Pause, IconPencil as Pencil, IconPlus as Plus, IconRefresh as RefreshCw, IconRepeat as Repeat, IconRoute as Route, IconShoppingBag as ShoppingBag, IconSquare as Square, IconPlayerStop as StopCircle, IconTag as Tag, IconClock as Timer, IconTrendingUp as TrendingUp, IconTrophy as Trophy, IconUserPlus as UserPlus, IconUsersGroup as UsersGroup, IconVariable as Variable } from "@tabler/icons-react";
+import { Position, type Node, type NodeProps } from "@xyflow/react";
+import { CustomHandle } from "./custom-handle";
+import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconRobotFace as BotMessageSquare, IconBriefcase as Briefcase, IconCalendarPlus as CalendarPlus, IconCircleCheck as CheckCircle2, IconChecklist as Checklist, IconCircleX as CircleX, IconClock as Clock, IconCornerDownRight as CornerDownRight, IconFileText as FileText, IconGitBranch as GitBranch, IconGlobe as Globe, IconPhoto as Image, IconListDetails as ListDetails, IconMail as Mail, IconMessageQuestion as MessageCircleQuestion, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPackageOff as PackageMinus, IconPlayerPause as Pause, IconPencil as Pencil, IconPlus as Plus, IconRefresh as RefreshCw, IconRepeat as Repeat, IconRoute as Route, IconShoppingBag as ShoppingBag, IconSquare as Square, IconPlayerStop as StopCircle, IconTag as Tag, IconClock as Timer, IconTrendingUp as TrendingUp, IconTrophy as Trophy, IconUserCheck as UserCheck, IconUserPlus as UserPlus, IconUsersGroup as UsersGroup, IconVariable as Variable } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ export const stepIcon: Record<string, ComponentType<{ className?: string; stroke
   finish_conversation: CheckCircle2,
   tabulate_conversation: Checklist,
   business_hours: Timer,
+  check_agent_status: UserCheck,
   ask_ai_agent: Bot,
   transfer_to_ai_agent: BotMessageSquare,
   consume_stock: PackageMinus,
@@ -86,6 +88,7 @@ export const stepDescription: Record<string, string> = {
   tabulate_conversation:
     "Grava o motivo de encerramento da conversa e, por padrao, ja encerra.",
   business_hours: "Decide com base no horario de atendimento.",
+  check_agent_status: "Verifica se o responsavel da conversa esta online.",
   ask_ai_agent: "Consulta um agente de IA e salva a resposta em variavel.",
   transfer_to_ai_agent:
     "Transfere o atendimento pra um agente IA, que assume a conversa automaticamente.",
@@ -128,6 +131,7 @@ export const stepColor: Record<string, string> = {
   finish_conversation: "text-[var(--color-success)]",
   tabulate_conversation: "text-[var(--color-cyan)]",
   business_hours: "text-[var(--color-warn)]",
+  check_agent_status: "text-[var(--color-warn)]",
   ask_ai_agent: "text-[var(--color-lavender)]",
   transfer_to_ai_agent: "text-[var(--color-lavender)]",
   consume_stock: "text-[var(--color-warning)]",
@@ -175,7 +179,7 @@ export const STEP_GROUPS: StepGroup[] = [
   },
   {
     title: "Lógica",
-    items: ["delay", "condition", "round_robin", "business_hours"],
+    items: ["delay", "condition", "round_robin", "business_hours", "check_agent_status"],
   },
   {
     title: "Integrações",
@@ -192,15 +196,12 @@ export type AddStepNodeData = {
   onSelectType: (stepType: ActionStepType, afterStepId: string | null) => void;
 };
 
+type AddStepRF = Node<AddStepNodeData, "addStep">;
+
 /**
- * AddStepNode — pilula "Adicionar proximo passo" que aparece no fim do
- * canvas. Ao clicar, abre o `StepPickerModal` central premium ("O que
- * deseja automatizar?") com search + grid 2-col de cards.
- *
- * Visual premium: brand outline + animacao `pulse-soft` (CSS puro) pra
- * chamar atencao sem ser cansativo.
+ * AddStepNode — pílula "Adicionar próximo passo" no fim do canvas.
  */
-export function AddStepNode({ data }: NodeProps<AddStepNodeData>) {
+export function AddStepNode({ data }: NodeProps<AddStepRF>) {
   const [open, setOpen] = useState(false);
 
   const handleSelect = useCallback(
@@ -213,10 +214,11 @@ export function AddStepNode({ data }: NodeProps<AddStepNodeData>) {
 
   return (
     <div className="relative flex flex-col items-center">
-      <Handle
+      <CustomHandle
         type="target"
         position={Position.Left}
-        className="size-2! border-none! bg-transparent!"
+        connectionLimit={1}
+        className="!size-2 !border-none !bg-transparent"
       />
 
       <button
@@ -227,10 +229,10 @@ export function AddStepNode({ data }: NodeProps<AddStepNodeData>) {
         }}
         title="Clique para adicionar um passo · arraste até outro node para conectar · ou solte no vazio para criar"
         className={cn(
-          "flex cursor-grab items-center gap-2 rounded-full border-2 border-dashed px-4 py-2 text-[12px] font-bold tracking-tight transition-all duration-200 active:cursor-grabbing",
+          "flex cursor-grab items-center gap-2 rounded-full border border-dashed px-3.5 py-1.5 text-[12px] font-semibold tracking-tight transition-colors active:cursor-grabbing",
           open
-            ? "border-primary bg-[var(--color-primary-soft)] text-primary shadow-[var(--shadow-indigo-glow)]"
-            : "animate-pulse-soft border-primary/40 bg-[var(--glass-bg-base)] text-[var(--text-muted)] backdrop-blur-sm hover:-translate-y-px hover:border-primary hover:bg-[var(--color-primary-soft)] hover:text-primary hover:shadow-[var(--shadow-indigo-glow)]"
+            ? "border-primary bg-[var(--color-primary-soft)] text-primary"
+            : "border-primary/40 bg-[var(--color-bg-card)] text-[var(--text-muted)] hover:border-primary hover:bg-[var(--color-primary-soft)] hover:text-primary"
         )}
       >
         <Plus className="size-3.5" strokeWidth={2.6} />

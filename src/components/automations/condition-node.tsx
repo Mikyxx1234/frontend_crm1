@@ -1,12 +1,25 @@
 "use client";
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { IconFilter as Filter, IconGitBranch as GitBranch, IconTrash as Trash2 } from "@tabler/icons-react";
+import { useMemo } from "react";
+import { Position, type Node, type NodeProps } from "@xyflow/react";
+import {
+  IconBan,
+  IconFilter as Filter,
+  IconGitBranch as GitBranch,
+} from "@tabler/icons-react";
 
-import { TooltipHost } from "@/components/ui/tooltip";
 import type { ConditionBranch } from "@/lib/automation-condition";
-import { cn } from "@/lib/utils";
+import { useDepartmentOptions } from "./editor-data";
+import { CONDITION_FIELDS } from "./editor-fields";
 import { NodeInlineConfig } from "./node-inline-config";
+import { CustomHandle } from "./custom-handle";
+import {
+  FlowNodeDeleteButton,
+  FlowNodeHeader,
+  FlowNodeShell,
+  FlowNodeStats,
+} from "./flow-node-shell";
+import { cn } from "@/lib/utils";
 
 export type ConditionNodeData = {
   label: string;
@@ -16,12 +29,13 @@ export type ConditionNodeData = {
   onDelete?: () => void;
   stats?: { success: number; failed: number; skipped: number };
   onStatsClick?: () => void;
-  /** Edição inline (populado por buildNodes no workflow-canvas). */
   stepType?: string;
   config?: Record<string, unknown>;
   stepOptions?: Array<{ value: string; label: string }>;
   onConfigChange?: (next: Record<string, unknown>) => void;
 };
+
+type ConditionRF = Node<ConditionNodeData, "condition">;
 
 const OP_LABEL: Record<string, string> = {
   eq: "Igual a",
@@ -37,145 +51,158 @@ const OP_LABEL: Record<string, string> = {
   not_empty: "Preenchido",
 };
 
-function ruleSummary(branch: ConditionBranch): string {
-  if (branch.rules.length === 0) return branch.label ?? "Condição";
+const FIELD_LABEL: Record<string, string> = Object.fromEntries(
+  CONDITION_FIELDS.map((f) => [f.value, f.label])
+);
+
+function ruleSummary(
+  branch: ConditionBranch,
+  resolveValue: (field: string, value: unknown) => string
+): string {
+  if (branch.rules.length === 0) return "Sem regras — clique para configurar";
   const first = branch.rules[0];
-  const field = first.field || "—";
+  const field = FIELD_LABEL[first.field] ?? first.field ?? "—";
   const op = OP_LABEL[first.op] ?? first.op;
   const value =
     first.op === "empty" || first.op === "not_empty"
       ? ""
-      : ` ${String(first.value ?? "").slice(0, 18)}`;
+      : ` ${resolveValue(first.field, first.value)}`;
   const base = `${field} ${op}${value}`;
   if (branch.rules.length > 1) {
-    return `${base} +${branch.rules.length - 1}`;
+    return `${base} (+${branch.rules.length - 1})`;
   }
   return base;
 }
 
-/**
- * ConditionNode — bifurcação multi-branch estilo Kommo. Substitui o
- * losango SIM/NÃO binário por um card retangular listando uma linha
- * por branch (+ "Nenhuma das condições" no fim). Cada linha expõe um
- * handle source próprio, permitindo o usuário ligar cada caminho a um
- * step diferente. Layout coerente com ActionNode (radius, sombra,
- * label com indice numerado).
- */
-export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) {
+export function ConditionNode({ data, selected }: NodeProps<ConditionRF>) {
   const branches = data.branches ?? [];
   const hasBranches = branches.length > 0;
+  const s = data.stats;
+
+  const { options: departmentOptions } = useDepartmentOptions();
+  const resolveValue = useMemo(() => {
+    const byId = new Map(departmentOptions.map((o) => [o.value, o.label]));
+    return (field: string, value: unknown) => {
+      const raw = String(value ?? "");
+      if (field === "conversation.departmentId") return byId.get(raw) ?? raw;
+      return raw;
+    };
+  }, [departmentOptions]);
 
   return (
-    <div className="group/node relative">
-      {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[var(--brand-gradient-end)] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
-          {data.stepIndex}
-        </span>
-      )}
-
-      <Handle
+    <FlowNodeShell
+      selected={selected}
+      type="condition"
+      accent="cyan"
+      stepIndex={data.stepIndex}
+      expanded={selected}
+      className={cn("wf-node--condition", selected && "wf-node--lg")}
+    >
+      <CustomHandle
         type="target"
         position={Position.Left}
-        className="size-3! border-2! border-white! bg-[var(--color-cyan)]!"
+        connectionLimit={1}
+        className="fx-port--flow"
       />
-
+      <FlowNodeHeader
+        icon={<GitBranch className="size-3.5" strokeWidth={2.4} />}
+        title={data.label || "Condição"}
+        subtitle={
+          selected
+            ? hasBranches
+              ? `Faça filtros para seguir caminhos diferentes`
+              : "Clique para adicionar uma condição"
+            : hasBranches
+              ? `${branches.length} ${branches.length > 1 ? "ramos" : "ramo"}`
+              : "Faça filtros para seguir caminhos diferentes"
+        }
+        actions={
+          <FlowNodeDeleteButton onDelete={data.onDelete} label="Remover condição" />
+        }
+      />
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
-          selected ? "w-[380px]" : "w-[300px]",
-          selected
-            ? "border-[var(--color-cyan)] shadow-[var(--shadow-lavender-glow)] ring-2 ring-[var(--color-cyan)]/30"
-            : "border-[var(--color-cyan)]/80 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-[var(--color-cyan)] hover:shadow-[var(--shadow-lavender-glow)]"
+          "wf-node__outs wf-node__outs--branches",
+          selected && "wf-node__outs--editing"
         )}
       >
-        {/* Header */}
-        <div className="node-drag-handle flex cursor-grab items-center gap-2 border-b border-[var(--color-cyan)]/70 bg-[var(--color-cyan-soft)] px-3 py-2 active:cursor-grabbing">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--color-bg-card)] text-[var(--color-cyan)] ring-1 ring-[var(--color-cyan)]/15">
-            <GitBranch className="size-3.5" strokeWidth={2.4} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-extrabold tracking-tighter text-[var(--text-primary)]">
-              {data.label}
-            </p>
-            <p className="truncate text-[10px] font-medium tracking-tight text-[var(--text-muted)]">
-              {hasBranches
-                ? `${branches.length} condição${branches.length > 1 ? "s" : ""}`
-                : "Clique para configurar"}
-            </p>
-          </div>
-          {data.onDelete && (
-            <TooltipHost label="Remover condição" side="top">
-              <button
-                type="button"
-                className="flex size-6 items-center justify-center rounded-md text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  data.onDelete?.();
-                }}
-                aria-label="Remover condição"
-              >
-                <Trash2 className="size-3.5" strokeWidth={2.2} />
-              </button>
-            </TooltipHost>
-          )}
-        </div>
-
-        {/* Branches */}
-        <ul className="flex flex-col">
-          {branches.map((branch, idx) => (
-            <li
-              key={branch.id}
-              className="relative flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-2 last:border-b-0 hover:bg-[var(--color-cyan-soft)]"
-            >
-              <span className="flex size-5 shrink-0 items-center justify-center rounded bg-[var(--color-cyan-soft)] text-[10px] font-bold tabular-nums text-[var(--color-cyan)] ring-1 ring-[var(--color-cyan)]/15">
-                {idx + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                {branch.label && (
-                  <p className="truncate text-[11px] font-bold tracking-tight text-[var(--text-primary)]">
-                    {branch.label}
-                  </p>
+        {branches.map((branch, idx) => {
+          const title =
+            (branch.label && branch.label.trim()) || `Ramo ${idx + 1}`;
+          const desc = ruleSummary(branch, resolveValue);
+          return (
+            <div key={branch.id}>
+              <div
+                className={cn(
+                  "wf-cond-card fx-item",
+                  selected && "wf-cond-card--handle"
                 )}
-                <p className="truncate text-[11px] font-medium tracking-tight text-[var(--color-ink-soft)]">
-                  <Filter className="mr-1 inline size-2.5 text-[var(--color-cyan)]" strokeWidth={2.4} />
-                  Se {ruleSummary(branch)}
-                </p>
+              >
+                <span className="wf-branch-num">{idx + 1}</span>
+                <div className="wf-cond-card__text fx-item__text">
+                  <p className="wf-cond-card__title fx-item__title">{title}</p>
+                  {!selected && (
+                    <p className="wf-cond-card__desc fx-item__sub">
+                      <Filter className="inline size-2.5 opacity-60" strokeWidth={2.2} />{" "}
+                      {desc}
+                    </p>
+                  )}
+                </div>
               </div>
-              <Handle
-                type="source"
-                position={Position.Right}
-                id={`branch:${branch.id}`}
-                className="size-2.5! border-2! border-white! bg-[var(--color-success)]!"
-                style={{ top: "50%" }}
-              />
-            </li>
-          ))}
-
-          {/* Else / Nenhuma das condições */}
-          <li className="relative flex items-center gap-2 border-t border-border bg-[var(--color-bg-subtle)]/60 px-3 py-2">
-            <span className="flex size-5 shrink-0 items-center justify-center rounded bg-[var(--color-danger-bg)] text-[10px] font-bold text-[var(--color-danger-text)] ring-1 ring-rose-100">
-              ⊘
-            </span>
-            <p className="flex-1 truncate text-[11px] font-medium italic tracking-tight text-[var(--text-muted)]">
-              Nenhuma das condições
+              <div className="fx-item-out">
+                <span>Se esta condição for verdadeira</span>
+                <CustomHandle
+                  type="source"
+                  position={Position.Right}
+                  id={`branch:${branch.id}`}
+                  connectionLimit={1}
+                  className="fx-port--cond"
+                />
+              </div>
+            </div>
+          );
+        })}
+        <div
+          className={cn(
+            "wf-cond-card wf-cond-card--else fx-out fx-out--error",
+            selected && "wf-cond-card--handle"
+          )}
+        >
+          <span className="wf-branch-num wf-branch-num--err">
+            <IconBan size={12} stroke={2.4} />
+          </span>
+          <div className="wf-cond-card__text">
+            <p className="wf-cond-card__title">
+              {selected ? "Senão" : "Quando não atender a nenhuma condição"}
             </p>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id="else"
-              className="size-2.5! border-2! border-white! bg-[var(--color-danger)]!"
-              style={{ top: "50%" }}
-            />
-          </li>
-        </ul>
-        <NodeInlineConfig
-          selected={selected}
-          stepType={data.stepType ?? "condition"}
-          config={data.config}
-          stepOptions={data.stepOptions ?? []}
-          onChange={(next) => data.onConfigChange?.(next)}
-        />
+            {!selected && (
+              <p className="wf-cond-card__desc">Caminho alternativo do fluxo</p>
+            )}
+          </div>
+          <CustomHandle
+            type="source"
+            position={Position.Right}
+            id="else"
+            connectionLimit={1}
+            className="fx-port--error"
+          />
+        </div>
       </div>
-    </div>
+      <NodeInlineConfig
+        selected={selected}
+        stepType={data.stepType ?? "condition"}
+        config={data.config}
+        stepOptions={data.stepOptions ?? []}
+        onChange={(next) => data.onConfigChange?.(next)}
+      />
+      {s && (
+        <FlowNodeStats
+          success={s.success}
+          warning={s.skipped}
+          error={s.failed}
+          onClick={data.onStatsClick}
+        />
+      )}
+    </FlowNodeShell>
   );
 }

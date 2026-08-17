@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -19,12 +19,14 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
 import { EmptyState } from "@/components/crm/empty-state";
 import { KpiSquareScroll } from "@/components/crm/kpi-card";
 
 import {
+  useAudienceOptions,
   useCampaign,
   useCampaignAction,
   useCampaignRecipients,
@@ -35,7 +37,8 @@ import {
   STATUS_META,
   TONE_CLASSES,
 } from "@/features/campaigns/constants";
-import type { CampaignAction } from "@/features/campaigns/types";
+import type { CampaignAction, CampaignDetail } from "@/features/campaigns/types";
+import { rewriteNumericPath } from "@/lib/public-path";
 
 const ACTIVE = ["SCHEDULED", "PROCESSING", "SENDING"];
 
@@ -44,6 +47,22 @@ function fmtDateTime(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleString("pt-BR");
+}
+
+/** Nome da tag escolhida na criação: audienceTags ou filters.tagIds. */
+function formatCampaignTag(
+  campaign: CampaignDetail,
+  catalog: { id: string; name: string }[],
+): string {
+  if (campaign.audienceTags && campaign.audienceTags.length > 0) {
+    return campaign.audienceTags.map((t) => t.name).join(", ");
+  }
+  const ids = (campaign.filters?.tagIds ?? []).filter(
+    (id): id is string => typeof id === "string" && id.length > 0,
+  );
+  if (ids.length === 0) return "—";
+  const byId = new Map(catalog.map((t) => [t.id, t.name]));
+  return ids.map((id) => byId.get(id) ?? id).join(", ");
 }
 
 const RECIPIENT_FILTERS = [
@@ -74,7 +93,19 @@ export default function CampaignDetailClientPage() {
 
   const campaignQuery = useCampaign(id, isAuth);
   const campaign = campaignQuery.data;
+
+  useEffect(() => {
+    if (campaign?.number != null) rewriteNumericPath("/campaigns", id, campaign.number);
+  }, [campaign?.number, id]);
   const isActive = campaign ? ACTIVE.includes(campaign.status) : false;
+  const audienceOptionsQuery = useAudienceOptions(isAuth);
+  const tagLabel = useMemo(
+    () =>
+      campaign
+        ? formatCampaignTag(campaign, audienceOptionsQuery.data?.tags ?? [])
+        : "—",
+    [campaign, audienceOptionsQuery.data?.tags],
+  );
 
   const statsQuery = useCampaignStats(id, isActive, isAuth && !!campaign);
   const stats = statsQuery.data;
@@ -90,7 +121,7 @@ export default function CampaignDetailClientPage() {
   if (campaignQuery.isLoading) {
     return (
       <Shell>
-        <div className="h-40 animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
+        <AppLoading variant="inline" />
       </Shell>
     );
   }
@@ -446,6 +477,7 @@ export default function CampaignDetailClientPage() {
           <DetailRow label="Agendado para" value={fmtDateTime(campaign.scheduledAt)} />
         ) : null}
         <DetailRow label="Velocidade" value={`${campaign.sendRate} msgs/s`} />
+        <DetailRow label="Tag" value={tagLabel} />
         {campaign.segment ? (
           <DetailRow label="Segmento" value={campaign.segment.name} />
         ) : null}

@@ -25,16 +25,15 @@ export function messagesKey(conversationId: string | null | undefined) {
   return ["messages", conversationId ?? "__none__"] as const;
 }
 
-/** Histórico da conversa ativa. */
+/** Histórico da conversa ativa (ticket atual + histórico capado/paralelo no backend). */
 export function useMessages(conversationId: string | null) {
   return useQuery<MessagesResponse>({
     queryKey: messagesKey(conversationId),
-    queryFn: () => getMessages(conversationId as string),
+    queryFn: () => getMessages(conversationId as string, { history: true }),
     enabled: !!conversationId,
-    staleTime: 5_000,
-    // Fallback p/ ticks de leitura quando o SSE atrasa/bufferiza (rewrite,
-    // multi-réplica). 5s é aceitável na conversa aberta.
-    refetchInterval: 5_000,
+    staleTime: 20_000,
+    refetchInterval: 45_000,
+    refetchOnWindowFocus: false,
   });
 }
 

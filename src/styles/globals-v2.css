@@ -851,20 +851,20 @@ dialog *  { scrollbar-width: thin; scrollbar-color: rgba(15,23,42,0.18) transpar
    (Abordagem documentada pelo React Flow para dark mode na v11.)
    ══════════════════════════════════════════════════════════════════ */
 .v2-dark .automation-canvas {
-  background-color: #0e1524 !important;
+  background-color: #1a2334 !important;
   background-image:
-    radial-gradient(ellipse at top left, rgba(123, 141, 247, 0.12) 0%, transparent 55%),
-    radial-gradient(ellipse at bottom right, rgba(6, 182, 212, 0.09) 0%, transparent 55%) !important;
+    radial-gradient(ellipse at top left, rgba(123, 141, 247, 0.10) 0%, transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(6, 182, 212, 0.07) 0%, transparent 55%) !important;
 }
 
 /* Superfícies neutras (cartões de nó, itens da palette) */
 .v2-dark .automation-editor .bg-white,
 .v2-dark .automation-editor .bg-white\/85,
 .v2-dark .automation-editor .bg-white\/80 {
-  background-color: #1a2336 !important;
+  background-color: #26314a !important;
 }
 .v2-dark .automation-editor .bg-slate-50 {
-  background-color: #141d2e !important;
+  background-color: #1f2a40 !important;
 }
 
 /* Texto neutro */
@@ -881,12 +881,12 @@ dialog *  { scrollbar-width: thin; scrollbar-color: rgba(15,23,42,0.18) transpar
 .v2-dark .automation-editor .ring-slate-100 { border-color: rgba(148, 163, 184, 0.20) !important; }
 .v2-dark .automation-editor .ring-slate-100 { --tw-ring-color: rgba(148, 163, 184, 0.20) !important; }
 /* Anéis brancos dos badges → casar com o tom escuro do cartão */
-.v2-dark .automation-editor .ring-white { --tw-ring-color: #1a2336 !important; }
-.v2-dark .automation-editor .border-white { border-color: #1a2336 !important; }
+.v2-dark .automation-editor .ring-white { --tw-ring-color: #26314a !important; }
+.v2-dark .automation-editor .border-white { border-color: #26314a !important; }
 
 /* Pílula "✕" de remover conexão (renderizada fora do node) */
 .v2-dark .automation-editor .react-flow__edgelabel-renderer .bg-white {
-  background-color: #1a2336 !important;
+  background-color: #26314a !important;
 }
 
 /* Controles (zoom/fit) e MiniMap — sobrepõem os utilitários `!` do JSX

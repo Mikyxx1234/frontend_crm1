@@ -1,10 +1,19 @@
 "use client";
 
-import { Handle, Position, type NodeProps } from "reactflow";
-import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconHelpCircle as HelpCircle, IconTrash as Trash2 } from "@tabler/icons-react";
+import { Position, type Node, type NodeProps } from "@xyflow/react";
+import {
+  IconAlertTriangle as AlertTriangle,
+  IconCircleCheck as CheckCircle2,
+  IconHelpCircle as HelpCircle,
+} from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { CustomHandle } from "./custom-handle";
+import {
+  FlowNodeDeleteButton,
+  FlowNodeHeader,
+  FlowNodeShell,
+} from "./flow-node-shell";
 
 export type QuestionButton = { text: string; gotoStepId: string };
 
@@ -17,90 +26,53 @@ export type QuestionNodeData = {
   onStatsClick?: () => void;
 };
 
-/**
- * QuestionNode — pergunta simples (sem rota por botão). Accent violet
- * (família "salesbot/conversacional"). Renderiza as opções como
- * pílulas dentro do card, mas o roteamento é único (handle "answered"
- * vs "timeout" no fundo).
- */
-export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
+type QuestionRF = Node<QuestionNodeData, "question">;
+
+export function QuestionNode({ data, selected }: NodeProps<QuestionRF>) {
   const buttons = data.buttons ?? [];
   const s = data.stats;
   const hasStats = s && (s.success > 0 || s.failed > 0);
 
   return (
-    <div
-      className={cn(
-        "group/node relative min-w-[230px] max-w-[290px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
-          selected
-            ? "border-[var(--color-lavender)]/60 ring-2 ring-[var(--color-lavender)]/30 shadow-[0_10px_30px_-10px_rgba(139,92,246,0.4)]"
-            : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-[var(--color-lavender)]/50 hover:shadow-[0_10px_30px_-10px_rgba(139,92,246,0.3)]"
-      )}
-    >
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
+    <FlowNodeShell selected={selected} type="message" accent="violet">
+      <CustomHandle type="target" position={Position.Left} connectionLimit={1} />
+      <FlowNodeHeader
+        icon={<HelpCircle className="size-3.5" strokeWidth={2.4} />}
+        title={data.label}
+        subtitle={data.summary}
+        actions={
+          <FlowNodeDeleteButton onDelete={data.onDelete} label="Remover pergunta" />
+        }
       />
-      <div className="flex items-start gap-3 px-3.5 py-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-lavender-soft)] text-[var(--color-lavender)] ring-1 ring-[var(--color-lavender)]/15">
-          <HelpCircle className="size-4" strokeWidth={2.4} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-[var(--text-primary)]">
-            {data.label}
-          </p>
-          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
-            {data.summary}
-          </p>
-        </div>
-        {data.onDelete && (
-          <TooltipHost label="Remover pergunta" side="top">
-            <button
-              type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
-              onClick={(e) => {
-                e.stopPropagation();
-                data.onDelete?.();
-              }}
-              aria-label="Remover pergunta"
-            >
-              <Trash2 className="size-3.5" strokeWidth={2.2} />
-            </button>
-          </TooltipHost>
-        )}
-      </div>
-
       {buttons.length > 0 && (
-        <div className="flex flex-wrap gap-1 border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-[var(--color-bg-subtle)] to-transparent px-3 py-2">
+        <div className="flex flex-wrap gap-1 border-t border-[var(--wf-node-border)] px-3 py-2">
           {buttons.map((btn, i) => (
             <span
               key={i}
-              className="inline-flex items-center rounded-full bg-[var(--color-lavender-soft)] px-2 py-0.5 text-[10px] font-bold tracking-tight text-[var(--color-lavender)] ring-1 ring-[var(--color-lavender)]/15"
+              className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold text-[var(--wf-accent)] bg-[color-mix(in_srgb,var(--wf-accent)_12%,transparent)]"
             >
               {btn.text}
             </span>
           ))}
         </div>
       )}
-
       {hasStats && (
         <TooltipHost label="Ver eventos" side="bottom">
           <button
             type="button"
-            className="flex w-full items-center gap-2 border-t border-[var(--glass-border-subtle)] px-3.5 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
+            className="wf-node__stats"
             onClick={(e) => {
               e.stopPropagation();
               data.onStatsClick?.();
             }}
             aria-label="Ver eventos"
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)] ring-1 ring-[var(--color-success)]/15">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)]">
               <CheckCircle2 className="size-3" />
               {s.success}
             </span>
             {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)] ring-1 ring-[var(--color-destructive)]/15">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)]">
                 <AlertTriangle className="size-3" />
                 {s.failed}
               </span>
@@ -108,20 +80,20 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
           </button>
         </TooltipHost>
       )}
-
-      <Handle
+      <CustomHandle
         type="source"
         position={Position.Right}
         id="answered"
-        className="size-3! border-2! border-white! bg-[var(--color-lavender)]!"
+        connectionLimit={1}
       />
-      <Handle
+      <CustomHandle
         type="source"
         position={Position.Bottom}
         id="timeout"
-        className="size-3! border-2! border-white! bg-[var(--color-warning)]!"
+        connectionLimit={1}
+        className="wf-handle--orange"
         style={{ left: "50%" }}
       />
-    </div>
+    </FlowNodeShell>
   );
 }

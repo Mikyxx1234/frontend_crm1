@@ -163,11 +163,11 @@ export function GlassModalPanel<T extends React.ElementType = "div">({
   ...props
 }: GlassModalPanelProps<T>) {
   const ctx = React.useContext(GlassModalContext);
-  const Component = as ?? "div";
+  const Component = (as ?? "div") as React.ElementType;
 
   return (
     <Component
-      ref={ctx?.panelRef as React.Ref<HTMLElement>}
+      ref={ctx?.panelRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby={ariaLabelledBy ?? ctx?.titleId}

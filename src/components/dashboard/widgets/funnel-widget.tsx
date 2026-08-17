@@ -1,7 +1,6 @@
 "use client";
 
-import { apiUrl } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
+import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
 import { useFunnelData } from "@/hooks/use-dashboard-data";
 import { useDashboardStore } from "@/stores/dashboard-store";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,15 +14,7 @@ const STAGE_COLORS = [
 export function FunnelWidget() {
   const { filters } = useDashboardStore();
 
-  const { data: pipelines = [] } = useQuery<{ id: string; name: string }[]>({
-    queryKey: ["pipelines-list"],
-    queryFn: async () => {
-      const r = await fetch(apiUrl("/api/pipelines"));
-      const j = await r.json();
-      return Array.isArray(j) ? j : j.pipelines ?? [];
-    },
-    staleTime: 120_000,
-  });
+  const { data: pipelines = [] } = usePipelinesQuery<{ id: string; name: string }>();
 
   const pipelineId = filters.pipelineId ?? pipelines[0]?.id ?? null;
   const { data: funnel, isLoading } = useFunnelData(pipelineId);

@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { SwitchGlass } from "@/components/crm/switch-glass";
+import { AppLoading } from "@/components/crm/app-loading";
 import { cn } from "@/lib/utils";
 
 type PipelineLossMeta = {
@@ -173,7 +174,7 @@ export function LostStageReasonsPanel({ pipelineId }: { pipelineId: string }) {
 
   if (metaQuery.isLoading) {
     return (
-      <div className="mb-3 h-28 animate-pulse rounded-lg bg-[var(--glass-bg-overlay)]" />
+      <AppLoading variant="inline" className="mb-3 min-h-[112px]" />
     );
   }
 

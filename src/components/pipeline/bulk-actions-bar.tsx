@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { IconArrowsLeftRight as ArrowRightLeft, IconCircleCheck as CheckCircle2, IconChevronDown as ChevronDown, IconLoader2 as Loader2, IconPencil as Pencil, IconTag as Tag, IconTrash as Trash2, IconTrophy as Trophy, IconUserCog as UserCog, IconX as X, IconCircleX as XCircle } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
 import { useCan } from "@/hooks/use-my-permissions";
+import { usePipelineLossReasons } from "@/features/pipeline-v2/hooks";
 
 type StageOption = { id: string; name: string; color?: string; isLost?: boolean };
 type UserOption = { id: string; name: string };
@@ -175,18 +176,7 @@ export function BulkActionsBar({
   const [pendingLostMoveStage, setPendingLostMoveStage] =
     React.useState<StageOption | null>(null);
 
-  const { data: lossMeta } = useQuery({
-    queryKey: ["pipeline-loss-reasons", pipelineId],
-    queryFn: async () => {
-      const res = await fetch(
-        apiUrl(`/api/pipelines/${pipelineId}/loss-reasons`),
-      );
-      if (!res.ok) return { lossReasonRequired: false };
-      return res.json() as Promise<{ lossReasonRequired?: boolean }>;
-    },
-    enabled: !!pipelineId,
-    staleTime: 30_000,
-  });
+  const { data: lossMeta } = usePipelineLossReasons(pipelineId);
   const lossReasonsActive = Boolean(lossMeta?.lossReasonRequired);
 
   // ID e total da BulkOperation atualmente acompanhada. Quando setado,

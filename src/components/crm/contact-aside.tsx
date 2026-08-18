@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { Row } from "@/components/crm/aside-row"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { RequirePermission } from "@/components/auth/require-permission"
+import { ChannelTypeIcon } from "@/components/inbox/channel-type-icon"
 import { useCan } from "@/hooks/use-my-permissions"
 import {
   IconBriefcase,
@@ -1095,7 +1096,7 @@ export function ContactAside({
                                       side="left"
                                     >
                                       <span className="inline-flex items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
-                                        <IconBrandWhatsapp size={14} className="text-[#25d366]" />
+                                        <ChannelTypeIcon type={contact.connection.type} size={14} />
                                         {channelTypeLabel(contact.connection.type)} · {formatConnectionShort(contact.connection)}
                                       </span>
                                     </TooltipGlass>

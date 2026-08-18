@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import { IconBrandWhatsapp, IconCircleDot } from "@tabler/icons-react";
+import { IconCircleDot } from "@tabler/icons-react";
 
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass";
+import { ChannelTypeIcon } from "@/components/inbox/channel-type-icon";
 import { cn } from "@/lib/utils";
 
 import type { OutboundChannelOption } from "@/features/inbox-v2/hooks/use-channels";
 
 /**
- * Seletor de canal de envio (WhatsApp). Renderizado acima do Composer
+ * Seletor de canal de envio (WhatsApp / Instagram / Messenger).
  * apenas quando a org tem >1 canal CONNECTED — orgs com 1 canal só não
  * precisam do widget (comportamento legacy preservado).
  *
@@ -48,7 +49,7 @@ export function ChannelSelector({
             ) : null}
           </span>
         ),
-        icon: <IconBrandWhatsapp size={14} className="text-[var(--color-success)]" />,
+        icon: <ChannelTypeIcon type={ch.type} size={14} />,
         description: ch.phoneNumber ?? undefined,
       };
     });
@@ -82,7 +83,7 @@ export function ChannelSelector({
             )}
             aria-label={`Canal de envio: ${labelText}${sublabelText ? ` ${sublabelText}` : ""}`}
           >
-            <IconBrandWhatsapp size={13} className="shrink-0 text-[var(--color-success)]" />
+            <ChannelTypeIcon type={selected?.type} size={13} />
             <span className="whitespace-nowrap">
               {labelText}
               {sublabelText ? (

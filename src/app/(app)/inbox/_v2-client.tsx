@@ -29,6 +29,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { usesWhatsapp24hWindow } from "@/components/inbox/channel-type-icon";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { TagChip } from "@/components/crm/tag-chip";
@@ -880,6 +881,10 @@ export default function InboxV2ClientPage({
       lastMessageChannelId,
     },
   );
+  const selectedOutbound = whatsappChannels?.find((c) => c.id === selectedChannelId);
+  const applyWhatsappSession = usesWhatsapp24hWindow(
+    selectedOutbound?.type ?? messagesData?.channel?.type,
+  );
 
   // Override de canal ativo: revalida a janela de 24h no canal de DESTINO
   // (o `session` do GET messages reflete só o canal da conversa).
@@ -891,7 +896,11 @@ export default function InboxV2ClientPage({
   // Acadêmico vira o channelId do ticket e o CSV (persistido) aparece
   // "24h encerrada" mesmo com janela aberta naquele chip.
   const { data: selectedSession, isFetched: selectedSessionFetched } =
-    useChannelSession(activeId, selectedChannelId, !!activeId && !!selectedChannelId);
+    useChannelSession(
+      activeId,
+      selectedChannelId,
+      applyWhatsappSession && !!activeId && !!selectedChannelId,
+    );
 
   function handleSelect(id: string) {
     setActiveId(id);
@@ -991,8 +1000,9 @@ export default function InboxV2ClientPage({
       ? !sessionActiveFromBackend
       : isSessionExpired(sessionInfo?.lastInboundAt ?? activeRow.lastInboundAt)
     : false;
-  const sessionExpiredEffective =
-    selectedChannelId && selectedSessionFetched
+  const sessionExpiredEffective = !applyWhatsappSession
+    ? false
+    : selectedChannelId && selectedSessionFetched
       ? selectedSession?.active !== true
       : channelOverrideActive
         ? false

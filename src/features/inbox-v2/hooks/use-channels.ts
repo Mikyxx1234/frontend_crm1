@@ -35,7 +35,7 @@ interface ChannelsResponse {
   channels?: ApiChannel[];
 }
 
-async function fetchOutboundWhatsappChannels(): Promise<OutboundChannelOption[]> {
+async function fetchOutboundMessagingChannels(): Promise<OutboundChannelOption[]> {
   const res = await fetch(apiUrl("/api/channels"));
   if (!res.ok) {
     throw new Error("Erro ao carregar canais.");
@@ -43,7 +43,13 @@ async function fetchOutboundWhatsappChannels(): Promise<OutboundChannelOption[]>
   const data = (await res.json().catch(() => ({}))) as ChannelsResponse;
   const list = Array.isArray(data.channels) ? data.channels : [];
   return list
-    .filter((c) => c.type === "WHATSAPP" && c.status === "CONNECTED")
+    .filter(
+      (c) =>
+        (c.type === "WHATSAPP" ||
+          c.type === "INSTAGRAM" ||
+          c.type === "FACEBOOK") &&
+        c.status === "CONNECTED",
+    )
     .map((c) => ({
       id: c.id,
       name: c.name,
@@ -55,19 +61,14 @@ async function fetchOutboundWhatsappChannels(): Promise<OutboundChannelOption[]>
 }
 
 /**
- * Canais WhatsApp CONNECTED da org corrente — alimenta o seletor de
- * canal de envio no Composer. Faz uma única request por org/sessão
- * (cache de 60s) e é compartilhado entre Inbox e Deal panel.
- *
- * O backend NÃO escopa a lista por scope-grants aqui (já que o gating
- * final acontece no POST de envio via `resolveOutboundChannel`). Se a
- * org expandir granularidade de permissões por usuário, o filtro extra
- * passa a fazer mais sentido aqui também.
+ * Canais CONNECTED de mensageria da org (WhatsApp, Instagram, Messenger).
+ * Alimenta o seletor "Enviar por". Templates HSM continuam filtrando
+ * WhatsApp no picker — esta lista só define canais de texto livre.
  */
 export function useWhatsappChannels(enabled = true) {
   return useQuery<OutboundChannelOption[]>({
-    queryKey: ["inbox-v2", "outbound-whatsapp-channels"],
-    queryFn: fetchOutboundWhatsappChannels,
+    queryKey: ["inbox-v2", "outbound-messaging-channels"],
+    queryFn: fetchOutboundMessagingChannels,
     enabled,
     staleTime: 60_000,
   });
@@ -179,7 +180,15 @@ export function useSelectedOutboundChannel(args: {
     if (storageKey) {
       try {
         const persisted = window.localStorage.getItem(storageKey);
-        if (persisted && validIds.has(persisted)) next = persisted;
+        if (persisted && validIds.has(persisted)) {
+          const persistedType = availableChannels.find((c) => c.id === persisted)?.type;
+          const convType = availableChannels.find(
+            (c) => c.id === conversationChannelId,
+          )?.type;
+          if (!convType || !persistedType || persistedType === convType) {
+            next = persisted;
+          }
+        }
       } catch {
         /* ignore */
       }

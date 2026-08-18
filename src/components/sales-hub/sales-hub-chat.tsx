@@ -22,6 +22,7 @@ import { toast } from "sonner";
 
 import { ChatArea } from "@/components/crm/chat-area";
 import type { Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { usesWhatsapp24hWindow } from "@/components/inbox/channel-type-icon";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { isSessionExpired, toMessageBubble } from "@/features/inbox-v2/adapters";
@@ -137,6 +138,10 @@ export function SalesHubChat({
       lastMessageChannelId,
     },
   );
+  const selectedOutbound = whatsappChannels?.find((c) => c.id === selectedChannelId);
+  const applyWhatsappSession = usesWhatsapp24hWindow(
+    selectedOutbound?.type ?? messagesData?.channel?.type,
+  );
 
   const channelOverrideActive =
     !!selectedChannelId &&
@@ -146,7 +151,7 @@ export function SalesHubChat({
     useChannelSession(
       conversationId,
       selectedChannelId,
-      !!conversationId && !!selectedChannelId,
+      applyWhatsappSession && !!conversationId && !!selectedChannelId,
     );
 
   const pinnedMessageIds = useMemo(
@@ -188,8 +193,9 @@ export function SalesHubChat({
       ? !sessionInfo.active
       : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundAt ?? null)
     : false;
-  const sessionExpiredEffective =
-    selectedChannelId && selectedSessionFetched
+  const sessionExpiredEffective = !applyWhatsappSession
+    ? false
+    : selectedChannelId && selectedSessionFetched
       ? selectedSession?.active !== true
       : channelOverrideActive
         ? false

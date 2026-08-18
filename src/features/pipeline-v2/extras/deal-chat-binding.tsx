@@ -21,6 +21,7 @@ import { avatarInitials } from "@/lib/avatar";
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
 import { ConnectionDivider, ConversationClosedMarker, DaySeparator, formatChatDayLabel, MessageBubble, StickyDayPill, TicketDivider, useStickyDayLabel, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { usesWhatsapp24hWindow } from "@/components/inbox/channel-type-icon";
 import {
   EventRow,
   isConversationCloseEventText,
@@ -224,11 +225,15 @@ export function useDealChatBinding(params: {
       lastMessageChannelId,
     },
   );
+  const selectedOutbound = whatsappChannels?.find((c) => c.id === selectedChannelId);
+  const applyWhatsappSession = usesWhatsapp24hWindow(
+    selectedOutbound?.type ?? messagesResp?.channel?.type,
+  );
   const { data: selectedSession, isFetched: selectedSessionFetched } =
     useChannelSession(
       effectiveConversationId ?? null,
       selectedChannelId,
-      !!effectiveConversationId && !!selectedChannelId,
+      applyWhatsappSession && !!effectiveConversationId && !!selectedChannelId,
     );
 
   // Deriva sessionExpired da mesma fonte do /inbox: prioriza a sessão do
@@ -250,9 +255,11 @@ export function useDealChatBinding(params: {
   const sessionExpiredDerived =
     sessionExpiredOverride !== undefined
       ? sessionExpiredOverride
-      : selectedChannelId && selectedSessionFetched
-        ? selectedSession?.active !== true
-        : sessionExpiredFromConversation;
+      : !applyWhatsappSession
+        ? false
+        : selectedChannelId && selectedSessionFetched
+          ? selectedSession?.active !== true
+          : sessionExpiredFromConversation;
   const sessionExpired = !!effectiveConversationId && sessionExpiredDerived;
   // Bloco C (25/jun/26): respeita `canReply` exposto pelo backend
   // (mesma fonte que o /inbox). Compat: default true quando ausente.

@@ -31,6 +31,7 @@ export type ChannelType = (typeof ChannelType)[keyof typeof ChannelType];
 export const ChannelProvider = {
   META_CLOUD_API: "META_CLOUD_API",
   BAILEYS_MD: "BAILEYS_MD",
+  META_INSTAGRAM_LOGIN: "META_INSTAGRAM_LOGIN",
 } as const;
 export type ChannelProvider = (typeof ChannelProvider)[keyof typeof ChannelProvider];
 

@@ -2271,11 +2271,9 @@ export function ChatWindow({
               }
 
               /* Chamadas:
-                 - Eventos sem mídia (`whatsapp_call` / `sip_call`, ou
-                   `whatsapp_call_recording` sem URL) → Activity Item compacto.
-                 - Gravação com mídia em `sip_call` também fica no Activity Item
-                   (botão Ouvir). `whatsapp_call_recording` COM `mediaUrl` cai
-                   no fluxo normal de áudio. */
+                 - `whatsapp_call` / `sip_call` (sem player) → Activity Item.
+                 - `whatsapp_call_recording` COM `mediaUrl` cai no fluxo de áudio.
+                 - Gravação SIP fica só na aba Chamadas, não no chat. */
               if (
                 mt === "whatsapp_call" ||
                 mt === "sip_call" ||
@@ -4484,6 +4482,11 @@ function chatDateLabel(date: Date | string | null): string {
   const y = new Date(now);
   y.setDate(y.getDate() - 1);
   if (d.toDateString() === y.toDateString()) return "Ontem";
+  const start = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((start(now) - start(d)) / 86_400_000);
+  if (diffDays > 1 && diffDays < 7) {
+    return d.toLocaleDateString("pt-BR", { weekday: "long" });
+  }
   return d.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -4503,9 +4506,13 @@ function shouldShowDateSeparator(
 }
 
 function DateSep({ date }: { date: string | null }) {
+  const label = chatDateLabel(date);
+  if (!label) return null;
   return (
-    <div className="flex justify-center py-3">
-      <span className={dt.chat.dateSep}>{chatDateLabel(date)}</span>
+    <div className="pointer-events-none sticky top-1 z-10 flex justify-center py-2">
+      <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/95 px-3 py-0.5 font-display text-[11px] font-semibold capitalize text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+        {label}
+      </span>
     </div>
   );
 }
@@ -4639,7 +4646,7 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
   const mt = String(message.messageType ?? "").toLowerCase();
   const isRecording = mt === "whatsapp_call_recording";
   const isSip = mt === "sip_call";
-  const hasRecording = (isRecording || isSip) && !!message.mediaUrl;
+  const hasRecording = isRecording && !!message.mediaUrl;
 
   const lower = content.toLowerCase();
   const senderName = String(message.senderName ?? "").trim();

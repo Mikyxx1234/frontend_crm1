@@ -42,6 +42,8 @@ import {
   IconUser,
   IconStarFilled,
   IconLock,
+  IconEye,
+  IconEyeOff,
 } from "@tabler/icons-react"
 import { useAsideViewMode, type AsideViewMode } from "@/hooks/use-aside-view-mode"
 import {
@@ -62,6 +64,7 @@ import { formatPhoneDisplay } from "@/lib/phone"
 import { useIsMobile } from "@/hooks/use-media-query"
 import { useMobileChatChrome } from "@/hooks/use-mobile-chat-chrome"
 import { COMPOSER_FOCUS_CHAT_EVENT } from "@/lib/composer-insert"
+import { useHideChatEvents } from "@/components/crm/chat-timeline"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
 // Mudancas (DD4 + DD5 do questionario):
@@ -1709,6 +1712,7 @@ function TabsBar({
   }, [searchOpen])
 
   const hasConversaActions = (activeTab === "conversa" && !!onSearchOpen) || !!conversationId
+  const { hideEvents, toggleHideEvents } = useHideChatEvents()
 
   return (
     <div className="shrink-0 border-b border-[var(--glass-border-subtle)]">
@@ -1792,10 +1796,27 @@ function TabsBar({
         {/* Ações à direita — sem spacer flex-1 no meio (ele roubava largura
             das abas e cortava "Timeline"/"Chamadas"). */}
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
-        {/* Botao "Ligar" (softphone) — vive aqui pra ficar ao lado do
-            kebab, canto direito do container da conversa. Antes ficava
-            no header do card do deal, mas ergonomicamente pertence
-            proximo da conversa (mesma logica do inbox). */}
+        {activeTab === "conversa" && (
+          <TooltipGlass
+            label={hideEvents ? "Mostrar eventos" : "Ocultar eventos"}
+            side="bottom"
+          >
+            <button
+              type="button"
+              aria-label={hideEvents ? "Mostrar eventos" : "Ocultar eventos"}
+              aria-pressed={hideEvents}
+              onClick={toggleHideEvents}
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
+                hideEvents
+                  ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]",
+              )}
+            >
+              {hideEvents ? <IconEyeOff size={15} /> : <IconEye size={15} />}
+            </button>
+          </TooltipGlass>
+        )}
         {callButtonSlot}
 
         {/* Kebab de ações do header — lupa + encerrar conversa */}

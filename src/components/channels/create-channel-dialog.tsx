@@ -799,9 +799,11 @@ export function CreateChannelDialog({
                         Ou configure manualmente (App da empresa)
                       </p>
                       <p className="text-xs text-[var(--text-muted)]">
-                        1. Cole o Access Token. 2. Clique em Webhook no rodape,
-                        copie a URL/token para o produto Instagram do App Meta e
-                        informe o App Secret. 3. Clique em Criar canal.
+                        Token da conta Instagram (login direto) ou token EAA da
+                        Pagina / usuario do sistema. Este ultimo exige Pagina do
+                        Facebook com Instagram Business vinculado e permissoes
+                        pages_messaging + instagram_manage_messages. Depois:
+                        Webhook no rodape (URL + App Secret) e Criar canal.
                       </p>
                       <div className="space-y-2">
                         <Label htmlFor="ch-ig-token">Access Token</Label>
@@ -811,7 +813,7 @@ export function CreateChannelDialog({
                           autoComplete="off"
                           value={accessToken}
                           onChange={(e) => setAccessToken(e.target.value)}
-                          placeholder="Token da conta Instagram Business"
+                          placeholder="Token Instagram Login ou EAA da Pagina"
                         />
                       </div>
                       <div className="space-y-2">

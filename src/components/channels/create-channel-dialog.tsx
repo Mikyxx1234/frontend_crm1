@@ -3,7 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import type { ChannelProvider, ChannelType } from "@/lib/prisma-enum-types";
 import { IconAt as AtSign, IconCheck as Check, IconChevronDown as ChevronDown, IconChevronLeft as ChevronLeft, IconCopy as Copy, IconExternalLink as ExternalLink, IconGlobe as Globe, IconLoader2 as Loader2, IconMail as Mail, IconMessageCircle as MessageCircle, IconQrcode as QrCode, IconShare2 as Share2, IconSparkles as Sparkles, IconWebhook as Webhook } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -96,6 +96,7 @@ export function CreateChannelDialog({
   const [accessToken, setAccessToken] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [businessAccountId, setBusinessAccountId] = useState("");
+  const [instagramUserId, setInstagramUserId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signupWarning, setSignupWarning] = useState<string | null>(null);
@@ -126,6 +127,27 @@ export function CreateChannelDialog({
 
   const embeddedSignup = useEmbeddedSignup();
   const facebookLogin = useFacebookLogin();
+  const [igLoginConfigured, setIgLoginConfigured] = useState<boolean | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch(apiUrl("/api/config/public"))
+      .then((res) => res.json())
+      .then((data: { instagramLoginConfigured?: boolean }) => {
+        if (!cancelled) {
+          setIgLoginConfigured(Boolean(data.instagramLoginConfigured));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIgLoginConfigured(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   function reset() {
     setStep(1);
@@ -136,6 +158,7 @@ export function CreateChannelDialog({
     setAccessToken("");
     setPhoneNumberId("");
     setBusinessAccountId("");
+    setInstagramUserId("");
     setError(null);
     setSignupWarning(null);
     setSubmitting(false);
@@ -306,6 +329,12 @@ export function CreateChannelDialog({
     // Instagram Login direto: OAuth por REDIRECT em instagram.com,
     // nao via FB SDK. Abrimos popup apontando pra rota /oauth/start
     // do backend, que redireciona (302) pro instagram.com/oauth/authorize.
+    if (igLoginConfigured === false) {
+      setError(
+        "Login direto do Instagram nao esta configurado neste ambiente. Use o fluxo manual: token, Webhook e Criar canal.",
+      );
+      return;
+    }
     setError(null);
     const popup = window.open(
       apiUrl("/api/channels/instagram/oauth/start"),
@@ -316,28 +345,49 @@ export function CreateChannelDialog({
       setError("Popup bloqueado pelo navegador. Libere popups e tente novamente.");
       return;
     }
+    const cleanup = () => {
+      window.removeEventListener("message", listener);
+      clearInterval(closedWatch);
+    };
     const listener = (event: MessageEvent) => {
       const raw = typeof event.data === "string" ? event.data : "";
       if (!raw) return;
-      let msg: { type?: string; ok?: boolean; channelId?: string; username?: string };
+      let msg: {
+        type?: string;
+        ok?: boolean;
+        channelId?: string;
+        username?: string;
+        message?: string;
+      };
       try {
         // A callback route serializa `{type, ok, ...}` DUAS vezes (postMessage
         // recebe uma string JSON contendo o payload). Fazemos parse duplo
         // defensivo.
         const first = JSON.parse(raw) as unknown;
-        msg = typeof first === "string" ? (JSON.parse(first) as typeof msg) : (first as typeof msg);
+        msg =
+          typeof first === "string"
+            ? (JSON.parse(first) as typeof msg)
+            : (first as typeof msg);
       } catch {
         return;
       }
       if (msg?.type !== "IG_OAUTH_DONE") return;
-      window.removeEventListener("message", listener);
+      cleanup();
       if (msg.ok) {
         onCreated?.();
         handleOpenChange(false);
       } else {
-        setError("Falha ao conectar Instagram. Tente novamente.");
+        setError(
+          typeof msg.message === "string" && msg.message.trim()
+            ? msg.message
+            : "Falha ao conectar Instagram. Tente novamente.",
+        );
       }
     };
+    const closedWatch = window.setInterval(() => {
+      if (!popup.closed) return;
+      cleanup();
+    }, 400);
     window.addEventListener("message", listener);
   }
 
@@ -379,6 +429,66 @@ export function CreateChannelDialog({
       return;
     }
     const prov = providerForType(channelType, provider);
+
+    if (channelType === "INSTAGRAM") {
+      if (!accessToken.trim()) {
+        setError(
+          "Preencha o Token de acesso ou clique em Entrar com Instagram.",
+        );
+        return;
+      }
+      if (!webhookInfo) {
+        setError(
+          "Abra o Webhook, cole a URL no App Meta e informe o App Secret. Depois clique em Criar canal.",
+        );
+        void fetchWebhookInfo();
+        return;
+      }
+      if (!appSecret.trim()) {
+        setWebhookModalOpen(true);
+        setError(
+          "Cole o App Secret do seu App Meta no modal Webhook antes de criar o canal.",
+        );
+        return;
+      }
+      setSubmitting(true);
+      setError(null);
+      try {
+        const res = await fetch(apiUrl("/api/channels/instagram/manual"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name.trim(),
+            accessToken: accessToken.trim(),
+            instagramUserId: instagramUserId.trim() || undefined,
+            channelId: webhookInfo.channelId,
+            verifyToken: webhookInfo.verifyToken,
+            webhookId: webhookInfo.webhookId,
+            appSecret: appSecret.trim(),
+          }),
+        });
+        const data = (await res.json()) as {
+          message?: string;
+          webhookSubscribed?: boolean;
+        };
+        if (!res.ok) {
+          throw new Error(data.message ?? "Erro ao conectar Instagram.");
+        }
+        onCreated?.();
+        if (data.webhookSubscribed === false) {
+          setSignupWarning(
+            "Canal criado, mas a Meta nao assinou o webhook (subscribed_apps). Confira o token e o campo messages no App.",
+          );
+          return;
+        }
+        handleOpenChange(false);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Erro ao conectar Instagram.");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
 
     // Meta Cloud API manual: usa a rota dedicada que provisiona o webhook
     // automaticamente (subscribed_apps no App Meta global do CRM) e retorna
@@ -466,8 +576,13 @@ export function CreateChannelDialog({
     ? providerForType(channelType, provider)
     : null;
 
+  // Embedded Signup e so do WhatsApp Cloud API. Instagram tambem usa
+  // provider META_CLOUD_API no wizard, mas o login e OAuth proprio —
+  // nao pode herdar essa flag senão o rodape esconde "Criar canal".
   const showEmbeddedSignup =
-    effectiveProvider === "META_CLOUD_API" && embeddedSignup.isConfigured;
+    channelType === "WHATSAPP" &&
+    effectiveProvider === "META_CLOUD_API" &&
+    embeddedSignup.isConfigured;
 
   const sheetFooter = (
     <div className="flex w-full flex-wrap items-center gap-2">
@@ -491,8 +606,9 @@ export function CreateChannelDialog({
       ) : null}
       <div className="flex flex-1 flex-wrap justify-end gap-2">
         {step === 3 &&
-        effectiveProvider === "META_CLOUD_API" &&
-        channelType === "WHATSAPP" ? (
+        ((effectiveProvider === "META_CLOUD_API" &&
+          channelType === "WHATSAPP") ||
+          channelType === "INSTAGRAM") ? (
           <Button
             type="button"
             variant="outline"
@@ -527,8 +643,7 @@ export function CreateChannelDialog({
             Continuar
           </Button>
         ) : (showEmbeddedSignup && !showManualConfig) ||
-          channelType === "FACEBOOK" ||
-          channelType === "INSTAGRAM" ? null : (
+          channelType === "FACEBOOK" ? null : (
           <Button type="button" onClick={() => void submit()} disabled={submitting}>
             {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
             Criar canal
@@ -656,7 +771,9 @@ export function CreateChannelDialog({
                         Conectar Instagram diretamente
                       </p>
                       <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        Login direto pela conta Instagram Business. Nao requer Pagina do Facebook.
+                        Caminho recomendado: login direto pela conta Instagram
+                        Business. Nao requer Pagina do Facebook. O canal e
+                        criado automaticamente apos autorizar.
                       </p>
                       <Button
                         type="button"
@@ -669,6 +786,48 @@ export function CreateChannelDialog({
                         </svg>
                         Entrar com Instagram
                       </Button>
+                      {igLoginConfigured === false ? (
+                        <p className="mt-2 text-[11px] text-[var(--color-warning)]">
+                          Login direto indisponivel neste ambiente. Use o fluxo
+                          manual abaixo (token + Webhook + Criar canal).
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-3 rounded-lg border bg-[var(--glass-bg-overlay)] p-3">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        Ou configure manualmente (App da empresa)
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        1. Cole o Access Token. 2. Clique em Webhook no rodape,
+                        copie a URL/token para o produto Instagram do App Meta e
+                        informe o App Secret. 3. Clique em Criar canal.
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="ch-ig-token">Access Token</Label>
+                        <Input
+                          id="ch-ig-token"
+                          type="password"
+                          autoComplete="off"
+                          value={accessToken}
+                          onChange={(e) => setAccessToken(e.target.value)}
+                          placeholder="Token da conta Instagram Business"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ch-ig-uid">Instagram User ID</Label>
+                        <Input
+                          id="ch-ig-uid"
+                          value={instagramUserId}
+                          onChange={(e) => setInstagramUserId(e.target.value)}
+                          placeholder="Opcional se o token for da propria conta"
+                        />
+                      </div>
+                      {signupWarning ? (
+                        <p className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-2 text-xs text-[var(--color-warning)]">
+                          {signupWarning}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 ) : channelType === "FACEBOOK" ? (

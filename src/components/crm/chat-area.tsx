@@ -9,7 +9,7 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { ChatAvatar } from "@/components/inbox/chat-avatar"
 import { AVATAR_SIZE, avatarInitials } from "@/lib/avatar"
-import { MessageBubble, ConnectionDivider, ConversationClosedMarker, TicketDivider, DaySeparator, formatChatDayLabel, type Message } from "./message-bubble"
+import { MessageBubble, ConnectionDivider, ConversationClosedMarker, TicketDivider, DaySeparator, formatChatDayLabel, StickyDayPill, useStickyDayLabel, type Message } from "./message-bubble"
 import {
   EventRow,
   isConversationCloseEventText,
@@ -221,6 +221,10 @@ export function ChatArea({
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
+  const stickyDayLabel = useStickyDayLabel(
+    messagesRef,
+    `${messages[0]?.id ?? ""}:${messages[messages.length - 1]?.id ?? ""}:${messages.length}`,
+  )
   // Botão flutuante "descer" (estilo WhatsApp): aparece quando chega mensagem
   // do cliente enquanto o operador está lendo histórico mais acima. O badge
   // conta as novas mensagens não vistas; clicar rola suave até o fim.
@@ -549,11 +553,12 @@ export function ChatArea({
       {/* MESSAGES — única área rolável; min-h-0 permite encolher e manter
           o footer (composer) sempre visível na base. */}
       <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-7 pt-6 pb-8 max-md:px-3">
+        <StickyDayPill date={stickyDayLabel} />
         <ul className="flex list-none flex-col gap-1.5">
         {(() => {
-          // Pills de dia no fluxo (Hoje / Ontem / weekday) com `sticky` no
-          // topo — o dia visível fica fixo até o próximo empurrar, como no
-          // WhatsApp Web. `data-day-label` permanece por compat.
+          // Pills de dia inline no fluxo (Hoje / Ontem / weekday). O dia
+          // visível no topo vem do overlay `StickyDayPill`, não de várias
+          // stickies irmãs. `data-day-label` alimenta `useStickyDayLabel`.
           const distinctChannels = new Set(
             messages.map((m) => m.channelId).filter(Boolean) as string[],
           )
@@ -623,7 +628,7 @@ export function ChatArea({
             return (
               <Fragment key={message.id || index}>
                 {showDay && dayLabel ? (
-                  <li className="pointer-events-none sticky top-1 z-10 list-none" data-day-label={dayLabel}>
+                  <li className="pointer-events-none list-none" data-day-label={dayLabel}>
                     <DaySeparator date={dayLabel} />
                   </li>
                 ) : null}

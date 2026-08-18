@@ -62,6 +62,7 @@ import { dt } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { MetaSendErrorBalloon } from "@/components/crm/meta-send-error-balloon";
 import { EventRow, classifyTimelineItem, isRedundantOpenStatusEvent } from "@/components/crm/chat-timeline";
+import { StickyDayPill, useStickyDayLabel } from "@/components/crm/message-bubble";
 
 /** Texto da nota em uma linha (banner fixado estilo WhatsApp). */
 function notePreviewOneLine(content: string, maxChars = 140): string {
@@ -462,6 +463,7 @@ export function ChatWindow({
   // mount sem hydration mismatch).
   const isMobile = useIsMobile();
   const bottomRef = React.useRef<HTMLDivElement>(null);
+  const messagesScrollRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   /** Handlers expostos por cada `AudioMessage` — menu ⋯ chama transcrever sem duplicar lógica. */
@@ -637,6 +639,10 @@ export function ChatWindow({
     refetchInterval: conversationId ? 45_000 : false,
   });
   const messages = messagesData?.messages ?? [];
+  const stickyDayLabel = useStickyDayLabel(
+    messagesScrollRef,
+    `${conversationId ?? ""}:${messages.length}:${messages[0]?.id ?? ""}`,
+  );
   const pinnedNoteId = messagesData?.pinnedNoteId ?? null;
   const pinnedCacheRef = React.useRef<InboxMessageDto | null>(null);
   React.useEffect(() => {
@@ -2205,6 +2211,7 @@ export function ChatWindow({
           nas bordas em telas <375px) sob o pretexto de 'Kommo-like'.
           16px (px-4) e o minimo aceitavel sem perder identidade. */}
       <div
+        ref={messagesScrollRef}
         className={cn(
           "relative min-h-0 flex-1 overflow-y-auto bg-[var(--chat-bg)] px-4 py-3 shadow-inner",
           compactChrome
@@ -2212,6 +2219,7 @@ export function ChatWindow({
             : "scrollbar-thin sm:px-12 sm:py-12",
         )}
       >
+        <StickyDayPill date={stickyDayLabel} />
         {/* Mobile: px-4 py-3 (respeita regra). Desktop: px-12 py-12
             (respiro editorial premium). */}
         {isFetching && !isLoading && (
@@ -2245,6 +2253,7 @@ export function ChatWindow({
           {messages.map((m, idx) => {
             const prev = idx > 0 ? messages[idx - 1] : null;
             const showDate = shouldShowDateSeparator(prev, m);
+            const dayLabel = chatDateLabel(m.createdAt) || undefined;
 
             {
               const mt = String(m.messageType ?? "").toLowerCase();
@@ -2257,7 +2266,7 @@ export function ChatWindow({
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <div data-msg-idx={idx}>
+                    <div data-msg-idx={idx} data-day-label={dayLabel}>
                       <AIDraftCard
                         messageId={String(m.id)}
                         content={raw}
@@ -2282,7 +2291,7 @@ export function ChatWindow({
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <div data-msg-idx={idx}>
+                    <div data-msg-idx={idx} data-day-label={dayLabel}>
                       <CallActivityItem message={m} />
                     </div>
                   </React.Fragment>
@@ -2294,7 +2303,7 @@ export function ChatWindow({
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <div data-msg-idx={idx}>
+                    <div data-msg-idx={idx} data-day-label={dayLabel}>
                       <ConsentActivityItem
                         message={m}
                         verdict={consentVerdict}
@@ -2316,7 +2325,7 @@ export function ChatWindow({
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <div data-msg-idx={idx}>
+                    <div data-msg-idx={idx} data-day-label={dayLabel}>
                       <SystemEventRow
                         body={systemBody}
                         createdAt={m.createdAt}
@@ -2339,7 +2348,7 @@ export function ChatWindow({
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <div data-msg-idx={idx}>
+                    <div data-msg-idx={idx} data-day-label={dayLabel}>
                       <EventRow
                         action={classified.action ?? "ia"}
                         text={m.content}
@@ -2384,7 +2393,7 @@ export function ChatWindow({
               <React.Fragment key={m.id}>
                 {showDate && <DateSep date={m.createdAt} />}
                 <MotionDiv
-                  data-msg-idx={idx}
+                  data-msg-idx={idx} data-day-label={dayLabel}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
@@ -4509,7 +4518,10 @@ function DateSep({ date }: { date: string | null }) {
   const label = chatDateLabel(date);
   if (!label) return null;
   return (
-    <div className="pointer-events-none sticky top-1 z-10 flex justify-center py-2">
+    <div
+      className="pointer-events-none flex justify-center py-2"
+      data-day-label={label}
+    >
       <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/95 px-3 py-0.5 font-display text-[11px] font-semibold capitalize text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
         {label}
       </span>

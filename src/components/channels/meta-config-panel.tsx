@@ -84,6 +84,9 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
     typeof cfg.appSecret === "string" ? cfg.appSecret : "";
   const initialVerifyToken =
     typeof cfg.verifyToken === "string" ? cfg.verifyToken : "";
+  const webhookId =
+    typeof cfg.webhookId === "string" ? cfg.webhookId.trim() : "";
+  const isInstagram = channel.type === "INSTAGRAM";
   // Confirmação de leitura (visto azul) — default LIGADO (ausente = envia).
   const initialSendReadReceipts = cfg.sendReadReceipts !== false;
   const wasEmbeddedSignup = cfg.embeddedSignup === true;
@@ -92,7 +95,9 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
   // globais do CRM — o cliente NAO precisa mexer no painel Meta. Detectamos
   // pela ausencia de appSecret proprio no config (embedded signup nunca grava;
   // canais criados via /api/channels/manual-cloud tambem nao).
-  const isGlobalApp = !initialAppSecret;
+  // Instagram da empresa usa o App Secret do produto Instagram — nunca o
+  // webhook "automatico" do App do CRM.
+  const isGlobalApp = !isInstagram && !initialAppSecret;
 
   const [channelName, setChannelName] = useState(channel.name);
   const [defaultPipelineId, setDefaultPipelineId] = useState<string | null>(
@@ -151,8 +156,9 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
   // veio (channel antigo carregado de cache?), cai pra rota legacy ate o
   // proximo refetch. Apos Deploy 2 a rota legacy sai e isso vira erro
   // visivel — desejavel pra forcar refresh do cache.
-  const webhookUrl = channel.organizationSlug
-    ? `${webhookBase}/api/webhooks/meta/${channel.organizationSlug}`
+  const webhookPathId = webhookId || channel.organizationSlug;
+  const webhookUrl = webhookPathId
+    ? `${webhookBase}/api/webhooks/meta/${webhookPathId}`
     : `${webhookBase}/api/webhooks/meta`;
 
   const copyToClipboard = (value: string, fieldName: string) => {
@@ -180,6 +186,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
         ...(accessToken.trim() ? { accessToken: accessToken.trim() } : {}),
         ...(appSecret.trim() ? { appSecret: appSecret.trim() } : {}),
         ...(verifyToken.trim() ? { verifyToken: verifyToken.trim() } : {}),
+        ...(webhookId ? { webhookId } : {}),
       };
       const res = await fetch(apiUrl(`/api/channels/${channel.id}`), {
         method: "PUT",
@@ -219,17 +226,31 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
       setManualReconnecting(false);
       return;
     }
-    fetch(apiUrl("/api/channels/manual-cloud"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        channelId: channel.id,
-        name: channelName.trim() || channel.name,
-        accessToken: tokenToUse,
-        phoneNumberId: phoneNumberId.trim(),
-        wabaId: businessAccountId.trim(),
-      }),
-    })
+    fetch(
+      apiUrl(isInstagram ? "/api/channels/instagram/manual" : "/api/channels/manual-cloud"),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          isInstagram
+            ? {
+                channelId: channel.id,
+                name: channelName.trim() || channel.name,
+                accessToken: tokenToUse,
+                appSecret: appSecret.trim() || undefined,
+                verifyToken: verifyToken.trim() || undefined,
+                webhookId: webhookId || undefined,
+              }
+            : {
+                channelId: channel.id,
+                name: channelName.trim() || channel.name,
+                accessToken: tokenToUse,
+                phoneNumberId: phoneNumberId.trim(),
+                wabaId: businessAccountId.trim(),
+              },
+        ),
+      },
+    )
       .then(async (res) => {
         const data = (await res.json()) as { message?: string };
         if (!res.ok) {
@@ -258,11 +279,12 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-            Meta Cloud API
+            {isInstagram ? "Instagram Direct" : "Meta Cloud API"}
           </h3>
           <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-            Credenciais do WhatsApp Business Platform. Valores atuais ficam
-            mascarados.
+            {isInstagram
+              ? "Token e webhook do App da empresa. Valores atuais ficam mascarados."
+              : "Credenciais do WhatsApp Business Platform. Valores atuais ficam mascarados."}
           </p>
         </div>
         <span
@@ -334,7 +356,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
         </div>
       ) : null}
 
-      {embeddedSignup.isConfigured ? (
+      {!isInstagram && embeddedSignup.isConfigured ? (
         <>
           <Separator />
           <div className="space-y-3">
@@ -446,6 +468,8 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
         />
       </section>
 
+      {!isInstagram ? (
+      <>
       <Separator />
 
       {/* Comportamento do canal — flags não-credenciais gravadas no config. */}
@@ -471,6 +495,8 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           />
         </label>
       </section>
+      </>
+      ) : null}
 
       <Separator />
 
@@ -493,6 +519,23 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               <Webhook className="size-3" />
               Webhook
             </Button>
+            {isInstagram ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 text-xs"
+                disabled={manualReconnecting}
+                onClick={handleManualReconnect}
+              >
+                {manualReconnecting ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-3" />
+                )}
+                Reconectar
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -542,8 +585,12 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                 showTokenHint
                   ? initialToken
                     ? `Salvo: ${maskSecret(initialToken)} — deixe em branco para manter`
+                    : isInstagram
+                      ? "Cole o token gerado no produto Instagram"
+                      : "Cole o token (EAA...)"
+                  : isInstagram
+                    ? "Cole o token gerado no produto Instagram"
                     : "Cole o token (EAA...)"
-                  : "Cole o token (EAA...)"
               }
               className="font-mono text-xs"
             />
@@ -560,7 +607,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               </Button>
             </TooltipGlass>
           </div>
-          {accessToken && accessToken.length < 50 ? (
+          {accessToken && !isInstagram && accessToken.length < 50 ? (
             <p className="text-xs text-[var(--color-warning)]">
               Token muito curto ({accessToken.length}). Tokens válidos começam com{" "}
               <span className="font-mono">EAA</span> e têm 200+ caracteres.
@@ -568,6 +615,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           ) : null}
         </div>
 
+        {!isInstagram ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="meta-pnid" className="text-xs">
@@ -592,11 +640,12 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
             />
           </div>
         </div>
+        ) : null}
 
-        {!isGlobalApp && (
+        {(!isGlobalApp || isInstagram) && (
           <div className="space-y-1.5">
             <Label htmlFor="meta-app-secret" className="text-xs">
-              App Secret
+              {isInstagram ? "Chave secreta do app do Instagram" : "App Secret"}
             </Label>
             <div className="flex gap-2">
               <Input
@@ -613,7 +662,9 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                 placeholder={
                   initialAppSecret
                     ? `Salvo: ${maskSecret(initialAppSecret)} — deixe em branco para manter`
-                    : "32 chars hex (Configurações → Básico no seu app Meta)"
+                    : isInstagram
+                      ? "Produto Instagram → chave secreta do app (não Configurações → Básico)"
+                      : "32 chars hex (Configurações → Básico no seu app Meta)"
                 }
                 className="font-mono text-xs"
               />
@@ -633,8 +684,19 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           </div>
         )}
       </section>
+      {isInstagram && (manualReconnectError || manualReconnectSuccess) ? (
+        <p
+          className={
+            manualReconnectError
+              ? "text-xs text-[var(--color-danger-text)]"
+              : "text-xs text-[var(--color-success)]"
+          }
+        >
+          {manualReconnectError ?? "✓ Token revalidado na Meta"}
+        </p>
+      ) : null}
 
-      {embeddedSignup.isConfigured && (
+      {!isInstagram && embeddedSignup.isConfigured && (
         <>
           <Separator />
           <section className="flex flex-wrap items-center justify-between gap-3">
@@ -712,6 +774,20 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
 
       {/* Docs colapsado num details compacto — antes era um card grande sobre
           WhatsApp Calling API que ninguém precisa ler sempre. */}
+      {isInstagram ? (
+        <details className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-2 text-xs">
+          <summary className="cursor-pointer font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+            Ajuda e documentação
+          </summary>
+          <div className="mt-2 space-y-1.5 text-[var(--text-muted)]">
+            <p>
+              Token e webhook precisam ser do mesmo app. No produto Instagram,
+              assine <code className="rounded bg-[var(--glass-bg-strong)] px-1">messages</code>{" "}
+              e cole a chave secreta do app do Instagram.
+            </p>
+          </div>
+        </details>
+      ) : (
       <details className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-2 text-xs">
         <summary className="cursor-pointer font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]">
           Ajuda e documentação
@@ -743,6 +819,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           </div>
         </div>
       </details>
+      )}
 
       {/* Footer sticky-ish: unico botao salvar (antes tinha dois — este e o
           "Salvar e ativar URL de callback" dentro do bloco avancado; o
@@ -784,7 +861,9 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               Webhook
             </DialogTitle>
             <DialogDescription>
-              {isGlobalApp
+              {isInstagram
+                ? "No produto Instagram do mesmo app do token: cole a URL e o token, assine o campo messages e use a chave secreta do app do Instagram."
+                : isGlobalApp
                 ? "A assinatura do webhook é gerenciada pelo App do CRM. Use os dados abaixo apenas se mantém um App Meta próprio."
                 : "Configure a URL e o token abaixo no painel Meta (developers.facebook.com → seu app → WhatsApp → Configuração)."}
             </DialogDescription>
@@ -817,7 +896,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                 </Button>
               </TooltipGlass>
             </div>
-            {!channel.organizationSlug ? (
+            {!webhookPathId ? (
               <p className="text-xs text-[var(--color-warning)]">
                 Organization slug ausente — recarregue a página.
               </p>
@@ -875,7 +954,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               type="button"
               size="sm"
               className="gap-1.5"
-              disabled={saveMutation.isPending || !channel.organizationSlug}
+              disabled={saveMutation.isPending || !webhookPathId}
               onClick={() => saveMutation.mutate()}
             >
               {saveMutation.isPending ? (
@@ -902,10 +981,22 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               Como configurar no painel Meta?
             </summary>
             <ol className="mt-2 ml-4 list-decimal space-y-1">
+              {isInstagram ? (
+                <>
+                  <li>Salve o canal aqui — token de verificação e chave secreta precisam estar gravados antes da Meta verificar.</li>
+                  <li>No mesmo app do token: produto Instagram → Webhooks.</li>
+                  <li>Cole a URL e o token acima e clique em Verificar e salvar.</li>
+                  <li>Assine o campo <span className="font-mono">messages</span>.</li>
+                  <li>Use a chave secreta do app do Instagram, não Configurações → Básico.</li>
+                </>
+              ) : (
+                <>
               <li>Salve o canal aqui — verifyToken e appSecret precisam estar gravados no banco antes da Meta tentar verificar.</li>
               <li>No painel Meta: <span className="font-mono">developers.facebook.com</span> → seu app → WhatsApp → Configuração.</li>
               <li>Em &quot;Webhook&quot; clique em &quot;Editar&quot;, cole a URL e o token acima e clique em &quot;Verify and save&quot;.</li>
               <li>Subscreva o campo <span className="font-mono">messages</span> (e <span className="font-mono">calls</span> se usar ligações).</li>
+                </>
+              )}
             </ol>
           </details>
         </DialogContent>

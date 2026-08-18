@@ -1335,23 +1335,20 @@ export function MessageBubble({
     return <FormBubble message={message} className={className} />
   }
 
-  // Ligação (SIP/Api4com): mesmo EventRow dos demais eventos da timeline.
+  // Ligação (SIP/Api4com): EventRow na conversa. Gravação fica só na aba Chamadas.
   if (message.messageType === "sip_call") {
     const inbound = message.type === "incoming"
     const missed = /n[ãa]o atendida/i.test(message.content ?? "")
     const [title, ...rest] = (message.content ?? "").split(" · ")
     const detail = rest.join(" · ").trim()
-    const recordingUrl = resolveMediaUrl(message.mediaUrl)
     return (
-      <div className={cn("flex w-full flex-col gap-1.5", className)}>
-        <EventRow
-          icon={missed ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
-          text={title || (inbound ? "Ligação recebida" : "Ligação realizada")}
-          actor={detail}
-          time={message.time}
-        />
-        {recordingUrl ? <AudioPlayer url={recordingUrl} isOutgoing={!inbound} /> : null}
-      </div>
+      <EventRow
+        icon={missed ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
+        text={title || (inbound ? "Ligação recebida" : "Ligação realizada")}
+        actor={detail}
+        time={message.time}
+        className={className}
+      />
     )
   }
 
@@ -1793,12 +1790,40 @@ function ReactionBadge({
 
 interface DaySeparatorProps {
   date: string
+  /** Gruda no topo do container rolável até o próximo dia empurrar (WhatsApp). */
+  sticky?: boolean
 }
 
-export function DaySeparator({ date }: DaySeparatorProps) {
+/** Rótulo de dia no chat: Hoje, Ontem, weekday (últimos 7 dias) ou dd/mm/aaaa. */
+export function formatChatDayLabel(iso?: string | null): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  const start = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const diffDays = Math.round((start(new Date()) - start(d)) / 86_400_000)
+  if (diffDays === 0) return "Hoje"
+  if (diffDays === 1) return "Ontem"
+  if (diffDays > 1 && diffDays < 7) {
+    return d.toLocaleDateString("pt-BR", { weekday: "long" })
+  }
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+}
+
+export function DaySeparator({ date, sticky = false }: DaySeparatorProps) {
   return (
-    <div className="self-center px-0 py-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-      {date}
+    <div
+      className={cn(
+        "flex justify-center py-2",
+        sticky && "sticky top-1 z-10",
+      )}
+    >
+      <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/95 px-3 py-0.5 font-display text-[11px] font-semibold capitalize text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+        {date}
+      </span>
     </div>
   )
 }

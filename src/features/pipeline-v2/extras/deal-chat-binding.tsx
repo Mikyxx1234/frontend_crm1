@@ -9,7 +9,7 @@
  * pra serem plugados nas props correspondentes do DealDetailPanel.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,12 +20,14 @@ import { apiUrl } from "@/lib/api";
 import { avatarInitials } from "@/lib/avatar";
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
-import { ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, StickyDayPill, useStickyDayLabel, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { ConnectionDivider, ConversationClosedMarker, DaySeparator, formatChatDayLabel, MessageBubble, TicketDivider, type Message as BubbleMessage } from "@/components/crm/message-bubble";
 import {
   EventRow,
   isConversationCloseEventText,
   isConversationOpenEventText,
+  isHideableChatEvent,
   isRedundantOpenStatusEvent,
+  useHideChatEvents,
 } from "@/components/crm/chat-timeline";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
@@ -53,7 +55,6 @@ import {
   useChannelSession,
 } from "@/features/inbox-v2/hooks";
 import {
-  formatDayLabel,
   isSessionExpired,
   toMessageBubble,
 } from "@/features/inbox-v2/adapters";
@@ -256,6 +257,7 @@ export function useDealChatBinding(params: {
   // Bloco C (25/jun/26): respeita `canReply` exposto pelo backend
   // (mesma fonte que o /inbox). Compat: default true quando ausente.
   const canReply = messagesResp?.canReply ?? true;
+  const { hideEvents } = useHideChatEvents();
 
   // SSE: assina /api/sse/messages e invalida as mensagens da conversa
   // ativa quando chega new_message. Sem isto o chat do deal só atualizava
@@ -338,11 +340,6 @@ export function useDealChatBinding(params: {
     }
     return null;
   }, []);
-
-  const stickyDay = useStickyDayLabel(
-    findScrollEl,
-    `${effectiveConversationId ?? ""}:${bubbles[0]?.id ?? ""}:${bubbles[bubbles.length - 1]?.id ?? ""}:${bubbles.length}`,
-  );
 
   const scrollToEnd = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -594,6 +591,7 @@ export function useDealChatBinding(params: {
     );
     const showConnSwitches = distinctChannels.size >= 2;
     let lastChannelId: string | null = null;
+    let lastDayLabel: string | null = null;
     const hasPersistedClose = bubbles.some(
       (m) => m.kind === "event" && isConversationCloseEventText(m.content),
     );
@@ -642,7 +640,12 @@ export function useDealChatBinding(params: {
       if (b.kind === "event" && isRedundantOpenStatusEvent(b.content)) {
         return null;
       }
-      const dayLabel = formatDayLabel(b.createdAt);
+      if (hideEvents && isHideableChatEvent(b)) {
+        return null;
+      }
+      const dayLabel = formatChatDayLabel(b.createdAt);
+      const showDay = Boolean(dayLabel && dayLabel !== lastDayLabel);
+      if (showDay && dayLabel) lastDayLabel = dayLabel;
       let connLabel: string | null = null;
       if (showConnSwitches && b.channelId && b.channelId !== lastChannelId) {
         const ref = channelsMap[b.channelId];
@@ -652,7 +655,13 @@ export function useDealChatBinding(params: {
       const isNoteBubble = b.isNote === true;
       const isEvent = b.kind === "event";
       return (
-        <li key={b.id} className="list-none" data-day-label={dayLabel || undefined}>
+        <Fragment key={b.id}>
+          {showDay && dayLabel ? (
+            <li className="pointer-events-none sticky top-1 z-10 list-none" data-day-label={dayLabel}>
+              <DaySeparator date={dayLabel} />
+            </li>
+          ) : null}
+        <li className="list-none" data-day-label={dayLabel || undefined}>
           {connLabel && <ConnectionDivider label={connLabel} />}
           <div
             data-message-id={b.id}
@@ -700,11 +709,11 @@ export function useDealChatBinding(params: {
           )}
           </div>
         </li>
+        </Fragment>
       );
     });
     messagesNode = (
       <>
-        <StickyDayPill date={stickyDay} />
         <ul className="flex list-none flex-col gap-1.5">
           {bubbleNodes}
         </ul>

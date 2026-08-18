@@ -22,3 +22,4 @@ export {
   resolveEventActorLabel,
 } from "./event-actor";
 export { NoteRow } from "./note-row";
+export { isHideableChatEvent, useHideChatEvents } from "./hide-events";

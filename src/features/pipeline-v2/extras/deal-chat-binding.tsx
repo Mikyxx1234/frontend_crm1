@@ -20,7 +20,7 @@ import { apiUrl } from "@/lib/api";
 import { avatarInitials } from "@/lib/avatar";
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
-import { ConnectionDivider, ConversationClosedMarker, DaySeparator, formatChatDayLabel, MessageBubble, TicketDivider, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { ConnectionDivider, ConversationClosedMarker, DaySeparator, formatChatDayLabel, MessageBubble, StickyDayPill, TicketDivider, useStickyDayLabel, type Message as BubbleMessage } from "@/components/crm/message-bubble";
 import {
   EventRow,
   isConversationCloseEventText,
@@ -341,6 +341,11 @@ export function useDealChatBinding(params: {
     return null;
   }, []);
 
+  const stickyDayLabel = useStickyDayLabel(
+    findScrollEl,
+    `${effectiveConversationId ?? ""}:${bubbles.length}`,
+  );
+
   const scrollToEnd = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
       const el = findScrollEl();
@@ -657,7 +662,7 @@ export function useDealChatBinding(params: {
       return (
         <Fragment key={b.id}>
           {showDay && dayLabel ? (
-            <li className="pointer-events-none sticky top-1 z-10 list-none" data-day-label={dayLabel}>
+            <li className="pointer-events-none list-none" data-day-label={dayLabel}>
               <DaySeparator date={dayLabel} />
             </li>
           ) : null}
@@ -714,6 +719,7 @@ export function useDealChatBinding(params: {
     });
     messagesNode = (
       <>
+        <StickyDayPill date={stickyDayLabel} />
         <ul className="flex list-none flex-col gap-1.5">
           {bubbleNodes}
         </ul>

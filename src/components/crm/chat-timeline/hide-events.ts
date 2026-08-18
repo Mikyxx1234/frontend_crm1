@@ -5,14 +5,14 @@ import { useCallback, useEffect, useState } from "react"
 const STORAGE_KEY = "crm.chat.hideEvents"
 const CHANGE_EVENT = "crm:chat-hide-events"
 
-/** Eventos de timeline que o olho oculta. Ligação (`sip_call`) permanece. */
+/** Eventos de timeline que o olho oculta, inclusive ligação (`sip_call` / `whatsapp_call`). */
 export function isHideableChatEvent(message: {
   kind?: string | null
   messageType?: string | null
 }): boolean {
   const mt = String(message.messageType ?? "").toLowerCase()
   if (mt === "sip_call" || mt === "whatsapp_call" || mt === "whatsapp_call_recording") {
-    return false
+    return true
   }
   if (message.kind === "event") return true
   return mt === "event" || mt.startsWith("event:")

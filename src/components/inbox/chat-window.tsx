@@ -2271,15 +2271,14 @@ export function ChatWindow({
               }
 
               /* Chamadas:
-                 - Eventos sem mídia (`whatsapp_call`, ou `whatsapp_call_recording`
-                   sem URL) → Activity Item compacto.
-                 - Gravação com mídia (`whatsapp_call_recording` com `mediaUrl`)
-                   → cai no fluxo normal de mensagem e renderiza como áudio
-                   regular (bolha outbound cyan + AudioMessage com player). O
-                   `detectMediaKind` (acima) já mapeia `whatsapp_call_recording`
-                   para `"audio"`. */
+                 - Eventos sem mídia (`whatsapp_call` / `sip_call`, ou
+                   `whatsapp_call_recording` sem URL) → Activity Item compacto.
+                 - Gravação com mídia em `sip_call` também fica no Activity Item
+                   (botão Ouvir). `whatsapp_call_recording` COM `mediaUrl` cai
+                   no fluxo normal de áudio. */
               if (
                 mt === "whatsapp_call" ||
+                mt === "sip_call" ||
                 (mt === "whatsapp_call_recording" && !m.mediaUrl)
               ) {
                 return (
@@ -4639,7 +4638,8 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
   const content = String(message.content ?? "").trim();
   const mt = String(message.messageType ?? "").toLowerCase();
   const isRecording = mt === "whatsapp_call_recording";
-  const hasRecording = isRecording && !!message.mediaUrl;
+  const isSip = mt === "sip_call";
+  const hasRecording = (isRecording || isSip) && !!message.mediaUrl;
 
   const lower = content.toLowerCase();
   const senderName = String(message.senderName ?? "").trim();
@@ -4668,7 +4668,7 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
       !isOutgoing &&
       (senderSuggestsIncoming || contentSuggestsIncoming));
   const isTerminate = lower.includes("fim");
-  const isFailed = lower.includes("falhou");
+  const isFailed = lower.includes("falhou") || /n[ãa]o atendida/i.test(content);
 
   // Nome do agente exibido como linha discreta abaixo do título quando
   // outbound. Extrai do `senderName` ("WhatsApp · Marcelo Pinheiro" →
@@ -4686,23 +4686,34 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
         ? PhoneOutgoing
         : Phone;
 
-  const durationMatch = content.match(/(\d+m\d{2}s|\d+s)\b/);
+  const durationMatch = content.match(
+    /(\d+min(?:\s+\d+s)?|\d+m\d{2}s|\d+:\d{2}|\d+s)\b/,
+  );
   const timeMatch = content.match(/(\d{1,2}:\d{2}(?:[–-]\d{1,2}:\d{2})?)/);
   const duration = durationMatch?.[1] ?? null;
   const timeLabel =
     timeMatch?.[1] ?? (message.createdAt ? chatTime(message.createdAt) : null);
 
-  const label = hasRecording
-    ? "Gravação de chamada"
-    : isTerminate
-      ? isFailed
-        ? "Chamada não completada"
-        : "Chamada finalizada"
+  const sipLabel = isSip
+    ? isFailed
+      ? "Ligação não atendida"
       : isIncoming
-        ? "Chamada recebida"
-        : isOutgoing
-          ? "Chamada realizada"
-          : "Evento de chamada";
+        ? "Ligação recebida"
+        : "Ligação realizada"
+    : null;
+  const label = hasRecording && !isSip
+    ? "Gravação de chamada"
+    : sipLabel
+      ? sipLabel
+      : isTerminate
+        ? isFailed
+          ? "Chamada não completada"
+          : "Chamada finalizada"
+        : isIncoming
+          ? "Chamada recebida"
+          : isOutgoing
+            ? "Chamada realizada"
+            : "Evento de chamada";
 
   const accent = isFailed
     ? "text-destructive"

@@ -1341,14 +1341,17 @@ export function MessageBubble({
     const missed = /n[ãa]o atendida/i.test(message.content ?? "")
     const [title, ...rest] = (message.content ?? "").split(" · ")
     const detail = rest.join(" · ").trim()
+    const recordingUrl = resolveMediaUrl(message.mediaUrl)
     return (
-      <EventRow
-        icon={missed ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
-        text={title || (inbound ? "Ligação recebida" : "Ligação realizada")}
-        actor={detail}
-        time={message.time}
-        className={className}
-      />
+      <div className={cn("flex w-full flex-col gap-1.5", className)}>
+        <EventRow
+          icon={missed ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
+          text={title || (inbound ? "Ligação recebida" : "Ligação realizada")}
+          actor={detail}
+          time={message.time}
+        />
+        {recordingUrl ? <AudioPlayer url={recordingUrl} isOutgoing={!inbound} /> : null}
+      </div>
     )
   }
 

@@ -101,6 +101,7 @@ export function CreateChannelDialog({
   const [error, setError] = useState<string | null>(null);
   const [signupWarning, setSignupWarning] = useState<string | null>(null);
   const [showManualConfig, setShowManualConfig] = useState(false);
+  const [showIgCrmLogin, setShowIgCrmLogin] = useState(false);
   // Webhook opcional para clientes que preferem usar o proprio App Meta:
   // "Webhook" gera Callback URL + Verify Token e persiste o token no
   // canal ao clicar "Criar canal" (Channel.config.verifyToken).
@@ -163,6 +164,7 @@ export function CreateChannelDialog({
     setSignupWarning(null);
     setSubmitting(false);
     setShowManualConfig(false);
+    setShowIgCrmLogin(false);
     setWebhookInfo(null);
     setWebhookLoading(false);
     setWebhookModalOpen(false);
@@ -435,9 +437,7 @@ export function CreateChannelDialog({
 
     if (channelType === "INSTAGRAM") {
       if (!accessToken.trim()) {
-        setError(
-          "Preencha o Token de acesso ou clique em Entrar com Instagram.",
-        );
+        setError("Preencha o Token de acesso do App da empresa.");
         return;
       }
       if (!webhookInfo) {
@@ -769,44 +769,21 @@ export function CreateChannelDialog({
 
                 {channelType === "INSTAGRAM" ? (
                   <div className="space-y-3">
-                    <div className="rounded-xl border-2 border-[var(--color-brand-primary)]/20 bg-[var(--color-info)]/5 p-4">
+                    <div className="space-y-3 rounded-xl border-2 border-[var(--color-brand-primary)]/20 bg-[var(--color-info)]/5 p-4">
                       <p className="text-sm font-medium text-[var(--text-primary)]">
-                        Conectar Instagram diretamente
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        Caminho recomendado: login direto pela conta Instagram
-                        Business. Nao requer Pagina do Facebook. O canal e
-                        criado automaticamente apos autorizar.
-                      </p>
-                      <Button
-                        type="button"
-                        className="mt-3 w-full gap-2 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white"
-                        disabled={submitting}
-                        onClick={() => handleInstagramLogin()}
-                      >
-                        <svg className="size-4" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98C.014 8.333 0 8.741 0 12s.014 3.667.072 4.947c.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24s3.667-.014 4.947-.072c4.354-.2 6.782-2.618 6.979-6.98C23.986 15.667 24 15.259 24 12s-.014-3.667-.072-4.947c-.196-4.354-2.617-6.78-6.979-6.98C15.667.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
-                        </svg>
-                        Entrar com Instagram
-                      </Button>
-                      {igLoginConfigured === false ? (
-                        <p className="mt-2 text-[11px] text-[var(--color-warning)]">
-                          Login direto indisponivel neste ambiente. Use o fluxo
-                          manual abaixo (token + Webhook + Criar canal).
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <div className="space-y-3 rounded-lg border bg-[var(--glass-bg-overlay)] p-3">
-                      <p className="text-sm font-medium text-[var(--text-primary)]">
-                        Ou configure manualmente (App da empresa)
+                        App da empresa (messages)
                       </p>
                       <p className="text-xs text-[var(--text-muted)]">
-                        Token da conta Instagram (login direto) ou token EAA da
-                        Pagina / usuario do sistema. Este ultimo exige Pagina do
-                        Facebook com Instagram Business vinculado e permissoes
-                        pages_messaging + instagram_manage_messages. Depois:
-                        Webhook no rodape (URL + App Secret) e Criar canal.
+                        Use o App Meta da DNA e um token de usuario do sistema
+                        (EAA). Nao usa o app do CRM nem precisa ser provedor
+                        para outras empresas. A conta Instagram Business precisa
+                        estar vinculada a uma Pagina do Facebook, com as
+                        permissoes pages_messaging e instagram_manage_messages.
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        1. Cole o token. 2. Clique em Webhook, cole a URL no
+                        produto Instagram (campo messages) e o App Secret. 3.
+                        Criar canal.
                       </p>
                       <div className="space-y-2">
                         <Label htmlFor="ch-ig-token">Access Token</Label>
@@ -816,7 +793,7 @@ export function CreateChannelDialog({
                           autoComplete="off"
                           value={accessToken}
                           onChange={(e) => setAccessToken(e.target.value)}
-                          placeholder="Token Instagram Login ou EAA da Pagina"
+                          placeholder="Token EAA do usuario do sistema"
                         />
                       </div>
                       <div className="space-y-2">
@@ -825,7 +802,7 @@ export function CreateChannelDialog({
                           id="ch-ig-uid"
                           value={instagramUserId}
                           onChange={(e) => setInstagramUserId(e.target.value)}
-                          placeholder="Opcional se o token for da propria conta"
+                          placeholder="Opcional — o CRM descobre pela Pagina vinculada"
                         />
                       </div>
                       {signupWarning ? (
@@ -834,6 +811,37 @@ export function CreateChannelDialog({
                         </p>
                       ) : null}
                     </div>
+
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                      onClick={() => setShowIgCrmLogin((v) => !v)}
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "size-3.5 transition-transform",
+                          showIgCrmLogin && "rotate-180",
+                        )}
+                      />
+                      App do CRM (provedor — nao use se o App e so da DNA)
+                    </button>
+                    {showIgCrmLogin ? (
+                      <div className="rounded-lg border bg-[var(--glass-bg-overlay)] p-3">
+                        <p className="text-xs text-[var(--text-muted)]">
+                          Login OAuth no app do CRM. So faz sentido quando este
+                          CRM conecta Instagram de varias empresas. Nao e o
+                          fluxo do App proprio.
+                        </p>
+                        <Button
+                          type="button"
+                          className="mt-3 w-full gap-2 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white"
+                          disabled={submitting}
+                          onClick={() => handleInstagramLogin()}
+                        >
+                          Entrar com Instagram
+                        </Button>
+                      </div>
+                    ) : null}
                   </div>
                 ) : channelType === "FACEBOOK" ? (
                   <div className="space-y-3">
@@ -1087,8 +1095,9 @@ export function CreateChannelDialog({
               Webhook
             </DialogTitle>
             <DialogDescription>
-              Cole a URL e o token no produto Instagram → Webhooks (ou WhatsApp
-              → Configuração). Depois informe o App Secret abaixo.
+              {channelType === "INSTAGRAM"
+                ? "No App da DNA: Instagram → Webhooks. Cole a URL e o token, assine o campo messages e informe o App Secret."
+                : "Cole a URL e o token no painel Meta. Depois informe o App Secret abaixo."}
             </DialogDescription>
           </DialogHeader>
 
@@ -1196,12 +1205,24 @@ export function CreateChannelDialog({
                   Com as informações acima, configure:
                 </p>
                 <ol className="mt-2 ml-5 list-decimal space-y-1 text-xs text-[var(--text-muted)]">
-                  <li>Acessar Meta Developers</li>
-                  <li>No menu à esquerda, clique em &quot;WhatsApp &gt; Configuração&quot;</li>
-                  <li>Clique em &quot;Editar&quot;, na área de Webhook</li>
-                  <li>Informe o valor de &quot;Webhook URL&quot; no campo &quot;URL de retorno de chamada&quot;</li>
-                  <li>Informe o valor de &quot;Token de verificação&quot; no campo &quot;Verificar token&quot;</li>
-                  <li>Clique em &quot;Verificar e salvar&quot; para finalizar a configuração</li>
+                  {channelType === "INSTAGRAM" ? (
+                    <>
+                      <li>Abra o App Meta da empresa (DNA) em developers.facebook.com</li>
+                      <li>Produto Instagram → Webhooks (API com login do Instagram)</li>
+                      <li>Cole a Webhook URL e o Token de verificação e clique em Verificar e salvar</li>
+                      <li>Assine o campo <span className="font-mono">messages</span></li>
+                      <li>Cole o App Secret abaixo (Configurações → Básico)</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>Acessar Meta Developers</li>
+                      <li>No menu à esquerda, clique em &quot;WhatsApp &gt; Configuração&quot;</li>
+                      <li>Clique em &quot;Editar&quot;, na área de Webhook</li>
+                      <li>Informe o valor de &quot;Webhook URL&quot; no campo &quot;URL de retorno de chamada&quot;</li>
+                      <li>Informe o valor de &quot;Token de verificação&quot; no campo &quot;Verificar token&quot;</li>
+                      <li>Clique em &quot;Verificar e salvar&quot; para finalizar a configuração</li>
+                    </>
+                  )}
                 </ol>
               </div>
             </div>

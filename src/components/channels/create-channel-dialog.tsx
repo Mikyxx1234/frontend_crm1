@@ -771,16 +771,19 @@ export function CreateChannelDialog({
                         App da empresa (messages)
                       </p>
                       <p className="text-xs text-[var(--text-muted)]">
-                        Use o App Meta da DNA e um token de usuario do sistema
-                        (EAA). Nao usa o app do CRM nem precisa ser provedor
-                        para outras empresas. A conta Instagram Business precisa
-                        estar vinculada a uma Pagina do Facebook, com as
-                        permissoes pages_messaging e instagram_manage_messages.
+                        Use o App Meta da DNA. O token e o webhook precisam ser
+                        do <span className="font-medium">mesmo</span> app (o
+                        produto Instagram, nao outro app do Facebook). Token:
+                        Instagram → API setup → Gerar token ao lado da conta
+                        Business.
                       </p>
                       <p className="text-xs text-[var(--text-muted)]">
-                        1. Cole o token. 2. Clique em Webhook, cole a URL no
-                        produto Instagram (campo messages) e o App Secret. 3.
-                        Criar canal.
+                        1. Cole o token. 2. Clique em Webhook: cole a URL no
+                        produto Instagram (campo messages) e a{" "}
+                        <span className="font-medium">
+                          chave secreta do app do Instagram
+                        </span>
+                        , nao a de Configurações → Básico. 3. Criar canal.
                       </p>
                       <div className="space-y-2">
                         <Label htmlFor="ch-ig-token">Access Token</Label>
@@ -1093,7 +1096,7 @@ export function CreateChannelDialog({
             </DialogTitle>
             <DialogDescription>
               {channelType === "INSTAGRAM"
-                ? "No App da DNA: Instagram → Webhooks. Cole a URL e o token, assine o campo messages e informe o App Secret."
+                ? "No produto Instagram do mesmo app do token: Webhooks → URL + token, campo messages, e a chave secreta do app do Instagram."
                 : "Cole a URL e o token no painel Meta. Depois informe o App Secret abaixo."}
             </DialogDescription>
           </DialogHeader>
@@ -1168,20 +1171,26 @@ export function CreateChannelDialog({
 
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  App Secret
+                  {channelType === "INSTAGRAM"
+                    ? "Chave secreta do app do Instagram"
+                    : "App Secret"}
                 </Label>
                 <Input
                   type="password"
                   value={appSecret}
                   onChange={(e) => setAppSecret(e.target.value)}
-                  placeholder="App Secret do seu App Meta (obrigatório)"
+                  placeholder={
+                    channelType === "INSTAGRAM"
+                      ? "Chave secreta do app do Instagram (obrigatório)"
+                      : "App Secret do seu App Meta (obrigatório)"
+                  }
                   className="font-mono text-xs"
                   autoComplete="off"
                 />
                 <p className="text-[11px] text-[var(--text-muted)]">
-                  Meta Developers → Configurações → Básico → App Secret →
-                  &quot;Mostrar&quot;. Usado para validar a assinatura dos
-                  webhooks recebidos.
+                  {channelType === "INSTAGRAM"
+                    ? "Produto Instagram → API setup → Chave secreta do app do Instagram. Não use Configurações → Básico (isso é o App Secret do Facebook e a Meta rejeita a assinatura do Direct)."
+                    : "Meta Developers → Configurações → Básico → App Secret → \"Mostrar\". Usado para validar a assinatura dos webhooks recebidos."}
                 </p>
               </div>
 
@@ -1204,11 +1213,11 @@ export function CreateChannelDialog({
                 <ol className="mt-2 ml-5 list-decimal space-y-1 text-xs text-[var(--text-muted)]">
                   {channelType === "INSTAGRAM" ? (
                     <>
-                      <li>Abra o App Meta da empresa (DNA) em developers.facebook.com</li>
+                      <li>Abra o App Meta da empresa (DNA) em developers.facebook.com — o mesmo app do token</li>
                       <li>Produto Instagram → Webhooks (API com login do Instagram)</li>
                       <li>Cole a Webhook URL e o Token de verificação e clique em Verificar e salvar</li>
                       <li>Assine o campo <span className="font-mono">messages</span></li>
-                      <li>Cole o App Secret abaixo (Configurações → Básico)</li>
+                      <li>Cole a chave secreta do app do Instagram (produto Instagram), não Configurações → Básico</li>
                     </>
                   ) : (
                     <>

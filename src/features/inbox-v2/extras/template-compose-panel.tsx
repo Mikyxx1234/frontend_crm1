@@ -127,32 +127,33 @@ export function TemplateComposePanel({
   const retryAfterPickRef = useRef(false);
   const pendingSendRef = useRef(false);
   const { confirm: confirmDialog, dialog: confirmDialogNode } = useConfirm();
+  const waChannels = availableChannels?.filter((c) => c.type === "WHATSAPP");
 
   // Canal gravado na conversa ausente ou fora da lista CONNECTED →
   // não identificado. Exige modal de confirmação antes do envio.
-  const channelsReady = availableChannels !== undefined;
+  const channelsReady = waChannels !== undefined;
   const conversationChannelConnected = Boolean(
     conversationChannelId &&
-      availableChannels?.some((c) => c.id === conversationChannelId),
+      waChannels?.some((c) => c.id === conversationChannelId),
   );
   const channelUnidentified = channelsReady && !conversationChannelConnected;
   const needsChannelPick =
-    channelUnidentified && (availableChannels?.length ?? 0) > 0;
+    channelUnidentified && (waChannels?.length ?? 0) > 0;
 
   const suggestedChannelId = useMemo(() => {
-    if (!availableChannels?.length) return null;
-    if (lastMessageChannelId && availableChannels.some((c) => c.id === lastMessageChannelId)) {
+    if (!waChannels?.length) return null;
+    if (lastMessageChannelId && waChannels.some((c) => c.id === lastMessageChannelId)) {
       return lastMessageChannelId;
     }
     return null;
-  }, [availableChannels, lastMessageChannelId]);
+  }, [waChannels, lastMessageChannelId]);
 
   const effectiveChannelId = confirmedChannelId ?? selectedChannelId ?? null;
 
   const showChannelSelector = Boolean(
     !needsChannelPick &&
-      availableChannels &&
-      availableChannels.length > 0 &&
+      waChannels &&
+      waChannels.length > 0 &&
       onSelectChannel,
   );
 
@@ -229,7 +230,7 @@ export function TemplateComposePanel({
       onSent?.();
     },
     onError: (err: Error) => {
-      if (isDisconnectedChannelError(err) && (availableChannels?.length ?? 0) > 0) {
+      if (isDisconnectedChannelError(err) && (waChannels?.length ?? 0) > 0) {
         toast.error(err.message || "Canal desconectado");
         retryAfterPickRef.current = true;
         setConfirmedChannelId(null);
@@ -265,7 +266,7 @@ export function TemplateComposePanel({
     ) {
       const ok = await confirmDialog(
         channelSwitchConfirmOptions(
-          availableChannels,
+          waChannels,
           outboundId,
           conversationChannelId,
         ),
@@ -277,10 +278,10 @@ export function TemplateComposePanel({
 
   const selectedLabel = useMemo(() => {
     const id = confirmedChannelId ?? selectedChannelId;
-    const ch = availableChannels?.find((c) => c.id === id);
+    const ch = waChannels?.find((c) => c.id === id);
     if (!ch) return null;
     return ch.phoneNumber ? `${ch.name} · ${ch.phoneNumber}` : ch.name;
-  }, [availableChannels, confirmedChannelId, selectedChannelId]);
+  }, [waChannels, confirmedChannelId, selectedChannelId]);
 
   const sendBlockedByChannel = channelUnidentified && !confirmedChannelId;
 
@@ -386,7 +387,7 @@ export function TemplateComposePanel({
           </button>
         ) : showChannelSelector ? (
           <ChannelSelector
-            channels={availableChannels ?? []}
+            channels={waChannels ?? []}
             selectedChannelId={selectedChannelId ?? null}
             conversationChannelId={conversationChannelId ?? null}
             onSelect={onSelectChannel!}
@@ -423,7 +424,7 @@ export function TemplateComposePanel({
         <ChannelPickModal
           open={pickOpen}
           onOpenChange={setPickOpen}
-          channels={availableChannels ?? []}
+          channels={waChannels ?? []}
           selectedChannelId={confirmedChannelId ?? selectedChannelId ?? null}
           suggestedChannelId={suggestedChannelId}
           onConfirm={handleConfirmChannel}

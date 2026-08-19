@@ -55,17 +55,23 @@ function extFromMime(mime: string, fallback: string) {
   return map[mime] ?? fallback;
 }
 
+function fileSignature(file: File) {
+  return `${file.name}:${file.size}:${file.type}`;
+}
+
 function collectClipboardFiles(e: ClipboardEvent): File[] {
   const out: File[] = [];
   const seen = new Set<string>();
   const add = (f: File) => {
-    const key = `${f.name}:${f.size}:${f.lastModified}:${f.type}`;
+    const key = fileSignature(f);
     if (seen.has(key)) return;
     seen.add(key);
     out.push(f);
   };
-  if (e.clipboardData?.files?.length) {
-    for (const f of Array.from(e.clipboardData.files)) add(f);
+  const files = e.clipboardData?.files;
+  if (files && files.length > 0) {
+    for (const f of Array.from(files)) add(f);
+    return out;
   }
   if (e.clipboardData?.items) {
     for (const item of Array.from(e.clipboardData.items)) {
@@ -139,12 +145,15 @@ export function Composer({
   const blobRef = useRef<Blob | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mimeRef = useRef("audio/webm");
+  const pasteLockRef = useRef(false);
+  const pasteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       pending.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl));
       streamRef.current?.getTracks().forEach((t) => t.stop());
       if (timerRef.current) clearInterval(timerRef.current);
+      if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
       if (audioUrl) URL.revokeObjectURL(audioUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -170,27 +179,38 @@ export function Composer({
   }
 
   function stageFiles(files: File[], asSticker = false) {
-    const room = MAX_FILES - pending.length;
-    if (room <= 0) {
-      toast.error(`Máximo de ${MAX_FILES} anexos por mensagem.`);
-      return;
+    if (files.length === 0) return;
+    const oversized = files.filter((file) => file.size > MAX_BYTES);
+    for (const file of oversized) {
+      toast.error(`${file.name || "Arquivo"} passa de 16 MB.`);
     }
-    const now = Date.now();
-    const next: Staged[] = [];
-    for (const [i, file] of files.slice(0, room).entries()) {
-      if (file.size > MAX_BYTES) {
-        toast.error(`${file.name || "Arquivo"} passa de 16 MB.`);
-        continue;
+    const accepted = files.filter((file) => file.size <= MAX_BYTES);
+    if (accepted.length === 0) return;
+
+    setPending((prev) => {
+      const room = MAX_FILES - prev.length;
+      if (room <= 0) {
+        queueMicrotask(() => toast.error(`Máximo de ${MAX_FILES} anexos por mensagem.`));
+        return prev;
       }
-      const isImage = file.type.startsWith("image/");
-      next.push({
-        id: `${now}-${i}-${file.name}`,
-        file,
-        previewUrl: isImage ? URL.createObjectURL(file) : null,
-        asSticker: asSticker && isImage,
-      });
-    }
-    if (next.length) setPending((prev) => [...prev, ...next]);
+      const existing = new Set(prev.map((p) => fileSignature(p.file)));
+      const now = Date.now();
+      const next: Staged[] = [];
+      for (const file of accepted) {
+        if (next.length >= room) break;
+        const key = fileSignature(file);
+        if (existing.has(key)) continue;
+        existing.add(key);
+        const isImage = file.type.startsWith("image/");
+        next.push({
+          id: `${now}-${next.length}-${file.name}`,
+          file,
+          previewUrl: isImage ? URL.createObjectURL(file) : null,
+          asSticker: asSticker && isImage,
+        });
+      }
+      return next.length ? [...prev, ...next] : prev;
+    });
   }
 
   function removeStaged(id: string) {
@@ -205,6 +225,14 @@ export function Composer({
     const files = collectClipboardFiles(e);
     if (files.length === 0) return;
     e.preventDefault();
+    e.stopPropagation();
+    if (pasteLockRef.current) return;
+    pasteLockRef.current = true;
+    if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+    pasteTimerRef.current = setTimeout(() => {
+      pasteLockRef.current = false;
+      pasteTimerRef.current = null;
+    }, 400);
     stageFiles(files);
   }
 
@@ -411,17 +439,17 @@ export function Composer({
   }
 
   const iconBtn =
-    "grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+    "grid h-9 w-9 shrink-0 place-items-center rounded-[11px] text-muted-foreground transition-colors hover:bg-[var(--orbita-block-soft)] hover:text-foreground";
 
   return (
-    <div className="border-t border-border bg-card px-2 pb-2 pt-1.5" ref={rootRef}>
+    <div className="px-3 py-3" ref={rootRef} onPaste={handlePaste}>
       <div className="w-full">
         {pending.length > 0 && (
-          <div className="mb-1.5 flex flex-wrap gap-1.5 px-1">
+          <div className="mb-1.5 flex flex-wrap gap-1.5">
             {pending.map((item) => (
               <div
                 key={item.id}
-                className="relative flex items-center gap-2 rounded-lg bg-muted px-2 py-1"
+                className="relative flex items-center gap-2 rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-2 py-1"
               >
                 {item.previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -444,14 +472,14 @@ export function Composer({
         )}
 
         {picker && (
-          <div className="mb-1.5 overflow-hidden rounded-xl bg-muted shadow-lg">
-            <div className="flex border-b border-border">
+          <div className="mb-1.5 overflow-hidden rounded-[var(--orbita-radius-block)] bg-[var(--orbita-block-soft)]">
+            <div className="flex">
               <button
                 type="button"
                 onClick={() => setPicker("emoji")}
                 className={cn(
                   "flex-1 px-3 py-1.5 text-[12px] font-semibold",
-                  picker === "emoji" ? "bg-muted text-foreground" : "text-muted-foreground",
+                  picker === "emoji" ? "bg-white/50 text-foreground" : "text-muted-foreground",
                 )}
               >
                 Emojis
@@ -461,7 +489,7 @@ export function Composer({
                 onClick={() => setPicker("sticker")}
                 className={cn(
                   "flex-1 px-3 py-1.5 text-[12px] font-semibold",
-                  picker === "sticker" ? "bg-muted text-foreground" : "text-muted-foreground",
+                  picker === "sticker" ? "bg-white/50 text-foreground" : "text-muted-foreground",
                 )}
               >
                 Figurinhas
@@ -477,7 +505,7 @@ export function Composer({
                     type="button"
                     onClick={() => void sendSticker(emoji)}
                     disabled={busy}
-                    className="grid h-12 place-items-center rounded-md text-[28px] hover:bg-muted"
+                    className="grid h-12 place-items-center rounded-[var(--orbita-radius-inner)] text-[28px] hover:bg-white/50"
                   >
                     {emoji}
                   </button>
@@ -485,7 +513,7 @@ export function Composer({
                 <button
                   type="button"
                   onClick={() => stickerFileRef.current?.click()}
-                  className="grid h-12 place-items-center rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted"
+                  className="grid h-12 place-items-center rounded-[var(--orbita-radius-inner)] border border-dashed border-muted-foreground/30 text-muted-foreground hover:bg-white/50"
                   aria-label="Enviar figurinha própria"
                 >
                   <Plus className="h-5 w-5" />
@@ -496,7 +524,6 @@ export function Composer({
         )}
 
         <div
-          onPaste={handlePaste}
           onDragOver={(e) => {
             e.preventDefault();
             setDragging(true);
@@ -505,22 +532,22 @@ export function Composer({
           onDrop={handleDrop}
         >
           {rec === "recording" && (
-            <div className="flex min-w-0 items-center gap-2 rounded-lg bg-muted px-2 py-1">
-              <button type="button" onClick={discardAudio} aria-label="Descartar" className="grid h-10 w-10 place-items-center rounded-full text-destructive hover:bg-destructive/10">
+            <div className="flex min-w-0 items-center gap-2 rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-2 py-1">
+              <button type="button" onClick={discardAudio} aria-label="Descartar" className="grid h-9 w-9 place-items-center rounded-[11px] text-destructive hover:bg-destructive/10">
                 <Trash2 className="h-4 w-4" />
               </button>
               <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
               <span className="font-mono text-[13px] tabular-nums text-foreground">{formatClock(seconds)}</span>
               <span className="flex-1 text-[13px] text-muted-foreground">Gravando…</span>
-              <button type="button" onClick={stopRecording} aria-label="Parar" className="grid h-10 w-10 place-items-center rounded-full text-primary">
+              <button type="button" onClick={stopRecording} aria-label="Parar" className="grid h-9 w-9 place-items-center rounded-[11px] text-[var(--orbita-selected)]">
                 <span className="h-2.5 w-2.5 rounded-sm bg-current" />
               </button>
             </div>
           )}
 
           {rec === "preview" && (
-            <div className="flex min-w-0 items-center gap-2 rounded-lg bg-muted px-2 py-1">
-              <button type="button" onClick={discardAudio} aria-label="Descartar áudio" className="grid h-10 w-10 place-items-center rounded-full text-destructive hover:bg-destructive/10">
+            <div className="flex min-w-0 items-center gap-2 rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-2 py-1">
+              <button type="button" onClick={discardAudio} aria-label="Descartar áudio" className="grid h-9 w-9 place-items-center rounded-[11px] text-destructive hover:bg-destructive/10">
                 <Trash2 className="h-4 w-4" />
               </button>
               {audioUrl ? (
@@ -532,15 +559,15 @@ export function Composer({
                 onClick={() => void sendAudio()}
                 disabled={busy}
                 aria-label="Enviar áudio"
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-primary disabled:opacity-60"
+                className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[11px] bg-[var(--orbita-selected)] text-white disabled:opacity-60"
               >
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
               </button>
             </div>
           )}
 
           {!recording && (
-            <div className="flex items-end gap-0.5">
+            <div className="flex items-end gap-1">
               <div className="relative shrink-0">
                 <button
                   type="button"
@@ -549,19 +576,19 @@ export function Composer({
                     setPicker(null);
                   }}
                   aria-label="Mais opções"
-                  className={cn(iconBtn, plusOpen && "bg-muted text-foreground")}
+                  className={cn(iconBtn, plusOpen && "bg-[var(--orbita-block-soft)] text-foreground")}
                 >
                   <Plus className="h-5 w-5" />
                 </button>
                 {plusOpen && (
-                  <div className="absolute bottom-full left-0 z-20 mb-1 w-48 overflow-hidden rounded-md border border-border bg-card py-1 shadow-lg">
+                  <div className="absolute bottom-full left-0 z-20 mb-1 w-48 overflow-hidden rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block)] py-1 shadow-lg">
                     <button
                       type="button"
                       onClick={() => {
                         setPlusOpen(false);
                         fileRef.current?.click();
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-muted"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-[var(--orbita-block-soft)]"
                     >
                       <Paperclip className="h-4 w-4 text-muted-foreground" /> Anexar arquivo
                     </button>
@@ -571,14 +598,14 @@ export function Composer({
                         setPlusOpen(false);
                         setPicker("sticker");
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-muted"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-[var(--orbita-block-soft)]"
                     >
                       <Sticker className="h-4 w-4 text-muted-foreground" /> Figurinha
                     </button>
                     <button
                       type="button"
                       onClick={() => void startRecording()}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-muted"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-[var(--orbita-block-soft)]"
                     >
                       <Mic className="h-4 w-4 text-muted-foreground" /> Gravar áudio
                     </button>
@@ -588,7 +615,7 @@ export function Composer({
                         setPlusOpen(false);
                         wrapSelection("*");
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-muted"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-[var(--orbita-block-soft)]"
                     >
                       <Type className="h-4 w-4 text-muted-foreground" /> Negrito
                     </button>
@@ -599,14 +626,14 @@ export function Composer({
                 type="button"
                 onClick={() => setPicker((v) => (v ? null : "emoji"))}
                 aria-label="Emojis e figurinhas"
-                className={cn(iconBtn, picker && "bg-muted text-foreground")}
+                className={cn(iconBtn, picker && "bg-[var(--orbita-block-soft)] text-foreground")}
               >
                 <Smile className="h-5 w-5" />
               </button>
               <div
                 className={cn(
-                  "flex min-h-10 min-w-0 flex-1 items-end rounded-lg border border-border bg-background px-3",
-                  dragging && "ring-2 ring-primary/40",
+                  "flex min-h-10 min-w-0 flex-1 items-end rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3",
+                  dragging && "ring-2 ring-[var(--orbita-selected)]/40",
                 )}
               >
                 <textarea
@@ -618,10 +645,9 @@ export function Composer({
                     resize();
                   }}
                   onKeyDown={handleKeyDown}
-                  onPaste={handlePaste}
                   placeholder={placeholder}
                   disabled={busy}
-                  className="max-h-40 min-h-10 min-w-0 flex-1 resize-none bg-transparent py-2 text-[15px] leading-snug text-foreground outline-none placeholder:text-muted-foreground"
+                  className="max-h-40 min-h-10 min-w-0 flex-1 resize-none bg-transparent py-2 text-[14px] leading-snug text-foreground outline-none placeholder:text-muted-foreground"
                 />
               </div>
               {canSend ? (
@@ -630,9 +656,9 @@ export function Composer({
                   onClick={() => void submitText()}
                   disabled={busy}
                   aria-label="Enviar mensagem"
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-primary disabled:opacity-60"
+                  className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[11px] bg-[var(--orbita-selected)] text-white disabled:opacity-60"
                 >
-                  <Send className="h-5 w-5" />
+                  <Send className="h-4 w-4" />
                 </button>
               ) : (
                 <button

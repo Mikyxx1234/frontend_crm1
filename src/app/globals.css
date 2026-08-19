@@ -1159,21 +1159,105 @@
   --color-foreground: oklch(0.95 0.01 255);
 }
 
-/* Órbita: WhatsApp layout, CRM paint. Page chrome lives on the route wrapper. */
+/* ══════════════════════════════════════════════════════════════════
+   ÓRBITA — Bento layout tokens
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --orbita-canvas: #E9E7FB;
+  --orbita-block: #FFFFFF;
+  --orbita-block-soft: #F4F3FC;
+  --orbita-rail: #211C4E;
+  --orbita-rail-active: #31296B;
+  --orbita-radius-shell: 18px;
+  --orbita-radius-block: 16px;
+  --orbita-radius-inner: 12px;
+  --orbita-radius-avatar: 10px;
+  --orbita-gap: 10px;
+  --orbita-selected: #6C5CE7;
+}
+
+.dark {
+  --orbita-canvas: #1a1632;
+  --orbita-block: #252042;
+  --orbita-block-soft: #2d2650;
+  --orbita-rail: #0f0d1f;
+  --orbita-rail-active: #1a1632;
+}
+
+/* Órbita: Bento layout shell. */
 .team-chat-shell {
-  background: transparent;
+  background: var(--orbita-canvas);
   color: var(--color-foreground);
   min-width: 0;
-  border-radius: inherit;
+  padding: var(--orbita-gap);
+  border-radius: var(--orbita-radius-shell);
+  display: flex;
+  gap: var(--orbita-gap);
+}
+
+/* Bento blocks inside Órbita shell */
+.orbita-block {
+  background: var(--orbita-block);
+  border-radius: var(--orbita-radius-block);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.orbita-block-soft {
+  background: var(--orbita-block-soft);
+  border-radius: var(--orbita-radius-block);
+}
+
+/* Squircle avatars in Órbita - targets UserAvatar's inner rounded-full div */
+.team-chat-shell [data-orbita-avatar],
+.team-chat-shell [data-orbita-avatar] > div {
+  border-radius: var(--orbita-radius-avatar) !important;
+}
+.team-chat-shell [data-orbita-avatar] img {
+  border-radius: var(--orbita-radius-avatar) !important;
 }
 
 .team-chat-shell [data-wa-thread] {
-  background-color: var(--color-background);
+  background-color: var(--orbita-block);
   background-image: none;
 }
 
 .team-chat-shell .chat-scroll {
   scrollbar-color: color-mix(in oklch, var(--color-muted-foreground) 40%, transparent) transparent;
+}
+
+/* Órbita selected item */
+.orbita-item-selected {
+  background: var(--orbita-selected);
+  color: white;
+  border-radius: var(--orbita-radius-inner);
+}
+
+/* Focus visible for accessibility in Órbita */
+.team-chat-shell :focus-visible {
+  outline: 2px solid var(--orbita-selected);
+  outline-offset: 2px;
+}
+
+/* Responsive: on mobile, sidebar blocks stack vertically */
+@media (max-width: 1023px) {
+  .team-chat-shell {
+    flex-direction: column;
+  }
+}
+
+/* Órbita message bubbles */
+.orbita-bubble-received {
+  background: var(--orbita-block-soft);
+  border-radius: 16px;
+  border-bottom-left-radius: 6px;
+}
+
+.orbita-bubble-sent {
+  background: var(--orbita-selected);
+  color: white;
+  border-radius: 16px;
+  border-bottom-right-radius: 6px;
 }
 
 .chat-scroll {

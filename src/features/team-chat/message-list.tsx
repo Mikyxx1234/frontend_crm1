@@ -68,11 +68,11 @@ export function MessageList({
   }, [messages.length, room.id]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-background" data-wa-thread>
+    <div className="flex flex-1 flex-col overflow-hidden" data-wa-thread>
       {pinned.length > 0 && (
-        <div className="sticky top-0 z-10 shrink-0 border-b border-border bg-card px-4 py-2">
+        <div className="sticky top-0 z-10 shrink-0 bg-[var(--orbita-block-soft)] px-4 py-2">
           <div className="flex w-full items-start gap-2">
-            <Pin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+            <Pin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--orbita-selected)]" />
             <div className="min-w-0 flex-1 space-y-1">
               {pinned.map((m) => (
                 <div key={m.id} className="flex items-center gap-2">
@@ -84,7 +84,7 @@ export function MessageList({
                     type="button"
                     onClick={() => onTogglePin(m.id)}
                     aria-label="Desafixar"
-                    className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                    className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:bg-white/50"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -94,10 +94,10 @@ export function MessageList({
           </div>
         </div>
       )}
-      <div className="chat-scroll flex-1 overflow-y-auto px-4 py-3 md:px-10">
+      <div className="chat-scroll flex-1 overflow-y-auto px-4 py-3 md:px-8">
         <div className="flex min-h-full w-full flex-col">
           <div className="mb-4 flex justify-center">
-            <span className="max-w-md rounded-lg border border-border bg-card px-3 py-1.5 text-center text-[12.5px] leading-relaxed text-muted-foreground shadow-sm">
+            <span className="max-w-md rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3 py-1.5 text-center text-[12.5px] leading-relaxed text-muted-foreground">
               {isDirect
                 ? `Esta é o início da sua conversa com ${firstName}.`
                 : room.topic || `Este é o início do canal #${room.name}.`}
@@ -113,7 +113,7 @@ export function MessageList({
                 if (msg.kind === "SYSTEM") {
                   return (
                     <div key={msg.id} className="my-2 flex justify-center">
-                      <span className="rounded-lg border border-border bg-card px-3 py-1 text-[12px] text-muted-foreground shadow-sm">
+                      <span className="rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3 py-1 text-[12px] text-muted-foreground">
                         {msg.content}
                       </span>
                     </div>
@@ -134,7 +134,7 @@ export function MessageList({
                   <div key={msg.id}>
                     {showDay && (
                       <div className="my-3 flex justify-center">
-                        <span className="rounded-lg border border-border bg-card px-3 py-1 text-[12px] font-medium text-muted-foreground shadow-sm">
+                        <span className="rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3 py-1 text-[12px] font-medium text-muted-foreground">
                           {formatDayLabel(msg.createdAt)}
                         </span>
                       </div>
@@ -165,11 +165,11 @@ export function MessageList({
 
 function bubbleRadius(last: boolean, mine: boolean) {
   if (mine) {
-    if (last) return "rounded-[8px] rounded-br-[3px]";
-    return "rounded-[8px]";
+    if (last) return "rounded-[16px] rounded-br-[6px]";
+    return "rounded-[16px]";
   }
-  if (last) return "rounded-[8px] rounded-bl-[3px]";
-  return "rounded-[8px]";
+  if (last) return "rounded-[16px] rounded-bl-[6px]";
+  return "rounded-[16px]";
 }
 
 function MessageRow({
@@ -198,7 +198,7 @@ function MessageRow({
   const [picker, setPicker] = useState(false);
   const reactions = message.reactions ?? [];
   return (
-    <div className={cn("flex w-full", mine ? "justify-end" : "justify-start", first ? "mt-2.5" : "mt-[2px]")}>
+    <div className={cn("flex w-full flex-col", mine ? "items-end" : "items-start", first ? "mt-2.5" : "mt-[2px]")}>
       <div
         className={cn(
           "group/msg flex max-w-[min(85%,32rem)] items-end gap-1.5",
@@ -206,13 +206,13 @@ function MessageRow({
         )}
       >
         {isGroup && !mine && (
-          <div className="flex w-7 shrink-0 justify-center self-end">
+          <div className="flex w-7 shrink-0 justify-center self-end [&_>_div]:rounded-[var(--orbita-radius-avatar)] [&_img]:rounded-[var(--orbita-radius-avatar)]">
             {last && author ? <Avatar person={author} size="sm" /> : null}
           </div>
         )}
         <div className={cn("flex min-w-0 flex-col", mine ? "items-end" : "items-start")}>
           {first && isGroup && !mine && (
-            <span className="mb-0.5 px-1 text-[12.5px] font-medium text-primary">{authorName}</span>
+            <span className="mb-0.5 px-1 text-[12.5px] font-medium text-[var(--orbita-selected)]">{authorName}</span>
           )}
           <div className={cn("relative w-fit max-w-full", reactions.length > 0 && "mb-3")}>
             <MessageBody message={message} mine={mine} last={last} pinned={message.pinned} />
@@ -229,10 +229,10 @@ function MessageRow({
                     type="button"
                     onClick={() => onToggleReaction(message.id, r.emoji)}
                     className={cn(
-                      "flex items-center gap-0.5 rounded-full px-1.5 py-px text-[12px] shadow-sm",
+                      "flex items-center gap-0.5 rounded-full px-1.5 py-px text-[12px]",
                       reactionMine(r, meId)
-                        ? "bg-primary text-primary-foreground ring-1 ring-primary/40"
-                        : "border border-border bg-card text-foreground",
+                        ? "bg-[var(--orbita-selected)] text-white"
+                        : "bg-[var(--orbita-block)] text-foreground",
                     )}
                   >
                     <span>{r.emoji}</span>
@@ -243,7 +243,7 @@ function MessageRow({
             )}
             <div
               className={cn(
-                "absolute top-0 z-10 items-center rounded-full border border-border bg-card shadow-sm",
+                "absolute top-0 z-10 items-center rounded-full bg-[var(--orbita-block)]",
                 mine ? "right-full mr-1" : "left-full ml-1",
                 picker ? "flex" : "hidden group-hover/msg:flex",
               )}
@@ -280,7 +280,7 @@ function MessageRow({
               {picker && (
                 <div
                   className={cn(
-                    "absolute top-full z-20 mt-1 flex gap-0.5 rounded-full border border-border bg-card p-1 shadow-lg",
+                    "absolute top-full z-20 mt-1 flex gap-0.5 rounded-full bg-[var(--orbita-block)] p-1 shadow-lg",
                     mine ? "right-0" : "left-0",
                   )}
                 >
@@ -292,7 +292,7 @@ function MessageRow({
                         onToggleReaction(message.id, emoji);
                         setPicker(false);
                       }}
-                      className="grid h-7 w-7 place-items-center rounded-full text-base hover:bg-muted"
+                      className="grid h-7 w-7 place-items-center rounded-full text-base hover:bg-[var(--orbita-block-soft)]"
                     >
                       {emoji}
                     </button>
@@ -303,20 +303,13 @@ function MessageRow({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Timestamp({ iso, mine }: { iso: string; mine?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "absolute bottom-1 right-1.5 text-[11px] leading-none",
-        mine ? "text-primary-foreground/70" : "text-muted-foreground",
+      {/* Timestamp below the bubble */}
+      {last && (
+        <span className={cn("mt-[10px] text-[10px] text-muted-foreground", mine ? "mr-1" : "ml-8")}>
+          {formatClock(message.createdAt)}
+        </span>
       )}
-    >
-      {formatClock(iso)}
-    </span>
+    </div>
   );
 }
 
@@ -337,10 +330,12 @@ function MessageBody({
   const hasText = message.content.trim().length > 0;
   const radius = bubbleRadius(last, mine);
   const bubbleCls = cn(
-    "relative w-fit max-w-full shadow-sm",
+    "relative w-fit max-w-full",
     radius,
-    mine ? "bg-primary text-primary-foreground" : "border border-border bg-card text-foreground",
-    pinned && "ring-1 ring-primary/35",
+    mine
+      ? "bg-[var(--orbita-selected)] text-white"
+      : "bg-[var(--orbita-block-soft)] text-foreground",
+    pinned && "ring-1 ring-[var(--orbita-selected)]/35",
   );
 
   return (
@@ -367,23 +362,16 @@ function MessageBody({
           ) : (
             "✨"
           )}
-          {!hasText && media.length === 0 && i === stickers.length - 1 && <Timestamp iso={message.createdAt} />}
         </button>
       ))}
       {media.map((att, i) => (
         <div key={`${att.url}-${i}`} className={cn(bubbleCls, "overflow-hidden p-1")}>
           <MediaChip att={att} />
-          {!hasText && i === media.length - 1 && (
-            <div className="px-1 pb-4 pt-0.5">
-              <Timestamp iso={message.createdAt} mine={mine} />
-            </div>
-          )}
         </div>
       ))}
       {hasText && (
-        <div className={cn(bubbleCls, "px-2.5 pb-4 pt-1.5")}>
-          <p className="whitespace-pre-wrap break-words text-[14.2px] leading-[19px]">{message.content}</p>
-          <Timestamp iso={message.createdAt} mine={mine} />
+        <div className={cn(bubbleCls, "px-3 py-2")}>
+          <p className="whitespace-pre-wrap break-words text-[14px] leading-[20px]">{message.content}</p>
         </div>
       )}
     </div>
@@ -406,7 +394,7 @@ function MediaChip({ att }: { att: TeamChatAttachment }) {
             copy();
           }
         }}
-        className="group/media relative w-fit overflow-hidden rounded-md outline-none"
+        className="group/media relative w-fit overflow-hidden rounded-[var(--orbita-radius-inner)] outline-none"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={att.url} alt={att.name} className="max-h-72 max-w-[18rem] object-cover" />
@@ -423,7 +411,7 @@ function MediaChip({ att }: { att: TeamChatAttachment }) {
   }
 
   if (att.kind === "video") {
-    return <video src={att.url} controls className="max-h-72 max-w-[18rem] rounded-md bg-black" />;
+    return <video src={att.url} controls className="max-h-72 max-w-[18rem] rounded-[var(--orbita-radius-inner)] bg-black" />;
   }
 
   if (att.kind === "audio") {
@@ -447,12 +435,12 @@ function MediaChip({ att }: { att: TeamChatAttachment }) {
       className="flex w-fit items-center gap-2 px-2 py-1.5 outline-none"
     >
       <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <span className="max-w-[180px] truncate text-[13px] text-foreground">{att.name}</span>
+      <span className="max-w-[180px] truncate text-[13px]">{att.name}</span>
       <button
         type="button"
         onClick={copy}
         aria-label="Copiar arquivo"
-        className="grid h-7 w-7 place-items-center rounded-full hover:bg-muted"
+        className="grid h-7 w-7 place-items-center rounded-full hover:bg-white/20"
       >
         <Copy className="h-3.5 w-3.5" />
       </button>
@@ -460,7 +448,7 @@ function MediaChip({ att }: { att: TeamChatAttachment }) {
         href={att.url}
         download={att.name}
         aria-label="Baixar"
-        className="grid h-7 w-7 place-items-center rounded-full hover:bg-muted"
+        className="grid h-7 w-7 place-items-center rounded-full hover:bg-white/20"
       >
         <Download className="h-3.5 w-3.5" />
       </a>

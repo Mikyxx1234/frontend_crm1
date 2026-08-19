@@ -120,62 +120,66 @@ export function TeamChatApp() {
         : null;
 
   return (
-    <div className="team-chat-shell flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        <div
-          className={cn(
-            "flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden border-border",
-            "lg:w-[30%] lg:min-w-[340px] lg:max-w-[420px] lg:shrink-0 lg:border-r",
-            selected ? "hidden lg:flex" : "flex",
-          )}
-        >
-          <Sidebar
-            directs={directs}
-            groups={groups}
-            activeId={selectedId}
-            loading={status === "loading"}
-            error={directs.length === 0 && groups.length === 0 ? loadError : null}
-            onSelectRoom={(id) => {
-              setSelectedId(id);
-              setNotesOpen(false);
-            }}
-            onSelectPerson={(id) => {
-              setNotesOpen(false);
-              openPerson(id);
-            }}
-            onNew={() => setComposeOpen(true)}
-          />
-        </div>
-
-        <section className={cn("relative flex min-h-0 min-w-0 flex-1 flex-col bg-background", selected ? "flex" : "hidden lg:flex")}>
-          {selected ? (
-            <Thread
-              room={selected}
-              meId={meId}
-              meName={meName}
-              meAvatar={meAvatar}
-              notesOpen={notesOpen}
-              noteCount={notes.length}
-              onBack={() => setSelectedId(null)}
-              onToggleNotes={() => setNotesOpen((v) => !v)}
-              onAddMembers={() => setAddOpen(true)}
-            />
-          ) : (
-            <LandingEmpty onNew={() => setComposeOpen(true)} />
-          )}
-        </section>
-
-        {selected && notesOpen && (
-          <>
-            <div className="hidden h-full w-[320px] shrink-0 lg:block">
-              <NotesHost roomId={selected.id} notes={notes} onClose={() => setNotesOpen(false)} />
-            </div>
-            <div className="absolute inset-0 z-20 lg:hidden">
-              <NotesHost roomId={selected.id} notes={notes} onClose={() => setNotesOpen(false)} />
-            </div>
-          </>
+    <div className="team-chat-shell h-full min-h-0 min-w-0 flex-1 overflow-hidden">
+      {/* Lista de conversas - coluna esquerda */}
+      <div
+        className={cn(
+          "flex h-full min-h-0 w-[340px] min-w-[320px] shrink-0 flex-col gap-[var(--orbita-gap)]",
+          selected ? "hidden lg:flex" : "flex",
         )}
+      >
+        <Sidebar
+          directs={directs}
+          groups={groups}
+          activeId={selectedId}
+          loading={status === "loading"}
+          error={directs.length === 0 && groups.length === 0 ? loadError : null}
+          onSelectRoom={(id) => {
+            setSelectedId(id);
+            setNotesOpen(false);
+          }}
+          onSelectPerson={(id) => {
+            setNotesOpen(false);
+            openPerson(id);
+          }}
+          onNew={() => setComposeOpen(true)}
+        />
       </div>
+
+      {/* Painel de conversa - coluna direita */}
+      <section
+        className={cn(
+          "relative flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--orbita-gap)]",
+          selected ? "flex" : "hidden lg:flex",
+        )}
+      >
+        {selected ? (
+          <Thread
+            room={selected}
+            meId={meId}
+            meName={meName}
+            meAvatar={meAvatar}
+            notesOpen={notesOpen}
+            noteCount={notes.length}
+            onBack={() => setSelectedId(null)}
+            onToggleNotes={() => setNotesOpen((v) => !v)}
+            onAddMembers={() => setAddOpen(true)}
+          />
+        ) : (
+          <LandingEmpty onNew={() => setComposeOpen(true)} />
+        )}
+      </section>
+
+      {selected && notesOpen && (
+        <>
+          <div className="hidden h-full w-[320px] shrink-0 lg:block">
+            <NotesHost roomId={selected.id} notes={notes} onClose={() => setNotesOpen(false)} />
+          </div>
+          <div className="absolute inset-0 z-20 lg:hidden">
+            <NotesHost roomId={selected.id} notes={notes} onClose={() => setNotesOpen(false)} />
+          </div>
+        </>
+      )}
 
       <ComposeDialog
         open={composeOpen}
@@ -268,56 +272,65 @@ function Thread({
   }, [room.id]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <ChatHeader
-        room={liveRoom}
-        notesOpen={notesOpen}
-        noteCount={noteCount}
-        searchQuery={chatQuery}
-        onSearchChange={setChatQuery}
-        onBack={onBack}
-        onToggleNotes={onToggleNotes}
-        onAddMembers={onAddMembers}
-      />
-      <MessageList
-        room={liveRoom}
-        messages={messages}
-        meId={meId}
-        loading={!mock && isLoading}
-        query={chatQuery}
-        onToggleReaction={(id, emoji) =>
-          mock
-            ? toggleMockReaction(room.id, id, emoji, meId)
-            : react.mutate({ roomId: room.id, messageId: id, emoji }, { onError: (e: Error) => toast.error(e.message) })
-        }
-        onTogglePin={(id) =>
-          mock
-            ? toggleMockPin(room.id, id)
-            : pin.mutate({ roomId: room.id, messageId: id }, { onError: (e: Error) => toast.error(e.message) })
-        }
-      />
-      <Composer
-        roomId={room.id}
-        placeholder="Digite uma mensagem"
-        onSend={async (payload) => {
-          if (mock) {
-            sendMockMessage(room.id, payload, { id: meId, name: meName, avatarUrl: meAvatar })
-            return
+    <>
+      {/* Header block */}
+      <div className="orbita-block shrink-0">
+        <ChatHeader
+          room={liveRoom}
+          notesOpen={notesOpen}
+          noteCount={noteCount}
+          searchQuery={chatQuery}
+          onSearchChange={setChatQuery}
+          onBack={onBack}
+          onToggleNotes={onToggleNotes}
+          onAddMembers={onAddMembers}
+        />
+      </div>
+      {/* Messages block */}
+      <div className="orbita-block flex min-h-0 flex-1 flex-col overflow-hidden">
+        <MessageList
+          room={liveRoom}
+          messages={messages}
+          meId={meId}
+          loading={!mock && isLoading}
+          query={chatQuery}
+          onToggleReaction={(id, emoji) =>
+            mock
+              ? toggleMockReaction(room.id, id, emoji, meId)
+              : react.mutate({ roomId: room.id, messageId: id, emoji }, { onError: (e: Error) => toast.error(e.message) })
           }
-          await send.mutateAsync({
-            roomId: room.id,
-            content: payload.content,
-            attachments: payload.attachments,
-          })
-        }}
-      />
-    </div>
+          onTogglePin={(id) =>
+            mock
+              ? toggleMockPin(room.id, id)
+              : pin.mutate({ roomId: room.id, messageId: id }, { onError: (e: Error) => toast.error(e.message) })
+          }
+        />
+      </div>
+      {/* Composer block */}
+      <div className="orbita-block shrink-0">
+        <Composer
+          roomId={room.id}
+          placeholder="Digite uma mensagem"
+          onSend={async (payload) => {
+            if (mock) {
+              sendMockMessage(room.id, payload, { id: meId, name: meName, avatarUrl: meAvatar })
+              return
+            }
+            await send.mutateAsync({
+              roomId: room.id,
+              content: payload.content,
+              attachments: payload.attachments,
+            })
+          }}
+        />
+      </div>
+    </>
   );
 }
 
 function LandingEmpty({ onNew }: { onNew: () => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 text-center">
+    <div className="orbita-block flex flex-1 flex-col items-center justify-center px-6 text-center">
       <p className="font-display text-[32px] font-light tracking-tight text-foreground">Órbita</p>
       <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-muted-foreground">
         Escolha uma conversa à esquerda ou comece uma nova mensagem.

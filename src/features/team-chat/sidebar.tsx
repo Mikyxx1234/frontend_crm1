@@ -55,7 +55,7 @@ function HeaderIcon({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      className="grid h-8 w-8 place-items-center rounded-[var(--orbita-radius-inner)] text-muted-foreground transition-colors hover:bg-[var(--orbita-block-soft)] hover:text-foreground"
     >
       {children}
     </button>
@@ -88,24 +88,27 @@ function ChatRow({
   return (
     <div
       className={cn(
-        "group flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
-        active ? "bg-muted" : "hover:bg-muted/60",
+        "group mx-2 flex w-[calc(100%-16px)] items-center gap-2 rounded-[var(--orbita-radius-inner)] px-2 py-2 text-left transition-colors",
+        active ? "bg-[var(--orbita-selected)] text-white" : "hover:bg-[var(--orbita-block-soft)]",
       )}
     >
-      <button type="button" onClick={onClick} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+      <button type="button" onClick={onClick} className="flex min-w-0 flex-1 items-center gap-2 text-left">
         {item.kind === "dm" ? (
-          <Avatar person={toPerson(item.row.person)} size="md" showPresence />
+          <div className="shrink-0 [&_>_div]:rounded-[var(--orbita-radius-avatar)] [&_img]:rounded-[var(--orbita-radius-avatar)]">
+            <Avatar person={toPerson(item.row.person)} size="md" showPresence />
+          </div>
         ) : (
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
-            <Hash className="h-5 w-5" />
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--orbita-radius-avatar)] bg-[var(--orbita-block-soft)] text-muted-foreground">
+            <Hash className="h-4 w-4" />
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-baseline gap-1">
             <span
               className={cn(
-                "truncate text-[16px] leading-tight text-foreground",
-                unread > 0 || active ? "font-bold" : "font-medium",
+                "truncate text-[14px] leading-tight",
+                active ? "text-white" : "text-foreground",
+                unread > 0 || active ? "font-semibold" : "font-medium",
               )}
             >
               {item.kind === "group" ? `#${item.name}` : item.name}
@@ -113,24 +116,24 @@ function ChatRow({
             {item.time && (
               <span
                 className={cn(
-                  "ml-auto shrink-0 text-[12px]",
-                  unread > 0 ? "font-medium text-primary" : "text-muted-foreground",
+                  "ml-auto shrink-0 text-[11px]",
+                  active ? "text-white/70" : unread > 0 ? "font-medium text-primary" : "text-muted-foreground",
                 )}
               >
                 {item.time}
               </span>
             )}
           </div>
-          <div className="mt-0.5 flex items-center gap-2">
+          <div className="mt-0.5 flex items-center gap-1">
             <span
               className={cn(
-                "min-w-0 flex-1 truncate text-[13.5px] leading-snug",
-                unread > 0 ? "font-medium text-foreground" : "text-muted-foreground",
+                "min-w-0 flex-1 truncate text-[12px] leading-snug",
+                active ? "text-[#D6D2FA]" : unread > 0 ? "font-medium text-foreground" : "text-muted-foreground",
               )}
             >
               {item.preview}
             </span>
-            <UnreadPill count={unread} />
+            {!active && <UnreadPill count={unread} />}
           </div>
         </div>
       </button>
@@ -139,13 +142,14 @@ function ChatRow({
         onClick={onToggleFavorite}
         aria-label={favorited ? "Remover dos favoritos" : "Favoritar"}
         className={cn(
-          "grid h-7 w-7 shrink-0 place-items-center rounded-full",
+          "grid h-6 w-6 shrink-0 place-items-center rounded-full",
           favorited
-            ? "text-primary"
-            : "text-muted-foreground opacity-0 hover:bg-muted group-hover:opacity-100",
+            ? active ? "text-white" : "text-primary"
+            : "text-muted-foreground opacity-0 hover:bg-white/20 group-hover:opacity-100",
+          active && "text-white/80 hover:text-white",
         )}
       >
-        <Star className={cn("h-3.5 w-3.5", favorited && "fill-current")} />
+        <Star className={cn("h-3 w-3", favorited && "fill-current")} />
       </button>
     </div>
   );
@@ -253,10 +257,11 @@ export function Sidebar({
   ];
 
   return (
-    <aside className="flex h-full w-full min-w-0 flex-col overflow-hidden bg-card lg:min-w-[340px]">
-      <header className="shrink-0 px-3 pb-2 pt-3">
+    <>
+      {/* Search block */}
+      <aside className="orbita-block flex w-full min-w-0 shrink-0 flex-col px-3 py-3">
         <div className="flex items-center gap-1">
-          <h1 className="min-w-0 flex-1 truncate px-1 font-display text-[22px] font-semibold tracking-tight text-foreground">
+          <h1 className="min-w-0 flex-1 truncate px-1 font-display text-[18px] font-semibold tracking-tight text-foreground">
             Órbita
           </h1>
           <HeaderIcon label="Nova conversa" onClick={onNew}>
@@ -267,14 +272,14 @@ export function Sidebar({
               <MoreVertical className="h-5 w-5" />
             </HeaderIcon>
             {menuOpen && (
-              <div className="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-md border border-border bg-card py-1 shadow-lg">
+              <div className="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block)] py-1 shadow-lg">
                 <button
                   type="button"
                   onClick={() => {
                     setMenuOpen(false);
                     onNew();
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] text-foreground hover:bg-muted"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] text-foreground hover:bg-[var(--orbita-block-soft)]"
                 >
                   <SquarePen className="h-4 w-4 text-muted-foreground" />
                   Nova conversa
@@ -289,12 +294,12 @@ export function Sidebar({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Pesquisar ou começar uma nova conversa"
-            className="w-full rounded-lg border border-border bg-muted py-2 pl-10 pr-3 text-[14px] text-foreground outline-none placeholder:text-muted-foreground"
+            placeholder="Pesquisar conversas"
+            className="w-full rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] py-2 pl-10 pr-3 text-[14px] text-foreground outline-none placeholder:text-muted-foreground"
           />
         </div>
 
-        <div className="mt-2.5 flex flex-wrap gap-1.5 px-0.5">
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
           {pills.map((pill) => {
             const selected = filter === pill.id;
             return (
@@ -303,23 +308,24 @@ export function Sidebar({
                 type="button"
                 onClick={() => setFilter(pill.id)}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-medium transition-colors",
+                  "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium transition-colors",
                   selected
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80",
+                    ? "bg-[var(--orbita-selected)] text-white"
+                    : "bg-[var(--orbita-block-soft)] text-muted-foreground hover:bg-[var(--orbita-block-soft)]/80",
                 )}
               >
                 {pill.label}
                 {pill.id === "unread" && (pill.count ?? 0) > 0 && (
-                  <span className="text-[12px] tabular-nums">{pill.count}</span>
+                  <span className="text-[11px] tabular-nums">{pill.count}</span>
                 )}
               </button>
             );
           })}
         </div>
-      </header>
+      </aside>
 
-      <nav className="chat-scroll min-h-0 flex-1 overflow-y-auto" aria-label="Conversas">
+      {/* Conversations list block */}
+      <nav className="orbita-block chat-scroll min-h-0 flex-1 overflow-y-auto py-1" aria-label="Conversas">
         {loading ? (
           <p className="px-4 pt-10 text-center text-sm text-muted-foreground">Carregando o time…</p>
         ) : error ? (
@@ -351,6 +357,6 @@ export function Sidebar({
           ))
         )}
       </nav>
-    </aside>
+    </>
   );
 }

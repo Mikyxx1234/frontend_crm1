@@ -6,6 +6,8 @@ import {
   IconAlertTriangle,
   IconBuilding,
   IconClock,
+  IconEye,
+  IconEyeOff,
   IconPencil,
   IconToolsKitchen2,
   IconUsers,
@@ -379,10 +381,12 @@ export function CoverageBoard({
   search = "",
   deptIds = [],
   showHidden = false,
+  onShowHiddenChange,
 }: {
   search?: string;
   deptIds?: string[];
   showHidden?: boolean;
+  onShowHiddenChange?: (v: boolean) => void;
 } = {}) {
   const qc = useQueryClient();
   const { data: agents = [], isLoading, isError } = useCoverageAgents();
@@ -414,10 +418,17 @@ export function CoverageBoard({
 
   // ── Filtro (área + presença + busca) ──────────────────────────────────────
 
+  const q = search.trim().toLowerCase();
+
   const filtered = React.useMemo(() => {
     let arr = agents;
     if (!showHidden) {
-      arr = arr.filter((a) => a.visibleInCoverage !== false);
+      arr = arr.filter((a) => {
+        if (a.visibleInCoverage !== false) return true;
+        // Busca ainda acha quem foi escondido, para dar pra restaurar.
+        if (!q) return false;
+        return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
+      });
     }
     if (deptFilter.size > 0) {
       arr = arr.filter((a) => a.departments.some((d) => deptFilter.has(d.id)));
@@ -425,14 +436,18 @@ export function CoverageBoard({
     if (presenceFilter) {
       arr = arr.filter((a) => (a.agentStatus?.status ?? "OFFLINE") === presenceFilter);
     }
-    const q = search.trim().toLowerCase();
     if (q) {
       arr = arr.filter(
         (a) => a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q),
       );
     }
     return arr;
-  }, [agents, deptFilter, presenceFilter, search, showHidden]);
+  }, [agents, deptFilter, presenceFilter, q, showHidden]);
+
+  const hiddenCount = React.useMemo(
+    () => agents.filter((a) => a.visibleInCoverage === false).length,
+    [agents],
+  );
 
   // ── Range dinâmico da grade (hora cheia) ──────────────────────────────────
   // Só horários persistidos. Sem schedule não infla o eixo (antes usava
@@ -677,6 +692,28 @@ export function CoverageBoard({
         <div className="h-6 w-px bg-[var(--glass-border)]" />
 
         <DepartmentHoursControl />
+
+        {hiddenCount > 0 && (
+          <button
+            type="button"
+            onClick={() => onShowHiddenChange?.(!showHidden)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-colors",
+              showHidden
+                ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+            )}
+            aria-pressed={showHidden}
+            title={
+              showHidden
+                ? "Ocultar quem não aparece na lista"
+                : "Mostrar quem foi escondido da lista"
+            }
+          >
+            {showHidden ? <IconEye size={14} /> : <IconEyeOff size={14} />}
+            {hiddenCount} oculto{hiddenCount === 1 ? "" : "s"}
+          </button>
+        )}
       </div>
 
       {/* KPIs de cobertura do dia */}
@@ -737,6 +774,15 @@ export function CoverageBoard({
           <p className="text-sm text-[var(--text-muted)]">
             Nenhum agente encontrado{deptFilter.size > 0 ? " para as áreas selecionadas" : ""}.
           </p>
+          {!showHidden && hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => onShowHiddenChange?.(true)}
+              className="font-display text-[12px] font-semibold text-[var(--brand-primary)] hover:underline"
+            >
+              Mostrar {hiddenCount} oculto{hiddenCount === 1 ? "" : "s"}
+            </button>
+          )}
         </div>
       ) : (
         <div
@@ -912,7 +958,13 @@ export function CoverageBoard({
                             )}
                           </p>
                         </div>
-                        {inactive ? (
+                        {agent.visibleInCoverage === false ? (
+                          <TooltipGlass label="Escondido da lista — clique em editar para voltar a aparecer" side="left">
+                            <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
+                              Oculto
+                            </span>
+                          </TooltipGlass>
+                        ) : inactive ? (
                           <TooltipGlass label="Não participa da distribuição — não recebe leads" side="left">
                             <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
                               Inativo
@@ -930,7 +982,12 @@ export function CoverageBoard({
                             type="button"
                             onClick={() => openEdit(agent)}
                             aria-label={`Editar horário de ${agent.name}`}
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--color-primary-soft)]"
+                            className={cn(
+                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-opacity hover:bg-[var(--color-primary-soft)]",
+                              agent.visibleInCoverage === false
+                                ? "opacity-100"
+                                : "opacity-0 group-hover:opacity-100",
+                            )}
                           >
                             <IconPencil size={13} />
                           </button>

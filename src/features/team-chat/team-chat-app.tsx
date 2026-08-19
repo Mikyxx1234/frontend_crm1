@@ -19,8 +19,10 @@ import {
   useTeamChatNotes,
   useTeamChatRealtime,
   useTeamChatRooms,
+  useOrbitaFavorites,
 } from "./hooks";
 import { MOCK_PEOPLE, isMockId, mergeUniqueById } from "./mock-data";
+import { favoriteKey } from "./helpers";
 import {
   addMockNote,
   createMockRoom,
@@ -49,6 +51,7 @@ export function TeamChatApp() {
   const roomsQuery = useTeamChatRooms(ready);
   const peopleQuery = useTeamChatColleagues(ready);
   const mock = useMockChat();
+  const { favorites, toggleFavorite } = useOrbitaFavorites();
   const realRooms = roomsQuery.data?.rooms ?? [];
   const realColleagues = peopleQuery.data?.colleagues ?? [];
   useTeamChatRealtime(isMockId(selectedId) ? null : selectedId, ready);
@@ -134,6 +137,8 @@ export function TeamChatApp() {
           activeId={selectedId}
           loading={status === "loading"}
           error={directs.length === 0 && groups.length === 0 ? loadError : null}
+          favorites={favorites}
+          onToggleFavorite={toggleFavorite}
           onSelectRoom={(id) => {
             setSelectedId(id);
             setNotesOpen(false);
@@ -161,8 +166,14 @@ export function TeamChatApp() {
             meAvatar={meAvatar}
             notesOpen={notesOpen}
             noteCount={notes.length}
+            favorited={favorites.includes(
+              favoriteKey({ roomId: selected.id, personId: selected.peer?.id }),
+            )}
             onBack={() => setSelectedId(null)}
             onToggleNotes={() => setNotesOpen((v) => !v)}
+            onToggleFavorite={() =>
+              toggleFavorite(favoriteKey({ roomId: selected.id, personId: selected.peer?.id }))
+            }
             onAddMembers={() => setAddOpen(true)}
           />
         ) : (
@@ -245,8 +256,10 @@ function Thread({
   meAvatar,
   notesOpen,
   noteCount,
+  favorited,
   onBack,
   onToggleNotes,
+  onToggleFavorite,
   onAddMembers,
 }: {
   room: TeamChatRoom;
@@ -255,8 +268,10 @@ function Thread({
   meAvatar: string | null;
   notesOpen: boolean;
   noteCount: number;
+  favorited: boolean;
   onBack: () => void;
   onToggleNotes: () => void;
+  onToggleFavorite: () => void;
   onAddMembers: () => void;
 }) {
   const mock = isMockId(room.id);
@@ -272,22 +287,20 @@ function Thread({
   }, [room.id]);
 
   return (
-    <>
-      {/* Header block */}
-      <div className="orbita-block shrink-0">
-        <ChatHeader
-          room={liveRoom}
-          notesOpen={notesOpen}
-          noteCount={noteCount}
-          searchQuery={chatQuery}
-          onSearchChange={setChatQuery}
-          onBack={onBack}
-          onToggleNotes={onToggleNotes}
-          onAddMembers={onAddMembers}
-        />
-      </div>
-      {/* Messages block */}
-      <div className="orbita-block flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="orbita-block flex min-h-0 flex-1 flex-col overflow-hidden">
+      <ChatHeader
+        room={liveRoom}
+        notesOpen={notesOpen}
+        noteCount={noteCount}
+        searchQuery={chatQuery}
+        favorited={favorited}
+        onSearchChange={setChatQuery}
+        onBack={onBack}
+        onToggleNotes={onToggleNotes}
+        onToggleFavorite={onToggleFavorite}
+        onAddMembers={onAddMembers}
+      />
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden" data-wa-thread>
         <MessageList
           room={liveRoom}
           messages={messages}
@@ -306,8 +319,7 @@ function Thread({
           }
         />
       </div>
-      {/* Composer block */}
-      <div className="orbita-block shrink-0">
+      <div className="relative z-20 shrink-0 overflow-visible border-t border-black/[0.04] dark:border-white/[0.06]">
         <Composer
           roomId={room.id}
           placeholder="Digite uma mensagem"
@@ -324,7 +336,7 @@ function Thread({
           }}
         />
       </div>
-    </>
+    </div>
   );
 }
 

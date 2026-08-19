@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 import {
+  Bold,
   FileText,
+  Highlighter,
+  Italic,
   Mic,
   Paperclip,
   Plus,
@@ -10,11 +13,11 @@ import {
   Smile,
   Sticker,
   Trash2,
-  Type,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { EmojiPicker } from "@/components/inbox/emoji-picker";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +32,7 @@ const STICKERS = [
   "👍", "👎", "❤️", "🔥", "😂", "😍", "😮", "😢",
   "🙏", "👏", "🎉", "💯", "😎", "🤔", "😅", "🤝",
   "✅", "❌", "⭐", "🚀", "💪", "👀", "🤗", "🥳",
+  "🤩", "😇", "😜", "🫡", "🫠", "😴", "🤯", "🫶",
 ] as const;
 
 type Staged = {
@@ -130,6 +134,7 @@ export function Composer({
   const [busy, setBusy] = useState(false);
   const [plusOpen, setPlusOpen] = useState(false);
   const [picker, setPicker] = useState<"emoji" | "sticker" | null>(null);
+  const [hasSelection, setHasSelection] = useState(false);
   const [rec, setRec] = useState<RecState>("idle");
   const [seconds, setSeconds] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -162,13 +167,27 @@ export function Composer({
   useEffect(() => {
     if (!plusOpen && !picker) return;
     function onDoc(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+      const node = e.target as Node | null;
+      if (!node) return;
+      if (rootRef.current?.contains(node)) return;
+      const el = node instanceof Element ? node : node.parentElement;
+      if (el?.closest("[data-orbita-picker], [data-radix-popper-content-wrapper]")) return;
+      setPlusOpen(false);
+      setPicker(null);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
         setPlusOpen(false);
         setPicker(null);
       }
     }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    const id = window.setTimeout(() => document.addEventListener("mousedown", onDoc), 0);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(id);
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [plusOpen, picker]);
 
   function resize() {
@@ -408,7 +427,22 @@ export function Composer({
     }
   }
 
+  function syncSelection() {
+    const el = textareaRef.current;
+    setHasSelection(!!el && el.selectionStart !== el.selectionEnd);
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+      e.preventDefault();
+      wrapSelection("*");
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
+      e.preventDefault();
+      wrapSelection("_");
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       if (e.nativeEvent.isComposing || e.keyCode === 229) return;
       e.preventDefault();
@@ -435,14 +469,18 @@ export function Composer({
       const from = start + before.length;
       el.setSelectionRange(from, from + selected.length);
       resize();
+      syncSelection();
     });
   }
 
   const iconBtn =
     "grid h-9 w-9 shrink-0 place-items-center rounded-[11px] text-muted-foreground transition-colors hover:bg-[var(--orbita-block-soft)] hover:text-foreground";
 
+  const formatBtn =
+    "grid h-7 w-7 place-items-center rounded-full text-muted-foreground hover:bg-[var(--orbita-block-soft)] hover:text-foreground";
+
   return (
-    <div className="px-3 py-3" ref={rootRef} onPaste={handlePaste}>
+    <div className="relative px-2 py-2" ref={rootRef} onPaste={handlePaste}>
       <div className="w-full">
         {pending.length > 0 && (
           <div className="mb-1.5 flex flex-wrap gap-1.5">
@@ -457,7 +495,14 @@ export function Composer({
                 ) : (
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span className="max-w-[140px] truncate text-[12px] text-foreground">{item.file.name || "Arquivo"}</span>
+                <div className="min-w-0">
+                  <span className="block max-w-[140px] truncate text-[12px] text-foreground">
+                    {item.file.name || "Arquivo"}
+                  </span>
+                  {item.asSticker && (
+                    <span className="text-[10px] font-medium text-[var(--orbita-selected)]">Figurinha</span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => removeStaged(item.id)}
@@ -472,14 +517,18 @@ export function Composer({
         )}
 
         {picker && (
-          <div className="mb-1.5 overflow-hidden rounded-[var(--orbita-radius-block)] bg-[var(--orbita-block-soft)]">
-            <div className="flex">
+          <div
+            data-orbita-picker
+            onMouseDown={(e) => e.stopPropagation()}
+            className="absolute inset-x-2 bottom-full z-40 mb-1 overflow-hidden rounded-[var(--orbita-radius-block)] bg-[var(--orbita-block)] shadow-lg ring-1 ring-black/5"
+          >
+            <div className="flex bg-[var(--orbita-block-soft)]">
               <button
                 type="button"
                 onClick={() => setPicker("emoji")}
                 className={cn(
                   "flex-1 px-3 py-1.5 text-[12px] font-semibold",
-                  picker === "emoji" ? "bg-white/50 text-foreground" : "text-muted-foreground",
+                  picker === "emoji" ? "bg-[var(--orbita-block)] text-foreground" : "text-muted-foreground",
                 )}
               >
                 Emojis
@@ -489,23 +538,29 @@ export function Composer({
                 onClick={() => setPicker("sticker")}
                 className={cn(
                   "flex-1 px-3 py-1.5 text-[12px] font-semibold",
-                  picker === "sticker" ? "bg-white/50 text-foreground" : "text-muted-foreground",
+                  picker === "sticker" ? "bg-[var(--orbita-block)] text-foreground" : "text-muted-foreground",
                 )}
               >
                 Figurinhas
               </button>
             </div>
             {picker === "emoji" ? (
-              <EmojiPicker open onPick={(emoji) => insertEmoji(emoji)} className="border-0 shadow-none" />
+              <EmojiPicker
+                open
+                compact
+                onPick={(emoji) => insertEmoji(emoji)}
+                className="border-0 bg-transparent shadow-none"
+              />
             ) : (
-              <div className="grid grid-cols-8 gap-1 p-2">
+              <div className="grid max-h-[200px] grid-cols-8 gap-1 overflow-y-auto p-2">
                 {STICKERS.map((emoji) => (
                   <button
                     key={emoji}
                     type="button"
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => void sendSticker(emoji)}
                     disabled={busy}
-                    className="grid h-12 place-items-center rounded-[var(--orbita-radius-inner)] text-[28px] hover:bg-white/50"
+                    className="grid h-12 place-items-center rounded-[var(--orbita-radius-inner)] text-[28px] hover:bg-[var(--orbita-block-soft)]"
                   >
                     {emoji}
                   </button>
@@ -513,7 +568,7 @@ export function Composer({
                 <button
                   type="button"
                   onClick={() => stickerFileRef.current?.click()}
-                  className="grid h-12 place-items-center rounded-[var(--orbita-radius-inner)] border border-dashed border-muted-foreground/30 text-muted-foreground hover:bg-white/50"
+                  className="grid h-12 place-items-center rounded-[var(--orbita-radius-inner)] border border-dashed border-muted-foreground/30 text-muted-foreground hover:bg-[var(--orbita-block-soft)]"
                   aria-label="Enviar figurinha própria"
                 >
                   <Plus className="h-5 w-5" />
@@ -569,8 +624,10 @@ export function Composer({
           {!recording && (
             <div className="flex items-end gap-1">
               <div className="relative shrink-0">
+              <TooltipGlass label="Mais opções" side="top">
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     setPlusOpen((v) => !v);
                     setPicker(null);
@@ -580,6 +637,7 @@ export function Composer({
                 >
                   <Plus className="h-5 w-5" />
                 </button>
+              </TooltipGlass>
                 {plusOpen && (
                   <div className="absolute bottom-full left-0 z-20 mb-1 w-48 overflow-hidden rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block)] py-1 shadow-lg">
                     <button
@@ -617,25 +675,99 @@ export function Composer({
                       }}
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-[var(--orbita-block-soft)]"
                     >
-                      <Type className="h-4 w-4 text-muted-foreground" /> Negrito
+                      <Bold className="h-4 w-4 text-muted-foreground" /> Negrito
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlusOpen(false);
+                        wrapSelection("==");
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-[var(--orbita-block-soft)]"
+                    >
+                      <Highlighter className="h-4 w-4 text-muted-foreground" /> Destacar texto
                     </button>
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => setPicker((v) => (v ? null : "emoji"))}
-                aria-label="Emojis e figurinhas"
-                className={cn(iconBtn, picker && "bg-[var(--orbita-block-soft)] text-foreground")}
-              >
-                <Smile className="h-5 w-5" />
-              </button>
+              {picker ? (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setPlusOpen(false);
+                    setPicker((v) => (v === "emoji" ? null : "emoji"));
+                  }}
+                  aria-label="Emojis e figurinhas"
+                  className={cn(iconBtn, "bg-[var(--orbita-block-soft)] text-foreground")}
+                >
+                  <Smile className="h-5 w-5" />
+                </button>
+              ) : (
+                <TooltipGlass label="Emojis e figurinhas" side="top">
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      setPicker("emoji");
+                    }}
+                    aria-label="Emojis e figurinhas"
+                    className={iconBtn}
+                  >
+                    <Smile className="h-5 w-5" />
+                  </button>
+                </TooltipGlass>
+              )}
               <div
                 className={cn(
-                  "flex min-h-10 min-w-0 flex-1 items-end rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3",
+                  "relative flex min-h-10 min-w-0 flex-1 items-end rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3",
                   dragging && "ring-2 ring-[var(--orbita-selected)]/40",
                 )}
               >
+                {hasSelection && (
+                  <div className="absolute bottom-full left-0 z-20 mb-1 flex items-center gap-0.5 rounded-full bg-[var(--orbita-block)] p-0.5 shadow-lg">
+                    <TooltipGlass label="Negrito (*texto*)" side="top">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          wrapSelection("*");
+                        }}
+                        aria-label="Negrito"
+                        className={formatBtn}
+                      >
+                        <Bold className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipGlass>
+                    <TooltipGlass label="Itálico (_texto_)" side="top">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          wrapSelection("_");
+                        }}
+                        aria-label="Itálico"
+                        className={formatBtn}
+                      >
+                        <Italic className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipGlass>
+                    <TooltipGlass label="Destacar (==texto==)" side="top">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          wrapSelection("==");
+                        }}
+                        aria-label="Destacar texto"
+                        className={formatBtn}
+                      >
+                        <Highlighter className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipGlass>
+                  </div>
+                )}
                 <textarea
                   ref={textareaRef}
                   value={value}
@@ -643,8 +775,12 @@ export function Composer({
                   onChange={(e) => {
                     setValue(e.target.value);
                     resize();
+                    syncSelection();
                   }}
                   onKeyDown={handleKeyDown}
+                  onKeyUp={syncSelection}
+                  onMouseUp={syncSelection}
+                  onSelect={syncSelection}
                   placeholder={placeholder}
                   disabled={busy}
                   className="max-h-40 min-h-10 min-w-0 flex-1 resize-none bg-transparent py-2 text-[14px] leading-snug text-foreground outline-none placeholder:text-muted-foreground"

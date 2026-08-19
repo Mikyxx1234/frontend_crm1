@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { IconChevronDown, IconColumns, IconLayoutKanban, IconPlus, IconRocket } from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import { AppLoading } from "@/components/crm/app-loading";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { PageHeader } from "@/components/crm/page-header";
@@ -114,12 +115,36 @@ export default function DemandsClientPage({
       : null,
   ].filter((x): x is NonNullable<typeof x> => x !== null);
 
+  const booting =
+    (status === "loading" ||
+      boardsQuery.isPending ||
+      (!!activeId && boardQuery.isPending)) &&
+    !filteredBoard;
+  const loadError =
+    boardsQuery.error ?? boardQuery.error;
+  const loadErrorMessage =
+    loadError instanceof Error
+      ? loadError.message
+      : "Não foi possível carregar os boards.";
+
   return (
     <div
       className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4"
       style={{ gridTemplateRows: "1fr" }}
     >
       {navRail ?? <NavRailSpacer />}
+      {booting ? (
+        <AppLoading variant="panel" />
+      ) : boardsQuery.isError || boardQuery.isError ? (
+        <AppLoading
+          variant="panel"
+          error={loadErrorMessage}
+          onRetry={() => {
+            void boardsQuery.refetch();
+            void boardQuery.refetch();
+          }}
+        />
+      ) : (
       <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
           <PageHeader
             icon={<IconRocket size={20} />}
@@ -192,32 +217,7 @@ export default function DemandsClientPage({
           />
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {(status === "loading" ||
-              boardsQuery.isPending ||
-              (!!activeId && boardQuery.isPending)) &&
-            !filteredBoard ? (
-              <p className="flex flex-1 items-center justify-center text-[13px] text-[var(--text-muted)]">
-                Carregando
-              </p>
-            ) : boardsQuery.isError || boardQuery.isError ? (
-              <div className="space-y-2">
-                <p className="text-[13px] text-[var(--text-muted)]">
-                  {(boardsQuery.error ?? boardQuery.error) instanceof Error
-                    ? (boardsQuery.error ?? boardQuery.error)!.message
-                    : "Não foi possível carregar os boards."}
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    void boardsQuery.refetch();
-                    void boardQuery.refetch();
-                  }}
-                >
-                  Tentar de novo
-                </Button>
-              </div>
-            ) : !filteredBoard ? (
+            {!filteredBoard ? (
               <p className="text-[13px] text-[var(--text-muted)]">Nenhum board disponível.</p>
             ) : view === "kanban" ? (
               <div className="flex min-h-0 flex-1 flex-col">
@@ -383,6 +383,7 @@ export default function DemandsClientPage({
         </form>
       </FormDialog>
       </main>
+      )}
     </div>
   );
 }

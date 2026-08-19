@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { subscribeSSEEvents } from "@/hooks/use-sse";
@@ -18,7 +18,27 @@ import {
   reactTeamChatMessage,
   sendTeamChatMessage,
 } from "./api";
+import { loadOrbitaFavorites, saveOrbitaFavorites } from "./helpers";
 import type { TeamChatAttachment, TeamChatMessage, TeamChatNote } from "./types";
+
+export function useOrbitaFavorites() {
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  useEffect(() => {
+    setFavorites(loadOrbitaFavorites());
+  }, []);
+
+  function toggleFavorite(id: string) {
+    if (!id) return;
+    setFavorites((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      saveOrbitaFavorites(next);
+      return next;
+    });
+  }
+
+  return { favorites, toggleFavorite };
+}
 
 const ROOMS_KEY = "team-chat-rooms";
 const MESSAGES_KEY = "team-chat-messages";

@@ -312,160 +312,164 @@ export function WhatsAppCustomerPreview({
             <span>5G</span>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 bg-[#008069] px-1.5 py-1.5 text-white">
-            <button
-              type="button"
-              className="rounded-full p-0.5 hover:bg-white/10"
-              onClick={() => onOpenChange(false)}
-              aria-label="Fechar preview"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold">
-              {bizName.slice(0, 1).toUpperCase()}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold leading-tight">{bizName}</p>
-              <p className="truncate text-[10px] text-white/75">{bizDetail || "online"}</p>
+          <div className="relative isolate flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center gap-1.5 bg-[#008069] px-1.5 py-1.5 text-white">
+              <button
+                type="button"
+                className="rounded-full p-0.5 hover:bg-white/10"
+                onClick={() => onOpenChange(false)}
+                aria-label="Fechar preview"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold">
+                {bizName.slice(0, 1).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold leading-tight">{bizName}</p>
+                <p className="truncate text-[10px] text-white/75">{bizDetail || "online"}</p>
+              </div>
+              <Video className="h-3.5 w-3.5 opacity-90" />
+              <Phone className="h-3.5 w-3.5 opacity-90" />
+              <MoreVertical className="h-3.5 w-3.5 opacity-90" />
             </div>
-            <Video className="h-3.5 w-3.5 opacity-90" />
-            <Phone className="h-3.5 w-3.5 opacity-90" />
-            <MoreVertical className="h-3.5 w-3.5 opacity-90" />
-          </div>
 
-          <div
-            className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
-            style={{
-              backgroundColor: "#efeae2",
-              backgroundImage:
-                "radial-gradient(circle at 20% 20%, rgba(0,0,0,0.035) 0 1px, transparent 1.5px), radial-gradient(circle at 80% 60%, rgba(0,0,0,0.03) 0 1px, transparent 1.5px)",
-              backgroundSize: "28px 28px",
-            }}
-          >
-            <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto">
-              <div className="flex flex-col gap-1.5 px-2 py-2">
-                <p className="mx-auto w-fit rounded-md bg-white/80 px-1.5 py-0.5 text-[9px] text-[#54656f] shadow-sm">
-                  Hoje
-                </p>
-
-                {cannotSend && (
-                  <p className="mx-auto max-w-[92%] rounded-md bg-[#fff5c4] px-2 py-1 text-center text-[10px] text-[#54656f] shadow-sm">
-                    Este card ainda não envia — falta texto, template ou opção
+            <div
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              style={{
+                backgroundColor: "#efeae2",
+                backgroundImage:
+                  "radial-gradient(circle at 20% 20%, rgba(0,0,0,0.035) 0 1px, transparent 1.5px), radial-gradient(circle at 80% 60%, rgba(0,0,0,0.03) 0 1px, transparent 1.5px)",
+                backgroundSize: "28px 28px",
+              }}
+            >
+              <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto">
+                <div className="flex flex-col gap-1.5 px-2 py-2">
+                  <p className="mx-auto w-fit rounded-md bg-white/80 px-1.5 py-0.5 text-[9px] text-[#54656f] shadow-sm">
+                    Hoje
                   </p>
-                )}
 
-                {(body || header || footer || asList || choices.length > 0 || stepType === "send_whatsapp_media") && (
-                <ReceivedBubble>
-                  {stepType === "send_whatsapp_media" && (
-                    <MediaBlock type={mediaType} fileName={mediaName} src={mediaUrl} />
+                  {cannotSend && (
+                    <p className="mx-auto max-w-[92%] rounded-md bg-[#fff5c4] px-2 py-1 text-center text-[10px] text-[#54656f] shadow-sm">
+                      Este card ainda não envia — falta texto, template ou opção
+                    </p>
                   )}
-                  {stepType === "send_whatsapp_template" &&
-                    (headerFormat === "IMAGE" || headerFormat === "VIDEO" || headerFormat === "DOCUMENT") && (
-                      <MediaBlock type={headerFormat.toLowerCase()} />
+
+                  {(body || header || footer || asList || choices.length > 0 || stepType === "send_whatsapp_media") && (
+                  <ReceivedBubble>
+                    {stepType === "send_whatsapp_media" && (
+                      <MediaBlock type={mediaType} fileName={mediaName} src={mediaUrl} />
+                    )}
+                    {stepType === "send_whatsapp_template" &&
+                      (headerFormat === "IMAGE" || headerFormat === "VIDEO" || headerFormat === "DOCUMENT") && (
+                        <MediaBlock type={headerFormat.toLowerCase()} />
+                      )}
+
+                    <div className="relative min-w-[88px] pb-2.5 pr-7">
+                      {header ? (
+                        <p className="mb-px text-[11px] font-bold leading-[14px] text-[#111b21]">{header}</p>
+                      ) : null}
+                      {body ? (
+                        <WaText
+                          text={body}
+                          className="whitespace-pre-wrap text-[11px] leading-[14px] text-[#111b21]"
+                        />
+                      ) : null}
+                      {footer ? (
+                        <p className="mt-px text-[9px] leading-[12px] text-[#8696a0]">{footer}</p>
+                      ) : null}
+                      <span className="absolute bottom-0 right-0 text-[8px] leading-none text-[#667781]">{time}</span>
+                    </div>
+
+                    {!asList && choices.length > 0 && (
+                      <div className="-mx-1.5 mt-0.5 border-t border-[#e9edef]">
+                        {choices.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => tap(c)}
+                            className="flex w-full items-center justify-center gap-1 border-t border-[#e9edef] py-1 text-[11px] font-medium text-[#027eb5] first:border-t-0 hover:bg-[#f7f8fa]"
+                          >
+                            <ChoiceIcon kind={c.kind} />
+                            {c.title}
+                          </button>
+                        ))}
+                      </div>
                     )}
 
-                  <div className="relative min-w-[88px] pb-2.5 pr-7">
-                    {header ? (
-                      <p className="mb-px text-[11px] font-bold leading-[14px] text-[#111b21]">{header}</p>
-                    ) : null}
-                    {body ? (
-                      <WaText
-                        text={body}
-                        className="whitespace-pre-wrap text-[11px] leading-[14px] text-[#111b21]"
-                      />
-                    ) : null}
-                    {footer ? (
-                      <p className="mt-px text-[9px] leading-[12px] text-[#8696a0]">{footer}</p>
-                    ) : null}
-                    <span className="absolute bottom-0 right-0 text-[8px] leading-none text-[#667781]">{time}</span>
-                  </div>
-
-                  {!asList && choices.length > 0 && (
-                    <div className="-mx-1.5 mt-0.5 border-t border-[#e9edef]">
-                      {choices.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => tap(c)}
-                          className="flex w-full items-center justify-center gap-1 border-t border-[#e9edef] py-1 text-[11px] font-medium text-[#027eb5] first:border-t-0 hover:bg-[#f7f8fa]"
-                        >
-                          <ChoiceIcon kind={c.kind} />
-                          {c.title}
-                        </button>
-                      ))}
-                    </div>
+                    {asList && (
+                      <button
+                        type="button"
+                        onClick={() => setListOpen(true)}
+                        className="-mx-1.5 mt-0.5 flex w-[calc(100%+0.75rem)] items-center justify-center gap-1 border-t border-[#e9edef] py-1 text-[11px] font-medium text-[#027eb5] hover:bg-[#f7f8fa]"
+                      >
+                        <List className="h-3 w-3" />
+                        {listButton}
+                      </button>
+                    )}
+                  </ReceivedBubble>
                   )}
 
-                  {asList && (
-                    <button
-                      type="button"
-                      onClick={() => setListOpen(true)}
-                      className="-mx-1.5 mt-0.5 flex w-[calc(100%+0.75rem)] items-center justify-center gap-1 border-t border-[#e9edef] py-1 text-[11px] font-medium text-[#027eb5] hover:bg-[#f7f8fa]"
-                    >
-                      <List className="h-3 w-3" />
-                      {listButton}
-                    </button>
+                  {reply && (
+                    <SentBubble time={time}>
+                      <p className="text-[11px] leading-[14px] text-[#111b21]">{reply}</p>
+                    </SentBubble>
                   )}
-                </ReceivedBubble>
-                )}
+                  {hint && (
+                    <p className="mx-auto max-w-[90%] rounded-md bg-[#fff5c4] px-2 py-1 text-center text-[10px] text-[#54656f] shadow-sm">
+                      {hint}
+                    </p>
+                  )}
+                </div>
+              </div>
 
-                {reply && (
-                  <SentBubble time={time}>
-                    <p className="text-[11px] leading-[14px] text-[#111b21]">{reply}</p>
-                  </SentBubble>
-                )}
-                {hint && (
-                  <p className="mx-auto max-w-[90%] rounded-md bg-[#fff5c4] px-2 py-1 text-center text-[10px] text-[#54656f] shadow-sm">
-                    {hint}
-                  </p>
-                )}
+              <div className="flex shrink-0 items-center gap-1 bg-[#f0f2f5] px-1 py-1">
+                <Smile className="h-3.5 w-3.5 text-[#54656f]" />
+                <div className="flex-1 rounded-full bg-white px-2 py-1 text-[10px] text-[#667781]">Mensagem</div>
+                <Paperclip className="h-3.5 w-3.5 text-[#54656f]" />
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-1 bg-[#f0f2f5] px-1 py-1">
-              <Smile className="h-3.5 w-3.5 text-[#54656f]" />
-              <div className="flex-1 rounded-full bg-white px-2 py-1 text-[10px] text-[#667781]">Mensagem</div>
-              <Paperclip className="h-3.5 w-3.5 text-[#54656f]" />
-            </div>
-
             {listOpen && (
-              <div className="absolute inset-0 z-10 flex min-h-0 flex-col justify-end bg-black/45">
+              <div className="absolute inset-0 z-10 flex min-h-0 flex-col overflow-hidden">
                 <button
                   type="button"
-                  className="min-h-0 flex-1"
+                  className="min-h-0 w-full flex-1 bg-black/45"
                   onClick={() => setListOpen(false)}
                   aria-label="Fechar lista"
                 />
-                <div className="flex max-h-[58%] min-h-0 w-full flex-col rounded-t-[12px] bg-white pb-1">
-                  <div className="mx-auto mt-1 h-0.5 w-5 shrink-0 rounded-full bg-[#d1d7db]" />
-                  <div className="flex shrink-0 items-center justify-between px-2 py-0.5">
-                    <p className="truncate text-[11px] font-semibold text-[#111b21]">{sheetTitle}</p>
+                <div className="flex min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-t-[16px] bg-white pb-4 shadow-[0_-8px_24px_rgba(11,20,26,0.2)] [max-height:min(72%,28rem)]">
+                  <div className="mx-auto mt-1.5 h-1 w-8 shrink-0 rounded-full bg-[#d1d7db]" />
+                  <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-1.5">
+                    <p className="truncate text-[13px] font-semibold text-[#111b21]">{sheetTitle}</p>
                     <button
                       type="button"
                       onClick={() => setListOpen(false)}
-                      className="p-0.5 text-[#54656f]"
+                      className="rounded-full p-0.5 text-[#54656f] hover:bg-[#f0f2f5]"
                       aria-label="Fechar lista"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="min-h-0 overflow-y-auto overscroll-contain">
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                     {sectionTitle ? (
-                      <p className="px-2 pb-0.5 text-[9px] font-medium text-[#8696a0]">{sectionTitle}</p>
+                      <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-[#8696a0]">
+                        {sectionTitle}
+                      </p>
                     ) : null}
                     {choices.length === 0 ? (
-                      <p className="px-2 py-1.5 text-[10px] italic text-[#8696a0]">Nenhuma opção cadastrada</p>
+                      <p className="px-3 py-2 text-[11px] italic text-[#8696a0]">Nenhuma opção cadastrada</p>
                     ) : (
                       choices.map((c) => (
                         <button
                           key={c.id}
                           type="button"
                           onClick={() => tap(c)}
-                          className="flex w-full flex-col items-start px-2 py-1 text-left hover:bg-[#f6f6f6]"
+                          className="flex w-full flex-col items-start border-t border-[#f0f2f5] px-3 py-2.5 text-left first:border-t-0 hover:bg-[#f6f6f6]"
                         >
-                          <span className="text-[11px] leading-[14px] text-[#111b21]">{c.title}</span>
+                          <span className="text-[13px] leading-[18px] text-[#111b21]">{c.title}</span>
                           {c.description ? (
-                            <span className="text-[9px] leading-[12px] text-[#667781]">{c.description}</span>
+                            <span className="text-[11px] leading-[14px] text-[#667781]">{c.description}</span>
                           ) : null}
                         </button>
                       ))

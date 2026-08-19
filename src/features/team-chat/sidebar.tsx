@@ -1,21 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Hash, MoreVertical, Plus, Search, SquarePen, Star } from "lucide-react";
+import { Hash, MoreVertical, Search, SquarePen, Star } from "lucide-react";
 
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { cn } from "@/lib/utils";
 
 import { Avatar } from "./avatar";
 import {
   favoriteKey,
   formatListTime,
-  loadOrbitaFavorites,
-  saveOrbitaFavorites,
   toPerson,
 } from "./helpers";
 import type { DirectRow, TeamChatRoom } from "./types";
 
-type ListFilter = "all" | "unread" | "favorites";
+type ListFilter = "all" | "unread" | "favorites" | "groups";
 
 type ChatListItem =
   | {
@@ -65,7 +64,7 @@ function HeaderIcon({
 function UnreadPill({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="ml-auto flex h-[19px] min-w-[19px] shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-semibold text-primary-foreground">
+    <span className="ml-auto flex h-[20px] min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[var(--orbita-selected)] px-1.5 text-[11px] font-semibold text-white">
       {count > 99 ? "99+" : count}
     </span>
   );
@@ -88,11 +87,11 @@ function ChatRow({
   return (
     <div
       className={cn(
-        "group mx-2 flex w-[calc(100%-16px)] items-center gap-2 rounded-[var(--orbita-radius-inner)] px-2 py-2 text-left transition-colors",
+        "group flex min-h-[72px] w-full items-center gap-3 px-3 py-3 text-left transition-colors",
         active ? "bg-[var(--orbita-selected)] text-white" : "hover:bg-[var(--orbita-block-soft)]",
       )}
     >
-      <button type="button" onClick={onClick} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+      <button type="button" onClick={onClick} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         {item.kind === "dm" ? (
           <div className="shrink-0 [&_>_div]:rounded-[var(--orbita-radius-avatar)] [&_img]:rounded-[var(--orbita-radius-avatar)]">
             <Avatar person={toPerson(item.row.person)} size="md" showPresence />
@@ -117,7 +116,7 @@ function ChatRow({
               <span
                 className={cn(
                   "ml-auto shrink-0 text-[11px]",
-                  active ? "text-white/70" : unread > 0 ? "font-medium text-primary" : "text-muted-foreground",
+                  active ? "text-white/70" : unread > 0 ? "font-medium text-[var(--orbita-selected)]" : "text-muted-foreground",
                 )}
               >
                 {item.time}
@@ -137,20 +136,24 @@ function ChatRow({
           </div>
         </div>
       </button>
-      <button
+      <TooltipGlass label={favorited ? "Remover dos favoritos" : "Favoritar"} side="left">
+        <button
         type="button"
         onClick={onToggleFavorite}
         aria-label={favorited ? "Remover dos favoritos" : "Favoritar"}
         className={cn(
           "grid h-6 w-6 shrink-0 place-items-center rounded-full",
           favorited
-            ? active ? "text-white" : "text-primary"
-            : "text-muted-foreground opacity-0 hover:bg-white/20 group-hover:opacity-100",
-          active && "text-white/80 hover:text-white",
+            ? active
+              ? "text-white"
+              : "text-primary"
+            : "text-muted-foreground opacity-50 hover:bg-white/20 group-hover:opacity-100",
+          active && !favorited && "text-white/80 hover:text-white",
         )}
       >
         <Star className={cn("h-3 w-3", favorited && "fill-current")} />
       </button>
+      </TooltipGlass>
     </div>
   );
 }
@@ -161,6 +164,8 @@ export function Sidebar({
   activeId,
   loading,
   error,
+  favorites,
+  onToggleFavorite,
   onSelectRoom,
   onSelectPerson,
   onNew,
@@ -170,6 +175,8 @@ export function Sidebar({
   activeId: string | null;
   loading: boolean;
   error?: string | null;
+  favorites: string[];
+  onToggleFavorite: (id: string) => void;
   onSelectRoom: (id: string) => void;
   onSelectPerson: (personId: string) => void;
   onNew: () => void;
@@ -177,13 +184,8 @@ export function Sidebar({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ListFilter>("all");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const q = query.trim().toLowerCase();
-
-  useEffect(() => {
-    setFavorites(loadOrbitaFavorites());
-  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -193,14 +195,6 @@ export function Sidebar({
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [menuOpen]);
-
-  function toggleFavorite(id: string) {
-    setFavorites((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      saveOrbitaFavorites(next);
-      return next;
-    });
-  }
 
   const unreadTotal = useMemo(
     () =>
@@ -245,6 +239,7 @@ export function Sidebar({
     return items.filter((item) => {
       if (filter === "unread" && item.unread <= 0) return false;
       if (filter === "favorites" && !favorites.includes(item.favId)) return false;
+      if (filter === "groups" && item.kind !== "group") return false;
       if (!q) return true;
       return item.name.toLowerCase().includes(q) || item.preview.toLowerCase().includes(q);
     });
@@ -253,19 +248,19 @@ export function Sidebar({
   const pills: { id: ListFilter; label: string; count?: number }[] = [
     { id: "all", label: "Tudo" },
     { id: "unread", label: "Não lidas", count: unreadTotal },
-    { id: "favorites", label: "Favoritas" },
+    { id: "favorites", label: "Favoritas", count: favorites.length },
+    ...(groups.length > 0 ? [{ id: "groups" as const, label: "Grupos", count: groups.length }] : []),
   ];
 
   return (
-    <>
-      {/* Search block */}
-      <aside className="orbita-block flex w-full min-w-0 shrink-0 flex-col px-3 py-3">
+    <aside className="orbita-block flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="shrink-0 px-3 pb-2 pt-3">
         <div className="flex items-center gap-1">
           <h1 className="min-w-0 flex-1 truncate px-1 font-display text-[18px] font-semibold tracking-tight text-foreground">
             Órbita
           </h1>
           <HeaderIcon label="Nova conversa" onClick={onNew}>
-            <Plus className="h-5 w-5" />
+            <SquarePen className="h-[18px] w-[18px]" />
           </HeaderIcon>
           <div className="relative" ref={menuRef}>
             <HeaderIcon label="Mais opções" onClick={() => setMenuOpen((v) => !v)}>
@@ -315,17 +310,16 @@ export function Sidebar({
                 )}
               >
                 {pill.label}
-                {pill.id === "unread" && (pill.count ?? 0) > 0 && (
+                {(pill.count ?? 0) > 0 && (
                   <span className="text-[11px] tabular-nums">{pill.count}</span>
                 )}
               </button>
             );
           })}
         </div>
-      </aside>
+      </div>
 
-      {/* Conversations list block */}
-      <nav className="orbita-block chat-scroll min-h-0 flex-1 overflow-y-auto py-1" aria-label="Conversas">
+      <nav className="chat-scroll min-h-0 flex-1 overflow-y-auto border-t border-black/[0.04] py-1 dark:border-white/[0.06]" aria-label="Conversas">
         {loading ? (
           <p className="px-4 pt-10 text-center text-sm text-muted-foreground">Carregando o time…</p>
         ) : error ? (
@@ -336,6 +330,8 @@ export function Sidebar({
               ? "Nenhuma conversa não lida."
               : filter === "favorites" && !q
                 ? "Nenhuma conversa favorita."
+                : filter === "groups" && !q
+                  ? "Nenhum grupo ainda."
                 : q
                   ? "Nenhuma conversa encontrada."
                   : "Nenhuma conversa ainda."}
@@ -352,11 +348,11 @@ export function Sidebar({
                 else if (item.row.room) onSelectRoom(item.row.room.id);
                 else onSelectPerson(item.row.person.id);
               }}
-              onToggleFavorite={() => toggleFavorite(item.favId)}
+              onToggleFavorite={() => onToggleFavorite(item.favId)}
             />
           ))
         )}
       </nav>
-    </>
+    </aside>
   );
 }

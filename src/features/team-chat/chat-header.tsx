@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Hash, Search, StickyNote, UserPlus, X } from "lucide-react";
+import { ArrowLeft, Hash, Search, Star, StickyNote, UserPlus, X } from "lucide-react";
 
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { cn } from "@/lib/utils";
 
 import { Avatar, AvatarStack } from "./avatar";
@@ -50,18 +51,22 @@ export function ChatHeader({
   notesOpen,
   noteCount,
   searchQuery,
+  favorited,
   onSearchChange,
   onBack,
   onToggleNotes,
+  onToggleFavorite,
   onAddMembers,
 }: {
   room: TeamChatRoom;
   notesOpen: boolean;
   noteCount: number;
   searchQuery: string;
+  favorited: boolean;
   onSearchChange: (value: string) => void;
   onBack: () => void;
   onToggleNotes: () => void;
+  onToggleFavorite: () => void;
   onAddMembers: () => void;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -70,8 +75,8 @@ export function ChatHeader({
   const people = room.members.map(toPerson);
 
   return (
-    <header className="shrink-0 px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
+    <header className="shrink-0 border-b border-black/[0.06] dark:border-white/[0.06]">
+      <div className="flex h-[60px] items-center justify-between gap-3 px-4">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
@@ -115,6 +120,17 @@ export function ChatHeader({
               <UserPlus className="h-[18px] w-[18px]" />
             </IconButton>
           )}
+          <TooltipGlass label={favorited ? "Remover dos favoritos" : "Favoritar conversa"} side="bottom">
+            <span className="inline-flex">
+              <IconButton
+                label={favorited ? "Remover dos favoritos" : "Favoritar conversa"}
+                active={favorited}
+                onClick={onToggleFavorite}
+              >
+                <Star className={cn("h-[18px] w-[18px]", favorited && "fill-current")} />
+              </IconButton>
+            </span>
+          </TooltipGlass>
           <IconButton
             label="Pesquisar na conversa"
             active={searchOpen}
@@ -140,7 +156,8 @@ export function ChatHeader({
         </div>
       </div>
       {searchOpen && (
-        <div className="mt-2 flex items-center gap-2 rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3 py-2">
+        <div className="mt-0 border-t border-black/[0.04] px-4 pb-3 pt-2 dark:border-white/[0.06]">
+          <div className="flex items-center gap-2 rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3 py-2">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
             value={searchQuery}
@@ -160,6 +177,7 @@ export function ChatHeader({
           >
             <X className="h-4 w-4" />
           </button>
+          </div>
         </div>
       )}
     </header>

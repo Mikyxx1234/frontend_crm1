@@ -1,14 +1,64 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, Fragment } from "react";
 import { Copy, Download, FileText, Pin, PinOff, SmilePlus, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { cn } from "@/lib/utils";
 
 import { Avatar } from "./avatar";
 import { dayKey, formatClock, formatDayLabel, REACTION_EMOJIS, toPerson } from "./helpers";
 import type { TeamChatAttachment, TeamChatMessage, TeamChatReaction, TeamChatRoom } from "./types";
+
+function formatChatText(text: string, mine: boolean): ReactNode {
+  if (!text) return text;
+  const tokenRe = /(==[^=\n]+==|\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~|`[^`\n]+`)/g;
+  const parts: ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = tokenRe.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    const tok = m[0];
+    if (tok.startsWith("==")) {
+      parts.push(
+        <mark
+          key={key++}
+          className={cn("rounded-sm px-0.5", mine ? "bg-white/30 text-inherit" : "bg-amber-200/80 text-foreground")}
+        >
+          {tok.slice(2, -2)}
+        </mark>,
+      );
+    } else {
+      const inner = tok.slice(1, -1);
+      switch (tok[0]) {
+        case "*":
+          parts.push(
+            <strong key={key++} className="font-semibold">
+              {inner}
+            </strong>,
+          );
+          break;
+        case "_":
+          parts.push(<em key={key++}>{inner}</em>);
+          break;
+        case "~":
+          parts.push(<s key={key++}>{inner}</s>);
+          break;
+        default:
+          parts.push(
+            <code key={key++} className={cn("rounded px-1 font-mono text-[0.92em]", mine ? "bg-white/15" : "bg-black/10")}>
+              {inner}
+            </code>,
+          );
+      }
+    }
+    last = m.index + tok.length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length ? parts : text;
+}
 
 async function copyAttachment(att: TeamChatAttachment) {
   if (att.kind === "sticker" && att.emoji) {
@@ -68,36 +118,41 @@ export function MessageList({
   }, [messages.length, room.id]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden" data-wa-thread>
+    <div className="flex flex-1 flex-col overflow-hidden">
       {pinned.length > 0 && (
         <div className="sticky top-0 z-10 shrink-0 bg-[var(--orbita-block-soft)] px-4 py-2">
           <div className="flex w-full items-start gap-2">
             <Pin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--orbita-selected)]" />
             <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--orbita-selected)]">
+                Destacadas
+              </p>
               {pinned.map((m) => (
                 <div key={m.id} className="flex items-center gap-2">
                   <p className="min-w-0 flex-1 truncate text-[13px] text-foreground">
                     <span className="font-semibold">{m.author?.name ?? "Colega"}</span>
                     <span className="text-muted-foreground"> · {m.content || "Anexo"}</span>
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => onTogglePin(m.id)}
-                    aria-label="Desafixar"
-                    className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:bg-white/50"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                  <TooltipGlass label="Remover destaque" side="left">
+                    <button
+                      type="button"
+                      onClick={() => onTogglePin(m.id)}
+                      aria-label="Remover destaque"
+                      className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:bg-white/50"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipGlass>
                 </div>
               ))}
             </div>
           </div>
         </div>
       )}
-      <div className="chat-scroll flex-1 overflow-y-auto px-4 py-3 md:px-8">
+      <div className="chat-scroll flex-1 overflow-y-auto px-4 py-3 md:px-10">
         <div className="flex min-h-full w-full flex-col">
-          <div className="mb-4 flex justify-center">
-            <span className="max-w-md rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3 py-1.5 text-center text-[12.5px] leading-relaxed text-muted-foreground">
+          <div className="mb-3 flex justify-center">
+            <span className="max-w-md rounded-full bg-[var(--orbita-block)]/90 px-3 py-1 text-center text-[12.5px] leading-relaxed text-muted-foreground shadow-sm">
               {isDirect
                 ? `Esta é o início da sua conversa com ${firstName}.`
                 : room.topic || `Este é o início do canal #${room.name}.`}
@@ -131,10 +186,10 @@ export function MessageList({
                   next.authorId !== msg.authorId ||
                   dayKey(next.createdAt) !== dayKey(msg.createdAt);
                 return (
-                  <div key={msg.id}>
+                  <Fragment key={msg.id}>
                     {showDay && (
-                      <div className="my-3 flex justify-center">
-                        <span className="rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3 py-1 text-[12px] font-medium text-muted-foreground">
+                      <div className="sticky top-2 z-[2] my-3 flex justify-center">
+                        <span className="rounded-full bg-[var(--orbita-block)] px-3 py-1 text-[12px] font-medium text-muted-foreground shadow-sm">
                           {formatDayLabel(msg.createdAt)}
                         </span>
                       </div>
@@ -151,7 +206,7 @@ export function MessageList({
                       onToggleReaction={onToggleReaction}
                       onTogglePin={onTogglePin}
                     />
-                  </div>
+                  </Fragment>
                 );
               })}
             </div>
@@ -163,13 +218,11 @@ export function MessageList({
   );
 }
 
-function bubbleRadius(last: boolean, mine: boolean) {
+function bubbleRadius(first: boolean, mine: boolean) {
   if (mine) {
-    if (last) return "rounded-[16px] rounded-br-[6px]";
-    return "rounded-[16px]";
+    return first ? "rounded-[12px] rounded-tr-[4px]" : "rounded-[12px] rounded-tr-[6px]";
   }
-  if (last) return "rounded-[16px] rounded-bl-[6px]";
-  return "rounded-[16px]";
+  return first ? "rounded-[12px] rounded-tl-[4px]" : "rounded-[12px] rounded-tl-[6px]";
 }
 
 function MessageRow({
@@ -198,10 +251,10 @@ function MessageRow({
   const [picker, setPicker] = useState(false);
   const reactions = message.reactions ?? [];
   return (
-    <div className={cn("flex w-full flex-col", mine ? "items-end" : "items-start", first ? "mt-2.5" : "mt-[2px]")}>
+    <div className={cn("flex w-full flex-col", mine ? "items-end" : "items-start", first ? "mt-3" : "mt-[2px]")}>
       <div
         className={cn(
-          "group/msg flex max-w-[min(85%,32rem)] items-end gap-1.5",
+          "group/msg flex max-w-[65%] items-end gap-1.5",
           mine ? "flex-row-reverse" : "flex-row",
         )}
       >
@@ -215,7 +268,13 @@ function MessageRow({
             <span className="mb-0.5 px-1 text-[12.5px] font-medium text-[var(--orbita-selected)]">{authorName}</span>
           )}
           <div className={cn("relative w-fit max-w-full", reactions.length > 0 && "mb-3")}>
-            <MessageBody message={message} mine={mine} last={last} pinned={message.pinned} />
+            <MessageBody
+              message={message}
+              mine={mine}
+              first={first}
+              pinned={message.pinned}
+              time={formatClock(message.createdAt)}
+            />
             {reactions.length > 0 && (
               <div
                 className={cn(
@@ -243,44 +302,53 @@ function MessageRow({
             )}
             <div
               className={cn(
-                "absolute top-0 z-10 items-center rounded-full bg-[var(--orbita-block)]",
-                mine ? "right-full mr-1" : "left-full ml-1",
+                "absolute top-0 z-10 -translate-y-full items-center rounded-full bg-[var(--orbita-block)] pb-1 shadow-sm",
+                mine ? "right-0" : "left-0",
                 picker ? "flex" : "hidden group-hover/msg:flex",
               )}
             >
               {(message.attachments ?? []).length > 0 && (
+                <TooltipGlass label="Copiar" side="top">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const firstAtt = message.attachments![0];
+                      void copyAttachment(firstAtt).catch(() => toast.error("Não foi possível copiar."));
+                    }}
+                    aria-label="Copiar"
+                    className="grid h-7 w-7 place-items-center text-muted-foreground hover:text-foreground"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipGlass>
+              )}
+              <TooltipGlass label="Reagir" side="top">
                 <button
                   type="button"
-                  onClick={() => {
-                    const firstAtt = message.attachments![0];
-                    void copyAttachment(firstAtt).catch(() => toast.error("Não foi possível copiar."));
-                  }}
-                  aria-label="Copiar"
+                  onClick={() => setPicker((v) => !v)}
+                  aria-label="Reagir"
                   className="grid h-7 w-7 place-items-center text-muted-foreground hover:text-foreground"
                 >
-                  <Copy className="h-3.5 w-3.5" />
+                  <SmilePlus className="h-3.5 w-3.5" />
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setPicker((v) => !v)}
-                aria-label="Reagir"
-                className="grid h-7 w-7 place-items-center text-muted-foreground hover:text-foreground"
-              >
-                <SmilePlus className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onTogglePin(message.id)}
-                aria-label="Fixar"
-                className="grid h-7 w-7 place-items-center text-muted-foreground hover:text-foreground"
-              >
-                {message.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-              </button>
+              </TooltipGlass>
+              <TooltipGlass label={message.pinned ? "Remover destaque" : "Destacar"} side="top">
+                <button
+                  type="button"
+                  onClick={() => onTogglePin(message.id)}
+                  aria-label={message.pinned ? "Remover destaque" : "Destacar"}
+                  className={cn(
+                    "grid h-7 w-7 place-items-center hover:text-foreground",
+                    message.pinned ? "text-[var(--orbita-selected)]" : "text-muted-foreground",
+                  )}
+                >
+                  {message.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                </button>
+              </TooltipGlass>
               {picker && (
                 <div
                   className={cn(
-                    "absolute top-full z-20 mt-1 flex gap-0.5 rounded-full bg-[var(--orbita-block)] p-1 shadow-lg",
+                    "absolute bottom-full z-20 mb-1 flex gap-0.5 rounded-full bg-[var(--orbita-block)] p-1 shadow-lg",
                     mine ? "right-0" : "left-0",
                   )}
                 >
@@ -303,12 +371,6 @@ function MessageRow({
           </div>
         </div>
       </div>
-      {/* Timestamp below the bubble */}
-      {last && (
-        <span className={cn("mt-[10px] text-[10px] text-muted-foreground", mine ? "mr-1" : "ml-8")}>
-          {formatClock(message.createdAt)}
-        </span>
-      )}
     </div>
   );
 }
@@ -316,26 +378,31 @@ function MessageRow({
 function MessageBody({
   message,
   mine,
-  last,
+  first,
   pinned,
+  time,
 }: {
   message: TeamChatMessage;
   mine: boolean;
-  last: boolean;
+  first: boolean;
   pinned: boolean;
+  time: string;
 }) {
   const attachments = message.attachments ?? [];
   const stickers = attachments.filter((a) => a.kind === "sticker");
   const media = attachments.filter((a) => a.kind !== "sticker");
   const hasText = message.content.trim().length > 0;
-  const radius = bubbleRadius(last, mine);
+  const radius = bubbleRadius(first, mine);
   const bubbleCls = cn(
     "relative w-fit max-w-full",
     radius,
-    mine
-      ? "bg-[var(--orbita-selected)] text-white"
-      : "bg-[var(--orbita-block-soft)] text-foreground",
+    mine ? "orbita-bubble-sent bg-[var(--orbita-selected)] text-white" : "orbita-bubble-received bg-[var(--orbita-block)] text-foreground",
+    first && "orbita-bubble--tail",
     pinned && "ring-1 ring-[var(--orbita-selected)]/35",
+  );
+  const timeCls = cn(
+    "select-none text-[11px] leading-none tabular-nums",
+    mine ? "text-white/75" : "text-muted-foreground",
   );
 
   return (
@@ -354,6 +421,11 @@ function MessageBody({
           onClick={() => void copyAttachment(att).catch(() => toast.error("Não foi possível copiar."))}
           className="relative w-fit text-[56px] leading-none"
         >
+          {pinned && !hasText && i === 0 && (
+            <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-[var(--orbita-selected)] text-white">
+              <Pin className="h-2.5 w-2.5" />
+            </span>
+          )}
           {att.emoji ? (
             att.emoji
           ) : att.url ? (
@@ -362,16 +434,36 @@ function MessageBody({
           ) : (
             "✨"
           )}
+          {!hasText && i === stickers.length - 1 && media.length === 0 && (
+            <span className={cn("absolute -bottom-4 right-0", timeCls)}>{time}</span>
+          )}
         </button>
       ))}
       {media.map((att, i) => (
         <div key={`${att.url}-${i}`} className={cn(bubbleCls, "overflow-hidden p-1")}>
           <MediaChip att={att} />
+          {!hasText && i === media.length - 1 && (
+            <span className={cn("absolute bottom-1.5 right-2 drop-shadow", timeCls)}>{time}</span>
+          )}
         </div>
       ))}
       {hasText && (
-        <div className={cn(bubbleCls, "px-3 py-2")}>
-          <p className="whitespace-pre-wrap break-words text-[14px] leading-[20px]">{message.content}</p>
+        <div className={cn(bubbleCls, "px-[9px] pb-1.5 pt-1.5")}>
+          {pinned && (
+            <span
+              className={cn(
+                "absolute -top-1.5 grid h-4 w-4 place-items-center rounded-full bg-[var(--orbita-selected)] text-white",
+                mine ? "-left-1.5" : "-right-1.5",
+              )}
+            >
+              <Pin className="h-2.5 w-2.5" />
+            </span>
+          )}
+          <p className="whitespace-pre-wrap break-words text-[14.2px] leading-[19px]">
+            {formatChatText(message.content, mine)}
+            <span className="inline-block w-[46px]" aria-hidden />
+          </p>
+          <span className={cn("absolute bottom-[5px] right-[8px]", timeCls)}>{time}</span>
         </div>
       )}
     </div>

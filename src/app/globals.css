@@ -1203,6 +1203,10 @@
   overflow: hidden;
 }
 
+.orbita-block.orbita-block--float {
+  overflow: visible;
+}
+
 .orbita-block-soft {
   background: var(--orbita-block-soft);
   border-radius: var(--orbita-radius-block);
@@ -1218,8 +1222,38 @@
 }
 
 .team-chat-shell [data-wa-thread] {
-  background-color: var(--orbita-block);
-  background-image: none;
+  background-color: var(--orbita-block-soft);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--orbita-selected) 9%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 22px 22px;
+}
+
+.orbita-bubble-received.orbita-bubble--tail::before,
+.orbita-bubble-sent.orbita-bubble--tail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 10px;
+}
+.orbita-bubble-received.orbita-bubble--tail {
+  border-top-left-radius: 4px;
+}
+.orbita-bubble-received.orbita-bubble--tail::before {
+  left: -7px;
+  background: var(--orbita-block);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+.orbita-bubble-sent.orbita-bubble--tail {
+  border-top-right-radius: 4px;
+}
+.orbita-bubble-sent.orbita-bubble--tail::before {
+  right: -7px;
+  background: var(--orbita-selected);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
 .team-chat-shell .chat-scroll {
@@ -1248,16 +1282,11 @@
 
 /* Órbita message bubbles */
 .orbita-bubble-received {
-  background: var(--orbita-block-soft);
-  border-radius: 16px;
-  border-bottom-left-radius: 6px;
+  background: var(--orbita-block);
 }
-
 .orbita-bubble-sent {
   background: var(--orbita-selected);
   color: white;
-  border-radius: 16px;
-  border-bottom-right-radius: 6px;
 }
 
 .chat-scroll {

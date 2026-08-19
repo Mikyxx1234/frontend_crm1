@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react"
 import * as Dialog from "@radix-ui/react-dialog"
-import { IconX } from "@tabler/icons-react"
+import { IconSearch, IconX } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
 import { InputGlass } from "@/components/crm/input-glass"
 import { ButtonGlass } from "@/components/crm/button-glass"
 import { Textarea } from "@/components/ui/textarea"
 import { useTeamUsers } from "@/features/pipeline-v2/hooks/use-deal-mutations"
 import { useDepartments } from "@/features/conversations-settings/hooks/use-departments"
+import { useContacts } from "@/features/directory-v2/hooks"
 import {
   ACTIVITY_KINDS,
   ACTIVITY_KIND_ORDER,
@@ -33,7 +34,10 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
   const [date, setDate] = useState(dateKey(defaultDate))
   const [time, setTime] = useState("09:00")
   const [duration, setDuration] = useState("30")
-  const [withWhom, setWithWhom] = useState("")
+  const [contactId, setContactId] = useState<string | null>(null)
+  const [contactName, setContactName] = useState<string | null>(null)
+  const [contactSearch, setContactSearch] = useState("")
+  const [debouncedContactSearch, setDebouncedContactSearch] = useState("")
   const [location, setLocation] = useState("")
   const [notes, setNotes] = useState("")
   const [assignKind, setAssignKind] = useState<"user" | "department">("user")
@@ -45,12 +49,22 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
   const users = usersQuery.data ?? []
   const departments = departmentsQuery.data ?? []
 
+  const contactsQuery = useContacts({
+    search: debouncedContactSearch || undefined,
+    perPage: 12,
+    enabled: open && !contactId && debouncedContactSearch.length >= 1,
+  })
+  const contactHits = contactsQuery.data?.items ?? []
+
   // Sincroniza a data ao abrir
   useEffect(() => {
     if (open) {
       setDate(dateKey(defaultDate))
       setTitle("")
-      setWithWhom("")
+      setContactId(null)
+      setContactName(null)
+      setContactSearch("")
+      setDebouncedContactSearch("")
       setLocation("")
       setNotes("")
       setAssignKind("user")
@@ -59,8 +73,23 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
     }
   }, [open, defaultDate])
 
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setDebouncedContactSearch(contactSearch.trim()),
+      250,
+    )
+    return () => window.clearTimeout(timer)
+  }, [contactSearch])
+
   const usesDuration = kind === "reuniao" || kind === "evento" || kind === "ligacao"
   const usesLocation = kind === "reuniao" || kind === "evento"
+
+  const clearContact = () => {
+    setContactId(null)
+    setContactName(null)
+    setContactSearch("")
+    setDebouncedContactSearch("")
+  }
 
   const submit = () => {
     if (!title.trim()) return
@@ -73,7 +102,9 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
       start: `${date}T${time}`,
       durationMin: usesDuration ? Number(duration) || undefined : undefined,
       status: "pendente",
-      withWhom: withWhom.trim() || undefined,
+      withWhom: contactName ?? undefined,
+      contactId: contactId,
+      contactName: contactName,
       location: usesLocation ? location.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
       assigneeType: isDept ? "department" : "user",
@@ -198,18 +229,77 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
             )}
           </div>
 
-          {/* Com quem / local */}
+          {/* Contato (opcional) / local */}
           <div className={cn("mb-4 grid gap-3", usesLocation ? "grid-cols-2" : "grid-cols-1")}>
-            <div className="flex flex-col gap-1.5">
+            <div className="relative flex flex-col gap-1.5">
               <label htmlFor="ac-who" className={labelCls}>
-                Contato
+                Contato <span className="normal-case tracking-normal font-body font-normal">(opcional)</span>
               </label>
-              <InputGlass
-                id="ac-who"
-                placeholder="Nome do lead ou empresa"
-                value={withWhom}
-                onChange={(e) => setWithWhom(e.target.value)}
-              />
+              {contactId && contactName ? (
+                <div className="flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5">
+                  <span className="min-w-0 flex-1 truncate font-body text-[13px] text-[var(--text-primary)]">
+                    {contactName}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearContact}
+                    aria-label="Limpar contato"
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+                  >
+                    <IconX size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <IconSearch
+                    size={14}
+                    className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+                  />
+                  <InputGlass
+                    id="ac-who"
+                    className="pl-8"
+                    placeholder="Buscar contato cadastrado…"
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                    autoComplete="off"
+                  />
+                  {contactSearch.trim().length >= 1 && (
+                    <div className="absolute z-20 mt-1 max-h-44 w-full overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-[var(--glass-shadow)] backdrop-blur-md">
+                      {contactsQuery.isLoading ? (
+                        <p className="px-3 py-2 font-body text-[12px] text-[var(--text-muted)]">
+                          Buscando…
+                        </p>
+                      ) : contactHits.length === 0 ? (
+                        <p className="px-3 py-2 font-body text-[12px] text-[var(--text-muted)]">
+                          Nenhum contato encontrado. Deixe vazio para lembrete pessoal.
+                        </p>
+                      ) : (
+                        contactHits.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              setContactId(c.id)
+                              setContactName(c.name)
+                              setContactSearch("")
+                            }}
+                            className="flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                          >
+                            <span className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                              {c.name}
+                            </span>
+                            {(c.email || c.phone) && (
+                              <span className="truncate font-body text-[11px] text-[var(--text-muted)]">
+                                {[c.email, c.phone].filter(Boolean).join(" · ")}
+                              </span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             {usesLocation && (
               <div className="flex flex-col gap-1.5">

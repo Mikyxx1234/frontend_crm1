@@ -2099,6 +2099,11 @@ aplicada com SQL aditivo idempotente em
 
 ## Decisões técnicas
 
+### 2026-08-19 — Atividades: contato opcional, criador, notas compartilhadas
+- Modelo: Cursor Grok 4.5 (execução sob spec Opus)
+- Decisão: na tela global `/activities`, Contato no composer é **opcional** (autocomplete via `useContacts`); texto livre não vincula lead — só `contactId` selecionado. `Activity` UI preserva `contactId`/`contactName`/`dealId`/`dealTitle`/`createdBy`. `ActivityRow` mostra “Criada por {nome|Sistema}” e link contextual (negócio > contato). Dialog compartilhado `activity-detail-dialog.tsx` (notas + histórico `history=1`) integrado em `/activities` e no painel de tarefas do negócio; ownership de editar/excluir nota via `useSession().user.id`, sem `isOwn` do backend.
+- Alternativas descartadas: texto livre como vínculo de contato; duplicar dialog no painel do deal; confiar em flag `isOwn` da API.
+
 ### 2026-07-20 — Biometria no APK (escopo A)
 - Modelo: Opus (Cursor Grok 4.5 / orquestração)
 - Decisão: cadeado local com `@capgo/capacitor-native-biometric`; só com sessão logada; flag `crm_biometric_lock_enabled` em localStorage; toggle no Perfil; sem Firebase/push neste escopo.

@@ -4,9 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { IconPin, IconPinFilled, IconPlus as Plus } from "@tabler/icons-react"
 import {
   Flag,
+  GitBranch,
   GitFork,
   LayoutGrid,
   MessageSquare,
+  Play,
   Users,
   Video,
   Webhook,
@@ -29,6 +31,8 @@ const KIND_ICON: Record<NodeKind, typeof MessageSquare> = {
   distribution: Users,
   move_stage: GitFork,
   finish: Flag,
+  condition: GitBranch,
+  action: Play,
 }
 
 const GROUPS: { title: string; items: NodeKind[] }[] = [

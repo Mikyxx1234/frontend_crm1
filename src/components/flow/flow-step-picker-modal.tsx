@@ -13,9 +13,11 @@ import {
 import type { Icon as LucideIcon } from "@tabler/icons-react"
 import {
   Flag,
+  GitBranch,
   GitFork,
   LayoutGrid,
   MessageSquare as LucideMessage,
+  Play,
   Users,
   Video,
   Webhook,
@@ -35,6 +37,8 @@ const KIND_ICON: Record<NodeKind, typeof LucideMessage> = {
   distribution: Users,
   move_stage: GitFork,
   finish: Flag,
+  condition: GitBranch,
+  action: Play,
 }
 
 const GROUPS: { title: string; items: NodeKind[] }[] = [

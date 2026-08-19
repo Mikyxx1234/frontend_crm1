@@ -223,7 +223,7 @@ function InnerEditor() {
         }
       }
       onEdgesChange(changes)
-      if (changes.some((c) => c.type !== "select" && c.type !== "dimensions")) {
+      if (changes.some((c) => c.type !== "select")) {
         markDirty()
       }
     },

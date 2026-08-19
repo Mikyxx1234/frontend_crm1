@@ -54,7 +54,6 @@ import {
   UpdateFieldValueControl,
 } from "./update-field-value"
 import { INHERIT_CHANNEL_VALUE, useConnectedStepChannels } from "./step-channel-picker"
-import { FlowVariableInput } from "@/components/flow/flow-variable-picker"
 
 const CUSTOM_FIELD_SENTINEL = "__custom__"
 
@@ -564,13 +563,32 @@ function VariableInput({
   onChange: (v: string) => void
   className?: string
 }) {
+  const ref = useRef<HTMLInputElement | null>(null)
+  const { open, filtered, closeT, refresh, apply, setOpen } = useVariablePicker(value, onChange)
+
   return (
-    <FlowVariableInput
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder ?? "Texto ou { para variáveis"}
-      className={cn("h-9", className)}
-    />
+    <div className="cfg-combo">
+      <InputGlass
+        ref={ref}
+        className={cn("cfg-input nodrag", className)}
+        value={value}
+        placeholder={placeholder ?? "Texto ou { para variáveis"}
+        onChange={(e) => {
+          onChange(e.target.value)
+          refresh(e.target)
+        }}
+        onKeyUp={(e) => refresh(e.currentTarget)}
+        onClick={(e) => refresh(e.currentTarget)}
+        onFocus={(e) => {
+          if (closeT.current) clearTimeout(closeT.current)
+          refresh(e.currentTarget)
+        }}
+        onBlur={() => {
+          closeT.current = setTimeout(() => setOpen(false), 160)
+        }}
+      />
+      <VariablePickerPop open={open} filtered={filtered} onPick={(token) => apply(ref.current, token)} />
+    </div>
   )
 }
 

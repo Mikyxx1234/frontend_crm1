@@ -101,9 +101,9 @@ export function TaskAlertCenter() {
   const runDismiss = useCallback(
     async (thenNavigate: boolean) => {
       if (!alert || busy) return;
+      if (thenNavigate) router.push("/activities");
       try {
         await dismissMutation.mutateAsync({ activityId: alert.id });
-        if (thenNavigate) router.push("/activities");
       } catch (err) {
         handleActionError(err, "Não foi possível fechar o alerta.");
       }
@@ -163,7 +163,9 @@ export function TaskAlertCenter() {
           )}
         />
 
-        <div className="relative z-10 flex items-start gap-3 p-3.5 pr-2">
+        {/* Camada de conteúdo: transparente ao clique para o botão de baixo
+            receber o toque; só as ações reativam pointer-events. */}
+        <div className="pointer-events-none relative z-10 flex items-start gap-3 p-3.5 pr-2">
           <div
             className={cn(
               "pointer-events-none mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl",
@@ -219,7 +221,7 @@ export function TaskAlertCenter() {
             aria-label="Fechar alerta"
             onClick={() => void runDismiss(false)}
             className={cn(
-              "relative z-10 shrink-0 rounded-full p-1.5 text-[var(--text-muted)] transition-colors",
+              "pointer-events-auto relative z-10 shrink-0 rounded-full p-1.5 text-[var(--text-muted)] transition-colors",
               "hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
               "disabled:pointer-events-none disabled:opacity-50",
               "motion-reduce:transition-none",

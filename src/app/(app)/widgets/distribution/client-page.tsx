@@ -428,6 +428,7 @@ export default function DistributionClientPage({
                 search={coverageSearch}
                 deptIds={coverageDeptIds}
                 showHidden={coverageShowHidden}
+                onShowHiddenChange={setCoverageShowHidden}
               />
             </div>
           </div>

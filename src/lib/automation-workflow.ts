@@ -369,11 +369,32 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
       return "Selecionar funil e motivo";
     }
     case "assign_owner": {
-      const target = c.target ? String(c.target) : "deal";
-      const targetLabel = target === "both" ? "negócio e contato" : target === "contact" ? "contato" : "negócio";
+      const target =
+        c.assignAll || c.assignTo === "all" || c.target === "all" || c.target === "both"
+          ? "all"
+          : c.assignTo
+            ? String(c.assignTo)
+            : c.target
+              ? String(c.target)
+              : "deal";
+      const targetLabel =
+        target === "all" || target === "both"
+          ? "todas as entidades"
+          : target === "contact"
+            ? "contato"
+            : target === "conversation"
+              ? "conversa"
+              : "negócio";
+      const who = c.departmentName
+        ? String(c.departmentName)
+        : c.userLabel
+          ? String(c.userLabel)
+          : c.departmentId
+            ? "Departamento"
+            : "";
       const userId = c.userId ? String(c.userId).trim() : "";
-      if (!userId) return `Limpar responsável (${targetLabel})`;
-      return `Usuário: ${userId} (${targetLabel})`;
+      if (!who && !userId) return `Limpar responsável (${targetLabel})`;
+      return `${who || userId} · ${targetLabel}`;
     }
     case "transfer_department":
       return c.departmentName

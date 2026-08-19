@@ -35,7 +35,19 @@ import {
 } from "@/lib/meta-whatsapp/meta-cloud-channels";
 import { cn } from "@/lib/utils";
 
-export type StepChannelOption = { id: string; label: string };
+export type StepChannelOption = { id: string; label: string; detail?: string };
+
+/** Mockup do /fluxo quando a org não tem canal conectado. */
+const MOCK_WHATSAPP_CHANNELS: StepChannelOption[] = [
+  { id: "mock-wa-oficial", label: "WhatsApp Oficial", detail: "+55 11 99999-0001" },
+  { id: "mock-wa-suporte", label: "WhatsApp Suporte", detail: "+55 11 99999-0002" },
+  { id: "mock-wa-comercial", label: "WhatsApp Comercial", detail: "+55 11 99999-0003" },
+];
+
+const MOCK_EMAIL_CHANNELS: StepChannelOption[] = [
+  { id: "mock-email-noreply", label: "E-mail operacional", detail: "noreply@empresa.com" },
+  { id: "mock-email-contato", label: "E-mail contato", detail: "contato@empresa.com" },
+];
 
 /** `send_email` usa canais de e-mail; todo o resto usa WhatsApp (Meta Cloud API). */
 function channelKindForStepType(stepType: string): "whatsapp" | "email" {
@@ -44,12 +56,13 @@ function channelKindForStepType(stepType: string): "whatsapp" | "email" {
 
 export function useConnectedStepChannels(
   stepType: string,
-  opts?: { enabled?: boolean },
+  opts?: { enabled?: boolean; mockIfEmpty?: boolean },
 ): {
   options: StepChannelOption[];
   isLoading: boolean;
 } {
   const kind = channelKindForStepType(stepType);
+  const mockIfEmpty = opts?.mockIfEmpty === true;
   const { data, isLoading } = useQuery({
     queryKey: ["automation-step-connected-channels", kind],
     queryFn: async () =>
@@ -59,14 +72,20 @@ export function useConnectedStepChannels(
   });
   // Memo obrigatório: array novo a cada render quebrava o useEffect de
   // buildNodes no canvas (setNodes em loop → Maximum update depth).
-  const options: StepChannelOption[] = useMemo(
-    () =>
-      (data ?? []).map((c) => ({
-        id: c.id,
-        label: kind === "email" ? c.name?.trim() || "Canal" : formatMetaChannelLabel(c),
-      })),
-    [data, kind],
-  );
+  const options: StepChannelOption[] = useMemo(() => {
+    const real = (data ?? []).map((c) => ({
+      id: c.id,
+      label: c.name?.trim() || (kind === "email" ? "Canal" : formatMetaChannelLabel(c)),
+      detail:
+        kind === "email"
+          ? undefined
+          : typeof c.phoneNumber === "string"
+            ? c.phoneNumber.trim()
+            : undefined,
+    }));
+    if (real.length > 0 || !mockIfEmpty) return real;
+    return kind === "email" ? MOCK_EMAIL_CHANNELS : MOCK_WHATSAPP_CHANNELS;
+  }, [data, kind, mockIfEmpty]);
   return { options, isLoading };
 }
 

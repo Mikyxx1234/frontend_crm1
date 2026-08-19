@@ -10,6 +10,7 @@
  */
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "sonner"
+import { IconChevronDown } from "@tabler/icons-react"
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass"
 import { InputGlass } from "@/components/crm/input-glass"
 import { apiUrl } from "@/lib/api"
@@ -53,6 +54,7 @@ import {
   UpdateFieldValueControl,
 } from "./update-field-value"
 import { INHERIT_CHANNEL_VALUE, useConnectedStepChannels } from "./step-channel-picker"
+import { FlowVariableInput } from "@/components/flow/flow-variable-picker"
 
 const CUSTOM_FIELD_SENTINEL = "__custom__"
 
@@ -71,6 +73,9 @@ export function NodeConfigEditor({
   config,
   steps,
   isFirstMessageStep,
+  inheritedChannelId,
+  fields: fieldsOverride,
+  hideStepTargets,
   onChange,
 }: {
   stepType: string
@@ -78,9 +83,15 @@ export function NodeConfigEditor({
   steps: StepOpt[]
   /** 1º passo de mensagem do fluxo — exige `channelId` explícito (sem "herdar"). */
   isFirstMessageStep?: boolean
+  /** Canal do 1º passo — cards seguintes mostram este valor até o operador trocar. */
+  inheritedChannelId?: string
+  /** Substitui `STEP_FIELDS[stepType]` — usado pelo editor /fluxo para omitir destinos via handle. */
+  fields?: EditorField[]
+  /** Esconde “Ir para passo” nos builders (o /fluxo usa handles). */
+  hideStepTargets?: boolean
   onChange: (next: Cfg) => void
 }) {
-  const fields = STEP_FIELDS[stepType]
+  const fields = fieldsOverride ?? STEP_FIELDS[stepType]
   const set = (key: string, value: unknown) => onChange({ ...config, [key]: value })
 
   if (!fields) {
@@ -109,6 +120,8 @@ export function NodeConfigEditor({
           onChange={onChange}
           stepType={stepType}
           isFirstMessageStep={isFirstMessageStep}
+          inheritedChannelId={inheritedChannelId}
+          hideStepTargets={hideStepTargets}
         />
       ))}
     </div>
@@ -125,6 +138,8 @@ function Field({
   onChange,
   stepType,
   isFirstMessageStep,
+  inheritedChannelId,
+  hideStepTargets,
 }: {
   field: EditorField
   config: Cfg
@@ -133,6 +148,8 @@ function Field({
   onChange: (next: Cfg) => void
   stepType: string
   isFirstMessageStep?: boolean
+  inheritedChannelId?: string
+  hideStepTargets?: boolean
 }) {
   switch (field.kind) {
     case "info":
@@ -149,7 +166,7 @@ function Field({
             />
           ) : (
             <InputGlass
-              className="nodrag"
+              className="cfg-input nodrag"
               value={str(config[field.key])}
               placeholder={field.placeholder}
               onChange={(e) => set(field.key, e.target.value)}
@@ -337,6 +354,8 @@ function Field({
           stepType={stepType}
           channelId={str(config.channelId)}
           isFirstMessageStep={!!isFirstMessageStep}
+          inheritedChannelId={inheritedChannelId}
+          mockIfEmpty={!!hideStepTargets}
           onChange={(v) => set("channelId", v)}
         />
       )
@@ -344,15 +363,35 @@ function Field({
     case "builder":
       switch (field.builder) {
         case "buttons":
-          return <ButtonsBuilder label={field.label} variant="text" items={asArr(config[field.key])} steps={steps} onChange={(v) => set(field.key, v)} />
+          return <ButtonsBuilder label={field.label} variant="text" items={asArr(config[field.key])} steps={steps} hideStepTargets={hideStepTargets} onChange={(v) => set(field.key, v)} />
         case "buttonsTitle":
-          return <ButtonsBuilder label={field.label} variant="title" max={3} items={asArr(config[field.key])} steps={steps} onChange={(v) => set(field.key, v)} />
+          return (
+            <ButtonsBuilder
+              label={field.label}
+              variant="title"
+              max={10}
+              items={asArr(config[field.key])}
+              steps={steps}
+              hideStepTargets={hideStepTargets}
+              onChange={(v) => set(field.key, v)}
+              listMeta={
+                asArr(config[field.key]).length > 3
+                  ? {
+                      button: str(config.button),
+                      sectionTitle: str(config.sectionTitle),
+                      onMetaChange: (patch) => onChange({ ...config, ...patch }),
+                    }
+                  : undefined
+              }
+            />
+          )
         case "listRows":
           return (
             <ListRowsBuilder
               label={field.label}
               items={asArr(config[field.key])}
               steps={steps}
+              hideStepTargets={hideStepTargets}
               onChange={(v) => set(field.key, v)}
             />
           )
@@ -525,32 +564,13 @@ function VariableInput({
   onChange: (v: string) => void
   className?: string
 }) {
-  const ref = useRef<HTMLInputElement | null>(null)
-  const { open, filtered, closeT, refresh, apply, setOpen } = useVariablePicker(value, onChange)
-
   return (
-    <div className="cfg-combo">
-      <InputGlass
-        ref={ref}
-        className={cn("nodrag", className)}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => {
-          onChange(e.target.value)
-          refresh(e.target)
-        }}
-        onKeyUp={(e) => refresh(e.currentTarget)}
-        onClick={(e) => refresh(e.currentTarget)}
-        onFocus={(e) => {
-          if (closeT.current) clearTimeout(closeT.current)
-          refresh(e.currentTarget)
-        }}
-        onBlur={() => {
-          closeT.current = setTimeout(() => setOpen(false), 160)
-        }}
-      />
-      <VariablePickerPop open={open} filtered={filtered} onPick={(token) => apply(ref.current, token)} />
-    </div>
+    <FlowVariableInput
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder ?? "Texto ou { para variáveis"}
+      className={cn("h-9", className)}
+    />
   )
 }
 
@@ -736,49 +756,61 @@ function ConfigSelect({
 }
 
 /**
- * Campo "Canal" — só aparece com 2+ canais conectados do tipo certo
- * (WhatsApp Meta Cloud API ou e-mail, conforme `stepType`). 1º passo de
- * mensagem do fluxo exige seleção explícita; demais herdam do fluxo
- * (`channelId` vazio) quando não selecionam nada.
+ * Campo "Canal de envio". Sempre visível nos passos de mensagem.
+ * No canvas de produção, passos seguintes ainda podem herdar (`channelId` vazio).
  */
 function ChannelPickerField({
   stepType,
   channelId,
   isFirstMessageStep,
+  inheritedChannelId,
+  mockIfEmpty,
   onChange,
 }: {
   stepType: string
   channelId: string
   isFirstMessageStep: boolean
+  inheritedChannelId?: string
+  mockIfEmpty?: boolean
   onChange: (v: string) => void
 }) {
-  const { options, isLoading } = useConnectedStepChannels(stepType)
-  if (isLoading || options.length <= 1) return null
+  const { options, isLoading } = useConnectedStepChannels(stepType, { mockIfEmpty })
 
-  const value = channelId || (isFirstMessageStep ? "" : INHERIT_CHANNEL_VALUE)
-  const selectOptions: Opt[] = [
-    ...(isFirstMessageStep
-      ? []
-      : [{ value: INHERIT_CHANNEL_VALUE, label: "Usar canal do fluxo (herdar)" }]),
-    ...options.map((o) => ({ value: o.id, label: o.label })),
-  ]
+  useEffect(() => {
+    if (isFirstMessageStep && options.length === 1 && !channelId) onChange(options[0]!.id)
+  }, [options, channelId, onChange, isFirstMessageStep])
+
+  if (isLoading) return null
+
+  const inherited = inheritedChannelId?.trim() || ""
+  const value = channelId || inherited
+  const selected = options.find((o) => o.id === value)
+  const placeholder = options.length === 0 ? "Nenhum canal conectado" : "Selecione o canal…"
 
   return (
     <Labeled
-      label="Canal"
+      label="Canal de envio"
       hint={
-        isFirstMessageStep
-          ? "1º passo de mensagem do fluxo — obrigatório (a organização tem mais de um canal conectado)."
-          : "Sem seleção, este passo usa o mesmo canal do passo anterior no fluxo."
+        !isFirstMessageStep && inherited && !channelId
+          ? "Herdado do 1º passo de mensagem. Pode trocar neste card."
+          : undefined
       }
     >
-      <ConfigSelect
-        value={value}
-        options={selectOptions}
-        placeholder="Selecione o canal…"
-        allowEmpty={false}
-        onChange={(v) => onChange(v === INHERIT_CHANNEL_VALUE ? "" : v)}
-      />
+      <div className="cfg-select-wrap nodrag nopan" onPointerDown={stopFlowPointer}>
+        <DropdownGlass
+          options={options.map((o) => ({ value: o.id, label: o.label }))}
+          value={value}
+          onValueChange={(v) => onChange(!isFirstMessageStep && v === inherited ? "" : v)}
+          placeholder={placeholder}
+          matchTriggerWidth
+          trigger={
+            <button type="button" className="w-full justify-between gap-2 px-2.5 text-left text-[13px]">
+              <span className="min-w-0 flex-1 truncate leading-5">{selected?.label || placeholder}</span>
+              <IconChevronDown size={15} className="shrink-0 opacity-50" />
+            </button>
+          }
+        />
+      </div>
     </Labeled>
   )
 }
@@ -1439,44 +1471,80 @@ function ButtonsBuilder({
   max,
   items,
   steps,
+  hideStepTargets,
   onChange,
+  listMeta,
 }: {
   label: string
   variant: "text" | "title"
   max?: number
   items: BtnItem[]
   steps: StepOpt[]
+  hideStepTargets?: boolean
   onChange: (v: BtnItem[]) => void
+  listMeta?: {
+    button: string
+    sectionTitle: string
+    onMetaChange: (patch: { button?: string; sectionTitle?: string }) => void
+  }
 }) {
   const key = variant
+  const asList = items.length > 3
+  const titleMax = asList ? 24 : 20
   const update = (i: number, patch: Partial<BtnItem>) => onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
   const add = () => onChange([...items, { id: rid("btn"), [key]: "" }])
   const remove = (i: number) => onChange(items.filter((_, idx) => idx !== i))
   const full = max != null && items.length >= max
   return (
     <div className="cfg-field">
-      <span className="cfg-label">{label}</span>
+      <span className="cfg-label">{asList ? "Itens da lista (máx. 10)" : label}</span>
+      <span className="cfg-hint">
+        {asList
+          ? "4+ opções: o WhatsApp envia como lista (Meta: 10 itens, título 24 caracteres)."
+          : "Até 3 opções aparecem como botões (20 caracteres). A 4ª vira lista."}
+      </span>
+      {asList && listMeta && (
+        <div className="mt-2 flex flex-col gap-2">
+          <InputGlass
+            className="cfg-input nodrag"
+            placeholder="Botão que abre a lista (máx. 20)"
+            value={listMeta.button}
+            maxLength={20}
+            onChange={(e) => listMeta.onMetaChange({ button: e.target.value })}
+          />
+          <InputGlass
+            className="cfg-input nodrag"
+            placeholder="Título da seção (opcional, máx. 24)"
+            value={listMeta.sectionTitle}
+            maxLength={24}
+            onChange={(e) => listMeta.onMetaChange({ sectionTitle: e.target.value })}
+          />
+        </div>
+      )}
       <div className="cfg-list">
         {items.map((it, i) => (
           <div className="cfg-item" key={it.id ?? i}>
             <div className="cfg-item-head">
               <InputGlass
-                className="nodrag"
-                placeholder={`Botão ${i + 1}`}
+                className="cfg-input nodrag"
+                placeholder={`${asList ? "Item" : "Botão"} ${i + 1} (máx. ${titleMax})`}
                 value={str(it[key])}
+                maxLength={titleMax}
                 onChange={(e) => update(i, { [key]: e.target.value })}
               />
               <button className="cfg-x nodrag" title="Remover" onClick={() => remove(i)}>
                 ×
               </button>
             </div>
-            <ConfigSelect value={str(it.gotoStepId)} options={steps} placeholder="Ir para passo…" onChange={(v) => update(i, { gotoStepId: v })} />
+            {!hideStepTargets && (
+              <ConfigSelect value={str(it.gotoStepId)} options={steps} placeholder="Ir para passo…" onChange={(v) => update(i, { gotoStepId: v })} />
+            )}
           </div>
         ))}
       </div>
       {!full && (
         <button className="cfg-add nodrag" onClick={add}>
-          + Adicionar botão
+          {asList ? "+ Adicionar item" : "+ Adicionar botão"}
         </button>
       )}
     </div>
@@ -1494,11 +1562,13 @@ function ListRowsBuilder({
   label,
   items,
   steps,
+  hideStepTargets,
   onChange,
 }: {
   label: string
   items: ListRowItem[]
   steps: StepOpt[]
+  hideStepTargets?: boolean
   onChange: (v: ListRowItem[]) => void
 }) {
   const update = (i: number, patch: Partial<ListRowItem>) =>
@@ -1528,12 +1598,14 @@ function ListRowsBuilder({
               value={str(it.description)}
               onChange={(v) => update(i, { description: v })}
             />
-            <ConfigSelect
-              value={str(it.gotoStepId)}
-              options={steps}
-              placeholder="Ir para passo…"
-              onChange={(v) => update(i, { gotoStepId: v })}
-            />
+            {!hideStepTargets && (
+              <ConfigSelect
+                value={str(it.gotoStepId)}
+                options={steps}
+                placeholder="Ir para passo…"
+                onChange={(v) => update(i, { gotoStepId: v })}
+              />
+            )}
           </div>
         ))}
       </div>

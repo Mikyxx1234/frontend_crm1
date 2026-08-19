@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import {
   IconClock,
@@ -11,6 +12,7 @@ import {
   IconDotsVertical,
   IconCircleCheck,
   IconRotateClockwise,
+  IconExternalLink,
 } from "@tabler/icons-react"
 import { CheckboxGlass } from "@/components/crm/checkbox-glass"
 import { ACTIVITY_KINDS, activityTime, type Activity } from "@/lib/activities-data"
@@ -20,9 +22,17 @@ interface ActivityRowProps {
   overdue?: boolean
   onToggle: (id: string) => void
   onDelete: (id: string) => void
+  /** Clique controlado no corpo da row (abre detalhes). */
+  onOpenDetails?: (activity: Activity) => void
 }
 
-export function ActivityRow({ activity, overdue, onToggle, onDelete }: ActivityRowProps) {
+export function ActivityRow({
+  activity,
+  overdue,
+  onToggle,
+  onDelete,
+  onOpenDetails,
+}: ActivityRowProps) {
   const meta = ACTIVITY_KINDS[activity.kind]
   const Icon = meta.icon
   const done = activity.status === "concluida"
@@ -47,15 +57,38 @@ export function ActivityRow({ activity, overdue, onToggle, onDelete }: ActivityR
       ? "var(--color-danger)"
       : meta.color
 
+  const creatorName = activity.createdBy?.name ?? "Sistema"
+  const contextLink = activity.dealId
+    ? { href: `/pipeline/${activity.dealId}`, label: "Abrir negócio" }
+    : activity.contactId
+      ? { href: `/contacts/${activity.contactId}`, label: "Abrir contato" }
+      : null
+
   return (
     <div
       className={cn(
         "group flex items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] border-l-4 bg-[var(--glass-bg-overlay)] p-4 shadow-[var(--glass-shadow-sm)] transition-all duration-150 hover:translate-x-0.5 hover:bg-[var(--glass-bg-strong)]",
         done && "opacity-65",
+        onOpenDetails && "cursor-pointer",
       )}
       style={{ borderLeftColor: accentColor }}
+      onClick={(e) => {
+        if (!onOpenDetails) return
+        const target = e.target as HTMLElement
+        if (target.closest("[data-row-stop]")) return
+        onOpenDetails(activity)
+      }}
+      onKeyDown={(e) => {
+        if (!onOpenDetails) return
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onOpenDetails(activity)
+        }
+      }}
+      role={onOpenDetails ? "button" : undefined}
+      tabIndex={onOpenDetails ? 0 : undefined}
     >
-      <div className="pt-0.5">
+      <div className="pt-0.5" data-row-stop>
         <CheckboxGlass
           checked={done}
           onChange={() => onToggle(activity.id)}
@@ -88,10 +121,10 @@ export function ActivityRow({ activity, overdue, onToggle, onDelete }: ActivityR
             {activityTime(activity)}
             {activity.durationMin ? ` · ${activity.durationMin} min` : ""}
           </span>
-          {activity.withWhom && (
+          {(activity.contactName || activity.withWhom) && (
             <span className="inline-flex items-center gap-1">
               <IconUser size={13} />
-              {activity.withWhom}
+              {activity.contactName || activity.withWhom}
             </span>
           )}
           {activity.location && (
@@ -114,10 +147,30 @@ export function ActivityRow({ activity, overdue, onToggle, onDelete }: ActivityR
             </span>
           )}
         </div>
+
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-body text-[11px] text-[var(--text-muted)]">
+          <span>
+            Criada por{" "}
+            <span className="font-display font-semibold text-[var(--text-secondary)]">
+              {creatorName}
+            </span>
+          </span>
+          {contextLink && (
+            <Link
+              href={contextLink.href}
+              data-row-stop
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 font-display font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-dark)]"
+            >
+              <IconExternalLink size={12} />
+              {contextLink.label}
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Etiqueta de status/tipo + menu */}
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2" data-row-stop>
         {overdue && !done && (
           <span className="rounded-full border border-[var(--color-danger)]/25 bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] px-2 py-0.5 font-display text-[10px] font-bold text-[var(--color-danger)]">
             Atrasada
@@ -160,6 +213,19 @@ export function ActivityRow({ activity, overdue, onToggle, onDelete }: ActivityR
               role="menu"
               className="absolute right-0 top-full z-30 mt-1 w-48 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md"
             >
+              {onOpenDetails && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onOpenDetails(activity)
+                    setMenuOpen(false)
+                  }}
+                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                >
+                  Detalhes
+                </button>
+              )}
               <button
                 type="button"
                 role="menuitem"

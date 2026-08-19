@@ -9,6 +9,7 @@ function at(dayOffset: number, hour: number, minute = 0): string {
 }
 
 const USER = { id: "u-mock-1", name: "Ana Souza", email: "ana@eduit.com.br", avatarUrl: null };
+const CREATOR = { id: "u-mock-2", name: "Bruno Lima", email: "bruno@eduit.com.br", avatarUrl: null };
 
 const MOCK_ITEMS: ActivityListItemDto[] = [
   {
@@ -21,6 +22,7 @@ const MOCK_ITEMS: ActivityListItemDto[] = [
     completedAt: null,
     createdAt: at(-2, 9, 0),
     user: USER,
+    createdBy: CREATOR,
     contact: { id: "mock-ct-1", name: "Carlos Mendes", email: "carlos@acme.com" },
     deal: { id: "mock-deal-1", title: "Plano Pro — Acme", stageId: "st-1" },
   },
@@ -34,6 +36,7 @@ const MOCK_ITEMS: ActivityListItemDto[] = [
     completedAt: null,
     createdAt: at(-1, 11, 0),
     user: USER,
+    createdBy: CREATOR,
     contact: { id: "mock-ct-2", name: "Marina Costa", email: "marina@beta.io" },
     deal: null,
   },
@@ -47,6 +50,7 @@ const MOCK_ITEMS: ActivityListItemDto[] = [
     completedAt: null,
     createdAt: at(0, 8, 0),
     user: USER,
+    createdBy: CREATOR,
     contact: null,
     deal: { id: "mock-deal-2", title: "Renovação — Beta Corp", stageId: "st-2" },
   },
@@ -60,6 +64,7 @@ const MOCK_ITEMS: ActivityListItemDto[] = [
     completedAt: at(-1, 9, 15),
     createdAt: at(-3, 15, 0),
     user: USER,
+    createdBy: CREATOR,
     contact: { id: "mock-ct-3", name: "Felipe Rocha", email: "felipe@gamma.sa" },
     deal: null,
   },
@@ -73,6 +78,7 @@ const MOCK_ITEMS: ActivityListItemDto[] = [
     completedAt: null,
     createdAt: at(-4, 10, 0),
     user: USER,
+    createdBy: CREATOR,
     contact: null,
     deal: null,
   },
@@ -86,6 +92,7 @@ const MOCK_ITEMS: ActivityListItemDto[] = [
     completedAt: null,
     createdAt: at(-1, 17, 0),
     user: USER,
+    createdBy: CREATOR,
     contact: null,
     deal: { id: "mock-deal-3", title: "Enterprise — Delta", stageId: "st-3" },
   },
@@ -99,6 +106,7 @@ const MOCK_ITEMS: ActivityListItemDto[] = [
     completedAt: null,
     createdAt: at(0, 7, 30),
     user: USER,
+    createdBy: CREATOR,
     contact: { id: "mock-ct-4", name: "Juliana Prado", email: "ju@lumina.com" },
     deal: null,
   },
@@ -112,6 +120,7 @@ const MOCK_ITEMS: ActivityListItemDto[] = [
     completedAt: null,
     createdAt: at(-2, 14, 0),
     user: USER,
+    createdBy: CREATOR,
     contact: null,
     deal: null,
   },
@@ -125,6 +134,7 @@ const MOCK_ITEMS: ActivityListItemDto[] = [
     completedAt: at(-5, 10, 45),
     createdAt: at(-6, 9, 0),
     user: USER,
+    createdBy: CREATOR,
     contact: { id: "mock-ct-5", name: "Roberto Lima", email: "roberto@norte.com" },
     deal: null,
   },
@@ -138,6 +148,7 @@ const MOCK_ITEMS: ActivityListItemDto[] = [
     completedAt: null,
     createdAt: at(-1, 12, 0),
     user: USER,
+    createdBy: CREATOR,
     contact: { id: "mock-ct-1", name: "Carlos Mendes", email: "carlos@acme.com" },
     deal: { id: "mock-deal-1", title: "Plano Pro — Acme", stageId: "st-1" },
   },

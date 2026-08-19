@@ -20,10 +20,18 @@ export interface Activity {
   /** Duração em minutos (opcional, para reuniões/eventos) */
   durationMin?: number
   status: ActivityStatus
-  /** Contato/lead relacionado */
+  /** Contato/lead relacionado (nome de exibição) */
   withWhom?: string
   notes?: string
   location?: string
+  /** Contato cadastrado vinculado (opcional — lembrete pessoal sem lead). */
+  contactId?: string | null
+  contactName?: string | null
+  /** Negócio vinculado, quando a tarefa nasce no pipeline. */
+  dealId?: string | null
+  dealTitle?: string | null
+  /** Quem criou (pode diferir do responsável). Null = Sistema. */
+  createdBy?: { id: string; name: string; avatarUrl?: string | null } | null
   /** Responsável: usuário específico ou departamento (compartilhada). */
   assigneeType?: "user" | "department"
   assigneeUserId?: string | null

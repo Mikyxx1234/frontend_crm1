@@ -555,6 +555,8 @@ export interface ActivityListItemDto {
   department?: { id: string; name: string; color: string | null; icon: string | null } | null;
   contact: { id: string; name: string; email: string | null } | null;
   deal: { id: string; title: string; stageId: string } | null;
+  /** Quem criou a tarefa (pode diferir do responsável `user`). */
+  createdBy?: { id: string; name: string; email: string; avatarUrl: string | null } | null;
 }
 
 export interface ActivityListPage {
@@ -651,5 +653,100 @@ export function deleteActivity(id: string): Promise<{ ok: true }> {
     "DELETE",
     undefined,
     "Erro ao excluir atividade.",
+  );
+}
+
+export function fetchActivity(id: string): Promise<ActivityListItemDto> {
+  return getJson<ActivityListItemDto>(
+    `/api/activities/${id}`,
+    "Erro ao carregar atividade.",
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Atividades — comentários / notas
+// ─────────────────────────────────────────────────────────────────
+
+export const ACTIVITY_COMMENT_CONTENT_MAX = 10_000;
+
+export type ActivityCommentRevisionAction = "CREATED" | "UPDATED" | "DELETED";
+
+export interface ActivityCommentDto {
+  id: string;
+  activityId: string;
+  organizationId: string;
+  authorId: string;
+  author: { id: string; name: string; avatarUrl: string | null };
+  content: string | null;
+  editedAt: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ActivityCommentRevisionDto {
+  id: string;
+  commentId: string;
+  organizationId: string;
+  actorId: string;
+  actor: { id: string; name: string; avatarUrl: string | null };
+  action: ActivityCommentRevisionAction;
+  beforeContent: string | null;
+  afterContent: string | null;
+  createdAt: string;
+}
+
+export function fetchActivityComments(
+  activityId: string,
+): Promise<{ items: ActivityCommentDto[] }> {
+  return getJson<{ items: ActivityCommentDto[] }>(
+    `/api/activities/${activityId}/comments`,
+    "Erro ao carregar notas.",
+  );
+}
+
+export function fetchActivityCommentHistory(
+  activityId: string,
+): Promise<{ items: ActivityCommentRevisionDto[] }> {
+  return getJson<{ items: ActivityCommentRevisionDto[] }>(
+    `/api/activities/${activityId}/comments?history=1`,
+    "Erro ao carregar histórico de notas.",
+  );
+}
+
+export function createActivityComment(
+  activityId: string,
+  content: string,
+): Promise<ActivityCommentDto> {
+  return sendJson<ActivityCommentDto>(
+    `/api/activities/${activityId}/comments`,
+    "POST",
+    { content },
+    "Erro ao adicionar nota.",
+  );
+}
+
+export function updateActivityComment(
+  activityId: string,
+  commentId: string,
+  content: string,
+): Promise<ActivityCommentDto> {
+  return sendJson<ActivityCommentDto>(
+    `/api/activities/${activityId}/comments/${commentId}`,
+    "PUT",
+    { content },
+    "Erro ao editar nota.",
+  );
+}
+
+export function deleteActivityComment(
+  activityId: string,
+  commentId: string,
+): Promise<ActivityCommentDto> {
+  return sendJson<ActivityCommentDto>(
+    `/api/activities/${activityId}/comments/${commentId}`,
+    "DELETE",
+    undefined,
+    "Erro ao excluir nota.",
   );
 }

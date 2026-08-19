@@ -16,26 +16,46 @@ import { isDirectoryMock, mockCompaniesPage, mockContactsPage } from "./mock";
 import { isPageMockMode } from "@/lib/page-mock-mode";
 import { mockActivitiesPage } from "./mock-activities";
 
+/** Erro HTTP tipado da camada directory-v2 (expõe `status`). */
+export class DirectoryApiError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "DirectoryApiError";
+    this.status = status;
+  }
+}
+
+function throwHttpError(text: string, status: number, errLabel: string): never {
+  let message = errLabel;
+  try {
+    const parsed = JSON.parse(text) as { message?: unknown };
+    if (typeof parsed?.message === "string") message = parsed.message;
+  } catch {
+    /* corpo não-JSON */
+  }
+  throw new DirectoryApiError(message, status);
+}
+
 async function getJson<T>(path: string, errLabel: string): Promise<T> {
   const res = await fetch(apiUrl(path));
   const text = await res.text();
   if (!res.ok) {
-    let message = errLabel;
-    try {
-      const parsed = JSON.parse(text) as { message?: unknown };
-      if (typeof parsed?.message === "string") message = parsed.message;
-    } catch {
-      /* corpo não-JSON */
-    }
-    throw new Error(message);
+    throwHttpError(text, res.status, errLabel);
   }
   if (!text.trim()) {
-    throw new Error("Sessão expirada ou backend indisponível. Recarregue e faça login.");
+    throw new DirectoryApiError(
+      "Sessão expirada ou backend indisponível. Recarregue e faça login.",
+      401,
+    );
   }
   try {
     return JSON.parse(text) as T;
   } catch {
-    throw new Error("Sessão não reconhecida pelo backend. Recarregue e faça login.");
+    throw new DirectoryApiError(
+      "Sessão não reconhecida pelo backend. Recarregue e faça login.",
+      401,
+    );
   }
 }
 
@@ -52,14 +72,7 @@ async function sendJson<T>(
   });
   const text = await res.text();
   if (!res.ok) {
-    let message = errLabel;
-    try {
-      const parsed = JSON.parse(text) as { message?: unknown };
-      if (typeof parsed?.message === "string") message = parsed.message;
-    } catch {
-      /* corpo não-JSON */
-    }
-    throw new Error(message);
+    throwHttpError(text, res.status, errLabel);
   }
   if (!text.trim()) return undefined as unknown as T;
   try {
@@ -748,5 +761,68 @@ export function deleteActivityComment(
     "DELETE",
     undefined,
     "Erro ao excluir nota.",
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Atividades — alertas (polling consumptivo)
+// ─────────────────────────────────────────────────────────────────
+
+export type ActivityAlertKind = "PRE_DUE" | "DUE";
+
+export interface ActivityAlertDto {
+  id: string;
+  kind: ActivityAlertKind;
+  title: string;
+  type: string;
+  scheduledAt: string;
+  contact?: { id: string; name: string } | null;
+  deal?: { id: string; title: string } | null;
+  department?: { id: string; name: string } | null;
+}
+
+export interface ActivityAlertResponse {
+  alert: ActivityAlertDto | null;
+}
+
+export type ActivityAlertActionBody =
+  | { action: "dismiss" }
+  | { action: "snooze"; kind: ActivityAlertKind };
+
+export function fetchActivityAlert(): Promise<ActivityAlertResponse> {
+  return getJson<ActivityAlertResponse>(
+    "/api/activities/alerts",
+    "Erro ao carregar alerta de tarefa.",
+  );
+}
+
+export function postActivityAlertAction(
+  activityId: string,
+  body: ActivityAlertActionBody,
+): Promise<{ ok: true }> {
+  return sendJson<{ ok: true }>(
+    `/api/activities/alerts/${activityId}`,
+    "POST",
+    body,
+    "Erro ao atualizar alerta de tarefa.",
+  );
+}
+
+/**
+ * Conflito/stale: limpar card no client.
+ * 404/409 tipados; 400 cobre mensagens conhecidas do contrato atual.
+ */
+export function isStaleActivityAlertError(err: unknown): boolean {
+  if (!(err instanceof DirectoryApiError)) return false;
+  if (err.status === 404 || err.status === 409) return true;
+  if (err.status !== 400) return false;
+  const m = err.message.toLowerCase();
+  return (
+    m.includes("dispensado") ||
+    m.includes("desatualizado") ||
+    m.includes("não encontrado") ||
+    m.includes("nao encontrado") ||
+    m.includes("sem alerta elegível") ||
+    m.includes("sem alerta elegivel")
   );
 }

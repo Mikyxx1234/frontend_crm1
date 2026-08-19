@@ -52,36 +52,43 @@ export function UserAvatar({
 }: UserAvatarProps) {
   const text = initials ?? avatarInitials(name ?? "?")
   const dot = status ? statusColor ?? STATUS_DOT[status] : statusColor
-  const dotSize = Math.max(8, Math.round(size * 0.28))
+  const dotSize = Math.max(10, Math.round(size * 0.26))
 
   return (
     <div
-      className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display font-bold leading-none text-white",
-        ring === "active" &&
-          "ring-2 ring-[var(--brand-primary)]/60 ring-offset-2 ring-offset-[var(--glass-bg-strong)]",
-        className,
-      )}
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}
+      className={cn("relative shrink-0", className)}
+      style={{ width: size, height: size }}
       title={title ?? name ?? undefined}
     >
-      {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageUrl}
-          alt={name ?? text}
-          className="size-full object-cover"
-          referrerPolicy="no-referrer"
-        />
-      ) : (
-        text
-      )}
-      {dot && (
+      <div
+        className={cn(
+          "relative flex size-full items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display font-bold leading-none text-white",
+          ring === "active" &&
+            "ring-2 ring-[var(--brand-primary)]/60 ring-offset-2 ring-offset-[var(--glass-bg-strong)]",
+        )}
+        style={{ fontSize: Math.round(size * 0.36) }}
+      >
+        <span aria-hidden={Boolean(imageUrl)}>{text}</span>
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt={name ?? text}
+            className="absolute inset-0 size-full object-cover"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              e.currentTarget.style.display = "none"
+            }}
+          />
+        ) : null}
+      </div>
+      {dot ? (
         <span
-          className="absolute bottom-0 right-0 rounded-full border-2 border-[var(--glass-bg-strong)]"
+          aria-hidden
+          className="absolute -bottom-px -right-px rounded-full border-2 border-background shadow-sm"
           style={{ width: dotSize, height: dotSize, backgroundColor: dot }}
         />
-      )}
+      ) : null}
     </div>
   )
 }

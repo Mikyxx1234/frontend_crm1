@@ -107,7 +107,7 @@ export function PageHeader({
     <div className={cn("flex flex-col gap-2 px-1", className)}>
       {/* Desktop: identidade (largura fixa) → busca (flexível, até max-w) → spacer → ações */}
       <div className="hidden items-center gap-4 lg:flex">
-        <div className={cn(IDENTITY_COL, "shrink-0")}>
+        <div className={cn(center ? cn(IDENTITY_COL, "shrink-0") : "min-w-0 shrink-0")}>
           <Identity icon={icon} title={title} back={back} titleAccessory={titleAccessory} />
         </div>
         {center ? (

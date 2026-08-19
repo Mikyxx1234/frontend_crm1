@@ -42,7 +42,9 @@ export type ConditionOp =
   // `contact.tags` / `contact.tagIds` (e par no `deal`), populados pelo
   // executor a partir das relações TagOnContact/TagOnDeal.
   | "has_tag"
-  | "not_has_tag";
+  | "not_has_tag"
+  | "in_business_hours"
+  | "not_in_business_hours";
 
 export type ConditionRule = {
   field: string;
@@ -92,6 +94,7 @@ function normalizeOp(raw: unknown): ConditionOp {
     "includes", "starts_with", "ends_with",
     "empty", "not_empty",
     "has_tag", "not_has_tag",
+    "in_business_hours", "not_in_business_hours",
   ];
   return (allowed.includes(s as ConditionOp) ? s : "eq") as ConditionOp;
 }

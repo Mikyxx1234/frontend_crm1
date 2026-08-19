@@ -299,11 +299,17 @@ function Thread({
       <Composer
         roomId={room.id}
         placeholder="Digite uma mensagem"
-        onSend={(payload) =>
-          mock
-            ? sendMockMessage(room.id, payload, { id: meId, name: meName, avatarUrl: meAvatar })
-            : send.mutateAsync({ roomId: room.id, content: payload.content, attachments: payload.attachments })
-        }
+        onSend={async (payload) => {
+          if (mock) {
+            sendMockMessage(room.id, payload, { id: meId, name: meName, avatarUrl: meAvatar })
+            return
+          }
+          await send.mutateAsync({
+            roomId: room.id,
+            content: payload.content,
+            attachments: payload.attachments,
+          })
+        }}
       />
     </div>
   );

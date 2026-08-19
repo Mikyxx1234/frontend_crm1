@@ -15,8 +15,10 @@ import {
   deleteContact,
   fetchActivities,
   fetchActivity,
+  fetchActivityAlert,
   fetchActivityCommentHistory,
   fetchActivityComments,
+  postActivityAlertAction,
   fetchCompanies,
   fetchCompany,
   fetchCompanyFacets,
@@ -33,6 +35,9 @@ import {
   updateActivityComment,
   updateCompany,
   updateContact,
+  type ActivityAlertActionBody,
+  type ActivityAlertKind,
+  type ActivityAlertResponse,
   type ActivityCommentDto,
   type ActivityCommentRevisionDto,
   type ActivityListItemDto,
@@ -490,6 +495,61 @@ export function useDeleteActivityComment(activityId: string | null) {
     },
     onSuccess: () => {
       if (activityId) invalidateActivityComments(qc, activityId);
+    },
+  });
+}
+
+const ACTIVITY_ALERT_KEY = ["v2-activity-alert"] as const;
+
+export { ACTIVITY_ALERT_KEY };
+
+/**
+ * Polling de alerta de tarefa (GET consumptivo).
+ * `enabled` deve refletir sessão autenticada no shell.
+ */
+export function useActivityAlert(enabled = true) {
+  return useQuery<ActivityAlertResponse>({
+    queryKey: ACTIVITY_ALERT_KEY,
+    queryFn: fetchActivityAlert,
+    enabled: resolveEnabled(enabled),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    retry: false,
+    staleTime: 0,
+  });
+}
+
+function clearActivityAlertCache(qc: ReturnType<typeof useQueryClient>) {
+  qc.setQueryData<ActivityAlertResponse>(ACTIVITY_ALERT_KEY, { alert: null });
+}
+
+export function useDismissActivityAlert() {
+  const qc = useQueryClient();
+  return useMutation<{ ok: true }, Error, { activityId: string }>({
+    mutationFn: ({ activityId }) =>
+      postActivityAlertAction(activityId, { action: "dismiss" }),
+    onSuccess: () => {
+      clearActivityAlertCache(qc);
+      void qc.invalidateQueries({ queryKey: ACTIVITY_ALERT_KEY });
+    },
+  });
+}
+
+export function useSnoozeActivityAlert() {
+  const qc = useQueryClient();
+  return useMutation<
+    { ok: true },
+    Error,
+    { activityId: string; kind: ActivityAlertKind }
+  >({
+    mutationFn: ({ activityId, kind }) =>
+      postActivityAlertAction(activityId, {
+        action: "snooze",
+        kind,
+      } satisfies ActivityAlertActionBody),
+    onSuccess: () => {
+      clearActivityAlertCache(qc);
+      void qc.invalidateQueries({ queryKey: ACTIVITY_ALERT_KEY });
     },
   });
 }

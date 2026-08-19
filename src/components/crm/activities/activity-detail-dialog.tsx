@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import * as Dialog from "@radix-ui/react-dialog"
 import { useSession } from "next-auth/react"
+import { useUserRole } from "@/hooks/use-user-role"
 import { toast } from "sonner"
 import {
   IconChevronDown,
@@ -76,6 +77,7 @@ export function ActivityDetailDialog({
 }: ActivityDetailDialogProps) {
   const { data: session } = useSession()
   const currentUserId = session?.user?.id ?? null
+  const { isManagerUp } = useUserRole()
   const { confirm, dialog: confirmDialog } = useConfirm()
 
   const detailQuery = useActivity(activityId, open && Boolean(activityId))
@@ -88,7 +90,7 @@ export function ActivityDetailDialog({
   const [historyOpen, setHistoryOpen] = useState(false)
   const historyQuery = useActivityCommentHistory(
     activityId,
-    open && historyOpen && Boolean(activityId),
+    open && historyOpen && isManagerUp && Boolean(activityId),
   )
 
   const createMut = useCreateActivityComment(activityId)
@@ -428,7 +430,8 @@ export function ActivityDetailDialog({
                 </div>
               </section>
 
-              {/* Histórico recolhível */}
+              {/* Histórico recolhível — só ADMIN/gestor */}
+              {isManagerUp && (
               <section className="mt-5 border-t border-[var(--glass-border-subtle)] pt-3">
                 <button
                   type="button"
@@ -504,6 +507,7 @@ export function ActivityDetailDialog({
                   </div>
                 )}
               </section>
+              )}
             </div>
           </Dialog.Content>
         </Dialog.Portal>

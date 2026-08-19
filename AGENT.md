@@ -2099,6 +2099,11 @@ aplicada com SQL aditivo idempotente em
 
 ## Decisões técnicas
 
+### 2026-08-19 — Alertas de tarefa (polling global)
+- Modelo: Cursor Grok 4.5 (execução sob spec Opus)
+- Decisão: card global autenticado (`TaskAlertCenter` no layout `(app)`) com polling GET `/api/activities/alerts` a cada 30s (`refetchIntervalInBackground: false`, retry desligado — GET consumptivo). Desktop: card glass fixo canto inferior direito (~360px), sem overlay. Mobile/APK: popup compacto no topo abaixo do safe-area. Fechar/clicar → dismiss; snooze 10 min com `kind`; erro Sonner mantém o card no cache. Sem SSE/WebPush/FCM neste escopo.
+- Alternativas descartadas: toasts Sonner como UI principal; push/SSE; overlay modal bloqueante.
+
 ### 2026-08-19 — Atividades: contato opcional, criador, notas compartilhadas
 - Modelo: Cursor Grok 4.5 (execução sob spec Opus)
 - Decisão: na tela global `/activities`, Contato no composer é **opcional** (autocomplete via `useContacts`); texto livre não vincula lead — só `contactId` selecionado. `Activity` UI preserva `contactId`/`contactName`/`dealId`/`dealTitle`/`createdBy`. `ActivityRow` mostra “Criada por {nome|Sistema}” e link contextual (negócio > contato). Dialog compartilhado `activity-detail-dialog.tsx` (notas + histórico `history=1`) integrado em `/activities` e no painel de tarefas do negócio; ownership de editar/excluir nota via `useSession().user.id`, sem `isOwn` do backend.

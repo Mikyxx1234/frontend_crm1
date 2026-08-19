@@ -11,6 +11,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 
 import { cn } from "@/lib/utils";
+import { InputGlass } from "@/components/crm/input-glass";
 
 import {
   Dialog,
@@ -24,6 +25,34 @@ import { Button } from "@/components/ui/button";
 
 import { getTabulations, type TabulationNode } from "../api/conversations";
 import { SkipAutomationsCheckbox } from "./skip-automations-option";
+
+function normalizeSearch(s: string) {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Resultado de busca no ramo atual: o nó e o caminho relativo até ele. */
+type SearchHit = { node: TabulationNode; trail: TabulationNode[] };
+
+function collectSearchHits(
+  nodes: TabulationNode[],
+  q: string,
+  trail: TabulationNode[] = [],
+): SearchHit[] {
+  const hits: SearchHit[] = [];
+  for (const node of nodes) {
+    if (!node.active) continue;
+    if (normalizeSearch(node.name).includes(q)) {
+      hits.push({ node, trail });
+    }
+    if (node.children.length > 0) {
+      hits.push(...collectSearchHits(node.children, q, [...trail, node]));
+    }
+  }
+  return hits;
+}
 
 type Props = {
   open: boolean;
@@ -68,40 +97,69 @@ export function TabulationDialog({
   // Se o ultimo do path for folha, permite confirmar.
   const [path, setPath] = useState<TabulationNode[]>([]);
   const [skipAutomations, setSkipAutomations] = useState(false);
+  const [search, setSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) {
       setPath([]);
       setSkipAutomations(false);
+      setSearch("");
+      return;
     }
+    const t = window.setTimeout(() => searchRef.current?.focus(), 60);
+    return () => window.clearTimeout(t);
   }, [open]);
 
   const currentChildren: TabulationNode[] = useMemo(() => {
     if (!query.data) return [];
     const last = path[path.length - 1];
     if (!last) return query.data.tree.filter((n) => n.active);
+    // Folha selecionada: lista os irmãos para o item (e a busca) permanecer visível.
+    if (last.children.length === 0) {
+      const parent = path[path.length - 2];
+      const siblings = parent ? parent.children : query.data.tree;
+      return siblings.filter((n) => n.active);
+    }
     return last.children.filter((n) => n.active);
   }, [query.data, path]);
 
+  const listed: SearchHit[] = useMemo(() => {
+    const q = normalizeSearch(search.trim());
+    if (!q) return currentChildren.map((node) => ({ node, trail: [] }));
+    return collectSearchHits(currentChildren, q);
+  }, [currentChildren, search]);
+
+  const isSearching = normalizeSearch(search.trim()).length > 0;
+
   const isLeafSelected =
     path.length > 0 && path[path.length - 1].children.length === 0;
+
+  function selectNode(n: TabulationNode, trail: TabulationNode[]) {
+    if (n.children.length > 0) setSearch("");
+    setPath((prev) => {
+      const base =
+        prev.length > 0 && prev[prev.length - 1].children.length === 0
+          ? prev.slice(0, -1)
+          : prev;
+      return [...base, ...trail, n];
+    });
+  }
 
   // Cada nível volta ao topo da lista: sem isso, ao entrar num submotivo a
   // lista curta herda o scroll do nível anterior e parece vazia/cortada.
   const listRef = useRef<HTMLUListElement | null>(null);
   useEffect(() => {
     listRef.current?.scrollTo({ top: 0 });
-  }, [path.length]);
+  }, [path.length, search]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        size="md"
-        // Mobile: mais largura útil + body em coluna flex (header/lista/footer)
-        // sem clipar rótulos nem esticar o rodapé com spacer.
+        size="lg"
         className="open:p-3 sm:open:p-4"
         bodyClassName="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4 sm:gap-4 sm:p-6"
-        panelClassName="max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)]"
+        panelClassName="h-[min(80vh,680px)] max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(80vh,720px)]"
       >
         <DialogHeader className="shrink-0 text-left">
           <DialogTitle className="pr-8 text-[17px] leading-snug sm:text-lg">
@@ -112,13 +170,29 @@ export function TabulationDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 sm:min-h-[220px] sm:flex-none sm:gap-3">
+        <div className="shrink-0">
+          <InputGlass
+            ref={searchRef}
+            type="search"
+            withSearch
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pesquisar tabulação..."
+            aria-label="Pesquisar tabulação"
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 sm:gap-3">
           {path.length > 0 ? (
             <div className="flex min-w-0 flex-wrap items-center gap-0.5 font-body text-[12px] text-[var(--text-muted)]">
               <button
                 type="button"
                 className="rounded-[var(--radius-sm)] px-1.5 py-0.5 font-medium transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)]"
-                onClick={() => setPath([])}
+                onClick={() => {
+                  setSearch("");
+                  setPath([]);
+                }}
               >
                 Início
               </button>
@@ -132,7 +206,10 @@ export function TabulationDialog({
                       i === path.length - 1 && "text-[var(--brand-primary)]",
                     )}
                     title={n.name}
-                    onClick={() => setPath((prev) => prev.slice(0, i + 1))}
+                    onClick={() => {
+                      setSearch("");
+                      setPath((prev) => prev.slice(0, i + 1));
+                    }}
                   >
                     {n.name}
                   </button>
@@ -142,55 +219,42 @@ export function TabulationDialog({
           ) : null}
 
           {query.isLoading ? (
-            <div className="py-8 text-center text-sm text-[var(--text-muted)]">
+            <div className="flex flex-1 items-center justify-center py-8 text-center text-sm text-[var(--text-muted)]">
               Carregando…
             </div>
           ) : query.isError ? (
-            <div className="py-8 text-center text-sm text-[var(--color-danger)]">
+            <div className="flex flex-1 items-center justify-center py-8 text-center text-sm text-[var(--color-danger)]">
               Erro ao carregar tabulações.
             </div>
-          ) : currentChildren.length === 0 ? (
-            <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] p-4 text-center font-body text-[13px] text-[var(--text-muted)] sm:p-6">
-              {path.length === 0
-                ? "Nenhuma tabulação disponível para este departamento."
-                : "Fim do ramo — selecione esta opção para confirmar."}
+          ) : listed.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] p-4 text-center font-body text-[13px] text-[var(--text-muted)] sm:p-6">
+              {isSearching
+                ? `Nenhuma tabulação encontrada para “${search.trim()}”.`
+                : path.length === 0
+                  ? "Nenhuma tabulação disponível para este departamento."
+                  : "Fim do ramo — selecione esta opção para confirmar."}
             </div>
           ) : (
-            // A lista rola sozinha: o scroll do corpo da modal empurrava os
-            // botões do rodapé pra fora da tela em árvores com muitos motivos.
             <ul
               ref={listRef}
-              className="flex min-h-0 max-h-[min(48dvh,320px)] flex-1 flex-col gap-2 overflow-y-auto overscroll-contain sm:max-h-[min(52vh,360px)] sm:flex-none"
+              className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain"
             >
-              {currentChildren.map((n) => {
+              {listed.map(({ node: n, trail }) => {
                 const hasChildren = n.children.length > 0;
                 const selected =
                   path.length > 0 && path[path.length - 1].id === n.id;
+                const trailLabel = trail.map((t) => t.name).join(" › ");
                 return (
-                  <li key={n.id} className="min-w-0">
+                  <li key={[...trail.map((t) => t.id), n.id].join(":")} className="min-w-0">
                     <button
                       type="button"
                       className={cn(
-                        "flex w-full min-w-0 items-center gap-2.5 rounded-[var(--radius-lg)] border px-2.5 py-2.5 text-left transition-colors sm:gap-3 sm:py-2",
+                        "flex w-full min-w-0 items-center gap-2.5 rounded-[var(--radius-lg)] border px-2.5 py-2.5 text-left transition-colors sm:gap-3 sm:py-2.5",
                         selected
                           ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/8"
                           : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]",
                       )}
-                      onClick={() => {
-                        if (hasChildren) {
-                          setPath((prev) => [...prev, n]);
-                        } else {
-                          // Folha: substitui o ultimo item (ou fixa)
-                          setPath((prev) => {
-                            const next = [...prev];
-                            if (next.length > 0 && next[next.length - 1].children.length === 0) {
-                              next[next.length - 1] = n;
-                              return next;
-                            }
-                            return [...prev, n];
-                          });
-                        }
-                      }}
+                      onClick={() => selectNode(n, trail)}
                     >
                       <span
                         className={cn(
@@ -204,9 +268,15 @@ export function TabulationDialog({
                       >
                         {hasChildren ? <IconFolder size={17} /> : <IconCircleDot size={17} />}
                       </span>
-                      {/* min-w-0: sem isso o flex nao encolhe e "Selecionar" sai da tela */}
-                      <span className="min-w-0 flex-1 break-words font-display text-[13px] font-semibold leading-snug text-[var(--text-primary)] sm:truncate sm:text-[13.5px]">
-                        {n.name}
+                      <span className="min-w-0 flex-1">
+                        <span className="block break-words font-display text-[13px] font-semibold leading-snug text-[var(--text-primary)] sm:truncate sm:text-[13.5px]">
+                          {n.name}
+                        </span>
+                        {trailLabel ? (
+                          <span className="mt-0.5 block truncate font-body text-[11px] text-[var(--text-muted)]">
+                            {trailLabel}
+                          </span>
+                        ) : null}
                       </span>
                       {hasChildren ? (
                         <ChevronRight size={16} className="shrink-0 text-[var(--text-muted)]" />
@@ -226,10 +296,12 @@ export function TabulationDialog({
         </div>
 
         {allowSkipAutomations ? (
-          <SkipAutomationsCheckbox
-            checked={skipAutomations}
-            onChange={setSkipAutomations}
-          />
+          <div className="shrink-0">
+            <SkipAutomationsCheckbox
+              checked={skipAutomations}
+              onChange={setSkipAutomations}
+            />
+          </div>
         ) : null}
 
         {/* Sem flex-1 spacer: no mobile (flex-col-reverse) ele esticava o
@@ -241,7 +313,10 @@ export function TabulationDialog({
               variant="ghost"
               size="sm"
               className="w-full sm:mr-auto sm:w-auto"
-              onClick={() => setPath((prev) => prev.slice(0, -1))}
+              onClick={() => {
+                setSearch("");
+                setPath((prev) => prev.slice(0, -1));
+              }}
             >
               <ChevronLeft size={14} className="mr-1" /> Voltar
             </Button>

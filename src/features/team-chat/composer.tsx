@@ -632,6 +632,9 @@ export function Composer({
                     setPlusOpen((v) => !v);
                     setPicker(null);
                   }}
+                  aria-label="Mais opções"
+                  className={cn(iconBtn, plusOpen && "bg-[var(--orbita-block-soft)] text-foreground")}
+                >
                   <Plus className="h-[22px] w-[22px]" />
                 </button>
               </TooltipGlass>
@@ -696,6 +699,8 @@ export function Composer({
                     setPicker((v) => (v === "emoji" ? null : "emoji"));
                   }}
                   aria-label="Emojis e figurinhas"
+                  className={cn(iconBtn, "bg-[var(--orbita-block-soft)] text-foreground")}
+                >
                   <Smile className="h-[22px] w-[22px]" />
                 </button>
               ) : (

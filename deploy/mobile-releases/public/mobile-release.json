@@ -1,7 +1,7 @@
 {
-  "versionCode": 5,
-  "versionName": "1.0.4",
-  "apkUrl": "https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.4.apk",
+  "versionCode": 6,
+  "versionName": "1.0.5",
+  "apkUrl": "https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.5.apk",
   "force": true,
-  "notes": "Avisos de tarefa chegam como notificacao do Android, mesmo com o app fechado."
+  "notes": "Avisos de tarefa como notificacao do Android e o app volta logado ao ser reaberto."
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { IconPhone } from "@tabler/icons-react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useDealDial } from "../hooks/use-deal-dial";
@@ -10,7 +12,7 @@ interface DealCallButtonProps {
   dealId?: string | null;
   phone: string | null;
   contactId?: string;
-  /** FAB no canto do chat (inbox / Sales Hub). Header do pipeline fica no tamanho padrão. */
+  /** FAB no canto inferior direito do viewport (inbox / Sales Hub). */
   fab?: boolean;
 }
 
@@ -19,11 +21,16 @@ export function DealCallButton({ dealId, phone, contactId, fab = false }: DealCa
   // botão some do card (espelha o comportamento do SoftphoneWidget).
   const callsWidget = useCallsWidget();
   const { dial, canDial, loading } = useDealDial({ dealId, phone, contactId });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (fab) setMounted(true);
+  }, [fab]);
 
   if (!phone) return null;
   if (callsWidget.enabled !== true) return null;
 
-  return (
+  const button = (
     <TooltipGlass label={canDial ? `Ligar ${phone}` : "Conecte o softphone"} side="left">
       <button
         type="button"
@@ -39,5 +46,19 @@ export function DealCallButton({ dealId, phone, contactId, fab = false }: DealCa
         <IconPhone size={fab ? 22 : 18} stroke={2.4} />
       </button>
     </TooltipGlass>
+  );
+
+  if (!fab) return button;
+  if (!mounted) return null;
+
+  // Portal no body: ChatArea tem overflow-hidden + backdrop-blur, que
+  // criam containing block e clipariam um `fixed` no subtree do chat.
+  return createPortal(
+    <div
+      className="pointer-events-none fixed z-(--z-sheet) right-[max(1rem,calc(env(safe-area-inset-right,0px)+1rem))] bottom-[max(1rem,calc(env(safe-area-inset-bottom,0px)+1rem))]"
+    >
+      <div className="pointer-events-auto">{button}</div>
+    </div>,
+    document.body,
   );
 }

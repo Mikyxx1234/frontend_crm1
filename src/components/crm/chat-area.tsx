@@ -178,8 +178,8 @@ interface ChatAreaProps {
    */
   activeBotsSlot?: React.ReactNode
   /**
-   * FAB no canto inferior direito do painel de chat, acima do composer
-   * (não cobre o enviar). Ex.: DealCallButton SIP.
+   * Slot do FAB de ligação (DealCallButton). O botão se posiciona no
+   * viewport (portal + `fixed`); aqui só montamos o node.
    */
   floatingCallSlot?: React.ReactNode
 }
@@ -483,12 +483,8 @@ export function ChatArea({
           ao lado da composer. O slot cuida do próprio posicionamento. */}
       {activeBotsSlot}
 
-      {/* SIP FAB — canto inf. direito do painel, acima do composer. */}
-      {floatingCallSlot ? (
-        <div className="pointer-events-none absolute right-3 z-30 bottom-[max(6rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))]">
-          <div className="pointer-events-auto">{floatingCallSlot}</div>
-        </div>
-      ) : null}
+      {/* SIP FAB — posiciona-se no viewport (DealCallButton `fab`). */}
+      {floatingCallSlot}
 
       {/* Faixa sutil de conversa resolvida — substitui o chip "ENCERRADA"
           do header. Verde suave, discreta, colada abaixo do header. */}
@@ -715,10 +711,7 @@ export function ChatArea({
               ? `${unreadCount} mensagens não lidas — ir para o fim`
               : "Ir para a última mensagem"
           }
-          className={cn(
-            "absolute bottom-24 z-20 flex size-10 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-px hover:text-[var(--brand-primary)] active:scale-95",
-            floatingCallSlot ? "right-20" : "right-6",
-          )}
+          className="absolute bottom-24 right-6 z-20 flex size-10 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-px hover:text-[var(--brand-primary)] active:scale-95"
         >
           <IconChevronDown size={20} />
           {unreadCount > 0 && (

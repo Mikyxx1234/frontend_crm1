@@ -25,6 +25,7 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RouteTransition } from "@/components/crm/route-transition";
 import { MobileStartRoute } from "@/components/layout/mobile-start-route";
 import { SystemPresenceHeartbeat } from "@/components/layout/system-presence-heartbeat";
+import { NativeFcmBootstrap } from "@/components/layout/native-fcm-bootstrap";
 import { TaskAlertCenter } from "@/components/layout/task-alert-center";
 import { SettingsDrawerProvider } from "@/features/settings/settings-drawer-context";
 
@@ -61,6 +62,7 @@ export default function AppLayout({
         <SoftphoneWidget />
         {/* Alerta global de tarefa (polling; sem overlay). */}
         <TaskAlertCenter />
+        <NativeFcmBootstrap />
         {/* Cold start mobile/APK: respeita startRoute do Layout Builder. */}
         <MobileStartRoute />
         {/* Barra inferior mobile (mobile-layout + Mais). md+ não renderiza. */}

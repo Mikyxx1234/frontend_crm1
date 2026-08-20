@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "365645784048",
+    "project_id": "crm-app-mobile-6ad4f",
+    "storage_bucket": "crm-app-mobile-6ad4f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:365645784048:android:cb8c2e216b7d763da1f335",
+        "android_client_info": {
+          "package_name": "br.com.eduit.crm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhKr8edVpcDhOwgLsHRgUfjUIzRxRiof0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

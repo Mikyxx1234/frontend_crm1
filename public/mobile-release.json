@@ -1,7 +1,7 @@
 {
-  "versionCode": 4,
-  "versionName": "1.0.3",
-  "apkUrl": "https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.3.apk",
+  "versionCode": 5,
+  "versionName": "1.0.4",
+  "apkUrl": "https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.4.apk",
   "force": true,
-  "notes": "Desbloqueio por digital/Face Unlock no app e correcao do salvamento do layout mobile."
+  "notes": "Avisos de tarefa chegam como notificacao do Android, mesmo com o app fechado."
 }

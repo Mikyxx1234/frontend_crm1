@@ -127,7 +127,7 @@ export function TeamChatApp() {
       {/* Lista de conversas - coluna esquerda */}
       <div
         className={cn(
-          "flex h-full min-h-0 w-[340px] min-w-[320px] shrink-0 flex-col gap-[var(--orbita-gap)]",
+          "flex h-full min-h-0 w-[340px] min-w-[320px] shrink-0 flex-col border-r border-[var(--orbita-divider)]",
           selected ? "hidden lg:flex" : "flex",
         )}
       >
@@ -154,7 +154,7 @@ export function TeamChatApp() {
       {/* Painel de conversa - coluna direita */}
       <section
         className={cn(
-          "relative flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--orbita-gap)]",
+          "relative flex min-h-0 min-w-0 flex-1 flex-col",
           selected ? "flex" : "hidden lg:flex",
         )}
       >
@@ -318,23 +318,25 @@ function Thread({
               : pin.mutate({ roomId: room.id, messageId: id }, { onError: (e: Error) => toast.error(e.message) })
           }
         />
-      </div>
-      <div className="relative z-20 shrink-0 overflow-visible border-t border-black/[0.04] bg-[var(--orbita-chrome)] dark:border-white/[0.06]">
-        <Composer
-          roomId={room.id}
-          placeholder="Digite uma mensagem"
-          onSend={async (payload) => {
-            if (mock) {
-              sendMockMessage(room.id, payload, { id: meId, name: meName, avatarUrl: meAvatar })
-              return
-            }
-            await send.mutateAsync({
-              roomId: room.id,
-              content: payload.content,
-              attachments: payload.attachments,
-            })
-          }}
-        />
+        <div className="relative z-20 shrink-0 overflow-visible px-3 pb-4 pt-2">
+          <div className="overflow-visible rounded-[28px] bg-[var(--orbita-block)] shadow-[0_1px_4px_rgba(11,20,26,0.14)]">
+            <Composer
+              roomId={room.id}
+              placeholder="Digite uma mensagem"
+              onSend={async (payload) => {
+                if (mock) {
+                  sendMockMessage(room.id, payload, { id: meId, name: meName, avatarUrl: meAvatar })
+                  return
+                }
+                await send.mutateAsync({
+                  roomId: room.id,
+                  content: payload.content,
+                  attachments: payload.attachments,
+                })
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -342,7 +344,7 @@ function Thread({
 
 function LandingEmpty({ onNew }: { onNew: () => void }) {
   return (
-    <div className="orbita-block flex flex-1 flex-col items-center justify-center px-6 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center bg-[var(--orbita-paper)] px-6 text-center" data-wa-thread>
       <p className="font-display text-[32px] font-light tracking-tight text-[var(--orbita-text)]">Órbita</p>
       <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-[var(--orbita-text-secondary)]">
         Escolha uma conversa à esquerda ou comece uma nova mensagem.

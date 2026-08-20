@@ -45,6 +45,7 @@ export function Avatar({
           background: tone.bg,
           color: tone.fg,
           fontSize: Math.round(px * 0.36),
+          borderRadius: "50%",
         }}
       >
         <span aria-hidden={Boolean(imageUrl)}>{person.initials}</span>
@@ -85,7 +86,7 @@ export function GroupGlyph({ seed, size = 40 }: { seed: string; size?: number })
       style={{
         width: size,
         height: size,
-        borderRadius: "var(--orbita-radius-avatar)",
+        borderRadius: "50%",
         background: tone.bg,
         color: tone.fg,
       }}
@@ -100,7 +101,7 @@ export function AvatarStack({ people, size = "sm" }: { people: ChatPerson[]; siz
   return (
     <div className="flex -space-x-3" aria-hidden="true">
       {shown.map((p) => (
-        <div key={p.id} className="rounded-[var(--orbita-radius-avatar)] ring-2 ring-[var(--orbita-chrome)]">
+        <div key={p.id} className="rounded-full ring-2 ring-[var(--orbita-chrome)]">
           <Avatar person={p} size={size} />
         </div>
       ))}

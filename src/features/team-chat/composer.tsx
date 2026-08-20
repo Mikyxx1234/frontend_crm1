@@ -194,7 +194,7 @@ export function Composer({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(Math.max(el.scrollHeight, 36), 160)}px`;
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, 48), 160)}px`;
   }
 
   function stageFiles(files: File[], asSticker = false) {
@@ -474,7 +474,7 @@ export function Composer({
   }
 
   const iconBtn =
-    "grid h-9 w-9 shrink-0 place-items-center rounded-[11px] text-muted-foreground transition-colors hover:bg-[var(--orbita-block-soft)] hover:text-foreground";
+    "grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--orbita-text-secondary)] transition-colors hover:bg-[var(--orbita-field)] hover:text-[var(--orbita-text)]";
 
   const formatBtn =
     "grid h-7 w-7 place-items-center rounded-full text-muted-foreground hover:bg-[var(--orbita-block-soft)] hover:text-foreground";
@@ -614,15 +614,15 @@ export function Composer({
                 onClick={() => void sendAudio()}
                 disabled={busy}
                 aria-label="Enviar áudio"
-                className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[11px] bg-[var(--orbita-selected)] text-white disabled:opacity-60"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--orbita-selected)] text-white disabled:opacity-60"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-5 w-5" />
               </button>
             </div>
           )}
 
           {!recording && (
-            <div className="flex items-end gap-1">
+            <div className="flex items-center gap-1">
               <div className="relative shrink-0">
               <TooltipGlass label="Mais opções" side="top">
                 <button
@@ -632,10 +632,7 @@ export function Composer({
                     setPlusOpen((v) => !v);
                     setPicker(null);
                   }}
-                  aria-label="Mais opções"
-                  className={cn(iconBtn, plusOpen && "bg-[var(--orbita-block-soft)] text-foreground")}
-                >
-                  <Plus className="h-5 w-5" />
+                  <Plus className="h-[22px] w-[22px]" />
                 </button>
               </TooltipGlass>
                 {plusOpen && (
@@ -699,9 +696,7 @@ export function Composer({
                     setPicker((v) => (v === "emoji" ? null : "emoji"));
                   }}
                   aria-label="Emojis e figurinhas"
-                  className={cn(iconBtn, "bg-[var(--orbita-block-soft)] text-foreground")}
-                >
-                  <Smile className="h-5 w-5" />
+                  <Smile className="h-[22px] w-[22px]" />
                 </button>
               ) : (
                 <TooltipGlass label="Emojis e figurinhas" side="top">
@@ -715,13 +710,13 @@ export function Composer({
                     aria-label="Emojis e figurinhas"
                     className={iconBtn}
                   >
-                    <Smile className="h-5 w-5" />
+                    <Smile className="h-[22px] w-[22px]" />
                   </button>
                 </TooltipGlass>
               )}
               <div
                 className={cn(
-                  "relative flex min-h-10 min-w-0 flex-1 items-end rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] px-3",
+                  "relative flex min-h-12 min-w-0 flex-1 items-center rounded-[20px] bg-transparent px-2",
                   dragging && "ring-2 ring-[var(--orbita-selected)]/40",
                 )}
               >
@@ -783,7 +778,7 @@ export function Composer({
                   onSelect={syncSelection}
                   placeholder={placeholder}
                   disabled={busy}
-                  className="max-h-40 min-h-10 min-w-0 flex-1 resize-none bg-transparent py-2 text-[14px] leading-snug text-foreground outline-none placeholder:text-muted-foreground"
+                  className="max-h-40 min-h-12 min-w-0 flex-1 resize-none bg-transparent py-3 text-[15px] leading-snug text-[var(--orbita-text)] outline-none placeholder:text-[var(--orbita-text-tertiary)]"
                 />
               </div>
               {canSend ? (
@@ -792,9 +787,9 @@ export function Composer({
                   onClick={() => void submitText()}
                   disabled={busy}
                   aria-label="Enviar mensagem"
-                  className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[11px] bg-[var(--orbita-selected)] text-white disabled:opacity-60"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--orbita-selected)] text-white disabled:opacity-60"
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-5 w-5" />
                 </button>
               ) : (
                 <button
@@ -803,7 +798,7 @@ export function Composer({
                   aria-label="Gravar áudio"
                   className={iconBtn}
                 >
-                  <Mic className="h-5 w-5" />
+                  <Mic className="h-[22px] w-[22px]" />
                 </button>
               )}
             </div>

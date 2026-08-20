@@ -8,7 +8,7 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { cn } from "@/lib/utils";
 
 import { Avatar } from "./avatar";
-import { dayKey, formatClock, formatDayLabel, REACTION_EMOJIS, toPerson } from "./helpers";
+import { dayKey, formatClock, formatDayLabel, getOrbitaNameColor, REACTION_EMOJIS, toPerson } from "./helpers";
 import type { TeamChatAttachment, TeamChatMessage, TeamChatReaction, TeamChatRoom } from "./types";
 
 function formatChatText(text: string, mine: boolean): ReactNode {
@@ -265,7 +265,12 @@ function MessageRow({
         )}
         <div className={cn("flex min-w-0 flex-col", mine ? "items-end" : "items-start")}>
           {first && isGroup && !mine && (
-            <span className="mb-0.5 px-1 text-[12.5px] font-medium text-[var(--orbita-text)]">{authorName}</span>
+            <span
+              className="mb-0.5 px-1 text-[12.5px] font-medium"
+              style={{ color: author ? getOrbitaNameColor(author.id) : "var(--orbita-text)" }}
+            >
+              {authorName}
+            </span>
           )}
           <div className={cn("relative w-fit max-w-full", reactions.length > 0 && "mb-3")}>
             <MessageBody
@@ -448,7 +453,7 @@ function MessageBody({
         </div>
       ))}
       {hasText && (
-        <div className={cn(bubbleCls, "px-[9px] pb-1.5 pt-1.5")}>
+        <div className={cn(bubbleCls, "px-3 pb-2 pt-2")}>
           {pinned && (
             <span
               className={cn(
@@ -459,7 +464,7 @@ function MessageBody({
               <Pin className="h-2.5 w-2.5" />
             </span>
           )}
-          <p className="whitespace-pre-wrap break-words text-[14.2px] leading-[19px]">
+          <p className="whitespace-pre-wrap break-words text-[14.5px] leading-[20px]">
             {formatChatText(message.content, mine)}
             <span className="inline-block w-[46px]" aria-hidden />
           </p>

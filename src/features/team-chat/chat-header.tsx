@@ -75,7 +75,7 @@ export function ChatHeader({
   const people = room.members.map(toPerson);
 
   return (
-    <header className="shrink-0 border-b border-black/[0.06] dark:border-white/[0.06]">
+    <header className="shrink-0 border-b border-black/[0.06] bg-[var(--orbita-chrome)] dark:border-white/[0.06]">
       <div className="flex h-[60px] items-center justify-between gap-3 px-4">
         <div className="flex min-w-0 items-center gap-3">
           <button

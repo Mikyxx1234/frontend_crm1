@@ -49,6 +49,19 @@ export function getOrbitaChannelTonal(id: string) {
   return CHANNEL_TONES[hashOf(id) % CHANNEL_TONES.length];
 }
 
+const NAME_COLORS = [
+  "var(--orbita-name-1)",
+  "var(--orbita-name-2)",
+  "var(--orbita-name-3)",
+  "var(--orbita-name-4)",
+  "var(--orbita-name-5)",
+  "var(--orbita-name-6)",
+] as const;
+
+export function getOrbitaNameColor(id: string) {
+  return NAME_COLORS[hashOf(id) % NAME_COLORS.length];
+}
+
 export function normalizeAvatarUrl(url?: string | null): string | null {
   const value = url?.trim();
   if (!value) return null;

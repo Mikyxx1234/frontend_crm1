@@ -87,7 +87,7 @@ function ChatRow({
   return (
     <div
       className={cn(
-        "group flex min-h-[72px] w-full items-center gap-3 px-3 py-3 text-left transition-colors",
+        "group flex min-h-[76px] w-full items-center gap-3 px-4 py-3 text-left transition-colors",
         active ? "bg-[var(--orbita-list-selected-bg)]" : "hover:bg-[var(--orbita-field)]",
       )}
     >
@@ -255,9 +255,9 @@ export function Sidebar({
 
   return (
     <aside className="orbita-block flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="shrink-0 px-3 pb-2 pt-3">
+      <div className="shrink-0 px-4 pb-3 pt-4">
         <div className="flex items-center gap-1">
-          <h1 className="min-w-0 flex-1 truncate px-1 font-display text-[18px] font-semibold tracking-tight text-[var(--orbita-text)]">
+          <h1 className="min-w-0 flex-1 truncate px-1 font-display text-[22px] font-semibold tracking-tight text-[var(--orbita-text)]">
             Órbita
           </h1>
           <HeaderIcon label="Nova conversa" onClick={onNew}>
@@ -291,7 +291,7 @@ export function Sidebar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Pesquisar conversas"
-            className="w-full rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-field)] py-2 pl-10 pr-3 text-[14px] text-[var(--orbita-text)] outline-none placeholder:text-[var(--orbita-text-tertiary)]"
+            className="h-11 w-full rounded-[10px] bg-[var(--orbita-field)] py-2.5 pl-10 pr-3 text-[15px] text-[var(--orbita-text)] outline-none placeholder:text-[var(--orbita-text-tertiary)]"
           />
         </div>
 
@@ -304,9 +304,9 @@ export function Sidebar({
                 type="button"
                 onClick={() => setFilter(pill.id)}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium transition-colors",
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
                   selected
-                    ? "bg-[var(--orbita-text)] text-[var(--orbita-block)]"
+                    ? "bg-[var(--orbita-chip-active)] text-[var(--orbita-chip-active-text)]"
                     : "bg-[var(--orbita-field)] text-[var(--orbita-text-secondary)] hover:text-[var(--orbita-text)]",
                 )}
               >

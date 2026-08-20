@@ -1,7 +1,7 @@
 {
-  "versionCode": 6,
-  "versionName": "1.0.5",
-  "apkUrl": "https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.5.apk",
+  "versionCode": 7,
+  "versionName": "1.0.6",
+  "apkUrl": "https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.6.apk",
   "force": true,
-  "notes": "Avisos de tarefa como notificacao do Android e o app volta logado ao ser reaberto."
+  "notes": "Icone EduIT no aplicativo e nas notificacoes nativas."
 }

@@ -186,6 +186,7 @@ export default function V2ActivitiesClientPage() {
         scheduledAt: localDateTimeToIso(a.start),
         completed: a.status === "concluida",
         contactId: a.contactId ?? null,
+        dealId: a.dealId ?? null,
         userId: a.assigneeType === "department" ? null : a.assigneeUserId ?? undefined,
         departmentId: a.assigneeType === "department" ? a.departmentId ?? null : null,
       },

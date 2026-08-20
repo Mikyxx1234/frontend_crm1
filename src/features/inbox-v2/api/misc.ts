@@ -451,27 +451,8 @@ export async function listInboxFilterChannels(): Promise<InboxFilterChannel[]> {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Atividades / Inbox stats
+// Inbox stats
 // ─────────────────────────────────────────────────────────────────
-
-export interface ActivityPayload {
-  type: "CALL" | "MEETING" | "TASK" | "OTHER" | string;
-  title: string;
-  contactId?: string;
-  conversationId?: string;
-  dealId?: string;
-  scheduledAt?: string;
-}
-
-/** POST /api/activities */
-export async function createActivity(payload: ActivityPayload): Promise<void> {
-  const res = await fetch(apiUrl("/api/activities"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error("Erro ao criar atividade");
-}
 
 /** GET /api/inbox/daily-stats */
 export async function getDailyStats(): Promise<{

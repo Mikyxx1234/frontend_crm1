@@ -1,13 +1,10 @@
 "use client";
 
-import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconCalendar as Calendar,
   IconCircleCheck as CheckCircle2,
   IconCircle as Circle,
-  IconClock,
   IconMail as Mail,
   IconMessageCircle as MessageCircle,
   IconNotes,
@@ -18,88 +15,27 @@ import {
   IconLoader2 as Loader2,
 } from "@tabler/icons-react";
 import type { Icon as LucideIcon } from "@tabler/icons-react";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Input } from "@/components/ui/input";
-import { SelectNative } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { TooltipHost } from "@/components/ui/tooltip";
+import { ActivityComposer } from "@/components/crm/activities/activity-composer";
 import { ActivityDetailDialog } from "@/components/crm/activities/activity-detail-dialog";
+import { TooltipHost } from "@/components/ui/tooltip";
 import { cn, formatDateTime } from "@/lib/utils";
-import type { Activity, ActivityKind } from "@/lib/activities-data";
+import type { Activity } from "@/lib/activities-data";
+import {
+  useActivities,
+  useCreateActivity,
+  useDeleteActivity,
+  useUpdateActivity,
+} from "@/features/directory-v2/hooks";
+import {
+  activityKindToType,
+  dtoToActivity,
+  localDateTimeToIso,
+} from "@/features/directory-v2/activity-adapter";
+import type { ActivityListItemDto } from "@/features/directory-v2/api";
 
-import type { DealDetailActivity } from "../shared";
 import { ACTIVITY_TYPES } from "../shared";
-
-// ── TimePicker DS v2 ──────────────────────────────────────────────
-function TimePickerInline({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-}) {
-  const [hh, mm] = value ? value.split(":") : ["", ""];
-
-  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
-  const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
-
-  function handleHour(h: string) {
-    onChange(`${h}:${mm || "00"}`);
-  }
-  function handleMinute(m: string) {
-    onChange(`${hh || "00"}:${m}`);
-  }
-
-  const selectCls = cn(
-    "h-8 rounded-lg border border-border bg-[var(--color-bg-card)] px-1.5 text-[13px] text-foreground transition appearance-none cursor-pointer",
-    "focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]/40",
-    "disabled:cursor-not-allowed disabled:opacity-40",
-  );
-
-  return (
-    <div
-      className={cn(
-        "flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-border bg-[var(--color-bg-card)] px-1.5 transition",
-        disabled && "opacity-40 pointer-events-none",
-      )}
-    >
-      <IconClock size={12} className="shrink-0 text-[var(--color-ink-muted)]" />
-      <select
-        disabled={disabled}
-        value={hh || ""}
-        onChange={(e) => handleHour(e.target.value)}
-        className={cn(selectCls, "w-[38px] border-0 bg-transparent focus:ring-0 px-0.5")}
-        aria-label="Hora"
-      >
-        <option value="">--</option>
-        {hours.map((h) => (
-          <option key={h} value={h}>
-            {h}
-          </option>
-        ))}
-      </select>
-      <span className="text-[11px] font-bold text-[var(--color-ink-muted)]">:</span>
-      <select
-        disabled={disabled}
-        value={mm || ""}
-        onChange={(e) => handleMinute(e.target.value)}
-        className={cn(selectCls, "w-[38px] border-0 bg-transparent focus:ring-0 px-0.5")}
-        aria-label="Minuto"
-      >
-        <option value="">--</option>
-        {minutes.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
 
 const TYPE_VISUAL: Record<
   string,
@@ -114,115 +50,77 @@ const TYPE_VISUAL: Record<
   OTHER: { Icon: Calendar, bg: "bg-[var(--color-warn-bg)]", ring: "ring-[var(--color-warn)]/70", fg: "text-[var(--color-warn)]" },
 };
 
-const TYPE_TO_KIND: Record<string, ActivityKind> = {
-  CALL: "ligacao",
-  MEETING: "reuniao",
-  EMAIL: "email",
-  TASK: "tarefa",
-  OTHER: "evento",
-};
-
-function dealActivityToUi(a: DealDetailActivity, dealId: string): Activity {
-  const iso = a.scheduledAt ?? a.createdAt;
-  const d = iso ? new Date(iso) : new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return {
-    id: a.id,
-    kind: TYPE_TO_KIND[a.type] ?? "tarefa",
-    title: a.title,
-    start: `${y}-${m}-${day}T${hh}:${mm}`,
-    status: a.completed ? "concluida" : "pendente",
-    notes: a.description ?? undefined,
-    dealId,
-    assigneeUserId: a.user?.id ?? null,
-    assigneeLabel: a.user?.name ?? null,
-    createdBy: null,
-  };
-}
-
 type ActivitiesPanelProps = {
-  activities?: DealDetailActivity[];
   dealId: string;
+  contactId?: string | null;
+  contactName?: string | null;
+  dealTitle?: string | null;
   onCreated?: () => void;
+  /** @deprecated Ignorado — a lista vem de `useActivities({ dealId })`. */
+  activities?: unknown;
 };
 
-const activitiesKey = (dealId: string) => ["deal-activities", dealId] as const;
-
-export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
-  const queryClient = useQueryClient();
-  const [type, setType] = React.useState("TASK");
-  const [title, setTitle] = React.useState("");
-  const [desc, setDesc] = React.useState("");
-  const [scheduledDate, setScheduledDate] = React.useState("");
-  const [scheduledTime, setScheduledTime] = React.useState("");
-  const [open, setOpen] = React.useState(false);
+export function ActivitiesPanel({
+  dealId,
+  contactId = null,
+  contactName = null,
+  dealTitle = null,
+  onCreated,
+}: ActivitiesPanelProps) {
+  const [composerOpen, setComposerOpen] = React.useState(false);
   const [detailActivity, setDetailActivity] = React.useState<Activity | null>(null);
 
-  const scheduledISO = React.useMemo(() => {
-    if (!scheduledDate) return "";
-    const time = scheduledTime || "00:00";
-    return `${scheduledDate}T${time}`;
-  }, [scheduledDate, scheduledTime]);
-
-  const { data: activities = [], isLoading } = useQuery<DealDetailActivity[]>({
-    queryKey: activitiesKey(dealId),
-    queryFn: async () => {
-      const res = await fetch(apiUrl(`/api/activities?dealId=${dealId}&perPage=100`));
-      if (!res.ok) throw new Error("Erro ao carregar atividades");
-      const json = await res.json().catch(() => ({}));
-      return Array.isArray(json) ? json : (json.items ?? []);
-    },
+  const activitiesQuery = useActivities({
+    dealId,
+    perPage: 100,
     enabled: Boolean(dealId),
-    staleTime: 30_000,
   });
+  const activities = activitiesQuery.data?.items ?? [];
+  const isLoading = activitiesQuery.isLoading;
 
-  const invalidate = React.useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: activitiesKey(dealId) });
-    onCreated?.();
-  }, [dealId, queryClient, onCreated]);
+  const createMutation = useCreateActivity();
+  const updateMutation = useUpdateActivity();
+  const deleteMutation = useDeleteActivity();
 
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const body: Record<string, unknown> = { type, title: title.trim(), dealId };
-      if (desc.trim()) body.description = desc.trim();
-      if (scheduledISO) body.scheduledAt = new Date(scheduledISO).toISOString();
-      const res = await fetch(apiUrl("/api/activities"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error("Erro ao criar atividade");
-      return res.json();
-    },
-    onSuccess: () => {
-      setTitle("");
-      setDesc("");
-      setScheduledDate("");
-      setScheduledTime("");
-      setOpen(false);
-      invalidate();
-    },
-  });
+  const handleCreate = (a: Activity) => {
+    createMutation.mutate(
+      {
+        type: activityKindToType(a.kind),
+        title: a.title,
+        description: a.notes ?? null,
+        scheduledAt: localDateTimeToIso(a.start),
+        completed: false,
+        contactId: a.contactId ?? contactId ?? null,
+        dealId: a.dealId ?? dealId,
+        userId: a.assigneeType === "department" ? null : a.assigneeUserId ?? undefined,
+        departmentId: a.assigneeType === "department" ? a.departmentId ?? null : null,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Tarefa criada");
+          onCreated?.();
+        },
+        onError: (err) => toast.error(err.message || "Falha ao criar tarefa"),
+      },
+    );
+  };
 
-  const toggleMut = useMutation({
-    mutationFn: (id: string) =>
-      fetch(apiUrl(`/api/activities/${id}/toggle`), { method: "POST" }).then((r) => {
-        if (!r.ok) throw new Error();
-      }),
-    onSuccess: invalidate,
-  });
+  const handleToggle = (dto: ActivityListItemDto) => {
+    const next = !dto.completed;
+    updateMutation.mutate({
+      id: dto.id,
+      payload: {
+        completed: next,
+        completedAt: next ? new Date().toISOString() : null,
+      },
+    });
+  };
 
-  const deleteMut = useMutation({
-    mutationFn: (id: string) =>
-      fetch(apiUrl(`/api/activities/${id}`), { method: "DELETE" }).then((r) => {
-        if (!r.ok) throw new Error();
-      }),
-    onSuccess: invalidate,
-  });
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id, {
+      onSuccess: () => onCreated?.(),
+    });
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[var(--color-chat-bg)]">
@@ -233,100 +131,19 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
             "shadow-[var(--shadow-sm)]",
           )}
         >
-          {!open ? (
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className={cn(
-                "flex w-full items-center gap-2.5 rounded-xl border border-dashed border-border",
-                "bg-[var(--color-bg-subtle)]/60 px-3.5 py-3 text-left text-[13px]",
-                "tracking-tight text-[var(--text-muted)] transition-colors",
-                "hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-bg-card)] hover:text-[var(--text-primary)]",
-              )}
-            >
-              <Plus className="size-4 text-primary" strokeWidth={2.4} />
-              <span className="font-semibold">Nova tarefa</span>
-            </button>
-          ) : (
-            <div className="space-y-2.5">
-              <div className="grid gap-2.5 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
-                    Tipo
-                  </label>
-                  <SelectNative
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="h-9 rounded-xl border-border text-sm"
-                  >
-                    {ACTIVITY_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </SelectNative>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
-                    Agendar
-                  </label>
-                  <div className="flex gap-1.5">
-                    <DatePicker
-                      value={scheduledDate || null}
-                      onChange={(v) => setScheduledDate(v)}
-                      placeholder="Data"
-                      className="min-w-0 flex-1"
-                    />
-                    <TimePickerInline
-                      value={scheduledTime}
-                      onChange={setScheduledTime}
-                      disabled={!scheduledDate}
-                    />
-                  </div>
-                </div>
-              </div>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Titulo da tarefa..."
-                className="h-9 rounded-xl border-border text-sm"
-                autoFocus
-              />
-              <Textarea
-                rows={2}
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
-                placeholder="Descricao (opcional)"
-                className="rounded-xl border-border text-sm"
-              />
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full px-4 text-[12px] font-bold text-[var(--text-muted)]"
-                  onClick={() => {
-                    setOpen(false);
-                    setTitle("");
-                    setDesc("");
-                    setScheduledDate("");
-                    setScheduledTime("");
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="rounded-full bg-primary px-4 text-[12px] font-bold text-white shadow-[var(--shadow-indigo-glow)] hover:bg-[var(--color-primary-dark)]"
-                  disabled={!title.trim() || mutation.isPending}
-                  onClick={() => mutation.mutate()}
-                >
-                  {mutation.isPending ? "Salvando..." : "Adicionar"}
-                </Button>
-              </div>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => setComposerOpen(true)}
+            className={cn(
+              "flex w-full items-center gap-2.5 rounded-xl border border-dashed border-border",
+              "bg-[var(--color-bg-subtle)]/60 px-3.5 py-3 text-left text-[13px]",
+              "tracking-tight text-[var(--text-muted)] transition-colors",
+              "hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-bg-card)] hover:text-[var(--text-primary)]",
+            )}
+          >
+            <Plus className="size-4 text-primary" strokeWidth={2.4} />
+            <span className="font-semibold">Nova tarefa</span>
+          </button>
         </div>
 
         {isLoading ? (
@@ -340,14 +157,31 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
         ) : (
           <ActivityTimeline
             activities={activities}
-            onToggle={(id) => toggleMut.mutate(id)}
-            onDelete={(id) => deleteMut.mutate(id)}
-            onOpenDetails={(a) => setDetailActivity(dealActivityToUi(a, dealId))}
-            togglePending={toggleMut.isPending}
-            deletePending={deleteMut.isPending}
+            onToggle={handleToggle}
+            onDelete={handleDelete}
+            onOpenDetails={(a) => setDetailActivity(dtoToActivity(a))}
+            togglePending={updateMutation.isPending}
+            deletePending={deleteMutation.isPending}
           />
         )}
       </div>
+
+      <ActivityComposer
+        open={composerOpen}
+        onOpenChange={setComposerOpen}
+        defaultDate={new Date()}
+        onCreate={handleCreate}
+        presetContactId={contactId}
+        presetContactName={contactName}
+        presetDealId={dealId}
+        presetDealTitle={dealTitle}
+        availableDeals={
+          dealId
+            ? [{ id: dealId, title: dealTitle || "Negócio atual" }]
+            : undefined
+        }
+        lockContact={Boolean(contactId)}
+      />
 
       <ActivityDetailDialog
         open={Boolean(detailActivity)}
@@ -369,10 +203,10 @@ function ActivityTimeline({
   togglePending,
   deletePending,
 }: {
-  activities: DealDetailActivity[];
-  onToggle: (id: string) => void;
+  activities: ActivityListItemDto[];
+  onToggle: (a: ActivityListItemDto) => void;
   onDelete: (id: string) => void;
-  onOpenDetails: (a: DealDetailActivity) => void;
+  onOpenDetails: (a: ActivityListItemDto) => void;
   togglePending: boolean;
   deletePending: boolean;
 }) {
@@ -398,11 +232,13 @@ function ActivityTimeline({
         {activities.map((a) => {
           const visual = TYPE_VISUAL[a.type] ?? TYPE_VISUAL.OTHER;
           const Icon = visual.Icon;
+          const assigneeLabel =
+            a.department?.name ?? a.user?.name ?? "Sem responsável";
           return (
             <li key={a.id} className="group relative">
               <button
                 type="button"
-                onClick={() => onToggle(a.id)}
+                onClick={() => onToggle(a)}
                 disabled={togglePending}
                 aria-label={a.completed ? "Marcar como pendente" : "Concluir"}
                 className={cn(
@@ -472,7 +308,7 @@ function ActivityTimeline({
                       </p>
                     ) : null}
                     <p className="mt-1.5 text-[11px] tracking-tight text-[var(--color-ink-muted)]">
-                      {a.user.name} · {formatDateTime(a.scheduledAt ?? a.createdAt)}
+                      {assigneeLabel} · {formatDateTime(a.scheduledAt ?? a.createdAt)}
                     </p>
                   </div>
                   <div

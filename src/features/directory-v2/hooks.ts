@@ -353,8 +353,46 @@ export function useDeleteCompany() {
   });
 }
 
-function invalidateActivities(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: ["v2-activities"], exact: false });
+/** Prefixo canônico das queries de atividades (aba global + painéis). */
+export const ACTIVITIES_QUERY_KEY = "v2-activities" as const;
+
+export type UseActivitiesParams = {
+  type?: ActivityTypeDto;
+  completed?: boolean;
+  page?: number;
+  perPage?: number;
+  scope?: "mine" | "department" | "all";
+  dealId?: string;
+  contactId?: string;
+  enabled?: boolean;
+};
+
+export function activitiesQueryKey(params: {
+  type?: ActivityTypeDto;
+  completed?: boolean;
+  scope?: "mine" | "department" | "all";
+  dealId?: string;
+  contactId?: string;
+  page?: number;
+  perPage?: number;
+}) {
+  return [
+    ACTIVITIES_QUERY_KEY,
+    params.type ?? "__any__",
+    params.completed === undefined ? "__any__" : params.completed,
+    params.scope ?? "all",
+    params.dealId ?? "__any__",
+    params.contactId ?? "__any__",
+    params.page ?? 1,
+    params.perPage ?? 30,
+  ] as const;
+}
+
+/** Invalida lista global, filtros contextuais e chave legada do painel de deal. */
+export function invalidateActivities(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: [ACTIVITIES_QUERY_KEY], exact: false });
+  qc.invalidateQueries({ queryKey: ["deal-activities"], exact: false });
+  qc.invalidateQueries({ queryKey: ["v2-activity"], exact: false });
 }
 
 export function useCreateActivity() {
@@ -381,30 +419,26 @@ export function useDeleteActivity() {
   });
 }
 
-export function useActivities(params: {
-  type?: ActivityTypeDto;
-  completed?: boolean;
-  page?: number;
-  perPage?: number;
-  scope?: "mine" | "department" | "all";
-  enabled?: boolean;
-}) {
+export function useActivities(params: UseActivitiesParams = {}) {
   const page = params.page ?? 1;
   const perPage = params.perPage ?? 30;
   return useQuery<ActivityListPage>({
-    queryKey: [
-      "v2-activities",
-      params.type ?? "__any__",
-      params.completed === undefined ? "__any__" : params.completed,
-      params.scope ?? "all",
+    queryKey: activitiesQueryKey({
+      type: params.type,
+      completed: params.completed,
+      scope: params.scope,
+      dealId: params.dealId,
+      contactId: params.contactId,
       page,
       perPage,
-    ],
+    }),
     queryFn: () =>
       fetchActivities({
         type: params.type,
         completed: params.completed,
         scope: params.scope,
+        dealId: params.dealId,
+        contactId: params.contactId,
         page,
         perPage,
       }),
@@ -431,8 +465,6 @@ function invalidateActivityComments(
   qc.invalidateQueries({ queryKey: ["v2-activity-comment-history", activityId] });
   qc.invalidateQueries({ queryKey: ["v2-activity", activityId] });
   invalidateActivities(qc);
-  // Painel do negócio usa chave própria
-  qc.invalidateQueries({ queryKey: ["deal-activities"], exact: false });
 }
 
 export function useActivityComments(activityId: string | null, enabled = true) {

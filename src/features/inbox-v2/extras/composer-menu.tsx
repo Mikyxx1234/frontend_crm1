@@ -45,6 +45,10 @@ export function ComposerMenu({
   onToggleNote,
   isResolved,
   contactId,
+  contactName,
+  dealId,
+  dealTitle,
+  deals,
   templateContext,
   onPickInternal,
   onPickTemplate,
@@ -64,6 +68,12 @@ export function ComposerMenu({
   onToggleNote?: () => void;
   isResolved?: boolean;
   contactId?: string | null;
+  contactName?: string | null;
+  /** Negócio exibido (padrão ao criar tarefa). */
+  dealId?: string | null;
+  dealTitle?: string | null;
+  /** Negócios do contato — permite trocar o vínculo da tarefa. */
+  deals?: { id: string; title: string }[];
   templateContext?: InternalTemplateContext;
   /** Insere o texto do modelo interno (interpolado) no composer para edição.
    *  Se o modelo tiver anexo(s), `media` é repassado pro composer enviar junto
@@ -286,8 +296,11 @@ export function ComposerMenu({
       <TaskDialog
         open={taskOpen}
         onClose={() => setTaskOpen(false)}
-        conversationId={conversationId}
         contactId={contactId}
+        contactName={contactName}
+        dealId={dealId}
+        dealTitle={dealTitle}
+        deals={deals}
       />
       {dialogs}
       <AgentAutomationPickerModal

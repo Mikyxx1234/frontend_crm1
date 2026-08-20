@@ -587,6 +587,10 @@ export interface FetchActivitiesParams {
   page?: number;
   perPage?: number;
   scope?: ActivityScope;
+  /** Filtra atividades vinculadas a um negócio. */
+  dealId?: string;
+  /** Filtra atividades vinculadas a um contato. */
+  contactId?: string;
 }
 
 export function fetchActivities(
@@ -601,6 +605,8 @@ export function fetchActivities(
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
   if (params.scope) sp.set("scope", params.scope);
+  if (params.dealId) sp.set("dealId", params.dealId);
+  if (params.contactId) sp.set("contactId", params.contactId);
   const qs = sp.toString();
   return getJson<ActivityListPage>(
     `/api/activities${qs ? `?${qs}` : ""}`,

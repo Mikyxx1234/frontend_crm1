@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import * as Dialog from "@radix-ui/react-dialog"
 import { IconSearch, IconX } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
@@ -9,7 +9,7 @@ import { ButtonGlass } from "@/components/crm/button-glass"
 import { Textarea } from "@/components/ui/textarea"
 import { useTeamUsers } from "@/features/pipeline-v2/hooks/use-deal-mutations"
 import { useDepartments } from "@/features/conversations-settings/hooks/use-departments"
-import { useContacts } from "@/features/directory-v2/hooks"
+import { useContact, useContacts } from "@/features/directory-v2/hooks"
 import {
   ACTIVITY_KINDS,
   ACTIVITY_KIND_ORDER,
@@ -18,17 +18,43 @@ import {
   type ActivityKind,
 } from "@/lib/activities-data"
 
+export type ActivityDealOption = { id: string; title: string }
+
 interface ActivityComposerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** Data pré-selecionada (do calendário). */
   defaultDate: Date
   onCreate: (activity: Activity) => void
+  /** Contato pré-selecionado (Inbox / Pipeline). */
+  presetContactId?: string | null
+  presetContactName?: string | null
+  /** Negócio pré-selecionado. */
+  presetDealId?: string | null
+  presetDealTitle?: string | null
+  /**
+   * Negócios do contato já conhecidos (ex.: aside do Inbox).
+   * Se omitido e houver contato, carrega via `useContact`.
+   */
+  availableDeals?: ActivityDealOption[]
+  /** Impede trocar o contato (contexto com contato fixo). */
+  lockContact?: boolean
 }
 
 const labelCls = "font-display text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]"
 
-export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: ActivityComposerProps) {
+export function ActivityComposer({
+  open,
+  onOpenChange,
+  defaultDate,
+  onCreate,
+  presetContactId = null,
+  presetContactName = null,
+  presetDealId = null,
+  presetDealTitle = null,
+  availableDeals,
+  lockContact = false,
+}: ActivityComposerProps) {
   const [kind, setKind] = useState<ActivityKind>("tarefa")
   const [title, setTitle] = useState("")
   const [date, setDate] = useState(dateKey(defaultDate))
@@ -36,6 +62,8 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
   const [duration, setDuration] = useState("30")
   const [contactId, setContactId] = useState<string | null>(null)
   const [contactName, setContactName] = useState<string | null>(null)
+  const [dealId, setDealId] = useState<string | null>(null)
+  const [dealTitle, setDealTitle] = useState<string | null>(null)
   const [contactSearch, setContactSearch] = useState("")
   const [debouncedContactSearch, setDebouncedContactSearch] = useState("")
   const [location, setLocation] = useState("")
@@ -52,26 +80,50 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
   const contactsQuery = useContacts({
     search: debouncedContactSearch || undefined,
     perPage: 12,
-    enabled: open && !contactId && debouncedContactSearch.length >= 1,
+    enabled: open && !contactId && !lockContact && debouncedContactSearch.length >= 1,
   })
   const contactHits = contactsQuery.data?.items ?? []
 
-  // Sincroniza a data ao abrir
+  const shouldFetchContactDeals =
+    open && Boolean(contactId) && availableDeals === undefined
+  const contactDetailQuery = useContact(shouldFetchContactDeals ? contactId : null)
+
+  const dealOptions: ActivityDealOption[] = useMemo(() => {
+    if (availableDeals) return availableDeals
+    const deals = contactDetailQuery.data?.deals ?? []
+    return deals.map((d) => ({
+      id: d.id,
+      title: d.title || d.stage?.name || "Negócio",
+    }))
+  }, [availableDeals, contactDetailQuery.data?.deals])
+
+  // Sincroniza presets / limpa ao abrir
   useEffect(() => {
-    if (open) {
-      setDate(dateKey(defaultDate))
-      setTitle("")
-      setContactId(null)
-      setContactName(null)
-      setContactSearch("")
-      setDebouncedContactSearch("")
-      setLocation("")
-      setNotes("")
-      setAssignKind("user")
-      setAssigneeUserId("")
-      setDepartmentId("")
-    }
-  }, [open, defaultDate])
+    if (!open) return
+    setDate(dateKey(defaultDate))
+    setTitle("")
+    setKind("tarefa")
+    setTime("09:00")
+    setDuration("30")
+    setContactId(presetContactId)
+    setContactName(presetContactName)
+    setDealId(presetDealId)
+    setDealTitle(presetDealTitle)
+    setContactSearch("")
+    setDebouncedContactSearch("")
+    setLocation("")
+    setNotes("")
+    setAssignKind("user")
+    setAssigneeUserId("")
+    setDepartmentId("")
+  }, [
+    open,
+    defaultDate,
+    presetContactId,
+    presetContactName,
+    presetDealId,
+    presetDealTitle,
+  ])
 
   useEffect(() => {
     const timer = window.setTimeout(
@@ -81,14 +133,41 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
     return () => window.clearTimeout(timer)
   }, [contactSearch])
 
+  // Se o deal pré-selecionado sumiu da lista, limpa; se há 1 deal e nenhum
+  // selecionado, não auto-força (opcional). Mantém preset quando válido.
+  useEffect(() => {
+    if (!open || !dealId) return
+    if (dealOptions.length === 0) return
+    const stillThere = dealOptions.some((d) => d.id === dealId)
+    if (!stillThere) {
+      setDealId(null)
+      setDealTitle(null)
+    }
+  }, [open, dealId, dealOptions])
+
   const usesDuration = kind === "reuniao" || kind === "evento" || kind === "ligacao"
   const usesLocation = kind === "reuniao" || kind === "evento"
+  const showDealPicker = Boolean(contactId) && dealOptions.length > 0
 
   const clearContact = () => {
+    if (lockContact) return
     setContactId(null)
     setContactName(null)
+    setDealId(null)
+    setDealTitle(null)
     setContactSearch("")
     setDebouncedContactSearch("")
+  }
+
+  const selectDeal = (id: string) => {
+    if (!id) {
+      setDealId(null)
+      setDealTitle(null)
+      return
+    }
+    const hit = dealOptions.find((d) => d.id === id)
+    setDealId(id)
+    setDealTitle(hit?.title ?? null)
   }
 
   const submit = () => {
@@ -105,6 +184,8 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
       withWhom: contactName ?? undefined,
       contactId: contactId,
       contactName: contactName,
+      dealId: dealId,
+      dealTitle: dealTitle,
       location: usesLocation ? location.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
       assigneeType: isDept ? "department" : "user",
@@ -233,21 +314,26 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
           <div className={cn("mb-4 grid gap-3", usesLocation ? "grid-cols-2" : "grid-cols-1")}>
             <div className="relative flex flex-col gap-1.5">
               <label htmlFor="ac-who" className={labelCls}>
-                Contato <span className="normal-case tracking-normal font-body font-normal">(opcional)</span>
+                Contato{" "}
+                {!lockContact && (
+                  <span className="normal-case tracking-normal font-body font-normal">(opcional)</span>
+                )}
               </label>
-              {contactId && contactName ? (
+              {contactId ? (
                 <div className="flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5">
                   <span className="min-w-0 flex-1 truncate font-body text-[13px] text-[var(--text-primary)]">
-                    {contactName}
+                    {contactName || "Contato selecionado"}
                   </span>
-                  <button
-                    type="button"
-                    onClick={clearContact}
-                    aria-label="Limpar contato"
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-                  >
-                    <IconX size={14} />
-                  </button>
+                  {!lockContact && (
+                    <button
+                      type="button"
+                      onClick={clearContact}
+                      aria-label="Limpar contato"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+                    >
+                      <IconX size={14} />
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="relative">
@@ -281,6 +367,8 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
                             onClick={() => {
                               setContactId(c.id)
                               setContactName(c.name)
+                              setDealId(null)
+                              setDealTitle(null)
                               setContactSearch("")
                             }}
                             className="flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
@@ -315,6 +403,29 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
               </div>
             )}
           </div>
+
+          {/* Negócio (opcional) — após contato */}
+          {showDealPicker && (
+            <div className="mb-4 flex flex-col gap-1.5">
+              <label htmlFor="ac-deal" className={labelCls}>
+                Negócio{" "}
+                <span className="normal-case tracking-normal font-body font-normal">(opcional)</span>
+              </label>
+              <select
+                id="ac-deal"
+                className={selectCls}
+                value={dealId ?? ""}
+                onChange={(e) => selectDeal(e.target.value)}
+              >
+                <option value="">Nenhum — só o contato</option>
+                {dealOptions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Responsável — usuário ou departamento (tarefa compartilhada) */}
           <div className="mb-4 flex flex-col gap-1.5">

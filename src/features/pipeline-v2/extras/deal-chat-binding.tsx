@@ -778,6 +778,10 @@ export function useDealChatBinding(params: {
           : undefined
       }
       contactId={contactId}
+      contactName={contactName}
+      dealId={dealId}
+      dealTitle={undefined}
+      deals={dealId ? [{ id: dealId, title: "Negócio atual" }] : undefined}
       externalTemplate={externalTemplate}
       onExternalTemplateConsumed={() => setExternalTemplate(null)}
       onRequestTemplate={() => setTemplateOpen(true)}

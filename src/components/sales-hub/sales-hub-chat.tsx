@@ -334,7 +334,12 @@ export function SalesHubChat({
         notesSlot={<DealNotesTab dealId={dealId} pipelineId={pipelineId} />}
         activitiesSlot={
           <div className="flex-1 overflow-auto">
-            <ActivitiesPanel dealId={dealId} />
+            <ActivitiesPanel
+              dealId={dealId}
+              contactId={contactId}
+              contactName={contactName}
+              dealTitle={undefined}
+            />
           </div>
         }
         timelineSlot={<ConversationTimelineTab conversationId={conversationId} />}
@@ -359,6 +364,9 @@ export function SalesHubChat({
             }
             isResolved={isResolved}
             contactId={contactId}
+            contactName={contactName}
+            dealId={dealId}
+            deals={[{ id: dealId, title: "Negócio atual" }]}
             externalTemplate={externalTemplate}
             onExternalTemplateConsumed={() => setExternalTemplate(null)}
             onRequestTemplate={() => setTemplateOpen(true)}

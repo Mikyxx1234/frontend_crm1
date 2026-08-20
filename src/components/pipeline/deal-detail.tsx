@@ -291,8 +291,10 @@ export function DealDetail({ dealId, open, onOpenChange, pipelineId, boardStages
                   )}
                   {rightTab === "activities" && (
                     <ActivitiesPanel
-                      activities={deal.activities}
                       dealId={deal.id}
+                      contactId={contactId}
+                      contactName={contact?.name ?? null}
+                      dealTitle={deal.title}
                       onCreated={() => {
                         if (dealId) queryClient.invalidateQueries({ queryKey: dealKey(dealId) });
                         queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });

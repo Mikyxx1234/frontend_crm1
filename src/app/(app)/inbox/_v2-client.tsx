@@ -1430,7 +1430,14 @@ export default function InboxV2ClientPage({
   );
   const activitiesSlot = firstDealId ? (
     <div className="flex-1 overflow-auto">
-      <ActivitiesPanel dealId={firstDealId} />
+      <ActivitiesPanel
+        dealId={firstDealId}
+        contactId={activeContactId}
+        contactName={
+          contactAsideView?.name ?? activeRow?.contact?.name ?? null
+        }
+        dealTitle={firstDeal?.title ?? null}
+      />
     </div>
   ) : (
     <NoDealTab message="Vincule um negocio a este contato para registrar tarefas." />
@@ -1534,6 +1541,17 @@ export default function InboxV2ClientPage({
             placeholder={composerPlaceholder}
             isResolved={activeRow.status === "RESOLVED"}
             contactId={activeContactId}
+            contactName={
+              contactAsideView?.name ??
+              activeRow.contact?.name ??
+              null
+            }
+            dealId={firstDealId}
+            dealTitle={firstDeal?.title ?? null}
+            deals={(contactAsideView?.deals ?? []).map((d) => ({
+              id: d.id,
+              title: d.title,
+            }))}
             externalTemplate={externalTemplate}
             onExternalTemplateConsumed={() => setExternalTemplate(null)}
             onRequestTemplate={() => setTemplateOpen(true)}

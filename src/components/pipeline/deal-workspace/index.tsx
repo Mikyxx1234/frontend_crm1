@@ -491,8 +491,10 @@ export function DealWorkspace({
                 ) : null}
                 {rightTab === "activities" ? (
                   <ActivitiesPanel
-                    activities={deal.activities}
                     dealId={deal.id}
+                    contactId={contactId}
+                    contactName={contact?.name ?? null}
+                    dealTitle={deal.title}
                     onCreated={() => {
                       if (dealId) queryClient.invalidateQueries({ queryKey: dealDetailKey(dealId) });
                       queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });

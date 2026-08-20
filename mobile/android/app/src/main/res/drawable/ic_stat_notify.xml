@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone de status FCM: silhueta branca (Android ignora cor no small icon). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group
+        android:translateX="-10.24"
+        android:translateY="-10.07"
+        android:scaleX="0.043103"
+        android:scaleY="0.043103">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M320,280h392v104H448v76h188v104H448v76h264v104H320z" />
+    </group>
+</vector>

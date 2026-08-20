@@ -182,10 +182,14 @@ async function fetchCallPermissionTemplates(): Promise<CallPermissionTemplate[]>
 export function WhatsappCallChip({
   conversationId,
   channel,
+  variant = "chip",
 }: {
   conversationId: string;
   channel: string | null | undefined;
+  /** `cta` = green pill in the inbox header. Compact `chip` for deal/sales-hub. */
+  variant?: "chip" | "cta";
 }) {
+  const isCta = variant === "cta";
   const isWaVoiceChannel = channel === "whatsapp" || channel === "meta";
   const queryClient = useQueryClient();
   const key = React.useMemo(
@@ -401,6 +405,9 @@ export function WhatsappCallChip({
   const [howItWorksOpen, setHowItWorksOpen] = React.useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = React.useState(false);
   const [historyOpen, setHistoryOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (isCta && menuOpen) setTemplatePickerOpen(true);
+  }, [isCta, menuOpen]);
   /** URL atualmente em playback no mini-player — null = nada tocando. */
   const [playingRecordingUrl, setPlayingRecordingUrl] = React.useState<string | null>(null);
   const recordingPlayerRef = React.useRef<HTMLAudioElement | null>(null);
@@ -467,6 +474,7 @@ export function WhatsappCallChip({
       return { label: "Expirado" };
     }
     if (cs === "GRANTED") {
+      if (isCta) return { label: "Fazer Chamada" };
       return {
         label: expiry.isPermanent
           ? "Voz ativa"
@@ -476,7 +484,7 @@ export function WhatsappCallChip({
     if (cs === "REQUESTED") {
       return { label: "Aguardando" };
     }
-    return { label: "Ligar" };
+    return { label: isCta ? "Fazer Chamada" : "Ligar" };
   })();
 
   const canInitiate =
@@ -518,9 +526,15 @@ export function WhatsappCallChip({
 
   if (isLoading) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[12px] font-semibold text-ink-subtle">
-        <Loader2 className="size-3.5 animate-spin" />
-        Voz…
+      <span
+        className={
+          isCta
+            ? "inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(16,185,129,0.45)]"
+            : "inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[12px] font-semibold text-ink-subtle"
+        }
+      >
+        <Loader2 className={cn("animate-spin", isCta ? "size-4" : "size-3.5")} />
+        {isCta ? "Fazer Chamada" : "Voz…"}
       </span>
     );
   }
@@ -537,37 +551,53 @@ export function WhatsappCallChip({
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-            (cs === "GRANTED" && !effectivelyExpired) ||
-              hasActiveCall ||
-              outbound.phase === "live" ||
-              outbound.phase === "need_answer"
-              ? "border-success/20 bg-success-soft text-success hover:bg-success-soft"
-              : cs === "DENIED" || effectivelyExpired
-                ? "border-destructive/20 bg-destructive-soft text-destructive hover:bg-destructive-soft"
-                : cs === "REQUESTED"
-                  ? "border-primary/20 bg-primary-soft text-info hover:bg-primary-soft"
-                  : "border-black/10 bg-white text-ink-subtle hover:bg-muted",
+            "inline-flex items-center transition-all outline-none",
+            isCta
+              ? cn(
+                  "gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(16,185,129,0.45)] ring-4 ring-emerald-500/15 hover:shadow-[0_6px_18px_rgba(16,185,129,0.55)] focus-visible:ring-emerald-500/40",
+                  cs === "DENIED" || effectivelyExpired
+                    ? "bg-destructive hover:bg-destructive/90 ring-destructive/15"
+                    : outbound.phase === "live" || hasActiveCall
+                      ? "bg-emerald-600 hover:bg-emerald-700"
+                      : "bg-emerald-500 hover:bg-emerald-600",
+                )
+              : cn(
+                  "gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold focus-visible:ring-2 focus-visible:ring-primary/30",
+                  (cs === "GRANTED" && !effectivelyExpired) ||
+                    hasActiveCall ||
+                    outbound.phase === "live" ||
+                    outbound.phase === "need_answer"
+                    ? "border-success/20 bg-success-soft text-success hover:bg-success-soft"
+                    : cs === "DENIED" || effectivelyExpired
+                      ? "border-destructive/20 bg-destructive-soft text-destructive hover:bg-destructive-soft"
+                      : cs === "REQUESTED"
+                        ? "border-primary/20 bg-primary-soft text-info hover:bg-primary-soft"
+                        : "border-black/10 bg-white text-ink-subtle hover:bg-muted",
+                ),
           )}
-          aria-label="Estado da sessão de voz"
+          aria-label={isCta ? "Fazer chamada" : "Estado da sessão de voz"}
         >
           <Phone
-            className={cn(
-              "size-3.5",
-              (cs === "GRANTED" && !effectivelyExpired) ||
-                hasActiveCall ||
-                outbound.phase === "live"
-                ? "text-success"
-                : cs === "DENIED" || effectivelyExpired
-                  ? "text-destructive"
-                  : cs === "REQUESTED"
-                    ? "text-[var(--color-sky)]"
-                    : "text-ink-subtle",
-            )}
+            className={
+              isCta
+                ? "size-4 text-white"
+                : cn(
+                    "size-3.5",
+                    (cs === "GRANTED" && !effectivelyExpired) ||
+                      hasActiveCall ||
+                      outbound.phase === "live"
+                      ? "text-success"
+                      : cs === "DENIED" || effectivelyExpired
+                        ? "text-destructive"
+                        : cs === "REQUESTED"
+                          ? "text-[var(--color-sky)]"
+                          : "text-ink-subtle",
+                  )
+            }
             strokeWidth={2.2}
           />
           <span className="whitespace-nowrap tabular-nums">{tone.label}</span>
-          <ChevronDown className="size-3 opacity-50" />
+          {!isCta && <ChevronDown className="size-3 opacity-50" />}
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
@@ -617,48 +647,54 @@ export function WhatsappCallChip({
             </div>
           )}
 
-          {canRequest && (
+          {(canRequest || (isCta && cs === "REQUESTED")) && (
             <>
-              {/* Ação rápida: usa template default */}
-              <DropdownMenuItem
-                onClick={() => requestPermission.mutate(undefined)}
-                disabled={requestPermission.isPending}
-                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
-              >
-                {requestPermission.isPending ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Phone className="size-3.5" />
-                )}
-                {effectivelyExpired ? "Solicitar voz novamente" : "Solicitar voz"}
-              </DropdownMenuItem>
+              {canRequest && !isCta && (
+                <DropdownMenuItem
+                  onClick={() => requestPermission.mutate(undefined)}
+                  disabled={requestPermission.isPending}
+                  className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
+                >
+                  {requestPermission.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Phone className="size-3.5" />
+                  )}
+                  {effectivelyExpired ? "Solicitar voz novamente" : "Solicitar voz"}
+                </DropdownMenuItem>
+              )}
 
-              {/* Submenu: escolher template */}
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-none hover:bg-muted focus:bg-muted"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setTemplatePickerOpen((v) => !v);
-                }}
-              >
-                <span className="flex items-center gap-2">
-                  <ChevronRight
-                    className={cn(
-                      "size-3.5 transition-transform",
-                      templatePickerOpen && "rotate-90",
-                    )}
-                  />
-                  Escolher template
-                </span>
-                {templatesQuery.isFetching ? (
-                  <Loader2 className="size-3 animate-spin text-[var(--color-ink-muted)]" />
-                ) : templatesQuery.data ? (
-                  <span className="text-[10px] text-[var(--color-ink-muted)]">
-                    {templatesQuery.data.length}
+              {isCta ? (
+                <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-widest text-ink-subtle">
+                  Templates de voz
+                </DropdownMenuLabel>
+              ) : (
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-none hover:bg-muted focus:bg-muted"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setTemplatePickerOpen((v) => !v);
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <ChevronRight
+                      className={cn(
+                        "size-3.5 transition-transform",
+                        templatePickerOpen && "rotate-90",
+                      )}
+                    />
+                    Escolher template
                   </span>
-                ) : null}
-              </button>
+                  {templatesQuery.isFetching ? (
+                    <Loader2 className="size-3 animate-spin text-[var(--color-ink-muted)]" />
+                  ) : templatesQuery.data ? (
+                    <span className="text-[10px] text-[var(--color-ink-muted)]">
+                      {templatesQuery.data.length}
+                    </span>
+                  ) : null}
+                </button>
+              )}
 
               {templatePickerOpen && (
                 <div className="max-h-[260px] overflow-y-auto px-1 pb-1">
@@ -743,19 +779,21 @@ export function WhatsappCallChip({
                 <Loader2 className="size-3.5 animate-spin text-info" />
                 Aguardando cliente autorizar
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => requestPermission.mutate(undefined)}
-                disabled={requestPermission.isPending}
-                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
-              >
-                <RefreshCw
-                  className={cn(
-                    "size-3.5",
-                    requestPermission.isPending && "animate-spin",
-                  )}
-                />
-                Reenviar solicitação
-              </DropdownMenuItem>
+              {!isCta && (
+                <DropdownMenuItem
+                  onClick={() => requestPermission.mutate(undefined)}
+                  disabled={requestPermission.isPending}
+                  className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
+                >
+                  <RefreshCw
+                    className={cn(
+                      "size-3.5",
+                      requestPermission.isPending && "animate-spin",
+                    )}
+                  />
+                  Reenviar solicitação
+                </DropdownMenuItem>
+              )}
             </>
           )}
 

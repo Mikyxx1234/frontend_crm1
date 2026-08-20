@@ -38,8 +38,6 @@ import {
   IconX,
   IconLock,
   IconChevronDown,
-  IconEye,
-  IconEyeOff,
 } from "@tabler/icons-react"
 
 export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
@@ -393,7 +391,7 @@ export function ChatArea({
     }
   }, [messages])
 
-  const { hideEvents, toggleHideEvents } = useHideChatEvents()
+  const { hideEvents } = useHideChatEvents()
 
   const effectiveDisabled = inputDisabled ?? showSessionAlert
   const value = inputValue ?? ""
@@ -454,12 +452,6 @@ export function ChatArea({
           )}
 
           <div className="ml-auto flex shrink-0 items-center gap-1">
-            <IconBtn
-              title={hideEvents ? "Mostrar eventos" : "Ocultar eventos"}
-              onClick={toggleHideEvents}
-            >
-              {hideEvents ? <IconEyeOff size={17} /> : <IconEye size={17} />}
-            </IconBtn>
             {headerActionsSlot ?? (
               <>
                 {contact.phone && (

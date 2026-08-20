@@ -1476,6 +1476,7 @@ export default function InboxV2ClientPage({
             <WhatsappCallChip
               conversationId={activeRow.id}
               channel={activeRow.channel}
+              variant="cta"
             />
             <ConversationActionsMenu
               conversationId={activeId}

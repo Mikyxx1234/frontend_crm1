@@ -3,7 +3,7 @@
   "appName": "EduIT CRM",
   "webDir": "www",
   "server": {
-    "url": "https://frontend-front.v74knz.easypanel.host/login",
+    "url": "https://frontend-front.v74knz.easypanel.host/",
     "hostname": "frontend-front.v74knz.easypanel.host",
     "cleartext": false,
     "androidScheme": "https",

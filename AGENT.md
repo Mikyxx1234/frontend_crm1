@@ -5,6 +5,22 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-08-20 — Push nativo FCM no APK
+
+**Modelo usado.** Cursor Grok 4.6.
+
+**Decisão.** Registrar FCM só com `window.Capacitor.Plugins.PushNotifications`
+(sem `@capacitor/*` no bundle Next). Bootstrap após login. Clique abre
+`/activities`. Foreground deixa o popup interno. Plugin nativo vive em
+`mobile/` + `google-services.json`.
+
+**Alternativas descartadas.** Web Push no WebView (não acorda o APK
+fechado); firebase-analytics no Gradle.
+
+**Impacto.** `push-fcm.ts`, `NativeFcmBootstrap`, plugin em `mobile/`.
+
+---
+
 ### 2026-08-14 — Node `check_agent_status` (Status do agente)
 
 **Modelo usado.** Cursor Grok 4.6.

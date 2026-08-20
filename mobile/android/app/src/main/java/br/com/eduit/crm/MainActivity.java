@@ -29,4 +29,13 @@ public class MainActivity extends BridgeActivity {
       cookieManager.setAcceptThirdPartyCookies(this.bridge.getWebView(), true);
     }
   }
+
+  // O WebView só grava os cookies em disco de tempos em tempos. Ao fechar o
+  // app pela lista de recentes o processo morre antes desse ciclo e a sessao
+  // do NextAuth se perde. flush() forca a gravacao enquanto ainda da tempo.
+  @Override
+  public void onPause() {
+    super.onPause();
+    CookieManager.getInstance().flush();
+  }
 }

@@ -17,24 +17,8 @@ export const AVATAR_FALLBACK_COLORS = [
   "var(--avatar-fallback-4)",
   "var(--avatar-fallback-5)",
   "var(--avatar-fallback-6)",
-] as const;
-
-const AVATAR_FALLBACK_FGS = [
-  "var(--avatar-fallback-1-fg)",
-  "var(--avatar-fallback-2-fg)",
-  "var(--avatar-fallback-3-fg)",
-  "var(--avatar-fallback-4-fg)",
-  "var(--avatar-fallback-5-fg)",
-  "var(--avatar-fallback-6-fg)",
-] as const;
-
-const CHANNEL_TONAL = [
-  { bg: "var(--channel-tonal-1-bg)", fg: "var(--channel-tonal-1-fg)" },
-  { bg: "var(--channel-tonal-2-bg)", fg: "var(--channel-tonal-2-fg)" },
-  { bg: "var(--channel-tonal-3-bg)", fg: "var(--channel-tonal-3-fg)" },
-  { bg: "var(--channel-tonal-4-bg)", fg: "var(--channel-tonal-4-fg)" },
-  { bg: "var(--channel-tonal-5-bg)", fg: "var(--channel-tonal-5-fg)" },
-  { bg: "var(--channel-tonal-6-bg)", fg: "var(--channel-tonal-6-fg)" },
+  "var(--avatar-fallback-7)",
+  "var(--avatar-fallback-8)",
 ] as const;
 
 export const AVATAR_BOT_BG = "var(--avatar-bot-bg)";
@@ -51,48 +35,26 @@ export const AVATAR_GLASS_COLORS: AvatarGlassColor[] = [
   "coral",
 ];
 
-function stableHash(seed: string): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash);
-}
-
-function paletteIndex(seed: string): number {
-  return stableHash(seed) % AVATAR_FALLBACK_COLORS.length;
-}
-
-export function getAvatarTone(seed: string): { bg: string; fg: string } {
-  const i = paletteIndex(seed);
-  return { bg: AVATAR_FALLBACK_COLORS[i], fg: AVATAR_FALLBACK_FGS[i] };
-}
-
-/** Cor sólida determinística a partir do id da pessoa (padrão Inbox / ChatAvatar). */
+/** Cor sólida determinística a partir do nome/id (padrão Inbox / ChatAvatar). */
 export function getAvatarSolidColor(seed: string): string {
   const normalized = seed.toLowerCase();
   if (normalized === "luz" || normalized.includes("luz")) {
     return "var(--color-warning)";
   }
-  return getAvatarTone(seed).bg;
-}
-
-export function getAvatarForegroundColor(seed: string): string {
-  const normalized = seed.toLowerCase();
-  if (normalized === "luz" || normalized.includes("luz")) {
-    return "var(--avatar-fallback-2-fg)";
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return getAvatarTone(seed).fg;
-}
-
-/** Fundo tonal + glifo da mesma matiz, hash estável do id do canal. */
-export function getChannelTonal(seed: string): { bg: string; fg: string } {
-  return CHANNEL_TONAL[paletteIndex(seed)];
+  return AVATAR_FALLBACK_COLORS[Math.abs(hash) % AVATAR_FALLBACK_COLORS.length];
 }
 
 /** Cor glass determinística para avatares de pessoas internas. */
 export function getAvatarGlassColor(seed: string): AvatarGlassColor {
-  return AVATAR_GLASS_COLORS[stableHash(seed) % AVATAR_GLASS_COLORS.length];
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_GLASS_COLORS[Math.abs(hash) % AVATAR_GLASS_COLORS.length];
 }
 
 export function avatarInitials(name: string | null | undefined): string {

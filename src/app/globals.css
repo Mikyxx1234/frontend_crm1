@@ -417,88 +417,19 @@
    CHAT — bolha enviada + fundo da thread (`data-chat-theme` no <html>)
    ══════════════════════════════════════════════════════════════════ */
 :root {
-  --chat-paper: #F4F3F1;
-  --chat-dot: #E0DEDA;
-  --chat-app: #F2F1F4;
-  --chat-chrome: #F7F7F9;
-  --chat-field: #F2F2F5;
-  --chat-text: #11121A;
-  --chat-text-secondary: #6B6C78;
-  --chat-text-tertiary: #9A9AA6;
-  --chat-accent: #6C5CE7;
-  --chat-unread-bg: #6C5CE7;
-  --chat-unread-fg: #FFFFFF;
-  --chat-list-selected-bg: #EFEDFC;
-  --chat-list-selected-name: #3A2FA8;
-  --chat-list-selected-preview: #6E67A8;
-  --chat-list-selected-time: #8480B8;
-  --chat-tick-read: #6C5CE7;
-  --chat-quote-bg: #F4F3F1;
-  --chat-quote-border: #E9E8E5;
-  --chat-quote-label: #11121A;
-  --chat-quote-text: #6B6C78;
-  --chat-bubble-sent-bg: #E4E0FB;
-  --chat-bubble-sent-text: #1B1640;
-  --chat-bubble-sent-time: #6B6C78;
-  --chat-bubble-sent-check-read: var(--chat-tick-read);
-  --chat-bg: var(--chat-paper);
-  --chat-bubble-received-bg: #FFFFFF;
-  --chat-bubble-received-border: #E9E8E5;
-  --chat-bubble-received-text: #11121A;
-  --chat-bubble-received-time: #9A9AA6;
-  --avatar-fallback-1: #E8674C;
-  --avatar-fallback-1-fg: #FFFFFF;
-  --avatar-fallback-2: #E0973B;
-  --avatar-fallback-2-fg: #3A2400;
-  --avatar-fallback-3: #3AA087;
-  --avatar-fallback-3-fg: #FFFFFF;
-  --avatar-fallback-4: #3B7FC4;
-  --avatar-fallback-4-fg: #FFFFFF;
-  --avatar-fallback-5: #6C5CE7;
-  --avatar-fallback-5-fg: #FFFFFF;
-  --avatar-fallback-6: #C05B94;
-  --avatar-fallback-6-fg: #FFFFFF;
-  --avatar-bot-bg: #475569;
-  --avatar-unread-bg: var(--chat-unread-bg);
-  --channel-tonal-1-bg: #FDEDE6;
-  --channel-tonal-1-fg: #C0492F;
-  --channel-tonal-2-bg: #FBF3E4;
-  --channel-tonal-2-fg: #B07820;
-  --channel-tonal-3-bg: #E6F5F1;
-  --channel-tonal-3-fg: #2A7A66;
-  --channel-tonal-4-bg: #E8F1F8;
-  --channel-tonal-4-fg: #2B5F96;
-  --channel-tonal-5-bg: #EFEDFC;
-  --channel-tonal-5-fg: #4F42C4;
-  --channel-tonal-6-bg: #F8EAF2;
-  --channel-tonal-6-fg: #9A3F73;
+  --chat-bubble-sent-bg: linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%);
+  --chat-bubble-sent-text: #ffffff;
+  --chat-bubble-sent-time: rgba(255, 255, 255, 0.7);
+  --chat-bubble-sent-check-read: #38bdf8;
+  --chat-bg: transparent;
+  --chat-bubble-received-text: #1e2a3b;
+  --chat-bubble-received-time: #4b5563;
   /* Campanha — teal/emerald, distinto da bolha enviada e da automação cinza */
   --chat-bubble-campaign-bg: #d1fae5;
   --chat-bubble-campaign-text: #064e3b;
   --chat-bubble-campaign-border: #6ee7b7;
   --chat-bubble-campaign-badge-bg: rgba(6, 78, 59, 0.12);
   --chat-bubble-campaign-badge-text: #047857;
-}
-
-.inbox-chroma {
-  background: var(--chat-app);
-  --bg-base: var(--chat-app);
-  --bg-mesh: var(--chat-app);
-  --bg-mesh-1: var(--chat-app);
-  --bg-mesh-2: var(--chat-app);
-  --bg-gradient: var(--chat-app);
-  --text-primary: var(--chat-text);
-  --text-secondary: var(--chat-text-secondary);
-  --text-muted: var(--chat-text-tertiary);
-  --color-ink-soft: var(--chat-text-secondary);
-  --color-ink-muted: var(--chat-text-tertiary);
-  --chat-bg: var(--chat-paper);
-}
-
-.chat-thread {
-  background-color: var(--chat-bg);
-  background-image: radial-gradient(circle at 1px 1px, var(--chat-dot) 1px, transparent 0);
-  background-size: 22px 22px;
 }
 
 /* Dark: `.dark` (next-themes) e `.v2-dark` (tema CRM v2) */

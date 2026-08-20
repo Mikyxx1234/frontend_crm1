@@ -311,8 +311,6 @@ export function toConversationCard(
     // Canal de origem — substitui o status dot pelo logo da plataforma
     // no canto inferior direito do avatar.
     channel: row.channel ?? null,
-    channelId: row.channelId ?? null,
-    contactId: row.contact?.id ?? null,
   };
 }
 
@@ -620,7 +618,6 @@ export interface ChatContactView {
       (whatsapp/instagram/...) no avatar do header do chat, idêntico
       ao card da lista de conversas. */
   channel?: string | null;
-  channelId?: string | null;
 }
 
 export function toChatContact(row: ConversationListRow): ChatContactView {
@@ -637,7 +634,6 @@ export function toChatContact(row: ConversationListRow): ChatContactView {
     phone: row.contact?.phone ?? "",
     contactId: row.contact?.id ?? row.id,
     channel: row.channel ?? null,
-    channelId: row.channelId ?? null,
   };
 }
 

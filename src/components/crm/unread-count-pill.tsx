@@ -24,8 +24,7 @@ export function UnreadCountPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-bold leading-none tabular-nums",
-        "bg-[var(--chat-unread-bg)] text-[var(--chat-unread-fg)]",
+        "inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_16%,white)] px-2 py-0.5 font-display text-[11px] font-bold leading-none text-[var(--brand-primary)] tabular-nums",
         className,
       )}
       aria-label={ariaLabel ?? `${count} mensagens não lidas`}

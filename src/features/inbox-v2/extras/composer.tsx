@@ -938,8 +938,8 @@ export function Composer({
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[11.5px] font-semibold transition-all",
                   !noteMode
-                    ? "bg-[var(--chat-list-selected-bg)] text-[var(--chat-list-selected-name)]"
-                    : "bg-[var(--chat-field)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                 )}
               >
                 <IconMessage size={12} />
@@ -951,8 +951,8 @@ export function Composer({
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[11.5px] font-semibold transition-all",
                   noteMode
-                    ? "border border-[var(--glass-border)] bg-[var(--chat-chrome)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
-                    : "bg-[var(--chat-field)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    ? "border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                 )}
               >
                 <IconLock size={12} />
@@ -1112,7 +1112,7 @@ export function Composer({
 
       <form
         onSubmit={handleSubmit}
-        className="flex min-h-11 min-w-0 items-center gap-1.5 overflow-visible rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--chat-chrome)] py-1 pl-3 pr-1.5 shadow-[var(--glass-shadow-sm)] sm:gap-2"
+        className="flex min-h-11 min-w-0 items-center gap-1.5 overflow-visible rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 pl-3 pr-1.5 backdrop-blur-md shadow-[var(--glass-shadow-sm)] sm:gap-2"
       >
         {/* Controles padrão — ocultos durante gravação de áudio */}
         {!isAudioActive && (

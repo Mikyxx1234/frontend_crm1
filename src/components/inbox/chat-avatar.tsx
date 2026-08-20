@@ -16,9 +16,7 @@ import {
   AVATAR_BOT_BG,
   AVATAR_UNREAD_BG,
   avatarInitials,
-  getAvatarForegroundColor,
-  getAvatarTone,
-  getChannelTonal,
+  getAvatarSolidColor,
 } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
 
@@ -50,8 +48,6 @@ export interface ChatAvatarProps {
   size?: number;
   /** Qual canal exibir no badge inferior direito. `null` oculta. */
   channel?: ChatAvatarChannel | string | null;
-  /** Id da conexão — hash estável da cor tonal do badge. */
-  channelId?: string | null;
   /** Oculta o overlay de cartoon (legado; mantido por compat). */
   hideCartoon?: boolean;
   /**
@@ -63,7 +59,8 @@ export interface ChatAvatarProps {
 }
 
 type ChannelBadgeSpec = {
-  Icon: React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>;
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+  bg: string;
   title: string;
 };
 
@@ -73,19 +70,23 @@ function resolveChannelBadge(
   const c = (channel ?? "").toLowerCase().trim();
   if (!c) return null;
   if (c === "whatsapp" || c === "wa")
-    return { Icon: IconBrandWhatsapp, title: "WhatsApp" };
+    return { Icon: IconBrandWhatsapp, bg: "var(--channel-whatsapp)", title: "WhatsApp" };
   if (c === "instagram" || c === "ig")
-    return { Icon: IconBrandInstagram, title: "Instagram" };
+    return {
+      Icon: IconBrandInstagram,
+      bg: "linear-gradient(45deg,#F58529 0%,#DD2A7B 50%,#8134AF 100%)",
+      title: "Instagram",
+    };
   if (c === "facebook" || c === "fb")
-    return { Icon: IconBrandFacebook, title: "Facebook" };
+    return { Icon: IconBrandFacebook, bg: "var(--channel-facebook)", title: "Facebook" };
   if (c === "meta" || c === "messenger")
-    return { Icon: IconBrandMessenger, title: "Messenger" };
+    return { Icon: IconBrandMessenger, bg: "var(--channel-messenger)", title: "Messenger" };
   if (c === "telegram" || c === "tg")
-    return { Icon: IconBrandTelegram, title: "Telegram" };
+    return { Icon: IconBrandTelegram, bg: "var(--channel-telegram)", title: "Telegram" };
   if (c === "email" || c === "mail")
-    return { Icon: IconMail, title: "E-mail" };
+    return { Icon: IconMail, bg: "var(--channel-email)", title: "E-mail" };
   if (c === "webchat" || c === "form" || c === "site" || c === "landing")
-    return { Icon: IconForms, title: "Formulário" };
+    return { Icon: IconForms, bg: "var(--channel-webchat)", title: "Formulário" };
   return null;
 }
 
@@ -98,7 +99,6 @@ export function ChatAvatar({
   bgColor: customBgColor,
   size = 48,
   channel = "whatsapp",
-  channelId = null,
   hideCartoon: _hideCartoon = false,
   isBot = false,
   className,
@@ -116,13 +116,8 @@ export function ChatAvatar({
     lowered === "sistema" ||
     lowered === "bot";
 
-  const tone = getAvatarTone(finalId);
   const bgColor =
-    customBgColor || (isBotResolved ? AVATAR_BOT_BG : tone.bg);
-  const fgColor = isBotResolved
-    ? "var(--chat-unread-fg)"
-    : getAvatarForegroundColor(finalId);
-  const channelTone = getChannelTonal(String(channelId || channel || finalId));
+    customBgColor || (isBotResolved ? AVATAR_BOT_BG : getAvatarSolidColor(finalId));
 
   const showUnread = typeof unreadCount === "number" && unreadCount > 0;
   const channelBadge = resolveChannelBadge(channel);
@@ -140,7 +135,7 @@ export function ChatAvatar({
     >
       {showUnread && (
         <div
-          className="absolute z-20 flex items-center justify-center rounded-full font-bold shadow-lg"
+          className="absolute z-20 flex items-center justify-center rounded-full font-bold text-white shadow-lg"
           style={{
             width: badgeSize,
             height: badgeSize,
@@ -150,7 +145,6 @@ export function ChatAvatar({
             border: `${badgeBorder}px solid var(--avatar-ring)`,
             lineHeight: 1,
             backgroundColor: AVATAR_UNREAD_BG,
-            color: "var(--chat-unread-fg)",
           }}
         >
           {unreadCount! > 9 ? "9+" : unreadCount}
@@ -177,16 +171,15 @@ export function ChatAvatar({
             <IconRobot
               size="72%"
               stroke={1.8}
-              className="relative z-10"
-              style={{ color: "var(--chat-unread-fg)" }}
+              className="relative z-10 text-white"
               aria-label="Automação"
             />
           </div>
         ) : (
           <div className="relative flex size-full items-center justify-center">
             <span
-              className="pointer-events-none font-semibold uppercase leading-none"
-              style={{ fontSize: initialsFontSize, color: fgColor }}
+              className="pointer-events-none font-semibold uppercase leading-none text-white/95"
+              style={{ fontSize: initialsFontSize }}
             >
               {initials}
             </span>
@@ -196,7 +189,7 @@ export function ChatAvatar({
 
       {channelBadge && (
         <div
-          className="absolute z-10 flex items-center justify-center rounded-full shadow-sm"
+          className="absolute z-10 flex items-center justify-center rounded-full text-white shadow-sm"
           title={channelBadge.title}
           aria-label={channelBadge.title}
           style={{
@@ -204,12 +197,11 @@ export function ChatAvatar({
             height: badgeSize,
             bottom: -badgeSize * 0.08,
             right: -badgeSize * 0.08,
-            background: channelTone.bg,
-            color: channelTone.fg,
+            background: channelBadge.bg,
             border: `${badgeBorder}px solid var(--avatar-ring)`,
           }}
         >
-          <channelBadge.Icon size={channelIconSize} style={{ color: channelTone.fg }} />
+          <channelBadge.Icon size={channelIconSize} className="text-white" />
         </div>
       )}
     </div>

@@ -54,14 +54,15 @@ export function StatusTicks({
     // + style + !text vencem herança em bolha azul e card claro.
     return (
       <span
-        className="inline-flex shrink-0"
-        style={{ color: "var(--wa-tick-fail)" }}
+        className="inline-flex shrink-0 !text-[#ef4444]"
+        style={{ color: "#ef4444" }}
         aria-label="Falha no envio"
       >
         <IconAlertCircleFilled
           size={fail}
-          className="shrink-0"
-          style={{ color: "var(--wa-tick-fail)" }}
+          color="#ef4444"
+          className="shrink-0 !text-[#ef4444]"
+          style={{ color: "#ef4444" }}
         />
       </span>
     )
@@ -80,14 +81,15 @@ export function StatusTicks({
   if (status === "read") {
     return (
       <span
-        className="inline-flex shrink-0"
-        style={{ color: "var(--chat-tick-read)" }}
+        className="inline-flex shrink-0 !text-[#38bdf8]"
+        style={{ color: "#38bdf8" }}
         aria-label="Lida"
       >
         <IconChecks
           size={checks}
-          className="shrink-0"
-          style={{ color: "var(--chat-tick-read)" }}
+          color="#38bdf8"
+          className="shrink-0 !text-[#38bdf8]"
+          style={{ color: "#38bdf8" }}
         />
       </span>
     )

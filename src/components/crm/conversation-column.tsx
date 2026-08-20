@@ -147,7 +147,7 @@ function statusVisual(label: string | undefined): {
   if (l.includes("entrada"))
     return {
       Icon: IconInbox,
-      bg: "var(--color-info-bg)",
+      bg: "rgba(59,130,246,0.14)",
       fg: "var(--color-info)",
     }
   if (l.includes("respond"))
@@ -160,8 +160,8 @@ function statusVisual(label: string | undefined): {
     return {
       // Mesmo IconRobot da NavRail / página Automações (sidebar-catalog).
       Icon: IconRobot,
-      bg: "color-mix(in srgb, var(--chat-accent) 14%, transparent)",
-      fg: "var(--chat-accent)",
+      bg: "rgba(139,92,246,0.14)",
+      fg: "rgb(124,58,237)",
     }
   if (l.includes("resolv") || l.includes("finaliz") || l.includes("encerr"))
     return {
@@ -303,7 +303,7 @@ export function ConversationColumn({
     <section
       aria-label="Lista de conversas"
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--chat-chrome)] px-4 pb-4 pt-4 shadow-[var(--glass-shadow)]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-4 pb-4 pt-4 backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
@@ -316,7 +316,7 @@ export function ConversationColumn({
           <InputGlass
             withSearch
             placeholder="Buscar conversa..."
-            className="flex-1 !bg-[var(--chat-field)]"
+            className="flex-1"
             value={searchVal}
             onChange={handleSearchChange}
           />
@@ -349,7 +349,7 @@ export function ConversationColumn({
         onClick={() => setDropdownOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={dropdownOpen}
-        className="flex flex-1 items-center gap-2.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--chat-field)] px-2 py-1.5 pr-3 text-left shadow-[0_2px_10px_rgba(100,130,180,0.12)] transition-shadow hover:shadow-[0_3px_14px_rgba(100,130,180,0.20)]"
+        className="flex flex-1 items-center gap-2.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-1.5 pr-3 text-left shadow-[0_2px_10px_rgba(100,130,180,0.12)] backdrop-blur-sm transition-shadow hover:shadow-[0_3px_14px_rgba(100,130,180,0.20)]"
       >
         <span
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"

@@ -322,7 +322,7 @@ const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as co
  */
 const AUTOMATION_BG = "#374151"
 const AUTOMATION_TEXT = "#f3f4f6"
-const AUTOMATION_ACCENT = "var(--chat-accent)"
+const AUTOMATION_ACCENT = "#6c5ce7"
 /** Accent do avatar de campanha (teal) — distinto do violeta de automação. */
 const CAMPAIGN_ACCENT = "#0d9488"
 
@@ -336,20 +336,20 @@ const CAMPAIGN_ACCENT = "#0d9488"
  * caso contrário (bolha azul do agente): translúcido sobre o fundo.
  */
 function MessageButtons({ buttons, onLightBg }: { buttons: string[]; onLightBg: boolean }) {
-  const accent = onLightBg ? "var(--chat-accent)" : "var(--chat-unread-fg)"
+  const accent = onLightBg ? AUTOMATION_ACCENT : "#ffffff"
   const dividerStyle = onLightBg
-    ? { background: "color-mix(in srgb, var(--chat-accent) 14%, transparent)" }
-    : { background: "color-mix(in srgb, var(--chat-unread-fg) 22%, transparent)" }
+    ? { background: `${AUTOMATION_ACCENT}24` }
+    : { background: "rgba(255,255,255,0.22)" }
   const btnStyle = onLightBg
     ? {
-        borderColor: "color-mix(in srgb, var(--chat-accent) 18%, transparent)",
-        background: "var(--chat-bubble-received-bg)",
-        color: "var(--chat-accent)",
+        borderColor: `${AUTOMATION_ACCENT}2e`,
+        background: "#ffffff",
+        color: AUTOMATION_ACCENT,
       }
     : {
-        borderColor: "color-mix(in srgb, var(--chat-unread-fg) 32%, transparent)",
-        background: "color-mix(in srgb, var(--chat-unread-fg) 14%, transparent)",
-        color: "var(--chat-unread-fg)",
+        borderColor: "rgba(255,255,255,0.32)",
+        background: "rgba(255,255,255,0.14)",
+        color: "#ffffff",
       }
   return (
     <div className="mt-2 -mx-1 flex flex-col gap-1">
@@ -769,7 +769,7 @@ function MetaReserve({
     >
       {isFavorited && <IconStarFilled size={10} />}
       {time}
-      {isOutgoing && status ? <StatusTicks status={status} onLightBg /> : null}
+      {isOutgoing && status ? <StatusTicks status={status} onLightBg={false} /> : null}
     </span>
   )
 }
@@ -1119,7 +1119,7 @@ function ReceivedMessageMenu({
           "absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-black/5 shadow-[0_2px_6px_rgba(15,20,40,0.22)] transition-opacity",
           open ? "opacity-100" : "opacity-0 group-hover:opacity-100",
         )}
-        style={{ background: "var(--chat-bubble-received-bg)", color: "var(--chat-text-secondary)" }}
+        style={{ background: "#ffffff", color: "#334155" }}
       >
         <IconChevronDown size={14} stroke={2.2} />
       </button>
@@ -1133,8 +1133,8 @@ function ReceivedMessageMenu({
                 position: "fixed",
                 top: coords.top,
                 left: coords.left,
-                background: "var(--chat-bubble-received-bg)",
-                color: "var(--chat-text)",
+                background: "#ffffff",
+                color: "#0f172a",
               }}
               className={cn(
                 "z-[100] max-w-[calc(100vw-16px)] overflow-hidden rounded-[var(--radius-lg)] border border-black/5 shadow-[0_12px_32px_rgba(15,20,40,0.22)]",
@@ -1147,7 +1147,7 @@ function ReceivedMessageMenu({
                   no stub (fecha menu) até o container implementar. */}
               <div
                 className="flex items-center gap-0.5 border-b px-1.5 py-1"
-                style={{ borderColor: "var(--chat-bubble-received-border)", background: "var(--chat-field)" }}
+                style={{ borderColor: "#e2e8f0", background: "#f8fafc" }}
               >
                 {QUICK_REACTIONS.map((emoji) => (
                   <button
@@ -1273,11 +1273,11 @@ function MenuItem({
         // e o item fica branco-sobre-branco (invisivel). Popover sempre
         // fundo branco + texto slate-900 pra manter contraste.
         className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-body text-[13px] transition-colors hover:bg-slate-50"
-        style={{ color: "var(--chat-text)" }}
+        style={{ color: "#0f172a" }}
       >
         <span
           className="flex h-5 w-5 items-center justify-center"
-          style={{ color: "var(--chat-text-secondary)" }}
+          style={{ color: "#475569" }}
         >
           {icon}
         </span>
@@ -1521,8 +1521,8 @@ export function MessageBubble({
                 // Cores hardcoded (não usar --text-primary) porque em v2-dark
                 // o token flipa e some contra o fundo fixo desta bolha.
                 ? "rounded-br border border-white/10 shadow-[0_3px_12px_rgba(15,20,40,0.28)]"
-                : "rounded-br shadow-[0_4px_16px_color-mix(in_srgb,var(--chat-accent)_18%,transparent)]"
-              : "rounded-bl text-[var(--chat-bubble-received-text)] shadow-[0_2px_12px_rgba(17,18,26,0.06)]",
+                : "rounded-br shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
+              : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
           style={
             isOutgoing
@@ -1543,11 +1543,7 @@ export function MessageBubble({
                     background: "var(--chat-bubble-sent-bg)",
                     color: "var(--chat-bubble-sent-text)",
                   }
-              : {
-                    background: "var(--chat-bubble-received-bg)",
-                    color: "var(--chat-bubble-received-text)",
-                    border: "0.5px solid var(--chat-bubble-received-border)",
-                  }
+              : { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" }
           }
         >
           {/* Indicador de mensagem fixada — banner no topo da conversa
@@ -1556,7 +1552,7 @@ export function MessageBubble({
           {message.isPinnedMessage && (
             <span
               className="absolute -left-1.5 -top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-black/5 shadow-[0_2px_6px_rgba(15,20,40,0.18)]"
-              style={{ background: "var(--chat-bubble-received-bg)" }}
+              style={{ background: "#ffffff" }}
               title="Mensagem fixada"
             >
               <IconPinFilled size={10} className="text-[var(--brand-primary)]" />
@@ -1591,10 +1587,7 @@ export function MessageBubble({
             <div className="mb-1.5 flex items-center gap-1.5">
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest"
-                style={{
-                  background: "color-mix(in srgb, var(--chat-unread-fg) 18%, transparent)",
-                  color: "var(--chat-unread-fg)",
-                }}
+                style={{ background: "rgba(199,210,254,0.18)", color: "#e0e7ff" }}
                 title={
                   message.isAutomationRun
                     ? "Automação disparada manualmente"
@@ -1648,7 +1641,7 @@ export function MessageBubble({
               snippet={message.replyTo.snippet}
               direction={message.replyTo.direction ?? "out"}
               senderName={message.replyTo.senderName ?? null}
-              onLightBg={!(isOutgoing && isBot)}
+              onLightBg={!isOutgoing}
             />
           )}
           {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
@@ -1656,7 +1649,7 @@ export function MessageBubble({
           {/* Botões de resposta rápida (interactive/template) — cards
               empilhados abaixo do corpo, estilo WhatsApp/V0. */}
           {message.buttons && message.buttons.length > 0 && (
-            <MessageButtons buttons={message.buttons} onLightBg={!(isOutgoing && isBot)} />
+            <MessageButtons buttons={message.buttons} onLightBg={!isOutgoing} />
           )}
           {/* Horário + ticks. Sem botões, overlay no spacer flutuante
               (canto inferior direito do conteúdo — padrão WhatsApp).
@@ -1688,7 +1681,7 @@ export function MessageBubble({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="pointer-events-auto inline-flex cursor-help">
-                    <StatusTicks status="failed" onLightBg={!isBot} />
+                    <StatusTicks status="failed" onLightBg={false} />
                   </span>
                 </TooltipTrigger>
                 <TooltipContent
@@ -1700,7 +1693,7 @@ export function MessageBubble({
                 </TooltipContent>
               </Tooltip>
             ) : isOutgoing && message.status ? (
-              <StatusTicks status={message.status} onLightBg={!isBot} />
+              <StatusTicks status={message.status} onLightBg={false} />
             ) : null}
           </span>
           {/* Badge de reação: sobrepõe a borda inferior (não o horário, que
@@ -1739,10 +1732,10 @@ function QuotedPreview({
 }) {
   const label = senderName || (direction === "out" ? "Você" : "Cliente")
   // Cores hardcoded p/ atravessar dark/light sem depender de --text-*.
-  const bg = onLightBg ? "var(--chat-quote-bg)" : "color-mix(in srgb, var(--chat-unread-fg) 14%, transparent)"
-  const border = onLightBg ? "var(--chat-quote-border)" : "var(--chat-unread-fg)"
-  const labelColor = onLightBg ? "var(--chat-quote-label)" : "var(--chat-unread-fg)"
-  const textColor = onLightBg ? "var(--chat-quote-text)" : "color-mix(in srgb, var(--chat-unread-fg) 88%, transparent)"
+  const bg = onLightBg ? "#f1f5f9" : "rgba(255,255,255,0.14)"
+  const border = onLightBg ? "#5b6ff5" : "#ffffff"
+  const labelColor = onLightBg ? "#4338ca" : "#e0e7ff"
+  const textColor = onLightBg ? "#334155" : "rgba(255,255,255,0.88)"
   return (
     <div
       className="mb-1.5 overflow-hidden rounded-md pl-2"

@@ -916,7 +916,7 @@ export function Composer({
         (!noteMode && (availableChannels?.length ?? 0) > 1) ||
         conversationId ||
         conversationNumber != null) && (
-        <div className="mb-1 flex items-center gap-1.5 px-0.5">
+        <div className="mb-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 px-0.5">
           {transferSlot}
 
           {/* Tabs Mensagem / Nota interna */}
@@ -951,9 +951,7 @@ export function Composer({
             </>
           )}
 
-          {/* Espaçador */}
-          <div className="flex-1" />
-
+          <div className="flex flex-1 flex-wrap items-center justify-end gap-1.5">
           {/* Seletor de canal — só quando há >1 WhatsApp CONNECTED e fora do modo nota.
               Notas internas não trafegam por canal. */}
           {!noteMode &&
@@ -966,7 +964,6 @@ export function Composer({
               conversationChannelId={conversationChannelId ?? null}
               onSelect={onSelectChannel}
               disabled={busy}
-              className="mr-1"
             />
           ) : null}
 
@@ -1099,12 +1096,13 @@ export function Composer({
               )}
             </div>
           )}
+          </div>
         </div>
       )}
 
       <form
         onSubmit={handleSubmit}
-        className="flex min-h-10 items-end gap-1.5 rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-1 backdrop-blur-md shadow-[var(--glass-shadow-sm)] sm:gap-2 sm:px-3"
+        className="flex min-h-11 items-center gap-1.5 overflow-visible rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 pl-3 pr-1.5 backdrop-blur-md shadow-[var(--glass-shadow-sm)] sm:gap-2"
       >
         {/* Controles padrão — ocultos durante gravação de áudio */}
         {!isAudioActive && (

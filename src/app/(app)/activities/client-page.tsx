@@ -6,6 +6,7 @@ import { NavRailSpacer } from "@/components/crm/nav-rail-spacer"
 import { ActivityCalendar } from "@/components/crm/activities/activity-calendar"
 import { ActivityRow } from "@/components/crm/activities/activity-row"
 import { ActivityComposer } from "@/components/crm/activities/activity-composer"
+import { ActivityDetailDialog } from "@/components/crm/activities/activity-detail-dialog"
 import { ActivitiesUrgentCard } from "@/components/crm/activities/activities-urgent-card"
 import { ActivitiesWeeklySummary } from "@/components/crm/activities/activities-weekly-summary"
 import {
@@ -91,6 +92,7 @@ export default function V2ActivitiesClientPage() {
   const [kindFilter, setKindFilter] = useState<ActivityKind | "all">("all")
   const [composerOpen, setComposerOpen] = useState(false)
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [detailActivity, setDetailActivity] = useState<Activity | null>(null)
 
   const activitiesQuery = useActivities({ perPage: 200, scope: scopeFilter })
   const createMutation = useCreateActivity()
@@ -183,6 +185,7 @@ export default function V2ActivitiesClientPage() {
         description: a.notes ?? null,
         scheduledAt: localDateTimeToIso(a.start),
         completed: a.status === "concluida",
+        contactId: a.contactId ?? null,
         userId: a.assigneeType === "department" ? null : a.assigneeUserId ?? undefined,
         departmentId: a.assigneeType === "department" ? a.departmentId ?? null : null,
       },
@@ -516,6 +519,7 @@ export default function V2ActivitiesClientPage() {
                       overdue={isOverdue(a)}
                       onToggle={toggle}
                       onDelete={remove}
+                      onOpenDetails={setDetailActivity}
                     />
                   ))
                 )}
@@ -544,6 +548,15 @@ export default function V2ActivitiesClientPage() {
         defaultDate={selectedDate}
         onOpenChange={setComposerOpen}
         onCreate={create}
+      />
+
+      <ActivityDetailDialog
+        open={Boolean(detailActivity)}
+        onOpenChange={(open) => {
+          if (!open) setDetailActivity(null)
+        }}
+        activityId={detailActivity?.id ?? null}
+        activity={detailActivity}
       />
     </div>
   )

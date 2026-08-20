@@ -22,6 +22,7 @@ import { parseChannelConfigRecord } from "./types";
 const PROVIDER_LABELS: Record<ChannelProvider, string> = {
   META_CLOUD_API: "Cloud API",
   BAILEYS_MD: "QR Code",
+  META_INSTAGRAM_LOGIN: "Instagram",
 };
 
 const TYPE_LABELS: Record<ChannelType, string> = {

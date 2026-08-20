@@ -40,7 +40,14 @@ export interface CallRecord {
   contactId: string | null;
   dealId: string | null;
   extensionId: string | null;
-  contact?: { id: string; name: string | null; phone: string | null } | null;
+  contact?: {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    avatarUrl?: string | null;
+  } | null;
+  /** Agente que discou (outbound) ou atendeu / dono do ramal (inbound). */
+  agent?: { id: string; name: string; avatarUrl: string | null } | null;
 }
 
 export interface ListCallsResponse {

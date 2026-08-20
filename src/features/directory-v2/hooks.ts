@@ -6,12 +6,19 @@ import {
   addContactNote,
   addContactTag,
   createActivity,
+  createActivityComment,
   createCompany,
   createContact,
   deleteActivity,
+  deleteActivityComment,
   deleteCompany,
   deleteContact,
   fetchActivities,
+  fetchActivity,
+  fetchActivityAlert,
+  fetchActivityCommentHistory,
+  fetchActivityComments,
+  postActivityAlertAction,
   fetchCompanies,
   fetchCompany,
   fetchCompanyFacets,
@@ -25,8 +32,14 @@ import {
   mergeContacts,
   removeContactTag,
   updateActivity,
+  updateActivityComment,
   updateCompany,
   updateContact,
+  type ActivityAlertActionBody,
+  type ActivityAlertKind,
+  type ActivityAlertResponse,
+  type ActivityCommentDto,
+  type ActivityCommentRevisionDto,
   type ActivityListItemDto,
   type ActivityListPage,
   type ActivityTypeDto,
@@ -398,5 +411,145 @@ export function useActivities(params: {
     enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,
     placeholderData: (prev) => prev,
+  });
+}
+
+export function useActivity(id: string | null, enabled = true) {
+  return useQuery<ActivityListItemDto>({
+    queryKey: ["v2-activity", id],
+    queryFn: () => fetchActivity(id!),
+    enabled: resolveEnabled(enabled) && Boolean(id),
+    staleTime: 10_000,
+  });
+}
+
+function invalidateActivityComments(
+  qc: ReturnType<typeof useQueryClient>,
+  activityId: string,
+) {
+  qc.invalidateQueries({ queryKey: ["v2-activity-comments", activityId] });
+  qc.invalidateQueries({ queryKey: ["v2-activity-comment-history", activityId] });
+  qc.invalidateQueries({ queryKey: ["v2-activity", activityId] });
+  invalidateActivities(qc);
+  // Painel do negócio usa chave própria
+  qc.invalidateQueries({ queryKey: ["deal-activities"], exact: false });
+}
+
+export function useActivityComments(activityId: string | null, enabled = true) {
+  return useQuery<{ items: ActivityCommentDto[] }>({
+    queryKey: ["v2-activity-comments", activityId],
+    queryFn: () => fetchActivityComments(activityId!),
+    enabled: resolveEnabled(enabled) && Boolean(activityId),
+    staleTime: 5_000,
+  });
+}
+
+export function useActivityCommentHistory(
+  activityId: string | null,
+  enabled = false,
+) {
+  return useQuery<{ items: ActivityCommentRevisionDto[] }>({
+    queryKey: ["v2-activity-comment-history", activityId],
+    queryFn: () => fetchActivityCommentHistory(activityId!),
+    enabled: resolveEnabled(enabled) && Boolean(activityId) && enabled,
+    staleTime: 10_000,
+  });
+}
+
+export function useCreateActivityComment(activityId: string | null) {
+  const qc = useQueryClient();
+  return useMutation<ActivityCommentDto, Error, { content: string }>({
+    mutationFn: ({ content }) => {
+      if (!activityId) throw new Error("Atividade inválida.");
+      return createActivityComment(activityId, content);
+    },
+    onSuccess: () => {
+      if (activityId) invalidateActivityComments(qc, activityId);
+    },
+  });
+}
+
+export function useUpdateActivityComment(activityId: string | null) {
+  const qc = useQueryClient();
+  return useMutation<
+    ActivityCommentDto,
+    Error,
+    { commentId: string; content: string }
+  >({
+    mutationFn: ({ commentId, content }) => {
+      if (!activityId) throw new Error("Atividade inválida.");
+      return updateActivityComment(activityId, commentId, content);
+    },
+    onSuccess: () => {
+      if (activityId) invalidateActivityComments(qc, activityId);
+    },
+  });
+}
+
+export function useDeleteActivityComment(activityId: string | null) {
+  const qc = useQueryClient();
+  return useMutation<ActivityCommentDto, Error, { commentId: string }>({
+    mutationFn: ({ commentId }) => {
+      if (!activityId) throw new Error("Atividade inválida.");
+      return deleteActivityComment(activityId, commentId);
+    },
+    onSuccess: () => {
+      if (activityId) invalidateActivityComments(qc, activityId);
+    },
+  });
+}
+
+const ACTIVITY_ALERT_KEY = ["v2-activity-alert"] as const;
+
+export { ACTIVITY_ALERT_KEY };
+
+/**
+ * Polling de alerta de tarefa (GET consumptivo).
+ * `enabled` deve refletir sessão autenticada no shell.
+ */
+export function useActivityAlert(enabled = true) {
+  return useQuery<ActivityAlertResponse>({
+    queryKey: ACTIVITY_ALERT_KEY,
+    queryFn: fetchActivityAlert,
+    enabled: resolveEnabled(enabled),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    retry: false,
+    staleTime: 0,
+  });
+}
+
+function clearActivityAlertCache(qc: ReturnType<typeof useQueryClient>) {
+  qc.setQueryData<ActivityAlertResponse>(ACTIVITY_ALERT_KEY, { alert: null });
+}
+
+export function useDismissActivityAlert() {
+  const qc = useQueryClient();
+  return useMutation<{ ok: true }, Error, { activityId: string }>({
+    mutationFn: ({ activityId }) =>
+      postActivityAlertAction(activityId, { action: "dismiss" }),
+    onSuccess: () => {
+      clearActivityAlertCache(qc);
+      void qc.invalidateQueries({ queryKey: ACTIVITY_ALERT_KEY });
+    },
+  });
+}
+
+export function useSnoozeActivityAlert() {
+  const qc = useQueryClient();
+  return useMutation<
+    { ok: true },
+    Error,
+    { activityId: string; kind: ActivityAlertKind }
+  >({
+    mutationFn: ({ activityId, kind }) =>
+      postActivityAlertAction(activityId, {
+        action: "snooze",
+        kind,
+      } satisfies ActivityAlertActionBody),
+    onSuccess: () => {
+      clearActivityAlertCache(qc);
+      void qc.invalidateQueries({ queryKey: ACTIVITY_ALERT_KEY });
+    },
   });
 }

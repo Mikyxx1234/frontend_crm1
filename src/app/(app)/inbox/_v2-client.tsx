@@ -29,6 +29,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { usesWhatsapp24hWindow } from "@/components/inbox/channel-type-icon";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { TagChip } from "@/components/crm/tag-chip";
@@ -880,6 +881,10 @@ export default function InboxV2ClientPage({
       lastMessageChannelId,
     },
   );
+  const selectedOutbound = whatsappChannels?.find((c) => c.id === selectedChannelId);
+  const applyWhatsappSession = usesWhatsapp24hWindow(
+    selectedOutbound?.type ?? messagesData?.channel?.type,
+  );
 
   // Override de canal ativo: revalida a janela de 24h no canal de DESTINO
   // (o `session` do GET messages reflete só o canal da conversa).
@@ -887,11 +892,15 @@ export default function InboxV2ClientPage({
     !!selectedChannelId &&
     !!conversationChannelId &&
     selectedChannelId !== conversationChannelId;
-  const { data: overrideSession } = useChannelSession(
-    activeId,
-    channelOverrideActive ? selectedChannelId : null,
-    channelOverrideActive,
-  );
+  // Sempre a sessão do número escolhido no composer. Sem isso, inbound no
+  // Acadêmico vira o channelId do ticket e o CSV (persistido) aparece
+  // "24h encerrada" mesmo com janela aberta naquele chip.
+  const { data: selectedSession, isFetched: selectedSessionFetched } =
+    useChannelSession(
+      activeId,
+      selectedChannelId,
+      applyWhatsappSession && !!activeId && !!selectedChannelId,
+    );
 
   function handleSelect(id: string) {
     setActiveId(id);
@@ -991,12 +1000,13 @@ export default function InboxV2ClientPage({
       ? !sessionActiveFromBackend
       : isSessionExpired(sessionInfo?.lastInboundAt ?? activeRow.lastInboundAt)
     : false;
-  // Com override de canal, manda a sessão do canal de DESTINO; enquanto a
-  // query carrega, mantém o valor da conversa (evita flicker do composer).
-  const sessionExpiredEffective =
-    channelOverrideActive && overrideSession
-      ? !overrideSession.active
-      : sessionExpired;
+  const sessionExpiredEffective = !applyWhatsappSession
+    ? false
+    : selectedChannelId && selectedSessionFetched
+      ? selectedSession?.active !== true
+      : channelOverrideActive
+        ? false
+        : sessionExpired;
   // Bloco C (25/jun/26): backend pode setar `canReply:false` quando o
   // usuário não tem `channel.send`. Default true preserva compat com
   // backend antigo (que não envia o campo).

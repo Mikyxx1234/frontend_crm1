@@ -22,6 +22,7 @@ import { toast } from "sonner";
 
 import { ChatArea } from "@/components/crm/chat-area";
 import type { Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { usesWhatsapp24hWindow } from "@/components/inbox/channel-type-icon";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { isSessionExpired, toMessageBubble } from "@/features/inbox-v2/adapters";
@@ -137,18 +138,21 @@ export function SalesHubChat({
       lastMessageChannelId,
     },
   );
+  const selectedOutbound = whatsappChannels?.find((c) => c.id === selectedChannelId);
+  const applyWhatsappSession = usesWhatsapp24hWindow(
+    selectedOutbound?.type ?? messagesData?.channel?.type,
+  );
 
-  // Override de canal ativo: revalida a janela de 24h no canal de DESTINO
-  // (o `session` do GET messages reflete só o canal da conversa).
   const channelOverrideActive =
     !!selectedChannelId &&
     !!conversationChannelId &&
     selectedChannelId !== conversationChannelId;
-  const { data: overrideSession } = useChannelSession(
-    conversationId,
-    channelOverrideActive ? selectedChannelId : null,
-    channelOverrideActive,
-  );
+  const { data: selectedSession, isFetched: selectedSessionFetched } =
+    useChannelSession(
+      conversationId,
+      selectedChannelId,
+      applyWhatsappSession && !!conversationId && !!selectedChannelId,
+    );
 
   const pinnedMessageIds = useMemo(
     () => messagesData?.pinnedMessageIds ?? [],
@@ -189,12 +193,13 @@ export function SalesHubChat({
       ? !sessionInfo.active
       : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundAt ?? null)
     : false;
-  // Com override de canal, manda a sessão do canal de DESTINO; enquanto a
-  // query carrega, mantém o valor da conversa (evita flicker do composer).
-  const sessionExpiredEffective =
-    channelOverrideActive && overrideSession
-      ? !overrideSession.active
-      : sessionExpired;
+  const sessionExpiredEffective = !applyWhatsappSession
+    ? false
+    : selectedChannelId && selectedSessionFetched
+      ? selectedSession?.active !== true
+      : channelOverrideActive
+        ? false
+        : sessionExpired;
   const canReply = messagesData?.canReply ?? true;
   const isResolved = conversationStatus === "RESOLVED";
 

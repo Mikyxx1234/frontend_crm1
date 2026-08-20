@@ -9,7 +9,7 @@
  * pra serem plugados nas props correspondentes do DealDetailPanel.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,12 +20,15 @@ import { apiUrl } from "@/lib/api";
 import { avatarInitials } from "@/lib/avatar";
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions";
 
-import { ConnectionDivider, ConversationClosedMarker, MessageBubble, TicketDivider, StickyDayPill, useStickyDayLabel, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { ConnectionDivider, ConversationClosedMarker, DaySeparator, formatChatDayLabel, MessageBubble, StickyDayPill, TicketDivider, useStickyDayLabel, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { usesWhatsapp24hWindow } from "@/components/inbox/channel-type-icon";
 import {
   EventRow,
   isConversationCloseEventText,
   isConversationOpenEventText,
+  isHideableChatEvent,
   isRedundantOpenStatusEvent,
+  useHideChatEvents,
 } from "@/components/crm/chat-timeline";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
@@ -50,9 +53,9 @@ import {
   useSendMessage,
   useWhatsappChannels,
   findLastPublicMessageChannelId,
+  useChannelSession,
 } from "@/features/inbox-v2/hooks";
 import {
-  formatDayLabel,
   isSessionExpired,
   toMessageBubble,
 } from "@/features/inbox-v2/adapters";
@@ -222,36 +225,46 @@ export function useDealChatBinding(params: {
       lastMessageChannelId,
     },
   );
+  const selectedOutbound = whatsappChannels?.find((c) => c.id === selectedChannelId);
+  const applyWhatsappSession = usesWhatsapp24hWindow(
+    selectedOutbound?.type ?? messagesResp?.channel?.type,
+  );
+  const { data: selectedSession, isFetched: selectedSessionFetched } =
+    useChannelSession(
+      effectiveConversationId ?? null,
+      selectedChannelId,
+      applyWhatsappSession && !!effectiveConversationId && !!selectedChannelId,
+    );
 
-  // Deriva sessionExpired da mesma fonte do /inbox: prioriza `session.active`
-  // do backend; se o objeto `session` não vier, cai no heurístico de 24h
-  // baseado em `lastInboundAt`. O override por prop continua válido (ex.:
-  // testes ou casos onde o caller já tem o sinal).
+  // Deriva sessionExpired da mesma fonte do /inbox: prioriza a sessão do
+  // número escolhido no composer (CSV vs Acadêmico são janelas distintas).
   const sessionInfo = messagesResp?.session;
   const sessionActiveFromBackend = sessionInfo?.active;
-  // Última mensagem inbound carregada na lista (rede de segurança caso o
-  // backend não envie `session.lastInboundAt`). `direction === "in"` é o
-  // valor canônico do backend (vide MessageDirection em api/types.ts).
   const lastInboundFromMessages =
     (messagesResp?.messages ?? [])
       .filter((m) => m.direction === "in")
       .map((m) => m.createdAt)
       .sort()
       .pop() ?? null;
-  // Só decide depois que o fetch responder, senão `isSessionExpired(null)`
-  // dispara um falso positivo durante o loading inicial.
+  const sessionExpiredFromConversation =
+    !messagesResp
+      ? false
+      : sessionActiveFromBackend !== undefined
+        ? !sessionActiveFromBackend
+        : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundFromMessages);
   const sessionExpiredDerived =
     sessionExpiredOverride !== undefined
       ? sessionExpiredOverride
-      : !messagesResp
+      : !applyWhatsappSession
         ? false
-        : sessionActiveFromBackend !== undefined
-          ? !sessionActiveFromBackend
-          : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundFromMessages);
+        : selectedChannelId && selectedSessionFetched
+          ? selectedSession?.active !== true
+          : sessionExpiredFromConversation;
   const sessionExpired = !!effectiveConversationId && sessionExpiredDerived;
   // Bloco C (25/jun/26): respeita `canReply` exposto pelo backend
   // (mesma fonte que o /inbox). Compat: default true quando ausente.
   const canReply = messagesResp?.canReply ?? true;
+  const { hideEvents } = useHideChatEvents();
 
   // SSE: assina /api/sse/messages e invalida as mensagens da conversa
   // ativa quando chega new_message. Sem isto o chat do deal só atualizava
@@ -335,9 +348,9 @@ export function useDealChatBinding(params: {
     return null;
   }, []);
 
-  const stickyDay = useStickyDayLabel(
+  const stickyDayLabel = useStickyDayLabel(
     findScrollEl,
-    `${effectiveConversationId ?? ""}:${bubbles[0]?.id ?? ""}:${bubbles[bubbles.length - 1]?.id ?? ""}:${bubbles.length}`,
+    `${effectiveConversationId ?? ""}:${bubbles.length}`,
   );
 
   const scrollToEnd = useCallback(
@@ -590,6 +603,7 @@ export function useDealChatBinding(params: {
     );
     const showConnSwitches = distinctChannels.size >= 2;
     let lastChannelId: string | null = null;
+    let lastDayLabel: string | null = null;
     const hasPersistedClose = bubbles.some(
       (m) => m.kind === "event" && isConversationCloseEventText(m.content),
     );
@@ -638,7 +652,12 @@ export function useDealChatBinding(params: {
       if (b.kind === "event" && isRedundantOpenStatusEvent(b.content)) {
         return null;
       }
-      const dayLabel = formatDayLabel(b.createdAt);
+      if (hideEvents && isHideableChatEvent(b)) {
+        return null;
+      }
+      const dayLabel = formatChatDayLabel(b.createdAt);
+      const showDay = Boolean(dayLabel && dayLabel !== lastDayLabel);
+      if (showDay && dayLabel) lastDayLabel = dayLabel;
       let connLabel: string | null = null;
       if (showConnSwitches && b.channelId && b.channelId !== lastChannelId) {
         const ref = channelsMap[b.channelId];
@@ -648,7 +667,13 @@ export function useDealChatBinding(params: {
       const isNoteBubble = b.isNote === true;
       const isEvent = b.kind === "event";
       return (
-        <li key={b.id} className="list-none" data-day-label={dayLabel || undefined}>
+        <Fragment key={b.id}>
+          {showDay && dayLabel ? (
+            <li className="pointer-events-none list-none" data-day-label={dayLabel}>
+              <DaySeparator date={dayLabel} />
+            </li>
+          ) : null}
+        <li className="list-none" data-day-label={dayLabel || undefined}>
           {connLabel && <ConnectionDivider label={connLabel} />}
           <div
             data-message-id={b.id}
@@ -696,11 +721,12 @@ export function useDealChatBinding(params: {
           )}
           </div>
         </li>
+        </Fragment>
       );
     });
     messagesNode = (
       <>
-        <StickyDayPill date={stickyDay} />
+        <StickyDayPill date={stickyDayLabel} />
         <ul className="flex list-none flex-col gap-1.5">
           {bubbleNodes}
         </ul>

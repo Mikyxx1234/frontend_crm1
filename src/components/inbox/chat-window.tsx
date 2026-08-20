@@ -62,6 +62,7 @@ import { dt } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { MetaSendErrorBalloon } from "@/components/crm/meta-send-error-balloon";
 import { EventRow, classifyTimelineItem, isRedundantOpenStatusEvent } from "@/components/crm/chat-timeline";
+import { StickyDayPill, useStickyDayLabel } from "@/components/crm/message-bubble";
 
 /** Texto da nota em uma linha (banner fixado estilo WhatsApp). */
 function notePreviewOneLine(content: string, maxChars = 140): string {
@@ -462,6 +463,7 @@ export function ChatWindow({
   // mount sem hydration mismatch).
   const isMobile = useIsMobile();
   const bottomRef = React.useRef<HTMLDivElement>(null);
+  const messagesScrollRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   /** Handlers expostos por cada `AudioMessage` — menu ⋯ chama transcrever sem duplicar lógica. */
@@ -637,6 +639,10 @@ export function ChatWindow({
     refetchInterval: conversationId ? 45_000 : false,
   });
   const messages = messagesData?.messages ?? [];
+  const stickyDayLabel = useStickyDayLabel(
+    messagesScrollRef,
+    `${conversationId ?? ""}:${messages.length}:${messages[0]?.id ?? ""}`,
+  );
   const pinnedNoteId = messagesData?.pinnedNoteId ?? null;
   const pinnedCacheRef = React.useRef<InboxMessageDto | null>(null);
   React.useEffect(() => {
@@ -2205,6 +2211,7 @@ export function ChatWindow({
           nas bordas em telas <375px) sob o pretexto de 'Kommo-like'.
           16px (px-4) e o minimo aceitavel sem perder identidade. */}
       <div
+        ref={messagesScrollRef}
         className={cn(
           "relative min-h-0 flex-1 overflow-y-auto bg-[var(--chat-bg)] px-4 py-3 shadow-inner",
           compactChrome
@@ -2212,6 +2219,7 @@ export function ChatWindow({
             : "scrollbar-thin sm:px-12 sm:py-12",
         )}
       >
+        <StickyDayPill date={stickyDayLabel} />
         {/* Mobile: px-4 py-3 (respeita regra). Desktop: px-12 py-12
             (respiro editorial premium). */}
         {isFetching && !isLoading && (
@@ -2245,6 +2253,7 @@ export function ChatWindow({
           {messages.map((m, idx) => {
             const prev = idx > 0 ? messages[idx - 1] : null;
             const showDate = shouldShowDateSeparator(prev, m);
+            const dayLabel = chatDateLabel(m.createdAt) || undefined;
 
             {
               const mt = String(m.messageType ?? "").toLowerCase();
@@ -2257,7 +2266,7 @@ export function ChatWindow({
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <div data-msg-idx={idx}>
+                    <div data-msg-idx={idx} data-day-label={dayLabel}>
                       <AIDraftCard
                         messageId={String(m.id)}
                         content={raw}
@@ -2271,21 +2280,18 @@ export function ChatWindow({
               }
 
               /* Chamadas:
-                 - Eventos sem mídia (`whatsapp_call`, ou `whatsapp_call_recording`
-                   sem URL) → Activity Item compacto.
-                 - Gravação com mídia (`whatsapp_call_recording` com `mediaUrl`)
-                   → cai no fluxo normal de mensagem e renderiza como áudio
-                   regular (bolha outbound cyan + AudioMessage com player). O
-                   `detectMediaKind` (acima) já mapeia `whatsapp_call_recording`
-                   para `"audio"`. */
+                 - `whatsapp_call` / `sip_call` (sem player) → Activity Item.
+                 - `whatsapp_call_recording` COM `mediaUrl` cai no fluxo de áudio.
+                 - Gravação SIP fica só na aba Chamadas, não no chat. */
               if (
                 mt === "whatsapp_call" ||
+                mt === "sip_call" ||
                 (mt === "whatsapp_call_recording" && !m.mediaUrl)
               ) {
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <div data-msg-idx={idx}>
+                    <div data-msg-idx={idx} data-day-label={dayLabel}>
                       <CallActivityItem message={m} />
                     </div>
                   </React.Fragment>
@@ -2297,7 +2303,7 @@ export function ChatWindow({
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <div data-msg-idx={idx}>
+                    <div data-msg-idx={idx} data-day-label={dayLabel}>
                       <ConsentActivityItem
                         message={m}
                         verdict={consentVerdict}
@@ -2319,7 +2325,7 @@ export function ChatWindow({
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <div data-msg-idx={idx}>
+                    <div data-msg-idx={idx} data-day-label={dayLabel}>
                       <SystemEventRow
                         body={systemBody}
                         createdAt={m.createdAt}
@@ -2342,7 +2348,7 @@ export function ChatWindow({
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <div data-msg-idx={idx}>
+                    <div data-msg-idx={idx} data-day-label={dayLabel}>
                       <EventRow
                         action={classified.action ?? "ia"}
                         text={m.content}
@@ -2387,7 +2393,7 @@ export function ChatWindow({
               <React.Fragment key={m.id}>
                 {showDate && <DateSep date={m.createdAt} />}
                 <MotionDiv
-                  data-msg-idx={idx}
+                  data-msg-idx={idx} data-day-label={dayLabel}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
@@ -4485,6 +4491,11 @@ function chatDateLabel(date: Date | string | null): string {
   const y = new Date(now);
   y.setDate(y.getDate() - 1);
   if (d.toDateString() === y.toDateString()) return "Ontem";
+  const start = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((start(now) - start(d)) / 86_400_000);
+  if (diffDays > 1 && diffDays < 7) {
+    return d.toLocaleDateString("pt-BR", { weekday: "long" });
+  }
   return d.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -4504,9 +4515,16 @@ function shouldShowDateSeparator(
 }
 
 function DateSep({ date }: { date: string | null }) {
+  const label = chatDateLabel(date);
+  if (!label) return null;
   return (
-    <div className="flex justify-center py-3">
-      <span className={dt.chat.dateSep}>{chatDateLabel(date)}</span>
+    <div
+      className="pointer-events-none flex justify-center py-2"
+      data-day-label={label}
+    >
+      <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/95 px-3 py-0.5 font-display text-[11px] font-semibold capitalize text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+        {label}
+      </span>
     </div>
   );
 }
@@ -4639,6 +4657,7 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
   const content = String(message.content ?? "").trim();
   const mt = String(message.messageType ?? "").toLowerCase();
   const isRecording = mt === "whatsapp_call_recording";
+  const isSip = mt === "sip_call";
   const hasRecording = isRecording && !!message.mediaUrl;
 
   const lower = content.toLowerCase();
@@ -4668,7 +4687,7 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
       !isOutgoing &&
       (senderSuggestsIncoming || contentSuggestsIncoming));
   const isTerminate = lower.includes("fim");
-  const isFailed = lower.includes("falhou");
+  const isFailed = lower.includes("falhou") || /n[ãa]o atendida/i.test(content);
 
   // Nome do agente exibido como linha discreta abaixo do título quando
   // outbound. Extrai do `senderName` ("WhatsApp · Marcelo Pinheiro" →
@@ -4686,23 +4705,34 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
         ? PhoneOutgoing
         : Phone;
 
-  const durationMatch = content.match(/(\d+m\d{2}s|\d+s)\b/);
+  const durationMatch = content.match(
+    /(\d+min(?:\s+\d+s)?|\d+m\d{2}s|\d+:\d{2}|\d+s)\b/,
+  );
   const timeMatch = content.match(/(\d{1,2}:\d{2}(?:[–-]\d{1,2}:\d{2})?)/);
   const duration = durationMatch?.[1] ?? null;
   const timeLabel =
     timeMatch?.[1] ?? (message.createdAt ? chatTime(message.createdAt) : null);
 
-  const label = hasRecording
-    ? "Gravação de chamada"
-    : isTerminate
-      ? isFailed
-        ? "Chamada não completada"
-        : "Chamada finalizada"
+  const sipLabel = isSip
+    ? isFailed
+      ? "Ligação não atendida"
       : isIncoming
-        ? "Chamada recebida"
-        : isOutgoing
-          ? "Chamada realizada"
-          : "Evento de chamada";
+        ? "Ligação recebida"
+        : "Ligação realizada"
+    : null;
+  const label = hasRecording && !isSip
+    ? "Gravação de chamada"
+    : sipLabel
+      ? sipLabel
+      : isTerminate
+        ? isFailed
+          ? "Chamada não completada"
+          : "Chamada finalizada"
+        : isIncoming
+          ? "Chamada recebida"
+          : isOutgoing
+            ? "Chamada realizada"
+            : "Evento de chamada";
 
   const accent = isFailed
     ? "text-destructive"

@@ -87,10 +87,12 @@ export function NodePalette({
   className,
   pinned,
   onTogglePin,
+  onAdd,
 }: {
   className?: string;
   pinned?: boolean;
   onTogglePin?: () => void;
+  onAdd?: (type: ActionStepType) => void;
 }) {
   return (
     <div
@@ -144,7 +146,9 @@ export function NodePalette({
                 <li key={type}>
                   <button
                     type="button"
+                    data-step-type={type}
                     draggable
+                    onClick={() => onAdd?.(type)}
                     onDragStart={(e) => {
                       e.dataTransfer.setData(PALETTE_DRAG_TYPE, type);
                       e.dataTransfer.effectAllowed = "copy";

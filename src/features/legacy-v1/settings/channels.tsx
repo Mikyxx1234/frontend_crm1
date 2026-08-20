@@ -90,6 +90,7 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
 const PROVIDER_LABEL: Record<string, string> = {
   META_CLOUD_API: "Meta Cloud API",
   BAILEYS_MD: "Baileys MD",
+  META_INSTAGRAM_LOGIN: "Instagram",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -303,7 +304,12 @@ export default function SettingsChannelsPage({
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   function openConfigure(ch: ApiChannel) {
-    if (ch.provider === "META_CLOUD_API") {
+    if (
+      ch.provider === "META_CLOUD_API" ||
+      ch.provider === "META_INSTAGRAM_LOGIN" ||
+      ch.type === "INSTAGRAM" ||
+      ch.type === "FACEBOOK"
+    ) {
       setMetaChannel(ch);
       return;
     }
@@ -814,7 +820,13 @@ export default function SettingsChannelsPage({
       >
         <DialogContent size="lg">
           <DialogHeader>
-            <DialogTitle>Configurar Meta Cloud API</DialogTitle>
+            <DialogTitle>
+              {metaChannel?.type === "INSTAGRAM"
+                ? "Configurar Instagram"
+                : metaChannel?.type === "FACEBOOK"
+                  ? "Configurar Messenger"
+                  : "Configurar Meta Cloud API"}
+            </DialogTitle>
           </DialogHeader>
           {metaChannel ? (
             <MetaConfigPanel channel={metaChannel} onSaved={() => setMetaChannel(null)} />

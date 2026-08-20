@@ -63,6 +63,13 @@ export function dtoToActivity(dto: ActivityListItemDto): Activity {
     start,
     status: dto.completed ? "concluida" : "pendente",
     withWhom: dto.contact?.name ?? dto.deal?.title ?? undefined,
+    contactId: dto.contact?.id ?? null,
+    contactName: dto.contact?.name ?? null,
+    dealId: dto.deal?.id ?? null,
+    dealTitle: dto.deal?.title ?? null,
+    createdBy: dto.createdBy
+      ? { id: dto.createdBy.id, name: dto.createdBy.name, avatarUrl: dto.createdBy.avatarUrl }
+      : null,
     notes: dto.description ?? undefined,
     assigneeType: isDept ? "department" : "user",
     assigneeUserId: dto.user?.id ?? null,

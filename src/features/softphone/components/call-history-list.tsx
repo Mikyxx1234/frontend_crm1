@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/phone";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { UserAvatar } from "@/components/crm/user-avatar";
 import { AVATAR_SIZE } from "@/lib/avatar";
 import { EmptyState } from "@/components/crm/empty-state";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
@@ -32,7 +33,7 @@ import type {
 } from "../api/types";
 
 const COLS =
-  "grid-cols-[36px_minmax(220px,2fr)_100px_110px_80px_minmax(140px,1.1fr)_minmax(120px,280px)]";
+  "grid-cols-[36px_minmax(180px,1.6fr)_minmax(140px,1.1fr)_100px_110px_80px_minmax(140px,1fr)_minmax(120px,240px)]";
 
 function formatDuration(sec: number | null) {
   if (!sec) return "—";
@@ -197,6 +198,7 @@ export function CallHistoryList({
     <>
       <span />
       <ListColumnLabel>Contato / Telefone</ListColumnLabel>
+      <ListColumnLabel>Agente</ListColumnLabel>
       <SortableHeader
         label="Direção"
         sort={sortFor("direction")}
@@ -227,7 +229,7 @@ export function CallHistoryList({
 
       {useCards ? (
         <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-          <div className="flex min-w-[820px] flex-col gap-2">
+          <div className="flex min-w-[960px] flex-col gap-2">
             <div className={listTableHeadRowClass(`${COLS} gap-3 border border-transparent px-4 py-2`)}>
               {HeadRow}
             </div>
@@ -270,7 +272,7 @@ export function CallHistoryList({
       ) : (
         <div className="flex w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
           <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-            <div className="min-w-[820px]">
+            <div className="min-w-[960px]">
               <div className={listTableHeadRowClass(`${COLS} gap-3 px-3 py-2.5`)}>
                 {HeadRow}
               </div>
@@ -350,47 +352,61 @@ function CallTableRow({ call, isPlaying, onPlay, variant = "dense" }: CallTableR
           )}
         </span>
 
-        {/* Contato / Telefone — avatar circular (padrão Contatos) + nome
-            bold + telefone mono na mesma linha. Sem nome, apenas o telefone
-            com um avatar neutro (?) para preservar alinhamento. */}
+        {/* Contato — ChatAvatar + nome primário + telefone muted (padrão Contatos). */}
         <div className="flex min-w-0 items-center gap-2.5">
           <ChatAvatar
             user={{
               id: call.contact?.id ?? call.phone,
               name: call.contact?.name ?? null,
-              imageUrl: null,
+              imageUrl: call.contact?.avatarUrl ?? null,
             }}
             channel={null}
             hideCartoon
             size={AVATAR_SIZE.sm}
           />
-          <div className="min-w-0 truncate leading-tight">
+          <div className="min-w-0 leading-tight">
             {call.contact?.name ? (
               <>
                 <Link
                   href={`/contacts/${call.contact.id}`}
-                  className="font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                  className="block truncate font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
                 >
                   {call.contact.name}
-                </Link>{" "}
-                <span className="font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
+                </Link>
+                <div className="truncate font-body text-[12px] text-[var(--text-muted)]">
                   {formatPhoneDisplay(call.phone)}
-                </span>
+                </div>
               </>
             ) : call.contact ? (
               <Link
                 href={`/contacts/${call.contact.id}`}
-                className="font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                className="block truncate font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
               >
                 {formatPhoneDisplay(call.phone)}
               </Link>
             ) : (
-              <span className="font-mono text-[12.5px] font-semibold tabular-nums text-[var(--text-primary)]">
+              <span className="block truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
                 {formatPhoneDisplay(call.phone)}
               </span>
             )}
           </div>
         </div>
+
+        {/* Agente — UserAvatar (gradiente/foto). Sem id resolvido → "—". */}
+        {call.agent ? (
+          <div className="flex min-w-0 items-center gap-2">
+            <UserAvatar
+              name={call.agent.name}
+              imageUrl={call.agent.avatarUrl}
+              size={AVATAR_SIZE.sm}
+            />
+            <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+              {call.agent.name}
+            </span>
+          </div>
+        ) : (
+          <span className="font-body text-[13px] text-[var(--text-muted)]">—</span>
+        )}
 
         {/* Direção — Recebida = brand-soft; Realizada = azul mais claro
             (mesma família, cinza foi trocado por azul conforme padrão do DS). */}

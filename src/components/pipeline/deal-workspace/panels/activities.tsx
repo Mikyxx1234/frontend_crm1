@@ -3,7 +3,20 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconCircle as Circle, IconClock, IconMail as Mail, IconMessageCircle as MessageCircle, IconPhoneCall as PhoneCall, IconPlus as Plus, IconTrash as Trash2, IconUsers as Users, IconLoader2 as Loader2 } from "@tabler/icons-react"
+import {
+  IconCalendar as Calendar,
+  IconCircleCheck as CheckCircle2,
+  IconCircle as Circle,
+  IconClock,
+  IconMail as Mail,
+  IconMessageCircle as MessageCircle,
+  IconNotes,
+  IconPhoneCall as PhoneCall,
+  IconPlus as Plus,
+  IconTrash as Trash2,
+  IconUsers as Users,
+  IconLoader2 as Loader2,
+} from "@tabler/icons-react";
 import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,20 +25,20 @@ import { Input } from "@/components/ui/input";
 import { SelectNative } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
+import { ActivityDetailDialog } from "@/components/crm/activities/activity-detail-dialog";
 import { cn, formatDateTime } from "@/lib/utils";
+import type { Activity, ActivityKind } from "@/lib/activities-data";
 
 import type { DealDetailActivity } from "../shared";
 import { ACTIVITY_TYPES } from "../shared";
 
 // ── TimePicker DS v2 ──────────────────────────────────────────────
-// Substituição do <input type="time"> nativo (exibe scroll-wheel do browser).
-// Dois selects compactos para hora e minuto, estilizados com tokens do DS.
 function TimePickerInline({
   value,
   onChange,
   disabled,
 }: {
-  value: string;         // "HH:mm" ou ""
+  value: string;
   onChange: (v: string) => void;
   disabled?: boolean;
 }) {
@@ -48,7 +61,12 @@ function TimePickerInline({
   );
 
   return (
-    <div className={cn("flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-border bg-[var(--color-bg-card)] px-1.5 transition", disabled && "opacity-40 pointer-events-none")}>
+    <div
+      className={cn(
+        "flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-border bg-[var(--color-bg-card)] px-1.5 transition",
+        disabled && "opacity-40 pointer-events-none",
+      )}
+    >
       <IconClock size={12} className="shrink-0 text-[var(--color-ink-muted)]" />
       <select
         disabled={disabled}
@@ -58,7 +76,11 @@ function TimePickerInline({
         aria-label="Hora"
       >
         <option value="">--</option>
-        {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+        {hours.map((h) => (
+          <option key={h} value={h}>
+            {h}
+          </option>
+        ))}
       </select>
       <span className="text-[11px] font-bold text-[var(--color-ink-muted)]">:</span>
       <select
@@ -69,28 +91,61 @@ function TimePickerInline({
         aria-label="Minuto"
       >
         <option value="">--</option>
-        {minutes.map((m) => <option key={m} value={m}>{m}</option>)}
+        {minutes.map((m) => (
+          <option key={m} value={m}>
+            {m}
+          </option>
+        ))}
       </select>
     </div>
   );
 }
 
-// Mapa de tipo -> visual (icone + cor accent + bg pilula)
 const TYPE_VISUAL: Record<
   string,
   { Icon: LucideIcon; bg: string; ring: string; fg: string }
 > = {
-  CALL:     { Icon: PhoneCall,     bg: "bg-[var(--color-cyan-soft)]",              ring: "ring-[var(--color-cyan)]/70",        fg: "text-[var(--color-cyan)]" },
-  EMAIL:    { Icon: Mail,          bg: "bg-[var(--color-success-bg)]",             ring: "ring-[var(--color-success)]/70",     fg: "text-[var(--color-success-text)]" },
-  MEETING:  { Icon: Users,         bg: "bg-[var(--color-lavender-soft)]",          ring: "ring-[var(--color-lavender)]/70",    fg: "text-[var(--color-lavender)]" },
-  TASK:     { Icon: CheckCircle2,  bg: "bg-[var(--color-primary)]/8",              ring: "ring-[var(--color-primary)]/70",     fg: "text-[var(--color-primary)]" },
-  NOTE:     { Icon: MessageCircle, bg: "bg-[var(--color-bg-subtle)]",              ring: "ring-[var(--color-border-soft)]",    fg: "text-[var(--color-ink-soft)]" },
-  WHATSAPP: { Icon: MessageCircle, bg: "bg-[var(--color-success-soft)]",           ring: "ring-[var(--color-success)]/70",     fg: "text-[var(--color-success-text)]" },
-  OTHER:    { Icon: Calendar,      bg: "bg-[var(--color-warn-bg)]",                ring: "ring-[var(--color-warn)]/70",        fg: "text-[var(--color-warn)]" },
+  CALL: { Icon: PhoneCall, bg: "bg-[var(--color-cyan-soft)]", ring: "ring-[var(--color-cyan)]/70", fg: "text-[var(--color-cyan)]" },
+  EMAIL: { Icon: Mail, bg: "bg-[var(--color-success-bg)]", ring: "ring-[var(--color-success)]/70", fg: "text-[var(--color-success-text)]" },
+  MEETING: { Icon: Users, bg: "bg-[var(--color-lavender-soft)]", ring: "ring-[var(--color-lavender)]/70", fg: "text-[var(--color-lavender)]" },
+  TASK: { Icon: CheckCircle2, bg: "bg-[var(--color-primary)]/8", ring: "ring-[var(--color-primary)]/70", fg: "text-[var(--color-primary)]" },
+  NOTE: { Icon: MessageCircle, bg: "bg-[var(--color-bg-subtle)]", ring: "ring-[var(--color-border-soft)]", fg: "text-[var(--color-ink-soft)]" },
+  WHATSAPP: { Icon: MessageCircle, bg: "bg-[var(--color-success-soft)]", ring: "ring-[var(--color-success)]/70", fg: "text-[var(--color-success-text)]" },
+  OTHER: { Icon: Calendar, bg: "bg-[var(--color-warn-bg)]", ring: "ring-[var(--color-warn)]/70", fg: "text-[var(--color-warn)]" },
 };
 
+const TYPE_TO_KIND: Record<string, ActivityKind> = {
+  CALL: "ligacao",
+  MEETING: "reuniao",
+  EMAIL: "email",
+  TASK: "tarefa",
+  OTHER: "evento",
+};
+
+function dealActivityToUi(a: DealDetailActivity, dealId: string): Activity {
+  const iso = a.scheduledAt ?? a.createdAt;
+  const d = iso ? new Date(iso) : new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return {
+    id: a.id,
+    kind: TYPE_TO_KIND[a.type] ?? "tarefa",
+    title: a.title,
+    start: `${y}-${m}-${day}T${hh}:${mm}`,
+    status: a.completed ? "concluida" : "pendente",
+    notes: a.description ?? undefined,
+    dealId,
+    assigneeUserId: a.user?.id ?? null,
+    assigneeLabel: a.user?.name ?? null,
+    createdBy: null,
+  };
+}
+
 type ActivitiesPanelProps = {
-  activities?: DealDetailActivity[]; // @deprecated — ignorado internamente
+  activities?: DealDetailActivity[];
   dealId: string;
   onCreated?: () => void;
 };
@@ -102,11 +157,11 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
   const [type, setType] = React.useState("TASK");
   const [title, setTitle] = React.useState("");
   const [desc, setDesc] = React.useState("");
-  const [scheduledDate, setScheduledDate] = React.useState(""); // "yyyy-MM-dd"
-  const [scheduledTime, setScheduledTime] = React.useState(""); // "HH:mm"
+  const [scheduledDate, setScheduledDate] = React.useState("");
+  const [scheduledTime, setScheduledTime] = React.useState("");
   const [open, setOpen] = React.useState(false);
+  const [detailActivity, setDetailActivity] = React.useState<Activity | null>(null);
 
-  // Combina data + hora em ISO string (ou vazia)
   const scheduledISO = React.useMemo(() => {
     if (!scheduledDate) return "";
     const time = scheduledTime || "00:00";
@@ -144,7 +199,11 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
       return res.json();
     },
     onSuccess: () => {
-      setTitle(""); setDesc(""); setScheduledDate(""); setScheduledTime(""); setOpen(false);
+      setTitle("");
+      setDesc("");
+      setScheduledDate("");
+      setScheduledTime("");
+      setOpen(false);
       invalidate();
     },
   });
@@ -168,7 +227,6 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[var(--color-chat-bg)]">
       <div className="scrollbar-thin flex-1 overflow-y-auto p-4 sm:p-6">
-        {/* Composer glass */}
         <div
           className={cn(
             "mb-5 rounded-2xl border border-border bg-card/90 p-4 backdrop-blur-md",
@@ -202,7 +260,9 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                     className="h-9 rounded-xl border-border text-sm"
                   >
                     {ACTIVITY_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
                     ))}
                   </SelectNative>
                 </div>
@@ -210,7 +270,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                     Agendar
                   </label>
-                    <div className="flex gap-1.5">
+                  <div className="flex gap-1.5">
                     <DatePicker
                       value={scheduledDate || null}
                       onChange={(v) => setScheduledDate(v)}
@@ -245,7 +305,13 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                   variant="ghost"
                   size="sm"
                   className="rounded-full px-4 text-[12px] font-bold text-[var(--text-muted)]"
-                  onClick={() => { setOpen(false); setTitle(""); setDesc(""); setScheduledDate(""); setScheduledTime(""); }}
+                  onClick={() => {
+                    setOpen(false);
+                    setTitle("");
+                    setDesc("");
+                    setScheduledDate("");
+                    setScheduledTime("");
+                  }}
                 >
                   Cancelar
                 </Button>
@@ -263,7 +329,6 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
           )}
         </div>
 
-        {/* Timeline */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="size-6 animate-spin text-[var(--color-ink-muted)]" />
@@ -277,32 +342,42 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
             activities={activities}
             onToggle={(id) => toggleMut.mutate(id)}
             onDelete={(id) => deleteMut.mutate(id)}
+            onOpenDetails={(a) => setDetailActivity(dealActivityToUi(a, dealId))}
             togglePending={toggleMut.isPending}
             deletePending={deleteMut.isPending}
           />
         )}
       </div>
+
+      <ActivityDetailDialog
+        open={Boolean(detailActivity)}
+        onOpenChange={(next) => {
+          if (!next) setDetailActivity(null);
+        }}
+        activityId={detailActivity?.id ?? null}
+        activity={detailActivity}
+      />
     </div>
   );
 }
 
-// Timeline com spine SVG curva (Bezier sutil) ligando os icones
 function ActivityTimeline({
   activities,
   onToggle,
   onDelete,
+  onOpenDetails,
   togglePending,
   deletePending,
 }: {
   activities: DealDetailActivity[];
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
+  onOpenDetails: (a: DealDetailActivity) => void;
   togglePending: boolean;
   deletePending: boolean;
 }) {
   return (
     <div className="relative pl-12">
-      {/* SVG spine — curva sutil de cima a baixo */}
       <svg
         className="pointer-events-none absolute left-[18px] top-3 h-[calc(100%-1.5rem)] w-3"
         preserveAspectRatio="none"
@@ -325,7 +400,6 @@ function ActivityTimeline({
           const Icon = visual.Icon;
           return (
             <li key={a.id} className="group relative">
-              {/* icone — pílula colorida */}
               <button
                 type="button"
                 onClick={() => onToggle(a.id)}
@@ -333,7 +407,10 @@ function ActivityTimeline({
                 aria-label={a.completed ? "Marcar como pendente" : "Concluir"}
                 className={cn(
                   "absolute -left-12 top-2 inline-flex size-9 items-center justify-center rounded-full",
-                  visual.bg, "ring-1", visual.ring, visual.fg,
+                  visual.bg,
+                  "ring-1",
+                  visual.ring,
+                  visual.fg,
                   "transition-transform active:scale-95",
                   a.completed && "opacity-60 grayscale",
                 )}
@@ -346,8 +423,17 @@ function ActivityTimeline({
               </button>
 
               <div
+                role="button"
+                tabIndex={0}
+                onClick={() => onOpenDetails(a)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onOpenDetails(a);
+                  }
+                }}
                 className={cn(
-                  "rounded-2xl border border-border bg-card p-3.5",
+                  "cursor-pointer rounded-2xl border border-border bg-card p-3.5",
                   "shadow-[var(--shadow-sm)] lumen-transition hover:shadow-[var(--shadow-md)]",
                 )}
               >
@@ -358,7 +444,8 @@ function ActivityTimeline({
                         className={cn(
                           "inline-flex items-center rounded-full px-1.5 py-0.5",
                           "text-[10px] font-semibold uppercase tracking-widest",
-                          visual.bg, visual.fg,
+                          visual.bg,
+                          visual.fg,
                         )}
                       >
                         {ACTIVITY_TYPES.find((t) => t.value === a.type)?.label ?? a.type}
@@ -388,21 +475,41 @@ function ActivityTimeline({
                       {a.user.name} · {formatDateTime(a.scheduledAt ?? a.createdAt)}
                     </p>
                   </div>
-                  <TooltipHost label="Excluir" side="left">
-                    <button
-                      type="button"
-                      onClick={() => onDelete(a.id)}
-                      disabled={deletePending}
-                      aria-label="Excluir"
-                      className={cn(
-                        "shrink-0 rounded-full p-1 text-[var(--color-ink-muted)] opacity-0",
-                        "transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]",
-                        "group-hover:opacity-100",
-                      )}
-                    >
-                      <Trash2 className="size-3.5" strokeWidth={2} />
-                    </button>
-                  </TooltipHost>
+                  <div
+                    className="flex shrink-0 flex-col gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <TooltipHost label="Detalhes e notas" side="left">
+                      <button
+                        type="button"
+                        onClick={() => onOpenDetails(a)}
+                        aria-label="Detalhes e notas"
+                        className={cn(
+                          "rounded-full p-1 text-[var(--color-ink-muted)]",
+                          "transition-all hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]",
+                          "opacity-0 group-hover:opacity-100",
+                        )}
+                      >
+                        <IconNotes className="size-3.5" strokeWidth={2} />
+                      </button>
+                    </TooltipHost>
+                    <TooltipHost label="Excluir" side="left">
+                      <button
+                        type="button"
+                        onClick={() => onDelete(a.id)}
+                        disabled={deletePending}
+                        aria-label="Excluir"
+                        className={cn(
+                          "rounded-full p-1 text-[var(--color-ink-muted)] opacity-0",
+                          "transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]",
+                          "group-hover:opacity-100",
+                        )}
+                      >
+                        <Trash2 className="size-3.5" strokeWidth={2} />
+                      </button>
+                    </TooltipHost>
+                  </div>
                 </div>
               </div>
             </li>

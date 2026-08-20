@@ -1245,7 +1245,8 @@
   padding: 4px;
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
-  background: var(--glass-bg-modal);
+  background: #ffffff;
+  color: #0f172a;
   box-shadow: var(--glass-shadow-lg);
 }
 /* Lista de tags no node: em fluxo (não absolute) pra o card crescer
@@ -1269,7 +1270,7 @@
   border-radius: var(--radius-sm);
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: #0f172a;
   text-align: left;
   cursor: pointer;
   transition: 0.1s;
@@ -2013,6 +2014,10 @@
   background: var(--wf-node-bg) !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
   backdrop-filter: none !important;
+  cursor: pointer;
+}
+.automation-editor .react-flow__minimap svg {
+  cursor: pointer;
 }
 .automation-editor .react-flow__edge-path {
   stroke-linecap: round;

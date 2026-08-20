@@ -77,6 +77,7 @@ export interface CapacitorPluginsMap {
   NativeBiometric?: NativeBiometricPlugin;
   App?: NativeAppPlugin;
   AppUpdate?: NativeAppUpdatePlugin;
+  PushNotifications?: unknown;
   [pluginName: string]: unknown;
 }
 

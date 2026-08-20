@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useEffect, useCallback, useMemo, type FormEvent } from "react"
+import { useRef, useState, useEffect, useCallback, useMemo, type FormEvent, Fragment } from "react"
 import { useSession } from "next-auth/react"
 import { useTeamUsers } from "@/features/inbox-v2/hooks/use-permissions"
 import { cn } from "@/lib/utils"
@@ -9,12 +9,14 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { ChatAvatar } from "@/components/inbox/chat-avatar"
 import { AVATAR_SIZE, avatarInitials } from "@/lib/avatar"
-import { MessageBubble, ConnectionDivider, ConversationClosedMarker, TicketDivider, StickyDayPill, useStickyDayLabel, type Message } from "./message-bubble"
+import { MessageBubble, ConnectionDivider, ConversationClosedMarker, TicketDivider, DaySeparator, formatChatDayLabel, StickyDayPill, useStickyDayLabel, type Message } from "./message-bubble"
 import {
   EventRow,
   isConversationCloseEventText,
   isConversationOpenEventText,
+  isHideableChatEvent,
   isRedundantOpenStatusEvent,
+  useHideChatEvents,
 } from "./chat-timeline"
 import { SessionAlert } from "./session-alert"
 import {
@@ -36,6 +38,8 @@ import {
   IconX,
   IconLock,
   IconChevronDown,
+  IconEye,
+  IconEyeOff,
 } from "@tabler/icons-react"
 
 export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
@@ -217,6 +221,10 @@ export function ChatArea({
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
+  const stickyDayLabel = useStickyDayLabel(
+    messagesRef,
+    `${messages[0]?.id ?? ""}:${messages[messages.length - 1]?.id ?? ""}:${messages.length}`,
+  )
   // Botão flutuante "descer" (estilo WhatsApp): aparece quando chega mensagem
   // do cliente enquanto o operador está lendo histórico mais acima. O badge
   // conta as novas mensagens não vistas; clicar rola suave até o fim.
@@ -379,11 +387,7 @@ export function ChatArea({
     }
   }, [messages])
 
-  const getMessagesRoot = useCallback(() => messagesRef.current, [])
-  const stickyDay = useStickyDayLabel(
-    getMessagesRoot,
-    `${messages[0]?.id ?? ""}:${messages[messages.length - 1]?.id ?? ""}:${messages.length}`,
-  )
+  const { hideEvents, toggleHideEvents } = useHideChatEvents()
 
   const effectiveDisabled = inputDisabled ?? showSessionAlert
   const value = inputValue ?? ""
@@ -444,6 +448,12 @@ export function ChatArea({
           )}
 
           <div className="ml-auto flex shrink-0 items-center gap-1">
+            <IconBtn
+              title={hideEvents ? "Mostrar eventos" : "Ocultar eventos"}
+              onClick={toggleHideEvents}
+            >
+              {hideEvents ? <IconEyeOff size={17} /> : <IconEye size={17} />}
+            </IconBtn>
             {headerActionsSlot ?? (
               <>
                 {contact.phone && (
@@ -543,18 +553,18 @@ export function ChatArea({
       {/* MESSAGES — única área rolável; min-h-0 permite encolher e manter
           o footer (composer) sempre visível na base. */}
       <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-7 pt-6 pb-8 max-md:px-3">
-        <StickyDayPill date={stickyDay} />
+        <StickyDayPill date={stickyDayLabel} />
         <ul className="flex list-none flex-col gap-1.5">
         {(() => {
-          // Dia fica só no overlay (`StickyDayPill`); `data-day-label` alimenta
-          // o rastreio. Sem `createdAt`, cai no prop `daySeparator` legado.
-          // Só marca troca de conexão quando a conversa tem 2+ contas distintas
-          // (ex.: dois WhatsApps). Com uma só, o chip do header já basta.
+          // Pills de dia inline no fluxo (Hoje / Ontem / weekday). O dia
+          // visível no topo vem do overlay `StickyDayPill`, não de várias
+          // stickies irmãs. `data-day-label` alimenta `useStickyDayLabel`.
           const distinctChannels = new Set(
             messages.map((m) => m.channelId).filter(Boolean) as string[],
           )
           const showConnSwitches = distinctChannels.size >= 2
           let lastChannelId: string | null = null
+          let lastDayLabel: string | null = null
           const sectionHasEvent = (
             from: number,
             pred: (content: string) => boolean,
@@ -598,7 +608,12 @@ export function ChatArea({
             if (message.kind === "event" && isRedundantOpenStatusEvent(message.content)) {
               return null
             }
-            const dayLabel = dayLabelFromISO(message.createdAt)
+            if (hideEvents && isHideableChatEvent(message)) {
+              return null
+            }
+            const dayLabel = formatChatDayLabel(message.createdAt)
+            const showDay = Boolean(dayLabel && dayLabel !== lastDayLabel)
+            if (showDay && dayLabel) lastDayLabel = dayLabel
             // Marcador de troca de conexão: aparece quando o channelId muda
             // em relação à última mensagem com canal conhecido.
             let connLabel: string | null = null
@@ -611,11 +626,16 @@ export function ChatArea({
             }
             const isEvent = message.kind === "event"
             return (
-              <li
-                key={message.id || index}
-                className="list-none"
-                data-day-label={dayLabel || daySeparator || undefined}
-              >
+              <Fragment key={message.id || index}>
+                {showDay && dayLabel ? (
+                  <li className="pointer-events-none list-none" data-day-label={dayLabel}>
+                    <DaySeparator date={dayLabel} />
+                  </li>
+                ) : null}
+                <li
+                  className="list-none"
+                  data-day-label={dayLabel || daySeparator || undefined}
+                >
                 {connLabel && <ConnectionDivider label={connLabel} />}
                 <div
                   data-message-id={message.id}
@@ -648,7 +668,8 @@ export function ChatArea({
                     />
                   )}
                 </div>
-              </li>
+                </li>
+              </Fragment>
             )
           })
         })()}
@@ -816,23 +837,6 @@ function ChatTabsBar({
       </div>
     </div>
   )
-}
-
-/** Rótulo do dia: "Hoje", "Ontem" ou "DD/MM/AAAA". */
-function dayLabelFromISO(iso?: string): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  const now = new Date()
-  if (d.toDateString() === now.toDateString()) return "Hoje"
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return "Ontem"
-  return d.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  })
 }
 
 function IconBtn({

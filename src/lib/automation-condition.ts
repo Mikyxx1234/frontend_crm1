@@ -42,7 +42,9 @@ export type ConditionOp =
   // `contact.tags` / `contact.tagIds` (e par no `deal`), populados pelo
   // executor a partir das relações TagOnContact/TagOnDeal.
   | "has_tag"
-  | "not_has_tag";
+  | "not_has_tag"
+  | "in_business_hours"
+  | "not_in_business_hours";
 
 export type ConditionRule = {
   field: string;
@@ -92,6 +94,7 @@ function normalizeOp(raw: unknown): ConditionOp {
     "includes", "starts_with", "ends_with",
     "empty", "not_empty",
     "has_tag", "not_has_tag",
+    "in_business_hours", "not_in_business_hours",
   ];
   return (allowed.includes(s as ConditionOp) ? s : "eq") as ConditionOp;
 }
@@ -169,17 +172,62 @@ export function normalizeConditionConfig(raw: unknown): ConditionConfig {
   return { branches: [], elseStepId: undefined };
 }
 
+const FIELD_LABELS: Record<string, string> = {
+  "contact.name": "Nome do contato",
+  "contact.email": "E-mail",
+  "contact.phone": "Telefone",
+  "contact.source": "Origem",
+  "contact.lifecycleStage": "Ciclo de vida",
+  "contact.assignedToId": "Responsável",
+  "contact.tags": "Tags do contato",
+  "deal.title": "Título do negócio",
+  "deal.value": "Valor",
+  "deal.status": "Status do negócio",
+  "deal.stageId": "Etapa",
+  "deal.pipelineId": "Funil",
+  "deal.ownerId": "Responsável (negócio)",
+  "deal.tags": "Tags do negócio",
+  "conversation.channel": "Canal",
+  "conversation.assignedToId": "Atendente",
+  "conversation.departmentId": "Departamento",
+  "conversation.isClosed": "Conversa encerrada",
+  "conversation.hasAgentReply": "Teve resposta do agente",
+  "conversation.hasError": "Conversa com erro",
+  "system.now": "Momento atual",
+};
+
+const OP_LABELS: Record<string, string> = {
+  eq: "=",
+  ne: "≠",
+  includes: "contém",
+  starts_with: "começa com",
+  ends_with: "termina com",
+  gt: ">",
+  gte: "≥",
+  lt: "<",
+  lte: "≤",
+  empty: "vazio",
+  not_empty: "não vazio",
+  has_tag: "tem tag",
+  not_has_tag: "não tem tag",
+  in_business_hours: "no expediente",
+  not_in_business_hours: "fora do expediente",
+};
+
 function describeRule(rule: ConditionRule): string {
-  // 27/mai/26 — Formatação amigável pra ops de tag (mais legível que
-  // "contact.tags has_tag VIP"). Os demais ops seguem o formato cru —
-  // o sumário do nó é compacto e o operador já entende.
   if (rule.op === "has_tag") {
     return `tem tag "${String(rule.value ?? "")}"`;
   }
   if (rule.op === "not_has_tag") {
     return `não tem tag "${String(rule.value ?? "")}"`;
   }
-  return `${rule.field} ${rule.op} ${String(rule.value ?? "").slice(0, 20)}`;
+  const field = FIELD_LABELS[rule.field] ?? rule.field;
+  const op = OP_LABELS[rule.op] ?? rule.op;
+  if (rule.op === "empty" || rule.op === "not_empty" || rule.op === "in_business_hours" || rule.op === "not_in_business_hours") {
+    return `${field} ${op}`;
+  }
+  const value = String(rule.value ?? "").slice(0, 24);
+  return value ? `${field} ${op} ${value}` : `${field} ${op}`;
 }
 
 /**

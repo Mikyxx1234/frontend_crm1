@@ -9,6 +9,7 @@ import {
   IconMail,
   IconRocket,
   IconMessage,
+  IconMessages,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
@@ -109,6 +110,15 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     description: "Central de conversas e atendimento.",
     locked: false,
     requiredPermission: "nav:inbox",
+  },
+  {
+    key: "team-chat",
+    title: "Órbita",
+    href: "/orbita",
+    icon: IconMessages,
+    description: "Chat interno do time — diretas e canais.",
+    locked: false,
+    requiredPermission: "nav:team-chat",
   },
   {
     key: "activities",

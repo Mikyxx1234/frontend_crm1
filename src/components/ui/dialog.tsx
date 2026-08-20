@@ -94,10 +94,12 @@ export interface DialogContentProps
    * Modais full-bleed que gerenciam o próprio padding/scroll passam
    * `bodyClassName="p-0 gap-0"` aqui. Default: `grid gap-4 p-6`. */
   bodyClassName?: string;
+  /** Aceito por compat com o editor de fluxo (shadcn). Sem efeito aqui. */
+  showCloseButton?: boolean;
 }
 
 const DialogContent = React.forwardRef<HTMLDialogElement, DialogContentProps>(
-  ({ className, children, size = "md", panelClassName, bodyClassName, ...props }, ref) => {
+  ({ className, children, size = "md", panelClassName, bodyClassName, showCloseButton: _showCloseButton, ...props }, ref) => {
     const { open, onOpenChange } = useDialogContext("DialogContent");
     const internalRef = React.useRef<HTMLDialogElement | null>(null);
     // Nó publicado no contexto de portal: popovers/menus (DropdownGlass) portam

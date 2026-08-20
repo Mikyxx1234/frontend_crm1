@@ -161,15 +161,14 @@ export function InlineFieldEditor({
       }
     };
 
-    // Wrap > ellipsis: `truncate` + ícones shrink-0 (mesmo invisíveis)
-    // cortava CPF/Polo/e-mail com folga vazia ao lado. Ícones saem do fluxo.
+    // Ícones em coluna própria (shrink-0): overlay absolute cobria e-mails longos.
     const valueWrapClass =
-      "min-w-0 w-full max-w-full whitespace-normal break-words [overflow-wrap:anywhere] text-left leading-snug";
+      "min-w-0 flex-1 whitespace-normal break-all [overflow-wrap:anywhere] text-left leading-snug";
 
     const row = (
       <div
         className={cn(
-          "group relative flex w-full min-w-0 max-w-full items-start overflow-visible transition-colors",
+          "group flex w-full min-w-0 max-w-full items-start gap-1 overflow-visible transition-colors",
           isEmpty
             ? "font-display text-[11px] text-[var(--text-muted)] opacity-60 italic"
             : textClassName ??
@@ -181,7 +180,7 @@ export function InlineFieldEditor({
             type="button"
             onClick={startEdit}
             aria-label={`Editar ${fieldId}`}
-            className={cn(valueWrapClass, editMode && "pr-4")}
+            className={valueWrapClass}
           >
             {displayValue}
           </button>
@@ -193,7 +192,7 @@ export function InlineFieldEditor({
             type="button"
             onClick={handleCopy}
             aria-label="Copiar"
-            className="absolute right-0 top-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100"
+            className="mt-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100"
           >
             <IconCopy size={12} />
           </button>
@@ -202,8 +201,7 @@ export function InlineFieldEditor({
           <IconPencil
             size={12}
             className={cn(
-              "pointer-events-none absolute top-0.5 shrink-0 transition-opacity group-hover:opacity-60",
-              !isEmpty ? "right-3.5" : "right-0",
+              "pointer-events-none mt-0.5 shrink-0 transition-opacity group-hover:opacity-60",
               editMode ? "opacity-40" : "opacity-0",
             )}
           />

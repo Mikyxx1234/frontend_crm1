@@ -162,6 +162,8 @@ export function mockActivitiesPage(params: FetchActivitiesParams = {}): Activity
   if (params.type) items = items.filter((a) => a.type === params.type);
   if (params.completed === true) items = items.filter((a) => a.completed);
   if (params.completed === false) items = items.filter((a) => !a.completed);
+  if (params.dealId) items = items.filter((a) => a.deal?.id === params.dealId);
+  if (params.contactId) items = items.filter((a) => a.contact?.id === params.contactId);
 
   const total = items.length;
   const start = (page - 1) * perPage;

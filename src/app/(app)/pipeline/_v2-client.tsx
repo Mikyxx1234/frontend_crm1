@@ -1308,7 +1308,12 @@ export default function KanbanV2ClientPage({
                 timeline: <DealTimelineTab dealId={activeDealId} />,
                 atividades: (
                   <div className="flex-1 overflow-auto">
-                    <ActivitiesPanel dealId={activeDealId} />
+                    <ActivitiesPanel
+                      dealId={activeDealId}
+                      contactId={dealContactId}
+                      contactName={dealDetail?.contact?.name ?? null}
+                      dealTitle={dealDetail?.title ?? null}
+                    />
                   </div>
                 ),
                 chamadas: (

@@ -5,6 +5,27 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-08-20 — Contrato único de tarefas (Inbox / Pipeline / aba Tarefas)
+
+**Modelo usado.** Opus (versão não confirmada).
+
+**Decisão.** `/api/activities` + `directory-v2` (`api.ts` / `hooks.ts`) são o
+contrato canônico. `ActivityComposer` é o formulário único (tipo, título,
+data/hora, duração, notas, responsável usuário/pessoal/departamento, contato
+e negócio opcionais). Query keys centralizadas em `v2-activities` (com
+`dealId`/`contactId` no key) e invalidação compartilhada em create/update/delete
+para refletir na aba global e nos painéis contextuais. Vínculo da Activity é
+sempre `contactId`/`dealId` — nunca `conversationId` (backend ignora).
+
+**Alternativas descartadas.** Manter formulários/payloads/caches separados por
+superfície (Inbox TaskDialog, painel Pipeline, aba global); usar
+`conversationId` como vínculo da Activity.
+
+**Impacto.** Composer compartilhado; TaskDialog vira wrapper; painel Pipeline
+usa hooks canônicos; create duplicado em `inbox-v2/api/misc` removido.
+
+---
+
 ### 2026-08-20 — Push nativo FCM no APK
 
 **Modelo usado.** Cursor Grok 4.6.

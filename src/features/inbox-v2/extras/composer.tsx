@@ -89,6 +89,10 @@ export function Composer({
   placeholder,
   isResolved,
   contactId,
+  contactName,
+  dealId,
+  dealTitle,
+  deals,
   externalTemplate,
   onExternalTemplateConsumed,
   signatureAllowed = true,
@@ -122,6 +126,12 @@ export function Composer({
   /** Quando definido, habilita o item Finalizar/Reabrir no menu "+". */
   isResolved?: boolean;
   contactId?: string | null;
+  contactName?: string | null;
+  /** Negócio exibido — padrão ao criar tarefa pelo menu "+". */
+  dealId?: string | null;
+  dealTitle?: string | null;
+  /** Negócios do contato para o seletor da tarefa. */
+  deals?: { id: string; title: string }[];
   /**
    * Template empurrado por um picker externo (ex.: modal de sessão expirada).
    * Quando muda para não-nulo, abre o painel de validação aqui dentro.
@@ -1115,6 +1125,10 @@ export function Composer({
               onToggleNote={onSendNote ? () => setNoteMode((v) => !v) : undefined}
               isResolved={isResolved}
               contactId={contactId}
+              contactName={contactName}
+              dealId={dealId}
+              dealTitle={dealTitle}
+              deals={deals}
               templateContext={templateContext}
               onPickInternal={insertTemplateText}
               onPickTemplate={(tpl) => setPendingTemplate(whatsappTemplateToPending(tpl))}

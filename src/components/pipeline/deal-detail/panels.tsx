@@ -2,26 +2,22 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { IconArrowLeft as ArrowLeft, IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconCircle as Circle, IconClock as Clock, IconFileText as FileText, IconLoader2 as Loader2, IconMessage as MessageSquare, IconPlus as Plus, IconSend as Send, IconTrash as Trash2 } from "@tabler/icons-react";
+import { IconArrowLeft as ArrowLeft, IconCalendar as Calendar, IconClock as Clock, IconFileText as FileText, IconLoader2 as Loader2, IconMessage as MessageSquare, IconPlus as Plus, IconSend as Send } from "@tabler/icons-react";
 
 import { ChannelBadge } from "@/components/inbox/channel-badge";
 import { ChatWindow } from "@/components/inbox/chat-window";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { TooltipHost } from "@/components/ui/tooltip";
-import { cn, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
-import { ACTIVITY_TYPES, ConversationRow, DealDetailActivity, DealDetailNote, STATUS_LABEL } from "./shared";
+import { ConversationRow, DealDetailActivity, DealDetailNote, STATUS_LABEL } from "./shared";
+import { ActivitiesPanel as CanonicalActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 
 export type RightTabValue = "conversations" | "activities" | "notes" | "timeline";
 
@@ -259,131 +255,31 @@ export function ConversationsPanel({
 }
 
 type ActivitiesPanelProps = {
-  activities: DealDetailActivity[];
   dealId: string;
-  onCreated: () => void;
+  onCreated?: () => void;
+  contactId?: string | null;
+  contactName?: string | null;
+  dealTitle?: string | null;
+  /** @deprecated Ignorado — lista vem dos hooks canônicos. */
+  activities?: DealDetailActivity[];
 };
 
-export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPanelProps) {
-  const [type, setType] = React.useState("TASK");
-  const [title, setTitle] = React.useState("");
-  const [desc, setDesc] = React.useState("");
-  const [scheduled, setScheduled] = React.useState("");
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const body: Record<string, unknown> = { type, title: title.trim(), dealId };
-      if (desc.trim()) body.description = desc.trim();
-      if (scheduled.trim()) body.scheduledAt = new Date(scheduled).toISOString();
-      const res = await fetch(apiUrl("/api/activities"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error("Erro ao criar atividade");
-      return res.json();
-    },
-    onSuccess: () => {
-      setTitle("");
-      setDesc("");
-      setScheduled("");
-      onCreated();
-    },
-  });
-
-  const toggleMut = useMutation({
-    mutationFn: (id: string) =>
-      fetch(apiUrl(`/api/activities/${id}/toggle`), { method: "POST" }).then((r) => {
-        if (!r.ok) throw new Error();
-      }),
-    onSuccess: () => onCreated(),
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (id: string) =>
-      fetch(apiUrl(`/api/activities/${id}`), { method: "DELETE" }).then((r) => {
-        if (!r.ok) throw new Error();
-      }),
-    onSuccess: () => onCreated(),
-  });
-
+/** Alinha o painel legado ao composer/hooks canônicos (sem reorganizar pastas). */
+export function ActivitiesPanel({
+  dealId,
+  onCreated,
+  contactId,
+  contactName,
+  dealTitle,
+}: ActivitiesPanelProps) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="scrollbar-thin flex-1 overflow-y-auto p-4">
-        <div className="mb-4 rounded-2xl border border-border bg-white p-4 shadow-sm space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Tipo</Label>
-              <DropdownGlass
-                options={ACTIVITY_TYPES.map((t) => ({ value: t.value, label: t.label }))}
-                value={type}
-                onValueChange={setType}
-                triggerClassName="h-9 w-full text-sm"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Agendar</Label>
-              <Input type="datetime-local" value={scheduled} onChange={(e) => setScheduled(e.target.value)} className="h-9 text-sm" />
-            </div>
-          </div>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título da tarefa…" className="h-9 text-sm" />
-          <Textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição (opcional)" className="text-sm" />
-          <Button type="button" size="sm" className="rounded-xl px-4" disabled={!title.trim() || mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending ? "Salvando…" : "Adicionar tarefa"}
-          </Button>
-        </div>
-
-        {activities.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma tarefa registrada.</p>
-        ) : (
-          <div className="relative space-y-0">
-            {activities.map((a, idx) => (
-              <div key={a.id} className="group/act relative flex gap-3 pb-5">
-                {idx < activities.length - 1 && <div className="absolute bottom-0 left-[15px] top-8 w-px bg-border/60" />}
-                <TooltipGlass label={a.completed ? "Marcar como pendente" : "Marcar como concluída"} side="right">
-                  <button
-                    type="button"
-                    onClick={() => toggleMut.mutate(a.id)}
-                    disabled={toggleMut.isPending}
-                    className={cn(
-                      "relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm transition-colors hover:border-[var(--color-success)]/50",
-                      a.completed ? "border-[var(--color-success)]/40 bg-[var(--color-success)]/10" : "border-border bg-muted/40",
-                    )}
-                  >
-                    {ACTIVITY_TYPES.find((t) => t.value === a.type)?.icon ?? "📌"}
-                  </button>
-                </TooltipGlass>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={cn("text-sm font-medium", a.completed && "line-through text-muted-foreground")}>{a.title}</span>
-                    {a.completed ? (
-                      <CheckCircle2 className="size-3.5 text-[var(--color-success)]" />
-                    ) : (
-                      <Circle className="size-3.5 text-[var(--glass-border)]" />
-                    )}
-                    <TooltipHost label="Excluir tarefa" side="left" className="ml-auto opacity-0 group-hover/act:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => deleteMut.mutate(a.id)}
-                        disabled={deleteMut.isPending}
-                        className="shrink-0 rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
-                        aria-label="Excluir tarefa"
-                      >
-                        <Trash2 className="size-3" />
-                      </button>
-                    </TooltipHost>
-                  </div>
-                  {a.description && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{a.description}</p>}
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    {a.user.name} · {formatDateTime(a.scheduledAt ?? a.createdAt)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    <CanonicalActivitiesPanel
+      dealId={dealId}
+      contactId={contactId}
+      contactName={contactName}
+      dealTitle={dealTitle}
+      onCreated={onCreated}
+    />
   );
 }
 

@@ -77,7 +77,6 @@ import type { OutboundChannelOption } from "@/features/inbox-v2/hooks/use-channe
  *    inputs de variáveis para validação); o envio é pelo botão do painel.
  *  - AudioRecorderButton
  *  - botão de envio
- *  - trailingSlot (ex.: DealCallButton à direita do enviar)
  */
 export function Composer({
   conversationId,
@@ -109,7 +108,6 @@ export function Composer({
   transferSlot,
   onRequestTemplate,
   sessionExpired,
-  trailingSlot,
 }: {
   conversationId: string | null;
   value: string;
@@ -180,8 +178,6 @@ export function Composer({
   onRequestTemplate?: () => void;
   /** Janela de 24h da Meta encerrada — aviso dedicado + CTA de template. */
   sessionExpired?: boolean;
-  /** Ação à direita do input (ex.: ligar SIP). Fica fora da pílula do composer. */
-  trailingSlot?: ReactNode;
 }) {
   const { confirm: confirmDialog, dialog: confirmDialogNode } = useConfirm();
   const [noteMode, setNoteMode] = useState(false);
@@ -1104,10 +1100,9 @@ export function Composer({
         </div>
       )}
 
-      <div className="flex items-center gap-1.5">
       <form
         onSubmit={handleSubmit}
-        className="flex min-h-11 min-w-0 flex-1 items-center gap-1.5 overflow-visible rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 pl-3 pr-1.5 backdrop-blur-md shadow-[var(--glass-shadow-sm)] sm:gap-2"
+        className="flex min-h-11 min-w-0 items-center gap-1.5 overflow-visible rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 pl-3 pr-1.5 backdrop-blur-md shadow-[var(--glass-shadow-sm)] sm:gap-2"
       >
         {/* Controles padrão — ocultos durante gravação de áudio */}
         {!isAudioActive && (
@@ -1246,8 +1241,6 @@ export function Composer({
           </TooltipGlass>
         )}
       </form>
-      {trailingSlot}
-      </div>
     </div>
   );
 }

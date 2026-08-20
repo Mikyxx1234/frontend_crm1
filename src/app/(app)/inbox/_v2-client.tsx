@@ -1559,13 +1559,6 @@ export default function InboxV2ClientPage({
               );
             }}
             conversationNumber={activeRow?.number ?? null}
-            trailingSlot={
-              <DealCallButton
-                dealId={firstDealId}
-                phone={chatContact?.phone || null}
-                contactId={activeContactId ?? undefined}
-              />
-            }
             transferSlot={
               <RequirePermission permission="conversation:transfer">
                 <TransferPopover
@@ -1578,6 +1571,14 @@ export default function InboxV2ClientPage({
                 />
               </RequirePermission>
             }
+          />
+        }
+        floatingCallSlot={
+          <DealCallButton
+            fab
+            dealId={firstDealId}
+            phone={chatContact?.phone || null}
+            contactId={activeContactId ?? undefined}
           />
         }
         notesSlot={notesSlot}

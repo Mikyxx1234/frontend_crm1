@@ -375,13 +375,14 @@ export function SalesHubChat({
             onCancelReply={() => setReplyTo(null)}
             onReopenNewConversation={onConversationReopened}
             conversationNumber={conversationNumber ?? null}
-            trailingSlot={
-              <DealCallButton
-                dealId={dealId}
-                phone={contactPhone ?? null}
-                contactId={contactId}
-              />
-            }
+          />
+        }
+        floatingCallSlot={
+          <DealCallButton
+            fab
+            dealId={dealId}
+            phone={contactPhone ?? null}
+            contactId={contactId}
           />
         }
       />

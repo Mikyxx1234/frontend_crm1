@@ -1470,16 +1470,6 @@ export default function InboxV2ClientPage({
               conversationId={activeRow.id}
               channel={activeRow.channel}
             />
-            {/* DealCallButton volta pro header do chat, ao lado do chip
-                de telefone e do kebab. Antes vivia no ContactAside, mas
-                duplicava o chip de "Ligar para <numero>" que ja fica
-                no header. Consolidamos a acao aqui pra remover ruido
-                visual no aside. */}
-            <DealCallButton
-              dealId={firstDealId}
-              phone={chatContact?.phone || null}
-              contactId={activeContactId ?? undefined}
-            />
             <ConversationActionsMenu
               conversationId={activeId}
               conversationNumber={activeRow?.number}
@@ -1569,7 +1559,14 @@ export default function InboxV2ClientPage({
               );
             }}
             conversationNumber={activeRow?.number ?? null}
-              transferSlot={
+            trailingSlot={
+              <DealCallButton
+                dealId={firstDealId}
+                phone={chatContact?.phone || null}
+                contactId={activeContactId ?? undefined}
+              />
+            }
+            transferSlot={
               <RequirePermission permission="conversation:transfer">
                 <TransferPopover
                   variant="composer"

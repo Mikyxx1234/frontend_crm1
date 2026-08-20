@@ -1,7 +1,7 @@
 {
-  "versionCode": 7,
-  "versionName": "1.0.6",
-  "apkUrl": "https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.6.apk",
+  "versionCode": 8,
+  "versionName": "1.0.7",
+  "apkUrl": "https://frontend-app.v74knz.easypanel.host/releases/eduit-crm-1.0.7.apk",
   "force": true,
-  "notes": "Icone EduIT no aplicativo e nas notificacoes nativas."
+  "notes": "Icone EduIT com proporcao corrigida no app e nas notificacoes."
 }

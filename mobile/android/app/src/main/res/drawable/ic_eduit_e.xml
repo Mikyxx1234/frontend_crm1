@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Letra E do icon.svg (PWA EduIT CRM), só o glifo branco. -->
+<!--
+  Foreground do ícone adaptativo: letra E da marca EduIT.
+  O glifo ocupa ~55% do viewport para caber na área segura de 72dp que os
+  launchers exibem (o restante do quadro de 108dp é cortado pela máscara).
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -7,5 +11,5 @@
     android:viewportHeight="1024">
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M320,280h392v104H448v76h188v104H448v76h264v104H320z" />
+        android:pathData="M232,180 H792 V329 H415 V438 H683 V586 H415 V695 H792 V844 H232 Z" />
 </vector>

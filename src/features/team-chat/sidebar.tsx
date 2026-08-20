@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Hash, MoreVertical, Search, SquarePen, Star } from "lucide-react";
+import { MoreVertical, Search, SquarePen, Star } from "lucide-react";
 
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { cn } from "@/lib/utils";
 
-import { Avatar } from "./avatar";
+import { Avatar, GroupGlyph } from "./avatar";
 import {
   favoriteKey,
   formatListTime,
@@ -54,7 +54,7 @@ function HeaderIcon({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="grid h-8 w-8 place-items-center rounded-[var(--orbita-radius-inner)] text-muted-foreground transition-colors hover:bg-[var(--orbita-block-soft)] hover:text-foreground"
+      className="grid h-8 w-8 place-items-center rounded-[var(--orbita-radius-inner)] text-[var(--orbita-text-secondary)] transition-colors hover:bg-[var(--orbita-field)] hover:text-[var(--orbita-text)]"
     >
       {children}
     </button>
@@ -64,7 +64,7 @@ function HeaderIcon({
 function UnreadPill({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="ml-auto flex h-[20px] min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[var(--orbita-selected)] px-1.5 text-[11px] font-semibold text-white">
+    <span className="ml-auto flex h-[20px] min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[var(--orbita-unread-bg)] px-1.5 text-[11px] font-semibold text-[var(--orbita-unread-fg)]">
       {count > 99 ? "99+" : count}
     </span>
   );
@@ -88,25 +88,23 @@ function ChatRow({
     <div
       className={cn(
         "group flex min-h-[72px] w-full items-center gap-3 px-3 py-3 text-left transition-colors",
-        active ? "bg-[var(--orbita-selected)] text-white" : "hover:bg-[var(--orbita-block-soft)]",
+        active ? "bg-[var(--orbita-list-selected-bg)]" : "hover:bg-[var(--orbita-field)]",
       )}
     >
       <button type="button" onClick={onClick} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         {item.kind === "dm" ? (
-          <div className="shrink-0 [&_>_div]:rounded-[var(--orbita-radius-avatar)] [&_img]:rounded-[var(--orbita-radius-avatar)]">
+          <div className="shrink-0">
             <Avatar person={toPerson(item.row.person)} size="md" showPresence />
           </div>
         ) : (
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--orbita-radius-avatar)] bg-[var(--orbita-block-soft)] text-muted-foreground">
-            <Hash className="h-4 w-4" />
-          </div>
+          <GroupGlyph seed={item.room.id} size={40} />
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1">
             <span
               className={cn(
                 "truncate text-[14px] leading-tight",
-                active ? "text-white" : "text-foreground",
+                active ? "text-[var(--orbita-list-selected-name)]" : "text-[var(--orbita-text)]",
                 unread > 0 || active ? "font-semibold" : "font-medium",
               )}
             >
@@ -116,7 +114,9 @@ function ChatRow({
               <span
                 className={cn(
                   "ml-auto shrink-0 text-[11px]",
-                  active ? "text-white/70" : unread > 0 ? "font-medium text-[var(--orbita-selected)]" : "text-muted-foreground",
+                  active
+                    ? "text-[var(--orbita-list-selected-time)]"
+                    : "text-[var(--orbita-text-tertiary)]",
                 )}
               >
                 {item.time}
@@ -127,7 +127,11 @@ function ChatRow({
             <span
               className={cn(
                 "min-w-0 flex-1 truncate text-[12px] leading-snug",
-                active ? "text-[#D6D2FA]" : unread > 0 ? "font-medium text-foreground" : "text-muted-foreground",
+                active
+                  ? "text-[var(--orbita-list-selected-preview)]"
+                  : unread > 0
+                    ? "font-medium text-[var(--orbita-text)]"
+                    : "text-[var(--orbita-text-secondary)]",
               )}
             >
               {item.preview}
@@ -144,11 +148,8 @@ function ChatRow({
         className={cn(
           "grid h-6 w-6 shrink-0 place-items-center rounded-full",
           favorited
-            ? active
-              ? "text-white"
-              : "text-primary"
-            : "text-muted-foreground opacity-50 hover:bg-white/20 group-hover:opacity-100",
-          active && !favorited && "text-white/80 hover:text-white",
+            ? "text-[var(--orbita-text)]"
+            : "text-[var(--orbita-text-tertiary)] opacity-50 hover:bg-[var(--orbita-field)] group-hover:opacity-100",
         )}
       >
         <Star className={cn("h-3 w-3", favorited && "fill-current")} />
@@ -256,7 +257,7 @@ export function Sidebar({
     <aside className="orbita-block flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <div className="shrink-0 px-3 pb-2 pt-3">
         <div className="flex items-center gap-1">
-          <h1 className="min-w-0 flex-1 truncate px-1 font-display text-[18px] font-semibold tracking-tight text-foreground">
+          <h1 className="min-w-0 flex-1 truncate px-1 font-display text-[18px] font-semibold tracking-tight text-[var(--orbita-text)]">
             Órbita
           </h1>
           <HeaderIcon label="Nova conversa" onClick={onNew}>
@@ -290,7 +291,7 @@ export function Sidebar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Pesquisar conversas"
-            className="w-full rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-block-soft)] py-2 pl-10 pr-3 text-[14px] text-foreground outline-none placeholder:text-muted-foreground"
+            className="w-full rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-field)] py-2 pl-10 pr-3 text-[14px] text-[var(--orbita-text)] outline-none placeholder:text-[var(--orbita-text-tertiary)]"
           />
         </div>
 
@@ -305,8 +306,8 @@ export function Sidebar({
                 className={cn(
                   "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium transition-colors",
                   selected
-                    ? "bg-[var(--orbita-selected)] text-white"
-                    : "bg-[var(--orbita-block-soft)] text-muted-foreground hover:bg-[var(--orbita-block-soft)]/80",
+                    ? "bg-[var(--orbita-text)] text-[var(--orbita-block)]"
+                    : "bg-[var(--orbita-field)] text-[var(--orbita-text-secondary)] hover:text-[var(--orbita-text)]",
                 )}
               >
                 {pill.label}

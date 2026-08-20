@@ -2,20 +2,28 @@ import type { DirectRow, TeamChatDepartment, TeamChatPerson } from "./types";
 
 export const REACTION_EMOJIS = ["🔥", "👍", "❤️", "🎉", "👏", "😂", "🙌", "👀"] as const;
 
-const GRADIENTS = [
-  "linear-gradient(140deg, oklch(0.58 0.23 278), oklch(0.53 0.24 274))",
-  "linear-gradient(140deg, oklch(0.63 0.25 350), oklch(0.6 0.25 348))",
-  "linear-gradient(140deg, oklch(0.62 0.13 195), oklch(0.58 0.13 200))",
-  "linear-gradient(140deg, oklch(0.6 0.2 25), oklch(0.57 0.21 22))",
-  "linear-gradient(140deg, oklch(0.62 0.16 150), oklch(0.58 0.15 155))",
-  "linear-gradient(140deg, oklch(0.58 0.18 300), oklch(0.52 0.2 280))",
-];
+const AVATAR_TONES = [
+  { bg: "var(--orbita-avatar-1)", fg: "var(--orbita-avatar-1-fg)" },
+  { bg: "var(--orbita-avatar-2)", fg: "var(--orbita-avatar-2-fg)" },
+  { bg: "var(--orbita-avatar-3)", fg: "var(--orbita-avatar-3-fg)" },
+  { bg: "var(--orbita-avatar-4)", fg: "var(--orbita-avatar-4-fg)" },
+  { bg: "var(--orbita-avatar-5)", fg: "var(--orbita-avatar-5-fg)" },
+  { bg: "var(--orbita-avatar-6)", fg: "var(--orbita-avatar-6-fg)" },
+] as const;
+
+const CHANNEL_TONES = [
+  { bg: "var(--orbita-channel-1-bg)", fg: "var(--orbita-channel-1-fg)" },
+  { bg: "var(--orbita-channel-2-bg)", fg: "var(--orbita-channel-2-fg)" },
+  { bg: "var(--orbita-channel-3-bg)", fg: "var(--orbita-channel-3-fg)" },
+  { bg: "var(--orbita-channel-4-bg)", fg: "var(--orbita-channel-4-fg)" },
+  { bg: "var(--orbita-channel-5-bg)", fg: "var(--orbita-channel-5-fg)" },
+  { bg: "var(--orbita-channel-6-bg)", fg: "var(--orbita-channel-6-fg)" },
+] as const;
 
 export type ChatPerson = {
   id: string;
   name: string;
   initials: string;
-  gradient: string;
   presence: "online" | "offline";
   avatarUrl?: string | null;
 };
@@ -31,6 +39,14 @@ function hashOf(id: string) {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   return h;
+}
+
+export function getOrbitaAvatarTone(id: string) {
+  return AVATAR_TONES[hashOf(id) % AVATAR_TONES.length];
+}
+
+export function getOrbitaChannelTonal(id: string) {
+  return CHANNEL_TONES[hashOf(id) % CHANNEL_TONES.length];
 }
 
 export function normalizeAvatarUrl(url?: string | null): string | null {
@@ -56,7 +72,6 @@ export function toPerson(
     id: p.id,
     name,
     initials: initialsOf(name),
-    gradient: GRADIENTS[hashOf(p.id) % GRADIENTS.length],
     presence: p.systemOnline ? "online" : "offline",
     avatarUrl: normalizeAvatarUrl(p.avatarUrl),
   };
@@ -173,7 +188,6 @@ export function meFromSession(
     id: id || "me",
     name: display,
     initials: initialsOf(display),
-    gradient: "linear-gradient(140deg, oklch(0.58 0.23 278), oklch(0.53 0.24 274))",
     presence: "online",
     avatarUrl: normalizeAvatarUrl(avatarUrl),
   };

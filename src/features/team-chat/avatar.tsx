@@ -1,7 +1,13 @@
-import { UserAvatar } from "@/components/crm/user-avatar";
+import { Hash } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
-import { normalizeAvatarUrl, type ChatPerson } from "./helpers";
+import {
+  getOrbitaAvatarTone,
+  getOrbitaChannelTonal,
+  normalizeAvatarUrl,
+  type ChatPerson,
+} from "./helpers";
 
 const sizePx = {
   sm: 36,
@@ -21,15 +27,70 @@ export function Avatar({
   showPresence?: boolean;
   className?: string;
 }) {
+  const px = sizePx[size];
+  const tone = getOrbitaAvatarTone(person.id);
+  const imageUrl = normalizeAvatarUrl(person.avatarUrl);
+  const dotSize = Math.max(10, Math.round(px * 0.26));
+
   return (
-    <div className={cn("relative shrink-0 overflow-visible", className)}>
-      <UserAvatar
-        name={person.name}
-        initials={person.initials}
-        imageUrl={normalizeAvatarUrl(person.avatarUrl)}
-        size={sizePx[size]}
-        status={showPresence ? (person.presence === "online" ? "online" : "offline") : null}
-      />
+    <div
+      data-orbita-avatar
+      className={cn("relative shrink-0 overflow-visible", className)}
+      style={{ width: px, height: px }}
+      title={person.name}
+    >
+      <div
+        className="relative flex size-full items-center justify-center overflow-hidden font-display font-bold leading-none"
+        style={{
+          background: tone.bg,
+          color: tone.fg,
+          fontSize: Math.round(px * 0.36),
+        }}
+      >
+        <span aria-hidden={Boolean(imageUrl)}>{person.initials}</span>
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt={person.name}
+            className="absolute inset-0 size-full object-cover"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : null}
+      </div>
+      {showPresence ? (
+        <span
+          aria-hidden
+          className="absolute -bottom-px -right-px rounded-full border-2 border-[var(--orbita-chrome)] shadow-sm"
+          style={{
+            width: dotSize,
+            height: dotSize,
+            backgroundColor:
+              person.presence === "online" ? "var(--color-online)" : "var(--color-offline)",
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+export function GroupGlyph({ seed, size = 40 }: { seed: string; size?: number }) {
+  const tone = getOrbitaChannelTonal(seed);
+  return (
+    <div
+      className="grid shrink-0 place-items-center"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "var(--orbita-radius-avatar)",
+        background: tone.bg,
+        color: tone.fg,
+      }}
+    >
+      <Hash className="h-4 w-4" />
     </div>
   );
 }
@@ -39,13 +100,8 @@ export function AvatarStack({ people, size = "sm" }: { people: ChatPerson[]; siz
   return (
     <div className="flex -space-x-3" aria-hidden="true">
       {shown.map((p) => (
-        <div key={p.id} className="rounded-full ring-2 ring-card">
-          <UserAvatar
-            name={p.name}
-            initials={p.initials}
-            imageUrl={normalizeAvatarUrl(p.avatarUrl)}
-            size={sizePx[size]}
-          />
+        <div key={p.id} className="rounded-[var(--orbita-radius-avatar)] ring-2 ring-[var(--orbita-chrome)]">
+          <Avatar person={p} size={size} />
         </div>
       ))}
     </div>

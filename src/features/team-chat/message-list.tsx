@@ -25,7 +25,7 @@ function formatChatText(text: string, mine: boolean): ReactNode {
       parts.push(
         <mark
           key={key++}
-          className={cn("rounded-sm px-0.5", mine ? "bg-white/30 text-inherit" : "bg-amber-200/80 text-foreground")}
+          className={cn("rounded-sm px-0.5", mine ? "bg-black/10 text-inherit" : "bg-amber-200/80 text-[var(--orbita-text)]")}
         >
           {tok.slice(2, -2)}
         </mark>,
@@ -48,7 +48,7 @@ function formatChatText(text: string, mine: boolean): ReactNode {
           break;
         default:
           parts.push(
-            <code key={key++} className={cn("rounded px-1 font-mono text-[0.92em]", mine ? "bg-white/15" : "bg-black/10")}>
+            <code key={key++} className="rounded px-1 font-mono text-[0.92em] bg-black/10">
               {inner}
             </code>,
           );
@@ -122,9 +122,9 @@ export function MessageList({
       {pinned.length > 0 && (
         <div className="sticky top-0 z-10 shrink-0 bg-[var(--orbita-block-soft)] px-4 py-2">
           <div className="flex w-full items-start gap-2">
-            <Pin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--orbita-selected)]" />
+            <Pin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--orbita-text-secondary)]" />
             <div className="min-w-0 flex-1 space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--orbita-selected)]">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--orbita-text-secondary)]">
                 Destacadas
               </p>
               {pinned.map((m) => (
@@ -259,13 +259,13 @@ function MessageRow({
         )}
       >
         {isGroup && !mine && (
-          <div className="flex w-7 shrink-0 justify-center self-end [&_>_div]:rounded-[var(--orbita-radius-avatar)] [&_img]:rounded-[var(--orbita-radius-avatar)]">
+          <div className="flex w-7 shrink-0 justify-center self-end">
             {last && author ? <Avatar person={author} size="sm" /> : null}
           </div>
         )}
         <div className={cn("flex min-w-0 flex-col", mine ? "items-end" : "items-start")}>
           {first && isGroup && !mine && (
-            <span className="mb-0.5 px-1 text-[12.5px] font-medium text-[var(--orbita-selected)]">{authorName}</span>
+            <span className="mb-0.5 px-1 text-[12.5px] font-medium text-[var(--orbita-text)]">{authorName}</span>
           )}
           <div className={cn("relative w-fit max-w-full", reactions.length > 0 && "mb-3")}>
             <MessageBody
@@ -290,8 +290,8 @@ function MessageRow({
                     className={cn(
                       "flex items-center gap-0.5 rounded-full px-1.5 py-px text-[12px]",
                       reactionMine(r, meId)
-                        ? "bg-[var(--orbita-selected)] text-white"
-                        : "bg-[var(--orbita-block)] text-foreground",
+                        ? "bg-[var(--orbita-selected)] text-[var(--orbita-unread-fg)]"
+                        : "bg-[var(--orbita-block)] text-[var(--orbita-text)]",
                     )}
                   >
                     <span>{r.emoji}</span>
@@ -396,13 +396,13 @@ function MessageBody({
   const bubbleCls = cn(
     "relative w-fit max-w-full",
     radius,
-    mine ? "orbita-bubble-sent bg-[var(--orbita-selected)] text-white" : "orbita-bubble-received bg-[var(--orbita-block)] text-foreground",
+    mine ? "orbita-bubble-sent" : "orbita-bubble-received",
     first && "orbita-bubble--tail",
     pinned && "ring-1 ring-[var(--orbita-selected)]/35",
   );
   const timeCls = cn(
     "select-none text-[11px] leading-none tabular-nums",
-    mine ? "text-white/75" : "text-muted-foreground",
+    mine ? "text-[var(--orbita-text-secondary)]" : "text-[var(--orbita-text-tertiary)]",
   );
 
   return (

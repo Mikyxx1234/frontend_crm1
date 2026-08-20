@@ -319,7 +319,7 @@ function Thread({
           }
         />
       </div>
-      <div className="relative z-20 shrink-0 overflow-visible border-t border-black/[0.04] dark:border-white/[0.06]">
+      <div className="relative z-20 shrink-0 overflow-visible border-t border-black/[0.04] bg-[var(--orbita-chrome)] dark:border-white/[0.06]">
         <Composer
           roomId={room.id}
           placeholder="Digite uma mensagem"
@@ -343,14 +343,14 @@ function Thread({
 function LandingEmpty({ onNew }: { onNew: () => void }) {
   return (
     <div className="orbita-block flex flex-1 flex-col items-center justify-center px-6 text-center">
-      <p className="font-display text-[32px] font-light tracking-tight text-foreground">Órbita</p>
-      <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-muted-foreground">
+      <p className="font-display text-[32px] font-light tracking-tight text-[var(--orbita-text)]">Órbita</p>
+      <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-[var(--orbita-text-secondary)]">
         Escolha uma conversa à esquerda ou comece uma nova mensagem.
       </p>
       <button
         type="button"
         onClick={onNew}
-        className="mt-5 text-[14px] font-medium text-primary hover:underline"
+        className="mt-5 text-[14px] font-medium text-[var(--orbita-text)] hover:underline"
       >
         Nova conversa
       </button>

@@ -1163,31 +1163,87 @@
    ÓRBITA — Bento layout tokens
    ══════════════════════════════════════════════════════════════════ */
 :root {
-  --orbita-canvas: #E9E7FB;
+  --orbita-canvas: #F3F2F0;
   --orbita-block: #FFFFFF;
-  --orbita-block-soft: #F4F3FC;
-  --orbita-rail: #211C4E;
-  --orbita-rail-active: #31296B;
+  --orbita-chrome: #F7F7F6;
+  --orbita-paper: #F4F3F1;
+  --orbita-dot: #E0DEDA;
+  --orbita-field: #F1F0EE;
+  --orbita-block-soft: var(--orbita-field);
+  --orbita-rail: #1C1C1C;
+  --orbita-rail-active: #2A2A2A;
   --orbita-radius-shell: 18px;
   --orbita-radius-block: 16px;
   --orbita-radius-inner: 12px;
   --orbita-radius-avatar: 10px;
   --orbita-gap: 10px;
   --orbita-selected: #6C5CE7;
+  --orbita-unread-bg: #6C5CE7;
+  --orbita-unread-fg: #FFFFFF;
+  --orbita-text: #11121A;
+  --orbita-text-secondary: #6B6C78;
+  --orbita-text-tertiary: #9A9AA6;
+  --orbita-list-selected-bg: #EEECE8;
+  --orbita-list-selected-name: var(--orbita-text);
+  --orbita-list-selected-preview: var(--orbita-text-secondary);
+  --orbita-list-selected-time: var(--orbita-text-tertiary);
+  --orbita-bubble-sent-bg: #E8E4DC;
+  --orbita-bubble-sent-text: #1B1914;
+  --orbita-bubble-received-border: #E9E8E5;
+  --orbita-avatar-1: #E8674C;
+  --orbita-avatar-1-fg: #FFFFFF;
+  --orbita-avatar-2: #E0973B;
+  --orbita-avatar-2-fg: #3A2400;
+  --orbita-avatar-3: #3AA087;
+  --orbita-avatar-3-fg: #FFFFFF;
+  --orbita-avatar-4: #3B7FC4;
+  --orbita-avatar-4-fg: #FFFFFF;
+  --orbita-avatar-5: #5A7A8C;
+  --orbita-avatar-5-fg: #FFFFFF;
+  --orbita-avatar-6: #C05B94;
+  --orbita-avatar-6-fg: #FFFFFF;
+  --orbita-channel-1-bg: #FDEDE6;
+  --orbita-channel-1-fg: #C0492F;
+  --orbita-channel-2-bg: #FBF3E4;
+  --orbita-channel-2-fg: #B07820;
+  --orbita-channel-3-bg: #E6F5F1;
+  --orbita-channel-3-fg: #2A7A66;
+  --orbita-channel-4-bg: #E8F1F8;
+  --orbita-channel-4-fg: #2B5F96;
+  --orbita-channel-5-bg: #E8EEF2;
+  --orbita-channel-5-fg: #3D5A6C;
+  --orbita-channel-6-bg: #F8EAF2;
+  --orbita-channel-6-fg: #9A3F73;
 }
 
 .dark {
-  --orbita-canvas: #1a1632;
-  --orbita-block: #252042;
-  --orbita-block-soft: #2d2650;
-  --orbita-rail: #0f0d1f;
-  --orbita-rail-active: #1a1632;
+  --orbita-canvas: #1a1916;
+  --orbita-block: #252420;
+  --orbita-chrome: #221f1c;
+  --orbita-paper: #1e1c19;
+  --orbita-dot: #3a3732;
+  --orbita-field: #2d2a26;
+  --orbita-block-soft: var(--orbita-field);
+  --orbita-rail: #0f0e0c;
+  --orbita-rail-active: #1a1916;
+  --orbita-text: #f3f2ee;
+  --orbita-text-secondary: #a8a69e;
+  --orbita-text-tertiary: #7d7b74;
+  --orbita-list-selected-bg: #2e2b27;
+  --orbita-list-selected-name: var(--orbita-text);
+  --orbita-list-selected-preview: var(--orbita-text-secondary);
+  --orbita-list-selected-time: var(--orbita-text-tertiary);
+  --orbita-bubble-sent-bg: #3a342c;
+  --orbita-bubble-sent-text: #f3f2ee;
+  --orbita-bubble-received-border: #3a3732;
 }
 
 /* Órbita: Bento layout shell. */
 .team-chat-shell {
   background: var(--orbita-canvas);
-  color: var(--color-foreground);
+  color: var(--orbita-text);
+  --color-foreground: var(--orbita-text);
+  --color-muted-foreground: var(--orbita-text-secondary);
   min-width: 0;
   padding: var(--orbita-gap);
   border-radius: var(--orbita-radius-shell);
@@ -1197,7 +1253,7 @@
 
 /* Bento blocks inside Órbita shell */
 .orbita-block {
-  background: var(--orbita-block);
+  background: var(--orbita-chrome);
   border-radius: var(--orbita-radius-block);
   min-width: 0;
   overflow: hidden;
@@ -1222,10 +1278,10 @@
 }
 
 .team-chat-shell [data-wa-thread] {
-  background-color: var(--orbita-block-soft);
+  background-color: var(--orbita-paper);
   background-image: radial-gradient(
     circle at 1px 1px,
-    color-mix(in srgb, var(--orbita-selected) 9%, transparent) 1px,
+    var(--orbita-dot) 1px,
     transparent 0
   );
   background-size: 22px 22px;
@@ -1252,7 +1308,7 @@
 }
 .orbita-bubble-sent.orbita-bubble--tail::before {
   right: -7px;
-  background: var(--orbita-selected);
+  background: var(--orbita-bubble-sent-bg);
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
@@ -1262,8 +1318,8 @@
 
 /* Órbita selected item */
 .orbita-item-selected {
-  background: var(--orbita-selected);
-  color: white;
+  background: var(--orbita-list-selected-bg);
+  color: var(--orbita-list-selected-name);
   border-radius: var(--orbita-radius-inner);
 }
 
@@ -1283,10 +1339,12 @@
 /* Órbita message bubbles */
 .orbita-bubble-received {
   background: var(--orbita-block);
+  color: var(--orbita-text);
+  box-shadow: inset 0 0 0 0.5px var(--orbita-bubble-received-border);
 }
 .orbita-bubble-sent {
-  background: var(--orbita-selected);
-  color: white;
+  background: var(--orbita-bubble-sent-bg);
+  color: var(--orbita-bubble-sent-text);
 }
 
 .chat-scroll {

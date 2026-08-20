@@ -500,7 +500,7 @@ export function Composer({
                     {item.file.name || "Arquivo"}
                   </span>
                   {item.asSticker && (
-                    <span className="text-[10px] font-medium text-[var(--orbita-selected)]">Figurinha</span>
+                    <span className="text-[10px] font-medium text-[var(--orbita-text-secondary)]">Figurinha</span>
                   )}
                 </div>
                 <button

@@ -115,6 +115,7 @@ import { DealTagsPopover } from "@/features/pipeline-v2/extras/deal-tags-popover
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
+import { WhatsappCallChip } from "@/components/inbox/whatsapp-call-chip";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { DealNotesTab } from "@/features/pipeline-v2/extras";
 import type { PipelineListStageDto } from "@/features/pipeline-v2/api";
@@ -1465,6 +1466,10 @@ export default function InboxV2ClientPage({
         onReplyMessage={handleReplyMessage}
         headerActionsSlot={
           <>
+            <WhatsappCallChip
+              conversationId={activeRow.id}
+              channel={activeRow.channel}
+            />
             {/* DealCallButton volta pro header do chat, ao lado do chip
                 de telefone e do kebab. Antes vivia no ContactAside, mas
                 duplicava o chip de "Ligar para <numero>" que ja fica

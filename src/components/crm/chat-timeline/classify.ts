@@ -187,7 +187,13 @@ export function classifyTimelineItem(
   input: TimelineClassifyInput,
 ): ClassifiedTimelineItem {
   const mt = (input.messageType ?? "").toLowerCase();
-  if (DRAFT_TYPES.has(mt) || mt === "ticket-separator" || mt === "sip_call") {
+  if (
+    DRAFT_TYPES.has(mt) ||
+    mt === "ticket-separator" ||
+    mt === "sip_call" ||
+    mt === "whatsapp_call" ||
+    mt === "whatsapp_call_recording"
+  ) {
     return { kind: "message" };
   }
 

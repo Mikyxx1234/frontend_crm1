@@ -1326,6 +1326,8 @@ export function MessageBubble({
     !isNote &&
     !hasForm &&
     message.messageType !== "sip_call" &&
+    message.messageType !== "whatsapp_call" &&
+    message.messageType !== "whatsapp_call_recording" &&
     // Sempre monta em mensagens recebidas de texto/mídia. Mesmo sem
     // callbacks plugados, o menu ainda oferece "Copiar" e mostra os
     // demais itens como stubs — melhor UX que sumir o chevron todo.
@@ -1335,16 +1337,30 @@ export function MessageBubble({
     return <FormBubble message={message} className={className} />
   }
 
-  // Ligação (SIP/Api4com): EventRow na conversa. Gravação fica só na aba Chamadas.
-  if (message.messageType === "sip_call") {
+  // Ligação SIP ou WhatsApp Calling: EventRow na conversa.
+  // Gravação WhatsApp COM mediaUrl cai no fluxo de áudio (detectMediaKind).
+  const callType = String(message.messageType ?? "").toLowerCase()
+  const isVoiceCallEvent =
+    callType === "sip_call" ||
+    callType === "whatsapp_call" ||
+    (callType === "whatsapp_call_recording" && !message.mediaUrl)
+  if (isVoiceCallEvent) {
     const inbound = message.type === "incoming"
     const missed = /n[ãa]o atendida/i.test(message.content ?? "")
     const [title, ...rest] = (message.content ?? "").split(" · ")
     const detail = rest.join(" · ").trim()
+    const fallback =
+      callType === "sip_call"
+        ? inbound
+          ? "Ligação recebida"
+          : "Ligação realizada"
+        : inbound
+          ? "Chamada WhatsApp recebida"
+          : "Chamada WhatsApp"
     return (
       <EventRow
         icon={missed ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
-        text={title || (inbound ? "Ligação recebida" : "Ligação realizada")}
+        text={title || fallback}
         actor={detail}
         time={message.time}
         className={className}

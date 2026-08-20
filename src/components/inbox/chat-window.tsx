@@ -2213,7 +2213,7 @@ export function ChatWindow({
       <div
         ref={messagesScrollRef}
         className={cn(
-          "relative min-h-0 flex-1 overflow-y-auto bg-[var(--chat-bg)] px-4 py-3 shadow-inner",
+          "relative min-h-0 flex-1 overflow-y-auto chat-thread px-4 py-3 shadow-inner",
           compactChrome
             ? "scrollbar-workspace sm:px-4 sm:py-3"
             : "scrollbar-thin sm:px-12 sm:py-12",
@@ -3878,7 +3878,7 @@ export function ChatWindow({
 
         {/* Composer — padrão completo (inbox) vs uma linha (DealWorkspace / compactChrome). */}
         {compactChrome ? (
-          <footer className="relative shrink-0 overflow-visible border-t border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
+          <footer className="relative shrink-0 overflow-visible border-t border-[var(--glass-border)] bg-[var(--chat-chrome)] pb-[calc(env(safe-area-inset-bottom,0px)+2px)] dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
             <SlashCommandMenu
               state={slash.state}
               onSelectItem={slash.onSelectItem}
@@ -4030,7 +4030,7 @@ export function ChatWindow({
             </div>
           </footer>
         ) : (
-          <footer className="relative border-t border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
+          <footer className="relative border-t border-[var(--glass-border)] bg-[var(--chat-chrome)] px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:p-6 dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
             <SlashCommandMenu
               state={slash.state}
               onSelectItem={slash.onSelectItem}

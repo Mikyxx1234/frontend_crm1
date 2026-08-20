@@ -49,7 +49,7 @@ export function ChannelSelector({
             ) : null}
           </span>
         ),
-        icon: <ChannelTypeIcon type={ch.type} size={14} />,
+        icon: <ChannelTypeIcon type={ch.type} channelId={ch.id} size={14} />,
         description: ch.phoneNumber ?? undefined,
       };
     });
@@ -83,7 +83,7 @@ export function ChannelSelector({
             )}
             aria-label={`Canal de envio: ${labelText}${sublabelText ? ` ${sublabelText}` : ""}`}
           >
-            <ChannelTypeIcon type={selected?.type} size={13} />
+            <ChannelTypeIcon type={selected?.type} channelId={selected?.id} size={13} />
             <span className="whitespace-nowrap">
               {labelText}
               {sublabelText ? (

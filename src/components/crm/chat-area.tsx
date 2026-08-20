@@ -73,6 +73,7 @@ interface ChatContact {
   contactId?: string
   /** Canal — badge no canto inferior direito (padrão Inbox / ChatAvatar). */
   channel?: string | null
+  channelId?: string | null
 }
 
 interface ChatAreaProps {
@@ -413,14 +414,11 @@ export function ChatArea({
     <main
       aria-label={`Conversa com ${contact.name}`}
       className={cn(
-        // h-full min-h-0: o pai (inbox mobile) limita a altura; sem isso a
-        // lista de mensagens estoura o viewport e o composer some abaixo
-        // do clip em conversas longas.
-        "relative flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "relative flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--chat-paper)] shadow-[var(--glass-shadow)]",
         className,
       )}
     >
-      <header className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]">
+      <header className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--chat-chrome)]">
         <div className="flex items-center gap-3 px-4 py-2">
           <TooltipGlass label={contact.name} side="bottom">
             <ChatAvatar
@@ -430,6 +428,7 @@ export function ChatArea({
               }}
               phone={contact.phone}
               channel={contact.channel ?? connection?.type ?? null}
+              channelId={contact.channelId ?? connection?.id ?? null}
               size={AVATAR_SIZE.lg}
             />
           </TooltipGlass>
@@ -565,7 +564,7 @@ export function ChatArea({
       })()}
       {/* MESSAGES — única área rolável; min-h-0 permite encolher e manter
           o footer (composer) sempre visível na base. */}
-      <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-7 pt-6 pb-8 max-md:px-3">
+      <div ref={messagesRef} className="chat-thread flex min-h-0 flex-1 flex-col overflow-y-auto px-7 pt-6 pb-8 max-md:px-3">
         <StickyDayPill date={stickyDayLabel} />
         <ul className="flex list-none flex-col gap-1.5">
         {(() => {
@@ -733,7 +732,7 @@ export function ChatArea({
           bottom nav some via useMobileChatChrome — bloco fica na base. */}
       <div
         data-chat-composer-footer
-        className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]/95 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pt-0.5 backdrop-blur-md"
+        className="shrink-0 border-t border-[var(--glass-border-subtle)] bg-[var(--chat-chrome)] pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pt-0.5"
       >
       {showSessionAlert && <SessionAlert onUseTemplate={onUseTemplate} />}
 
@@ -841,8 +840,8 @@ function ChatTabsBar({
               className={cn(
                 "inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all",
                 isActive
-                  ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                  ? "bg-[var(--chat-list-selected-bg)] text-[var(--chat-list-selected-name)] shadow-[var(--glass-shadow-sm)]"
+                  : "bg-[var(--chat-field)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
               )}
             >
               <Icon size={13} stroke={isActive ? 2.4 : 2} />

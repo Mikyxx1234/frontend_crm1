@@ -56,6 +56,8 @@ export interface ConversationListRow {
    */
   number?: number | null;
   channel: Channel;
+  /** Id da conexão (Channel) quando houver — hash do ícone tonal. */
+  channelId?: string | null;
   status: ConversationStatus;
   /**
    * Preenchido quando status = RESOLVED. Usado no card lateral para

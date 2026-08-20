@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar"
-import { AVATAR_SIZE } from "@/lib/avatar"
+import { AVATAR_SIZE, getChannelTonal } from "@/lib/avatar"
 import {
   IconClock,
   IconPaperclip,
@@ -86,6 +86,10 @@ export interface Conversation {
    * / "messenger", "telegram", "email", "webchat" / "form".
    */
   channel?: string | null
+  /** Id da conexão (Channel) — hash do badge tonal no avatar. */
+  channelId?: string | null
+  /** Id da pessoa (contato) — hash estável da cor do avatar. */
+  contactId?: string | null
   /**
    * Tempo restante da janela de 24h da Meta/WhatsApp.
    * - Texto pre-formatado (ex.: "2h 45min", "8min", "Expirada").
@@ -126,16 +130,16 @@ interface ConversationCardProps {
 }
 
 export const avatarGradients: Record<string, string> = {
-  sunset: "linear-gradient(135deg, #FFD580 0%, #FF8FA3 50%, #FF6B9D 100%)",
-  forest: "linear-gradient(135deg, #5CC7A9 0%, #2C8A6B 60%, #1F5D49 100%)",
-  ocean: "linear-gradient(135deg, #6FA8DC 0%, #3D5A80 60%, #293f5d 100%)",
-  dusk: "linear-gradient(135deg, #9F8FDF 0%, #5b6ff5 60%, #3d52e8 100%)",
-  blue: "linear-gradient(135deg, #6FA8DC 0%, #3D5A80 60%, #293f5d 100%)",
-  teal: "linear-gradient(135deg, #5CC7A9 0%, #2C8A6B 60%, #1F5D49 100%)",
-  orange: "linear-gradient(135deg, #FFD580 0%, #FF8FA3 50%, #FF6B9D 100%)",
-  coral: "linear-gradient(135deg, #FFD580 0%, #FF8FA3 50%, #FF6B9D 100%)",
-  purple: "linear-gradient(135deg, #9F8FDF 0%, #5b6ff5 60%, #3d52e8 100%)",
-  pink: "linear-gradient(135deg, #FFB1D6 0%, #FF6B9D 60%, #C13F73 100%)",
+  sunset: "var(--avatar-fallback-1)",
+  forest: "var(--avatar-fallback-3)",
+  ocean: "var(--avatar-fallback-4)",
+  dusk: "var(--avatar-fallback-5)",
+  blue: "var(--avatar-fallback-4)",
+  teal: "var(--avatar-fallback-3)",
+  orange: "var(--avatar-fallback-2)",
+  coral: "var(--avatar-fallback-1)",
+  purple: "var(--avatar-fallback-5)",
+  pink: "var(--avatar-fallback-6)",
 }
 
 const typeIconMap: Record<LastMessageType, React.ComponentType<{ size?: number; stroke?: number; className?: string }>> = {
@@ -178,25 +182,21 @@ export function channelBadge(channel: string | null | undefined): {
 } | null {
   const c = (channel ?? "").toLowerCase().trim();
   if (!c) return null;
+  const tone = getChannelTonal(c);
   if (c === "whatsapp" || c === "wa")
-    return { Icon: IconBrandWhatsapp, bg: "var(--channel-whatsapp)", fg: "#FFFFFF", title: "WhatsApp" };
+    return { Icon: IconBrandWhatsapp, bg: tone.bg, fg: tone.fg, title: "WhatsApp" };
   if (c === "instagram" || c === "ig")
-    return {
-      Icon: IconBrandInstagram,
-      bg: "linear-gradient(45deg,#F58529 0%,#DD2A7B 50%,#8134AF 100%)",
-      fg: "#FFFFFF",
-      title: "Instagram",
-    };
+    return { Icon: IconBrandInstagram, bg: tone.bg, fg: tone.fg, title: "Instagram" };
   if (c === "facebook" || c === "fb")
-    return { Icon: IconBrandFacebook, bg: "var(--channel-facebook)", fg: "#FFFFFF", title: "Facebook" };
+    return { Icon: IconBrandFacebook, bg: tone.bg, fg: tone.fg, title: "Facebook" };
   if (c === "meta" || c === "messenger")
-    return { Icon: IconBrandMessenger, bg: "var(--channel-messenger)", fg: "#FFFFFF", title: "Messenger" };
+    return { Icon: IconBrandMessenger, bg: tone.bg, fg: tone.fg, title: "Messenger" };
   if (c === "telegram" || c === "tg")
-    return { Icon: IconBrandTelegram, bg: "var(--channel-telegram)", fg: "#FFFFFF", title: "Telegram" };
+    return { Icon: IconBrandTelegram, bg: tone.bg, fg: tone.fg, title: "Telegram" };
   if (c === "email" || c === "mail")
-    return { Icon: IconMail, bg: "var(--channel-email)", fg: "#FFFFFF", title: "E-mail" };
+    return { Icon: IconMail, bg: tone.bg, fg: tone.fg, title: "E-mail" };
   if (c === "webchat" || c === "form" || c === "site" || c === "landing")
-    return { Icon: IconForms, bg: "var(--channel-webchat)", fg: "#FFFFFF", title: "Formulário" };
+    return { Icon: IconForms, bg: tone.bg, fg: tone.fg, title: "Formulário" };
   return null;
 }
 
@@ -234,18 +234,13 @@ export function ConversationCard({
         // shrink-0: a lista é flex-col + overflow-y-auto — sem isso, N cards
         // comprimem (flex-shrink:1) em barras cinza uniformes.
         "relative shrink-0 cursor-pointer overflow-hidden rounded-[var(--radius-lg)] border border-transparent shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-200",
-        // Nao-selecionado: fundo cinza clarinho (mais opaco / menos "branco puro")
-        // pra contrastar com o card selecionado. Hover intensifica levemente.
-        "bg-[color-mix(in_srgb,var(--glass-bg-overlay)_60%,rgba(148,163,184,0.10))]",
-        "hover:bg-[var(--glass-bg-overlay)]",
-        // Selecionado: fundo branco + ring inset (ring externo era clipado
-        // pelo overflow-y-auto da lista — 1º card perdia a borda de cima).
+        "bg-[color-mix(in_srgb,var(--chat-chrome)_80%,var(--chat-field))]",
+        "hover:bg-[var(--chat-chrome)]",
         conversation.active &&
-          "bg-white border-[var(--brand-primary)]/55 ring-2 ring-inset ring-[var(--brand-primary)]/30 shadow-[0_2px_8px_rgba(91,111,245,0.12)] hover:bg-white",
+          "bg-[var(--chat-list-selected-bg)] border-[var(--chat-list-selected-bg)] shadow-none hover:bg-[var(--chat-list-selected-bg)]",
         conversation.inactive && "opacity-70",
-        // Marcada (modo seleção): mesmo anel do brand, sem exigir foco/hover.
         selectionMode && selected &&
-          "bg-white border-[var(--brand-primary)]/55 ring-2 ring-inset ring-[var(--brand-primary)]/30 hover:bg-white",
+          "bg-[var(--chat-list-selected-bg)] border-[var(--chat-list-selected-bg)] hover:bg-[var(--chat-list-selected-bg)]",
       )}
     >
       <div className="px-3 py-2">
@@ -265,10 +260,11 @@ export function ConversationCard({
         <div className="relative shrink-0">
           <ChatAvatar
             user={{
-              id: conversation.id,
+              id: conversation.contactId ?? conversation.id,
               name: conversation.name,
             }}
             channel={(conversation.channel as ChatAvatarChannel) ?? null}
+            channelId={conversation.channelId}
             size={AVATAR_SIZE.lg}
           />
           {/* Sem canal: status online/offline no canto (padrão legado). */}
@@ -286,10 +282,24 @@ export function ConversationCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+            <span
+              className={cn(
+                "truncate font-display text-[13px] font-bold",
+                conversation.active
+                  ? "text-[var(--chat-list-selected-name)]"
+                  : "text-[var(--text-primary)]",
+              )}
+            >
               {conversation.name}
             </span>
-            <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] text-[var(--text-muted)]">
+            <span
+              className={cn(
+                "ml-auto flex shrink-0 items-center gap-1 text-[10px]",
+                conversation.active
+                  ? "text-[var(--chat-list-selected-time)]"
+                  : "text-[var(--text-muted)]",
+              )}
+            >
               {conversation.time}
               <UnreadCountPill count={unread} />
               {unread <= 0 && conversation.urgent && (
@@ -303,7 +313,14 @@ export function ConversationCard({
           {/* Preview — 1 linha, fonte menor itálica (estilo kanban).
               Texto => ícone de conversa com borda azul; mídia => ícone
               do tipo + label padronizado (sem itálico). */}
-          <div className="mt-0.5 flex items-center gap-1 text-[11px] italic leading-[1.35] text-[var(--text-muted)]">
+          <div
+            className={cn(
+              "mt-0.5 flex items-center gap-1 text-[11px] italic leading-[1.35]",
+              conversation.active
+                ? "text-[var(--chat-list-selected-preview)]"
+                : "text-[var(--text-muted)]",
+            )}
+          >
             {isOutgoing && conversation.lastMessageStatus === "failed" ? (
               <TooltipGlass
                 label={
@@ -318,9 +335,24 @@ export function ConversationCard({
               </TooltipGlass>
             ) : null}
             {TypeIcon ? (
-              <TypeIcon size={12} className="shrink-0 text-[var(--brand-primary)]" />
+              <TypeIcon
+                size={12}
+                className={cn(
+                  "shrink-0",
+                  conversation.active
+                    ? "text-[var(--chat-list-selected-name)]"
+                    : "text-[var(--chat-text-tertiary)]",
+                )}
+              />
             ) : (
-              <span className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
+              <span
+                className={cn(
+                  "inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
+                  conversation.active
+                    ? "border-[var(--chat-list-selected-preview)] text-[var(--chat-list-selected-name)]"
+                    : "border-[var(--chat-field)] text-[var(--text-muted)]",
+                )}
+              >
                 <IconMessage size={8} />
               </span>
             )}

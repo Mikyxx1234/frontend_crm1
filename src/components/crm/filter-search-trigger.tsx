@@ -87,7 +87,7 @@ export function FilterSearchTrigger({
         // pr-24 (~96px) reserva espaço pro pill "Filtrar" (com contador
         // quando ativo). Antes era pr-11 pro ícone-quadrado — sem esse
         // ajuste o placeholder ficava por trás do botão.
-        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-24 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
+        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--chat-field)] pl-9 pr-24 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
       />
       {tooltipLabel ? (
         <TooltipGlass label={tooltipLabel} side="bottom">

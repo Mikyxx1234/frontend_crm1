@@ -7,24 +7,30 @@ import {
   IconMail,
 } from "@tabler/icons-react";
 
+import { getChannelTonal } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
 
-/** Ícone da marca do canal (perfil, composer, seletor). WhatsApp permanece o default. */
+/** Ícone da marca do canal (perfil, composer, seletor). Cor tonal via hash do id. */
 export function ChannelTypeIcon({
   type,
+  channelId,
   size = 14,
   className,
 }: {
   type?: string | null;
+  channelId?: string | null;
   size?: number;
   className?: string;
 }) {
   const t = (type ?? "").toUpperCase();
+  const tone = getChannelTonal(String(channelId || type || "channel"));
+  const style = { color: tone.fg };
   if (t === "INSTAGRAM") {
     return (
       <IconBrandInstagram
         size={size}
-        className={cn("shrink-0 text-[#DD2A7B]", className)}
+        className={cn("shrink-0", className)}
+        style={style}
       />
     );
   }
@@ -32,17 +38,19 @@ export function ChannelTypeIcon({
     return (
       <IconBrandFacebook
         size={size}
-        className={cn("shrink-0 text-[#1877F2]", className)}
+        className={cn("shrink-0", className)}
+        style={style}
       />
     );
   }
   if (t === "EMAIL") {
-    return <IconMail size={size} className={cn("shrink-0", className)} />;
+    return <IconMail size={size} className={cn("shrink-0", className)} style={style} />;
   }
   return (
     <IconBrandWhatsapp
       size={size}
-      className={cn("shrink-0 text-[#25d366]", className)}
+      className={cn("shrink-0", className)}
+      style={style}
     />
   );
 }

@@ -1734,7 +1734,7 @@ export default function InboxV2ClientPage({
     // ── Mobile: layout de painel único (lista → chat/negócio) ──────
     if (!isDesktop) {
       return (
-        <div className="v2-screen relative grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
+        <div className="inbox-chroma v2-screen relative grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
           {navRailNode}
           <div
             className={cn(
@@ -1813,7 +1813,7 @@ export default function InboxV2ClientPage({
     // ── Desktop: layout original de 3 colunas ─────────────────────
     return (
       <div
-        className="v2-screen relative grid h-full min-h-0 gap-4 overflow-hidden p-4"
+        className="inbox-chroma v2-screen relative grid h-full min-h-0 gap-4 overflow-hidden p-4"
         style={{
           gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)",
           gridTemplateRows: "minmax(0, 1fr)",
@@ -1866,7 +1866,7 @@ export default function InboxV2ClientPage({
   // ── Mobile: layout de painel único (lista → chat/negócio) ──────
   if (!isDesktop) {
     return (
-      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
+      <div className="inbox-chroma v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
         {navRailNode}
         <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
           {!activeId ? (
@@ -1932,7 +1932,7 @@ export default function InboxV2ClientPage({
   // ── Desktop: layout original de 4 colunas ─────────────────────
   return (
     <div
-      className="v2-screen grid h-full min-h-0 gap-4 overflow-hidden p-4"
+      className="inbox-chroma v2-screen grid h-full min-h-0 gap-4 overflow-hidden p-4"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
         gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${effectiveAsideCollapsed ? "0px" : `${asideWidth}px`}`,

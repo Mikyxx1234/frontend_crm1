@@ -38,6 +38,7 @@ export type ConversationHeaderProps = {
 
   conversationId?: string | null;
   conversationChannel?: string | null;
+  conversationChannelId?: string | null;
 
   canManageAssignee?: boolean;
   myUserId?: string;
@@ -88,6 +89,7 @@ export function ConversationHeader({
   contactChannel,
   contactHref,
   conversationChannel,
+  conversationChannelId,
   overflowMenu,
   actionsSlot,
   toolbarActions,
@@ -113,7 +115,7 @@ export function ConversationHeader({
 
   return (
     <div
-      className="flex shrink-0 items-stretch border-b border-[var(--glass-border)] bg-[var(--glass-bg-panel)] backdrop-blur-md"
+      className="flex shrink-0 items-stretch border-b border-[var(--glass-border)] bg-[var(--chat-chrome)]"
       style={{ minHeight: 46 }}
     >
       <div className="flex min-w-0 shrink-0 items-center gap-2.5 border-r border-border px-2 sm:px-3">
@@ -151,6 +153,7 @@ export function ConversationHeader({
           }}
           phone={contactPhone ?? undefined}
           channel={normalizeChannel(contactChannel ?? conversationChannel)}
+          channelId={conversationChannelId ?? conversationChannel ?? null}
           size={34}
         />
 

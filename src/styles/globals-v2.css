@@ -69,7 +69,7 @@
      bolhas out em tema claro/gradiente, dando a impressão de que a
      entrega nunca era marcada como lida mesmo quando a Meta entregava
      o evento read via webhook. */
-  --wa-tick-read:    #38bdf8;   /* ticks azuis = lido (ciano vivo p/ contrastar na bolha indigo) */
+  --wa-tick-read:    #6C5CE7;   /* ticks indigo = lido (contrasta na bolha pastel) */
   /* Literal #ef4444 — NÃO usar var(--color-danger) aqui: tokens só em
      @theme às vezes não resolvem em class arbitrary e o ícone herda cinza. */
   --wa-tick-fail:    #ef4444;
@@ -288,16 +288,43 @@
   --input-radius:       0.75rem;
   --input-height:       2.5rem;
 
+  /* Chat chroma — superfícies da tela de inbox (só cor, sem layout) */
+  --chat-paper:              #F4F3F1;
+  --chat-dot:                #E0DEDA;
+  --chat-app:                #F2F1F4;
+  --chat-chrome:             #F7F7F9;
+  --chat-field:              #F2F2F5;
+  --chat-text:               #11121A;
+  --chat-text-secondary:     #6B6C78;
+  --chat-text-tertiary:      #9A9AA6;
+  --chat-accent:             #6C5CE7;
+  --chat-unread-bg:          #6C5CE7;
+  --chat-unread-fg:          #FFFFFF;
+  --chat-list-selected-bg:   #EFEDFC;
+  --chat-list-selected-name: #3A2FA8;
+  --chat-list-selected-preview: #6E67A8;
+  --chat-list-selected-time: #8480B8;
+  --chat-tick-read:          #6C5CE7;
+  --chat-quote-bg:           #F4F3F1;
+  --chat-quote-border:       #E9E8E5;
+  --chat-quote-label:        #11121A;
+  --chat-quote-text:         #6B6C78;
+
   /* Chat bubbles — light mode */
-  --chat-bubble-received-bg:     #ffffff;
-  --chat-bubble-received-border: rgba(203, 213, 225, 0.80);
-  --chat-bubble-received-text:   #0f172a;
-  --chat-bubble-received-time:   #94a3b8;
+  --chat-bubble-received-bg:     #FFFFFF;
+  --chat-bubble-received-border: #E9E8E5;
+  --chat-bubble-received-text:   #11121A;
+  --chat-bubble-received-time:   #9A9AA6;
   --chat-bubble-note-bg:         #f8fafc;
   --chat-bubble-note-border:     #e2e8f0;
+  --chat-bubble-sent-bg:         #E4E0FB;
+  --chat-bubble-sent-text:       #1B1640;
+  --chat-bubble-sent-time:       #6B6C78;
+  --chat-bubble-sent-check-read: var(--chat-tick-read);
+  --chat-bg:                     var(--chat-paper);
 
   /* Ticks de entrega — espelho @theme (inline/class var() precisa de :root) */
-  --wa-tick-read: #38bdf8;
+  --wa-tick-read: var(--chat-tick-read);
   --wa-tick-fail: #ef4444;
 
   /* WhatsApp — cores de marca do canal, ISOLADAS (mock/preview). Não usar
@@ -324,16 +351,34 @@
   --channel-webchat:   var(--brand-primary);
 
   /* ── Avatar (contato = sólido; interno = glass) ─────────────────────────── */
-  --avatar-fallback-1: #2563eb;
-  --avatar-fallback-2: #059669;
-  --avatar-fallback-3: #7c3aed;
-  --avatar-fallback-4: #db2777;
-  --avatar-fallback-5: #0891b2;
-  --avatar-fallback-6: #d97706;
-  --avatar-fallback-7: #dc2626;
-  --avatar-fallback-8: #0f766e;
-  --avatar-bot-bg:     #475569;
-  --avatar-unread-bg:  #22c55e;
+  --avatar-fallback-1:    #E8674C;
+  --avatar-fallback-1-fg: #FFFFFF;
+  --avatar-fallback-2:    #E0973B;
+  --avatar-fallback-2-fg: #3A2400;
+  --avatar-fallback-3:    #3AA087;
+  --avatar-fallback-3-fg: #FFFFFF;
+  --avatar-fallback-4:    #3B7FC4;
+  --avatar-fallback-4-fg: #FFFFFF;
+  --avatar-fallback-5:    #6C5CE7;
+  --avatar-fallback-5-fg: #FFFFFF;
+  --avatar-fallback-6:    #C05B94;
+  --avatar-fallback-6-fg: #FFFFFF;
+  --avatar-fallback-7:    var(--avatar-fallback-1);
+  --avatar-fallback-8:    var(--avatar-fallback-3);
+  --avatar-bot-bg:        #475569;
+  --avatar-unread-bg:     var(--chat-unread-bg);
+  --channel-tonal-1-bg:   #FDEDE6;
+  --channel-tonal-1-fg:   #C0492F;
+  --channel-tonal-2-bg:   #FBF3E4;
+  --channel-tonal-2-fg:   #B07820;
+  --channel-tonal-3-bg:   #E6F5F1;
+  --channel-tonal-3-fg:   #2A7A66;
+  --channel-tonal-4-bg:   #E8F1F8;
+  --channel-tonal-4-fg:   #2B5F96;
+  --channel-tonal-5-bg:   #EFEDFC;
+  --channel-tonal-5-fg:   #4F42C4;
+  --channel-tonal-6-bg:   #F8EAF2;
+  --channel-tonal-6-fg:   #9A3F73;
   --avatar-ring:       var(--color-background, #fff);
   --avatar-size-xs:    24px;
   --avatar-size-sm:    28px;
@@ -920,4 +965,26 @@ dialog *  { scrollbar-width: thin; scrollbar-color: rgba(15,23,42,0.18) transpar
 
 .v2-dark .v2-root [role="switch"] span.bg-white {
   background-color: #ffffff !important;
+}
+
+/* Inbox chroma — fundo entre painéis + textura da thread. Sem layout. */
+.inbox-chroma {
+  background: var(--chat-app);
+  --bg-base: var(--chat-app);
+  --bg-mesh: var(--chat-app);
+  --bg-mesh-1: var(--chat-app);
+  --bg-mesh-2: var(--chat-app);
+  --bg-gradient: var(--chat-app);
+  --text-primary: var(--chat-text);
+  --text-secondary: var(--chat-text-secondary);
+  --text-muted: var(--chat-text-tertiary);
+  --color-ink-soft: var(--chat-text-secondary);
+  --color-ink-muted: var(--chat-text-tertiary);
+  --chat-bg: var(--chat-paper);
+}
+
+.chat-thread {
+  background-color: var(--chat-bg);
+  background-image: radial-gradient(circle at 1px 1px, var(--chat-dot) 1px, transparent 0);
+  background-size: 22px 22px;
 }

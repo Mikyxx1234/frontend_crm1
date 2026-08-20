@@ -1157,3 +1157,227 @@
   --color-background: oklch(0.24 0.03 264);
   --color-foreground: oklch(0.95 0.01 255);
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   ÓRBITA — Bento layout tokens
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --orbita-canvas: #f0f2f5;
+  --orbita-block: #ffffff;
+  --orbita-chrome: #f0f2f5;
+  --orbita-paper: #efeae2;
+  --orbita-dot: #d8d2c8;
+  --orbita-field: #f0f2f5;
+  --orbita-chip-active: #d9fdd3;
+  --orbita-chip-active-text: #008069;
+  --orbita-block-soft: var(--orbita-field);
+  --orbita-rail: #111b21;
+  --orbita-rail-active: #202c33;
+  --orbita-radius-shell: 18px;
+  --orbita-radius-block: 16px;
+  --orbita-radius-inner: 12px;
+  --orbita-radius-avatar: 999px;
+  --orbita-gap: 10px;
+  --orbita-selected: #00a884;
+  --orbita-unread-bg: #25d366;
+  --orbita-unread-fg: #ffffff;
+  --orbita-divider: #e9edef;
+  --orbita-text: #111b21;
+  --orbita-text-secondary: #667781;
+  --orbita-text-tertiary: #8696a0;
+  --orbita-list-selected-bg: #f0f2f5;
+  --orbita-list-selected-name: var(--orbita-text);
+  --orbita-list-selected-preview: var(--orbita-text-secondary);
+  --orbita-list-selected-time: var(--orbita-text-tertiary);
+  --orbita-bubble-sent-bg: #d9fdd3;
+  --orbita-bubble-sent-text: #111b21;
+  --orbita-bubble-received-border: #e9edef;
+  --orbita-avatar-1: #e8674c;
+  --orbita-avatar-1-fg: #ffffff;
+  --orbita-avatar-2: #e0973b;
+  --orbita-avatar-2-fg: #3a2400;
+  --orbita-avatar-3: #3aa087;
+  --orbita-avatar-3-fg: #ffffff;
+  --orbita-avatar-4: #3b7fc4;
+  --orbita-avatar-4-fg: #ffffff;
+  --orbita-avatar-5: #5a7a8c;
+  --orbita-avatar-5-fg: #ffffff;
+  --orbita-avatar-6: #128c7e;
+  --orbita-avatar-6-fg: #ffffff;
+  --orbita-channel-1-bg: #fdede6;
+  --orbita-channel-1-fg: #c0492f;
+  --orbita-channel-2-bg: #fbf3e4;
+  --orbita-channel-2-fg: #b07820;
+  --orbita-channel-3-bg: #e6f5f1;
+  --orbita-channel-3-fg: #2a7a66;
+  --orbita-channel-4-bg: #e8f1f8;
+  --orbita-channel-4-fg: #2b5f96;
+  --orbita-channel-5-bg: #e8eef2;
+  --orbita-channel-5-fg: #3d5a6c;
+  --orbita-channel-6-bg: #e7f6f1;
+  --orbita-channel-6-fg: #0e7a63;
+  --orbita-name-1: #53bdeb;
+  --orbita-name-2: #06cf9c;
+  --orbita-name-3: #e542a3;
+  --orbita-name-4: #a5b337;
+  --orbita-name-5: #ff8f32;
+  --orbita-name-6: #02a698;
+}
+
+.dark {
+  --orbita-canvas: #0b141a;
+  --orbita-block: #111b21;
+  --orbita-chrome: #202c33;
+  --orbita-paper: #0b141a;
+  --orbita-dot: #1a2329;
+  --orbita-field: #202c33;
+  --orbita-chip-active: #005c4b;
+  --orbita-chip-active-text: #d9fdd3;
+  --orbita-block-soft: var(--orbita-field);
+  --orbita-rail: #0b141a;
+  --orbita-rail-active: #202c33;
+  --orbita-text: #e9edef;
+  --orbita-text-secondary: #8696a0;
+  --orbita-text-tertiary: #667781;
+  --orbita-list-selected-bg: #2a3942;
+  --orbita-list-selected-name: var(--orbita-text);
+  --orbita-list-selected-preview: var(--orbita-text-secondary);
+  --orbita-list-selected-time: var(--orbita-text-tertiary);
+  --orbita-bubble-sent-bg: #005c4b;
+  --orbita-bubble-sent-text: #e9edef;
+  --orbita-bubble-received-border: #2a3942;
+}
+
+/* Órbita: painel único no estilo WhatsApp Web. */
+.team-chat-shell {
+  background: var(--orbita-block);
+  color: var(--orbita-text);
+  --color-foreground: var(--orbita-text);
+  --color-muted-foreground: var(--orbita-text-secondary);
+  min-width: 0;
+  padding: 0;
+  border-radius: var(--orbita-radius-shell);
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* Painéis internos — sem card bento; o shell já recorta. */
+.orbita-block {
+  background: var(--orbita-block);
+  border-radius: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.orbita-block.orbita-block--float {
+  overflow: visible;
+}
+
+.orbita-block-soft {
+  background: var(--orbita-block-soft);
+  border-radius: var(--orbita-radius-block);
+}
+
+/* Squircle avatars in Órbita - targets UserAvatar's inner rounded-full div */
+.team-chat-shell [data-orbita-avatar],
+.team-chat-shell [data-orbita-avatar] > div {
+  border-radius: var(--orbita-radius-avatar) !important;
+}
+.team-chat-shell [data-orbita-avatar] img {
+  border-radius: var(--orbita-radius-avatar) !important;
+}
+
+.team-chat-shell [data-wa-thread] {
+  background-color: var(--orbita-paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='0.045' stroke-width='1.2'%3E%3Ccircle cx='40' cy='36' r='10'/%3E%3Crect x='92' y='28' width='18' height='14' rx='2'/%3E%3Cpath d='M132 42h22M168 36v12'/%3E%3Cpath d='M210 30l10 10-10 10'/%3E%3Ccircle cx='24' cy='110' r='6'/%3E%3Cpath d='M70 104c8 0 12 8 12 14s-4 14-12 14'/%3E%3Crect x='128' y='100' width='16' height='16' rx='8'/%3E%3Cpath d='M180 108h28M194 98v20'/%3E%3Cpath d='M30 176c12-8 24 8 36 0'/%3E%3Ccircle cx='110' cy='180' r='8'/%3E%3Cpath d='M150 172l12 16h-24z'/%3E%3Crect x='200' y='168' width='22' height='16' rx='3'/%3E%3Cpath d='M48 232h16M56 224v16'/%3E%3Ccircle cx='160' cy='236' r='5'/%3E%3Cpath d='M210 228c10 0 16 10 8 16'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 260px 260px;
+}
+
+.orbita-bubble-received.orbita-bubble--tail::before,
+.orbita-bubble-sent.orbita-bubble--tail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 10px;
+}
+.orbita-bubble-received.orbita-bubble--tail {
+  border-top-left-radius: 4px;
+}
+.orbita-bubble-received.orbita-bubble--tail::before {
+  left: -7px;
+  background: var(--orbita-block);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+.orbita-bubble-sent.orbita-bubble--tail {
+  border-top-right-radius: 4px;
+}
+.orbita-bubble-sent.orbita-bubble--tail::before {
+  right: -7px;
+  background: var(--orbita-bubble-sent-bg);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.team-chat-shell .chat-scroll {
+  scrollbar-color: color-mix(in oklch, var(--color-muted-foreground) 40%, transparent) transparent;
+}
+
+/* Órbita selected item */
+.orbita-item-selected {
+  background: var(--orbita-list-selected-bg);
+  color: var(--orbita-list-selected-name);
+  border-radius: var(--orbita-radius-inner);
+}
+
+/* Focus visible for accessibility in Órbita */
+.team-chat-shell :focus-visible {
+  outline: 2px solid var(--orbita-selected);
+  outline-offset: 2px;
+}
+
+/* Responsive: on mobile, sidebar blocks stack vertically */
+@media (max-width: 1023px) {
+  .team-chat-shell {
+    flex-direction: column;
+  }
+}
+
+/* Órbita message bubbles */
+.orbita-bubble-received {
+  background: var(--orbita-block);
+  color: var(--orbita-text);
+  box-shadow: inset 0 0 0 0.5px var(--orbita-bubble-received-border);
+}
+.orbita-bubble-sent {
+  background: var(--orbita-bubble-sent-bg);
+  color: var(--orbita-bubble-sent-text);
+}
+
+.chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--color-muted-foreground) 25%, transparent) transparent;
+}
+.chat-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.chat-scroll::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklch, var(--color-muted-foreground) 22%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+@keyframes message-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-message-in {
+  animation: message-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes soft-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
+.animate-soft-pulse {
+  animation: soft-pulse 2s infinite ease-in-out;
+}

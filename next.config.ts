@@ -128,6 +128,7 @@ const nextConfig: NextConfig = {
    */
   async redirects() {
     return [
+      { source: "/team-chat", destination: "/orbita", permanent: false },
       // ── v2 legacy (segmento /v2/* virou raiz) ──────────────────────
       { source: "/v2", destination: "/dashboard", permanent: true },
       { source: "/v2/:path*", destination: "/:path*", permanent: true },

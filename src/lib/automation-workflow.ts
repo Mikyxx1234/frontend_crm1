@@ -24,6 +24,7 @@ export type AutomationTriggerType =
   | "message_sent"
   | "call_received"
   | "call_made"
+  | "call_permission_granted"
   | "conversation_tabulated"
   | "whatsapp_session_expiring"
   | "lead_distributed"
@@ -50,6 +51,7 @@ export const AUTOMATION_TRIGGER_TYPES: AutomationTriggerType[] = [
   "message_sent",
   "call_received",
   "call_made",
+  "call_permission_granted",
   "conversation_tabulated",
   "whatsapp_session_expiring",
   "lead_distributed",
@@ -159,6 +161,7 @@ export function triggerTypeLabel(t: string): string {
     message_sent: "Mensagem enviada",
     call_received: "Ligação recebida",
     call_made: "Ligação realizada",
+    call_permission_granted: "Permissão de ligação concedida",
     conversation_tabulated: "Conversa encerrada",
     whatsapp_session_expiring: "Sessão do WhatsApp prestes a encerrar",
     lead_distributed: "Lead distribuído (consultor humano)",
@@ -291,6 +294,12 @@ export function summarizeTriggerConfig(
         missed: "Não atendidas",
       };
       return status ? (statusLabel[status] ?? status) : "Qualquer ligação";
+    }
+    case "call_permission_granted": {
+      const t = c.consentType ? String(c.consentType) : "";
+      if (t === "PERMANENT") return "Permanente";
+      if (t === "TEMPORARY") return "Temporária 7 dias";
+      return "Qualquer tipo";
     }
     case "message_received":
     case "message_sent": {
@@ -906,6 +915,8 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
     case "call_received":
     case "call_made":
       return { status: "" };
+    case "call_permission_granted":
+      return { consentType: "" };
     case "lead_distributed":
       return { departmentId: "" };
     case "manual":

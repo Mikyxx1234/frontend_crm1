@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Search, Star, StickyNote, UserPlus, X } from "lucide-react";
+import { ArrowLeft, PanelRight, Phone, Search, Star, UserPlus, Video, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { cn } from "@/lib/utils";
 
 import { Avatar, AvatarStack, GroupGlyph } from "./avatar";
-import { presenceLabel, toPerson } from "./helpers";
+import { PRESENCE_TEXT, presenceLabel, toPerson } from "./helpers";
 import type { TeamChatRoom } from "./types";
 
 function IconButton({
@@ -43,6 +44,30 @@ function IconButton({
         </span>
       )}
     </button>
+  );
+}
+
+function HeaderAction({
+  label,
+  active,
+  badge,
+  onClick,
+  children,
+}: {
+  label: string;
+  active?: boolean;
+  badge?: number;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <TooltipGlass label={label} side="bottom">
+      <span className="inline-flex">
+        <IconButton label={label} active={active} badge={badge} onClick={onClick}>
+          {children}
+        </IconButton>
+      </span>
+    </TooltipGlass>
   );
 }
 
@@ -98,7 +123,9 @@ export function ChatHeader({
               {isDirect ? room.name : `#${room.name}`}
             </h2>
             {isDirect && lead ? (
-              <span className="text-[12px] text-[var(--orbita-text-secondary)]">{presenceLabel[lead.presence]}</span>
+              <span className="text-[12px] font-medium" style={{ color: PRESENCE_TEXT[lead.presence] }}>
+                {presenceLabel[lead.presence]}
+              </span>
             ) : (
               <div className="flex items-center gap-2">
                 <AvatarStack people={people} />
@@ -112,22 +139,23 @@ export function ChatHeader({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {room.kind === "GROUP" && (
-            <IconButton label="Adicionar membros" onClick={onAddMembers}>
+            <HeaderAction label="Adicionar membros" onClick={onAddMembers}>
               <UserPlus className="h-[18px] w-[18px]" />
-            </IconButton>
+            </HeaderAction>
           )}
-          <TooltipGlass label={favorited ? "Remover dos favoritos" : "Favoritar conversa"} side="bottom">
-            <span className="inline-flex">
-              <IconButton
-                label={favorited ? "Remover dos favoritos" : "Favoritar conversa"}
-                active={favorited}
-                onClick={onToggleFavorite}
-              >
-                <Star className={cn("h-[18px] w-[18px]", favorited && "fill-current")} />
-              </IconButton>
-            </span>
-          </TooltipGlass>
-          <IconButton
+          <HeaderAction
+            label="Ligar"
+            onClick={() => toast.message("Chamadas internas em breve.")}
+          >
+            <Phone className="h-[18px] w-[18px]" />
+          </HeaderAction>
+          <HeaderAction
+            label="Chamada de vídeo"
+            onClick={() => toast.message("Chamadas internas em breve.")}
+          >
+            <Video className="h-[18px] w-[18px]" />
+          </HeaderAction>
+          <HeaderAction
             label="Pesquisar na conversa"
             active={searchOpen}
             onClick={() => {
@@ -140,15 +168,22 @@ export function ChatHeader({
             }}
           >
             <Search className="h-[18px] w-[18px]" />
-          </IconButton>
-          <IconButton
-            label="Notas da conversa"
+          </HeaderAction>
+          <HeaderAction
+            label={favorited ? "Remover dos favoritos" : "Favoritar"}
+            active={favorited}
+            onClick={onToggleFavorite}
+          >
+            <Star className={cn("h-[18px] w-[18px]", favorited && "fill-current")} />
+          </HeaderAction>
+          <HeaderAction
+            label="Detalhes"
             active={notesOpen}
             badge={notesOpen ? undefined : noteCount}
             onClick={onToggleNotes}
           >
-            <StickyNote className="h-[18px] w-[18px]" />
-          </IconButton>
+            <PanelRight className="h-[18px] w-[18px]" />
+          </HeaderAction>
         </div>
       </div>
       {searchOpen && (

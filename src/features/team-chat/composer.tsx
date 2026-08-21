@@ -5,6 +5,7 @@ import {
   Bold,
   FileText,
   Highlighter,
+  Image,
   Italic,
   Mic,
   Paperclip,
@@ -13,6 +14,7 @@ import {
   Smile,
   Sticker,
   Trash2,
+  Reply,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -101,11 +103,17 @@ function formatClock(s: number) {
 export function Composer({
   roomId,
   placeholder,
+  quote,
   onSend,
+  onTyping,
+  onClearQuote,
 }: {
   roomId: string;
   placeholder: string;
+  quote?: { author: string; text: string } | null;
   onSend: (input: { content: string; attachments: TeamChatAttachment[] }) => Promise<void> | void;
+  onTyping?: () => void;
+  onClearQuote?: () => void;
 }) {
   const [value, setValue] = useState("");
   const [pending, setPending] = useState<Staged[]>([]);
@@ -120,6 +128,7 @@ export function Composer({
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const imageRef = useRef<HTMLInputElement>(null);
   const stickerFileRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -141,6 +150,11 @@ export function Composer({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!quote) return;
+    textareaRef.current?.focus();
+  }, [quote]);
 
   useEffect(() => {
     if (!plusOpen && !picker) return;
@@ -271,11 +285,15 @@ export function Composer({
         };
         attachments.push(await uploadTeamChatAttachment(roomId, item.file, opts));
       }
-      await onSend({ content: text, attachments });
+      const body = quote
+        ? `> ${quote.author}: ${quote.text.replace(/\n/g, " ").slice(0, 180)}\n\n${text}`.trim()
+        : text;
+      await onSend({ content: body, attachments });
       pending.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl));
       setPending([]);
       setValue("");
       setPicker(null);
+      onClearQuote?.();
       requestAnimationFrame(() => {
         if (textareaRef.current) textareaRef.current.style.height = "auto";
       });
@@ -594,6 +612,24 @@ export function Composer({
           )}
 
           {!recording && (
+            <div className="flex flex-col">
+              {quote && (
+                <div className="mb-1 flex items-start gap-2 rounded-[var(--orbita-radius-inner)] bg-[var(--orbita-field)] px-3 py-2">
+                  <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--orbita-selected)]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] font-semibold text-[var(--orbita-selected)]">{quote.author}</p>
+                    <p className="truncate text-[12px] text-[var(--orbita-text-secondary)]">{quote.text}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onClearQuote?.()}
+                    aria-label="Cancelar resposta"
+                    className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:bg-white/50"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
             <div className="flex items-center gap-1">
               <div className="relative shrink-0">
               <TooltipGlass label="Mais opções" side="top">
@@ -748,6 +784,7 @@ export function Composer({
                     setValue(e.target.value);
                     resize();
                     syncSelection();
+                    if (e.target.value.trim()) onTyping?.();
                   }}
                   onKeyDown={handleKeyDown}
                   onKeyUp={syncSelection}
@@ -758,26 +795,51 @@ export function Composer({
                   className="max-h-40 min-h-12 min-w-0 flex-1 resize-none bg-transparent py-3 text-[15px] leading-snug text-[var(--orbita-text)] outline-none placeholder:text-[var(--orbita-text-tertiary)]"
                 />
               </div>
-              {canSend ? (
+              <TooltipGlass label="Imagem" side="top">
                 <button
                   type="button"
-                  onClick={() => void submitText()}
-                  disabled={busy}
-                  aria-label="Enviar mensagem"
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--orbita-selected)] text-white disabled:opacity-60"
-                >
-                  <Send className="h-5 w-5" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => void startRecording()}
-                  aria-label="Gravar áudio"
+                  onClick={() => imageRef.current?.click()}
+                  aria-label="Enviar imagem"
                   className={iconBtn}
                 >
-                  <Mic className="h-[22px] w-[22px]" />
+                  <Image className="h-[20px] w-[20px]" />
                 </button>
+              </TooltipGlass>
+              <TooltipGlass label="Documento" side="top">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  aria-label="Anexar documento"
+                  className={iconBtn}
+                >
+                  <Paperclip className="h-[20px] w-[20px]" />
+                </button>
+              </TooltipGlass>
+              {canSend ? (
+                <TooltipGlass label="Enviar" side="top">
+                  <button
+                    type="button"
+                    onClick={() => void submitText()}
+                    disabled={busy}
+                    aria-label="Enviar mensagem"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--orbita-selected)] text-white disabled:opacity-60"
+                  >
+                    <Send className="h-5 w-5" />
+                  </button>
+                </TooltipGlass>
+              ) : (
+                <TooltipGlass label="Gravar áudio" side="top">
+                  <button
+                    type="button"
+                    onClick={() => void startRecording()}
+                    aria-label="Gravar áudio"
+                    className={iconBtn}
+                  >
+                    <Mic className="h-[22px] w-[22px]" />
+                  </button>
+                </TooltipGlass>
               )}
+            </div>
             </div>
           )}
         </div>
@@ -785,6 +847,17 @@ export function Composer({
         <input
           ref={fileRef}
           type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            stageFiles(Array.from(e.target.files ?? []));
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={imageRef}
+          type="file"
+          accept="image/*"
           multiple
           className="hidden"
           onChange={(e) => {

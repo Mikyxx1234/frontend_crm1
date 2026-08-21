@@ -14,6 +14,7 @@ import {
   listTeamChatNotes,
   listTeamChatRooms,
   pinTeamChatMessage,
+  pingTeamChatTyping,
   pinTeamChatNote,
   reactTeamChatMessage,
   sendTeamChatMessage,
@@ -156,6 +157,65 @@ export function useTeamChatMutations() {
     },
   });
   return { createRoom, send, addMembers, react, pin, addNote, toggleNotePin, removeNote };
+}
+
+export type TeamChatTypingMap = Record<string, { userId: string; name: string }>;
+
+export function useTeamChatTyping(meId: string, enabled = true) {
+  const [typing, setTyping] = useState<TeamChatTypingMap>({});
+  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    if (!enabled) return;
+    function clearRoom(roomId: string) {
+      if (timers.current[roomId]) {
+        clearTimeout(timers.current[roomId]);
+        delete timers.current[roomId];
+      }
+      setTyping((prev) => {
+        if (!prev[roomId]) return prev;
+        const next = { ...prev };
+        delete next[roomId];
+        return next;
+      });
+    }
+    return subscribeSSEEvents("/api/sse/messages", {
+      team_chat_typing: (raw) => {
+        const data = raw as { roomId?: string; userId?: string; name?: string };
+        if (!data.roomId || !data.userId || data.userId === meId) return;
+        setTyping((prev) => ({
+          ...prev,
+          [data.roomId!]: { userId: data.userId!, name: data.name || "Colega" },
+        }));
+        if (timers.current[data.roomId]) clearTimeout(timers.current[data.roomId]);
+        timers.current[data.roomId] = setTimeout(() => clearRoom(data.roomId!), 3500);
+      },
+      team_chat_message: (raw) => {
+        const data = raw as { roomId?: string };
+        if (data.roomId) clearRoom(data.roomId);
+      },
+    });
+  }, [enabled, meId]);
+
+  useEffect(
+    () => () => {
+      Object.values(timers.current).forEach(clearTimeout);
+    },
+    [],
+  );
+
+  return typing;
+}
+
+export function usePingTeamChatTyping(roomId: string | null) {
+  const last = useRef(0);
+  return () => {
+    if (!roomId) return;
+    const now = Date.now();
+    if (now - last.current < 1400) return;
+    last.current = now;
+    void pingTeamChatTyping(roomId);
+  };
 }
 
 export function useTeamChatRealtime(activeRoomId: string | null, enabled = true) {

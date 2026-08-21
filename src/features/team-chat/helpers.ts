@@ -24,8 +24,31 @@ export type ChatPerson = {
   id: string;
   name: string;
   initials: string;
-  presence: "online" | "offline";
+  presence: "online" | "away" | "offline";
   avatarUrl?: string | null;
+};
+
+const AWAY_MS = 15 * 60 * 1000;
+
+export function presenceOf(p: Pick<TeamChatPerson, "systemOnline" | "lastSeenAt">): ChatPerson["presence"] {
+  if (p.systemOnline) return "online";
+  if (p.lastSeenAt) {
+    const age = Date.now() - new Date(p.lastSeenAt).getTime();
+    if (Number.isFinite(age) && age >= 0 && age < AWAY_MS) return "away";
+  }
+  return "offline";
+}
+
+export const PRESENCE_DOT: Record<ChatPerson["presence"], string> = {
+  online: "var(--color-online)",
+  away: "#f59e0b",
+  offline: "var(--color-offline)",
+};
+
+export const PRESENCE_TEXT: Record<ChatPerson["presence"], string> = {
+  online: "var(--color-online)",
+  away: "#f59e0b",
+  offline: "var(--orbita-text-secondary)",
 };
 
 export function initialsOf(name: string) {
@@ -78,14 +101,14 @@ export function normalizeAvatarUrl(url?: string | null): string | null {
 }
 
 export function toPerson(
-  p: Pick<TeamChatPerson, "id" | "name" | "avatarUrl" | "systemOnline">,
+  p: Pick<TeamChatPerson, "id" | "name" | "avatarUrl" | "systemOnline" | "lastSeenAt">,
 ): ChatPerson {
   const name = p.name?.trim() || "Colega";
   return {
     id: p.id,
     name,
     initials: initialsOf(name),
-    presence: p.systemOnline ? "online" : "offline",
+    presence: presenceOf(p),
     avatarUrl: normalizeAvatarUrl(p.avatarUrl),
   };
 }
@@ -128,7 +151,8 @@ export function dayKey(iso: string) {
 }
 
 export const presenceLabel = {
-  online: "Disponível",
+  online: "Online agora",
+  away: "Ausente",
   offline: "Offline",
 } as const;
 
@@ -201,7 +225,7 @@ export function meFromSession(
     id: id || "me",
     name: display,
     initials: initialsOf(display),
-    presence: "online",
+    presence: "online" as const,
     avatarUrl: normalizeAvatarUrl(avatarUrl),
   };
 }

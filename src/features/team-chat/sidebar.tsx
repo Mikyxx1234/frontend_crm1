@@ -27,6 +27,7 @@ type ChatListItem =
       name: string;
       preview: string;
       time: string;
+      typing: boolean;
     }
   | {
       key: string;
@@ -38,6 +39,7 @@ type ChatListItem =
       name: string;
       preview: string;
       time: string;
+      typing: boolean;
     };
 
 function HeaderIcon({
@@ -110,6 +112,9 @@ function ChatRow({
             >
               {item.kind === "group" ? `#${item.name}` : item.name}
             </span>
+            {favorited && (
+              <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" aria-hidden />
+            )}
             {item.time && (
               <span
                 className={cn(
@@ -127,14 +132,16 @@ function ChatRow({
             <span
               className={cn(
                 "min-w-0 flex-1 truncate text-[12px] leading-snug",
-                active
-                  ? "text-[var(--orbita-list-selected-preview)]"
-                  : unread > 0
-                    ? "font-medium text-[var(--orbita-text)]"
-                    : "text-[var(--orbita-text-secondary)]",
+                item.typing
+                  ? "font-medium text-[var(--orbita-selected)]"
+                  : active
+                    ? "text-[var(--orbita-list-selected-preview)]"
+                    : unread > 0
+                      ? "font-medium text-[var(--orbita-text)]"
+                      : "text-[var(--orbita-text-secondary)]",
               )}
             >
-              {item.preview}
+              {item.typing ? "Digitando..." : item.preview}
             </span>
             {!active && <UnreadPill count={unread} />}
           </div>
@@ -170,6 +177,7 @@ export function Sidebar({
   onSelectRoom,
   onSelectPerson,
   onNew,
+  typing = {},
 }: {
   directs: DirectRow[];
   groups: TeamChatRoom[];
@@ -181,6 +189,7 @@ export function Sidebar({
   onSelectRoom: (id: string) => void;
   onSelectPerson: (personId: string) => void;
   onNew: () => void;
+  typing?: Record<string, { userId: string; name: string }>;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ListFilter>("all");
@@ -218,6 +227,7 @@ export function Sidebar({
         name: row.person.name,
         preview: row.room?.lastPreview || "Enviar mensagem",
         time: row.room?.lastMessageAt ? formatListTime(row.room.lastMessageAt) : "",
+        typing: Boolean(row.room?.id && typing[row.room.id]),
       });
     }
     for (const room of groups) {
@@ -231,10 +241,11 @@ export function Sidebar({
         name: room.name,
         preview: room.lastPreview || "Comece a conversa",
         time: formatListTime(room.lastMessageAt),
+        typing: Boolean(typing[room.id]),
       });
     }
     return out.sort((a, b) => b.at - a.at || a.name.localeCompare(b.name, "pt-BR"));
-  }, [directs, groups]);
+  }, [directs, groups, typing]);
 
   const visible = useMemo(() => {
     return items.filter((item) => {
@@ -250,7 +261,6 @@ export function Sidebar({
     { id: "all", label: "Tudo" },
     { id: "unread", label: "Não lidas", count: unreadTotal },
     { id: "favorites", label: "Favoritas", count: favorites.length },
-    ...(groups.length > 0 ? [{ id: "groups" as const, label: "Grupos", count: groups.length }] : []),
   ];
 
   return (
@@ -295,7 +305,7 @@ export function Sidebar({
           />
         </div>
 
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex gap-4 border-b border-black/[0.06] dark:border-white/[0.08]">
           {pills.map((pill) => {
             const selected = filter === pill.id;
             return (
@@ -304,14 +314,14 @@ export function Sidebar({
                 type="button"
                 onClick={() => setFilter(pill.id)}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
+                  "-mb-px flex items-center gap-1.5 border-b-2 pb-2 text-[13px] font-medium transition-colors",
                   selected
-                    ? "bg-[var(--orbita-chip-active)] text-[var(--orbita-chip-active-text)]"
-                    : "bg-[var(--orbita-field)] text-[var(--orbita-text-secondary)] hover:text-[var(--orbita-text)]",
+                    ? "border-[var(--orbita-selected)] text-[var(--orbita-selected)]"
+                    : "border-transparent text-[var(--orbita-text-secondary)] hover:text-[var(--orbita-text)]",
                 )}
               >
                 {pill.label}
-                {(pill.count ?? 0) > 0 && (
+                {(pill.count ?? 0) > 0 && !selected && (
                   <span className="text-[11px] tabular-nums">{pill.count}</span>
                 )}
               </button>

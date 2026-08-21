@@ -6,10 +6,12 @@ import {
   getOrbitaAvatarTone,
   getOrbitaChannelTonal,
   normalizeAvatarUrl,
+  PRESENCE_DOT,
   type ChatPerson,
 } from "./helpers";
 
 const sizePx = {
+  xs: 28,
   sm: 36,
   md: 44,
   lg: 56,
@@ -69,8 +71,7 @@ export function Avatar({
           style={{
             width: dotSize,
             height: dotSize,
-            backgroundColor:
-              person.presence === "online" ? "var(--color-online)" : "var(--color-offline)",
+            backgroundColor: PRESENCE_DOT[person.presence],
           }}
         />
       ) : null}

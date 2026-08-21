@@ -1190,10 +1190,12 @@
   --orbita-list-selected-name: var(--orbita-text);
   --orbita-list-selected-preview: var(--orbita-text-secondary);
   --orbita-list-selected-time: var(--orbita-text-tertiary);
-  --orbita-bubble-sent-bg: #dce2ff;
-  --orbita-bubble-sent-text: #1e2a3b;
-  --orbita-bubble-received-border: rgba(91, 111, 245, 0.12);
-  --orbita-paper-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280'%3E%3Cg fill='none' stroke='%235b6ff5' stroke-opacity='0.11' stroke-width='1.15'%3E%3Ccircle cx='140' cy='140' r='22'/%3E%3Ccircle cx='140' cy='140' r='52'/%3E%3Ccircle cx='140' cy='140' r='88'/%3E%3Cellipse cx='140' cy='140' rx='118' ry='44' transform='rotate(-22 140 140)'/%3E%3Cellipse cx='140' cy='140' rx='118' ry='44' transform='rotate(28 140 140)'/%3E%3Ccircle cx='232' cy='98' r='3.2' fill='%23a78bfa' fill-opacity='0.35' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+  --orbita-bubble-sent-bg: #5b6ff5;
+  --orbita-bubble-sent-text: #ffffff;
+  --orbita-bubble-sent-meta: rgba(255, 255, 255, 0.72);
+  --orbita-bubble-received-border: rgba(91, 111, 245, 0.10);
+  --orbita-paper-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Ccircle cx='1.5' cy='1.5' r='1.15' fill='%235b6ff5' fill-opacity='0.16'/%3E%3C/svg%3E");
+  --orbita-paper-size: 18px;
   --orbita-avatar-1: #e8674c;
   --orbita-avatar-1-fg: #ffffff;
   --orbita-avatar-2: #e0973b;
@@ -1246,13 +1248,15 @@
   --orbita-list-selected-name: var(--orbita-text);
   --orbita-list-selected-preview: var(--orbita-text-secondary);
   --orbita-list-selected-time: var(--orbita-text-tertiary);
-  --orbita-bubble-sent-bg: #2d3558;
-  --orbita-bubble-sent-text: #e8edf5;
-  --orbita-bubble-received-border: rgba(167, 139, 250, 0.18);
+  --orbita-bubble-sent-bg: #5b6ff5;
+  --orbita-bubble-sent-text: #ffffff;
+  --orbita-bubble-sent-meta: rgba(255, 255, 255, 0.72);
+  --orbita-bubble-received-border: rgba(167, 139, 250, 0.16);
   --orbita-selected: #a78bfa;
   --orbita-unread-bg: #8b7cf6;
   --orbita-divider: rgba(167, 139, 250, 0.16);
-  --orbita-paper-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280'%3E%3Cg fill='none' stroke='%23a78bfa' stroke-opacity='0.16' stroke-width='1.15'%3E%3Ccircle cx='140' cy='140' r='22'/%3E%3Ccircle cx='140' cy='140' r='52'/%3E%3Ccircle cx='140' cy='140' r='88'/%3E%3Cellipse cx='140' cy='140' rx='118' ry='44' transform='rotate(-22 140 140)'/%3E%3Cellipse cx='140' cy='140' rx='118' ry='44' transform='rotate(28 140 140)'/%3E%3Ccircle cx='232' cy='98' r='3.2' fill='%23a78bfa' fill-opacity='0.45' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+  --orbita-paper-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Ccircle cx='1.5' cy='1.5' r='1.15' fill='%23a78bfa' fill-opacity='0.22'/%3E%3C/svg%3E");
+  --orbita-paper-size: 18px;
 }
 
 .team-chat-shell {
@@ -1298,7 +1302,7 @@
 .team-chat-shell [data-wa-thread] {
   background-color: var(--orbita-paper);
   background-image: var(--orbita-paper-pattern);
-  background-size: 280px 280px;
+  background-size: var(--orbita-paper-size, 18px);
 }
 
 .team-chat-shell .chat-scroll {

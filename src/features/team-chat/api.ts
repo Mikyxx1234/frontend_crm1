@@ -38,6 +38,14 @@ export async function listTeamChatMessages(roomId: string): Promise<{ messages: 
   );
 }
 
+export async function pingTeamChatTyping(roomId: string): Promise<void> {
+  try {
+    await fetch(apiUrl(`/api/team-chat/rooms/${roomId}/typing`), { method: "POST" });
+  } catch {
+    /* indicador é best-effort */
+  }
+}
+
 export async function sendTeamChatMessage(
   roomId: string,
   input: { content?: string; attachments?: TeamChatAttachment[] },

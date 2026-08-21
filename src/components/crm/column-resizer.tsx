@@ -100,13 +100,14 @@ export function ColumnResizer({
         className,
       )}
     >
-      {/* Alça sempre visível (sinaliza resize); reforça no hover / arrasto. */}
+      {/* Alça sempre visível (sinaliza resize); no hover só engrossa,
+          sem trocar para a cor da marca. */}
       <span
         className={cn(
           "h-[58%] min-h-3 w-[2px] rounded-full transition-all",
-          "bg-[color-mix(in_srgb,var(--text-muted)_45%,transparent)]",
-          "group-hover:h-[70%] group-hover:w-[3px] group-hover:bg-[var(--brand-primary)]",
-          dragging && "h-[70%] w-[3px] bg-[var(--brand-primary)]",
+          "bg-[color-mix(in_srgb,var(--text-muted)_40%,transparent)]",
+          "group-hover:h-[66%] group-hover:w-[2px] group-hover:bg-[color-mix(in_srgb,var(--text-muted)_55%,transparent)]",
+          dragging && "h-[70%] w-[3px] bg-[color-mix(in_srgb,var(--text-muted)_70%,transparent)]",
         )}
       />
     </button>

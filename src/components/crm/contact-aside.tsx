@@ -185,7 +185,7 @@ const ASIDE_STORAGE_KEY = "crm:contact-aside:section-order-v4"
  *  (SectionHeader) e o conteúdo ficam DENTRO do mesmo card. Antes o
  *  título flutuava sobre o fundo do painel, acima do card. */
 const SECTION_CARD_CLASS =
-  "mx-3 mb-3 min-w-0 max-w-full rounded-[var(--radius-xl)] border border-slate-100 bg-white p-3 shadow-sm"
+  "mx-2 mb-2 min-w-0 max-w-full rounded-[var(--radius-xl)] border border-slate-100 bg-white p-2.5 shadow-sm"
 
 // ── Abas Perfil / Produto ─────────────────────────────────────────
 // O hero do negócio (secao `negocios`) fica FIXO no topo. As demais
@@ -409,7 +409,7 @@ function DealInline({
 
   if (collapsed) {
     return (
-      <div className="px-3 pt-1.5 pb-0">
+      <div className="px-2 pt-1.5 pb-0">
         <button
           type="button"
           onClick={onToggle}
@@ -449,7 +449,7 @@ function DealInline({
   }
 
   return (
-    <div className="px-3 pt-2 pb-0">
+    <div className="px-2 pt-2 pb-0">
       {/* ── Hero header (ref. Stitch): card escuro #2e3b6e como CARD interno,
           dentro do padding do container (não mais edge-to-edge). Mesma forma
           dos cards de contato/negócio: rounded-xl + borda sutil + shadow. ── */}
@@ -908,7 +908,7 @@ export function ContactAside({
         {deals.length > 0 && !sectionHiddenMap["negocios"] && (
           <div className="shrink-0 space-y-0.5 border-b border-[var(--glass-border-subtle)] pb-2">
             {multiDeal && (
-              <p className="px-3 pt-2 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+              <p className="px-2 pt-2 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                 {deals.length} negócios — toque para expandir
               </p>
             )}
@@ -934,7 +934,7 @@ export function ContactAside({
         )}
 
         {/* ── Abas: Perfil / Produto + toggle de visão (ref. Stitch) ── */}
-        <nav className="flex shrink-0 items-center gap-2 p-4" aria-label="Alternar entre Perfil e Produto">
+        <nav className="flex shrink-0 items-center gap-1.5 px-2.5 py-2" aria-label="Alternar entre Perfil e Produto">
           {ASIDE_TAB_ITEMS.map((item) => {
             const active = activeTab === item.value
             return (

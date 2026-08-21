@@ -1312,10 +1312,16 @@
   border-radius: var(--orbita-radius-inner);
 }
 
-/* Focus visible for accessibility in Órbita */
+/* Focus visible for accessibility in Rely — not on the composer field */
 .team-chat-shell :focus-visible {
   outline: 2px solid var(--orbita-selected);
   outline-offset: 2px;
+}
+.team-chat-shell textarea:focus,
+.team-chat-shell textarea:focus-visible,
+.team-chat-shell input:focus,
+.team-chat-shell input:focus-visible {
+  outline: none;
 }
 
 /* Responsive: on mobile, sidebar blocks stack vertically */

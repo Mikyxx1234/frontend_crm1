@@ -366,12 +366,23 @@
    ────────────────────────────────────────────────────────────────── */
 /* ── Largura da NavRail v2 ──────────────────────────────────────────
    Publicada em `<html>` pelo `NavRailV2` (via effect em `dataset`).
-   Todas as page shells v2 usam `grid-cols-[var(--nav-rail-w,72px)_...]`
-   pra que a coluna do trilho expanda automaticamente quando o usuário
-   clica o botão `»`, sem quebrar o layout do grid. */
+   `@property` permite interpolar a largura — o recuo das pages
+   (`grid-template-columns: var(--nav-rail-w) …`) acompanha o »/« e o
+   breakpoint, em vez de pular 72↔220. */
+@property --nav-rail-w {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 72px;
+}
 :root {
   --nav-rail-w: 72px;
+  --nav-rail-inset: 0.75rem; /* p-3 / left-3 */
   --mobile-bottom-nav-h: 0px;
+}
+@media (min-width: 640px) {
+  :root {
+    --nav-rail-inset: 1rem; /* p-4 / left-4 */
+  }
 }
 html[data-nav-expanded="true"] {
   --nav-rail-w: 220px;
@@ -421,12 +432,11 @@ html[data-nav-expanded="true"] {
    para não depender da altura do parent quando o conteúdo some na troca
    de rota. Insets batem com o padding das shells (p-3 / sm:p-4). */
 .v2-nav-rail-fixed {
-  height: calc(100dvh / var(--v2-scale, 1) - 1.5rem); /* 2 × top-3 */
-}
-@media (min-width: 640px) {
-  .v2-nav-rail-fixed {
-    height: calc(100dvh / var(--v2-scale, 1) - 2rem); /* 2 × top-4 */
-  }
+  left: var(--nav-rail-inset, 0.75rem);
+  top: var(--nav-rail-inset, 0.75rem);
+  width: var(--nav-rail-w, 72px);
+  height: calc(100dvh / var(--v2-scale, 1) - 2 * var(--nav-rail-inset, 0.75rem));
+  transition: width 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Utility para alturas que devem ocupar 100% da viewport REAL apesar
@@ -435,8 +445,8 @@ html[data-nav-expanded="true"] {
    vazia embaixo. Com --v2-scale, `calc(100dvh / 0.88)` ≈ 113.64dvh
    antes do zoom — apos o zoom encolher, fica exatamente 100dvh. */
 .v2-screen {
-  /* Altura total da tela normalizada pela escala */
   height: calc(100dvh / var(--v2-scale, 1));
+  transition: grid-template-columns 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* O grid do v2-screen tem uma única row — os filhos herdam a altura total */

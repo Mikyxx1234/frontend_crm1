@@ -114,7 +114,6 @@ import {
   WinButton,
   useDealChatBinding,
 } from "@/features/pipeline-v2/extras";
-import { CountUpNumber } from "@/features/pipeline-v2/extras/count-up";
 import { PipelineChannelsModal } from "@/features/pipeline-v2/extras/pipeline-channels-modal";
 import { computePopoverPosition } from "@/features/pipeline-v2/extras/use-portal-popover";
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
@@ -533,9 +532,6 @@ export default function KanbanV2ClientPage({
   // `mergedFilters` e não `filters` + `rawSearch`: é o recorte que o board de
   // fato pediu ao servidor (busca já com debounce e mínimo de caracteres).
   const isFiltering = !isEmptyFilters(mergedFilters);
-  const boardPending = hasServerBoard
-    ? boardFiltered.isPending
-    : boardNormal.isPending;
 
   // Contexto para "selecionar todos que batem no filtro" na edição em massa.
   // Permite editar além dos ~100 cards carregados por coluna: o servidor
@@ -848,41 +844,11 @@ export default function KanbanV2ClientPage({
             );
           }}
           titleAccessory={
-            <div className="flex items-center gap-2">
-              <PipelineSwitcher
-                variant="icon"
-                selectedId={pipelineId}
-                onChange={(id) => setPipelineId(id)}
-              />
-              <span
-                className={cn(
-                  "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 font-display text-[11.5px] font-bold",
-                  isFiltering
-                    ? "border-[var(--brand-primary)]/30 bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
-                    : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)]",
-                )}
-                aria-live="polite"
-              >
-                {boardPending ? (
-                  "Contando…"
-                ) : isFiltering &&
-                  pipelineTotalUnfiltered != null &&
-                  pipelineTotalUnfiltered !== filteredTotal ? (
-                  <>
-                    <CountUpNumber value={filteredTotal} className="tabular-nums" />
-                    <span className="font-semibold opacity-70">
-                      de {pipelineTotalUnfiltered.toLocaleString("pt-BR")}
-                    </span>
-                    negócios
-                  </>
-                ) : (
-                  <>
-                    <CountUpNumber value={filteredTotal} className="tabular-nums" />
-                    {filteredTotal === 1 ? "negócio" : "negócios"}
-                  </>
-                )}
-              </span>
-            </div>
+            <PipelineSwitcher
+              variant="icon"
+              selectedId={pipelineId}
+              onChange={(id) => setPipelineId(id)}
+            />
           }
           searchSlot={
             <PipelineSearchFilterBar

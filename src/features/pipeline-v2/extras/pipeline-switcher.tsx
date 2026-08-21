@@ -17,7 +17,7 @@ import { IconChevronDown, IconFilter } from "@tabler/icons-react";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { ClientOnly } from "@/components/util/client-only";
 import { usePipelines } from "@/features/pipeline-v2/hooks";
-import { CountUpNumber } from "./count-up";
+import { CountUpNumber } from "@/components/crm/count-up";
 
 function pipelineDealTotal(
   stages: { dealCount?: number }[] | undefined,

@@ -587,7 +587,7 @@ export function ChatArea({
           o footer (composer) sempre visível na base. */}
       <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto [overflow-anchor:none] px-3 pt-6 pb-8 max-md:px-2">
         <StickyDayPill date={stickyDayLabel} />
-        <ul className="flex list-none flex-col gap-1.5">
+        <ul className="flex list-none flex-col gap-0.5">
         {(() => {
           // Pills de dia inline no fluxo (Hoje / Ontem / weekday). O dia
           // visível no topo vem do overlay `StickyDayPill`, não de várias

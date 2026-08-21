@@ -813,11 +813,11 @@ function AudioPlayer({
 }
 
 /**
- * Reserva invisível no fluxo do texto para o horário (+ ticks).
- * `float: right` empurra o slot para o fim da última linha quando cabe;
- * se não cabe, a linha seguinte fica só com o horário à direita — sem o
- * vão horizontal que `padding-right` fixo + `position: absolute` abrem
- * quando a bolha é larga (asides fechados / coluna central larga).
+ * Reserva no fim do texto (padrão WhatsApp Web): inline-block da largura
+ * do horário. Cabe na última linha → o relógio fica no canto; se não cabe,
+ * quebra numa linha de ~13px (não a line-height do corpo).
+ * O wrapper do texto usa `leading-[0]` pra o strut do pai não inflar essa
+ * linha extra.
  */
 function MetaReserve({
   time,
@@ -833,7 +833,7 @@ function MetaReserve({
   return (
     <span
       aria-hidden
-      className="invisible float-right ml-1.5 inline-flex items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none"
+      className="invisible inline-block h-[13px] align-bottom whitespace-nowrap pl-1.5 text-[10.5px] leading-[13px]"
     >
       {isFavorited && <IconStarFilled size={10} />}
       {time}
@@ -957,8 +957,8 @@ function MessageContent({
       : null
   if (unsupportedText) {
     return (
-      <span className={cn("flow-root break-words italic [overflow-wrap:anywhere]", isOutgoing ? "text-white/80" : "text-[var(--text-muted)]")}>
-        {unsupportedText}
+      <span className={cn("block leading-[0] break-words italic [overflow-wrap:anywhere]", isOutgoing ? "text-white/80" : "text-[var(--text-muted)]")}>
+        <span className="whitespace-pre-wrap leading-[1.45]">{unsupportedText}</span>
         {metaReserve}
       </span>
     )
@@ -966,8 +966,8 @@ function MessageContent({
 
   // ── Texto ──────────────────────────────────────────────────────
   return (
-    <span className="flow-root break-words [overflow-wrap:anywhere]">
-      {formatWhatsapp(content)}
+    <span className="block leading-[0] break-words [overflow-wrap:anywhere]">
+      <span className="whitespace-pre-wrap leading-[1.45]">{formatWhatsapp(content)}</span>
       {metaReserve}
     </span>
   )
@@ -1028,11 +1028,11 @@ function CaptionText({
   return (
     <span
       className={cn(
-        "flow-root break-words text-[13px] [overflow-wrap:anywhere]",
+        "block leading-[0] break-words [overflow-wrap:anywhere]",
         !isOutgoing && "text-[var(--chat-bubble-received-text)]",
       )}
     >
-      {formatWhatsapp(caption)}
+      <span className="whitespace-pre-wrap text-[13px] leading-[1.45]">{formatWhatsapp(caption)}</span>
       {metaReserve}
     </span>
   )
@@ -1601,7 +1601,7 @@ export function MessageBubble({
         )}
         <div
           className={cn(
-            "relative min-w-0 overflow-visible rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
+            "relative min-w-0 overflow-visible rounded-[var(--radius-lg)] px-3 py-1.5 text-sm leading-[1.45]",
             hasReactions && "z-[2]",
             isOutgoing ? "chat-bubble-sent" : "chat-bubble-received",
             isOutgoing
@@ -1750,16 +1750,16 @@ export function MessageBubble({
           {message.buttons && message.buttons.length > 0 && (
             <MessageButtons buttons={message.buttons} onLightBg={!isOutgoing} />
           )}
-          {/* Horário + ticks. Sem botões, overlay no spacer flutuante
-              (canto inferior direito do conteúdo — padrão WhatsApp).
-              `bottom`/`right` batem com py-2 / px-3.5 pra cobrir o spacer.
+          {/* Horário + ticks. Sem botões, overlay no spacer do texto
+              (canto inferior direito — padrão WhatsApp Web).
+              `bottom`/`right` batem com py-1.5 / px-3.
               COM botões, entra em fluxo abaixo deles. */}
           <span
             className={cn(
               "pointer-events-none select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
               hasButtons
-                ? "mt-1.5 flex w-full justify-end"
-                : "absolute bottom-2 right-3.5 inline-flex",
+                ? "mt-1 flex w-full justify-end"
+                : "absolute bottom-1.5 right-3 inline-flex",
               timeOverMedia &&
                 "rounded px-1 py-0.5 text-white shadow-[0_1px_2px_rgba(0,0,0,0.55)] [text-shadow:0_1px_2px_rgba(0,0,0,0.75)] bg-black/35",
               !timeOverMedia && isOutgoing && isBot && !isCampaign && "text-white/70",

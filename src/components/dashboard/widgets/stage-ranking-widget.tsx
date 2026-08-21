@@ -9,7 +9,6 @@ import { IconChevronRight as ChevronRight, IconTrophy as Trophy } from "@tabler/
 import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
 import { SUBTLE_SPRING, formatBRL, formatCount } from "@/lib/dashboard-tokens";
 import { cn } from "@/lib/utils";
-import { useDashboardStore } from "@/stores/dashboard-store";
 
 type AgentRow = {
   userId: string;
@@ -50,34 +49,26 @@ async function fetchStageRanking(
 type Metric = "count" | "value";
 
 type StageRankingProps = {
-  /** Se fornecido, sobrepõe o valor do `dashboardStore.filters.pipelineId`. */
   pipelineId?: string | null;
-  /** ISO range. Se não vier, usa o período do dashboardStore. */
-  from?: string;
-  to?: string;
+  from: string;
+  to: string;
 };
 
-export function StageRankingWidget(props: StageRankingProps = {}) {
-  const store = useDashboardStore();
+export function StageRankingWidget({ pipelineId, from, to }: StageRankingProps) {
   const [metric, setMetric] = React.useState<Metric>("count");
 
   const pipelinesQuery = usePipelinesQuery<Pipeline>();
 
-  const from = props.from ?? store.from;
-  const to = props.to ?? store.to;
-  const pipelineId =
-    props.pipelineId !== undefined
-      ? props.pipelineId
-      : (store.filters.pipelineId ?? pipelinesQuery.data?.[0]?.id ?? null);
+  const resolvedPipelineId = pipelineId ?? pipelinesQuery.data?.[0]?.id ?? null;
 
   const rankingQuery = useQuery({
-    queryKey: ["stage-ranking", pipelineId, from, to],
-    queryFn: () => fetchStageRanking(pipelineId!, from, to),
-    enabled: !!pipelineId,
+    queryKey: ["stage-ranking", resolvedPipelineId, from, to],
+    queryFn: () => fetchStageRanking(resolvedPipelineId!, from, to),
+    enabled: !!resolvedPipelineId,
     staleTime: 30_000,
   });
 
-  if (!pipelineId) {
+  if (!resolvedPipelineId) {
     return (
       <EmptyState message="Configure um pipeline para ver o ranking por etapa." />
     );

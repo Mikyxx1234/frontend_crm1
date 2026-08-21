@@ -4,12 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 
 import {
   fetchDashboard,
-  fetchDealsOverview,
+  fetchDashboardMe,
   fetchServiceOverview,
   type DashboardData,
   type DashboardFiltersState,
+  type DashboardMeData,
   type DashboardPeriod,
-  type DealsOverview,
   type PipelineOption,
   type ServiceOverview,
 } from "./api";
@@ -18,25 +18,6 @@ import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import type { FilterOptionsResponse } from "@/components/pipeline/kanban-filters/types";
 import { isPreviewMode } from "@/lib/preview-mode";
 import { usePipelinesQuery } from "@/features/shared/queries/pipelines";
-
-export function useDealsOverview(params: {
-  period: DashboardPeriod;
-  pipelineId?: string;
-  ownerId?: string;
-  enabled?: boolean;
-}) {
-  return useQuery<DealsOverview>({
-    queryKey: ["dashboard-v2", "deals", params.period, params.pipelineId, params.ownerId],
-    queryFn: () =>
-      fetchDealsOverview({
-        period: params.period,
-        pipelineId: params.pipelineId,
-        ownerId: params.ownerId,
-      }),
-    enabled: isPreviewMode() ? true : (params.enabled ?? true),
-    staleTime: 30_000,
-  });
-}
 
 export function useServiceOverview(params: {
   period: DashboardPeriod;
@@ -51,15 +32,9 @@ export function useServiceOverview(params: {
 }
 
 export function usePipelineOptions(enabled = true) {
-  // Mesmo GET /api/pipelines (mesmo shape) do pipeline-v2 → key canônica.
   return usePipelinesQuery<PipelineOption>(enabled);
 }
 
-/**
- * Dashboard comercial filtrado (Fase 1). Mantém os dados anteriores
- * enquanto refaz a busca ao trocar de filtro (evita flicker / skeleton
- * a cada ajuste).
- */
 export function useDashboard(
   filters: DashboardFiltersState,
   enabled = true,
@@ -73,7 +48,16 @@ export function useDashboard(
   });
 }
 
-/** Opções de filtros do dashboard — reutiliza /api/kanban/filter-options. */
+export function useDashboardMe(enabled = true) {
+  return useQuery<DashboardMeData>({
+    queryKey: ["dashboard-v2", "me"],
+    queryFn: fetchDashboardMe,
+    enabled: isPreviewMode() ? true : enabled,
+    staleTime: 15_000,
+    refetchInterval: 60_000,
+  });
+}
+
 export function useDashboardFilterOptions(enabled = true) {
   return useQuery<FilterOptionsResponse>({
     queryKey: ["dashboard-filter-options"],

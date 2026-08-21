@@ -35,6 +35,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconHistory as History, IconInfoCircle as Info, IconLoader2 as Loader2, IconMicrophone as Mic, IconPhone as Phone, IconPhoneIncoming as PhoneIncoming, IconPhoneOff as PhoneOff, IconPhoneOutgoing as PhoneOutgoing, IconPlayerPlay as Play, IconRefresh as RefreshCw } from "@tabler/icons-react";
+import { CallTemplateSendIcon } from "@/components/inbox/call-template-send-icon";
 import { toast } from "sonner";
 
 import {
@@ -530,7 +531,7 @@ export function WhatsappCallChip({
 
   if (isLoading) {
     return isCta ? (
-      <span className="inline-flex size-10 shrink-0 items-center justify-center" aria-label="Ligar via WhatsApp">
+      <span className="inline-flex size-11 shrink-0 items-center justify-center" aria-label="Enviar template de ligação">
         <Loader2 className="size-5 animate-spin text-emerald-500" />
       </span>
     ) : (
@@ -674,8 +675,11 @@ export function WhatsappCallChip({
                         className="block w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted focus:bg-muted disabled:opacity-50"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="truncate font-mono font-medium text-foreground">
-                            {tpl.name}
+                          <span className="flex min-w-0 items-center gap-2">
+                            <CallTemplateSendIcon size={22} />
+                            <span className="truncate font-mono font-medium text-foreground">
+                              {tpl.name}
+                            </span>
                           </span>
                           <span className="shrink-0 text-[10px] uppercase text-[var(--color-ink-muted)]">
                             {tpl.language}
@@ -954,18 +958,11 @@ export function WhatsappCallChip({
         <>
           <button
             type="button"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50"
-            aria-label="Ligar via WhatsApp"
+            className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+            aria-label="Enviar template de ligação"
             onClick={() => setMenuOpen(true)}
           >
-            <img
-              src="/inbox-ligar-whatsapp.png"
-              alt="Ligar via WhatsApp"
-              width={40}
-              height={40}
-              className="size-10 object-contain"
-              draggable={false}
-            />
+            <CallTemplateSendIcon size={40} />
           </button>
           <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
             <DialogContent size="sm">

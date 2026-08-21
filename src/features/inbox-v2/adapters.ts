@@ -208,6 +208,22 @@ export function inferLastMessageType(
   return "text";
 }
 
+/**
+ * Preview do card da lista: uma linha, sem markdown/HTML/âncoras.
+ * O card renderiza texto puro; se vier `[texto](url)` ou `<a>`, o
+ * operador via um snippet clicável como link (e não como abrir a conversa).
+ */
+export function toPlainCardPreview(content: string): string {
+  return content
+    .replace(/\[([^\]]+)\]\(\s*(?:https?:\/\/|mailto:|tel:)[^)\s]+\s*\)/gi, "$1")
+    .replace(/<\/?a\b[^>]*>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/(^|\s)[*_~`]{1,3}(?=\S)/g, "$1")
+    .replace(/(\S)[*_~`]{1,3}(?=\s|$)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function deriveBadge(row: ConversationListRow): ConversationBadge | undefined {
   const tagNames = (row.tags ?? []).map((t) => (t.name ?? "").toLowerCase());
   if (tagNames.some((n) => n === "vip" || n.includes("enterprise"))) {
@@ -243,10 +259,14 @@ export function toConversationCard(
   // `preview`) quanto `lastMessagePreview` (forma atual, com `content`
   // + `messageType`). Preferimos o que tiver dado real; se nenhum
   // tiver, cai pra string vazia (mostra apenas o tipo, se conhecido).
-  const previewText = prettifyChatMessageBody(
-    row.lastMessage?.preview ??
-      row.lastMessagePreview?.content ??
-      "",
+  // Texto plano: markdown/HTML no preview virava “link” no card e o
+  // clique parecia disparar ação além de abrir a conversa.
+  const previewText = toPlainCardPreview(
+    prettifyChatMessageBody(
+      row.lastMessage?.preview ??
+        row.lastMessagePreview?.content ??
+        "",
+    ),
   );
   const lastMessageType = inferLastMessageType(
     previewText,

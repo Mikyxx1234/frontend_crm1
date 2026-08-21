@@ -4,6 +4,8 @@ export interface TabItem {
   label: string
   count?: number
   icon?: React.ReactNode
+  /** Tooltip nativo / DS no seletor de fila. */
+  title?: string
 }
 
 interface TabsGlassProps {

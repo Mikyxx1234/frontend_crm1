@@ -734,6 +734,29 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
           </div>
         </div>
       );
+    case "call_permission_granted":
+      return (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Disparado quando o cliente aceita o pedido de permissão de ligação no WhatsApp
+            (opt-in de voz). Não inclui ligações SIP.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="tc-consent-type">Tipo de permissão (opcional)</Label>
+            <DropdownGlass
+              triggerClassName="w-full"
+              placeholder="Qualquer"
+              value={String(value.consentType ?? "")}
+              options={[
+                { value: "", label: "Qualquer" },
+                { value: "PERMANENT", label: "Permanente" },
+                { value: "TEMPORARY", label: "Temporária 7 dias" },
+              ]}
+              onValueChange={(v) => set("consentType", v)}
+            />
+          </div>
+        </div>
+      );
     case "lead_distributed":
       return <LeadDistributedFields value={value} patch={patch} />;
     case "manual":

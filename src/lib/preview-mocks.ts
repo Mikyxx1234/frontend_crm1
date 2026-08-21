@@ -989,6 +989,7 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
       entrada:    CONVERSATIONS.filter((c) => c.status === "OPEN" && !c.assignedTo).length + 4,
       esperando:  CONVERSATIONS.filter((c) => c.unreadCount > 0).length + 2,
       respondidas: CONVERSATIONS.filter((c) => c.lastMessage.direction === "out").length,
+      ligar:      0,
       automacao:  2,
       finalizados: CONVERSATIONS.filter((c) => c.status === "RESOLVED").length,
       erro:       CONVERSATIONS.filter((c) => c.hasError).length,

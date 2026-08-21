@@ -191,11 +191,12 @@ function ContactTagsTray({
 // TAB_ORDER). "Automação" lista conversas cujo contato tem automação
 // RUNNING (fila de automação). "Erro" = OPEN + hasError (falha de envio);
 // encerradas não entram — hasError sticky em RESOLVED poluía a aba.
-const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
+const TABS: ReadonlyArray<{ id: InboxTab; label: string; title?: string }> = [
   { id: "todos", label: "Todas" },
   { id: "entrada", label: "Entrada" },
   { id: "esperando", label: "Aguardando" },
   { id: "respondidas", label: "Respondidas" },
+  { id: "ligar", label: "Ligar", title: "WhatsApp com permissão de ligação ativa" },
   { id: "automacao", label: "Automação" },
   { id: "finalizados", label: "Encerradas" },
   { id: "erro", label: "Erro" },
@@ -242,7 +243,10 @@ export default function InboxV2ClientPage({
     if (!myPermissions) {
       return TABS.filter(
         (t) =>
-          t.id === "todos" || t.id === "esperando" || t.id === "respondidas",
+          t.id === "todos" ||
+          t.id === "esperando" ||
+          t.id === "respondidas" ||
+          t.id === "ligar",
       );
     }
     const allowed = new Set<string>(
@@ -1198,6 +1202,7 @@ export default function InboxV2ClientPage({
         return {
           label: t.label,
           count,
+          title: t.title,
         };
       })}
       activeTabIndex={visibleTabs.findIndex((t) => t.id === tab)}

@@ -1780,7 +1780,7 @@ export default function InboxV2ClientPage({
     // ── Mobile: layout de painel único (lista → chat/negócio) ──────
     if (!isDesktop) {
       return (
-        <div className="v2-screen relative grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-2 overflow-hidden p-2">
+        <div className="v2-screen relative grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-2 overflow-hidden p-2 md:gap-3 md:pl-3">
           {navRailNode}
           <div
             className={cn(
@@ -1859,7 +1859,7 @@ export default function InboxV2ClientPage({
     // ── Desktop: layout original de 3 colunas ─────────────────────
     return (
       <div
-        className="v2-screen relative grid h-full min-h-0 gap-2 overflow-hidden p-2"
+        className="v2-screen relative grid h-full min-h-0 gap-2 overflow-hidden p-2 md:gap-3 md:pl-3"
         style={{
           gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)",
           gridTemplateRows: "minmax(0, 1fr)",
@@ -1912,7 +1912,7 @@ export default function InboxV2ClientPage({
   // ── Mobile: layout de painel único (lista → chat/negócio) ──────
   if (!isDesktop) {
     return (
-      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-2 overflow-hidden p-2">
+      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-2 overflow-hidden p-2 md:gap-3 md:pl-3">
         {navRailNode}
         <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden">
           {!activeId ? (
@@ -1978,7 +1978,7 @@ export default function InboxV2ClientPage({
   // ── Desktop: layout original de 4 colunas ─────────────────────
   return (
     <div
-      className="v2-screen grid h-full min-h-0 gap-2 overflow-hidden p-2"
+      className="v2-screen grid h-full min-h-0 gap-2 overflow-hidden p-2 md:gap-3 md:pl-3"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
         gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${effectiveAsideCollapsed ? "0px" : `${asideWidth}px`}`,

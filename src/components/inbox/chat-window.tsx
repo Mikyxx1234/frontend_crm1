@@ -54,6 +54,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { MotionDiv } from "@/components/ui/motion";
+import { agentNameFromWhatsappCallSender } from "@/lib/whatsapp-call-chat";
 import {
   parseTemplateMeta,
   prettifyChatMessageBody,
@@ -1901,6 +1902,7 @@ export function ChatWindow({
           deliveryStatus={status}
           out={out && !isNote}
           senderLabel={audioSenderLabel}
+          isCallRec={isCallRec}
           isUploading={isUploading}
           onRegisterTranscribe={
             isUploading || isCallRec
@@ -3154,7 +3156,11 @@ export function ChatWindow({
                       texto. Ainda visível em sm+ (tablet vertical em
                       diante) e em todo desktop. */}
                       <TooltipHost
-                        label={m.senderName || "Admin EduIT"}
+                        label={
+                          agentNameFromWhatsappCallSender(m.senderName) ||
+                          m.senderName ||
+                          "Admin EduIT"
+                        }
                         side="top"
                       >
                         <ChatAvatar
@@ -3163,7 +3169,11 @@ export function ChatWindow({
                               (session?.user as { id?: string })?.id ??
                               m.senderName ??
                               "out",
-                            name: m.senderName || "Admin EduIT",
+                            name:
+                              agentNameFromWhatsappCallSender(m.senderName) ||
+                              m.senderName ||
+                              session?.user?.name ||
+                              "Admin EduIT",
                             imageUrl: isBot
                               ? null
                               : (m.senderImageUrl ??
@@ -4977,6 +4987,8 @@ interface AudioMessageProps {
   out?: boolean;
   /** Label opcional exibido no topo do balão (ex.: "Admin EduIT"). */
   senderLabel?: string;
+  /** Gravação de ligação WhatsApp — chrome distinto do áudio de voz. */
+  isCallRec?: boolean;
   /** Mensagem otimista — anexo ainda subindo. Substitui meta por
    *  "Enviando…" e desabilita ações que dependem do servidor (download
    *  MP3 + transcrição), evitando 404 enquanto o blob local não foi
@@ -5037,6 +5049,7 @@ function AudioMessage({
   deliveryStatus = "delivered",
   out = false,
   senderLabel,
+  isCallRec = false,
   isUploading = false,
   onRegisterTranscribe,
 }: AudioMessageProps) {
@@ -5281,13 +5294,15 @@ function AudioMessage({
     return () => onRegisterTranscribe(null);
   }, [onRegisterTranscribe, transcribe]);
 
-  const playerSurface = out
-    ? "bg-current/8"
-    : "bg-[var(--color-bg-subtle)]";
+  const playerSurface = isCallRec
+    ? "bg-[#1b4332] text-[#e8f5e9]"
+    : out
+      ? "bg-current/8"
+      : "bg-[var(--color-bg-subtle)]";
 
   return (
     <>
-      {senderLabel ? (
+      {senderLabel && !isCallRec ? (
         <span className="mb-1 block text-[11px] text-ink-subtle">
           {senderLabel}
         </span>
@@ -5296,10 +5311,17 @@ function AudioMessage({
       <div className="min-w-[230px] max-w-[320px]">
         <div
           className={cn(
-            "font-display flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1",
+            "font-display flex flex-col gap-1 rounded-[var(--radius-sm)] px-2 py-1.5",
             playerSurface,
           )}
         >
+        {isCallRec ? (
+          <p className="flex items-center gap-1 font-display text-[10px] font-semibold text-[#d8f3dc]">
+            <Phone className="size-2.5" />
+            Ligação WhatsApp
+          </p>
+        ) : null}
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={togglePlay}
@@ -5417,6 +5439,7 @@ function AudioMessage({
               </button>
             ) : null}
           </div>
+        </div>
         </div>
       </div>
 

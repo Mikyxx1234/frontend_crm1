@@ -505,6 +505,7 @@ function AudioPlayer({
   const [transcript, setTranscript] = useState<TranscriptState>({ status: "idle" })
   const [transcriptExpanded, setTranscriptExpanded] = useState(false)
   const [rate, setRate] = useState(1)
+  const [downloading, setDownloading] = useState(false)
 
   const SPEEDS = [0.5, 1, 1.5, 2] as const
   const cycleSpeed = useCallback(() => {
@@ -632,21 +633,42 @@ function AudioPlayer({
 
   const isCall = variant === "call"
 
+  const downloadAudio = useCallback(async () => {
+    if (!url || downloading) return
+    setDownloading(true)
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = "ligacao-whatsapp"
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+    } catch {
+      toast.error("Não foi possível baixar o áudio.")
+    } finally {
+      setDownloading(false)
+    }
+  }, [url, downloading])
+
   return (
     <div
       className={cn(
         "flex w-[min(320px,74vw)] flex-col gap-1 py-0.5",
         transcript.status === "done" ? "pb-2" : "pb-1",
-        isCall &&
-          "rounded-lg border border-white/20 bg-black/[0.08] px-2 py-1.5 dark:border-white/10",
+        isCall && "px-0.5",
       )}
     >
       {isCall ? (
         <p className={cn(
-          "flex items-center gap-1 font-display text-[9px] font-bold uppercase tracking-wider",
-          isOutgoing ? "text-current/70" : "text-[var(--text-muted)]",
+          "flex items-center gap-1 font-display text-[10px] font-semibold",
+          isOutgoing ? "text-current/75" : "text-[var(--text-muted)]",
         )}>
-          <IconPhone size={10} />
+          <IconPhone size={11} />
           Ligação WhatsApp
         </p>
       ) : null}
@@ -662,8 +684,8 @@ function AudioPlayer({
             "flex size-8 shrink-0 items-center justify-center rounded-full shadow-sm transition-all active:scale-95",
             isCall
               ? isOutgoing
-                ? "bg-white/20 hover:bg-white/25"
-                : "bg-emerald-600 text-white hover:bg-emerald-700"
+                ? "bg-white/18 hover:bg-white/25"
+                : "bg-emerald-800 text-white hover:bg-emerald-900"
               : isOutgoing
                 ? "bg-current/15 hover:bg-current/20"
                 : "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-dark)]",
@@ -710,6 +732,26 @@ function AudioPlayer({
         >
           {rate}x
         </button>
+        {url ? (
+          <button
+            type="button"
+            onClick={downloadAudio}
+            disabled={downloading}
+            aria-label="Baixar áudio"
+            className={cn(
+              "inline-flex size-6 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-60",
+              isOutgoing
+                ? "text-current/70 hover:bg-current/10"
+                : "text-[var(--color-ink-muted)] hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]",
+            )}
+          >
+            {downloading ? (
+              <IconLoader2 size={12} className="animate-spin" />
+            ) : (
+              <IconDownload size={12} />
+            )}
+          </button>
+        ) : null}
       </div>
 
       {url && !isCall && transcript.status !== "done" && (
@@ -1439,6 +1481,9 @@ export function MessageBubble({
       />
     ) : null
   const hasReactions = !!(message.reactions && message.reactions.length > 0)
+  const isCallRec =
+    String(message.messageType ?? "").toLowerCase() === "whatsapp_call_recording" &&
+    !!message.mediaUrl
 
   return (
     <div
@@ -1564,11 +1609,19 @@ export function MessageBubble({
                 // Cores hardcoded (não usar --text-primary) porque em v2-dark
                 // o token flipa e some contra o fundo fixo desta bolha.
                 ? "rounded-br border border-white/10 shadow-[0_3px_12px_rgba(15,20,40,0.28)]"
+                : isCallRec
+                ? "rounded-br shadow-[0_3px_12px_rgba(20,60,40,0.28)]"
                 : "rounded-br shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
-              : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
+              : isCallRec
+                ? "rounded-bl text-[#d8f3dc] shadow-[0_2px_10px_rgba(20,60,40,0.16)]"
+                : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
           style={
-            isOutgoing
+            isCallRec
+              ? isOutgoing
+                ? { background: "#1b4332", color: "#e8f5e9" }
+                : { background: "#245c3d", color: "#e8f5e9" }
+              : isOutgoing
               ? isCampaign
                 ? {
                     background: "var(--chat-bubble-campaign-bg)",

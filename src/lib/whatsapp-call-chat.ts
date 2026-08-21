@@ -16,6 +16,17 @@ export function buildCallBizOpaquePayload(userId: string, displayName: string): 
   return JSON.stringify({ u: userId }).slice(0, 512);
 }
 
+/** Nome do agente em `WhatsApp · chamada · Marcelo` / `WhatsApp · Marcelo`. */
+export function agentNameFromWhatsappCallSender(
+  senderName: string | null | undefined,
+): string {
+  const cleaned = (senderName ?? "")
+    .replace(/^WhatsApp\s+·\s+(?:chamada\s+·\s+)?/i, "")
+    .trim();
+  if (!cleaned || /^whatsapp$/i.test(cleaned)) return "";
+  return cleaned;
+}
+
 export function parseCallBizOpaque(raw: string | null | undefined): CallBizOpaque {
   if (!raw?.trim()) return {};
   try {

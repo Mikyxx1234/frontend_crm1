@@ -15,6 +15,8 @@ name: Build & Deploy
 #     API_BASE_DEV           Ex: https://crm-dev-backend.ca31ey.easypanel.host
 #     NEXTAUTH_URL_PROD      Ex: https://crm.easypanel.host
 #     NEXTAUTH_URL_DEV       Ex: https://crm-dev-frontend.ca31ey.easypanel.host
+#     COCKPIT_URL_DEV        Ex: https://cockpit-dev.easypanel.host  (opcional)
+#     COCKPIT_URL_PROD       só quando for ligar o embed em produção
 #
 #   Secrets:
 #     NEXTAUTH_SECRET_PROD           (mesmo valor do NEXTAUTH_SECRET em prod)
@@ -60,6 +62,8 @@ jobs:
           V_API_BASE_DEV: ${{ vars.API_BASE_DEV }}
           V_NEXTAUTH_URL_PROD: ${{ vars.NEXTAUTH_URL_PROD }}
           V_NEXTAUTH_URL_DEV: ${{ vars.NEXTAUTH_URL_DEV }}
+          V_COCKPIT_URL_PROD: ${{ vars.COCKPIT_URL_PROD }}
+          V_COCKPIT_URL_DEV: ${{ vars.COCKPIT_URL_DEV }}
           S_NEXTAUTH_SECRET_PROD: ${{ secrets.NEXTAUTH_SECRET_PROD }}
           S_NEXTAUTH_SECRET_DEV: ${{ secrets.NEXTAUTH_SECRET_DEV }}
           S_WEBHOOK_PROD: ${{ secrets.EASYPANEL_WEBHOOK_PROD }}
@@ -71,24 +75,28 @@ jobs:
             NEXTAUTH_URL="$V_NEXTAUTH_URL_PROD"
             NEXTAUTH_SECRET="$S_NEXTAUTH_SECRET_PROD"
             WEBHOOK="$S_WEBHOOK_PROD"
+            COCKPIT_URL="$V_COCKPIT_URL_PROD"
           else
             TAG=dev
             API_BASE="$V_API_BASE_DEV"
             NEXTAUTH_URL="$V_NEXTAUTH_URL_DEV"
             NEXTAUTH_SECRET="$S_NEXTAUTH_SECRET_DEV"
             WEBHOOK="$S_WEBHOOK_DEV"
+            COCKPIT_URL="$V_COCKPIT_URL_DEV"
           fi
           TAG=$(printf '%s' "$TAG" | tr -d '\r\n')
           API_BASE=$(printf '%s' "$API_BASE" | tr -d '\r\n')
           NEXTAUTH_URL=$(printf '%s' "$NEXTAUTH_URL" | tr -d '\r\n')
           NEXTAUTH_SECRET=$(printf '%s' "$NEXTAUTH_SECRET" | tr -d '\r\n')
           WEBHOOK=$(printf '%s' "$WEBHOOK" | tr -d '\r\n')
+          COCKPIT_URL=$(printf '%s' "$COCKPIT_URL" | tr -d '\r\n')
           {
             echo "TAG=$TAG"
             echo "API_BASE=$API_BASE"
             echo "NEXTAUTH_URL=$NEXTAUTH_URL"
             echo "NEXTAUTH_SECRET=$NEXTAUTH_SECRET"
             echo "WEBHOOK=$WEBHOOK"
+            echo "COCKPIT_URL=$COCKPIT_URL"
           } >> "$GITHUB_OUTPUT"
           echo "::group::env resolved (values masked)"
           [ -n "$TAG" ]             && echo "TAG=<set>"             || echo "TAG=<EMPTY>"
@@ -96,6 +104,7 @@ jobs:
           [ -n "$NEXTAUTH_URL" ]    && echo "NEXTAUTH_URL=<set>"    || echo "NEXTAUTH_URL=<EMPTY>"
           [ -n "$NEXTAUTH_SECRET" ] && echo "NEXTAUTH_SECRET=<set>" || echo "NEXTAUTH_SECRET=<EMPTY>"
           [ -n "$WEBHOOK" ]         && echo "WEBHOOK=<set>"         || echo "WEBHOOK=<EMPTY>"
+          [ -n "$COCKPIT_URL" ]     && echo "COCKPIT_URL=<set>"     || echo "COCKPIT_URL=<EMPTY>"
           echo "::endgroup::"
 
       # ── Build Next.js fora do Docker ─────────────────────────────────────
@@ -140,6 +149,7 @@ jobs:
       - name: Build Next.js
         env:
           NEXT_PUBLIC_API_BASE_URL: ${{ steps.env.outputs.API_BASE }}
+          NEXT_PUBLIC_COCKPIT_URL: ${{ steps.env.outputs.COCKPIT_URL }}
           NEXTAUTH_URL: ${{ steps.env.outputs.NEXTAUTH_URL }}
           NEXTAUTH_SECRET: ${{ steps.env.outputs.NEXTAUTH_SECRET }}
           AUTH_SECRET: ${{ steps.env.outputs.NEXTAUTH_SECRET }}

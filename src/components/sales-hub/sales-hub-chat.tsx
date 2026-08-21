@@ -53,6 +53,7 @@ import {
 } from "@/features/inbox-v2/extras/channel-switch-confirm";
 import { DealNotesTab } from "@/features/pipeline-v2/extras";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
+import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 
 export type SalesHubChatProps = {
   conversationId: string;
@@ -382,6 +383,14 @@ export function SalesHubChat({
             onCancelReply={() => setReplyTo(null)}
             onReopenNewConversation={onConversationReopened}
             conversationNumber={conversationNumber ?? null}
+          />
+        }
+        floatingCallSlot={
+          <DealCallButton
+            fab
+            dealId={dealId}
+            phone={contactPhone ?? null}
+            contactId={contactId}
           />
         }
       />

@@ -72,7 +72,7 @@ import {
   validateFirstMessageChannel,
   workflowStepsToPayload,
 } from "@/lib/automation-workflow";
-import { autoAlignWorkflowSteps } from "@/lib/automation-layout";
+import { ALIGN_TRIGGER_POS, autoAlignWorkflowSteps } from "@/lib/automation-layout";
 import { useConnectedStepChannels } from "@/components/automations/step-channel-picker";
 import { cn, formatDateTime } from "@/lib/utils";
 
@@ -977,16 +977,12 @@ export default function AutomationDetailPage() {
 
   const handleAutoAlign = useCallback(() => {
     setSteps((prev) => autoAlignWorkflowSteps(prev));
-    // 27/mai/26 — Auto-align também reseta a posição do nó do gatilho.
-    // Como o trigger agora é arrastável e a posição é salva em
-    // `triggerConfig.__rfPos`, sem este reset um trigger arrastado pro
-    // canto continuaria lá após o auto-align — quebrando a aparência
-    // de "fluxo organizado" que o botão promete.
-    setTriggerConfig((tc) => {
-      const next = { ...tc };
-      delete next.__rfPos;
-      return next;
-    });
+    // Gatilho volta pra (32, 300) no mesmo tick que os steps recebem
+    // `__rfPos` — sem isso um trigger arrastado fica fora do fitView.
+    setTriggerConfig((tc) => ({
+      ...tc,
+      __rfPos: { ...ALIGN_TRIGGER_POS },
+    }));
     setDirty(true);
     setAutoAlignVersion((v) => v + 1);
   }, []);

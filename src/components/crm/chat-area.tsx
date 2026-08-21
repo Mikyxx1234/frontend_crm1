@@ -38,8 +38,6 @@ import {
   IconX,
   IconLock,
   IconChevronDown,
-  IconEye,
-  IconEyeOff,
 } from "@tabler/icons-react"
 
 export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
@@ -177,6 +175,11 @@ interface ChatAreaProps {
    * do `<main>` (que agora é `relative`); o próprio slot cuida da posição.
    */
   activeBotsSlot?: React.ReactNode
+  /**
+   * Slot do FAB de ligação (DealCallButton). O botão se posiciona no
+   * viewport (portal + `fixed`); aqui só montamos o node.
+   */
+  floatingCallSlot?: React.ReactNode
 }
 
 export function ChatArea({
@@ -218,6 +221,7 @@ export function ChatArea({
   conversationResolved,
   conversationClosedAt,
   activeBotsSlot,
+  floatingCallSlot,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
@@ -387,7 +391,7 @@ export function ChatArea({
     }
   }, [messages])
 
-  const { hideEvents, toggleHideEvents } = useHideChatEvents()
+  const { hideEvents } = useHideChatEvents()
 
   const effectiveDisabled = inputDisabled ?? showSessionAlert
   const value = inputValue ?? ""
@@ -448,12 +452,6 @@ export function ChatArea({
           )}
 
           <div className="ml-auto flex shrink-0 items-center gap-1">
-            <IconBtn
-              title={hideEvents ? "Mostrar eventos" : "Ocultar eventos"}
-              onClick={toggleHideEvents}
-            >
-              {hideEvents ? <IconEyeOff size={17} /> : <IconEye size={17} />}
-            </IconBtn>
             {headerActionsSlot ?? (
               <>
                 {contact.phone && (
@@ -476,6 +474,9 @@ export function ChatArea({
       {/* Botão flutuante "Robôs ativos" — overlay no canto inf. direito,
           ao lado da composer. O slot cuida do próprio posicionamento. */}
       {activeBotsSlot}
+
+      {/* SIP FAB — posiciona-se no viewport (DealCallButton `fab`). */}
+      {floatingCallSlot}
 
       {/* Faixa sutil de conversa resolvida — substitui o chip "ENCERRADA"
           do header. Verde suave, discreta, colada abaixo do header. */}

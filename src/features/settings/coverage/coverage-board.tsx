@@ -3,25 +3,18 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  IconAlertTriangle,
   IconBuilding,
   IconClock,
   IconEye,
   IconEyeOff,
   IconPencil,
-  IconToolsKitchen2,
-  IconUsers,
-  IconWifi,
   IconX as X,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { UserAvatar } from "@/components/crm/user-avatar";
 import { ButtonGlass } from "@/components/crm/button-glass";
-import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { InputGlass } from "@/components/crm/input-glass";
-import { KpiCard } from "@/components/crm/kpi-card";
-import { KpiStrip } from "@/components/crm/kpi-strip";
+import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { Label } from "@/components/ui/label";
@@ -39,68 +32,23 @@ import {
   WEEKDAYS,
   type Schedule,
 } from "@/features/settings/schedules/schedule-shared";
-import { useMediaQuery } from "@/hooks/use-media-query";
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+import { CoverageGantt } from "./coverage-gantt";
+import { CoverageMiniDash } from "./coverage-rail";
+import { MOCK_COVERAGE_AGENTS, shouldUseCoverageMock } from "./mock-agents";
+import {
+  axisRange,
+  coverageByHour,
+  deriveCoverageStats,
+  type CoverageAgent,
+} from "./schedule-data";
 
-export type CoverageDepartment = { id: string; name: string; color: string };
-type DepartmentRef = CoverageDepartment;
+export type { CoverageAgent, CoverageDepartment } from "./schedule-data";
 
 type AgentPresence = "ONLINE" | "AWAY" | "OFFLINE";
-
-type CoverageAgent = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  avatarUrl?: string | null;
-  schedule: Schedule | null;
-  /** Opt-in administrativo. Default true quando o GET não manda o campo. */
-  participates?: boolean;
-  /** false = some da grade (admins que não atendem). Default true. */
-  visibleInCoverage?: boolean;
-  agentStatus: {
-    status: AgentPresence;
-    availableForVoiceCalls?: boolean;
-    updatedAt: string;
-  } | null;
-  departments: DepartmentRef[];
-};
-
-type SlotState = "work" | "lunch" | "off";
-
 type PresenceFilter = "" | AgentPresence;
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const SLOT_MINUTES = 30;
-/** Coluna fixa (sticky) com seleção + identidade do agente. */
-const AGENT_COL_PX = 320;
-/**
- * Largura da coluna fixa no mobile depois que a grade começa a ser arrastada.
- * A coluna cheia ocupa quase toda a viewport estreita e esconde o gráfico.
- */
-const AGENT_COL_COMPACT_PX = 124;
-/** Folga antes de recolher — evita alternar a cada micro-scroll acidental. */
-const COMPACT_SCROLL_THRESHOLD_PX = 8;
-/** Largura mínima por slot de 30min — força scroll em vez de comprimir horas. */
-const SLOT_MIN_PX = 32;
-const DAY_START_MIN = 6 * 60;
-const DAY_END_MIN = 20 * 60;
-
-const SLOT_STYLES: Record<SlotState, string> = {
-  work: "bg-[color-mix(in_srgb,var(--color-success)_58%,transparent)]",
-  lunch: "bg-[color-mix(in_srgb,var(--color-warn)_80%,transparent)]",
-  off: "bg-[var(--glass-bg-strong)] opacity-40",
-};
-
-const INACTIVE_SLOT_STYLES: Record<SlotState, string> = {
-  work: "bg-[color-mix(in_srgb,var(--text-muted)_22%,transparent)]",
-  lunch: "bg-[color-mix(in_srgb,var(--text-muted)_14%,transparent)]",
-  off: "bg-[var(--glass-bg-strong)] opacity-25",
-};
 
 const DEFAULT_DEPT_HOURS: DepartmentOperatingHours = {
   start: "09:00",
@@ -142,87 +90,68 @@ const PRESENCE_OPTIONS: { id: PresenceFilter; label: string; dot: string }[] = [
   { id: "OFFLINE", label: "Offline", dot: "bg-[var(--text-muted)]" },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/** "HH:MM" → minutos desde a meia-noite. */
-function parseTime(hhmm: string): number {
-  const [h, m] = hhmm.split(":").map(Number);
-  return (h || 0) * 60 + (m || 0);
-}
-
-function formatSlot(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-/**
- * Estado visual do slot. Sem expediente persistido = fora (barra vazia).
- * Não pintar o dia inteiro como "work" — isso era o "Sempre elegível" /
- * LIVRE esticando a barra verde de 06h às 20h. Sábado usa janela própria
- * sem almoço quando `saturdayEnabled`.
- */
-function slotState(schedule: Schedule | null, weekday: number, slotMin: number): SlotState {
-  if (!schedule) return "off";
-  if (weekday === 6) {
-    if (!schedule.saturdayEnabled) return "off";
-    const s = parseTime(schedule.saturdayStart ?? "09:00");
-    const e = parseTime(schedule.saturdayEnd ?? "13:00");
-    return slotMin >= s && slotMin < e ? "work" : "off";
-  }
-  if (!schedule.weekdays.includes(weekday)) return "off";
-  const start = parseTime(schedule.startTime);
-  const end = parseTime(schedule.endTime);
-  if (slotMin < start || slotMin >= end) return "off";
-  const ls = parseTime(schedule.lunchStart);
-  const le = parseTime(schedule.lunchEnd);
-  if (slotMin >= ls && slotMin < le) return "lunch";
-  return "work";
-}
-
-/** Primeiro nome — única informação textual mantida na coluna recolhida. */
-function firstName(name: string): string {
-  return name.trim().split(/\s+/)[0] || name;
-}
-
-/** Resumo textual do dia na coluna do agente (expediente + almoço explícitos). */
-function daySummary(schedule: Schedule | null, weekday: number): string {
-  if (!schedule) return "Sem expediente";
-  if (weekday === 6) {
-    return schedule.saturdayEnabled
-      ? `Sáb ${schedule.saturdayStart ?? "09:00"}–${schedule.saturdayEnd ?? "13:00"}`
-      : "Folga";
-  }
-  if (!schedule.weekdays.includes(weekday)) return "Folga";
-  return `${schedule.startTime}–${schedule.endTime} · almoço ${schedule.lunchStart}–${schedule.lunchEnd}`;
-}
-
-/** Horários reais do expediente no dia (ignora quem não tem schedule). */
-function shiftBounds(schedule: Schedule, weekday: number): { start: number; end: number } | null {
-  if (weekday === 6) {
-    if (!schedule.saturdayEnabled) return null;
-    return {
-      start: parseTime(schedule.saturdayStart ?? "09:00"),
-      end: parseTime(schedule.saturdayEnd ?? "13:00"),
-    };
-  }
-  if (!schedule.weekdays.includes(weekday)) return null;
-  return { start: parseTime(schedule.startTime), end: parseTime(schedule.endTime) };
+function coerceSchedule(raw: CoverageAgent["schedule"]): Schedule | null {
+  if (!raw || typeof raw !== "object") return null;
+  if (typeof raw.startTime !== "string" || typeof raw.endTime !== "string") return null;
+  const weekdays = Array.isArray(raw.weekdays)
+    ? raw.weekdays.map(Number).filter((d) => d >= 0 && d <= 6)
+    : [1, 2, 3, 4, 5];
+  return {
+    startTime: raw.startTime,
+    lunchStart: typeof raw.lunchStart === "string" ? raw.lunchStart : "12:00",
+    lunchEnd: typeof raw.lunchEnd === "string" ? raw.lunchEnd : "13:00",
+    endTime: raw.endTime,
+    timezone: typeof raw.timezone === "string" ? raw.timezone : "America/Sao_Paulo",
+    weekdays,
+    saturdayEnabled: raw.saturdayEnabled === true,
+    saturdayStart: raw.saturdayStart,
+    saturdayEnd: raw.saturdayEnd,
+  };
 }
 
 async function fetchCoverage(): Promise<CoverageAgent[]> {
   const res = await fetch(apiUrl("/api/agents/schedules"));
   if (!res.ok) throw new Error("Erro ao carregar expedientes");
-  return res.json();
+  const payload: unknown = await res.json();
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as { agents?: unknown }).agents)
+      ? (payload as { agents: unknown[] }).agents
+      : [];
+  return (list as CoverageAgent[]).map((a) => ({
+    ...a,
+    schedule: coerceSchedule(a.schedule),
+  }));
 }
 
 export function useCoverageAgents() {
-  return useQuery({
+  // ?mock=1 → bypass API, retorna mocks imediatamente
+  const forceMock =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("mock") === "1";
+
+  const query = useQuery({
     queryKey: ["agents-coverage"],
     queryFn: fetchCoverage,
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
+    enabled: !forceMock, // não faz request se forçar mock
   });
+
+  // Com ?mock=1: sempre mock. Sem: mock só quando API vazia em localhost.
+  const isMock =
+    forceMock ||
+    shouldUseCoverageMock({
+      realCount: query.data?.length ?? 0,
+      isLoading: query.isLoading,
+    });
+
+  return {
+    ...query,
+    data: isMock ? MOCK_COVERAGE_AGENTS : query.data,
+    isLoading: forceMock ? false : query.isLoading,
+    isMock,
+  };
 }
 
 function DepartmentHoursControl() {
@@ -389,7 +318,7 @@ export function CoverageBoard({
   onShowHiddenChange?: (v: boolean) => void;
 } = {}) {
   const qc = useQueryClient();
-  const { data: agents = [], isLoading, isError } = useCoverageAgents();
+  const { data: agents = [], isLoading, isError, isMock } = useCoverageAgents();
 
   const [weekday, setWeekday] = React.useState<number>(() => new Date().getDay());
   const deptFilter = React.useMemo(() => new Set(deptIds), [deptIds]);
@@ -449,52 +378,20 @@ export function CoverageBoard({
     [agents],
   );
 
-  // ── Range dinâmico da grade (hora cheia) ──────────────────────────────────
-  // Só horários persistidos. Sem schedule não infla o eixo (antes usava
-  // 08–18 fictício e pintava o dia inteiro). Eixo mínimo 06h–20h; estende
-  // até o fim real (ex.: 21h) e inclui a hora final como coluna rotulada.
+  const { dayStart, dayEnd, hours } = React.useMemo(
+    () => axisRange(filtered, weekday, nowMinutes, isToday),
+    [filtered, weekday, nowMinutes, isToday],
+  );
 
-  const { rangeStart, rangeEnd, slots } = React.useMemo(() => {
-    const starts: number[] = [DAY_START_MIN];
-    const ends: number[] = [DAY_END_MIN];
-    for (const a of filtered) {
-      if (!a.schedule) continue;
-      const b = shiftBounds(a.schedule, weekday);
-      if (!b) continue;
-      starts.push(b.start);
-      ends.push(b.end);
-    }
-    if (isToday) ends.push(nowMinutes);
-    const start = Math.max(0, Math.floor(Math.min(...starts) / 60) * 60);
-    const latest = Math.max(...ends);
-    const end = Math.min(24 * 60, Math.max(21 * 60, Math.floor(latest / 60) * 60 + 60));
-    const list: number[] = [];
-    for (let m = start; m < end; m += SLOT_MINUTES) list.push(m);
-    return { rangeStart: start, rangeEnd: end, slots: list };
-  }, [filtered, weekday, isToday, nowMinutes]);
+  const perHour = React.useMemo(
+    () => coverageByHour(filtered, weekday, hours),
+    [filtered, weekday, hours],
+  );
 
-  // ── Cobertura por slot + KPIs ─────────────────────────────────────────────
-
-  const coverage = React.useMemo(() => {
-    const perSlot = slots.map((slotMin) => {
-      let work = 0;
-      let lunch = 0;
-      for (const a of filtered) {
-        if (a.participates === false) continue;
-        const st = slotState(a.schedule, weekday, slotMin);
-        if (st === "work") work++;
-        else if (st === "lunch") lunch++;
-      }
-      return { slotMin, work, lunch };
-    });
-    const gaps = perSlot.filter((s) => s.work === 0);
-    const minWork = perSlot.length ? Math.min(...perSlot.map((s) => s.work)) : 0;
-    const minSlot = perSlot.find((s) => s.work === minWork);
-    const maxLunch = perSlot.length ? Math.max(...perSlot.map((s) => s.lunch)) : 0;
-    const maxLunchSlot = perSlot.find((s) => s.lunch === maxLunch);
-    const onlineNow = filtered.filter((a) => a.agentStatus?.status === "ONLINE").length;
-    return { perSlot, gaps, minWork, minSlot, maxLunch, maxLunchSlot, onlineNow };
-  }, [filtered, slots, weekday]);
+  const stats = React.useMemo(
+    () => deriveCoverageStats(filtered, perHour),
+    [filtered, perHour],
+  );
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 
@@ -612,40 +509,24 @@ export function CoverageBoard({
     setEditVisible(agent.visibleInCoverage !== false);
   };
 
-  // ── Coluna do agente recolhível (mobile) ──────────────────────────────────
-  // Em tela estreita a coluna cheia cobre a grade. Assim que o usuário arrasta
-  // a grade para o lado, a coluna encolhe para só o primeiro nome; ao voltar ao
-  // início (grade novamente oculta) os dados completos reaparecem.
-
-  const isMdUp = useMediaQuery("(min-width: 768px)", true);
-  const [gridScrolled, setGridScrolled] = React.useState(false);
-  const compactAgentCol = !isMdUp && gridScrolled;
-  const agentColPx = compactAgentCol ? AGENT_COL_COMPACT_PX : AGENT_COL_PX;
-
-  const handleGridScroll = React.useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const next = e.currentTarget.scrollLeft > COMPACT_SCROLL_THRESHOLD_PX;
-    setGridScrolled((prev) => (prev === next ? prev : next));
-  }, []);
-
-  // minmax com piso em px: a grade cresce além do container e rola no eixo X
-  // em vez de comprimir/cortar a última hora (20h, 21h…).
-  const gridTemplate = `${agentColPx}px repeat(${slots.length}, minmax(${SLOT_MIN_PX}px, 1fr))`;
-
-  // Posição (%) do marcador "agora" dentro da área de slots.
-  const nowPct =
-    isToday && nowMinutes >= rangeStart && nowMinutes <= rangeEnd
-      ? ((nowMinutes - rangeStart) / (rangeEnd - rangeStart)) * 100
-      : null;
-
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3.5">
+      {isMock && (
+        <PageDemoBanner>
+          Dados de exemplo — a API não retornou agentes; exibindo equipe ilustrativa
+          (somente localhost/dev ou ?mock=1).
+        </PageDemoBanner>
+      )}
+
       {isError && (
         <p className="rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 px-4 py-3 text-sm text-[var(--color-danger)]">
           Erro ao carregar expedientes.
         </p>
       )}
+
+      {!isLoading && <CoverageMiniDash stats={stats} />}
 
       {/* Controles: dia da semana + presença (busca/área ficam no PageHeader) */}
       <div className="flex flex-wrap items-center gap-2">
@@ -694,71 +575,32 @@ export function CoverageBoard({
         <DepartmentHoursControl />
 
         {hiddenCount > 0 && (
-          <button
-            type="button"
-            onClick={() => onShowHiddenChange?.(!showHidden)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-colors",
-              showHidden
-                ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-            )}
-            aria-pressed={showHidden}
-            title={
+          <TooltipGlass
+            label={
               showHidden
                 ? "Ocultar quem não aparece na lista"
                 : "Mostrar quem foi escondido da lista"
             }
+            side="bottom"
           >
-            {showHidden ? <IconEye size={14} /> : <IconEyeOff size={14} />}
-            {hiddenCount} oculto{hiddenCount === 1 ? "" : "s"}
-          </button>
+            <button
+              type="button"
+              onClick={() => onShowHiddenChange?.(!showHidden)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-display text-[12px] font-semibold transition-colors",
+                showHidden
+                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+              )}
+              aria-pressed={showHidden}
+            >
+              {showHidden ? <IconEye size={14} /> : <IconEyeOff size={14} />}
+              {hiddenCount} oculto{hiddenCount === 1 ? "" : "s"}
+            </button>
+          </TooltipGlass>
         )}
       </div>
 
-      {/* KPIs de cobertura do dia */}
-      <KpiStrip aria-label="Indicadores de cobertura">
-        <KpiCard
-          label="Agentes"
-          value={filtered.length.toLocaleString("pt-BR")}
-          icon={<IconUsers size={20} stroke={2.2} />}
-          tone="brand"
-        />
-        <KpiCard
-          label="Online agora"
-          value={coverage.onlineNow.toLocaleString("pt-BR")}
-          icon={<IconWifi size={20} stroke={2.2} />}
-          tone={coverage.onlineNow > 0 ? "success" : "warning"}
-        />
-        <KpiCard
-          label="Gaps no dia"
-          value={coverage.gaps.length.toLocaleString("pt-BR")}
-          icon={<IconAlertTriangle size={20} stroke={2.2} />}
-          tone={coverage.gaps.length > 0 ? "warning" : "success"}
-        />
-        <KpiCard
-          label="Cobertura mínima"
-          value={
-            coverage.minSlot
-              ? `${coverage.minWork} às ${formatSlot(coverage.minSlot.slotMin)}`
-              : "—"
-          }
-          icon={<IconClock size={20} stroke={2.2} />}
-          tone={coverage.minWork <= 1 ? "warning" : "success"}
-        />
-        <KpiCard
-          label="Pico de almoço"
-          value={
-            coverage.maxLunchSlot && coverage.maxLunch > 0
-              ? `${coverage.maxLunch} às ${formatSlot(coverage.maxLunchSlot.slotMin)}`
-              : "—"
-          }
-          icon={<IconToolsKitchen2 size={20} stroke={2.2} />}
-          tone={coverage.maxLunch >= Math.max(2, Math.ceil(filtered.length / 2)) ? "warning" : "neutral"}
-        />
-      </KpiStrip>
-
-      {/* Grade */}
       {isLoading ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -785,262 +627,24 @@ export function CoverageBoard({
           )}
         </div>
       ) : (
-        <div
-          onScroll={handleGridScroll}
-          className="overflow-x-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]"
-        >
-          <div className="relative w-max min-w-full pr-3">
-            {/* Marcador "agora" — linha vertical sobre toda a grade */}
-            {nowPct !== null && (
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-y-0 z-20 w-0.5 bg-[var(--color-danger)]"
-                style={{
-                  left: `calc(${agentColPx}px + (100% - ${agentColPx}px) * ${nowPct / 100})`,
-                }}
-              >
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-[var(--radius-sm)] bg-[var(--color-danger)] px-1.5 py-0.5 font-display text-[9px] font-bold text-white tabular-nums">
-                  {formatSlot(nowMinutes)}
-                </span>
-              </div>
-            )}
+        <CoverageGantt
+          agents={filtered}
+          weekday={weekday}
+          perHour={perHour}
+          maxCoverage={stats.maxCoverage}
+          dayStart={dayStart}
+          dayEnd={dayEnd}
+          hours={hours}
+          nowMinutes={nowMinutes}
+          isToday={isToday}
+          selected={selected}
+          allSelected={allFilteredSelected}
+          onToggleAll={toggleSelectAll}
+          onToggle={toggleSelected}
+          onEdit={openEdit}
+        />
 
-            {/* Header de horas */}
-            <div className="grid border-b border-[var(--glass-border)]" style={{ gridTemplateColumns: gridTemplate }}>
-              <div
-                className={cn(
-                  "sticky left-0 z-10 flex items-center gap-2 border-r border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-2.5",
-                  compactAgentCol ? "px-2" : "px-3",
-                )}
-              >
-                {!compactAgentCol && (
-                  <CheckboxGlass
-                    checked={allFilteredSelected}
-                    onChange={toggleSelectAll}
-                    aria-label="Selecionar todos os agentes filtrados"
-                  />
-                )}
-                <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-                  Agente
-                </span>
-              </div>
-              {Array.from({ length: (rangeEnd - rangeStart) / 60 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="border-l border-[var(--glass-border)] px-1 py-2.5 font-display text-[10px] font-bold text-[var(--text-muted)] tabular-nums"
-                  style={{ gridColumn: `span 2` }}
-                >
-                  {String(rangeStart / 60 + i).padStart(2, "0")}h
-                </div>
-              ))}
-            </div>
-
-            {/* Linha de cobertura */}
-            <div className="grid border-b border-[var(--glass-border)] bg-[var(--glass-bg-panel)]" style={{ gridTemplateColumns: gridTemplate }}>
-              <div className="sticky left-0 z-10 flex items-center border-r border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-2">
-                <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-                  Cobertura
-                </span>
-              </div>
-              {coverage.perSlot.map((s) => (
-                <TooltipGlass
-                  key={s.slotMin}
-                  label={`${formatSlot(s.slotMin)} — ${s.work} em expediente, ${s.lunch} em almoço`}
-                  side="top"
-                >
-                  <div
-                    className={cn(
-                      "flex items-center justify-center py-2 font-display text-[11px] font-bold tabular-nums",
-                      s.work === 0
-                        ? "bg-[color-mix(in_srgb,var(--color-danger)_72%,transparent)] text-white"
-                        : s.work === 1
-                          ? "bg-[color-mix(in_srgb,var(--color-warn)_55%,transparent)] text-[color-mix(in_srgb,var(--color-warn)_80%,black)]"
-                          : "text-[var(--text-secondary)]",
-                    )}
-                  >
-                    {s.work}
-                  </div>
-                </TooltipGlass>
-              ))}
-            </div>
-
-            {/* Linhas dos agentes */}
-            {filtered.map((agent) => {
-              const presence = agent.agentStatus?.status ?? "OFFLINE";
-              const inactive = agent.participates === false;
-              const slotStyles = inactive ? INACTIVE_SLOT_STYLES : SLOT_STYLES;
-              return (
-                <div
-                  key={agent.id}
-                  className={cn(
-                    "group grid border-b border-[var(--glass-border)] last:border-b-0 hover:bg-[var(--glass-bg-panel)]",
-                    inactive && "opacity-70 grayscale-[0.35]",
-                  )}
-                  style={{ gridTemplateColumns: gridTemplate }}
-                >
-                  <div
-                    className={cn(
-                      "sticky left-0 z-10 flex items-center border-r border-[var(--glass-border)] py-2 group-hover:bg-[var(--glass-bg-panel)]",
-                      compactAgentCol ? "gap-2 px-2" : "gap-2.5 px-3",
-                      inactive
-                        ? "bg-[color-mix(in_srgb,var(--text-muted)_8%,var(--glass-bg-base))]"
-                        : "bg-[var(--glass-bg-base)]",
-                    )}
-                  >
-                    {compactAgentCol ? (
-                      <>
-                        <UserAvatar
-                          size={24}
-                          name={agent.name}
-                          imageUrl={agent.avatarUrl}
-                          status={
-                            presence === "ONLINE"
-                              ? "online"
-                              : presence === "AWAY"
-                                ? "away"
-                                : "offline"
-                          }
-                        />
-                        <p
-                          title={agent.name}
-                          className={cn(
-                            "min-w-0 flex-1 truncate font-display text-[12px] font-bold",
-                            inactive ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]",
-                          )}
-                        >
-                          {firstName(agent.name)}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <CheckboxGlass
-                          checked={selected.has(agent.id)}
-                          onChange={() => toggleSelected(agent.id)}
-                          aria-label={`Selecionar ${agent.name}`}
-                        />
-                        <UserAvatar
-                          size={32}
-                          name={agent.name}
-                          imageUrl={agent.avatarUrl}
-                          status={
-                            presence === "ONLINE"
-                              ? "online"
-                              : presence === "AWAY"
-                                ? "away"
-                                : "offline"
-                          }
-                        />
-                        <div className="min-w-0 flex-1 leading-tight">
-                          <p
-                            className={cn(
-                              "truncate font-display text-[13px] font-bold",
-                              inactive ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]",
-                            )}
-                          >
-                            {agent.name}
-                          </p>
-                          <p className="font-body text-[11px] font-semibold leading-snug text-[var(--text-secondary)] tabular-nums">
-                            {daySummary(agent.schedule, weekday)}
-                          </p>
-                          <p className="flex items-center gap-1.5 truncate font-body text-[10px] text-[var(--text-muted)]">
-                            {agent.departments.length > 0 ? (
-                              agent.departments.map((d) => (
-                                <span key={d.id} className="inline-flex items-center gap-1">
-                                  <span
-                                    className={cn("size-1.5 rounded-full", inactive && "opacity-50")}
-                                    style={{ backgroundColor: d.color }}
-                                  />
-                                  {d.name}
-                                </span>
-                              ))
-                            ) : (
-                              <span>Sem área</span>
-                            )}
-                          </p>
-                        </div>
-                        {agent.visibleInCoverage === false ? (
-                          <TooltipGlass label="Escondido da lista — clique em editar para voltar a aparecer" side="left">
-                            <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
-                              Oculto
-                            </span>
-                          </TooltipGlass>
-                        ) : inactive ? (
-                          <TooltipGlass label="Não participa da distribuição — não recebe leads" side="left">
-                            <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
-                              Inativo
-                            </span>
-                          </TooltipGlass>
-                        ) : !agent.schedule ? (
-                          <TooltipGlass label="Sem expediente definido — a barra só aparece depois de salvar o horário" side="left">
-                            <span className="shrink-0 rounded-full bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-[var(--text-muted)]">
-                              Sem horário
-                            </span>
-                          </TooltipGlass>
-                        ) : null}
-                        <TooltipGlass label="Editar horário" side="left">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(agent)}
-                            aria-label={`Editar horário de ${agent.name}`}
-                            className={cn(
-                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)] transition-opacity hover:bg-[var(--color-primary-soft)]",
-                              agent.visibleInCoverage === false
-                                ? "opacity-100"
-                                : "opacity-0 group-hover:opacity-100",
-                            )}
-                          >
-                            <IconPencil size={13} />
-                          </button>
-                        </TooltipGlass>
-                      </>
-                    )}
-                  </div>
-                  {slots.map((slotMin) => {
-                    const st = slotState(agent.schedule, weekday, slotMin);
-                    return (
-                      <div
-                        key={slotMin}
-                        className={cn("border-l border-[var(--glass-border)]/40", slotStyles[st])}
-                        title={`${agent.name} — ${formatSlot(slotMin)}: ${
-                          inactive
-                            ? "não participa"
-                            : st === "work"
-                              ? "em expediente"
-                              : st === "lunch"
-                                ? "almoço"
-                                : "fora"
-                        }`}
-                      />
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
       )}
-
-      {/* Legenda */}
-      <div className="flex flex-wrap items-center gap-4 px-1">
-        <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
-          <span className={cn("size-3 rounded-sm", SLOT_STYLES.work)} /> Em expediente
-        </span>
-        <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
-          <span className={cn("size-3 rounded-sm", SLOT_STYLES.lunch)} /> Almoço
-        </span>
-        <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
-          <span className={cn("size-3 rounded-sm", SLOT_STYLES.off)} /> Fora do expediente
-        </span>
-        <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
-          <span className={cn("size-3 rounded-sm", INACTIVE_SLOT_STYLES.work)} /> Não participa
-        </span>
-        <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
-          <span className="size-3 rounded-sm bg-[color-mix(in_srgb,var(--color-danger)_72%,transparent)]" /> Gap (0 agentes)
-        </span>
-        <span className="flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
-          <span className="h-3 w-0.5 bg-[var(--color-danger)]" /> Agora
-        </span>
-      </div>
 
       {/* Barra de ação em massa */}
       {selected.size > 0 && (
@@ -1076,14 +680,13 @@ export function CoverageBoard({
         submitLabel="Salvar"
         submitPending={saveOne.isPending}
         onSubmit={() => {
-          if (editAgent) {
-            saveOne.mutate({
-              userId: editAgent.id,
-              schedule: editSchedule,
-              participates: editParticipates,
-              visibleInCoverage: editVisible,
-            });
-          }
+          if (!editAgent) return;
+          saveOne.mutate({
+            userId: editAgent.id,
+            schedule: editSchedule,
+            participates: editParticipates,
+            visibleInCoverage: editVisible,
+          });
         }}
       >
         <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-3 py-2.5">
@@ -1127,7 +730,9 @@ export function CoverageBoard({
         description="O expediente abaixo substitui o horário atual de todos os selecionados."
         submitLabel={`Aplicar a ${selected.size} agente(s)`}
         submitPending={applyBulk.isPending}
-        onSubmit={() => applyBulk.mutate({ userIds: [...selected], schedule: bulkSchedule })}
+        onSubmit={() => {
+          applyBulk.mutate({ userIds: [...selected], schedule: bulkSchedule });
+        }}
       >
         <ScheduleFields schedule={bulkSchedule} onChange={setBulkSchedule} />
       </ScheduleDialogShell>

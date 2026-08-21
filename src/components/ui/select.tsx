@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { IconChevronDown as ChevronDown } from "@tabler/icons-react";
 
@@ -41,4 +43,174 @@ const SelectNative = React.forwardRef<HTMLSelectElement, SelectNativeProps>(
 );
 SelectNative.displayName = "SelectNative";
 
-export { SelectNative };
+type SelectContextValue = {
+  value?: string;
+  onValueChange?: (value: string) => void;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  labels: Record<string, React.ReactNode>;
+  registerLabel: (value: string, label: React.ReactNode) => void;
+};
+
+const SelectContext = React.createContext<SelectContextValue | null>(null);
+
+function useSelectContext(component: string) {
+  const ctx = React.useContext(SelectContext);
+  if (!ctx) throw new Error(`${component} must be used within <Select>`);
+  return ctx;
+}
+
+function Select({
+  value,
+  onValueChange,
+  children,
+}: {
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [labels, setLabels] = React.useState<Record<string, React.ReactNode>>(
+    {}
+  );
+  const registerLabel = React.useCallback(
+    (itemValue: string, label: React.ReactNode) => {
+      setLabels((prev) =>
+        prev[itemValue] === label ? prev : { ...prev, [itemValue]: label }
+      );
+    },
+    []
+  );
+
+  return (
+    <SelectContext.Provider
+      value={{ value, onValueChange, open, setOpen, labels, registerLabel }}
+    >
+      <div className="relative">{children}</div>
+    </SelectContext.Provider>
+  );
+}
+
+function SelectTrigger({
+  className,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { size?: "sm" | "default" }) {
+  const { open, setOpen } = useSelectContext("SelectTrigger");
+  return (
+    <button
+      type="button"
+      data-slot="select-trigger"
+      aria-expanded={open}
+      className={cn(
+        "flex h-9 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm whitespace-nowrap outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      onClick={() => setOpen(!open)}
+      {...props}
+    >
+      {children}
+      <ChevronDown aria-hidden className="size-4 shrink-0 opacity-60" />
+    </button>
+  );
+}
+
+function SelectValue({
+  placeholder,
+  children,
+  className,
+}: {
+  placeholder?: string;
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  const { value, labels } = useSelectContext("SelectValue");
+  const shown = children ?? (value ? labels[value] : null) ?? placeholder;
+  return (
+    <span
+      data-slot="select-value"
+      className={cn("flex flex-1 truncate text-left", className)}
+    >
+      {shown}
+    </span>
+  );
+}
+
+function SelectContent({
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  const { open, setOpen } = useSelectContext("SelectContent");
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.parentElement?.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open, setOpen]);
+
+  if (!open) return null;
+  return (
+    <div
+      ref={ref}
+      data-slot="select-content"
+      className={cn(
+        "absolute z-50 mt-1 max-h-60 w-full min-w-36 overflow-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SelectItem({
+  value,
+  className,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { value: string }) {
+  const { value: selected, onValueChange, setOpen, registerLabel } =
+    useSelectContext("SelectItem");
+
+  React.useEffect(() => {
+    registerLabel(value, children);
+  }, [value, children, registerLabel]);
+
+  return (
+    <button
+      type="button"
+      data-slot="select-item"
+      data-selected={selected === value || undefined}
+      className={cn(
+        "relative flex w-full cursor-default items-center rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+        selected === value && "bg-accent text-accent-foreground",
+        className
+      )}
+      onClick={() => {
+        onValueChange?.(value);
+        setOpen(false);
+      }}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+export {
+  SelectNative,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+};

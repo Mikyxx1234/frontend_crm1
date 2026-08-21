@@ -383,6 +383,7 @@
   --glass-bg-modal:       rgba(255, 255, 255, 0.97);
 
   --color-online:         #10b981;
+  --color-offline:        #94a3b8;
   --color-enterprise-bg:  rgba(91, 111, 245, 0.15);
   --color-success-bg:     rgba(16, 185, 129, 0.12);
   --color-success-text:   #047857;
@@ -1361,4 +1362,54 @@
 }
 .animate-soft-pulse {
   animation: soft-pulse 2s infinite ease-in-out;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Fluxo de atendimento — tokens do editor visual (React Flow)
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --brand: oklch(0.52 0.21 277);
+  --brand-foreground: oklch(0.985 0 0);
+
+  --route-navigation: oklch(0.6 0.13 233);
+  --route-response: oklch(0.62 0.16 150);
+  --route-error: oklch(0.62 0.22 22);
+
+  --topic-inicio: oklch(0.52 0.21 277);
+  --topic-inicio-tint: oklch(0.95 0.03 277);
+  --topic-portal: oklch(0.6 0.13 233);
+  --topic-portal-tint: oklch(0.95 0.03 233);
+  --topic-financeiro: oklch(0.62 0.16 150);
+  --topic-financeiro-tint: oklch(0.95 0.04 150);
+  --topic-documentos: oklch(0.68 0.15 55);
+  --topic-documentos-tint: oklch(0.96 0.04 70);
+  --topic-encerramento: oklch(0.55 0.02 260);
+  --topic-encerramento-tint: oklch(0.95 0.005 260);
+  --topic-fallback: oklch(0.62 0.22 22);
+  --topic-fallback-tint: oklch(0.96 0.03 22);
+}
+
+.dark {
+  --brand: oklch(0.62 0.2 277);
+  --brand-foreground: oklch(0.985 0 0);
+  --route-navigation: oklch(0.68 0.13 233);
+  --route-response: oklch(0.72 0.16 150);
+  --route-error: oklch(0.7 0.19 22);
+  --topic-inicio: oklch(0.68 0.18 277);
+  --topic-inicio-tint: oklch(0.28 0.05 277);
+  --topic-portal: oklch(0.7 0.13 233);
+  --topic-portal-tint: oklch(0.28 0.04 233);
+  --topic-financeiro: oklch(0.72 0.16 150);
+  --topic-financeiro-tint: oklch(0.28 0.05 150);
+  --topic-documentos: oklch(0.74 0.14 55);
+  --topic-documentos-tint: oklch(0.3 0.05 70);
+  --topic-encerramento: oklch(0.7 0.02 260);
+  --topic-encerramento-tint: oklch(0.28 0.01 260);
+  --topic-fallback: oklch(0.7 0.19 22);
+  --topic-fallback-tint: oklch(0.3 0.06 22);
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
 }

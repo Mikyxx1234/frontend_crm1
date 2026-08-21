@@ -1112,7 +1112,7 @@ export function Composer({
 
       <form
         onSubmit={handleSubmit}
-        className="flex min-h-11 items-center gap-1.5 overflow-visible rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 pl-3 pr-1.5 backdrop-blur-md shadow-[var(--glass-shadow-sm)] sm:gap-2"
+        className="flex min-h-11 min-w-0 items-center gap-1.5 overflow-visible rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 pl-3 pr-1.5 backdrop-blur-md shadow-[var(--glass-shadow-sm)] sm:gap-2"
       >
         {/* Controles padrão — ocultos durante gravação de áudio */}
         {!isAudioActive && (

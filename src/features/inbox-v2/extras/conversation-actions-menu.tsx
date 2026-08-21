@@ -17,6 +17,8 @@ import {
   IconLoader2,
   IconRobot,
   IconUser,
+  IconEye,
+  IconEyeOff,
 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
@@ -26,6 +28,7 @@ import {
 import { RequirePermission } from "@/components/auth/require-permission";
 import { useExecuteDistribution } from "@/features/distribution/hooks";
 import { apiUrl } from "@/lib/api";
+import { useHideChatEvents } from "@/components/crm/chat-timeline";
 import { useResolveConversationFlow } from "./use-resolve-conversation-flow";
 
 interface ConversationActionsMenuProps {
@@ -104,6 +107,7 @@ export function ConversationActionsMenu({
       onResolved,
     });
   const executeDist = useExecuteDistribution();
+  const { hideEvents, toggleHideEvents } = useHideChatEvents();
 
   const departmentsQuery = useQuery({
     queryKey: ["inbox-distribute-departments"],
@@ -387,6 +391,22 @@ export function ConversationActionsMenu({
           >
             <IconSearch size={16} className="shrink-0 text-[var(--text-muted)]" stroke={2} />
             <span>Buscar na conversa</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              toggleHideEvents();
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left text-[13px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+          >
+            {hideEvents ? (
+              <IconEyeOff size={16} className="shrink-0 text-[var(--text-muted)]" stroke={2} />
+            ) : (
+              <IconEye size={16} className="shrink-0 text-[var(--text-muted)]" stroke={2} />
+            )}
+            <span>{hideEvents ? "Mostrar eventos" : "Ocultar eventos"}</span>
           </button>
 
           <button

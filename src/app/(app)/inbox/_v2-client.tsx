@@ -115,6 +115,7 @@ import { DealTagsPopover } from "@/features/pipeline-v2/extras/deal-tags-popover
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
+import { WhatsappCallChip } from "@/components/inbox/whatsapp-call-chip";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { DealNotesTab } from "@/features/pipeline-v2/extras";
 import type { PipelineListStageDto } from "@/features/pipeline-v2/api";
@@ -1472,15 +1473,10 @@ export default function InboxV2ClientPage({
         onReplyMessage={handleReplyMessage}
         headerActionsSlot={
           <>
-            {/* DealCallButton volta pro header do chat, ao lado do chip
-                de telefone e do kebab. Antes vivia no ContactAside, mas
-                duplicava o chip de "Ligar para <numero>" que ja fica
-                no header. Consolidamos a acao aqui pra remover ruido
-                visual no aside. */}
-            <DealCallButton
-              dealId={firstDealId}
-              phone={chatContact?.phone || null}
-              contactId={activeContactId ?? undefined}
+            <WhatsappCallChip
+              conversationId={activeRow.id}
+              channel={activeRow.channel}
+              variant="cta"
             />
             <ConversationActionsMenu
               conversationId={activeId}
@@ -1582,7 +1578,7 @@ export default function InboxV2ClientPage({
               );
             }}
             conversationNumber={activeRow?.number ?? null}
-              transferSlot={
+            transferSlot={
               <RequirePermission permission="conversation:transfer">
                 <TransferPopover
                   variant="composer"
@@ -1594,6 +1590,14 @@ export default function InboxV2ClientPage({
                 />
               </RequirePermission>
             }
+          />
+        }
+        floatingCallSlot={
+          <DealCallButton
+            fab
+            dealId={firstDealId}
+            phone={chatContact?.phone || null}
+            contactId={activeContactId ?? undefined}
           />
         }
         notesSlot={notesSlot}

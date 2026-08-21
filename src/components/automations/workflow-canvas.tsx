@@ -1059,6 +1059,7 @@ function WorkflowCanvasInner({
         let changed = false;
 
         if (cfg.nextStepId === id) { cfg.nextStepId = NONE; changed = true; }
+        if (cfg.targetStepId === id) { delete cfg.targetStepId; changed = true; }
         if (cfg.elseGotoStepId === id) { delete cfg.elseGotoStepId; changed = true; }
         if (cfg.elseStepId === id) { delete cfg.elseStepId; changed = true; }
         if (cfg.timeoutGotoStepId === id) { delete cfg.timeoutGotoStepId; changed = true; }
@@ -1124,6 +1125,10 @@ function WorkflowCanvasInner({
         for (const id of idSet) {
           if (cfg.nextStepId === id) {
             cfg.nextStepId = NONE;
+            changed = true;
+          }
+          if (cfg.targetStepId === id) {
+            delete cfg.targetStepId;
             changed = true;
           }
           if (cfg.elseGotoStepId === id) {

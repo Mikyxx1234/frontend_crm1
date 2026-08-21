@@ -12,8 +12,6 @@ import { cn } from "@/lib/utils";
 import { Avatar } from "./avatar";
 import { useTeamChatColleagues, useTeamChatMutations } from "./hooks";
 import { toPerson } from "./helpers";
-import { findMockDmByPeer, isMockId, mergeUniqueById } from "./mock-data";
-import { addMockMembers, createMockRoom, getMockSnapshot } from "./mock-store";
 import type { TeamChatPerson, TeamChatRoom } from "./types";
 
 function resetCompose(
@@ -30,13 +28,11 @@ export function ComposeDialog({
   open,
   onOpenChange,
   meId,
-  extraPeople = [],
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   meId: string;
-  extraPeople?: TeamChatPerson[];
   onCreated: (roomId: string) => void;
 }) {
   const { data, isLoading } = useTeamChatColleagues(open);
@@ -45,28 +41,9 @@ export function ComposeDialog({
   const [picked, setPicked] = useState<string[]>([]);
   const [name, setName] = useState("");
 
-  const people = mergeUniqueById(data?.colleagues ?? [], extraPeople).filter((p) => p.id !== meId);
+  const people = (data?.colleagues ?? []).filter((p) => p.id !== meId);
   const visible = people.filter((p) => !q.trim() || p.name.toLowerCase().includes(q.trim().toLowerCase()));
   const isGroup = picked.length > 1 || !!name.trim();
-
-  function finishLocal() {
-    const selectedPeople = people.filter((p) => picked.includes(p.id));
-    if (!isGroup && picked[0]) {
-      const existing = findMockDmByPeer(picked[0], getMockSnapshot().rooms);
-      if (existing) {
-        resetCompose(setPicked, setName, setQ);
-        onCreated(existing.id);
-        return;
-      }
-    }
-    const room = createMockRoom({
-      kind: isGroup ? "GROUP" : "DM",
-      name: isGroup ? name.trim() || "canal" : selectedPeople[0]?.name || "Conversa",
-      members: selectedPeople,
-    });
-    resetCompose(setPicked, setName, setQ);
-    onCreated(room.id);
-  }
 
   return (
     <FormDialog
@@ -84,10 +61,6 @@ export function ComposeDialog({
             variant="primary"
             disabled={picked.length === 0 || (isGroup && picked.length > 1 && !name.trim()) || createRoom.isPending}
             onClick={() => {
-              if (picked.some(isMockId)) {
-                finishLocal();
-                return;
-              }
               createRoom.mutate(
                 { memberIds: picked, name: isGroup ? name.trim() || undefined : undefined },
                 {
@@ -95,7 +68,7 @@ export function ComposeDialog({
                     resetCompose(setPicked, setName, setQ);
                     onCreated(res.room.id);
                   },
-                  onError: () => finishLocal(),
+                  onError: (e: Error) => toast.error(e.message),
                 },
               );
             }}
@@ -126,19 +99,17 @@ export function AddMembersDialog({
   onOpenChange,
   room,
   meId,
-  extraPeople = [],
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   room: TeamChatRoom;
   meId: string;
-  extraPeople?: TeamChatPerson[];
 }) {
   const { data } = useTeamChatColleagues(open);
   const { addMembers } = useTeamChatMutations();
   const [picked, setPicked] = useState<string[]>([]);
   const inRoom = new Set(room.members.map((m) => m.id));
-  const people = mergeUniqueById(data?.colleagues ?? [], extraPeople).filter(
+  const people = (data?.colleagues ?? []).filter(
     (p) => p.id !== meId && !inRoom.has(p.id),
   );
 
@@ -161,14 +132,6 @@ export function AddMembersDialog({
             variant="primary"
             disabled={picked.length === 0 || addMembers.isPending}
             onClick={() => {
-              const selectedPeople = people.filter((p) => picked.includes(p.id));
-              if (isMockId(room.id) || picked.some(isMockId)) {
-                addMockMembers(room.id, selectedPeople);
-                setPicked([]);
-                onOpenChange(false);
-                toast.success("Membros adicionados");
-                return;
-              }
               addMembers.mutate(
                 { roomId: room.id, memberIds: picked },
                 {

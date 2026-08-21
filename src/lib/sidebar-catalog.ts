@@ -113,8 +113,8 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
   },
   {
     key: "team-chat",
-    title: "Órbita",
-    href: "/orbita",
+    title: "Rely",
+    href: "/rely",
     icon: IconMessages,
     description: "Chat interno do time — diretas e canais.",
     locked: false,

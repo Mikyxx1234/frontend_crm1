@@ -1423,7 +1423,7 @@ export function MessageBubble({
   if (isVoiceCallEvent) {
     const inbound = message.type === "incoming"
     const body = message.content ?? ""
-    const missed = /n[ãa]o atendida|falhou/i.test(body)
+    const missed = /n[ãa]o atendida|n[ãa]o completada|falhou/i.test(body)
     const ended = /\bfim\b|encerrada/i.test(body)
     const fallback =
       callType === "sip_call"
@@ -1437,13 +1437,16 @@ export function MessageBubble({
             : ended
               ? "Chamada WhatsApp encerrada"
               : "Chamada realizada pelo WhatsApp"
+    const dirIcon = inbound ? PhoneIncoming : PhoneOutgoing
     return (
       <EventRow
-        icon={missed || ended ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
+        icon={missed ? PhoneOff : dirIcon}
         iconClassName={
-          missed || ended
+          missed
             ? "text-[var(--color-danger)]"
-            : "text-[var(--color-success)]"
+            : ended
+              ? "text-[var(--color-ink-soft)]"
+              : "text-[var(--color-success)]"
         }
         text={fallback}
         actor=""

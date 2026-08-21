@@ -30,7 +30,10 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { TagChip } from "@/components/crm/tag-chip";
 import { SEARCH_MIN_CHARS } from "@/lib/search-query";
 import { useInboxOmnisearch } from "../hooks/use-inbox-omnisearch";
-import { InboxSearchResultsPanel } from "./inbox-search-results";
+import {
+  flattenInboxSearchHits,
+  InboxSearchResultsPanel,
+} from "./inbox-search-results";
 import { UserAvatar } from "@/components/crm/user-avatar";
 import { ModalPortalContext } from "@/components/ui/modal-portal-context";
 import {
@@ -44,6 +47,7 @@ import {
   listInboxFilterChannels,
   listPipelines,
   listTags,
+  type ConversationListRow,
   type InboxFilterChannel,
   type InboxFilters,
 } from "@/features/inbox-v2/api";
@@ -72,7 +76,7 @@ interface InboxSearchFilterBarProps {
   onChangeFilters: (next: InboxFilters) => void;
   placeholder?: string;
   className?: string;
-  onPickConversation?: (id: string) => void;
+  onPickConversation?: (row: ConversationListRow) => void;
   onPickDeal?: (id: string) => void;
 }
 
@@ -465,9 +469,15 @@ export function InboxSearchFilterBar({
     width: number;
   } | null>(null);
   const wrapRef = React.useRef<HTMLDivElement>(null);
+  const [activeHit, setActiveHit] = React.useState(0);
   const activeCount = countActive(filters);
   const showHits = focused && search.trim().length >= SEARCH_MIN_CHARS;
   const hits = useInboxOmnisearch(search, showHits);
+  const flatHits = flattenInboxSearchHits(hits.conversations, hits.deals);
+
+  React.useEffect(() => {
+    setActiveHit(0);
+  }, [hits.query, hits.conversations.length, hits.deals.length]);
 
   const updateCoords = React.useCallback(() => {
     const rect = wrapRef.current?.getBoundingClientRect();
@@ -513,8 +523,8 @@ export function InboxSearchFilterBar({
     };
   }, [showHits, updateCoords]);
 
-  function pickConversation(id: string) {
-    onPickConversation?.(id);
+  function pickConversation(row: ConversationListRow) {
+    onPickConversation?.(row);
     onSearch("");
     setFocused(false);
   }
@@ -523,6 +533,13 @@ export function InboxSearchFilterBar({
     onPickDeal?.(id);
     onSearch("");
     setFocused(false);
+  }
+
+  function pickActiveHit() {
+    const hit = flatHits[activeHit] ?? flatHits[0];
+    if (!hit) return;
+    if (hit.kind === "conversation") pickConversation(hit.row);
+    else pickDeal(hit.deal.id);
   }
 
   // Chips de filtros ativos ficam ABAIXO da pill de busca (mesma UX do
@@ -538,15 +555,20 @@ export function InboxSearchFilterBar({
           onSearch={onSearch}
           onFocus={() => setFocused(true)}
           onKeyDown={(e) => {
-            if (e.key !== "Enter" || !showHits) return;
-            e.preventDefault();
-            const firstConv = hits.conversations[0];
-            if (firstConv) {
-              pickConversation(firstConv.id);
+            if (!showHits) return;
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setActiveHit((i) => Math.min(i + 1, Math.max(flatHits.length - 1, 0)));
               return;
             }
-            const firstDeal = hits.deals[0];
-            if (firstDeal) pickDeal(firstDeal.id);
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActiveHit((i) => Math.max(i - 1, 0));
+              return;
+            }
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            pickActiveHit();
           }}
           onOpenFilters={() => {
             setOpen(true);
@@ -566,6 +588,8 @@ export function InboxSearchFilterBar({
           query={hits.query || search.trim()}
           conversations={hits.conversations}
           deals={hits.deals}
+          activeIndex={activeHit}
+          onActiveIndexChange={setActiveHit}
           onPickConversation={pickConversation}
           onPickDeal={pickDeal}
         />

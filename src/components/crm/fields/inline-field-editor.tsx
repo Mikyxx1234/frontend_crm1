@@ -4,7 +4,7 @@
  * InlineFieldEditor
  *
  * Editor inline para valores de campos personalizados.
- * Exibição: valor atual + ícone de lápis ao hover.
+ * Exibição: valor atual (clique para editar). Copiar fica na tooltip.
  * Edição: input adequado ao tipo do campo (text, number, date, select, boolean).
  * Salva via PUT /api/contacts/:id/custom-fields ou /api/deals/:id/custom-fields.
  */
@@ -13,11 +13,9 @@ import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  IconPencil,
   IconCheck,
   IconX,
   IconLoader2,
-  IconCopy,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
@@ -79,7 +77,7 @@ export function InlineFieldEditor({
   onSaved,
   textClassName,
   placeholder = "Adicionar",
-  editMode = false,
+  editMode: _editMode = false,
 }: InlineFieldEditorProps) {
   const qc = useQueryClient();
   const canEditEntity = useCan(
@@ -150,8 +148,7 @@ export function InlineFieldEditor({
       ? placeholder
       : formatDisplayValue(value!, fieldType);
 
-    const handleCopy = async (e: React.MouseEvent) => {
-      e.stopPropagation();
+    const handleCopy = async () => {
       if (isEmpty) return;
       try {
         await navigator.clipboard.writeText(value!);
@@ -161,14 +158,10 @@ export function InlineFieldEditor({
       }
     };
 
-    // Ícones em coluna própria (shrink-0): overlay absolute cobria e-mails longos.
-    const valueWrapClass =
-      "min-w-0 flex-1 whitespace-normal break-all [overflow-wrap:anywhere] text-left leading-snug";
-
     const row = (
       <div
         className={cn(
-          "group flex w-full min-w-0 max-w-full items-start gap-1 overflow-visible transition-colors",
+          "group flex w-full min-w-0 max-w-full items-center overflow-hidden transition-colors",
           isEmpty
             ? "font-display text-[11px] text-[var(--text-muted)] opacity-60 italic"
             : textClassName ??
@@ -180,39 +173,37 @@ export function InlineFieldEditor({
             type="button"
             onClick={startEdit}
             aria-label={`Editar ${fieldId}`}
-            className={valueWrapClass}
+            className="min-w-0 flex-1 truncate text-left leading-snug"
           >
             {displayValue}
           </button>
         ) : (
-          <span className={valueWrapClass}>{displayValue}</span>
-        )}
-        {!isEmpty && (
-          <button
-            type="button"
-            onClick={handleCopy}
-            aria-label="Copiar"
-            className="mt-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100"
-          >
-            <IconCopy size={12} />
-          </button>
-        )}
-        {canEditEntity && (
-          <IconPencil
-            size={12}
-            className={cn(
-              "pointer-events-none mt-0.5 shrink-0 transition-opacity group-hover:opacity-60",
-              editMode ? "opacity-40" : "opacity-0",
-            )}
-          />
+          <span className="min-w-0 flex-1 truncate text-left leading-snug">{displayValue}</span>
         )}
       </div>
     );
 
-    // Sem valor: sem tooltip nem copy — só o placeholder clicável.
     if (isEmpty) return row;
     return (
-      <TooltipGlass label={value!} side="top">
+      <TooltipGlass
+        label={
+          <span className="flex items-center gap-2">
+            <span className="max-w-[220px] break-all">{value}</span>
+            <button
+              type="button"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleCopy();
+              }}
+              className="shrink-0 rounded-[6px] bg-white/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/90 hover:bg-white/25"
+            >
+              Copiar
+            </button>
+          </span>
+        }
+        side="top"
+      >
         {row}
       </TooltipGlass>
     );

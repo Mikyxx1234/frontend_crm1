@@ -97,6 +97,7 @@ import {
   SESSION_CLOSED_TOAST,
 } from "@/features/inbox-v2/extras/channel-switch-confirm";
 import type { ConversationListRow, InboxTab } from "@/features/inbox-v2/api";
+import { inboxQueueTabFor, pickVisibleInboxTab } from "@/features/inbox-v2/inbox-queue-tab";
 import {
   DEFAULT_INBOX_TAB,
   useInboxFilterUrlState,
@@ -898,8 +899,10 @@ export default function InboxV2ClientPage({
     setReplyTo(null);
   }
 
-  function handlePickSearchConversation(id: string) {
-    handleSelect(id);
+  function handlePickSearchConversation(row: ConversationListRow) {
+    const queue = pickVisibleInboxTab(inboxQueueTabFor(row), visibleTabs);
+    if (queue && queue !== tab) setTab(queue);
+    handleSelect(row.id);
     setSearchInput("");
     setMobilePaneTab("chat");
   }

@@ -339,17 +339,29 @@ export function WhatsappCallChip({
           "Configure um template aprovado da Meta em Configurações → WhatsApp Templates.",
         );
       }
+      const tpl = (templatesQuery.data ?? []).find((t) => t.name === templateName);
       const r = await fetch(apiUrl(`/api/conversations/${conversationId}/call-permission`),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ templateName }),
+          body: JSON.stringify({
+            templateName,
+            languageCode: tpl?.language || "pt_BR",
+            bodyText: tpl?.bodyText,
+            headerText: tpl?.headerText,
+            footerText: tpl?.footerText,
+            buttons: tpl?.buttons,
+          }),
         },
       );
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
+        const fromApi = typeof j?.message === "string" ? j.message.trim() : "";
         throw new Error(
-          typeof j?.message === "string" ? j.message : "Erro ao enviar solicitação",
+          fromApi ||
+            (r.status === 502
+              ? "O servidor não respondeu a tempo ao enviar o template (502). Tente novamente."
+              : "Erro ao enviar solicitação"),
         );
       }
       // Guarda último template usado para virar default rápido na próxima vez.

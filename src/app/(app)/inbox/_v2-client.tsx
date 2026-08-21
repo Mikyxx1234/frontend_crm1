@@ -4,14 +4,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useBulkOperation, isBulkOperationFinished } from "@/hooks/use-bulk-operation";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { listAllowedInboxTabsForUser } from "@/lib/authz/scope-grants-shared";
-import {
-  SEARCH_DEBOUNCE_MS,
-  normalizeSearchQuery,
-} from "@/lib/search-query";
 import { toast } from "sonner";
 import {
   IconArrowLeft,
@@ -232,6 +229,7 @@ export default function InboxV2ClientPage({
   pageHeader,
 }: InboxV2ClientPageProps = {}) {
   const { data: session, status: sessionStatus } = useSession();
+  const router = useRouter();
   const isAuthenticated = sessionStatus === "authenticated";
   const isDesktop = useIsDesktop();
   const { data: myPermissions } = useMyPermissions();
@@ -291,7 +289,6 @@ export default function InboxV2ClientPage({
     }
   }, [tabHydrated, visibleTabs, tab, setTab]);
 
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [templateOpen, setTemplateOpen] = useState(false);
@@ -388,18 +385,6 @@ export default function InboxV2ClientPage({
     };
   }, []);
 
-  // Debounce do search (~350ms) + min 3 chars no query (ver searchForQuery).
-  useEffect(() => {
-    const t = setTimeout(
-      () => setDebouncedSearch(searchInput.trim()),
-      SEARCH_DEBOUNCE_MS,
-    );
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
-  // Só dispara list/counts com ≥3 chars — ILIKE curto é caro e pouco útil.
-  const searchForQuery = normalizeSearchQuery(debouncedSearch);
-
   // ── Dados ───────────────────────────────────────────────────────
   // Ordenação e direção da última msg são CLIENT-SIDE (evita refetch).
   // `windowState` (Aberta/Fechada) vai ao servidor — senão o badge Erro
@@ -420,7 +405,7 @@ export default function InboxV2ClientPage({
   } = useConversations({
     tab,
     filters: serverFilters,
-    search: searchForQuery,
+    search: "",
     // Só busca depois da sessão + prefs (tab/filtros do localStorage).
     // Sem isso: (1) query disabled → isLoading=false → empty flash;
     // (2) fetch com tab default "esperando" antes de hidratar a aba salva.
@@ -475,7 +460,6 @@ export default function InboxV2ClientPage({
   const { data: tabCounts } = useTabCounts(
     isAuthenticated && tabHydrated && filtersHydrated,
     serverFilters,
-    searchForQuery,
   );
 
   // Uma fonte: badge da aba = select-all N. `list.total` ainda pode ser o
@@ -740,7 +724,7 @@ export default function InboxV2ClientPage({
             action,
             allInFilter: true,
             tab,
-            search: searchForQuery,
+            search: "",
             filters: serverFilters as Record<string, unknown>,
           }
         : { ids, action },
@@ -915,6 +899,17 @@ export default function InboxV2ClientPage({
     setReplyTo(null);
   }
 
+  function handlePickSearchConversation(id: string) {
+    handleSelect(id);
+    setSearchInput("");
+    setMobilePaneTab("chat");
+  }
+
+  function handlePickSearchDeal(id: string) {
+    setSearchInput("");
+    router.push(`/pipeline?deal=${encodeURIComponent(id)}`);
+  }
+
   async function handleSend(value: string) {
     if (!activeId) return;
     try {
@@ -1037,16 +1032,14 @@ export default function InboxV2ClientPage({
   // Com header de página, busca no centro do header e filtro nas actions.
   const searchInHeader = !!pageHeader;
 
-  // Com busca ativa: só exibe badge nos status que têm match (esconde 0).
-  // Sem busca: badges globais/filtrados por funil como antes.
-  const searchActive = searchForQuery.length > 0;
-
   const inboxSearchFilterNode = (
     <InboxSearchFilterBar
       search={searchInput}
       onSearch={setSearchInput}
       filters={filters}
       onChangeFilters={setFilters}
+      onPickConversation={handlePickSearchConversation}
+      onPickDeal={handlePickSearchDeal}
     />
   );
 
@@ -1059,6 +1052,8 @@ export default function InboxV2ClientPage({
       onSearch={setSearchInput}
       filters={filters}
       onChangeFilters={setFilters}
+      onPickConversation={handlePickSearchConversation}
+      onPickDeal={handlePickSearchDeal}
       placeholder="Buscar..."
       className={cn(
         "min-w-0",
@@ -1205,12 +1200,9 @@ export default function InboxV2ClientPage({
         const count = listBootstrapping
           ? undefined
           : tabCounts?.[t.id];
-        // Com busca: oculta badge dos status sem resultado (só mostra
-        // Todas + a fila real do lead). Sem busca: mostra todos os counts.
-        const hideZeroBadge = searchActive && (count ?? 0) === 0;
         return {
           label: t.label,
-          count: hideZeroBadge ? undefined : count,
+          count,
         };
       })}
       activeTabIndex={visibleTabs.findIndex((t) => t.id === tab)}

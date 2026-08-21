@@ -1397,7 +1397,12 @@ export function MessageBubble({
               : "Chamada realizada pelo WhatsApp"
     return (
       <EventRow
-        icon={missed ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
+        icon={missed || ended ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
+        iconClassName={
+          missed || ended
+            ? "text-[var(--color-danger)]"
+            : "text-[var(--color-success)]"
+        }
         text={fallback}
         actor=""
         time={message.time}

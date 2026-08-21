@@ -376,9 +376,11 @@
 }
 :root {
   --nav-rail-w: 72px;
-  /* Recuo vertical (top/bottom) da rail. Eixo X é 0 — colada na viewport.
-     Conteúdo continua offset por `--nav-rail-w` + gap/padding das shells. */
+  /* Recuo vertical (top/bottom) da rail. Eixo X é 0 — colada na viewport. */
   --nav-rail-inset: 0.75rem; /* p-3 / top-3 */
+  /* Gutter horizontal simétrico: rail↔conteúdo === conteúdo↔borda direita.
+     Mesmo valor do inset vertical (p-3 / sm:p-4). */
+  --page-gutter: var(--nav-rail-inset);
   --mobile-bottom-nav-h: 0px;
 }
 @media (min-width: 640px) {
@@ -450,6 +452,29 @@ html[data-nav-expanded="true"] {
 .v2-screen {
   height: calc(100dvh / var(--v2-scale, 1));
   transition: grid-template-columns 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Shell: gutter único em TODAS as páginas. No desktop a rail está
+   `left: 0`, então o espaço rail↔1ª coluna vem só do `column-gap`
+   (padding-left 0 — sem somar pl + gap). À direita, padding-right
+   igual. Mobile (sem rail) usa o mesmo gutter dos dois lados.
+   Especificidade `.v2-root .v2-screen` vence `p-*` / `gap-*` do Tailwind. */
+.v2-root .v2-screen {
+  padding-top: var(--nav-rail-inset, 0.75rem);
+  padding-bottom: var(--nav-rail-inset, 0.75rem);
+  padding-right: var(--page-gutter);
+  padding-left: var(--page-gutter);
+  column-gap: var(--page-gutter);
+}
+@media (min-width: 768px) {
+  .v2-root .v2-screen {
+    padding-left: 0;
+  }
+}
+
+/* col-resize nativo no Windows é um traço claro — some no mesh/vidro. */
+.v2-col-resize-cursor {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Crect x='10' y='4' width='1.5' height='16' rx='0.5' fill='%23334155'/%3E%3Crect x='12.5' y='4' width='1.5' height='16' rx='0.5' fill='%23334155'/%3E%3Cpath d='M8 12H4m0 0 2-2M4 12l2 2' fill='none' stroke='%23334155' stroke-width='1.75' stroke-linecap='round'/%3E%3Cpath d='M16 12h4m0 0-2-2m2 2-2 2' fill='none' stroke='%23334155' stroke-width='1.75' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, col-resize;
 }
 
 /* O grid do v2-screen tem uma única row — os filhos herdam a altura total */

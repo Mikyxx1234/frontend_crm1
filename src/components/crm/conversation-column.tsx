@@ -320,7 +320,7 @@ export function ConversationColumn({
     <section
       aria-label="Lista de conversas"
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-1 pb-1 pt-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-2 pb-2 pt-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
@@ -544,8 +544,8 @@ export function ConversationColumn({
         )
       })()}
 
-      {/* Lista — ring do card ativo é inset, então não precisa de padding
-          lateral (era o vão que o operador marcou nas laterais). */}
+      {/* Lista — gutter lateral vem do section (`px-2`, mesmo mx-2 do aside
+          direito). Ring do card ativo continua inset. */}
       {/* Scroller NÃO é flex-col: filhos diretos em flex-col + overflow-y
           encolhem (flex-shrink:1) e viram barras cinza. Espelho do DealQueue. */}
       <div

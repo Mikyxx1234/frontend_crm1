@@ -95,22 +95,11 @@ export function ColumnResizer({
       title="Arrastar para tornar mais estreito ou mais largo"
       onPointerDown={onPointerDown}
       className={cn(
-        "group absolute top-0 z-20 flex h-full w-3 cursor-col-resize items-center justify-center",
+        "absolute top-0 z-20 flex h-full w-3 cursor-col-resize items-center justify-center",
         direction === "left" ? "-left-[6px]" : "-right-[6px]",
         className,
       )}
-    >
-      {/* Alça sempre visível (sinaliza resize); no hover só engrossa,
-          sem trocar para a cor da marca. */}
-      <span
-        className={cn(
-          "h-[58%] min-h-3 w-[2px] rounded-full transition-all",
-          "bg-[color-mix(in_srgb,var(--text-muted)_40%,transparent)]",
-          "group-hover:h-[66%] group-hover:w-[2px] group-hover:bg-[color-mix(in_srgb,var(--text-muted)_55%,transparent)]",
-          dragging && "h-[70%] w-[3px] bg-[color-mix(in_srgb,var(--text-muted)_70%,transparent)]",
-        )}
-      />
-    </button>
+    />
   );
 }
 

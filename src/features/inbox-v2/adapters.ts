@@ -17,6 +17,7 @@ import { avatarInitials as avatarInitialsFromLib } from "@/lib/avatar";
 import type { ConnectionRef } from "@/lib/connection-label";
 import { sanitizeContactName } from "@/lib/display-name";
 
+import { agentNameFromWhatsappCallSender } from "@/lib/whatsapp-call-chat";
 import { prettifyChatMessageBody } from "@/lib/whatsapp-outbound-template-label";
 
 import type {
@@ -509,6 +510,13 @@ export function toMessageBubble(
   const prettyContent = prettifyChatMessageBody(dto.content ?? "");
   const btnParsed = !formParsed ? parseInteractiveButtons(prettyContent) : null;
 
+  const isCallRec =
+    String(dto.messageType ?? "").toLowerCase() === "whatsapp_call_recording";
+  const callAgentName = isCallRec
+    ? agentNameFromWhatsappCallSender(dto.senderName)
+    : "";
+  const outboundSenderName = callAgentName || dto.senderName || undefined;
+
   return {
     id: dto.id,
     content: formParsed ? "" : (btnParsed?.text ?? dto.content ?? ""),
@@ -521,14 +529,14 @@ export function toMessageBubble(
     // injetam `agentInitials` (ex.: aba Conversa do deal detail).
     senderInitials: isInbound
       ? avatarInitials(contactName)
-      : !isBot && dto.senderName
-        ? avatarInitials(dto.senderName)
+      : !isBot && outboundSenderName
+        ? avatarInitials(outboundSenderName)
         : undefined,
     // Nome completo do remetente — exibido como tooltip no avatar e rótulo
     // abaixo da bolha outgoing para identificar agente ou automação.
     // Campanha: mantém o valor original ("Campanha: {nome}"); a UI usa
     // `campaignName` no destaque.
-    senderName: !isInbound && dto.senderName ? dto.senderName : undefined,
+    senderName: !isInbound && outboundSenderName ? outboundSenderName : undefined,
     senderUserId: dto.senderUserId ?? undefined,
     // Foto do agente remetente (resolvida no backend). Só outbound humano.
     senderImageUrl: !isInbound && !isBot ? (dto.senderImageUrl ?? undefined) : undefined,

@@ -35,6 +35,7 @@ import {
   IconStar,
   IconStarFilled,
   IconSpeakerphone,
+  IconPhone,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -488,7 +489,15 @@ type TranscriptState =
   | { status: "done"; text: string }
   | { status: "error"; message: string }
 
-function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: boolean }) {
+function AudioPlayer({
+  url,
+  isOutgoing,
+  variant = "voice",
+}: {
+  url: string | null
+  isOutgoing: boolean
+  variant?: "voice" | "call"
+}) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
   const [current, setCurrent] = useState(0)
@@ -621,13 +630,26 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
     ? "bg-current/10 hover:bg-current/15"
     : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20"
 
+  const isCall = variant === "call"
+
   return (
     <div
       className={cn(
         "flex w-[min(320px,74vw)] flex-col gap-1 py-0.5",
         transcript.status === "done" ? "pb-2" : "pb-1",
+        isCall &&
+          "rounded-lg border border-white/20 bg-black/[0.08] px-2 py-1.5 dark:border-white/10",
       )}
     >
+      {isCall ? (
+        <p className={cn(
+          "flex items-center gap-1 font-display text-[9px] font-bold uppercase tracking-wider",
+          isOutgoing ? "text-current/70" : "text-[var(--text-muted)]",
+        )}>
+          <IconPhone size={10} />
+          Ligação WhatsApp
+        </p>
+      ) : null}
       {url && <audio ref={audioRef} src={url} preload="none" aria-hidden="true" />}
 
       <div className="flex items-center gap-2">
@@ -638,9 +660,13 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
           aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
           className={cn(
             "flex size-8 shrink-0 items-center justify-center rounded-full shadow-sm transition-all active:scale-95",
-            isOutgoing
-              ? "bg-current/15 hover:bg-current/20"
-              : "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-dark)]",
+            isCall
+              ? isOutgoing
+                ? "bg-white/20 hover:bg-white/25"
+                : "bg-emerald-600 text-white hover:bg-emerald-700"
+              : isOutgoing
+                ? "bg-current/15 hover:bg-current/20"
+                : "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-dark)]",
             !url && "cursor-not-allowed opacity-40",
           )}
         >
@@ -686,7 +712,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
         </button>
       </div>
 
-      {url && transcript.status !== "done" && (
+      {url && !isCall && transcript.status !== "done" && (
         <button
           type="button"
           disabled={transcript.status === "loading"}
@@ -792,7 +818,15 @@ function MessageContent({
 
   // ── Áudio / voz / PTT ──────────────────────────────────────────
   if (kind === "audio") {
-    return <AudioPlayer url={url} isOutgoing={isOutgoing} />
+    const isCallRec =
+      String(message.messageType ?? "").toLowerCase() === "whatsapp_call_recording"
+    return (
+      <AudioPlayer
+        url={url}
+        isOutgoing={isOutgoing}
+        variant={isCallRec ? "call" : "voice"}
+      />
+    )
   }
 
   // ── Imagem / sticker ───────────────────────────────────────────
@@ -1346,22 +1380,26 @@ export function MessageBubble({
     (callType === "whatsapp_call_recording" && !message.mediaUrl)
   if (isVoiceCallEvent) {
     const inbound = message.type === "incoming"
-    const missed = /n[ãa]o atendida/i.test(message.content ?? "")
-    const [title, ...rest] = (message.content ?? "").split(" · ")
-    const detail = rest.join(" · ").trim()
+    const body = message.content ?? ""
+    const missed = /n[ãa]o atendida|falhou/i.test(body)
+    const ended = /\bfim\b|encerrada/i.test(body)
     const fallback =
       callType === "sip_call"
         ? inbound
           ? "Ligação recebida"
           : "Ligação realizada"
         : inbound
-          ? "Chamada WhatsApp recebida"
-          : "Chamada WhatsApp"
+          ? "Chamada recebida pelo WhatsApp"
+          : missed
+            ? "Chamada WhatsApp não completada"
+            : ended
+              ? "Chamada WhatsApp encerrada"
+              : "Chamada realizada pelo WhatsApp"
     return (
       <EventRow
         icon={missed ? PhoneOff : inbound ? PhoneIncoming : PhoneOutgoing}
-        text={title || fallback}
-        actor={detail}
+        text={fallback}
+        actor=""
         time={message.time}
         className={className}
       />

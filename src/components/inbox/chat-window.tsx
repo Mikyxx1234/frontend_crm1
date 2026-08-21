@@ -1903,7 +1903,7 @@ export function ChatWindow({
           senderLabel={audioSenderLabel}
           isUploading={isUploading}
           onRegisterTranscribe={
-            isUploading
+            isUploading || isCallRec
               ? undefined
               : (handler) => {
                   if (handler) audioTranscribeRefs.current.set(msgId, handler);
@@ -2580,7 +2580,10 @@ export function ChatWindow({
                                 <Share2 className="size-3.5 shrink-0 opacity-70" />
                                 Encaminhar…
                               </DropdownMenuItem>
-                              {detectMediaKind(m) === "audio" && m.mediaUrl ? (
+                              {detectMediaKind(m) === "audio" &&
+                              m.mediaUrl &&
+                              String(m.messageType ?? "").toLowerCase() !==
+                                "whatsapp_call_recording" ? (
                                 <DropdownMenuItem
                                   className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
                                   onClick={() =>
@@ -4672,10 +4675,12 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
   const senderSuggestsIncoming = senderName === "WhatsApp";
   // Heurística adicional pelo conteúdo (fallback p/ histórico legado:
   // strings antigas tinham `· agente: X` antes de 2026-04-18).
-  const contentSuggestsIncoming = lower.includes("entrada");
+  const contentSuggestsIncoming =
+    lower.includes("entrada") || lower.includes("recebida pelo whatsapp");
   const contentSuggestsOutgoing =
     lower.includes("saída") ||
     lower.includes("saida") ||
+    lower.includes("realizada pelo whatsapp") ||
     lower.includes("agente:");
   const isOutgoing =
     message.direction === "out" ||
@@ -4686,7 +4691,7 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
     (message.direction !== "out" &&
       !isOutgoing &&
       (senderSuggestsIncoming || contentSuggestsIncoming));
-  const isTerminate = lower.includes("fim");
+  const isTerminate = lower.includes("fim") || lower.includes("encerrada");
   const isFailed = lower.includes("falhou") || /n[ãa]o atendida/i.test(content);
 
   // Nome do agente exibido como linha discreta abaixo do título quando
@@ -4721,17 +4726,17 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
         : "Ligação realizada"
     : null;
   const label = hasRecording && !isSip
-    ? "Gravação de chamada"
+    ? "Gravação da ligação WhatsApp"
     : sipLabel
       ? sipLabel
       : isTerminate
         ? isFailed
-          ? "Chamada não completada"
-          : "Chamada finalizada"
+          ? "Chamada WhatsApp não completada"
+          : "Chamada WhatsApp encerrada"
         : isIncoming
-          ? "Chamada recebida"
+          ? "Chamada recebida pelo WhatsApp"
           : isOutgoing
-            ? "Chamada realizada"
+            ? "Chamada realizada pelo WhatsApp"
             : "Evento de chamada";
 
   const accent = isFailed

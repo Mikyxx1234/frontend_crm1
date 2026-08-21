@@ -118,6 +118,10 @@ interface ConversationColumnProps {
   onRefresh?: () => void
   /** true enquanto a atualização manual da fila está em curso (gira o ícone). */
   isRefreshing?: boolean
+  /**
+   * Quando a busca pinna um card no topo, volta o scroll da lista.
+   */
+  scrollToTopKey?: string
 }
 
 const DEFAULT_TABS: TabItem[] = [
@@ -216,12 +220,18 @@ export function ConversationColumn({
   bulkActionsSlot,
   onRefresh,
   isRefreshing = false,
+  scrollToTopKey,
 }: ConversationColumnProps) {
   // Sentinela invisível no fim da lista. Quando entra no viewport
   // (com 200px de margem), dispara `onLoadMore`. IntersectionObserver
   // é a forma mais confiável — onScroll perde frame em listas longas
   // e tem que recalcular thresholds manualmente.
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const listScrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!scrollToTopKey) return
+    listScrollRef.current?.scrollTo({ top: 0 })
+  }, [scrollToTopKey])
   useEffect(() => {
     if (!onLoadMore || !hasMore) return
     const el = sentinelRef.current
@@ -539,7 +549,10 @@ export function ConversationColumn({
           clipa o anel no topo/lados — sem padding o 1º card perde a borda. */}
       {/* Scroller NÃO é flex-col: filhos diretos em flex-col + overflow-y
           encolhem (flex-shrink:1) e viram barras cinza. Espelho do DealQueue. */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5 [-webkit-overflow-scrolling:touch]">
+      <div
+        ref={listScrollRef}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5 [-webkit-overflow-scrolling:touch]"
+      >
         <div className="flex flex-col gap-1.5">
         {isLoading ? (
           <AppLoading variant="inline" className="min-h-[280px]" />

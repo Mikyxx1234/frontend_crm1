@@ -51,6 +51,14 @@ import { cn } from "@/lib/utils";
 import { formatPhoneDisplay, normalizePhone } from "@/lib/phone";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
 import { AVATAR_SIZE } from "@/lib/avatar";
+import {
+  OmnisearchHitAvatar,
+  OmnisearchHitButton,
+  OmnisearchResultsPanel,
+  OmnisearchSection,
+} from "@/components/crm/omnisearch-results";
+import { useOmnisearchMenu } from "@/components/crm/use-omnisearch-menu";
+import { useCompaniesOmnisearch } from "@/features/directory-v2/use-directory-omnisearch";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   dateRangeFromPreset,
@@ -247,6 +255,7 @@ export default function V2CompaniesClientPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
   const [editing, setEditing] = useState<CompanyListItemDto | null>(null);
+  const [pinnedFromSearch, setPinnedFromSearch] = useState<CompanyListItemDto | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const deleteMut = useDeleteCompany();
@@ -330,16 +339,20 @@ export default function V2CompaniesClientPage() {
     enabled: isAuthenticated,
   });
   const items = query.data?.items ?? [];
+  const displayItems = useMemo(() => {
+    if (!pinnedFromSearch) return items;
+    return [pinnedFromSearch, ...items.filter((c) => c.id !== pinnedFromSearch.id)];
+  }, [items, pinnedFromSearch]);
   const total = query.data?.total ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / perPage));
-  const allChecked = items.length > 0 && items.every((c) => selected.has(c.id));
-  const someChecked = items.some((c) => selected.has(c.id));
+  const allChecked = displayItems.length > 0 && displayItems.every((c) => selected.has(c.id));
+  const someChecked = displayItems.some((c) => selected.has(c.id));
 
   function toggleAll() {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allChecked) items.forEach((c) => next.delete(c.id));
-      else items.forEach((c) => next.add(c.id));
+      if (allChecked) displayItems.forEach((c) => next.delete(c.id));
+      else displayItems.forEach((c) => next.add(c.id));
       return next;
     });
   }
@@ -378,6 +391,17 @@ export default function V2CompaniesClientPage() {
 
   const isLoading = query.isLoading && items.length === 0;
 
+  function requestEdit(c: CompanyListItemDto) {
+    if (pinnedFromSearch && pinnedFromSearch.id !== c.id) setPinnedFromSearch(null);
+    setEditing(c);
+  }
+
+  function handlePickSearchCompany(c: CompanyListItemDto) {
+    setPinnedFromSearch(c);
+    setSearch("");
+    setEditing(c);
+  }
+
   return (
     <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailSpacer />
@@ -401,6 +425,7 @@ export default function V2CompaniesClientPage() {
                 industryFilter={filterIndustry}
                 activeCount={activeFilterCount}
                 onClear={clearPanelFilters}
+                onPick={handlePickSearchCompany}
                 onApply={(next) => {
                   setSortBy(next.sortBy);
                   setSortOrder(next.sortOrder);
@@ -497,7 +522,7 @@ export default function V2CompaniesClientPage() {
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
             {query.error instanceof Error ? query.error.message : "Erro ao carregar."}
           </div>
-        ) : items.length === 0 ? (
+        ) : displayItems.length === 0 ? (
           <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
             <EmptyState
               icon={<IconBuilding size={28} />}
@@ -513,7 +538,7 @@ export default function V2CompaniesClientPage() {
           </div>
         ) : view === "tabela" ? (
           <TabelaView
-            items={items}
+            items={displayItems}
             selected={selected}
             allChecked={allChecked}
             someChecked={someChecked}
@@ -525,11 +550,11 @@ export default function V2CompaniesClientPage() {
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSort={toggleSort}
-            onEdit={setEditing}
+            onEdit={requestEdit}
           />
         ) : (
           <CardsView
-            items={items}
+            items={displayItems}
             selected={selected}
             allChecked={allChecked}
             someChecked={someChecked}
@@ -541,7 +566,7 @@ export default function V2CompaniesClientPage() {
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSort={toggleSort}
-            onEdit={setEditing}
+            onEdit={requestEdit}
           />
         )}
 
@@ -586,7 +611,7 @@ function SearchFilterBar({
   search, onSearch, facets,
   sortBy, sortOrder, createdFrom, createdTo,
   stateFilter, cityFilter, industryFilter,
-  activeCount, onClear, onApply,
+  activeCount, onClear, onApply, onPick,
 }: {
   search: string;
   onSearch: (v: string) => void;
@@ -601,6 +626,7 @@ function SearchFilterBar({
   activeCount: number;
   onClear: () => void;
   onApply: (next: CompanyFilterDraft) => void;
+  onPick?: (c: CompanyListItemDto) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<FilterPanelTab>("ordenar");
@@ -609,6 +635,13 @@ function SearchFilterBar({
     state: stateFilter, city: cityFilter, industry: industryFilter,
   });
   const ref = useRef<HTMLDivElement>(null);
+  const hits = useCompaniesOmnisearch(search, search.trim().length >= 3);
+  const menu = useOmnisearchMenu(search, hits.items.length);
+
+  function pickCompany(c: CompanyListItemDto) {
+    onPick?.(c);
+    menu.close();
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -665,19 +698,72 @@ function SearchFilterBar({
 
   return (
     <div ref={ref} className="relative w-full">
+      <div ref={menu.wrapRef}>
       <IconSearch size={15} className="absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]" />
       <input
         type="search"
         value={search}
         onChange={(e) => onSearch(e.target.value)}
-        onFocus={() => setOpen(true)}
+        onFocus={() => menu.setFocused(true)}
+        onKeyDown={(e) =>
+          menu.onInputKeyDown(e, () => {
+            const c = hits.items[menu.activeIndex] ?? hits.items[0];
+            if (c) pickCompany(c);
+          })
+        }
         placeholder="Pesquisar e filtrar..."
         aria-label="Buscar e filtrar empresas"
         className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-24 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
       />
+      </div>
+      {menu.showHits && menu.coords && typeof document !== "undefined" && (
+        <OmnisearchResultsPanel
+          coords={menu.coords}
+          loading={hits.isLoading || hits.waitingDebounce}
+          query={hits.query || search.trim()}
+          empty={hits.items.length === 0}
+          total={hits.items.length}
+          onSeeAll={menu.close}
+        >
+          <OmnisearchSection icon={<IconBuilding size={13} />} label="Empresas" count={hits.items.length}>
+            {hits.items.map((c, i) => (
+              <OmnisearchHitButton
+                key={c.id}
+                active={i === menu.activeIndex}
+                onHover={() => menu.setActiveIndex(i)}
+                onClick={() => pickCompany(c)}
+              >
+                <OmnisearchHitAvatar
+                  id={c.id}
+                  name={c.name}
+                  overlay={<IconBuilding size={10} />}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex min-w-0 items-baseline gap-1.5">
+                    <span className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                      {c.name}
+                    </span>
+                    {c.number != null && (
+                      <span className="shrink-0 font-body text-[12px] tabular-nums text-[var(--text-muted)]">
+                        #{c.number}
+                      </span>
+                    )}
+                  </span>
+                  <span className="mt-0.5 truncate font-body text-[12px] text-[var(--text-secondary)]">
+                    {c.domain || c.city || c.industry || "Abrir empresa"}
+                  </span>
+                </span>
+              </OmnisearchHitButton>
+            ))}
+          </OmnisearchSection>
+        </OmnisearchResultsPanel>
+      )}
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          menu.close();
+          setOpen((o) => !o);
+        }}
         aria-label="Filtros"
         className={cn(
           "absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center gap-1.5 rounded-full px-2.5 transition-colors",

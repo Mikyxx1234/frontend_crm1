@@ -871,6 +871,8 @@ export default function KanbanV2ClientPage({
               optionsLoading={filterOptionsLoading}
               sortKey={sortKey}
               onSortKeyChange={(k) => setSortKey(k)}
+              pipelineId={pipelineId}
+              onPickDeal={(deal) => setActiveDeal(deal.id, deal.number)}
             />
           }
           menuSlot={

@@ -28,6 +28,9 @@ import { cn } from "@/lib/utils";
 import { FilterSearchTrigger } from "@/components/crm/filter-search-trigger";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { TagChip } from "@/components/crm/tag-chip";
+import { SEARCH_MIN_CHARS } from "@/lib/search-query";
+import { useInboxOmnisearch } from "../hooks/use-inbox-omnisearch";
+import { InboxSearchResultsPanel } from "./inbox-search-results";
 import { UserAvatar } from "@/components/crm/user-avatar";
 import { ModalPortalContext } from "@/components/ui/modal-portal-context";
 import {
@@ -69,6 +72,8 @@ interface InboxSearchFilterBarProps {
   onChangeFilters: (next: InboxFilters) => void;
   placeholder?: string;
   className?: string;
+  onPickConversation?: (id: string) => void;
+  onPickDeal?: (id: string) => void;
 }
 
 const CHANNEL_TYPE_LABELS: Record<string, string> = {
@@ -449,9 +454,76 @@ export function InboxSearchFilterBar({
   onChangeFilters,
   placeholder = "Pesquisar e filtrar...",
   className,
+  onPickConversation,
+  onPickDeal,
 }: InboxSearchFilterBarProps) {
   const [open, setOpen] = React.useState(false);
+  const [focused, setFocused] = React.useState(false);
+  const [coords, setCoords] = React.useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
+  const wrapRef = React.useRef<HTMLDivElement>(null);
   const activeCount = countActive(filters);
+  const showHits = focused && search.trim().length >= SEARCH_MIN_CHARS;
+  const hits = useInboxOmnisearch(search, showHits);
+
+  const updateCoords = React.useCallback(() => {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const width = Math.max(rect.width, 280);
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+    setCoords({
+      top: Math.min(rect.bottom + 6, window.innerHeight - 8),
+      left,
+      width: rect.width,
+    });
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (!showHits) {
+      setCoords(null);
+      return;
+    }
+    updateCoords();
+  }, [showHits, search, hits.conversations.length, hits.deals.length, updateCoords]);
+
+  React.useEffect(() => {
+    if (!showHits) return;
+    function onDown(e: PointerEvent) {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (wrapRef.current?.contains(target)) return;
+      if ((target as HTMLElement).closest?.("[data-inbox-search-results]")) return;
+      setFocused(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setFocused(false);
+    }
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", updateCoords, { passive: true });
+    window.addEventListener("scroll", updateCoords, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", updateCoords);
+      window.removeEventListener("scroll", updateCoords, true);
+    };
+  }, [showHits, updateCoords]);
+
+  function pickConversation(id: string) {
+    onPickConversation?.(id);
+    onSearch("");
+    setFocused(false);
+  }
+
+  function pickDeal(id: string) {
+    onPickDeal?.(id);
+    onSearch("");
+    setFocused(false);
+  }
 
   // Chips de filtros ativos ficam ABAIXO da pill de busca (mesma UX do
   // Pipeline v2 — ver `FilterChips` em kanban-filters + render em
@@ -460,16 +532,44 @@ export function InboxSearchFilterBar({
   // ativos sem reabrir o modal.
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <FilterSearchTrigger
-        search={search}
-        onSearch={onSearch}
-        onOpenFilters={() => setOpen(true)}
-        filtersOpen={open}
-        activeCount={activeCount}
-        placeholder={placeholder}
-        ariaLabel="Buscar e filtrar conversas"
-        tooltipLabel="Filtrar conversas"
-      />
+      <div ref={wrapRef}>
+        <FilterSearchTrigger
+          search={search}
+          onSearch={onSearch}
+          onFocus={() => setFocused(true)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || !showHits) return;
+            e.preventDefault();
+            const firstConv = hits.conversations[0];
+            if (firstConv) {
+              pickConversation(firstConv.id);
+              return;
+            }
+            const firstDeal = hits.deals[0];
+            if (firstDeal) pickDeal(firstDeal.id);
+          }}
+          onOpenFilters={() => {
+            setOpen(true);
+            setFocused(false);
+          }}
+          filtersOpen={open}
+          activeCount={activeCount}
+          placeholder={placeholder}
+          ariaLabel="Buscar conversas e negócios"
+          tooltipLabel="Filtrar conversas"
+        />
+      </div>
+      {showHits && coords && typeof document !== "undefined" && (
+        <InboxSearchResultsPanel
+          coords={coords}
+          loading={hits.isLoading || hits.waitingDebounce}
+          query={hits.query || search.trim()}
+          conversations={hits.conversations}
+          deals={hits.deals}
+          onPickConversation={pickConversation}
+          onPickDeal={pickDeal}
+        />
+      )}
       {activeCount > 0 && (
         <InboxActiveFilterChips
           filters={filters}

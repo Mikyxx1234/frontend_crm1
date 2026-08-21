@@ -25,6 +25,8 @@ export type FilterSearchTriggerProps = {
   /** Tooltip glass (Inbox). Sem isto, usa `title` nativo como no Kanban. */
   tooltipLabel?: string;
   className?: string;
+  onFocus?: () => void;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
 };
 
 export function FilterSearchTrigger({
@@ -37,6 +39,8 @@ export function FilterSearchTrigger({
   ariaLabel,
   tooltipLabel,
   className,
+  onFocus,
+  onKeyDown,
 }: FilterSearchTriggerProps) {
   const filterAria =
     activeCount > 0 ? `Filtros (${activeCount} ativos)` : "Filtros";
@@ -81,7 +85,10 @@ export function FilterSearchTrigger({
       <input
         type="search"
         value={search}
+        autoComplete="off"
         onChange={(e) => onSearch(e.target.value)}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         aria-label={ariaLabel ?? placeholder}
         // pr-24 (~96px) reserva espaço pro pill "Filtrar" (com contador

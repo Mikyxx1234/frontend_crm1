@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconAlertTriangle, IconBrandWhatsapp, IconX } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconCopy,
+  IconFileText,
+  IconSend,
+} from "@tabler/icons-react";
 
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { InputGlass } from "@/components/crm/input-glass";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { FormDialog } from "@/components/ui/form-dialog";
 import {
   listAgentEnabledTemplates,
   sendTemplate,
@@ -15,31 +21,20 @@ import {
 } from "@/features/inbox-v2/api";
 import { emitConversationReopened, messagesKey, useMessages } from "@/features/inbox-v2/hooks";
 import type { InboxMessageDto } from "@/features/inbox-v2/api/types";
+import { cn } from "@/lib/utils";
 
-/* ─────────────────────────────────────────────────────────────
-   Detecção de envio anterior de template nesta conversa
-───────────────────────────────────────────────────────────── */
+type CategoryFilter = "all" | "UTILITY" | "MARKETING";
 
 interface PriorSend {
-  sentAt: string; // ISO
-  author: string; // "Automação" ou nome do agente
-  repliedAt?: string; // ISO — se o lead respondeu depois
+  sentAt: string;
+  author: string;
+  repliedAt?: string;
 }
 
-/**
- * Para um nome de template (ex.: "form__quali_estag_em"), procura nas
- * mensagens da conversa se ele já foi enviado antes.
- * A detecção usa o padrão de conteúdo que o backend grava:
- *   `📋 *<nome>*` ou `*<nome>*:`
- */
-function usePriorSend(
-  conversationId: string | null,
-  templateName: string,
-): PriorSend | null {
+function usePriorSend(conversationId: string | null, templateName: string): PriorSend | null {
   const { data } = useMessages(conversationId);
   return useMemo(() => {
     const msgs = data?.messages ?? [];
-    // Último OUT com este template
     const outMatch = [...msgs]
       .reverse()
       .find(
@@ -57,8 +52,6 @@ function usePriorSend(
       outMatch.senderName === "Automação" || !outMatch.senderName
         ? "Automação"
         : outMatch.senderName;
-
-    // Houve resposta IN interativa/form após esse envio?
     const repliedMsg = msgs.find(
       (m: InboxMessageDto) =>
         m.direction === "in" &&
@@ -66,25 +59,18 @@ function usePriorSend(
           (m.content ?? "").includes("Resposta do formulário")) &&
         m.createdAt > sentAt,
     );
-
     return { sentAt, author, repliedAt: repliedMsg?.createdAt };
   }, [data?.messages, templateName]);
 }
 
-/**
- * Metadados visuais da categoria WABA (MARKETING / UTILITY / AUTHENTICATION).
- * A categoria define regras de cobrança/janela da Meta, então é informação
- * relevante pro operador na hora de escolher o template.
- */
-function categoryMeta(category?: string | null): { label: string; color: string } | null {
+function categoryMeta(category?: string | null): { id: "UTILITY" | "MARKETING" | "AUTHENTICATION"; label: string; color: string } | null {
   const c = (category ?? "").toUpperCase();
-  if (c === "MARKETING") return { label: "Marketing", color: "#a855f7" };
-  if (c === "UTILITY") return { label: "Utility", color: "#0ea5e9" };
-  if (c === "AUTHENTICATION") return { label: "Autenticação", color: "#f59e0b" };
+  if (c === "MARKETING") return { id: "MARKETING", label: "Marketing", color: "#a855f7" };
+  if (c === "UTILITY") return { id: "UTILITY", label: "Utilidade", color: "#0ea5e9" };
+  if (c === "AUTHENTICATION") return { id: "AUTHENTICATION", label: "Autenticação", color: "#f59e0b" };
   return null;
 }
 
-/** Chip da categoria — cor derivada via color-mix pra manter o padrão glass. */
 function CategoryChip({ category }: { category?: string | null }) {
   const meta = categoryMeta(category);
   if (!meta) return null;
@@ -98,12 +84,11 @@ function CategoryChip({ category }: { category?: string | null }) {
       }}
       title={`Categoria WhatsApp: ${meta.label}`}
     >
-      {meta.label}
+      {meta.id === "UTILITY" ? "UTILITY" : meta.id}
     </span>
   );
 }
 
-/** Formata data ISO para "dd/MM HH:mm" (horário local). */
 function fmtDate(iso: string): string {
   try {
     const d = new Date(iso);
@@ -117,345 +102,334 @@ function fmtDate(iso: string): string {
   }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Botão de template com confirmação de reenvio inline
-───────────────────────────────────────────────────────────── */
+function matchesQuery(tpl: WhatsappTemplate, q: string) {
+  if (!q) return true;
+  const hay = `${tpl.name} ${tpl.metaTemplateName ?? ""} ${tpl.body ?? ""}`.toLowerCase();
+  return hay.includes(q);
+}
 
-function TemplateItemWithConfirm({
+function TemplateCard({
   tpl,
   conversationId,
-  onSend,
-  onPick,
-  isPending,
+  selected,
+  onSelect,
 }: {
   tpl: WhatsappTemplate;
   conversationId: string;
-  onSend: () => void;
-  /** Quando fornecido, clicar SELECIONA o template (abre painel de validação)
-   * em vez de enviar direto — a confirmação de reenvio passa a ser o painel. */
-  onPick?: () => void;
-  isPending: boolean;
+  selected: boolean;
+  onSelect: () => void;
 }) {
-  const [confirming, setConfirming] = useState(false);
-  // O backend grava o nome canônico WABA (metaTemplateName) no conteúdo
-  // da mensagem out — `tpl.name` pode ser o label (rótulo de exibição).
-  // Fallback pra `tpl.name` mantém compat se o adapter não preencheu.
   const prior = usePriorSend(conversationId, tpl.metaTemplateName ?? tpl.name);
-
-  if (confirming && prior) {
-    return (
-      <div className="rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_8%,transparent)] px-2.5 py-2.5">
-        <div className="mb-2 flex items-start gap-1.5">
-          <IconAlertTriangle size={14} className="mt-px shrink-0 text-[var(--color-warn)]" />
-          <p className="text-[11.5px] leading-snug text-[var(--text-primary)]">
-            <span className="font-semibold">&ldquo;{tpl.name}&rdquo;</span> já
-            foi enviado por{" "}
-            <span className="font-semibold">{prior.author}</span> em{" "}
-            {fmtDate(prior.sentAt)}
-            {prior.repliedAt && (
-              <> e <span className="font-semibold">já foi respondido</span> em {fmtDate(prior.repliedAt)}</>
-            )}
-            . Reenviar mesmo assim?
-          </p>
-          <button
-            type="button"
-            onClick={() => setConfirming(false)}
-            className="ml-auto shrink-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-          >
-            <IconX size={13} />
-          </button>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => {
-              setConfirming(false);
-              onSend();
-            }}
-            className="rounded-full bg-[var(--color-warning)] px-3 py-1 text-[11.5px] font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
-          >
-            Reenviar
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirming(false)}
-            className="rounded-full px-3 py-1 text-[11.5px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <button
       type="button"
-      disabled={isPending}
-      onClick={() => {
-        // Com `onPick`, o painel de validação é o próprio passo de confirmação
-        // — não exibimos o confirm inline de reenvio aqui.
-        if (onPick) {
-          onPick();
-        } else if (prior) {
-          setConfirming(true);
-        } else {
-          onSend();
-        }
-      }}
-      className="block w-full rounded-[var(--radius-md)] border border-transparent px-2.5 py-2 text-left transition-colors hover:border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
+      onClick={onSelect}
+      className={cn(
+        "w-full rounded-[var(--radius-lg)] border px-3.5 py-3 text-left transition-colors",
+        selected
+          ? "border-[var(--brand-primary)]/45 bg-[var(--brand-primary)]/[0.06]"
+          : "border-[var(--glass-border)] bg-[var(--glass-bg-modal)] hover:border-[var(--brand-primary)]/30",
+      )}
     >
-      <div className="flex items-center gap-1.5">
-        <span className="min-w-0 flex-1 truncate font-display text-[12.5px] font-bold text-[var(--text-primary)]">
-          {tpl.name}
-        </span>
-        <CategoryChip category={tpl.category} />
-        {tpl.language && (
-          <span className="shrink-0 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            {tpl.language}
-          </span>
-        )}
-        {prior && (
-          <TooltipGlass
-            label={`Enviado por ${prior.author} em ${fmtDate(prior.sentAt)}${prior.repliedAt ? " · Respondido" : ""}`}
-            side="top"
-          >
-            <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--color-warning)_20%,transparent)] px-1.5 py-px text-[9.5px] font-semibold text-[var(--color-warning)]">
-              {prior.repliedAt ? "respondido" : "enviado"}
+      <div className="flex items-start gap-2.5">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="min-w-0 truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+              {tpl.name}
             </span>
-          </TooltipGlass>
-        )}
-      </div>
-      {tpl.body ? (
-        <div className="mt-1 line-clamp-2 text-[11.5px] leading-relaxed text-[var(--text-muted)]">
-          {tpl.body}
+            <CategoryChip category={tpl.category} />
+            {tpl.language ? (
+              <span className="shrink-0 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                {tpl.language}
+              </span>
+            ) : null}
+            {prior ? (
+              <TooltipGlass
+                label={`Enviado por ${prior.author} em ${fmtDate(prior.sentAt)}${prior.repliedAt ? " · Respondido" : ""}`}
+                side="top"
+              >
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-[color-mix(in_srgb,var(--color-warning)_20%,transparent)] px-1.5 py-px text-[9.5px] font-semibold text-[var(--color-warning)]">
+                  <IconAlertTriangle size={10} />
+                  {prior.repliedAt ? "respondido" : "enviado"}
+                </span>
+              </TooltipGlass>
+            ) : null}
+          </div>
+          {tpl.body ? (
+            <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-[var(--text-muted)]">
+              {tpl.body}
+            </p>
+          ) : null}
         </div>
-      ) : null}
+        <span
+          className={cn(
+            "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border-2",
+            selected ? "border-[var(--brand-primary)]" : "border-[var(--text-muted)]/35",
+          )}
+          aria-hidden
+        >
+          {selected ? <span className="size-2 rounded-full bg-[var(--brand-primary)]" /> : null}
+        </span>
+      </div>
     </button>
   );
 }
 
 /**
- * Lista templates WhatsApp habilitados para o agente e dispara
- * `sendTemplate` ao clicar. Mostra badge "enviado/respondido" quando
- * o template já foi usado nesta conversa, com confirm antes de reenviar.
+ * Lista pesquisável de templates WhatsApp (corpo do modal).
  */
 export function TemplatePickerList({
   conversationId,
   channelId,
-  onClose,
-  onPick,
+  selectedId,
+  onSelect,
+  query,
+  onQueryChange,
+  category,
+  onCategoryChange,
 }: {
   conversationId: string;
-  /** Canal Cloud API de envio — filtra templates da WABA correta. */
   channelId?: string | null;
-  onClose?: () => void;
-  /**
-   * Quando fornecido, clicar no template ABRE o painel de validação no
-   * composer (corpo travado + variáveis) em vez de enviar na hora.
-   */
-  onPick?: (tpl: WhatsappTemplate) => void;
+  selectedId: string | null;
+  onSelect: (tpl: WhatsappTemplate) => void;
+  query: string;
+  onQueryChange: (q: string) => void;
+  category: CategoryFilter;
+  onCategoryChange: (c: CategoryFilter) => void;
 }) {
-  const qc = useQueryClient();
   const { data, isLoading, error, isError } = useQuery<WhatsappTemplate[]>({
     queryKey: ["whatsapp-templates", "agent-enabled", channelId ?? "default"],
-    queryFn: async () => {
-      const items = await listAgentEnabledTemplates(channelId);
-      // Diagnóstico: logamos quantos templates voltaram. Útil quando o
-      // operador relata "modal vazia": confirma se backend retornou lista
-      // (sinal de `agentEnabled=false` em todos) ou se a chamada falhou
-      // antes mesmo de montar a UI.
-      console.info("[templates] agent-enabled returned", items?.length ?? 0, "items");
-      return items;
-    },
+    queryFn: () => listAgentEnabledTemplates(channelId),
     staleTime: 5 * 60_000,
     retry: 1,
   });
 
-  if (isError) {
-    console.error("[templates] agent-enabled fetch failed", error);
-  }
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (data ?? []).filter((tpl) => {
+      if (category !== "all" && (tpl.category ?? "").toUpperCase() !== category) return false;
+      return matchesQuery(tpl, q);
+    });
+  }, [data, query, category]);
 
-  const sendMutation = useMutation({
-    mutationFn: (tpl: WhatsappTemplate) =>
-      sendTemplate(conversationId, {
-        // O backend espera o nome canônico WABA em `templateName`. Quando
-        // `metaTemplateName` está disponível (caminho normal), preferimos
-        // ele — `tpl.name` pode ter sido derivado do `label`, que é só
-        // exibição e não casa com o template aprovado na Graph.
-        templateName: tpl.metaTemplateName ?? tpl.name,
-        bodyPreview: tpl.body,
-        languageCode: tpl.language ?? "pt_BR",
-        // Garante que o backend mapeie pro template correto na Graph
-        // mesmo quando há ambiguidade de nome entre orgs.
-        templateGraphId: tpl.metaTemplateId ?? null,
-      }),
-    onSuccess: (data) => {
-      toast.success("Template enviado");
-      qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
-      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
-      // Conversa encerrada reaberta como novo ticket → troca o chat ativo.
-      if (data.reopenedConversationId) {
-        qc.invalidateQueries({ queryKey: messagesKey(data.reopenedConversationId) });
-        emitConversationReopened(data.reopenedConversationId);
-      }
-      onClose?.();
-    },
-    onError: (err: Error) =>
-      toast.error(err.message || "Falha ao enviar template"),
-  });
+  const chips: { id: CategoryFilter; label: string }[] = [
+    { id: "all", label: "Todos" },
+    { id: "UTILITY", label: "Utilidade" },
+    { id: "MARKETING", label: "Marketing" },
+  ];
 
   return (
-    <div
-      style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
-      className="flex max-h-[70vh] w-[400px] max-w-[92vw] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
-    >
-      {/* Header padronizado: ícone WhatsApp + título + contador + fechar */}
-      <div className="flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] px-4 py-3">
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,#25d366_16%,white)] text-[#128c4a]">
-          <IconBrandWhatsapp size={17} stroke={2} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-            Templates do WhatsApp
-          </p>
-          <p className="text-[11px] text-[var(--text-muted)]">
-            {data?.length
-              ? `${data.length} ${data.length === 1 ? "modelo aprovado" : "modelos aprovados"}`
-              : "Modelos aprovados pela Meta"}
-          </p>
-        </div>
-        {onClose ? (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="grid size-7 shrink-0 place-items-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-          >
-            <IconX size={15} />
-          </button>
-        ) : null}
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <InputGlass
+        withSearch
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        placeholder="Buscar por nome ou conteúdo..."
+      />
+      <div className="flex flex-wrap gap-1.5">
+        {chips.map((chip) => {
+          const on = category === chip.id;
+          return (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => onCategoryChange(chip.id)}
+              className={cn(
+                "rounded-full px-3 py-1 text-[12px] font-semibold transition-colors",
+                on
+                  ? "bg-[var(--brand-primary)] text-white"
+                  : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+              )}
+            >
+              {chip.label}
+            </button>
+          );
+        })}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
-      {isLoading ? (
-        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
-          Carregando...
-        </div>
-      ) : isError ? (
-        <div className="px-2 py-3 text-center text-xs text-[var(--color-danger)]">
-          Falha ao carregar templates
-          <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-            {(error as Error)?.message ?? "Tente novamente."}
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-0.5">
+        {isLoading ? (
+          <p className="py-6 text-center text-xs text-[var(--text-muted)]">Carregando…</p>
+        ) : isError ? (
+          <div className="py-6 text-center text-xs text-[var(--color-danger)]">
+            Falha ao carregar templates
+            <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+              {(error as Error)?.message ?? "Tente novamente."}
+            </p>
           </div>
-        </div>
-      ) : !data?.length ? (
-        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
-          Nenhum template habilitado para este agente.
-          <div className="mt-1 text-[11px] text-[var(--text-muted)]/70">
-            Habilite em Configurações &gt; Templates do WhatsApp.
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-0.5">
-          {data.map((tpl) => (
-            <TemplateItemWithConfirm
+        ) : !data?.length ? (
+          <p className="py-6 text-center text-xs text-[var(--text-muted)]">
+            Nenhum template habilitado para este agente.
+            <span className="mt-1 block text-[11px] text-[var(--text-muted)]/70">
+              Habilite em Configurações &gt; Templates do WhatsApp.
+            </span>
+          </p>
+        ) : visible.length === 0 ? (
+          <p className="py-6 text-center text-xs text-[var(--text-muted)]">Nenhum modelo nesta busca.</p>
+        ) : (
+          visible.map((tpl) => (
+            <TemplateCard
               key={tpl.id}
               tpl={tpl}
               conversationId={conversationId}
-              onSend={() => sendMutation.mutate(tpl)}
-              onPick={
-                onPick
-                  ? () => {
-                      onPick(tpl);
-                      onClose?.();
-                    }
-                  : undefined
-              }
-              isPending={sendMutation.isPending}
+              selected={selectedId === tpl.id}
+              onSelect={() => onSelect(tpl)}
             />
-          ))}
-        </div>
-      )}
+          ))
+        )}
       </div>
     </div>
   );
 }
 
 /**
- * Modal central do picker de templates WhatsApp — o mesmo card
- * ("Templates do WhatsApp" + ícone verde + N modelos) usado no menu "+"
- * e no CTA de sessão 24h encerrada.
+ * Modal do picker de templates WhatsApp — busca, filtro de categoria,
+ * seleção e rodapé Copiar / Usar template.
  */
 export function WhatsappTemplatePickerModal({
   open,
   onClose,
   conversationId,
   channelId,
+  contactName,
   onPick,
 }: {
   open: boolean;
   onClose: () => void;
   conversationId: string | null;
   channelId?: string | null;
+  contactName?: string | null;
   onPick?: (tpl: WhatsappTemplate) => void;
 }) {
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const qc = useQueryClient();
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<CategoryFilter>("all");
+  const [selected, setSelected] = useState<WhatsappTemplate | null>(null);
+
+  const { data } = useQuery<WhatsappTemplate[]>({
+    queryKey: ["whatsapp-templates", "agent-enabled", channelId ?? "default"],
+    queryFn: () => listAgentEnabledTemplates(channelId),
+    staleTime: 5 * 60_000,
+    enabled: open && !!conversationId,
+  });
 
   useEffect(() => {
-    setPortalTarget(document.body);
-  }, []);
+    if (open) return;
+    setQuery("");
+    setCategory("all");
+    setSelected(null);
+  }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
+  const sendMutation = useMutation({
+    mutationFn: (tpl: WhatsappTemplate) =>
+      sendTemplate(conversationId as string, {
+        templateName: tpl.metaTemplateName ?? tpl.name,
+        bodyPreview: tpl.body,
+        languageCode: tpl.language ?? "pt_BR",
+        templateGraphId: tpl.metaTemplateId ?? null,
+      }),
+    onSuccess: (res) => {
+      toast.success("Template enviado");
+      if (conversationId) {
+        qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
+        qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+        if (res.reopenedConversationId) {
+          qc.invalidateQueries({ queryKey: messagesKey(res.reopenedConversationId) });
+          emitConversationReopened(res.reopenedConversationId);
+        }
       }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+      onClose();
+    },
+    onError: (err: Error) => toast.error(err.message || "Falha ao enviar template"),
+  });
 
-  if (!portalTarget || !conversationId) return null;
+  const count = data?.length ?? 0;
+  const countLabel =
+    count === 1 ? "1 modelo aprovado" : `${count} modelos aprovados`;
+  const who = contactName?.trim();
+  const description = who ? `${countLabel} · enviar para ${who}` : countLabel;
 
-  return createPortal(
-    <AnimatePresence>
-      {open ? (
-        <>
-          <motion.div
-            key="wa-tpl-bg"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            onClick={onClose}
-            className="fixed inset-0 z-70 bg-black/30 backdrop-blur-sm"
-            aria-hidden
-          />
-          <motion.div
-            key="wa-tpl-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Templates do WhatsApp"
-            initial={{ opacity: 0, y: 12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-            className="fixed left-1/2 top-1/2 z-71 -translate-x-1/2 -translate-y-1/2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <TemplatePickerList
-              conversationId={conversationId}
-              channelId={channelId}
-              onClose={onClose}
-              onPick={onPick}
-            />
-          </motion.div>
-        </>
+  function useSelected() {
+    if (!selected) return;
+    if (onPick) {
+      onPick(selected);
+      onClose();
+      return;
+    }
+    sendMutation.mutate(selected);
+  }
+
+  async function copySelected() {
+    const text = selected?.body?.trim();
+    if (!text) {
+      toast.error("Este modelo não tem texto para copiar.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Texto do template copiado");
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  }
+
+  return (
+    <FormDialog
+      open={open && !!conversationId}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+      size="lg"
+      busy={sendMutation.isPending}
+      title={
+        <span className="flex items-center gap-2.5">
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,#25d366_18%,white)] text-[#128c4a]">
+            <IconFileText size={16} stroke={2} />
+          </span>
+          Templates do WhatsApp
+        </span>
+      }
+      description={description}
+      bodyClassName="flex min-h-[min(52vh,420px)] flex-col gap-0 space-y-0 overflow-hidden px-6 py-4"
+      footer={
+        <div className="flex w-full flex-col gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <ButtonGlass
+              type="button"
+              variant="glass"
+              disabled={!selected?.body || sendMutation.isPending}
+              onClick={() => void copySelected()}
+            >
+              <IconCopy size={15} />
+              Copiar
+            </ButtonGlass>
+            <ButtonGlass
+              type="button"
+              variant="primary"
+              disabled={!selected || sendMutation.isPending}
+              onClick={useSelected}
+            >
+              <IconSend size={15} />
+              {sendMutation.isPending ? "Enviando…" : "Usar template"}
+            </ButtonGlass>
+          </div>
+          <p className="text-center text-[11px] text-[var(--text-muted)]">
+            A variável {"{{1}}"} é preenchida com o nome do contato
+          </p>
+        </div>
+      }
+    >
+      {conversationId ? (
+        <TemplatePickerList
+          conversationId={conversationId}
+          channelId={channelId}
+          selectedId={selected?.id ?? null}
+          onSelect={setSelected}
+          query={query}
+          onQueryChange={setQuery}
+          category={category}
+          onCategoryChange={setCategory}
+        />
       ) : null}
-    </AnimatePresence>,
-    portalTarget,
+    </FormDialog>
   );
 }

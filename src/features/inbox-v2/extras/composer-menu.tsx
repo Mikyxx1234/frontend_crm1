@@ -323,6 +323,7 @@ export function ComposerMenu({
         onClose={() => setTemplateModalOpen(false)}
         conversationId={conversationId}
         channelId={channelId}
+        contactName={contactName}
         onPick={onPickTemplate}
       />
     </div>

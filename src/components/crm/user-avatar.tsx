@@ -56,7 +56,7 @@ export function UserAvatar({
 
   return (
     <div
-      className={cn("relative shrink-0", className)}
+      className={cn("relative shrink-0 rounded-full", className)}
       style={{ width: size, height: size }}
       title={title ?? name ?? undefined}
     >

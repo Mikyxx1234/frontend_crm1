@@ -815,6 +815,7 @@ export function useDealChatBinding(params: {
         onClose={() => setTemplateOpen(false)}
         conversationId={effectiveConversationId ?? null}
         channelId={selectedChannelId}
+        contactName={contactName}
         onPick={(tpl) => {
           setExternalTemplate(whatsappTemplateToPending(tpl));
           setTemplateOpen(false);

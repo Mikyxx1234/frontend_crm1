@@ -35,16 +35,12 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconHistory as History, IconInfoCircle as Info, IconLoader2 as Loader2, IconMicrophone as Mic, IconPhone as Phone, IconPhoneIncoming as PhoneIncoming, IconPhoneOff as PhoneOff, IconPhoneOutgoing as PhoneOutgoing, IconPlayerPlay as Play, IconRefresh as RefreshCw } from "@tabler/icons-react";
+import {
+  CallPermissionTemplateDialog,
+  type CallPermissionTemplate,
+} from "@/components/inbox/call-permission-template-dialog";
 import { CallTemplateSendIcon } from "@/components/inbox/call-template-send-icon";
 import { toast } from "sonner";
-
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,17 +75,6 @@ type CallingContext = {
 
 /** Meta bloqueia novo request por 24h depois de um REJECT. */
 const DENY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
-type CallPermissionTemplate = {
-  id: string | null;
-  name: string;
-  language: string;
-  sub_category: string | null;
-  bodyText: string;
-  headerText: string;
-  footerText: string;
-  buttons: string[];
-};
 
 const TPL_STORAGE = "wa_call_permission_tpl";
 
@@ -187,10 +172,12 @@ async function fetchCallPermissionTemplates(): Promise<CallPermissionTemplate[]>
 export function WhatsappCallChip({
   conversationId,
   channel,
+  contactName,
   variant = "chip",
 }: {
   conversationId: string;
   channel: string | null | undefined;
+  contactName?: string | null;
   /** `cta` = green pill in the inbox header. Compact `chip` for deal/sales-hub. */
   variant?: "chip" | "cta";
 }) {
@@ -219,12 +206,13 @@ export function WhatsappCallChip({
     refetchIntervalInBackground: false,
   });
 
-  // Só busca templates quando o dropdown abre (evita N+1 em inbox cheia).
+  // Só busca templates quando a modal de envio abre (evita N+1 em inbox cheia).
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = React.useState(false);
   const templatesQuery = useQuery({
     queryKey: ["call-permission-templates"],
     queryFn: fetchCallPermissionTemplates,
-    enabled: menuOpen && isWaVoiceChannel,
+    enabled: templateDialogOpen && isWaVoiceChannel,
     staleTime: 5 * 60_000,
   });
 
@@ -374,6 +362,8 @@ export function WhatsappCallChip({
     },
     onSuccess: () => {
       toast.success("Solicitação de voz enviada ao cliente");
+      setTemplateDialogOpen(false);
+      setMenuOpen(false);
       queryClient.invalidateQueries({ queryKey: key });
       queryClient.invalidateQueries({ queryKey: messagesKey(conversationId) });
       queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
@@ -420,11 +410,7 @@ export function WhatsappCallChip({
   // de `channel === "whatsapp"` deve filtrar via `enabled`/no efeito,
   // nunca via short-circuit antes do hook.
   const [howItWorksOpen, setHowItWorksOpen] = React.useState(false);
-  const [templatePickerOpen, setTemplatePickerOpen] = React.useState(false);
   const [historyOpen, setHistoryOpen] = React.useState(false);
-  React.useEffect(() => {
-    if (isCta && menuOpen) setTemplatePickerOpen(true);
-  }, [isCta, menuOpen]);
   /** URL atualmente em playback no mini-player — null = nada tocando. */
   const [playingRecordingUrl, setPlayingRecordingUrl] = React.useState<string | null>(null);
   const recordingPlayerRef = React.useRef<HTMLAudioElement | null>(null);
@@ -608,7 +594,10 @@ export function WhatsappCallChip({
             <>
               {canRequest && !isCta && (
                 <button type="button"
-                  onClick={() => requestPermission.mutate(undefined)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setTemplateDialogOpen(true);
+                  }}
                   disabled={requestPermission.isPending}
                   className="flex w-full items-center gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
                 >
@@ -621,96 +610,20 @@ export function WhatsappCallChip({
                 </button>
               )}
 
-              {isCta ? (
-                <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-ink-subtle">
-                  Templates de voz
-                </div>
-              ) : (
+              {!isCta && (
                 <button
                   type="button"
                   className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-none hover:bg-muted focus:bg-muted"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setTemplatePickerOpen((v) => !v);
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setTemplateDialogOpen(true);
                   }}
                 >
                   <span className="flex items-center gap-2">
-                    <ChevronRight
-                      className={cn(
-                        "size-3.5 transition-transform",
-                        templatePickerOpen && "rotate-90",
-                      )}
-                    />
+                    <ChevronRight className="size-3.5" />
                     Escolher template
                   </span>
-                  {templatesQuery.isFetching ? (
-                    <Loader2 className="size-3 animate-spin text-[var(--color-ink-muted)]" />
-                  ) : templatesQuery.data ? (
-                    <span className="text-[10px] text-[var(--color-ink-muted)]">
-                      {templatesQuery.data.length}
-                    </span>
-                  ) : null}
                 </button>
-              )}
-
-              {templatePickerOpen && (
-                <div className="max-h-[260px] overflow-y-auto px-1 pb-1">
-                  {templatesQuery.isLoading ? (
-                    <div className="px-2 py-3 text-center text-[11px] text-[var(--color-ink-muted)]">
-                      <Loader2 className="mx-auto size-3.5 animate-spin" />
-                      <p className="mt-1">Carregando…</p>
-                    </div>
-                  ) : (templatesQuery.data ?? []).length === 0 ? (
-                    <div className="px-2 py-2 text-[11px] text-ink-muted">
-                      Nenhum template aprovado do tipo{" "}
-                      <code className="rounded bg-muted px-1">call_permission</code>{" "}
-                      encontrado. Cadastre em{" "}
-                      <a
-                        href="/settings/message-models?tab=whatsapp"
-                        className="font-medium text-primary underline-offset-2 hover:underline"
-                      >
-                        Configurações → Templates
-                      </a>
-                      .
-                    </div>
-                  ) : (
-                    (templatesQuery.data ?? []).map((tpl) => (
-                      <button
-                        type="button"
-                        key={tpl.name}
-                        disabled={requestPermission.isPending}
-                        onClick={() => {
-                          setTemplatePickerOpen(false);
-                          setMenuOpen(false);
-                          requestPermission.mutate(tpl.name);
-                        }}
-                        className="block w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted focus:bg-muted disabled:opacity-50"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="flex min-w-0 items-center gap-2">
-                            <CallTemplateSendIcon size={22} />
-                            <span className="truncate font-mono font-medium text-foreground">
-                              {tpl.name}
-                            </span>
-                          </span>
-                          <span className="shrink-0 text-[10px] uppercase text-[var(--color-ink-muted)]">
-                            {tpl.language}
-                          </span>
-                        </div>
-                        {tpl.bodyText ? (
-                          <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-ink-muted">
-                            {tpl.bodyText}
-                          </p>
-                        ) : null}
-                        {tpl.buttons.length > 0 ? (
-                          <p className="mt-0.5 text-[10px] text-[var(--color-ink-muted)]">
-                            {tpl.buttons.length} botão{tpl.buttons.length > 1 ? "es" : ""}
-                          </p>
-                        ) : null}
-                      </button>
-                    ))
-                  )}
-                </div>
               )}
             </>
           )}
@@ -739,9 +652,12 @@ export function WhatsappCallChip({
                 <Loader2 className="size-3.5 animate-spin text-info" />
                 Aguardando cliente autorizar
               </button>
-              {!isCta && (
+                  {!isCta && (
                 <button type="button"
-                  onClick={() => requestPermission.mutate(undefined)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setTemplateDialogOpen(true);
+                  }}
                   disabled={requestPermission.isPending}
                   className="flex w-full items-center gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
                 >
@@ -968,23 +884,16 @@ export function WhatsappCallChip({
       />
       {isCta ? (
         <>
-          <button
-            type="button"
-            className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50"
-            aria-label="Enviar template de ligação"
-            onClick={() => setMenuOpen(true)}
-          >
-            <CallTemplateSendIcon size={40} />
-          </button>
-          <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
-            <DialogContent size="sm">
-              <DialogHeader className="text-left">
-                <DialogTitle className="pr-8">Fazer chamada</DialogTitle>
-              </DialogHeader>
-              <DialogClose />
-              {pickerBody}
-            </DialogContent>
-          </Dialog>
+          <TooltipHost label="Enviar template de ligação" side="bottom">
+            <button
+              type="button"
+              className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+              aria-label="Enviar template de ligação"
+              onClick={() => setTemplateDialogOpen(true)}
+            >
+              <CallTemplateSendIcon size={40} />
+            </button>
+          </TooltipHost>
         </>
       ) : (
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -1030,6 +939,15 @@ export function WhatsappCallChip({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      <CallPermissionTemplateDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        contactName={contactName}
+        templates={templatesQuery.data ?? []}
+        loading={templatesQuery.isLoading}
+        sending={requestPermission.isPending}
+        onSubmit={(name) => requestPermission.mutate(name)}
+      />
     </>
   );
 }

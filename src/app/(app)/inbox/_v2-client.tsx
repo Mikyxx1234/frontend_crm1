@@ -1477,6 +1477,9 @@ export default function InboxV2ClientPage({
               conversationId={activeRow.id}
               channel={activeRow.channel}
               variant="cta"
+              contactName={
+                contactAsideView?.name ?? activeRow.contact?.name ?? null
+              }
             />
             <ConversationActionsMenu
               conversationId={activeId}

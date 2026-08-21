@@ -350,6 +350,7 @@ export function DealWorkspaceToolbarMenuItems({
           <WhatsappCallChip
             conversationId={conversationId!}
             channel={conversationChannel}
+            contactName={contactName}
           />
         </div>
       ) : null}

@@ -48,11 +48,8 @@ export default function AppLayout({
             troca do componente de página) remontava o trilho, fazendo os
             ícones/avatar piscarem. Posição fixa sobre a 1ª coluna do grid
             (que as páginas reservam via `--nav-rail-w` + <NavRailSpacer/>),
-            mantendo o mesmo recuo (p-3/p-4) das shells. */}
-        <div
-          className="v2-nav-rail-fixed fixed left-3 top-3 z-40 max-md:hidden sm:left-4 sm:top-4"
-          style={{ width: "var(--nav-rail-w, 72px)" }}
-        >
+            mantendo o mesmo recuo (`--nav-rail-inset`, p-3/sm:p-4). */}
+        <div className="v2-nav-rail-fixed fixed z-40 max-md:hidden">
           <NavRailV2 />
         </div>
         <RouteTransition>{children}</RouteTransition>

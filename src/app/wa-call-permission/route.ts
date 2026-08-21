@@ -6,13 +6,11 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * Path ESTÁTICO de propósito. O rewrite `afterFiles` `/api/:path*` do
- * next.config roda ANTES de rotas dinâmicas (`[id]`), então o proxy em
- * `/api/conversations/[id]/call-permission` nunca era atingido — o POST
- * ia pro backend via rewrite, o Traefik cortava e o browser via 502 HTML.
- * Mesmo padrão do SSE (`/api/sse/messages`).
+ * Fora de `/api/*` de propósito. O rewrite `afterFiles` `/api/:path*` do
+ * Next intercepta App Router em `/api/...` e o Traefik devolve 502 HTML
+ * (2871 bytes) antes do handler local. Este path não casa com o rewrite.
  */
-const UPSTREAM_TIMEOUT_MS = 5_000;
+const UPSTREAM_TIMEOUT_MS = 2_500;
 
 export async function POST(request: Request) {
   let base: string;
@@ -59,7 +57,6 @@ export async function POST(request: Request) {
           },
           body,
           cache: "no-store",
-          signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
         },
       ),
       new Promise<never>((_, reject) => {

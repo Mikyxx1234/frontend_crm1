@@ -328,7 +328,7 @@ export function WhatsappCallChip({
         );
       }
       const tpl = (templatesQuery.data ?? []).find((t) => t.name === templateName);
-      const r = await fetch(apiUrl("/api/wa-call-permission"),
+      const r = await fetch(apiUrl("/wa-call-permission"),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

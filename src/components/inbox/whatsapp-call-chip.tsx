@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSSE } from "@/hooks/use-sse";
 import { emitConversationReopened, messagesKey } from "@/features/inbox-v2/hooks/use-messages";
+import type { MessagesResponse } from "@/features/inbox-v2/api";
 import { useWhatsappOutboundWebRtc } from "@/hooks/use-whatsapp-outbound-webrtc";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -152,13 +153,46 @@ function useConsentExpiry(
     return { expired: false, remaining: Number.POSITIVE_INFINITY, isPermanent: true };
   }
   // Temporária: prefere expiresAt do backend; senão fallback 7d.
+  // Sem nenhuma data (coluna zerada após reenvio de template) NÃO
+  // tratamos como expirado — o aceite na timeline ainda vale.
   const expiresAt = consentExpiresAt
     ? new Date(consentExpiresAt).getTime()
     : consentUpdatedAt
       ? new Date(consentUpdatedAt).getTime() + TEMPORARY_FALLBACK_TTL_MS
-      : 0;
+      : now + TEMPORARY_FALLBACK_TTL_MS;
   const remaining = Math.max(0, expiresAt - now);
   return { expired: remaining <= 0, remaining, isPermanent: false };
+}
+
+function inferGrantFromMessages(
+  messages: { content?: string; createdAt?: string }[] | undefined,
+): { permanent: boolean; at: string; expiresAt: string | null } | null {
+  if (!messages?.length) return null;
+  let best: { at: number; accept: boolean; permanent: boolean } | null = null;
+  for (const m of messages) {
+    const t = (m.content ?? "").toLowerCase();
+    const at = new Date(m.createdAt ?? "").getTime();
+    if (!Number.isFinite(at) || at <= 0) continue;
+    const accept =
+      (t.includes("✅") && t.includes("aceitou")) || t.includes("cliente aceitou");
+    const deny =
+      (t.includes("❌") && t.includes("recusou")) || t.includes("cliente recusou");
+    if (!accept && !deny) continue;
+    if (!best || at >= best.at) {
+      best = { at, accept, permanent: t.includes("permanen") };
+    }
+  }
+  if (!best?.accept) return null;
+  if (best.permanent) {
+    return { permanent: true, at: new Date(best.at).toISOString(), expiresAt: null };
+  }
+  const exp = best.at + TEMPORARY_FALLBACK_TTL_MS;
+  if (exp <= Date.now()) return null;
+  return {
+    permanent: false,
+    at: new Date(best.at).toISOString(),
+    expiresAt: new Date(exp).toISOString(),
+  };
 }
 
 async function fetchCallPermissionTemplates(): Promise<CallPermissionTemplate[]> {
@@ -204,6 +238,19 @@ export function WhatsappCallChip({
       (q.state.data as CallingContext | undefined)?.activeCallMetaId ? 10_000 : false,
     refetchIntervalInBackground: false,
   });
+
+  const [msgTick, bumpMsgs] = React.useState(0);
+  React.useEffect(() => {
+    const cache = queryClient.getQueryCache();
+    return cache.subscribe((ev) => {
+      const k = ev.query.queryKey;
+      if (k[0] === "messages" && k[1] === conversationId) bumpMsgs((n) => n + 1);
+    });
+  }, [queryClient, conversationId]);
+  const cachedMessages = React.useMemo(
+    () => queryClient.getQueryData<MessagesResponse>(messagesKey(conversationId)),
+    [queryClient, conversationId, msgTick],
+  );
 
   // Só busca templates quando a modal de envio abre (evita N+1 em inbox cheia).
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -405,13 +452,30 @@ export function WhatsappCallChip({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const cs = data?.consentStatus ?? "NONE";
-  const expiry = useConsentExpiry(
-    cs,
+  const apiCs = data?.consentStatus ?? "NONE";
+  const inferred = inferGrantFromMessages(cachedMessages?.messages);
+  const expiryApi = useConsentExpiry(
+    apiCs,
     data?.consentType ?? null,
     data?.consentUpdatedAt ?? null,
     data?.consentExpiresAt ?? null,
   );
+  const expiryInf = useConsentExpiry(
+    inferred ? "GRANTED" : "NONE",
+    inferred?.permanent ? "PERMANENT" : "TEMPORARY",
+    inferred?.at ?? null,
+    inferred?.expiresAt ?? null,
+  );
+  const apiGrantedLive = apiCs === "GRANTED" && !expiryApi.expired;
+  const cs: ConsentStatus =
+    apiCs === "DENIED"
+      ? "DENIED"
+      : apiGrantedLive
+        ? "GRANTED"
+        : inferred
+          ? "GRANTED"
+          : apiCs;
+  const expiry = cs === "GRANTED" && !apiGrantedLive && inferred ? expiryInf : expiryApi;
 
   // ── State local de UI ──────────────────────────────────────
   // IMPORTANTE: estes hooks precisam ficar ANTES de qualquer early

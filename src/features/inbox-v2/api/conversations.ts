@@ -94,6 +94,7 @@ export async function fetchTabCounts(
       entrada: 0,
       esperando: 0,
       respondidas: 0,
+      ligar: 0,
       automacao: 0,
       finalizados: 0,
       erro: 0,

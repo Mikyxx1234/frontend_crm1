@@ -47,6 +47,7 @@ export const INBOX_TAB_IDS = [
   "entrada",
   "esperando",
   "respondidas",
+  "ligar",
   "automacao",
   "finalizados",
   "erro",

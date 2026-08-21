@@ -59,6 +59,7 @@ const TRIGGER_LABELS: Record<string, string> = {
   lead_score_reached: "Score atingido",
   contact_created: "Contato criado",
   conversation_created: "Conversa criada",
+  call_permission_granted: "Permissão de ligação",
 };
 
 const ACTION_TYPES = [

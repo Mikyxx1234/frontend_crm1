@@ -15,6 +15,7 @@ import {
   IconRobot,
   IconAlertCircle,
   IconRefresh,
+  IconPhone,
   type Icon as TablerIcon,
 } from "@tabler/icons-react"
 import { AppLoading } from "@/components/crm/app-loading"
@@ -155,6 +156,12 @@ function statusVisual(label: string | undefined): {
       Icon: IconCornerUpLeft,
       bg: "var(--color-enterprise-bg)",
       fg: "var(--brand-primary)",
+    }
+  if (l === "ligar")
+    return {
+      Icon: IconPhone,
+      bg: "rgba(16,185,129,0.14)",
+      fg: "rgb(5,150,105)",
     }
   if (l.includes("automa"))
     return {
@@ -347,6 +354,7 @@ export function ConversationColumn({
         ref={dropdownBtnRef}
         type="button"
         onClick={() => setDropdownOpen((v) => !v)}
+        title={tabs[activeTab]?.title}
         aria-haspopup="listbox"
         aria-expanded={dropdownOpen}
         className="flex flex-1 items-center gap-2.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-1.5 pr-3 text-left shadow-[0_2px_10px_rgba(100,130,180,0.12)] backdrop-blur-sm transition-shadow hover:shadow-[0_3px_14px_rgba(100,130,180,0.20)]"
@@ -425,6 +433,7 @@ export function ConversationColumn({
                   type="button"
                   role="option"
                   aria-selected={isActive}
+                  title={tab.title}
                   onClick={() => {
                     handleTabChange(idx)
                     setDropdownOpen(false)

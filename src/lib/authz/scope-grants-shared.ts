@@ -14,13 +14,16 @@ export type InboxTab =
   | "automacao"
   | "finalizados"
   | "erro"
-  | "todos";
+  | "todos"
+  | "ligar";
 
-/** Ordem das categorias na inbox (sem "todos") — manter alinhado a `INBOX_CATEGORY_TABS` no serviço. */
-const INBOX_CATEGORY_TAB_ORDER: readonly Exclude<InboxTab, "todos">[] = [
+/** Ordem da barra da Inbox (espelha `INBOX_TAB_BAR_ORDER` do backend). */
+export const INBOX_TAB_BAR_ORDER: readonly InboxTab[] = [
+  "todos",
   "entrada",
   "esperando",
   "respondidas",
+  "ligar",
   "automacao",
   "finalizados",
   "erro",
@@ -362,6 +365,7 @@ const INBOX_TAB_PERMISSION_KEYS: Record<InboxTab, string> = {
   entrada: "inbox:tab:entrada",
   esperando: "inbox:tab:esperando",
   respondidas: "inbox:tab:respondidas",
+  ligar: "inbox:tab:ligar",
   automacao: "inbox:tab:automacao",
   finalizados: "inbox:tab:finalizados",
   erro: "inbox:tab:erro",
@@ -375,6 +379,7 @@ const LEGACY_INBOX_TAB_REQUIRED_PERMISSION: Record<
   entrada: "conversation:claim",
   esperando: "conversation:view",
   respondidas: "conversation:view",
+  ligar: "conversation:view",
   automacao: "conversation:view",
   finalizados: "conversation:view",
   erro: "conversation:view",
@@ -407,6 +412,13 @@ function memberTabAllowedByPermissions(
   tab: InboxTab,
 ): boolean {
   if (hasAnyInboxTabPermission(perms)) {
+    if (tab === "ligar") {
+      return (
+        permissionsAllow(perms, INBOX_TAB_PERMISSION_KEYS.ligar) ||
+        permissionsAllow(perms, INBOX_TAB_PERMISSION_KEYS.esperando) ||
+        permissionsAllow(perms, INBOX_TAB_PERMISSION_KEYS.respondidas)
+      );
+    }
     return permissionsAllow(perms, INBOX_TAB_PERMISSION_KEYS[tab]);
   }
   if (tab === "todos") return true;
@@ -453,18 +465,18 @@ export function listAllowedInboxTabsForUser(args: {
   const role = asRoleKey(args.role);
   const perms = toPermissionSet(args.permissions);
   if ((perms && permissionsAllow(perms, "*")) || !role || role === "ADMIN" || role === "MANAGER") {
-    return ["todos", ...INBOX_CATEGORY_TAB_ORDER];
+    return [...INBOX_TAB_BAR_ORDER];
   }
+  const allowed = INBOX_TAB_BAR_ORDER.filter((t) =>
+    canSeeInboxTab({ grants: args.grants, role, tab: t, permissions: args.permissions }),
+  );
+  if (allowed.length > 0) return allowed;
   const showTodos = canSeeInboxTab({
     grants: args.grants,
     role,
     tab: "todos",
     permissions: args.permissions,
   });
-  const allowed = INBOX_CATEGORY_TAB_ORDER.filter((t) =>
-    canSeeInboxTab({ grants: args.grants, role, tab: t, permissions: args.permissions }),
-  );
-  const base: Exclude<InboxTab, "todos">[] =
-    allowed.length > 0 ? [...allowed] : ["esperando", "respondidas"];
-  return showTodos ? ["todos", ...base] : [...base];
+  const fallback: Exclude<InboxTab, "todos" | "ligar">[] = ["esperando", "respondidas"];
+  return showTodos ? ["todos", ...fallback] : [...fallback];
 }

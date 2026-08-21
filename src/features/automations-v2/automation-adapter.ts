@@ -28,6 +28,9 @@ const TRIGGER_LABEL: Record<string, AutomationTrigger> = {
   agent_changed: "Agente alterado",
   message_received: "Mensagem recebida",
   message_sent: "Mensagem enviada",
+  call_received: "Ligação recebida",
+  call_made: "Ligação realizada",
+  call_permission_granted: "Permissão de ligação concedida",
   manual: "Manual",
 };
 

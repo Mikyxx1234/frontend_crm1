@@ -19,6 +19,8 @@ import {
   useTeamChatNotes,
   useTeamChatRealtime,
   useTeamChatRooms,
+  useTeamChatTyping,
+  usePingTeamChatTyping,
   useOrbitaFavorites,
 } from "./hooks";
 import { favoriteKey } from "./helpers";
@@ -36,6 +38,7 @@ export function TeamChatApp() {
   const roomsQuery = useTeamChatRooms(ready);
   const peopleQuery = useTeamChatColleagues(ready);
   const { favorites, toggleFavorite } = useOrbitaFavorites();
+  const typing = useTeamChatTyping(meId, ready);
   const rooms = roomsQuery.data?.rooms ?? [];
   const colleagues = peopleQuery.data?.colleagues ?? [];
   useTeamChatRealtime(selectedId, ready);
@@ -118,6 +121,7 @@ export function TeamChatApp() {
             openPerson(id);
           }}
           onNew={() => setComposeOpen(true)}
+          typing={typing}
         />
       </div>
 
@@ -232,9 +236,12 @@ function Thread({
   const { send, react, pin } = useTeamChatMutations();
   const messages = data?.messages ?? [];
   const [chatQuery, setChatQuery] = useState("");
+  const [quote, setQuote] = useState<{ author: string; text: string } | null>(null);
+  const pingTyping = usePingTeamChatTyping(room.id);
 
   useEffect(() => {
     setChatQuery("");
+    setQuote(null);
   }, [room.id]);
 
   return (
@@ -264,12 +271,21 @@ function Thread({
           onTogglePin={(id) =>
             pin.mutate({ roomId: room.id, messageId: id }, { onError: (e: Error) => toast.error(e.message) })
           }
+          onReply={(msg) =>
+            setQuote({
+              author: msg.author?.name ?? "Colega",
+              text: msg.content.trim() || (msg.attachments?.[0]?.name ?? "Anexo"),
+            })
+          }
         />
         <div className="relative z-20 shrink-0 overflow-visible px-3 pb-4 pt-2">
           <div className="overflow-visible rounded-[16px] bg-[var(--orbita-block)] ring-1 ring-[var(--orbita-divider)] shadow-[0_8px_24px_rgba(91,111,245,0.08)]">
             <Composer
               roomId={room.id}
               placeholder="Digite uma mensagem"
+              quote={quote}
+              onTyping={pingTyping}
+              onClearQuote={() => setQuote(null)}
               onSend={async (payload) => {
                 await send.mutateAsync({
                   roomId: room.id,

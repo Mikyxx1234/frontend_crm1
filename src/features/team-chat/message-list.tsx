@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode, Fragment } from "react";
-import { Copy, Download, FileText, Pin, PinOff, SmilePlus, X } from "lucide-react";
+import { Copy, Download, FileText, Pin, PinOff, Reply, SmilePlus, X } from "lucide-react";
 import { toast } from "sonner";
+
+import { StatusTicks, type DeliveryTickStatus } from "@/components/crm/status-ticks";
 
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { cn } from "@/lib/utils";
 
-import { Avatar } from "./avatar";
+import { Avatar, GroupGlyph } from "./avatar";
 import { dayKey, formatClock, formatDayLabel, getOrbitaNameColor, REACTION_EMOJIS, toPerson } from "./helpers";
 import type { TeamChatAttachment, TeamChatMessage, TeamChatReaction, TeamChatRoom } from "./types";
 
@@ -25,7 +27,7 @@ function formatChatText(text: string, mine: boolean): ReactNode {
       parts.push(
         <mark
           key={key++}
-          className={cn("rounded-sm px-0.5", mine ? "bg-black/10 text-inherit" : "bg-amber-200/80 text-[var(--orbita-text)]")}
+          className={cn("rounded-sm px-0.5", mine ? "bg-white/20 text-inherit" : "bg-amber-200/80 text-[var(--orbita-text)]")}
         >
           {tok.slice(2, -2)}
         </mark>,
@@ -92,6 +94,7 @@ export function MessageList({
   query = "",
   onToggleReaction,
   onTogglePin,
+  onReply,
 }: {
   room: TeamChatRoom;
   messages: TeamChatMessage[];
@@ -100,10 +103,10 @@ export function MessageList({
   query?: string;
   onToggleReaction: (id: string, emoji: string) => void;
   onTogglePin: (id: string) => void;
+  onReply?: (message: TeamChatMessage) => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
   const isDirect = room.kind === "DM";
-  const firstName = room.name.split(" ")[0];
   const q = query.trim().toLowerCase();
   const pinned = messages.filter((m) => m.pinned);
   const visible = useMemo(() => {
@@ -151,12 +154,22 @@ export function MessageList({
       )}
       <div className="chat-scroll flex-1 overflow-y-auto px-4 py-3 md:px-10">
         <div className="flex min-h-full w-full flex-col">
-          <div className="mb-3 flex justify-center">
-            <span className="max-w-md rounded-full bg-[var(--orbita-block)]/90 px-3 py-1 text-center text-[12.5px] leading-relaxed text-muted-foreground shadow-sm">
-              {isDirect
-                ? `Esta é o início da sua conversa com ${firstName}.`
-                : room.topic || `Este é o início do canal #${room.name}.`}
-            </span>
+          <div className="mb-4 flex justify-center">
+            <div className="flex max-w-sm flex-col items-center rounded-2xl bg-[var(--orbita-block)]/92 px-6 py-5 text-center shadow-sm">
+              {isDirect && room.peer ? (
+                <Avatar person={toPerson(room.peer)} size="lg" showPresence />
+              ) : (
+                <GroupGlyph seed={room.id} size={56} />
+              )}
+              <p className="mt-3 text-[15px] font-semibold text-[var(--orbita-text)]">
+                {isDirect ? room.name : `#${room.name}`}
+              </p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--orbita-text-secondary)]">
+                {isDirect
+                  ? "Este é o início da sua conversa."
+                  : room.topic || `Este é o início do canal #${room.name}.`}
+              </p>
+            </div>
           </div>
           {loading ? (
             <p className="py-10 text-center text-sm text-muted-foreground">Carregando…</p>
@@ -202,9 +215,15 @@ export function MessageList({
                       first={first}
                       last={last}
                       mine={mine}
-                      isGroup={!isDirect}
+                      showName={!isDirect}
+                      peerOnline={
+                        isDirect
+                          ? Boolean(room.peer?.systemOnline)
+                          : room.members.some((m) => m.id !== meId && m.systemOnline)
+                      }
                       onToggleReaction={onToggleReaction}
                       onTogglePin={onTogglePin}
+                      onReply={onReply}
                     />
                   </Fragment>
                 );
@@ -222,6 +241,13 @@ function bubbleRadius(_first: boolean, _mine: boolean) {
   return "rounded-[16px]";
 }
 
+function tickStatus(mine: boolean, peerOnline: boolean, createdAt: string): DeliveryTickStatus | undefined {
+  if (!mine) return undefined;
+  const age = Date.now() - new Date(createdAt).getTime();
+  if (Number.isFinite(age) && age < 1800) return "sent";
+  return peerOnline ? "read" : "delivered";
+}
+
 function MessageRow({
   message,
   meId,
@@ -230,9 +256,11 @@ function MessageRow({
   first,
   last,
   mine,
-  isGroup,
+  showName,
+  peerOnline,
   onToggleReaction,
   onTogglePin,
+  onReply,
 }: {
   message: TeamChatMessage;
   meId: string;
@@ -241,12 +269,24 @@ function MessageRow({
   first: boolean;
   last: boolean;
   mine: boolean;
-  isGroup: boolean;
+  showName: boolean;
+  peerOnline: boolean;
   onToggleReaction: (id: string, emoji: string) => void;
   onTogglePin: (id: string) => void;
+  onReply?: (message: TeamChatMessage) => void;
 }) {
   const [picker, setPicker] = useState(false);
+  const [, bumpTick] = useState(0);
   const reactions = message.reactions ?? [];
+  const tick = tickStatus(mine, peerOnline, message.createdAt);
+
+  useEffect(() => {
+    if (!mine) return;
+    const age = Date.now() - new Date(message.createdAt).getTime();
+    if (!Number.isFinite(age) || age >= 1800) return;
+    const t = window.setTimeout(() => bumpTick((n) => n + 1), 1800 - age);
+    return () => window.clearTimeout(t);
+  }, [mine, message.createdAt]);
   return (
     <div className={cn("flex w-full flex-col", mine ? "items-end" : "items-start", first ? "mt-3" : "mt-[2px]")}>
       <div
@@ -255,13 +295,13 @@ function MessageRow({
           mine ? "flex-row-reverse" : "flex-row",
         )}
       >
-        {isGroup && !mine && (
+        {!mine && (
           <div className="flex w-7 shrink-0 justify-center self-end">
-            {last && author ? <Avatar person={author} size="sm" /> : null}
+            {last && author ? <Avatar person={author} size="xs" /> : null}
           </div>
         )}
         <div className={cn("flex min-w-0 flex-col", mine ? "items-end" : "items-start")}>
-          {first && isGroup && !mine && (
+          {first && showName && !mine && (
             <span
               className="mb-0.5 px-1 text-[12.5px] font-medium"
               style={{ color: author ? getOrbitaNameColor(author.id) : "var(--orbita-text)" }}
@@ -276,6 +316,7 @@ function MessageRow({
               first={first}
               pinned={message.pinned}
               time={formatClock(message.createdAt)}
+              tick={tick}
             />
             {reactions.length > 0 && (
               <div
@@ -321,6 +362,18 @@ function MessageRow({
                     className="grid h-7 w-7 place-items-center text-muted-foreground hover:text-foreground"
                   >
                     <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipGlass>
+              )}
+              {onReply && (
+                <TooltipGlass label="Responder" side="top">
+                  <button
+                    type="button"
+                    onClick={() => onReply(message)}
+                    aria-label="Responder"
+                    className="grid h-7 w-7 place-items-center text-muted-foreground hover:text-foreground"
+                  >
+                    <Reply className="h-3.5 w-3.5" />
                   </button>
                 </TooltipGlass>
               )}
@@ -383,12 +436,14 @@ function MessageBody({
   first,
   pinned,
   time,
+  tick,
 }: {
   message: TeamChatMessage;
   mine: boolean;
   first: boolean;
   pinned: boolean;
   time: string;
+  tick?: DeliveryTickStatus;
 }) {
   const attachments = message.attachments ?? [];
   const stickers = attachments.filter((a) => a.kind === "sticker");
@@ -404,7 +459,13 @@ function MessageBody({
   );
   const timeCls = cn(
     "select-none text-[11px] leading-none tabular-nums",
-    mine ? "text-[var(--orbita-text-secondary)]" : "text-[var(--orbita-text-tertiary)]",
+    mine ? "text-[var(--orbita-bubble-sent-meta)]" : "text-[var(--orbita-text-tertiary)]",
+  );
+  const meta = (
+    <span className="inline-flex items-center gap-0.5">
+      <span className={timeCls}>{time}</span>
+      {tick && <StatusTicks status={tick} />}
+    </span>
   );
 
   return (
@@ -437,7 +498,7 @@ function MessageBody({
             "✨"
           )}
           {!hasText && i === stickers.length - 1 && media.length === 0 && (
-            <span className={cn("absolute -bottom-4 right-0", timeCls)}>{time}</span>
+            <span className="absolute -bottom-4 right-0">{meta}</span>
           )}
         </button>
       ))}
@@ -445,7 +506,7 @@ function MessageBody({
         <div key={`${att.url}-${i}`} className={cn(bubbleCls, "overflow-hidden p-1")}>
           <MediaChip att={att} />
           {!hasText && i === media.length - 1 && (
-            <span className={cn("absolute bottom-1.5 right-2 drop-shadow", timeCls)}>{time}</span>
+            <span className="absolute bottom-1.5 right-2 drop-shadow">{meta}</span>
           )}
         </div>
       ))}
@@ -463,9 +524,9 @@ function MessageBody({
           )}
           <p className="whitespace-pre-wrap break-words text-[14.5px] leading-[20px]">
             {formatChatText(message.content, mine)}
-            <span className="inline-block w-[46px]" aria-hidden />
+            <span className={cn("inline-block", mine ? "w-[72px]" : "w-[46px]")} aria-hidden />
           </p>
-          <span className={cn("absolute bottom-[5px] right-[8px]", timeCls)}>{time}</span>
+          <span className="absolute bottom-[5px] right-[8px]">{meta}</span>
         </div>
       )}
     </div>

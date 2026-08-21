@@ -320,7 +320,7 @@ export function ConversationColumn({
     <section
       aria-label="Lista de conversas"
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-2 pb-2 pt-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "@container relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-2 pb-2 pt-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
@@ -359,7 +359,7 @@ export function ConversationColumn({
       )}
 
       {/* Seletor de status + toggle de filtro na mesma linha */}
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-2 @max-[240px]:gap-1">
       <button
         ref={dropdownBtnRef}
         type="button"
@@ -367,7 +367,7 @@ export function ConversationColumn({
         title={tabs[activeTab]?.title}
         aria-haspopup="listbox"
         aria-expanded={dropdownOpen}
-        className="flex flex-1 items-center gap-2.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-1.5 pr-3 text-left shadow-[0_2px_10px_rgba(100,130,180,0.12)] backdrop-blur-sm transition-shadow hover:shadow-[0_3px_14px_rgba(100,130,180,0.20)]"
+        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-1.5 pr-3 text-left shadow-[0_2px_10px_rgba(100,130,180,0.12)] backdrop-blur-sm transition-shadow hover:shadow-[0_3px_14px_rgba(100,130,180,0.20)] @max-[240px]:gap-1.5 @max-[240px]:pr-2"
       >
         <span
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
@@ -375,7 +375,7 @@ export function ConversationColumn({
         >
           <currentVisual.Icon size={15} stroke={2.2} />
         </span>
-        <span className="flex-1 truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+        <span className="min-w-0 flex-1 truncate font-display text-[13px] font-semibold text-[var(--text-primary)] @max-[240px]:hidden">
           {currentTabLabel}
         </span>
         {currentTabCount == null ? (

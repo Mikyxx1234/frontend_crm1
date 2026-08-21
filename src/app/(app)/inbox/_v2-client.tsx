@@ -1240,7 +1240,7 @@ export default function InboxV2ClientPage({
           <ColumnResizer
             value={convWidth}
             onChange={setConvWidth}
-            min={260}
+            min={200}
             max={400}
           />
         ) : undefined

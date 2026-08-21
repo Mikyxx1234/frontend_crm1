@@ -279,6 +279,7 @@ export function ConversationColumn({
   const urgency = urgencyCount ?? conversations.filter((c) => c.urgent).length
 
   const currentTabLabel = tabs[activeTab]?.label ?? "Todas"
+  const currentTabCount = tabs[activeTab]?.count
   const currentVisual = statusVisual(currentTabLabel)
 
   // ── Dropdown de status ──────────────────────────────────────────
@@ -371,8 +372,15 @@ export function ConversationColumn({
         >
           <currentVisual.Icon size={15} stroke={2.2} />
         </span>
-        <span className="min-w-0 flex-1 truncate font-display text-[13px] font-semibold text-[var(--text-primary)] @max-[240px]:hidden">
-          {currentTabLabel}
+        <span className="flex min-w-0 flex-1 items-center gap-1.5 @max-[240px]:hidden">
+          <span className="min-w-0 truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+            {currentTabLabel}
+          </span>
+          {currentTabCount != null && (
+            <span className="shrink-0 rounded-full bg-[var(--brand-primary)] px-1.5 py-px text-[10.5px] font-bold tabular-nums text-white">
+              <CountUpNumber key={currentTabLabel} value={currentTabCount} fromZero />
+            </span>
+          )}
         </span>
         <IconChevronDown
           size={15}

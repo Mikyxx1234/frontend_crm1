@@ -21,6 +21,8 @@ export interface DropdownOption {
    * (quando string), `description` e `value`.
    */
   searchText?: string
+  /** Conteúdo à direita do item (ex.: contador), antes do check. */
+  trailing?: React.ReactNode
 }
 
 /**
@@ -269,6 +271,7 @@ export function DropdownGlass({
                     </span>
                   )}
                 </span>
+                {option.trailing}
                 {isSelected && !option.danger && (
                   <IconCheck size={15} strokeWidth={2.5} className="shrink-0 text-[var(--brand-primary)]" />
                 )}

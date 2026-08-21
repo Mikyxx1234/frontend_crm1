@@ -643,7 +643,11 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
               onSortKeyChange={setSortKey}
               placeholder="Buscar no funil…"
               pipelineId={pipelineId}
-              onPickDeal={(deal) => setActiveDeal(deal.id, deal.number)}
+              onPickDeal={(deal) => {
+                const dest = deal.stage?.pipelineId;
+                if (dest && dest !== pipelineId) setPipelineId(dest);
+                setActiveDeal(deal.id, deal.number);
+              }}
             />
           }
           pipelineNameSlot={

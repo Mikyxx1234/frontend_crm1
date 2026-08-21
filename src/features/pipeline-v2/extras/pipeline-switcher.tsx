@@ -17,6 +17,14 @@ import { IconChevronDown, IconFilter } from "@tabler/icons-react";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { ClientOnly } from "@/components/util/client-only";
 import { usePipelines } from "@/features/pipeline-v2/hooks";
+import { CountUpNumber } from "./count-up";
+
+function pipelineDealTotal(
+  stages: { dealCount?: number }[] | undefined,
+): number {
+  if (!stages?.length) return 0;
+  return stages.reduce((acc, s) => acc + (s.dealCount ?? 0), 0);
+}
 
 interface PipelineSwitcherProps {
   selectedId: string | null;
@@ -27,11 +35,22 @@ interface PipelineSwitcherProps {
 export function PipelineSwitcher({ selectedId, onChange, variant = "dropdown" }: PipelineSwitcherProps) {
   const { data: pipelines = [], isLoading } = usePipelines();
 
-  const options = pipelines.map((p) => ({
-    value: p.id,
-    label: p.name,
-    icon: <IconFilter size={15} />,
-  }));
+  const options = pipelines.map((p) => {
+    const total = pipelineDealTotal(p.stages);
+    return {
+      value: p.id,
+      label: p.name,
+      searchText: p.name,
+      icon: <IconFilter size={15} />,
+      trailing: (
+        <CountUpNumber
+          value={total}
+          fromZero
+          className="shrink-0 font-display text-[11px] font-bold tabular-nums text-[var(--text-muted)]"
+        />
+      ),
+    };
+  });
 
   if (variant === "icon") {
     const current = pipelines.find((p) => p.id === selectedId);

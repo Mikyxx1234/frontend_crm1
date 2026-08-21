@@ -11,7 +11,6 @@ const RESULT_LIMIT = 8;
 export function usePipelineOmnisearch(
   search: string,
   enabled: boolean,
-  pipelineId?: string | null,
 ) {
   const [debounced, setDebounced] = useState("");
   useEffect(() => {
@@ -23,13 +22,12 @@ export function usePipelineOmnisearch(
   const ready = enabled && query.length > 0;
 
   const deals = useQuery({
-    queryKey: ["pipeline-omnisearch", pipelineId ?? "", query],
+    queryKey: ["pipeline-omnisearch", query],
     queryFn: () =>
       fetchDealsList({
         search: query,
         page: 1,
         perPage: RESULT_LIMIT,
-        pipelineId: pipelineId || undefined,
       }),
     enabled: ready,
     staleTime: 15_000,

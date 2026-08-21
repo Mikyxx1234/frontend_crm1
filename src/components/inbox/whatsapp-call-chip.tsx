@@ -39,7 +39,6 @@ import {
   CallPermissionTemplateDialog,
   type CallPermissionTemplate,
 } from "@/components/inbox/call-permission-template-dialog";
-import { CallTemplateSendIcon } from "@/components/inbox/call-template-send-icon";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -895,38 +894,7 @@ export function WhatsappCallChip({
       />
       {isCta ? (
         <>
-          {canInitiate || outbound.isInitiating || outbound.phase === "need_answer" ? (
-            <TooltipHost
-              label={
-                outbound.isInitiating || outbound.phase === "need_answer"
-                  ? "Chamando…"
-                  : "Ligar pelo WhatsApp"
-              }
-              side="bottom"
-            >
-              <button
-                type="button"
-                className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50 disabled:opacity-70"
-                aria-label="Ligar pelo WhatsApp"
-                disabled={outbound.isInitiating}
-                onClick={() => void initiate()}
-              >
-                <span
-                  className="flex size-10 items-center justify-center rounded-full"
-                  style={{
-                    background: "#25D366",
-                    boxShadow: "0 4px 14px rgba(37, 211, 102, 0.4)",
-                  }}
-                >
-                  {outbound.isInitiating || outbound.phase === "need_answer" ? (
-                    <Loader2 className="size-5 animate-spin text-white" />
-                  ) : (
-                    <Phone className="size-5 text-white" strokeWidth={2.4} />
-                  )}
-                </span>
-              </button>
-            </TooltipHost>
-          ) : canTerminate ? (
+          {canTerminate ? (
             <TooltipHost label="Encerrar chamada" side="bottom">
               <button
                 type="button"
@@ -940,14 +908,54 @@ export function WhatsappCallChip({
               </button>
             </TooltipHost>
           ) : (
-            <TooltipHost label="Enviar template de ligação" side="bottom">
+            <TooltipHost
+              label={
+                outbound.isInitiating || outbound.phase === "need_answer"
+                  ? "Chamando…"
+                  : canInitiate
+                    ? "Ligar pelo WhatsApp"
+                    : cs === "REQUESTED"
+                      ? "Aguardando o cliente permitir no WhatsApp"
+                      : cs === "DENIED" && denyCooldown.active
+                        ? `Recusado · novo pedido em ${formatRemaining(denyCooldown.remainingMs)}`
+                        : "Peça permissão no + → Pedir permissão de ligação"
+              }
+              side="bottom"
+            >
               <button
                 type="button"
-                className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50"
-                aria-label="Enviar template de ligação"
-                onClick={() => setTemplateDialogOpen(true)}
+                className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50 disabled:hover:scale-100 disabled:opacity-100"
+                aria-label={canInitiate ? "Ligar pelo WhatsApp" : "Ligação indisponível"}
+                disabled={!canInitiate || outbound.isInitiating}
+                onClick={() => {
+                  if (canInitiate) void initiate();
+                }}
               >
-                <CallTemplateSendIcon size={40} />
+                <span
+                  className="flex size-10 items-center justify-center rounded-full"
+                  style={
+                    canInitiate || outbound.isInitiating || outbound.phase === "need_answer"
+                      ? {
+                          background: "#25D366",
+                          boxShadow: "0 4px 14px rgba(37, 211, 102, 0.4)",
+                        }
+                      : {
+                          background: "color-mix(in srgb, var(--color-ink-subtle) 18%, transparent)",
+                          boxShadow: "none",
+                        }
+                  }
+                >
+                  {outbound.isInitiating || outbound.phase === "need_answer" ? (
+                    <Loader2 className="size-5 animate-spin text-white" />
+                  ) : (
+                    <Phone
+                      className={
+                        canInitiate ? "size-5 text-white" : "size-5 text-[var(--color-ink-subtle)]"
+                      }
+                      strokeWidth={2.4}
+                    />
+                  )}
+                </span>
               </button>
             </TooltipHost>
           )}

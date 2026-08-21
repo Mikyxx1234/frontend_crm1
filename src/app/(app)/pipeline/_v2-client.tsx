@@ -114,6 +114,7 @@ import {
   WinButton,
   useDealChatBinding,
 } from "@/features/pipeline-v2/extras";
+import { CountUpNumber } from "@/features/pipeline-v2/extras/count-up";
 import { PipelineChannelsModal } from "@/features/pipeline-v2/extras/pipeline-channels-modal";
 import { computePopoverPosition } from "@/features/pipeline-v2/extras/use-portal-popover";
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
@@ -535,13 +536,6 @@ export default function KanbanV2ClientPage({
   const boardPending = hasServerBoard
     ? boardFiltered.isPending
     : boardNormal.isPending;
-  const totalLabel = boardPending
-    ? "Contando…"
-    : isFiltering &&
-        pipelineTotalUnfiltered != null &&
-        pipelineTotalUnfiltered !== filteredTotal
-      ? `${filteredTotal.toLocaleString("pt-BR")} de ${pipelineTotalUnfiltered.toLocaleString("pt-BR")} negócios`
-      : `${filteredTotal.toLocaleString("pt-BR")} ${filteredTotal === 1 ? "negócio" : "negócios"}`;
 
   // Contexto para "selecionar todos que batem no filtro" na edição em massa.
   // Permite editar além dos ~100 cards carregados por coluna: o servidor
@@ -854,11 +848,41 @@ export default function KanbanV2ClientPage({
             );
           }}
           titleAccessory={
-            <PipelineSwitcher
-              variant="icon"
-              selectedId={pipelineId}
-              onChange={(id) => setPipelineId(id)}
-            />
+            <div className="flex items-center gap-2">
+              <PipelineSwitcher
+                variant="icon"
+                selectedId={pipelineId}
+                onChange={(id) => setPipelineId(id)}
+              />
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 font-display text-[11.5px] font-bold",
+                  isFiltering
+                    ? "border-[var(--brand-primary)]/30 bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)]",
+                )}
+                aria-live="polite"
+              >
+                {boardPending ? (
+                  "Contando…"
+                ) : isFiltering &&
+                  pipelineTotalUnfiltered != null &&
+                  pipelineTotalUnfiltered !== filteredTotal ? (
+                  <>
+                    <CountUpNumber value={filteredTotal} className="tabular-nums" />
+                    <span className="font-semibold opacity-70">
+                      de {pipelineTotalUnfiltered.toLocaleString("pt-BR")}
+                    </span>
+                    negócios
+                  </>
+                ) : (
+                  <>
+                    <CountUpNumber value={filteredTotal} className="tabular-nums" />
+                    {filteredTotal === 1 ? "negócio" : "negócios"}
+                  </>
+                )}
+              </span>
+            </div>
           }
           searchSlot={
             <PipelineSearchFilterBar
@@ -872,7 +896,11 @@ export default function KanbanV2ClientPage({
               sortKey={sortKey}
               onSortKeyChange={(k) => setSortKey(k)}
               pipelineId={pipelineId}
-              onPickDeal={(deal) => setActiveDeal(deal.id, deal.number)}
+              onPickDeal={(deal) => {
+                const dest = deal.stage?.pipelineId;
+                if (dest && dest !== pipelineId) setPipelineId(dest);
+                setActiveDeal(deal.id, deal.number);
+              }}
             />
           }
           menuSlot={
@@ -926,19 +954,8 @@ export default function KanbanV2ClientPage({
           onClose={() => setKebabOpen(false)}
         />
 
+        {((!filters.search?.trim() && search.trim()) || !isEmptyFilters(filters)) && (
         <div className="flex flex-wrap items-center gap-2 px-0.5">
-          <span
-            className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[11.5px] font-bold",
-              isFiltering
-                ? "border-[var(--brand-primary)]/30 bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
-                : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)]",
-            )}
-            aria-live="polite"
-          >
-            {totalLabel}
-          </span>
-
           {/* `filters.search` tem precedência sobre a barra (ver `rawSearch`) e
               já ganha chip próprio no FilterChips — não duplicar. */}
           {!filters.search?.trim() && search.trim() && (
@@ -974,6 +991,7 @@ export default function KanbanV2ClientPage({
             </>
           )}
         </div>
+        )}
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

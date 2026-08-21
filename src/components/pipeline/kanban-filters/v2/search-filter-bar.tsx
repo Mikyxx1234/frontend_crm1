@@ -20,6 +20,7 @@ import {
 import { useOmnisearchMenu } from "@/components/crm/use-omnisearch-menu";
 import { sanitizeContactName } from "@/lib/display-name";
 import type { DealListItemDto } from "@/features/pipeline-v2/api/list";
+import { usePipelines } from "@/features/pipeline-v2/hooks";
 import { usePipelineOmnisearch } from "@/features/pipeline-v2/use-pipeline-omnisearch";
 
 import { countActiveFilters, type AdvancedDealFilters } from "../types";
@@ -68,13 +69,19 @@ export function PipelineSearchFilterBar({
   onSortKeyChange,
   placeholder = "Pesquisar e filtrar...",
   className,
-  pipelineId,
+  pipelineId: _pipelineId,
   onPickDeal,
 }: PipelineSearchFilterBarProps) {
+  void _pipelineId;
   const [open, setOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
-  const hits = usePipelineOmnisearch(search, search.trim().length >= 3, pipelineId);
+  const hits = usePipelineOmnisearch(search, search.trim().length >= 3);
+  const { data: pipelines = [] } = usePipelines();
+  const pipelineNameById = React.useMemo(
+    () => new Map(pipelines.map((p) => [p.id, p.name])),
+    [pipelines],
+  );
   const menu = useOmnisearchMenu(search, hits.items.length);
   const activeCount = countActiveFilters(filters) + (search.trim() ? 1 : 0);
 
@@ -145,6 +152,12 @@ export function PipelineSearchFilterBar({
             {hits.items.map((deal, i) => {
               const name = sanitizeContactName(deal.contact?.name) || deal.title || "Negócio";
               const stage = deal.stage?.name?.trim() || null;
+              const funnel = deal.stage?.pipelineId
+                ? pipelineNameById.get(deal.stage.pipelineId)
+                : null;
+              const detail = [funnel, stage ? `Etapa ${stage}` : deal.title]
+                .filter(Boolean)
+                .join(" · ");
               return (
                 <OmnisearchHitButton
                   key={deal.id}
@@ -170,7 +183,7 @@ export function PipelineSearchFilterBar({
                       )}
                     </span>
                     <span className="mt-0.5 truncate font-body text-[12px] text-[var(--text-secondary)]">
-                      {stage ? `Etapa ${stage}` : deal.title}
+                      {detail}
                     </span>
                   </span>
                   <OmnisearchStatusPill tone={deal.status === "LOST" ? "danger" : "success"}>

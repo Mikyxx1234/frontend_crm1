@@ -324,7 +324,11 @@ export default function V2PipelineListClientPage() {
               onSortKeyChange={setSortKey}
               placeholder="Buscar por título, contato, CPF, RGM…"
               pipelineId={pipelineId}
-              onPickDeal={(deal) => openDeal(deal.id, deal.number)}
+              onPickDeal={(deal) => {
+                const dest = deal.stage?.pipelineId;
+                if (dest && dest !== pipelineId) setPipelineId(dest);
+                openDeal(deal.id, deal.number);
+              }}
             />
           }
           tabsOverride={

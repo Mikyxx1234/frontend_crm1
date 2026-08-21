@@ -110,4 +110,6 @@ export interface PipelineListStageDto {
   position: number;
   isWon?: boolean;
   isLost?: boolean;
+  /** Total de negócios na etapa (GET /api/pipelines). */
+  dealCount?: number;
 }

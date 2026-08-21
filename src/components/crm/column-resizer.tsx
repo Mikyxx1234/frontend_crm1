@@ -10,7 +10,7 @@
  *
  * Comportamento:
  *  - Pointer events (touch + mouse + pen).
- *  - Aplica `body.style.cursor` e `user-select: none` durante o arrasto.
+ *  - Aplica cursor SVG (`.v2-col-resize-cursor`) e `user-select: none` durante o arrasto.
  *  - Respeita `min` / `max`.
  */
 
@@ -75,15 +75,14 @@ export function ColumnResizer({
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerup", onUp);
     document.addEventListener("pointercancel", onUp);
-    const prevCursor = document.body.style.cursor;
     const prevSelect = document.body.style.userSelect;
-    document.body.style.cursor = "col-resize";
+    document.body.classList.add("v2-col-resize-cursor");
     document.body.style.userSelect = "none";
     return () => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
       document.removeEventListener("pointercancel", onUp);
-      document.body.style.cursor = prevCursor;
+      document.body.classList.remove("v2-col-resize-cursor");
       document.body.style.userSelect = prevSelect;
     };
   }, [dragging, direction, min, max, onChange]);
@@ -95,11 +94,19 @@ export function ColumnResizer({
       title="Arrastar para tornar mais estreito ou mais largo"
       onPointerDown={onPointerDown}
       className={cn(
-        "absolute top-0 z-20 flex h-full w-3 cursor-col-resize items-center justify-center",
+        "v2-col-resize-cursor absolute top-0 z-20 flex h-full w-3 appearance-none items-center justify-center border-0 bg-transparent p-0",
         direction === "left" ? "-left-[6px]" : "-right-[6px]",
         className,
       )}
-    />
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none h-8 w-[3px] rounded-full bg-[var(--text-muted)]/45",
+          dragging && "bg-[var(--brand-primary)]",
+        )}
+      />
+    </button>
   );
 }
 

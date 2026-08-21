@@ -13,6 +13,9 @@ import { ButtonGlass } from "@/components/crm/button-glass";
  * PageHeader + área scroll — mas sem o botão "Voltar para configurações"
  * default. Por design, top-level pages costumam ter o NavRail como única
  * navegação primária; o `backHref` é opcional para casos pontuais.
+ *
+ * Gutter horizontal (rail↔conteúdo e conteúdo↔borda direita) vem de
+ * `--page-gutter` em `.v2-screen` — não repetir `pl-*` aqui.
  */
 export function AppV2PageShell({
   title,
@@ -45,7 +48,7 @@ export function AppV2PageShell({
   );
 
   return (
-    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
+    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] overflow-hidden">
       <NavRailSpacer />
 
       <main className="flex min-h-0 min-w-0 flex-col gap-3.5 overflow-hidden">

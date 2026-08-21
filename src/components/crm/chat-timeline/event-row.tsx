@@ -39,10 +39,24 @@ const ACTION_ICON: Record<ConversationEventAction, LucideIcon> = {
   template: FileText,
 };
 
+const ACTION_ICON_CLASS: Record<ConversationEventAction, string> = {
+  distribuicao: "text-[var(--color-info)]",
+  transferencia: "text-[var(--color-warning)]",
+  status: "text-[var(--color-success)]",
+  tabulacao: "text-[var(--color-primary)]",
+  tag: "text-[var(--color-lavender)]",
+  entrada: "text-[var(--color-success)]",
+  saida: "text-[var(--color-danger)]",
+  ia: "text-[var(--color-lavender)]",
+  template: "text-[var(--color-info)]",
+};
+
 export type EventRowProps = {
   action?: ConversationEventAction;
   /** Override do ícone (ex.: ligação atendida / não atendida). */
   icon?: LucideIcon;
+  /** Override da cor do ícone (ex.: ligação iniciada vs encerrada). */
+  iconClassName?: string;
   text: string;
   actor: string;
   /** User.id do agente — usado quando `actor` veio genérico ("Agente"). */
@@ -54,6 +68,7 @@ export type EventRowProps = {
 export function EventRow({
   action,
   icon,
+  iconClassName,
   text,
   actor,
   actorId,
@@ -76,6 +91,10 @@ export function EventRow({
   const Icon = icon ?? (action ? ACTION_ICON[action] : undefined) ?? Sparkles;
   const displayText = normalizeConversationEventText(text, displayActor);
   const actorSep = isConversationLifecycleText(displayText) ? "por" : "·";
+  const iconTone =
+    iconClassName ??
+    (action ? ACTION_ICON_CLASS[action] : undefined) ??
+    "text-[var(--color-primary)]";
 
   return (
     <div
@@ -92,7 +111,7 @@ export function EventRow({
         }
       >
         <Icon
-          className="size-3.5 shrink-0 text-primary"
+          className={cn("size-3.5 shrink-0", iconTone)}
           strokeWidth={2}
           aria-hidden
         />

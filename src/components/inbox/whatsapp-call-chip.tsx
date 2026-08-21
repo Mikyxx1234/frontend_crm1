@@ -359,10 +359,14 @@ export function WhatsappCallChip({
       } catch {
         /* ignore */
       }
-      return j;
+      return j as { pending?: boolean };
     },
-    onSuccess: () => {
-      toast.success("Solicitação de voz enviada ao cliente");
+    onSuccess: (j) => {
+      toast.success(
+        j?.pending
+          ? "Enviando template de ligação…"
+          : "Solicitação de voz enviada ao cliente",
+      );
       setTemplateDialogOpen(false);
       setMenuOpen(false);
       queryClient.invalidateQueries({ queryKey: key });

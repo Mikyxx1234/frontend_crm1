@@ -259,7 +259,7 @@ export function ConversationCard({
           "bg-white border-[var(--brand-primary)]/55 ring-2 ring-inset ring-[var(--brand-primary)]/30 hover:bg-white",
       )}
     >
-      <div className="px-3 py-2">
+      <div className="px-3 py-2 @max-[280px]:px-2 @max-[280px]:py-1.5">
       {/* Linha 1: checkbox (modo seleção) + avatar + (nome + tempo + preview ao lado).
           items-start alinha o nome no topo do avatar; o preview de 2
           linhas ocupa o espaço ao lado da metade inferior do avatar —
@@ -313,7 +313,7 @@ export function ConversationCard({
 
           {/* Preview — 1 linha, texto plano (não parece link: sem itálico,
               sem âncora). Ícone só indica tipo; clique seleciona o card. */}
-          <div className="mt-0.5 flex items-center gap-1 text-[11px] leading-[1.35] text-[var(--text-secondary)]">
+          <div className="mt-0.5 flex items-center gap-1 text-[11px] leading-[1.35] text-[var(--text-secondary)] @max-[220px]:hidden">
             {isOutgoing && conversation.lastMessageStatus === "failed" ? (
               <TooltipGlass
                 label={
@@ -348,7 +348,7 @@ export function ConversationCard({
 
       {/* Tags de contato — max 2 visíveis, +N para overflow */}
       {conversation.tags && conversation.tags.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1 @max-[280px]:hidden">
           {conversation.tags.slice(0, 2).map((t) => (
             <TooltipGlass key={t.id} label={t.name} side="top">
               <TagChip
@@ -374,12 +374,12 @@ export function ConversationCard({
       {/* Linha 3: assignee + sessao — flex-nowrap evita quebrar em 2 linhas
           quando o nome do responsavel + chip de sessao somam mais largura
           do que a coluna. O chip do assignee trunca com ellipsis. */}
-      <div className="mt-1.5 flex min-w-0 flex-nowrap items-center gap-1.5">
+      <div className="mt-1.5 flex min-w-0 flex-nowrap items-center gap-1.5 @max-[220px]:hidden">
         {/* Quando há responsável: exibe label "RESPONSÁVEL" + chip/slot.
             Sem responsável: apenas chip ghost "+Responsável". */}
         <span className="flex min-w-0 flex-1 items-center gap-1">
           {(conversation.assignee || conversation.assigneeId) && (
-            <span className="shrink-0 font-display text-[9px] font-bold text-[var(--text-muted)]">
+            <span className="shrink-0 font-display text-[9px] font-bold text-[var(--text-muted)] @max-[280px]:hidden">
               Responsável
             </span>
           )}
@@ -429,7 +429,7 @@ export function ConversationCard({
       {conversation.number != null && (
         <div
           className={cn(
-            "mt-1 font-display text-[10px] font-semibold tabular-nums",
+            "mt-1 font-display text-[10px] font-semibold tabular-nums @max-[260px]:hidden",
             conversation.resolved
               ? "text-[var(--text-muted)]"
               : "text-emerald-600 v2-dark:text-emerald-400",
@@ -442,7 +442,7 @@ export function ConversationCard({
       {showInboundSignal ? (
         <AwaitingReplyFooter
           unreadCount={unread}
-          className="rounded-b-[var(--radius-lg)]"
+          className="rounded-b-[var(--radius-lg)] @max-[260px]:justify-center @max-[260px]:px-2 @max-[260px]:py-1 @max-[260px]:[&>span]:sr-only"
         />
       ) : null}
     </article>

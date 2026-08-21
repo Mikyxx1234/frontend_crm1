@@ -320,7 +320,7 @@ export function ConversationColumn({
     <section
       aria-label="Lista de conversas"
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-4 pb-4 pt-4 backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-2.5 pb-2.5 pt-2.5 backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
@@ -329,7 +329,7 @@ export function ConversationColumn({
           `full` mantém o badge de urgência e o botão "+" do design v0.
           Quando `hideSearch`, esses controles vivem no header da página. */}
       {!hideSearch && (
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-2 flex items-center gap-2">
           <InputGlass
             withSearch
             placeholder="Buscar conversa..."
@@ -359,7 +359,7 @@ export function ConversationColumn({
       )}
 
       {/* Seletor de status + toggle de filtro na mesma linha */}
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-2">
       <button
         ref={dropdownBtnRef}
         type="button"

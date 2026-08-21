@@ -263,11 +263,11 @@ export default function InboxV2ClientPage({
   // ── Largura das colunas (persistidas) ─────────────────────────
   const [convWidth, setConvWidth] = usePersistentWidth(
     "inbox-v2:conv-width",
-    320,
+    300,
   );
   const [asideWidth, setAsideWidth] = usePersistentWidth(
     "inbox-v2:aside-width",
-    340,
+    300,
   );
 
   // ── Estado de UI local ─────────────────────────────────────────
@@ -1245,8 +1245,8 @@ export default function InboxV2ClientPage({
           <ColumnResizer
             value={convWidth}
             onChange={setConvWidth}
-            min={280}
-            max={440}
+            min={260}
+            max={400}
           />
         ) : undefined
       }
@@ -1785,12 +1785,12 @@ export default function InboxV2ClientPage({
     // ── Mobile: layout de painel único (lista → chat/negócio) ──────
     if (!isDesktop) {
       return (
-        <div className="v2-screen relative grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
+        <div className="v2-screen relative grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-2 overflow-hidden p-2">
           {navRailNode}
           <div
             className={cn(
               "relative flex min-h-0 min-w-0 flex-col overflow-hidden",
-              headerCollapsed ? "gap-0" : "gap-3",
+              headerCollapsed ? "gap-0" : "gap-2",
             )}
           >
             {renderCollapsiblePageHeader(
@@ -1864,7 +1864,7 @@ export default function InboxV2ClientPage({
     // ── Desktop: layout original de 3 colunas ─────────────────────
     return (
       <div
-        className="v2-screen relative grid h-full min-h-0 gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4"
+        className="v2-screen relative grid h-full min-h-0 gap-2 overflow-hidden p-2"
         style={{
           gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)",
           gridTemplateRows: "minmax(0, 1fr)",
@@ -1874,7 +1874,7 @@ export default function InboxV2ClientPage({
         <div
           className={cn(
             "relative flex min-h-0 min-w-0 flex-col overflow-hidden",
-            headerCollapsed ? "gap-0" : "gap-4",
+            headerCollapsed ? "gap-0" : "gap-2",
           )}
         >
           {renderCollapsiblePageHeader(
@@ -1886,7 +1886,7 @@ export default function InboxV2ClientPage({
             />,
           )}
           <div
-            className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
+            className="grid min-h-0 flex-1 gap-2 transition-[grid-template-columns] duration-200"
             style={{ gridTemplateColumns: `${convWidth}px 1fr ${effectiveAsideCollapsed ? "0px" : `${asideWidth}px`}` }}
           >
             {conversationColumnNode}
@@ -1897,8 +1897,8 @@ export default function InboxV2ClientPage({
                   direction="left"
                   value={asideWidth}
                   onChange={setAsideWidth}
-                  min={280}
-                  max={440}
+                  min={240}
+                  max={400}
                 />
               )}
               {asideNode}
@@ -1917,9 +1917,9 @@ export default function InboxV2ClientPage({
   // ── Mobile: layout de painel único (lista → chat/negócio) ──────
   if (!isDesktop) {
     return (
-      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
+      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-2 overflow-hidden p-2">
         {navRailNode}
-        <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden">
           {!activeId ? (
             <div className="min-h-0 flex-1 overflow-hidden">
               {conversationColumnNode}
@@ -1983,7 +1983,7 @@ export default function InboxV2ClientPage({
   // ── Desktop: layout original de 4 colunas ─────────────────────
   return (
     <div
-      className="v2-screen grid h-full min-h-0 gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4"
+      className="v2-screen grid h-full min-h-0 gap-2 overflow-hidden p-2"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
         gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${effectiveAsideCollapsed ? "0px" : `${asideWidth}px`}`,
@@ -1999,8 +1999,8 @@ export default function InboxV2ClientPage({
             direction="left"
             value={asideWidth}
             onChange={setAsideWidth}
-            min={280}
-            max={440}
+            min={240}
+            max={400}
           />
         )}
         {asideNode}

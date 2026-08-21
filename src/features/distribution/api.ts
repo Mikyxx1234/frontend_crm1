@@ -200,6 +200,7 @@ export function retryPending(): Promise<RetryResult> {
 
 export interface DistributionSettings {
   respectDepartment: boolean;
+  autoOnInbound: boolean;
 }
 
 export function fetchDistributionSettings(): Promise<DistributionSettings> {

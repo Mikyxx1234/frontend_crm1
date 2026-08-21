@@ -42,6 +42,15 @@ const serwist = new Serwist({
       matcher: ({ sameOrigin, url: { pathname } }) =>
         sameOrigin &&
         (pathname.startsWith("/api/storage/") ||
+          pathname.startsWith("/api/media/") ||
+          pathname.startsWith("/api/wa-call-permission")),
+      method: "POST",
+      handler: new NetworkOnly(),
+    },
+    {
+      matcher: ({ sameOrigin, url: { pathname } }) =>
+        sameOrigin &&
+        (pathname.startsWith("/api/storage/") ||
           pathname.startsWith("/api/media/")),
       method: "GET",
       handler: new NetworkOnly(),

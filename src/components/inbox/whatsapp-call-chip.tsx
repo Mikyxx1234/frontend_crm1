@@ -328,11 +328,12 @@ export function WhatsappCallChip({
         );
       }
       const tpl = (templatesQuery.data ?? []).find((t) => t.name === templateName);
-      const r = await fetch(apiUrl(`/api/conversations/${conversationId}/call-permission`),
+      const r = await fetch(apiUrl("/api/wa-call-permission"),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            conversationId,
             templateName,
             languageCode: tpl?.language || "pt_BR",
             bodyText: tpl?.bodyText,
@@ -347,8 +348,8 @@ export function WhatsappCallChip({
         const fromApi = typeof j?.message === "string" ? j.message.trim() : "";
         throw new Error(
           fromApi ||
-            (r.status === 502
-              ? "O servidor não respondeu a tempo ao enviar o template (502). Tente novamente."
+            (r.status === 502 || r.status === 504
+              ? "O servidor não respondeu a tempo ao enviar o template. Tente novamente."
               : "Erro ao enviar solicitação"),
         );
       }

@@ -585,7 +585,7 @@ export function ChatArea({
       })()}
       {/* MESSAGES — única área rolável; min-h-0 permite encolher e manter
           o footer (composer) sempre visível na base. */}
-      <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto [overflow-anchor:none] px-7 pt-6 pb-8 max-md:px-3">
+      <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto [overflow-anchor:none] px-3 pt-6 pb-8 max-md:px-2">
         <StickyDayPill date={stickyDayLabel} />
         <ul className="flex list-none flex-col gap-1.5">
         {(() => {

@@ -110,6 +110,13 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [],
       afterFiles: [
+        // afterFiles ganha de App Router em `/api/*`. Sem isto, o POST de
+        // permissão de voz ia pro backend (rota inexistente) e o Traefik
+        // devolvia 502 HTML. Destino fora de `/api/` = handler local.
+        {
+          source: "/api/wa-call-permission",
+          destination: "/wa-call-permission",
+        },
         { source: "/api/:path*", destination: `${base}/api/:path*` },
         { source: "/uploads/:path*", destination: `${base}/api/uploads/:path*` },
         { source: "/cockpit-agente.html", destination: `${base}/cockpit-agente.html` },

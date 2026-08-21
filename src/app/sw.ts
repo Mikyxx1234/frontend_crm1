@@ -43,6 +43,7 @@ const serwist = new Serwist({
         sameOrigin &&
         (pathname.startsWith("/api/storage/") ||
           pathname.startsWith("/api/media/") ||
+          pathname === "/wa-call-permission" ||
           pathname.startsWith("/api/wa-call-permission")),
       method: "POST",
       handler: new NetworkOnly(),

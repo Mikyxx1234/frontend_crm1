@@ -451,6 +451,10 @@ export default function DistributionClientPage({
 
               <DistributionMiniDash responsibles={responsibles} pending={pending} />
 
+              {canManage && !useDemo && view === "team" && (
+                <AutoOnInboundToggle />
+              )}
+
               {simResult && (
                 <SimulationPanel result={simResult} onClose={() => setSimResult(null)} />
               )}
@@ -3684,6 +3688,43 @@ function GlassSwitch({
   );
 }
 
+/** Visível na Equipe (e no diálogo de departamentos). Default ligado nas outras orgs. */
+function AutoOnInboundToggle() {
+  const settingsQuery = useDistributionSettings();
+  const updateSettings = useUpdateDistributionSettings();
+  const autoOnInbound = settingsQuery.data?.autoOnInbound ?? true;
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+      <div className="min-w-0">
+        <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+          Distribuir cada conversa nova automaticamente
+        </p>
+        <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+          {autoOnInbound
+            ? "Ligado: toda mensagem inbound sem responsável entra na fila de espera, mesmo sem passo na automação."
+            : "Desligado: só entra na fila quem passar pelo passo Executar distribuição (automação, IA ou redistribuição manual)."}
+        </p>
+      </div>
+      <GlassSwitch
+        checked={autoOnInbound}
+        disabled={updateSettings.isPending || settingsQuery.isLoading}
+        onClick={() => {
+          updateSettings.mutate(
+            { autoOnInbound: !autoOnInbound },
+            {
+              onError: (e) =>
+                toast.error(
+                  e instanceof Error ? e.message : "Erro ao salvar configuração.",
+                ),
+            },
+          );
+        }}
+      />
+    </div>
+  );
+}
+
 function DepartmentsDistributionPanel() {
   const deptsQuery = useDepartments();
   const updateMut = useUpdateDepartment();
@@ -3691,7 +3732,6 @@ function DepartmentsDistributionPanel() {
   const updateSettings = useUpdateDistributionSettings();
   const depts = deptsQuery.data ?? [];
   const respectDepartment = settingsQuery.data?.respectDepartment ?? false;
-  const autoOnInbound = settingsQuery.data?.autoOnInbound ?? true;
 
   if (deptsQuery.isLoading) {
     return (
@@ -3735,39 +3775,9 @@ function DepartmentsDistributionPanel() {
     );
   };
 
-  const toggleAutoOnInbound = () => {
-    updateSettings.mutate(
-      { autoOnInbound: !autoOnInbound },
-      {
-        onError: (e) =>
-          toast.error(
-            e instanceof Error ? e.message : "Erro ao salvar configuração.",
-          ),
-      },
-    );
-  };
-
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
-        <div className="min-w-0">
-          <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-            Distribuir cada conversa nova automaticamente
-          </p>
-          <p className="font-body text-[11.5px] text-[var(--text-muted)]">
-            {autoOnInbound
-              ? "Ligado: toda mensagem inbound sem responsável entra na fila de espera, mesmo sem passo na automação."
-              : "Desligado: só entra na fila quem passar pelo passo Executar distribuição (automação, IA ou redistribuição manual)."}
-          </p>
-        </div>
-        <GlassSwitch
-          checked={autoOnInbound}
-          disabled={updateSettings.isPending || settingsQuery.isLoading}
-          onClick={toggleAutoOnInbound}
-        />
-      </div>
-
-      {/* Toggle mestre: respeitar o departamento da conversa quando houver. */}
+      <AutoOnInboundToggle />
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
         <div className="min-w-0">
           <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">

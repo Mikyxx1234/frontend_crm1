@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { SEARCH_DEBOUNCE_MS, normalizeSearchQuery } from "@/lib/search-query";
-import { fetchDealsList, type DealListItemDto } from "../api/list";
+import { fetchDealsList, type DealListItemDto } from "@/features/pipeline-v2/api/list";
 
 const RESULT_LIMIT = 8;
 

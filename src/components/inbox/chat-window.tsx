@@ -4702,7 +4702,10 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
       !isOutgoing &&
       (senderSuggestsIncoming || contentSuggestsIncoming));
   const isTerminate = lower.includes("fim") || lower.includes("encerrada");
-  const isFailed = lower.includes("falhou") || /n[ãa]o atendida/i.test(content);
+  const isFailed =
+    lower.includes("falhou") ||
+    /n[ãa]o atendida/i.test(content) ||
+    /n[ãa]o completada/i.test(content);
 
   // Nome do agente exibido como linha discreta abaixo do título quando
   // outbound. Extrai do `senderName` ("WhatsApp · Marcelo Pinheiro" →
@@ -4714,11 +4717,13 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
 
   const Icon = hasRecording
     ? Volume2
-    : isIncoming
-      ? PhoneIncoming
-      : isOutgoing
-        ? PhoneOutgoing
-        : Phone;
+    : isFailed
+      ? PhoneOff
+      : isIncoming
+        ? PhoneIncoming
+        : isOutgoing
+          ? PhoneOutgoing
+          : Phone;
 
   const durationMatch = content.match(
     /(\d+min(?:\s+\d+s)?|\d+m\d{2}s|\d+:\d{2}|\d+s)\b/,
@@ -4751,11 +4756,13 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
 
   const accent = isFailed
     ? "text-destructive"
-    : isIncoming
-      ? "text-success"
-      : isOutgoing
-        ? "text-primary"
-        : "text-[var(--color-ink-soft)]";
+    : isTerminate
+      ? "text-[var(--color-ink-soft)]"
+      : isIncoming
+        ? "text-success"
+        : isOutgoing
+          ? "text-primary"
+          : "text-[var(--color-ink-soft)]";
 
   // Lateralização: outbound (agente) → direita; inbound (cliente) →
   // esquerda; sem direção detectável (eventos de sistema antigos) →

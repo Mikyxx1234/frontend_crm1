@@ -105,13 +105,13 @@ export function EventRow({
     >
       <span className="h-px min-w-4 flex-1 bg-border" aria-hidden />
       <p
-        className="flex min-w-0 max-w-[min(100%,36rem)] flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-center text-xs text-muted-foreground"
+        className="flex min-w-0 max-w-[min(100%,36rem)] flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-center text-[10px] leading-snug text-muted-foreground"
         aria-label={
           displayActor ? `${displayText} ${actorSep} ${displayActor}` : displayText
         }
       >
         <Icon
-          className={cn("size-3.5 shrink-0", iconTone)}
+          className={cn("size-3 shrink-0", iconTone)}
           strokeWidth={2}
           aria-hidden
         />
@@ -122,7 +122,7 @@ export function EventRow({
           </span>
         ) : null}
         {time ? (
-          <time className="text-[10px] tabular-nums text-muted-foreground">
+          <time className="text-[9px] tabular-nums text-muted-foreground">
             {time}
           </time>
         ) : null}

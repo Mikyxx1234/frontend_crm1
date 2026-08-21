@@ -397,6 +397,7 @@ export function DealWorkspace({
                 <WhatsappCallChip
                   conversationId={selectedConv.id}
                   channel={selectedConv.channel}
+                  contactName={contact?.name ?? deal.title}
                 />
               ) : undefined
             }

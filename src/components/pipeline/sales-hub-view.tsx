@@ -924,6 +924,12 @@ export function SalesHubView({
                     channel={
                       activeConversation.channel ?? activeDeal?.channel ?? null
                     }
+                    contactName={
+                      activeDeal?.contact?.name ??
+                      activeDeal?.title ??
+                      detailDeal?.name ??
+                      ""
+                    }
                   />
                   {contactConversations.length > 1 ? (
                     <TooltipHost label="Conversas do contato" side="bottom">

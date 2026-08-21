@@ -320,7 +320,7 @@ export function ConversationColumn({
     <section
       aria-label="Lista de conversas"
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-2.5 pb-2.5 pt-2.5 backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-1 pb-1 pt-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
@@ -544,14 +544,13 @@ export function ConversationColumn({
         )
       })()}
 
-      {/* Lista */}
-      {/* p-1.5: o card ativo usa ring-2 (fora da caixa); overflow-y-auto
-          clipa o anel no topo/lados — sem padding o 1º card perde a borda. */}
+      {/* Lista — ring do card ativo é inset, então não precisa de padding
+          lateral (era o vão que o operador marcou nas laterais). */}
       {/* Scroller NÃO é flex-col: filhos diretos em flex-col + overflow-y
           encolhem (flex-shrink:1) e viram barras cinza. Espelho do DealQueue. */}
       <div
         ref={listScrollRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5 [-webkit-overflow-scrolling:touch]"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-0.5 [-webkit-overflow-scrolling:touch]"
       >
         <div className="flex flex-col gap-1.5">
         {isLoading ? (

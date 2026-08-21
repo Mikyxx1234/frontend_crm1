@@ -291,7 +291,7 @@ export function WhatsappCallChip({
   const remoteSourceRef = React.useRef<MediaStreamAudioSourceNode | null>(null);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
 
-  const unlockAudio = React.useCallback(async () => {
+  const unlockAudio = React.useCallback(() => {
     try {
       const AC =
         window.AudioContext ||
@@ -301,7 +301,7 @@ export function WhatsappCallChip({
         audioCtxRef.current = new AC();
       }
       if (audioCtxRef.current.state === "suspended") {
-        await audioCtxRef.current.resume();
+        void audioCtxRef.current.resume();
       }
     } catch {
       /* ignore */
@@ -310,11 +310,8 @@ export function WhatsappCallChip({
     if (!el) return;
     el.muted = false;
     el.volume = 1;
-    try {
-      await el.play();
-    } catch {
-      /* stream ainda não chegou — o clique já desbloqueou a política */
-    }
+    // Não chamar play() sem stream: em alguns browsers a Promise
+    // fica pendente para sempre e o clique em Ligar nunca segue.
   }, []);
 
   React.useEffect(() => {
@@ -369,9 +366,12 @@ export function WhatsappCallChip({
     }
   }, [outbound.phase, outbound.remoteStream]);
 
+  const resetOutbound = outbound.reset;
+  const resetOutboundRef = React.useRef(resetOutbound);
+  resetOutboundRef.current = resetOutbound;
   React.useEffect(() => {
-    outbound.reset();
-  }, [conversationId, outbound.reset]);
+    resetOutboundRef.current();
+  }, [conversationId]);
 
   // Quando a fase WebRTC local sai de "live"/"need_answer" (chamada encerrada
   // por qualquer lado), revalida o calling-context imediatamente para tirar o
@@ -651,7 +651,7 @@ export function WhatsappCallChip({
     !terminateCall.isPending;
 
   const initiate = async () => {
-    await unlockAudio();
+    unlockAudio();
     const r = await outbound.initiate();
     if (r.ok) {
       toast.success("Pedido aceito pela Meta. Aguarde…");

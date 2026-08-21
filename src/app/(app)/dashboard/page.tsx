@@ -2,8 +2,8 @@
  * /v2/dashboard — reaproveita DashboardV2ClientPage do route group
  * `(v2)/dashboard-v2`, injetando o `<NavRailSpacer />`.
  *
- * Toda a feature `features/dashboard-v2` (analytics deals-overview,
- * service-overview, pipelines) é reaproveitada sem alterações.
+ * Toda a feature `features/dashboard-v2` (negócios, atendimento, fila do
+ * operador) é reaproveitada sem alterações.
  */
 
 import DashboardV2ClientPage from "./_v2-client";

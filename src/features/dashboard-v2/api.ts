@@ -1,7 +1,6 @@
 /*
- * API client do Dashboard V2 (dois níveis: Negócios e Atendimento).
- * Consome os endpoints novos /api/analytics/deals-overview e
- * /api/analytics/service-overview, além de /api/pipelines para o filtro.
+ * API client do Dashboard: negócios (GET /api/dashboard), atendimento
+ * (GET /api/analytics/service-overview) e fila do operador (GET /api/dashboard/me).
  */
 
 import { apiUrl } from "@/lib/api";
@@ -12,38 +11,6 @@ export interface DashboardPeriod {
   from: string; // ISO
   to: string; // ISO
 }
-
-// ── Negócios ───────────────────────────────────────────────────────
-
-export interface DealStageFlow {
-  id: string;
-  name: string;
-  color: string;
-  count: number;
-  value: number;
-  entered: number;
-  exited: number;
-  lost: number;
-  won: number;
-}
-
-export interface DealsOverview {
-  stages: DealStageFlow[];
-  /**
-   * Pessoas (contatos) novas que entraram no CRM no período — org inteira,
-   * independente do pipeline. `count` = contatos distintos criados.
-   */
-  newInPeriod?: { count: number; value: number };
-  summary: {
-    totalValue: number;
-    totalDeals: number;
-    winRate: number;
-    avgTicket: number;
-    deltas: { winRate: number; avgTicket: number };
-  };
-}
-
-// ── Atendimento ────────────────────────────────────────────────────
 
 export interface DonutDatum {
   name: string;
@@ -127,20 +94,6 @@ async function getJson<T>(path: string, errLabel: string): Promise<T> {
     // middleware quando a sessão não é reconhecida pelo backend).
     throw new Error("Sessão não reconhecida pelo backend. Recarregue e faça login novamente.");
   }
-}
-
-export async function fetchDealsOverview(params: {
-  period: DashboardPeriod;
-  pipelineId?: string;
-  ownerId?: string;
-}): Promise<DealsOverview> {
-  const qs = buildQuery({
-    from: params.period.from,
-    to: params.period.to,
-    pipelineId: params.pipelineId,
-    ownerId: params.ownerId,
-  });
-  return getJson<DealsOverview>(`/api/analytics/deals-overview${qs}`, "Erro ao carregar negócios");
 }
 
 export async function fetchServiceOverview(params: {
@@ -302,4 +255,23 @@ export async function fetchDashboard(
     `/api/dashboard?${sp.toString()}`,
     "Erro ao carregar o dashboard",
   );
+}
+
+export interface DashboardMeItem {
+  id: string;
+  number: number | null;
+  title: string;
+  subtitle: string | null;
+  href: string;
+  meta: string | null;
+}
+
+export interface DashboardMeData {
+  conversations: { total: number; items: DashboardMeItem[] };
+  activities: { overdue: number; today: number; items: DashboardMeItem[] };
+  stalled: { total: number; items: DashboardMeItem[] };
+}
+
+export async function fetchDashboardMe(): Promise<DashboardMeData> {
+  return getJson<DashboardMeData>("/api/dashboard/me", "Erro ao carregar sua fila");
 }

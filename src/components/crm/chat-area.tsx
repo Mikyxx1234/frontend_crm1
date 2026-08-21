@@ -159,6 +159,8 @@ interface ChatAreaProps {
    * Numero e' opcional pra manter compat com callers antigos.
    */
   conversationNumber?: number | null
+  /** Id da conversa — usado para não resetar o scroll em refetch de histórico. */
+  conversationId?: string | null
 
   /**
    * Sinaliza que a conversa foi encerrada (`status = RESOLVED`). Quando
@@ -205,6 +207,7 @@ export function ChatArea({
   composerSlot,
   headerActionsSlot,
   conversationNumber,
+  conversationId,
   onUseTemplate,
   notesSlot,
   activitiesSlot,
@@ -315,42 +318,73 @@ export function ChatArea({
     const fresh = sessionName ? senderPhotoByName.get(sessionName) : null
     return fresh ?? session?.user?.image ?? null
   }, [session, senderPhotoByName])
+  const NEAR_BOTTOM_PX = 160
+
+  const isNearBottom = (el: HTMLElement) =>
+    el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX
+
   // Rola suave (ou instantâneo) até a última mensagem e zera o estado do
   // botão "descer".
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const container = messagesRef.current
     if (!container) return
-    requestAnimationFrame(() => {
+    const pin = () => {
+      container.scrollTop = container.scrollHeight
+    }
+    if (behavior === "auto") {
+      requestAnimationFrame(() => requestAnimationFrame(pin))
+    } else {
       container.scrollTo({ top: container.scrollHeight, behavior })
-    })
+    }
+    stickToBottomRef.current = true
     setShowScrollDown(false)
     setUnreadCount(0)
   }, [])
 
-  // Esconde o botão assim que o operador chega perto do fim manualmente.
+  const convKey = conversationId ?? (conversationNumber != null ? `n:${conversationNumber}` : "")
+  const convKeyRef = useRef(convKey)
+  const stickToBottomRef = useRef(true)
+  const prevFirstIdRef = useRef<string | null>(null)
+  const prevLastIdRef = useRef<string | null>(null)
+
+  // Esconde o botão só quando o operador está no fim; mostra sempre que
+  // sobe no histórico (não só quando chega inbound).
   useEffect(() => {
     const container = messagesRef.current
     if (!container) return
     const onScroll = () => {
-      const nearBottom =
-        container.scrollHeight - container.scrollTop - container.clientHeight < 200
-      if (nearBottom) {
-        setShowScrollDown(false)
-        setUnreadCount(0)
-      }
+      const near = isNearBottom(container)
+      stickToBottomRef.current = near
+      setShowScrollDown(!near)
+      if (near) setUnreadCount(0)
     }
     container.addEventListener("scroll", onScroll, { passive: true })
     return () => container.removeEventListener("scroll", onScroll)
   }, [])
 
-  // Rola a lista até o fim quando: (1) a conversa muda / carrega (instantâneo),
-  // ou (2) chega/enviamos uma nova mensagem no fim. Ao enviar (mensagem própria)
-  // ou quando o operador já está perto do fim, rola suave; se ele estiver lendo
-  // histórico mais acima e o cliente enviar, NÃO puxamos a tela — mostramos o
-  // botão "descer" com o contador. Detecta troca de conversa vs. append
-  // comparando o 1º/último id (evita depender de `conversationNumber`, nulável).
-  const prevFirstIdRef = useRef<string | null>(null)
-  const prevLastIdRef = useRef<string | null>(null)
+  // Troca de conversa: vai ao fim depois do layout. Não usa o 1º id da
+  // lista — refetch com history=1 muda o primeiro item e parecia "switch".
+  useEffect(() => {
+    const switched = convKeyRef.current !== convKey
+    convKeyRef.current = convKey
+    if (!switched && prevLastIdRef.current != null) return
+    stickToBottomRef.current = true
+    setShowScrollDown(false)
+    setUnreadCount(0)
+    prevFirstIdRef.current = messages[0]?.id ?? null
+    prevLastIdRef.current = messages[messages.length - 1]?.id ?? null
+    const container = messagesRef.current
+    if (!container) return
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight
+      })
+    })
+  }, [convKey, messages])
+
+  // Append no fim: gruda se o operador já estava no rodapé (ou mandou
+  // mensagem). Eventos de sistema (permissão de ligação, distribuição)
+  // não puxam a tela se ele estiver lendo histórico.
   useEffect(() => {
     const container = messagesRef.current
     if (!container) return
@@ -362,30 +396,19 @@ export function ChatArea({
     prevFirstIdRef.current = firstId
     prevLastIdRef.current = lastId
 
-    // Nada novo no fim (ex.: prepend de histórico mais antigo) → não mexe.
-    if (lastId === prevLast) return
+    if (!lastId || lastId === prevLast) return
+    if (prevLast == null) return
 
-    const isSwitchOrInitial = prevLast === null || firstId !== prevFirst
-    if (isSwitchOrInitial) {
+    const near = stickToBottomRef.current || isNearBottom(container)
+    const ownChat =
+      last.type === "outgoing" && last.kind !== "event" && last.kind !== "note"
+    if (ownChat || near) {
       requestAnimationFrame(() => {
         container.scrollTop = container.scrollHeight
       })
       setShowScrollDown(false)
       setUnreadCount(0)
-      return
-    }
-
-    const nearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 200
-    const ownMessage = last?.type === "outgoing"
-    if (ownMessage || nearBottom) {
-      requestAnimationFrame(() => {
-        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" })
-      })
-      setShowScrollDown(false)
-      setUnreadCount(0)
     } else {
-      // Mensagem do cliente chegou enquanto o operador lê histórico acima.
       setShowScrollDown(true)
       setUnreadCount((n) => n + 1)
     }
@@ -553,7 +576,7 @@ export function ChatArea({
       })()}
       {/* MESSAGES — única área rolável; min-h-0 permite encolher e manter
           o footer (composer) sempre visível na base. */}
-      <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-7 pt-6 pb-8 max-md:px-3">
+      <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto [overflow-anchor:none] px-7 pt-6 pb-8 max-md:px-3">
         <StickyDayPill date={stickyDayLabel} />
         <ul className="flex list-none flex-col gap-1.5">
         {(() => {
@@ -627,7 +650,7 @@ export function ChatArea({
             }
             const isEvent = message.kind === "event"
             return (
-              <Fragment key={message.id || index}>
+              <Fragment key={`${message.id || "msg"}-${index}`}>
                 {showDay && dayLabel ? (
                   <li className="pointer-events-none list-none" data-day-label={dayLabel}>
                     <DaySeparator date={dayLabel} />
@@ -703,7 +726,7 @@ export function ChatArea({
               ? `${unreadCount} mensagens não lidas — ir para o fim`
               : "Ir para a última mensagem"
           }
-          className="absolute bottom-24 right-6 z-20 flex size-10 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-px hover:text-[var(--brand-primary)] active:scale-95"
+          className="absolute bottom-24 right-6 z-30 flex size-10 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-px hover:text-[var(--brand-primary)] active:scale-95"
         >
           <IconChevronDown size={20} />
           {unreadCount > 0 && (

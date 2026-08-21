@@ -321,6 +321,7 @@ export function SalesHubChat({
         connection={messagesData?.channel ?? null}
         connections={messagesData?.channels}
         conversationNumber={conversationNumber ?? null}
+        conversationId={conversationId}
         conversationResolved={isResolved}
         conversationClosedAt={conversationClosedAt ?? null}
         onUseTemplate={() => setTemplateOpen(true)}

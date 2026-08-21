@@ -1462,6 +1462,7 @@ export default function InboxV2ClientPage({
         connection={messagesData?.channel ?? null}
         connections={messagesData?.channels}
         conversationNumber={activeRow?.number ?? null}
+        conversationId={activeRow.id}
         conversationResolved={activeRow?.status === "RESOLVED"}
         conversationClosedAt={activeRow?.closedAt ?? null}
         onUseTemplate={() => setTemplateOpen(true)}

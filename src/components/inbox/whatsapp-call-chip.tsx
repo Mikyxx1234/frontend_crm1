@@ -47,7 +47,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSSE } from "@/hooks/use-sse";
-import { messagesKey } from "@/features/inbox-v2/hooks/use-messages";
+import { emitConversationReopened, messagesKey } from "@/features/inbox-v2/hooks/use-messages";
 import { useWhatsappOutboundWebRtc } from "@/hooks/use-whatsapp-outbound-webrtc";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -359,7 +359,7 @@ export function WhatsappCallChip({
       } catch {
         /* ignore */
       }
-      return j as { pending?: boolean };
+      return j as { pending?: boolean; reopenedConversationId?: string };
     },
     onSuccess: (j) => {
       toast.success(
@@ -369,6 +369,12 @@ export function WhatsappCallChip({
       );
       setTemplateDialogOpen(false);
       setMenuOpen(false);
+      if (typeof j?.reopenedConversationId === "string" && j.reopenedConversationId) {
+        emitConversationReopened(j.reopenedConversationId);
+        queryClient.invalidateQueries({
+          queryKey: messagesKey(j.reopenedConversationId),
+        });
+      }
       queryClient.invalidateQueries({ queryKey: key });
       queryClient.invalidateQueries({ queryKey: messagesKey(conversationId) });
       queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });

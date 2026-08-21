@@ -529,16 +529,14 @@ export function WhatsappCallChip({
   };
 
   if (isLoading) {
-    return (
-      <span
-        className={
-          isCta
-            ? "inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(16,185,129,0.45)]"
-            : "inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[12px] font-semibold text-ink-subtle"
-        }
-      >
-        <Loader2 className={cn("animate-spin", isCta ? "size-4" : "size-3.5")} />
-        {isCta ? "Fazer Chamada" : "Voz…"}
+    return isCta ? (
+      <span className="inline-flex size-10 shrink-0 items-center justify-center" aria-label="Ligar via WhatsApp">
+        <Loader2 className="size-5 animate-spin text-emerald-500" />
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[12px] font-semibold text-ink-subtle">
+        <Loader2 className="size-3.5 animate-spin" />
+        Voz…
       </span>
     );
   }
@@ -956,19 +954,18 @@ export function WhatsappCallChip({
         <>
           <button
             type="button"
-            className={cn(
-              "inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(16,185,129,0.45)] ring-4 ring-emerald-500/15 outline-none transition-all hover:shadow-[0_6px_18px_rgba(16,185,129,0.55)] focus-visible:ring-emerald-500/40",
-              cs === "DENIED" || effectivelyExpired
-                ? "bg-destructive hover:bg-destructive/90 ring-destructive/15"
-                : outbound.phase === "live" || hasActiveCall
-                  ? "bg-emerald-600 hover:bg-emerald-700"
-                  : "bg-emerald-500 hover:bg-emerald-600",
-            )}
-            aria-label="Fazer chamada"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+            aria-label="Ligar via WhatsApp"
             onClick={() => setMenuOpen(true)}
           >
-            <Phone className="size-4 text-white" strokeWidth={2.2} />
-            <span className="whitespace-nowrap tabular-nums">{tone.label}</span>
+            <img
+              src="/inbox-ligar-whatsapp.png"
+              alt="Ligar via WhatsApp"
+              width={40}
+              height={40}
+              className="size-10 object-contain"
+              draggable={false}
+            />
           </button>
           <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
             <DialogContent size="sm">

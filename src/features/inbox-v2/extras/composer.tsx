@@ -112,6 +112,7 @@ export function Composer({
   transferSlot,
   onRequestTemplate,
   sessionExpired,
+  enableCallPermission,
 }: {
   conversationId: string | null;
   value: string;
@@ -188,6 +189,8 @@ export function Composer({
   onRequestTemplate?: () => void;
   /** Janela de 24h da Meta encerrada — aviso dedicado + CTA de template. */
   sessionExpired?: boolean;
+  /** Exibe "Pedir permissão de ligação" no menu +. */
+  enableCallPermission?: boolean;
 }) {
   const { confirm: confirmDialog, dialog: confirmDialogNode } = useConfirm();
   const [noteMode, setNoteMode] = useState(false);
@@ -1139,6 +1142,7 @@ export function Composer({
               outboundDisabled={inputDisabled}
               beforeOutboundSend={confirmChannelSwitchIfNeeded}
               onOutboundBlocked={warnOutboundBlocked}
+              enableCallPermission={enableCallPermission}
             />
             <div ref={emojiWrapRef} className="relative">
               <TooltipGlass label="Emoji" side="top">

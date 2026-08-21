@@ -6,14 +6,23 @@ import {
   IconPaperclip,
   IconCamera,
   IconFileText,
-  IconLock,
   IconClock,
   IconCheckbox,
   IconCircleCheck,
   IconRotateClockwise,
   IconMessageCode,
   IconBolt,
+  IconPhone,
 } from "@tabler/icons-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { CallPermissionTemplateDialog } from "@/components/inbox/call-permission-template-dialog";
+import { emitConversationReopened, messagesKey } from "@/features/inbox-v2/hooks/use-messages";
+import {
+  CALL_PERMISSION_TPL_STORAGE,
+  fetchCallPermissionTemplates,
+  sendCallPermissionTemplate,
+} from "@/lib/wa-call-permission-send";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { useResolveConversationFlow } from "./use-resolve-conversation-flow";
@@ -59,6 +68,7 @@ export function ComposerMenu({
   outboundDisabled,
   beforeOutboundSend,
   onOutboundBlocked,
+  enableCallPermission,
 }: {
   conversationId: string | null;
   /** Canal de envio atual — filtra templates WhatsApp da WABA correta. */
@@ -95,6 +105,8 @@ export function ComposerMenu({
   outboundDisabled?: boolean;
   beforeOutboundSend?: () => boolean | Promise<boolean>;
   onOutboundBlocked?: () => void;
+  /** WhatsApp Cloud API — item "Pedir permissão de ligação". */
+  enableCallPermission?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
@@ -102,6 +114,51 @@ export function ComposerMenu({
   const [taskOpen, setTaskOpen] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
+  const [callPermissionOpen, setCallPermissionOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const callTemplatesQuery = useQuery({
+    queryKey: ["call-permission-templates"],
+    queryFn: fetchCallPermissionTemplates,
+    enabled: callPermissionOpen && !!conversationId && !!enableCallPermission,
+    staleTime: 5 * 60_000,
+  });
+  const sendCallPermission = useMutation({
+    mutationFn: async (chosenTemplate?: string) => {
+      if (!conversationId) throw new Error("Conversa inválida.");
+      let stored = "";
+      try {
+        stored = sessionStorage.getItem(CALL_PERMISSION_TPL_STORAGE)?.trim() ?? "";
+      } catch {
+        /* ignore */
+      }
+      const templateName = (chosenTemplate ?? "").trim() || stored;
+      if (!templateName) {
+        throw new Error(
+          "Configure um template aprovado da Meta em Configurações → WhatsApp Templates.",
+        );
+      }
+      const tpl = (callTemplatesQuery.data ?? []).find((t) => t.name === templateName);
+      return sendCallPermissionTemplate({ conversationId, templateName, tpl });
+    },
+    onSuccess: (j) => {
+      toast.success(
+        j?.pending
+          ? "Enviando template de ligação…"
+          : "Solicitação de voz enviada ao cliente",
+      );
+      setCallPermissionOpen(false);
+      if (typeof j?.reopenedConversationId === "string" && j.reopenedConversationId) {
+        emitConversationReopened(j.reopenedConversationId);
+        queryClient.invalidateQueries({
+          queryKey: messagesKey(j.reopenedConversationId),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["calling-context", conversationId] });
+      queryClient.invalidateQueries({ queryKey: messagesKey(conversationId) });
+      queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const popoverRef = useRef<HTMLDivElement>(null);
   const { handleToggleResolve: resolveFlow, toggleResolve, dialogs } =
     useResolveConversationFlow({
@@ -224,6 +281,19 @@ export function ComposerMenu({
                 <IconFileText size={15} /> Templates WhatsApp
               </button>
 
+              {enableCallPermission ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCallPermissionOpen(true);
+                    closeMenu();
+                  }}
+                  className={itemClass}
+                >
+                  <IconPhone size={15} /> Pedir permissão de ligação
+                </button>
+              ) : null}
+
               <button
                 type="button"
                 onClick={() => {
@@ -325,6 +395,15 @@ export function ComposerMenu({
         channelId={channelId}
         contactName={contactName}
         onPick={onPickTemplate}
+      />
+      <CallPermissionTemplateDialog
+        open={callPermissionOpen}
+        onOpenChange={setCallPermissionOpen}
+        contactName={contactName}
+        templates={callTemplatesQuery.data ?? []}
+        loading={callTemplatesQuery.isLoading}
+        sending={sendCallPermission.isPending}
+        onSubmit={(name) => sendCallPermission.mutate(name)}
       />
     </div>
   );

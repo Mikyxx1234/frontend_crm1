@@ -1582,6 +1582,9 @@ export default function InboxV2ClientPage({
               );
             }}
             conversationNumber={activeRow?.number ?? null}
+            enableCallPermission={
+              activeRow.channel === "whatsapp" || activeRow.channel === "meta"
+            }
             transferSlot={
               <RequirePermission permission="conversation:transfer">
                 <TransferPopover

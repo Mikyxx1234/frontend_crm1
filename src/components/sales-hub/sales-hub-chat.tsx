@@ -384,6 +384,9 @@ export function SalesHubChat({
             onCancelReply={() => setReplyTo(null)}
             onReopenNewConversation={onConversationReopened}
             conversationNumber={conversationNumber ?? null}
+            enableCallPermission={
+              contactChannel === "whatsapp" || contactChannel === "meta"
+            }
           />
         }
         floatingCallSlot={

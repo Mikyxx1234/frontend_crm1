@@ -799,6 +799,7 @@ export function useDealChatBinding(params: {
       conversationNumber={conversationNumber ?? null}
       departmentId={departmentId ?? null}
       requireTabulationOnClose={requireTabulationOnClose ?? false}
+      enableCallPermission={applyWhatsappSession}
     />
   ) : null;
 

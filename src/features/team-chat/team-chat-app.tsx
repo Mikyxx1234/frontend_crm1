@@ -266,7 +266,7 @@ function Thread({
           }
         />
         <div className="relative z-20 shrink-0 overflow-visible px-3 pb-4 pt-2">
-          <div className="overflow-visible rounded-[28px] bg-[var(--orbita-block)] shadow-[0_1px_4px_rgba(11,20,26,0.14)]">
+          <div className="overflow-visible rounded-[16px] bg-[var(--orbita-block)] ring-1 ring-[var(--orbita-divider)] shadow-[0_8px_24px_rgba(91,111,245,0.08)]">
             <Composer
               roomId={room.id}
               placeholder="Digite uma mensagem"
@@ -288,14 +288,21 @@ function Thread({
 function LandingEmpty({ onNew }: { onNew: () => void }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-[var(--orbita-paper)] px-6 text-center" data-wa-thread>
-      <p className="font-display text-[32px] font-light tracking-tight text-[var(--orbita-text)]">Rely</p>
+      <span className="grid h-16 w-16 place-items-center rounded-2xl bg-[var(--orbita-block)] shadow-[0_8px_24px_rgba(91,111,245,0.12)] ring-1 ring-[var(--orbita-divider)]">
+        <svg viewBox="0 0 32 32" className="h-8 w-8" aria-hidden>
+          <circle cx="16" cy="16" r="3.2" fill="var(--orbita-selected)" />
+          <ellipse cx="16" cy="16" rx="11" ry="4.4" fill="none" stroke="var(--orbita-selected)" strokeWidth="1.4" transform="rotate(-24 16 16)" />
+          <ellipse cx="16" cy="16" rx="11" ry="4.4" fill="none" stroke="var(--color-lavender, #a78bfa)" strokeWidth="1.4" transform="rotate(28 16 16)" />
+        </svg>
+      </span>
+      <p className="mt-5 font-display text-[28px] font-semibold tracking-tight text-[var(--orbita-text)]">Rely</p>
       <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-[var(--orbita-text-secondary)]">
-        Escolha uma conversa à esquerda ou comece uma nova mensagem.
+        Chat interno do time. Escolha uma conversa ou comece uma nova.
       </p>
       <button
         type="button"
         onClick={onNew}
-        className="mt-5 text-[14px] font-medium text-[var(--orbita-text)] hover:underline"
+        className="mt-5 text-[14px] font-semibold text-[var(--orbita-selected)] hover:underline"
       >
         Nova conversa
       </button>

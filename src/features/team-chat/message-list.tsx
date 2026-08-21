@@ -218,11 +218,8 @@ export function MessageList({
   );
 }
 
-function bubbleRadius(first: boolean, mine: boolean) {
-  if (mine) {
-    return first ? "rounded-[12px] rounded-tr-[4px]" : "rounded-[12px] rounded-tr-[6px]";
-  }
-  return first ? "rounded-[12px] rounded-tl-[4px]" : "rounded-[12px] rounded-tl-[6px]";
+function bubbleRadius(_first: boolean, _mine: boolean) {
+  return "rounded-[16px]";
 }
 
 function MessageRow({

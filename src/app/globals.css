@@ -1160,17 +1160,17 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   ÓRBITA — Bento layout tokens
+   RELY — chat interno (tokens próprios; não reutiliza --wa-*)
    ══════════════════════════════════════════════════════════════════ */
 :root {
-  --orbita-canvas: #f0f2f5;
+  --orbita-canvas: var(--bg-base, #dde8f5);
   --orbita-block: #ffffff;
-  --orbita-chrome: #f0f2f5;
-  --orbita-paper: #efeae2;
-  --orbita-dot: #d8d2c8;
-  --orbita-field: #f0f2f5;
-  --orbita-chip-active: #d9fdd3;
-  --orbita-chip-active-text: #008069;
+  --orbita-chrome: #ffffff;
+  --orbita-paper: var(--bg-base, #dde8f5);
+  --orbita-dot: rgba(91, 111, 245, 0.14);
+  --orbita-field: rgba(91, 111, 245, 0.08);
+  --orbita-chip-active: rgba(167, 139, 250, 0.22);
+  --orbita-chip-active-text: #3d52e8;
   --orbita-block-soft: var(--orbita-field);
   --orbita-rail: #111b21;
   --orbita-rail-active: #202c33;
@@ -1179,20 +1179,21 @@
   --orbita-radius-inner: 12px;
   --orbita-radius-avatar: 999px;
   --orbita-gap: 10px;
-  --orbita-selected: #00a884;
-  --orbita-unread-bg: #25d366;
+  --orbita-selected: #5b6ff5;
+  --orbita-unread-bg: #5b6ff5;
   --orbita-unread-fg: #ffffff;
-  --orbita-divider: #e9edef;
-  --orbita-text: #111b21;
-  --orbita-text-secondary: #667781;
-  --orbita-text-tertiary: #8696a0;
-  --orbita-list-selected-bg: #f0f2f5;
+  --orbita-divider: rgba(91, 111, 245, 0.14);
+  --orbita-text: #1e2a3b;
+  --orbita-text-secondary: #5b6b82;
+  --orbita-text-tertiary: #8490a3;
+  --orbita-list-selected-bg: rgba(91, 111, 245, 0.10);
   --orbita-list-selected-name: var(--orbita-text);
   --orbita-list-selected-preview: var(--orbita-text-secondary);
   --orbita-list-selected-time: var(--orbita-text-tertiary);
-  --orbita-bubble-sent-bg: #d9fdd3;
-  --orbita-bubble-sent-text: #111b21;
-  --orbita-bubble-received-border: #e9edef;
+  --orbita-bubble-sent-bg: #dce2ff;
+  --orbita-bubble-sent-text: #1e2a3b;
+  --orbita-bubble-received-border: rgba(91, 111, 245, 0.12);
+  --orbita-paper-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280'%3E%3Cg fill='none' stroke='%235b6ff5' stroke-opacity='0.11' stroke-width='1.15'%3E%3Ccircle cx='140' cy='140' r='22'/%3E%3Ccircle cx='140' cy='140' r='52'/%3E%3Ccircle cx='140' cy='140' r='88'/%3E%3Cellipse cx='140' cy='140' rx='118' ry='44' transform='rotate(-22 140 140)'/%3E%3Cellipse cx='140' cy='140' rx='118' ry='44' transform='rotate(28 140 140)'/%3E%3Ccircle cx='232' cy='98' r='3.2' fill='%23a78bfa' fill-opacity='0.35' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
   --orbita-avatar-1: #e8674c;
   --orbita-avatar-1-fg: #ffffff;
   --orbita-avatar-2: #e0973b;
@@ -1225,31 +1226,35 @@
   --orbita-name-6: #02a698;
 }
 
-.dark {
-  --orbita-canvas: #0b141a;
-  --orbita-block: #111b21;
-  --orbita-chrome: #202c33;
-  --orbita-paper: #0b141a;
-  --orbita-dot: #1a2329;
-  --orbita-field: #202c33;
-  --orbita-chip-active: #005c4b;
-  --orbita-chip-active-text: #d9fdd3;
+.dark,
+.v2-dark {
+  --orbita-canvas: var(--bg-base, #0f1623);
+  --orbita-block: #141d2e;
+  --orbita-chrome: #141d2e;
+  --orbita-paper: #131b30;
+  --orbita-dot: rgba(167, 139, 250, 0.18);
+  --orbita-field: rgba(167, 139, 250, 0.12);
+  --orbita-chip-active: rgba(167, 139, 250, 0.28);
+  --orbita-chip-active-text: #ddd6fe;
   --orbita-block-soft: var(--orbita-field);
-  --orbita-rail: #0b141a;
-  --orbita-rail-active: #202c33;
-  --orbita-text: #e9edef;
-  --orbita-text-secondary: #8696a0;
-  --orbita-text-tertiary: #667781;
-  --orbita-list-selected-bg: #2a3942;
+  --orbita-rail: #0b1220;
+  --orbita-rail-active: #1a2235;
+  --orbita-text: #e8edf5;
+  --orbita-text-secondary: #9ba8b9;
+  --orbita-text-tertiary: #7b8798;
+  --orbita-list-selected-bg: rgba(167, 139, 250, 0.16);
   --orbita-list-selected-name: var(--orbita-text);
   --orbita-list-selected-preview: var(--orbita-text-secondary);
   --orbita-list-selected-time: var(--orbita-text-tertiary);
-  --orbita-bubble-sent-bg: #005c4b;
-  --orbita-bubble-sent-text: #e9edef;
-  --orbita-bubble-received-border: #2a3942;
+  --orbita-bubble-sent-bg: #2d3558;
+  --orbita-bubble-sent-text: #e8edf5;
+  --orbita-bubble-received-border: rgba(167, 139, 250, 0.18);
+  --orbita-selected: #a78bfa;
+  --orbita-unread-bg: #8b7cf6;
+  --orbita-divider: rgba(167, 139, 250, 0.16);
+  --orbita-paper-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280'%3E%3Cg fill='none' stroke='%23a78bfa' stroke-opacity='0.16' stroke-width='1.15'%3E%3Ccircle cx='140' cy='140' r='22'/%3E%3Ccircle cx='140' cy='140' r='52'/%3E%3Ccircle cx='140' cy='140' r='88'/%3E%3Cellipse cx='140' cy='140' rx='118' ry='44' transform='rotate(-22 140 140)'/%3E%3Cellipse cx='140' cy='140' rx='118' ry='44' transform='rotate(28 140 140)'/%3E%3Ccircle cx='232' cy='98' r='3.2' fill='%23a78bfa' fill-opacity='0.45' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* Órbita: painel único no estilo WhatsApp Web. */
 .team-chat-shell {
   background: var(--orbita-block);
   color: var(--orbita-text);
@@ -1261,6 +1266,7 @@
   display: flex;
   gap: 0;
   overflow: hidden;
+  box-shadow: 0 1px 0 rgba(91, 111, 245, 0.08), 0 16px 40px rgba(30, 42, 59, 0.07);
 }
 
 /* Painéis internos — sem card bento; o shell já recorta. */
@@ -1291,33 +1297,8 @@
 
 .team-chat-shell [data-wa-thread] {
   background-color: var(--orbita-paper);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='0.045' stroke-width='1.2'%3E%3Ccircle cx='40' cy='36' r='10'/%3E%3Crect x='92' y='28' width='18' height='14' rx='2'/%3E%3Cpath d='M132 42h22M168 36v12'/%3E%3Cpath d='M210 30l10 10-10 10'/%3E%3Ccircle cx='24' cy='110' r='6'/%3E%3Cpath d='M70 104c8 0 12 8 12 14s-4 14-12 14'/%3E%3Crect x='128' y='100' width='16' height='16' rx='8'/%3E%3Cpath d='M180 108h28M194 98v20'/%3E%3Cpath d='M30 176c12-8 24 8 36 0'/%3E%3Ccircle cx='110' cy='180' r='8'/%3E%3Cpath d='M150 172l12 16h-24z'/%3E%3Crect x='200' y='168' width='22' height='16' rx='3'/%3E%3Cpath d='M48 232h16M56 224v16'/%3E%3Ccircle cx='160' cy='236' r='5'/%3E%3Cpath d='M210 228c10 0 16 10 8 16'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 260px 260px;
-}
-
-.orbita-bubble-received.orbita-bubble--tail::before,
-.orbita-bubble-sent.orbita-bubble--tail::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  width: 8px;
-  height: 10px;
-}
-.orbita-bubble-received.orbita-bubble--tail {
-  border-top-left-radius: 4px;
-}
-.orbita-bubble-received.orbita-bubble--tail::before {
-  left: -7px;
-  background: var(--orbita-block);
-  clip-path: polygon(100% 0, 0 0, 100% 100%);
-}
-.orbita-bubble-sent.orbita-bubble--tail {
-  border-top-right-radius: 4px;
-}
-.orbita-bubble-sent.orbita-bubble--tail::before {
-  right: -7px;
-  background: var(--orbita-bubble-sent-bg);
-  clip-path: polygon(0 0, 100% 0, 0 100%);
+  background-image: var(--orbita-paper-pattern);
+  background-size: 280px 280px;
 }
 
 .team-chat-shell .chat-scroll {

@@ -44,6 +44,7 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
   const queuedAnswerRef = React.useRef<{ callId: string; sdp: string } | null>(null);
   const recorderRef = React.useRef<CallRecordingHandle | null>(null);
   const recordingStartedForCallRef = React.useRef<string | null>(null);
+  const acceptedRef = React.useRef(false);
   const conversationIdRef = React.useRef<string | null>(null);
   conversationIdRef.current = conversationId ?? null;
 
@@ -114,6 +115,7 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
     expectedCallIdRef.current = null;
     appliedAnswerRef.current = false;
     queuedAnswerRef.current = null;
+    acceptedRef.current = false;
     setActiveCallId(null);
     setRemoteStream(null);
     setMediaDebug(null);
@@ -169,7 +171,8 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
         }
         if (lastErr) throw lastErr;
         queuedAnswerRef.current = null;
-        setPhase("live");
+        // SDP/toque ≠ atendimento. Gravação e "Em chamada" só no ACCEPTED.
+        setPhase(acceptedRef.current ? "live" : "need_answer");
       } catch (e) {
         appliedAnswerRef.current = false;
         const m = e instanceof Error ? e.message : "SDP answer inválido";
@@ -319,11 +322,20 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
         );
         const data = (await res.json().catch(() => ({}))) as {
           pendingAnswer?: { sdp_type?: string; sdp?: string } | null;
+          items?: { metaCallId?: string; signalingStatus?: string | null }[];
         };
         if (stopped) return;
         const sess = data.pendingAnswer;
         if (sess?.sdp && sess.sdp_type?.toLowerCase() === "answer") {
           void applyAnswer(callId, sess.sdp);
+        }
+        const accepted = (data.items ?? []).some(
+          (it) =>
+            it.metaCallId === callId && (it.signalingStatus ?? "").toUpperCase() === "ACCEPTED",
+        );
+        if (accepted) {
+          acceptedRef.current = true;
+          if (appliedAnswerRef.current) setPhase("live");
         }
       } catch {
         /* ignore */
@@ -337,12 +349,8 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
     };
   }, [phase, conversationId, applyAnswer]);
 
-  // Inicia automaticamente a gravação assim que a mídia fica ativa.
-  // Precisa do local stream (criado no initiate), do remote stream
-  // (chega via ontrack) e de estar em "live". A Meta não grava chamadas
-  // do lado dela (não envia recording_url), então o browser do agente
-  // é a única fonte possível. Só roda para chamadas outbound iniciadas
-  // pelo chip — é o único fluxo que passa por este hook.
+  // Grava só depois do ACCEPTED: em "live" o SDP já tocou (ringback)
+  // e o cliente atendeu. A Meta não grava do lado dela.
   React.useEffect(() => {
     if (phase !== "live") return;
     if (recorderRef.current) return;
@@ -380,12 +388,21 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
           conversationId?: string;
           callId?: string;
           event?: string;
+          signalingStatus?: string;
           session?: { sdp_type?: string; sdp?: string };
         };
         const sdp = p.session?.sdp;
         const sdpType = p.session?.sdp_type?.toLowerCase();
         if (p.callId && sdp && sdpType === "answer") {
           void applyAnswer(p.callId, sdp);
+        }
+        const sig = (p.signalingStatus ?? "").toUpperCase();
+        if (sig === "ACCEPTED") {
+          const mine = expectedCallIdRef.current ?? activeCallId;
+          if (!p.callId || !mine || p.callId === mine) {
+            acceptedRef.current = true;
+            if (appliedAnswerRef.current) setPhase("live");
+          }
         }
         if ((p.event ?? "").toLowerCase() !== "terminate") return;
         const mine = expectedCallIdRef.current ?? activeCallId;

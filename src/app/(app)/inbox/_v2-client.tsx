@@ -1662,6 +1662,7 @@ export default function InboxV2ClientPage({
       onClose={() => setTemplateOpen(false)}
       conversationId={activeId}
       channelId={selectedChannelId}
+      contactName={contactName || null}
       onPick={(tpl) => {
         setExternalTemplate(whatsappTemplateToPending(tpl));
         setTemplateOpen(false);

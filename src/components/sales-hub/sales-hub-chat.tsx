@@ -401,6 +401,7 @@ export function SalesHubChat({
         onClose={() => setTemplateOpen(false)}
         conversationId={conversationId}
         channelId={selectedChannelId}
+        contactName={contactName}
         onPick={(tpl) => {
           setExternalTemplate(whatsappTemplateToPending(tpl));
           setTemplateOpen(false);

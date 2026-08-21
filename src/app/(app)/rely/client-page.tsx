@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { NavRailSpacer } from "@/components/crm/nav-rail-spacer";
 import { TeamChatApp } from "@/features/team-chat/team-chat-app";
 
-export default function OrbitaClientPage({
+export default function RelyClientPage({
   navRail,
 }: {
   navRail?: ReactNode;

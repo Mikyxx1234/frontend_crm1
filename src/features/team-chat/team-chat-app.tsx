@@ -21,27 +21,12 @@ import {
   useTeamChatRooms,
   useOrbitaFavorites,
 } from "./hooks";
-import { MOCK_PEOPLE, isMockId, mergeUniqueById } from "./mock-data";
 import { favoriteKey } from "./helpers";
-import {
-  addMockNote,
-  createMockRoom,
-  mockMessagesFor,
-  removeMockNote,
-  sendMockMessage,
-  setActiveMockRoom,
-  toggleMockNotePin,
-  toggleMockPin,
-  toggleMockReaction,
-  useMockChat,
-} from "./mock-store";
 import type { DirectRow, TeamChatRoom } from "./types";
 
 export function TeamChatApp() {
   const { data: session, status } = useSession();
   const meId = (session?.user as { id?: string } | undefined)?.id ?? "";
-  const meName = session?.user?.name ?? "Você";
-  const meAvatar = session?.user?.image ?? null;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -50,20 +35,12 @@ export function TeamChatApp() {
   const ready = status === "authenticated";
   const roomsQuery = useTeamChatRooms(ready);
   const peopleQuery = useTeamChatColleagues(ready);
-  const mock = useMockChat();
   const { favorites, toggleFavorite } = useOrbitaFavorites();
-  const realRooms = roomsQuery.data?.rooms ?? [];
-  const realColleagues = peopleQuery.data?.colleagues ?? [];
-  useTeamChatRealtime(isMockId(selectedId) ? null : selectedId, ready);
-
-  useEffect(() => {
-    setActiveMockRoom(isMockId(selectedId) ? selectedId : null);
-  }, [selectedId]);
+  const rooms = roomsQuery.data?.rooms ?? [];
+  const colleagues = peopleQuery.data?.colleagues ?? [];
+  useTeamChatRealtime(selectedId, ready);
 
   const { createRoom } = useTeamChatMutations();
-
-  const colleagues = useMemo(() => mergeUniqueById(realColleagues, MOCK_PEOPLE), [realColleagues]);
-  const rooms = useMemo(() => mergeUniqueById(realRooms, mock.rooms), [realRooms, mock.rooms]);
 
   const directs = useMemo<DirectRow[]>(() => {
     const dms = rooms.filter((r) => r.kind === "DM");
@@ -92,18 +69,12 @@ export function TeamChatApp() {
   const groups = rooms.filter((r) => r.kind === "GROUP");
   const selected = rooms.find((r) => r.id === selectedId) ?? null;
   const notesQuery = useTeamChatNotes(selectedId, notesOpen || !!selectedId);
-  const notes = isMockId(selectedId) ? (mock.notes[selectedId ?? ""] ?? []) : (notesQuery.data?.notes ?? []);
+  const notes = notesQuery.data?.notes ?? [];
 
   function openPerson(personId: string) {
     const existing = rooms.find((r) => r.kind === "DM" && r.peer?.id === personId);
     if (existing) {
       setSelectedId(existing.id);
-      return;
-    }
-    if (isMockId(personId)) {
-      const person = colleagues.find((p) => p.id === personId);
-      if (!person) return;
-      setSelectedId(createMockRoom({ kind: "DM", name: person.name, members: [person] }).id);
       return;
     }
     createRoom.mutate(
@@ -124,7 +95,6 @@ export function TeamChatApp() {
 
   return (
     <div className="team-chat-shell h-full min-h-0 min-w-0 flex-1 overflow-hidden">
-      {/* Lista de conversas - coluna esquerda */}
       <div
         className={cn(
           "flex h-full min-h-0 w-[340px] min-w-[320px] shrink-0 flex-col border-r border-[var(--orbita-divider)]",
@@ -151,7 +121,6 @@ export function TeamChatApp() {
         />
       </div>
 
-      {/* Painel de conversa - coluna direita */}
       <section
         className={cn(
           "relative flex min-h-0 min-w-0 flex-1 flex-col",
@@ -162,8 +131,6 @@ export function TeamChatApp() {
           <Thread
             room={selected}
             meId={meId}
-            meName={meName}
-            meAvatar={meAvatar}
             notesOpen={notesOpen}
             noteCount={notes.length}
             favorited={favorites.includes(
@@ -196,7 +163,6 @@ export function TeamChatApp() {
         open={composeOpen}
         onOpenChange={setComposeOpen}
         meId={meId}
-        extraPeople={MOCK_PEOPLE}
         onCreated={(id) => {
           setSelectedId(id);
           setComposeOpen(false);
@@ -208,7 +174,6 @@ export function TeamChatApp() {
           onOpenChange={setAddOpen}
           room={selected}
           meId={meId}
-          extraPeople={MOCK_PEOPLE}
         />
       )}
     </div>
@@ -225,24 +190,17 @@ function NotesHost({
   onClose: () => void;
 }) {
   const { addNote, toggleNotePin, removeNote } = useTeamChatMutations();
-  const mock = isMockId(roomId);
   return (
     <NotesPanel
       notes={notes}
       onAdd={(text) =>
-        mock
-          ? addMockNote(roomId, text)
-          : addNote.mutate({ roomId, content: text }, { onError: (e: Error) => toast.error(e.message) })
+        addNote.mutate({ roomId, content: text }, { onError: (e: Error) => toast.error(e.message) })
       }
       onTogglePin={(id) =>
-        mock
-          ? toggleMockNotePin(roomId, id)
-          : toggleNotePin.mutate({ noteId: id, roomId }, { onError: (e: Error) => toast.error(e.message) })
+        toggleNotePin.mutate({ noteId: id, roomId }, { onError: (e: Error) => toast.error(e.message) })
       }
       onDelete={(id) =>
-        mock
-          ? removeMockNote(roomId, id)
-          : removeNote.mutate({ noteId: id, roomId }, { onError: (e: Error) => toast.error(e.message) })
+        removeNote.mutate({ noteId: id, roomId }, { onError: (e: Error) => toast.error(e.message) })
       }
       onClose={onClose}
     />
@@ -252,8 +210,6 @@ function NotesHost({
 function Thread({
   room,
   meId,
-  meName,
-  meAvatar,
   notesOpen,
   noteCount,
   favorited,
@@ -264,8 +220,6 @@ function Thread({
 }: {
   room: TeamChatRoom;
   meId: string;
-  meName: string;
-  meAvatar: string | null;
   notesOpen: boolean;
   noteCount: number;
   favorited: boolean;
@@ -274,12 +228,9 @@ function Thread({
   onToggleFavorite: () => void;
   onAddMembers: () => void;
 }) {
-  const mock = isMockId(room.id);
-  const mockState = useMockChat();
-  const { data, isLoading } = useTeamChatMessages(mock ? null : room.id);
+  const { data, isLoading } = useTeamChatMessages(room.id);
   const { send, react, pin } = useTeamChatMutations();
-  const liveRoom = mock ? (mockState.rooms.find((r) => r.id === room.id) ?? room) : room;
-  const messages = mock ? mockMessagesFor(room.id, meId) : (data?.messages ?? []);
+  const messages = data?.messages ?? [];
   const [chatQuery, setChatQuery] = useState("");
 
   useEffect(() => {
@@ -289,7 +240,7 @@ function Thread({
   return (
     <div className="orbita-block flex min-h-0 flex-1 flex-col overflow-hidden">
       <ChatHeader
-        room={liveRoom}
+        room={room}
         notesOpen={notesOpen}
         noteCount={noteCount}
         searchQuery={chatQuery}
@@ -302,20 +253,16 @@ function Thread({
       />
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden" data-wa-thread>
         <MessageList
-          room={liveRoom}
+          room={room}
           messages={messages}
           meId={meId}
-          loading={!mock && isLoading}
+          loading={isLoading}
           query={chatQuery}
           onToggleReaction={(id, emoji) =>
-            mock
-              ? toggleMockReaction(room.id, id, emoji, meId)
-              : react.mutate({ roomId: room.id, messageId: id, emoji }, { onError: (e: Error) => toast.error(e.message) })
+            react.mutate({ roomId: room.id, messageId: id, emoji }, { onError: (e: Error) => toast.error(e.message) })
           }
           onTogglePin={(id) =>
-            mock
-              ? toggleMockPin(room.id, id)
-              : pin.mutate({ roomId: room.id, messageId: id }, { onError: (e: Error) => toast.error(e.message) })
+            pin.mutate({ roomId: room.id, messageId: id }, { onError: (e: Error) => toast.error(e.message) })
           }
         />
         <div className="relative z-20 shrink-0 overflow-visible px-3 pb-4 pt-2">
@@ -324,15 +271,11 @@ function Thread({
               roomId={room.id}
               placeholder="Digite uma mensagem"
               onSend={async (payload) => {
-                if (mock) {
-                  sendMockMessage(room.id, payload, { id: meId, name: meName, avatarUrl: meAvatar })
-                  return
-                }
                 await send.mutateAsync({
                   roomId: room.id,
                   content: payload.content,
                   attachments: payload.attachments,
-                })
+                });
               }}
             />
           </div>
@@ -345,7 +288,7 @@ function Thread({
 function LandingEmpty({ onNew }: { onNew: () => void }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-[var(--orbita-paper)] px-6 text-center" data-wa-thread>
-      <p className="font-display text-[32px] font-light tracking-tight text-[var(--orbita-text)]">Órbita</p>
+      <p className="font-display text-[32px] font-light tracking-tight text-[var(--orbita-text)]">Rely</p>
       <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-[var(--orbita-text-secondary)]">
         Escolha uma conversa à esquerda ou comece uma nova mensagem.
       </p>

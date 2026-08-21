@@ -66,11 +66,10 @@ export function useTeamChatRooms(enabled = true) {
 }
 
 export function useTeamChatMessages(roomId: string | null) {
-  const mock = !!roomId && roomId.startsWith("mock-");
   return useQuery({
     queryKey: [MESSAGES_KEY, roomId],
     queryFn: () => listTeamChatMessages(roomId as string),
-    enabled: !!roomId && !mock,
+    enabled: !!roomId,
     refetchInterval: 120_000,
   });
 }
@@ -85,11 +84,10 @@ export function useTeamChatColleagues(enabled = true) {
 }
 
 export function useTeamChatNotes(roomId: string | null, enabled = true) {
-  const mock = !!roomId && roomId.startsWith("mock-");
   return useQuery({
     queryKey: [NOTES_KEY, roomId],
     queryFn: () => listTeamChatNotes(roomId as string),
-    enabled: !!roomId && enabled && !mock,
+    enabled: !!roomId && enabled,
   });
 }
 

@@ -22,7 +22,6 @@ import { EmojiPicker } from "@/components/inbox/emoji-picker";
 import { cn } from "@/lib/utils";
 
 import { uploadTeamChatAttachment } from "./api";
-import { isMockId } from "./mock-data";
 import type { TeamChatAttachment } from "./types";
 
 const MAX_FILES = 8;
@@ -97,27 +96,6 @@ function bestAudioMime() {
 
 function formatClock(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-}
-
-function localAttachment(file: File | Blob, options?: { fileName?: string; asSticker?: boolean }): TeamChatAttachment {
-  const name = options?.fileName ?? (file instanceof File ? file.name : "arquivo.bin");
-  const mime = file.type || "application/octet-stream";
-  const kind = options?.asSticker
-    ? "sticker"
-    : mime.startsWith("image/")
-      ? "image"
-      : mime.startsWith("audio/")
-        ? "audio"
-        : mime.startsWith("video/")
-          ? "video"
-          : "file";
-  return {
-    url: URL.createObjectURL(file),
-    name,
-    mimeType: mime,
-    size: file.size,
-    kind,
-  };
 }
 
 export function Composer({
@@ -291,11 +269,7 @@ export function Composer({
           fileName: item.file.name || `arquivo.${extFromMime(item.file.type, "bin")}`,
           asSticker: item.asSticker,
         };
-        attachments.push(
-          isMockId(roomId)
-            ? localAttachment(item.file, opts)
-            : await uploadTeamChatAttachment(roomId, item.file, opts),
-        );
+        attachments.push(await uploadTeamChatAttachment(roomId, item.file, opts));
       }
       await onSend({ content: text, attachments });
       pending.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl));
@@ -415,9 +389,7 @@ export function Composer({
     try {
       const ext = extFromMime(blob.type.split(";")[0], "webm");
       const fileName = `audio-${Date.now()}.${ext}`;
-      const attachment = isMockId(roomId)
-        ? localAttachment(blob, { fileName })
-        : await uploadTeamChatAttachment(roomId, blob, { fileName });
+      const attachment = await uploadTeamChatAttachment(roomId, blob, { fileName });
       await onSend({ content: "", attachments: [attachment] });
       discardAudio();
     } catch (err) {
@@ -833,12 +805,10 @@ export function Composer({
             void (async () => {
               setBusy(true);
               try {
-                const attachment = isMockId(roomId)
-                  ? localAttachment(file, { fileName: file.name, asSticker: true })
-                  : await uploadTeamChatAttachment(roomId, file, {
-                      fileName: file.name,
-                      asSticker: true,
-                    });
+                const attachment = await uploadTeamChatAttachment(roomId, file, {
+                  fileName: file.name,
+                  asSticker: true,
+                });
                 await onSend({ content: "", attachments: [attachment] });
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Não foi possível enviar a figurinha.");

@@ -258,7 +258,7 @@ export function Sidebar({
       <div className="shrink-0 px-4 pb-3 pt-4">
         <div className="flex items-center gap-1">
           <h1 className="min-w-0 flex-1 truncate px-1 font-display text-[22px] font-semibold tracking-tight text-[var(--orbita-text)]">
-            Órbita
+            Rely
           </h1>
           <HeaderIcon label="Nova conversa" onClick={onNew}>
             <SquarePen className="h-[18px] w-[18px]" />

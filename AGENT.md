@@ -5,6 +5,24 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-08-21 — Inbox: voltar nativo do celular volta à lista
+
+**Modelo usado.** Cursor Grok 4.5.
+
+**Decisão.** `useInboxUrlSync` passa a usar `history.pushState` ao abrir
+conversa (lista → `?c=`) e escuta `popstate` para sincronizar `activeId`.
+O botão Voltar do CRM chama `history.back()` quando há `?c=`, alinhado ao
+gesto/botão nativo do WebView. Mesmo padrão de `useDealDeepLink` no Pipeline.
+
+**Alternativas descartadas.** Interceptar só `@capacitor/app` backButton
+(não cobre gesto/histórico web); manter `replaceState` (back cai no
+Dashboard).
+
+**Impacto.** `features/inbox-v2/hooks/use-inbox-url-sync.ts`,
+`app/(app)/inbox/_v2-client.tsx` (Voltar → `closeActiveConversation`).
+
+---
+
 ### 2026-08-20 — Contrato único de tarefas (Inbox / Pipeline / aba Tarefas)
 
 **Modelo usado.** Opus (versão não confirmada).

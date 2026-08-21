@@ -565,7 +565,12 @@ export default function InboxV2ClientPage({
   }, [needsDeepLinkFetch, deepLinkError, listData, stickyRow, activeId]);
 
   const activeRow = stickyRow;
-  useInboxUrlSync(activeId, setActiveId, activeRow?.number, activeRow?.id);
+  const { closeActiveConversation } = useInboxUrlSync(
+    activeId,
+    setActiveId,
+    activeRow?.number,
+    activeRow?.id,
+  );
   const activeContactId = activeRow?.contact?.id ?? null;
 
   // Se não há conversa ativa, o aside não tem o que mostrar — força
@@ -1778,7 +1783,7 @@ export default function InboxV2ClientPage({
                 <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-1.5">
                   <button
                     type="button"
-                    onClick={() => setActiveId(null)}
+                    onClick={closeActiveConversation}
                     className="flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-1.5 py-1 text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
                   >
                     <IconArrowLeft size={14} stroke={2} />
@@ -1898,7 +1903,7 @@ export default function InboxV2ClientPage({
               <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-1.5">
                 <button
                   type="button"
-                  onClick={() => setActiveId(null)}
+                  onClick={closeActiveConversation}
                   className="flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-1.5 py-1 text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
                 >
                   <IconArrowLeft size={14} stroke={2} />

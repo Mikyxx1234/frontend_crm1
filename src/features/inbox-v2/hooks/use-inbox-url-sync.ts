@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const C_PARAM = "c";
 const LEGACY_PARAMS = ["conversationId", "conversation", "conv"] as const;
@@ -34,7 +34,10 @@ function readInboxConversationParam(): string | null {
   return null;
 }
 
-function writeInboxConversationParam(value: string | null) {
+function writeInboxConversationParam(
+  value: string | null,
+  mode: "push" | "replace",
+) {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
   let dirty = false;
@@ -55,14 +58,17 @@ function writeInboxConversationParam(value: string | null) {
     dirty = true;
   }
   if (!dirty) return;
-  window.history.replaceState(window.history.state, "", url.toString());
+  const fn =
+    mode === "push" ? window.history.pushState : window.history.replaceState;
+  fn.call(window.history, window.history.state, "", url.toString());
 }
 
 /**
  * Deep-link `?c=` — URL só número sequencial; estado interno continua CUID.
  *
- * Leitura: dígitos → number; senão CUID legado (`?c=`, `?conversationId=`,
- * `?conversation=`, `?conv=`). Depois do load, CUID na query vira `?c=<number>`.
+ * Abertura empilha histórico (`pushState`) para o voltar nativo do celular/
+ * WebView retornar à lista da Inbox — mesmo padrão de `useDealDeepLink`.
+ * Hidratação e sync número (CUID → dígitos) usam `replaceState`.
  */
 export function useInboxUrlSync(
   activeId: string | null,
@@ -71,23 +77,84 @@ export function useInboxUrlSync(
   conversationRowId?: string | null,
 ) {
   const [hydrated, setHydrated] = useState(false);
+  /** Evita reescrever a URL após popstate (já refletiu o histórico). */
+  const skipWriteRef = useRef(false);
+  /** Último valor de `?c=` alinhado com o histórico. */
+  const lastWrittenRef = useRef<string | null>(null);
 
   useEffect(() => {
     const raw = readInboxConversationParam();
-    if (raw) setActiveId(raw);
+    if (raw) {
+      lastWrittenRef.current = raw;
+      setActiveId(raw);
+    }
     setHydrated(true);
   }, [setActiveId]);
 
   useEffect(() => {
+    function onPop() {
+      const raw = readInboxConversationParam();
+      skipWriteRef.current = true;
+      lastWrittenRef.current = raw;
+      setActiveId(raw);
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [setActiveId]);
+
+  useEffect(() => {
     if (!hydrated) return;
-    if (!activeId) {
-      writeInboxConversationParam(null);
+    if (skipWriteRef.current) {
+      skipWriteRef.current = false;
       return;
     }
-    if (conversationNumber != null && conversationRowId === activeId) {
-      writeInboxConversationParam(String(conversationNumber));
+
+    if (!activeId) {
+      if (readInboxConversationParam()) {
+        writeInboxConversationParam(null, "replace");
+      }
+      lastWrittenRef.current = null;
+      return;
     }
+
+    if (conversationNumber == null || conversationRowId !== activeId) return;
+
+    const numStr = String(conversationNumber);
+    const cur = readInboxConversationParam();
+    if (cur === numStr) {
+      lastWrittenRef.current = numStr;
+      return;
+    }
+
+    // Lista → chat (sem `?c=`): push — back nativo volta à lista.
+    // CUID/legado → número da mesma conversa: replace.
+    // Número A → número B (troca de conversa): push.
+    let mode: "push" | "replace";
+    if (cur == null) {
+      mode = "push";
+    } else if (cur === activeId || lastWrittenRef.current === activeId) {
+      mode = "replace";
+    } else if (/^\d+$/.test(cur) && cur !== numStr) {
+      mode = "push";
+    } else {
+      mode = "replace";
+    }
+
+    writeInboxConversationParam(numStr, mode);
+    lastWrittenRef.current = numStr;
   }, [activeId, conversationNumber, conversationRowId, hydrated]);
 
-  return { hydrated };
+  /**
+   * Voltar do CRM: se a URL tem `?c=`, usa history.back() para alinhar com
+   * o gesto/botão nativo. Senão só limpa o estado.
+   */
+  const closeActiveConversation = useCallback(() => {
+    if (typeof window !== "undefined" && readInboxConversationParam()) {
+      window.history.back();
+      return;
+    }
+    setActiveId(null);
+  }, [setActiveId]);
+
+  return { hydrated, closeActiveConversation };
 }

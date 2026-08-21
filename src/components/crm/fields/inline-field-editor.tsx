@@ -14,6 +14,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   IconCheck,
+  IconCopy,
   IconX,
   IconLoader2,
 } from "@tabler/icons-react";
@@ -196,9 +197,10 @@ export function InlineFieldEditor({
                 e.stopPropagation();
                 void handleCopy();
               }}
-              className="shrink-0 rounded-[6px] bg-white/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/90 hover:bg-white/25"
+              className="flex size-5 shrink-0 items-center justify-center rounded-[6px] bg-white/15 text-white/90 hover:bg-white/25"
+              aria-label="Copiar"
             >
-              Copiar
+              <IconCopy size={12} stroke={2.2} />
             </button>
           </span>
         }

@@ -4,12 +4,17 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  IconChevronDown,
+  IconChevronUp,
   IconPhone,
   IconPhoneIncoming,
   IconPhoneOutgoing,
   IconPhoneX,
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
+  IconSearch,
+  IconSelector,
+  IconUser,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/phone";
@@ -24,6 +29,7 @@ import {
   listTableHeadRowClass,
   type SortDir,
 } from "@/components/crm/sortable-header";
+import { SEARCH_DEBOUNCE_MS, normalizeSearchQuery } from "@/lib/search-query";
 import { listCalls } from "../api/extensions";
 import type {
   CallRecord,
@@ -49,6 +55,21 @@ function formatDate(iso: string) {
     year: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+function formatClock(iso: string) {
+  return new Date(iso).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatShortDate(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
   });
 }
 
@@ -117,11 +138,345 @@ interface CallHistoryListProps {
   header?: ReactNode;
 }
 
-export function CallHistoryList({
+const CONV_COLS =
+  "grid-cols-[minmax(0,1.7fr)_minmax(0,1.05fr)_minmax(5.75rem,auto)_minmax(4.25rem,auto)_minmax(4.5rem,auto)]";
+
+function DefaultContactAvatar({ size = 28 }: { size?: number }) {
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--text-muted)_12%,transparent)] text-[var(--text-muted)]"
+      style={{ width: size, height: size }}
+      aria-hidden
+    >
+      <IconUser size={Math.round(size * 0.55)} stroke={1.8} />
+    </span>
+  );
+}
+
+function ConvSortHeader({
+  label,
+  field,
+  sortBy,
+  sortDir,
+  onToggle,
+}: {
+  label: string;
+  field: CallsSortField;
+  sortBy: CallsSortField;
+  sortDir: CallsSortDir;
+  onToggle: (field: CallsSortField) => void;
+}) {
+  const active = sortBy === field;
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(field)}
+      className={cn(
+        "inline-flex items-center gap-0.5 text-[12px] font-semibold",
+        active
+          ? "text-[var(--brand-primary)]"
+          : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+      )}
+      aria-label={`Ordenar por ${label}`}
+    >
+      {label}
+      {active ? (
+        sortDir === "asc" ? (
+          <IconChevronUp size={12} stroke={2.4} />
+        ) : (
+          <IconChevronDown size={12} stroke={2.4} />
+        )
+      ) : (
+        <IconSelector size={12} stroke={2} className="opacity-40" />
+      )}
+    </button>
+  );
+}
+
+function ConversationCallHistory({
+  contactId,
+  header,
+}: {
+  contactId?: string;
+  header?: ReactNode;
+}) {
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sortBy, setSortBy] = useState<CallsSortField>("startedAt");
+  const [sortDir, setSortDir] = useState<CallsSortDir>("desc");
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(
+      () => setDebouncedSearch(normalizeSearchQuery(search)),
+      SEARCH_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const filters: ListCallsFilters = {
+    contactId,
+    page: 1,
+    perPage: 50,
+    search: debouncedSearch || undefined,
+    sortBy,
+    sortDir,
+  };
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["calls", "conversation", filters],
+    queryFn: () => listCalls(filters),
+    enabled: Boolean(contactId),
+  });
+
+  const calls = data?.calls ?? [];
+  const total = data?.total ?? 0;
+
+  const toggleSort = (field: CallsSortField) => {
+    if (sortBy === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortDir(
+        field === "startedAt" || field === "durationSeconds" ? "desc" : "asc",
+      );
+    }
+  };
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {header}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-[15px] font-semibold leading-tight text-[var(--text-primary)]">
+            Histórico de chamadas
+          </h3>
+          <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
+            {isLoading
+              ? "Carregando…"
+              : `${total.toLocaleString("pt-BR")} registro${total !== 1 ? "s" : ""}`}
+          </p>
+        </div>
+        <label className="relative w-full max-w-[240px] shrink-0">
+          <span className="sr-only">Buscar contato ou agente</span>
+          <IconSearch
+            size={14}
+            stroke={2}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+          />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar contato ou agente"
+            className="h-9 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-8 pr-3 text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+          />
+        </label>
+      </div>
+
+      <div className="min-w-0 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow)]">
+        <div
+          className={cn(
+            "grid items-center gap-3 border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,transparent)] px-3 py-2.5",
+            CONV_COLS,
+          )}
+        >
+          <span className="text-[12px] font-semibold text-[var(--text-muted)]">
+            Contato
+          </span>
+          <span className="text-[12px] font-semibold text-[var(--text-muted)]">
+            Agente
+          </span>
+          <ConvSortHeader
+            label="Status"
+            field="status"
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onToggle={toggleSort}
+          />
+          <ConvSortHeader
+            label="Duração"
+            field="durationSeconds"
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onToggle={toggleSort}
+          />
+          <ConvSortHeader
+            label="Data e hora"
+            field="startedAt"
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onToggle={toggleSort}
+          />
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-2 p-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-12 animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)]"
+              />
+            ))}
+          </div>
+        ) : calls.length === 0 ? (
+          <EmptyState
+            icon={<IconPhone size={28} />}
+            title="Nenhuma chamada encontrada"
+            description="Sem chamadas para este contato."
+          />
+        ) : (
+          <ul className="flex min-w-0 flex-col">
+            {calls.map((call) => (
+              <ConversationCallRow
+                key={call.id}
+                call={call}
+                isPlaying={playingId === call.id}
+                onPlay={() =>
+                  setPlayingId(playingId === call.id ? null : call.id)
+                }
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ConversationCallRow({
+  call,
+  isPlaying,
+  onPlay,
+}: {
+  call: CallRecord;
+  isPlaying: boolean;
+  onPlay: () => void;
+}) {
+  const missed = call.status === "MISSED" || call.status === "FAILED";
+  const { label: sLabel, color: sColor } = statusLabel(call.status);
+  const duration = formatDuration(call.durationSeconds);
+  const name = call.contact?.name?.trim() || formatPhoneDisplay(call.phone);
+
+  return (
+    <li className="min-w-0 border-b border-[var(--glass-border-subtle)] last:border-b-0">
+      <div
+        className={cn(
+          "grid min-w-0 items-center gap-3 px-3 py-2.5",
+          CONV_COLS,
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-full",
+              missed
+                ? "bg-[var(--color-danger-bg)] text-[var(--color-danger)]"
+                : "bg-[var(--color-info-bg)] text-[var(--color-info)]",
+            )}
+          >
+            {missed ? <IconPhoneX size={13} /> : <IconPhone size={13} />}
+          </span>
+          <DefaultContactAvatar size={AVATAR_SIZE.sm} />
+          <div className="min-w-0 leading-tight">
+            {call.contact?.id ? (
+              <Link
+                href={`/contacts/${call.contact.id}`}
+                className="block truncate text-[13px] font-semibold text-[var(--text-primary)] hover:text-[var(--brand-primary)]"
+              >
+                {name}
+              </Link>
+            ) : (
+              <span className="block truncate text-[13px] font-semibold text-[var(--text-primary)]">
+                {name}
+              </span>
+            )}
+            {call.contact?.name ? (
+              <span className="block truncate text-[12px] text-[var(--text-muted)]">
+                {formatPhoneDisplay(call.phone)}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        {call.agent ? (
+          <div className="flex min-w-0 items-center gap-2">
+            <UserAvatar
+              name={call.agent.name}
+              imageUrl={call.agent.avatarUrl}
+              size={AVATAR_SIZE.sm}
+            />
+            <span className="truncate text-[13px] font-medium text-[var(--text-primary)]">
+              {call.agent.name}
+            </span>
+          </div>
+        ) : (
+          <span className="text-[13px] text-[var(--text-muted)]">—</span>
+        )}
+
+        <span
+          className={cn(
+            "inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-[3px] text-[11px] font-medium before:h-1.5 before:w-1.5 before:rounded-full before:bg-current",
+            sColor,
+          )}
+        >
+          {sLabel}
+        </span>
+
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="text-[13px] tabular-nums text-[var(--text-secondary)]">
+            {duration}
+          </span>
+          {call.recordUrl && !isPlaying ? (
+            <button
+              type="button"
+              onClick={onPlay}
+              title="Ouvir gravação"
+              className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_14%,transparent)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)] hover:text-white"
+            >
+              <IconPlayerPlayFilled size={11} />
+            </button>
+          ) : null}
+        </div>
+
+        <div className="min-w-0 leading-tight">
+          <span className="block text-[13px] font-medium tabular-nums text-[var(--text-primary)]">
+            {formatClock(call.startedAt)}
+          </span>
+          <span className="block text-[11px] tabular-nums text-[var(--text-muted)]">
+            {formatShortDate(call.startedAt)}
+          </span>
+        </div>
+      </div>
+      {isPlaying && call.recordUrl ? (
+        <div className="px-3 pb-2.5">
+          <CompactAudioPlayer
+            src={call.recordUrl}
+            fallbackDuration={call.durationSeconds}
+            onEnded={onPlay}
+          />
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
+export function CallHistoryList(props: CallHistoryListProps) {
+  if (props.embedded) {
+    return (
+      <ConversationCallHistory
+        contactId={props.contactId}
+        header={props.header}
+      />
+    );
+  }
+  return <StandaloneCallHistoryList {...props} />;
+}
+
+function StandaloneCallHistoryList({
   filters: externalFilters,
   onFiltersChange,
   contactId,
-  embedded,
   groupByDay: groupedRequested = false,
   header,
 }: CallHistoryListProps) {
@@ -168,8 +523,7 @@ export function CallHistoryList({
   }
 
   // Layout em cards (padrão Contatos/Empresas): cabeçalho solto + linhas
-  // individuais com gap. Em contexto embutido (inbox/pipeline) mantém tabela densa.
-  const useCards = !embedded;
+  // individuais com gap. A aba da conversa usa `ConversationCallHistory`.
 
   // Ordenação — resolvida a partir de `filters` (default startedAt/desc). Só
   // agrupamos por dia quando a ordem é a padrão (startedAt/desc); em outras
@@ -224,11 +578,10 @@ export function CallHistoryList({
   );
 
   return (
-    <div className={cn("flex min-h-0 flex-col gap-3", !embedded && "flex-1")}>
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {header}
 
-      {useCards ? (
-        <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+      <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
           <div className="flex min-w-[960px] flex-col gap-2">
             <div className={listTableHeadRowClass(`${COLS} gap-3 border border-transparent px-4 py-2`)}>
               {HeadRow}
@@ -269,31 +622,8 @@ export function CallHistoryList({
                 ))}
           </div>
         </div>
-      ) : (
-        <div className="flex w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-            <div className="min-w-[960px]">
-              <div className={listTableHeadRowClass(`${COLS} gap-3 px-3 py-2.5`)}>
-                {HeadRow}
-              </div>
-              <div className="flex flex-col">
-                {calls.map((call) => (
-                  <CallTableRow
-                    key={call.id}
-                    call={call}
-                    isPlaying={playingId === call.id}
-                    onPlay={() => setPlayingId(playingId === call.id ? null : call.id)}
-                    variant="dense"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {!embedded && (
-        <PaginationGlass
+      <PaginationGlass
           label={`${total.toLocaleString("pt-BR")} chamada${total !== 1 ? "s" : ""} — página ${page} de ${lastPage}`}
           canPrev={page > 1}
           canNext={page < lastPage}
@@ -302,7 +632,6 @@ export function CallHistoryList({
           perPage={perPage}
           onPerPageChange={(value) => onFiltersChange?.({ ...filters, perPage: value, page: 1 })}
         />
-      )}
     </div>
   );
 }

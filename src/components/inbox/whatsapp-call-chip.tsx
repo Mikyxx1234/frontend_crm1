@@ -889,16 +889,62 @@ export function WhatsappCallChip({
       />
       {isCta ? (
         <>
-          <TooltipHost label="Enviar template de ligação" side="bottom">
-            <button
-              type="button"
-              className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50"
-              aria-label="Enviar template de ligação"
-              onClick={() => setTemplateDialogOpen(true)}
+          {canInitiate || outbound.isInitiating || outbound.phase === "need_answer" ? (
+            <TooltipHost
+              label={
+                outbound.isInitiating || outbound.phase === "need_answer"
+                  ? "Chamando…"
+                  : "Ligar pelo WhatsApp"
+              }
+              side="bottom"
             >
-              <CallTemplateSendIcon size={40} />
-            </button>
-          </TooltipHost>
+              <button
+                type="button"
+                className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50 disabled:opacity-70"
+                aria-label="Ligar pelo WhatsApp"
+                disabled={outbound.isInitiating}
+                onClick={() => void initiate()}
+              >
+                <span
+                  className="flex size-10 items-center justify-center rounded-full"
+                  style={{
+                    background: "#25D366",
+                    boxShadow: "0 4px 14px rgba(37, 211, 102, 0.4)",
+                  }}
+                >
+                  {outbound.isInitiating || outbound.phase === "need_answer" ? (
+                    <Loader2 className="size-5 animate-spin text-white" />
+                  ) : (
+                    <Phone className="size-5 text-white" strokeWidth={2.4} />
+                  )}
+                </span>
+              </button>
+            </TooltipHost>
+          ) : canTerminate ? (
+            <TooltipHost label="Encerrar chamada" side="bottom">
+              <button
+                type="button"
+                className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-red-500/50"
+                aria-label="Encerrar chamada"
+                onClick={handleTerminate}
+              >
+                <span className="flex size-10 items-center justify-center rounded-full bg-red-500 shadow-[0_4px_14px_rgba(239,68,68,0.4)]">
+                  <PhoneOff className="size-5 text-white" strokeWidth={2.4} />
+                </span>
+              </button>
+            </TooltipHost>
+          ) : (
+            <TooltipHost label="Enviar template de ligação" side="bottom">
+              <button
+                type="button"
+                className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+                aria-label="Enviar template de ligação"
+                onClick={() => setTemplateDialogOpen(true)}
+              >
+                <CallTemplateSendIcon size={40} />
+              </button>
+            </TooltipHost>
+          )}
         </>
       ) : (
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>

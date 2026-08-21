@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** Anima um inteiro de `from` até `value` (ease-out). Remount recomeça do 0. */
+/** Anima um inteiro até `value` (ease-out). Com `fromZero`, remount recomeça do 0. */
 export function CountUpNumber({
   value,
   className,
@@ -31,9 +31,5 @@ export function CountUpNumber({
     return () => cancelAnimationFrame(raf);
   }, [value, fromZero]);
 
-  return (
-    <span className={className}>
-      {n.toLocaleString("pt-BR")}
-    </span>
-  );
+  return <span className={className}>{n.toLocaleString("pt-BR")}</span>;
 }

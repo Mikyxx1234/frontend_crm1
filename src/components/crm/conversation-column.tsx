@@ -22,6 +22,7 @@ import { AppLoading } from "@/components/crm/app-loading"
 import { InputGlass } from "./input-glass"
 import { type TabItem } from "./tabs-glass"
 import { TooltipGlass } from "./tooltip-glass"
+import { CountUpNumber } from "./count-up"
 import { ConversationCard, type Conversation } from "./conversation-card"
 import { CheckboxGlass } from "./checkbox-glass"
 
@@ -278,11 +279,6 @@ export function ConversationColumn({
   const urgency = urgencyCount ?? conversations.filter((c) => c.urgent).length
 
   const currentTabLabel = tabs[activeTab]?.label ?? "Todas"
-  // Em loading, não cair em `conversations.length` (0) — isso pintava o
-  // badge "0" no F5 antes da query/sessão/prefs terminarem.
-  const currentTabCount = isLoading
-    ? (tabs[activeTab]?.count ?? null)
-    : (tabs[activeTab]?.count ?? conversations.length)
   const currentVisual = statusVisual(currentTabLabel)
 
   // ── Dropdown de status ──────────────────────────────────────────
@@ -378,16 +374,6 @@ export function ConversationColumn({
         <span className="min-w-0 flex-1 truncate font-display text-[13px] font-semibold text-[var(--text-primary)] @max-[240px]:hidden">
           {currentTabLabel}
         </span>
-        {currentTabCount == null ? (
-          <span
-            aria-hidden="true"
-            className="inline-block h-5 w-8 animate-pulse rounded-full bg-[var(--brand-primary)]/35"
-          />
-        ) : (
-          <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 font-display text-[11px] font-bold text-white tabular-nums">
-            {currentTabCount}
-          </span>
-        )}
         <IconChevronDown
           size={15}
           className={cn(
@@ -429,7 +415,7 @@ export function ConversationColumn({
             style={{
               top: dropdownPos.top,
               left: dropdownPos.left,
-              width: dropdownPos.width,
+              width: Math.max(dropdownPos.width, 220),
               isolation: "isolate",
             }}
             onMouseDown={(e) => e.stopPropagation()}
@@ -477,7 +463,7 @@ export function ConversationColumn({
                             : "bg-black/[0.06] text-[var(--text-muted)]",
                         )}
                       >
-                        {tab.count}
+                        <CountUpNumber value={tab.count} fromZero />
                       </span>
                     )}
                   </span>

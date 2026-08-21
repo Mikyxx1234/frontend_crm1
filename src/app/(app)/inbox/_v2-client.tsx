@@ -27,6 +27,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { usesWhatsapp24hWindow } from "@/components/inbox/channel-type-icon";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { TagChip } from "@/components/crm/tag-chip";
@@ -1093,45 +1094,46 @@ export default function InboxV2ClientPage({
   // Aviso sonoro por mensagem recebida — o botão só (des)liga a preferência
   // (persistida no localStorage). O ping em si toca no useInboxRealtime.
   const [soundMuted, setSoundMuted] = useInboxSoundMuted();
-  const soundToggleNode = (
-    <TooltipGlass
-      label={soundMuted ? "Ativar aviso sonoro" : "Silenciar aviso sonoro"}
-      side="bottom"
-    >
-      <button
-        type="button"
-        onClick={() => setSoundMuted(!soundMuted)}
-        aria-pressed={!soundMuted}
-        className={cn(
-          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
-          soundMuted
-            ? "border-[var(--color-warn)]/40 bg-[var(--color-warn-bg)] text-[var(--color-warn)] hover:text-[var(--color-warn)]"
-            : "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
-        )}
-      >
-        {soundMuted ? <IconBellOff size={17} stroke={2} /> : <IconBell size={17} stroke={2} />}
-      </button>
-    </TooltipGlass>
-  );
-
-  // Botão que entra/sai do modo de seleção — vive ao lado do filtro, na
-  // mesma linha do dropdown de status.
-  const selectionToggleNode = (
-    <TooltipGlass label={selectionMode ? "Sair da seleção" : "Selecionar conversas"} side="bottom">
-      <button
-        type="button"
-        onClick={() => (selectionMode ? exitSelectionMode() : setSelectionMode(true))}
-        aria-pressed={selectionMode}
-        className={cn(
-          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
-          selectionMode
-            ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]",
-        )}
-      >
-        {selectionMode ? <IconX size={17} stroke={2} /> : <IconSquareCheck size={17} stroke={2} />}
-      </button>
-    </TooltipGlass>
+  const columnMoreMenuNode = (
+    <DropdownGlass
+      matchTriggerWidth={false}
+      className="min-w-[220px]"
+      align="end"
+      options={[
+        {
+          value: "sound",
+          label: "Notificações",
+          icon: soundMuted ? <IconBellOff size={15} /> : <IconBell size={15} />,
+          trailing: !soundMuted ? (
+            <IconCircleCheck size={15} className="text-[var(--brand-primary)]" />
+          ) : undefined,
+        },
+        {
+          value: "select",
+          label: "Seleção de múltiplas",
+          icon: <IconSquareCheck size={15} />,
+          trailing: selectionMode ? (
+            <IconCircleCheck size={15} className="text-[var(--brand-primary)]" />
+          ) : undefined,
+        },
+      ]}
+      onValueChange={(v) => {
+        if (v === "sound") setSoundMuted(!soundMuted);
+        if (v === "select") {
+          if (selectionMode) exitSelectionMode();
+          else setSelectionMode(true);
+        }
+      }}
+      trigger={
+        <button
+          type="button"
+          aria-label="Mais opções da lista"
+          className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] data-[state=open]:border-[var(--brand-primary)] data-[state=open]:bg-[var(--brand-primary)] data-[state=open]:text-white"
+        >
+          <IconChevronDown size={16} stroke={2.4} />
+        </button>
+      }
+    />
   );
 
   // Ações da barra de seleção — Encerrar/Reabrir/Reatribuir (protegidas por
@@ -1198,8 +1200,7 @@ export default function InboxV2ClientPage({
       // sobe junto da busca, como botão irmão (fora do input).
       filterSlot={
         <>
-          {soundToggleNode}
-          {selectionToggleNode}
+          {columnMoreMenuNode}
           {!searchInHeader && (
             <InboxFilterButton value={filters} onChange={setFilters} />
           )}

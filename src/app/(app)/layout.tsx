@@ -48,7 +48,7 @@ export default function AppLayout({
             troca do componente de página) remontava o trilho, fazendo os
             ícones/avatar piscarem. Posição fixa sobre a 1ª coluna do grid
             (que as páginas reservam via `--nav-rail-w` + <NavRailSpacer/>),
-            mantendo o mesmo recuo (`--nav-rail-inset`, p-3/sm:p-4). */}
+            colada à esquerda da viewport (`left: 0`; inset só no eixo Y). */}
         <div className="v2-nav-rail-fixed fixed z-40 max-md:hidden">
           <NavRailV2 />
         </div>

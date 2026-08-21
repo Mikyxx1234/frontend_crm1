@@ -376,12 +376,14 @@
 }
 :root {
   --nav-rail-w: 72px;
-  --nav-rail-inset: 0.75rem; /* p-3 / left-3 */
+  /* Recuo vertical (top/bottom) da rail. Eixo X é 0 — colada na viewport.
+     Conteúdo continua offset por `--nav-rail-w` + gap/padding das shells. */
+  --nav-rail-inset: 0.75rem; /* p-3 / top-3 */
   --mobile-bottom-nav-h: 0px;
 }
 @media (min-width: 640px) {
   :root {
-    --nav-rail-inset: 1rem; /* p-4 / left-4 */
+    --nav-rail-inset: 1rem; /* p-4 / top-4 */
   }
 }
 html[data-nav-expanded="true"] {
@@ -430,9 +432,10 @@ html[data-nav-expanded="true"] {
 
 /* NavRail persistente no layout `(app)`: altura por dvh (não top+bottom),
    para não depender da altura do parent quando o conteúdo some na troca
-   de rota. Insets batem com o padding das shells (p-3 / sm:p-4). */
+   de rota. `left: 0` cola na borda da viewport; inset vertical bate com
+   o padding das shells (p-3 / sm:p-4). */
 .v2-nav-rail-fixed {
-  left: var(--nav-rail-inset, 0.75rem);
+  left: 0;
   top: var(--nav-rail-inset, 0.75rem);
   width: var(--nav-rail-w, 72px);
   height: calc(100dvh / var(--v2-scale, 1) - 2 * var(--nav-rail-inset, 0.75rem));

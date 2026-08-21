@@ -224,9 +224,20 @@ export function ConversationCard({
     conversation.lastMessageDirection === "in" &&
     !conversation.resolved
 
+  function handleCardClick(e: React.MouseEvent<HTMLElement>) {
+    if (selectionMode) return
+    // Preview/markdown nunca deve navegar: o card só seleciona a conversa.
+    const anchor = (e.target as HTMLElement | null)?.closest?.("a")
+    if (anchor) e.preventDefault()
+    onClick?.()
+  }
+
   return (
     <article
-      onClick={selectionMode ? undefined : onClick}
+      onClick={handleCardClick}
+      onAuxClick={(e) => {
+        if ((e.target as HTMLElement | null)?.closest?.("a")) e.preventDefault()
+      }}
       className={cn(
         // Borda trocada para `--glass-border-subtle` (0.30 alpha vs 0.55):
         // alinha com a referência v0 que tem cards "flutuando" sem
@@ -300,10 +311,9 @@ export function ConversationCard({
             </span>
           </div>
 
-          {/* Preview — 1 linha, fonte menor itálica (estilo kanban).
-              Texto => ícone de conversa com borda azul; mídia => ícone
-              do tipo + label padronizado (sem itálico). */}
-          <div className="mt-0.5 flex items-center gap-1 text-[11px] italic leading-[1.35] text-[var(--text-muted)]">
+          {/* Preview — 1 linha, texto plano (não parece link: sem itálico,
+              sem âncora). Ícone só indica tipo; clique seleciona o card. */}
+          <div className="mt-0.5 flex items-center gap-1 text-[11px] leading-[1.35] text-[var(--text-secondary)]">
             {isOutgoing && conversation.lastMessageStatus === "failed" ? (
               <TooltipGlass
                 label={
@@ -326,8 +336,8 @@ export function ConversationCard({
             )}
             <span
               className={cn(
-                "line-clamp-1 flex-1 overflow-hidden",
-                typeLabel && "font-medium not-italic text-[var(--text-secondary)]",
+                "pointer-events-none line-clamp-1 flex-1 overflow-hidden text-[var(--text-secondary)]",
+                typeLabel && "font-medium",
               )}
             >
               {typeLabel ?? conversation.preview}

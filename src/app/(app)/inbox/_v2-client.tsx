@@ -909,6 +909,7 @@ export default function InboxV2ClientPage({
     );
 
   function handleSelect(id: string) {
+    if (id === activeId) return;
     setActiveId(id);
     markRead.mutate(id);
     setReplyTo(null);

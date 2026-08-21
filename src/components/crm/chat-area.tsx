@@ -186,7 +186,7 @@ interface ChatAreaProps {
 
 export function ChatArea({
   contact,
-  messages,
+  messages: messagesProp,
   daySeparator,
   showSessionAlert = false,
   className,
@@ -226,6 +226,15 @@ export function ChatArea({
   activeBotsSlot,
   floatingCallSlot,
 }: ChatAreaProps) {
+  const messages = useMemo(() => {
+    const seen = new Set<string>()
+    return messagesProp.filter((m) => {
+      if (!m.id) return true
+      if (seen.has(m.id)) return false
+      seen.add(m.id)
+      return true
+    })
+  }, [messagesProp])
   const formRef = useRef<HTMLFormElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
   const stickyDayLabel = useStickyDayLabel(

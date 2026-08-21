@@ -40,6 +40,8 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
   const pcRef = React.useRef<RTCPeerConnection | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
   const expectedCallIdRef = React.useRef<string | null>(null);
+  const appliedAnswerRef = React.useRef(false);
+  const queuedAnswerRef = React.useRef<{ callId: string; sdp: string } | null>(null);
   const recorderRef = React.useRef<CallRecordingHandle | null>(null);
   const recordingStartedForCallRef = React.useRef<string | null>(null);
   const conversationIdRef = React.useRef<string | null>(null);
@@ -110,6 +112,8 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
     }
     pcRef.current = null;
     expectedCallIdRef.current = null;
+    appliedAnswerRef.current = false;
+    queuedAnswerRef.current = null;
     setActiveCallId(null);
     setRemoteStream(null);
     setMediaDebug(null);
@@ -137,7 +141,17 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
     async (callId: string, sdp: string) => {
       const pc = pcRef.current;
       const expected = expectedCallIdRef.current;
-      if (!pc || !expected || callId !== expected) return;
+      if (!pc) {
+        queuedAnswerRef.current = { callId, sdp };
+        return;
+      }
+      if (!expected) {
+        queuedAnswerRef.current = { callId, sdp };
+        return;
+      }
+      if (callId !== expected) return;
+      if (appliedAnswerRef.current) return;
+      appliedAnswerRef.current = true;
       try {
         const candidates = [
           sanitizeMetaWhatsappSdpForBrowser(sdp),
@@ -154,8 +168,10 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
           }
         }
         if (lastErr) throw lastErr;
+        queuedAnswerRef.current = null;
         setPhase("live");
       } catch (e) {
+        appliedAnswerRef.current = false;
         const m = e instanceof Error ? e.message : "SDP answer inválido";
         setErrorMsg(m);
         setPhase("error");
@@ -210,11 +226,10 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
           releasePc();
           return;
         }
-        // Encerramento limpo pelo peer remoto (Meta/cliente desligou a chamada):
-        // o PeerConnection vai para "closed"/"disconnected" sem passar por
-        // "failed". Antes isso era ignorado — a gravação ficava órfã (o
-        // MediaRecorder nunca era parado) e o upload nunca acontecia.
-        if (s === "closed" || s === "disconnected") {
+        // "disconnected" é transitório (ICE restart / answer ainda a chegar).
+        // Encerrar aí mata o PeerConnection antes do SDP answer da Meta —
+        // a chamada fica "ligada" no telemóvel mas muda dos dois lados.
+        if (s === "closed") {
           releasePc();
           setPhase("idle");
         }
@@ -222,11 +237,11 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
 
       pc.ontrack = (ev) => {
         const [first] = ev.streams;
-        if (first?.getTracks().length) {
-          setRemoteStream(first);
-        } else if (ev.track) {
-          setRemoteStream(new MediaStream([ev.track]));
-        }
+        const stream =
+          first?.getTracks().length ? first : ev.track ? new MediaStream([ev.track]) : null;
+        if (!stream) return;
+        for (const t of stream.getAudioTracks()) t.enabled = true;
+        setRemoteStream(stream);
       };
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -235,10 +250,14 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
       });
       streamRef.current = stream;
       for (const track of stream.getTracks()) {
+        track.enabled = true;
         pc.addTrack(track, stream);
       }
 
-      const offer = await pc.createOffer();
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: false,
+      });
       await pc.setLocalDescription(offer);
       await waitIceGatheringComplete(pc);
 
@@ -261,9 +280,16 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
       if (!callId) throw new Error("Meta não devolveu o ID da chamada.");
 
       expectedCallIdRef.current = callId;
+      appliedAnswerRef.current = false;
       setActiveCallId(callId);
       setPhase("need_answer");
       bumpDebug();
+
+      const queued = queuedAnswerRef.current;
+      if (queued && queued.callId === callId) {
+        queuedAnswerRef.current = null;
+        void applyAnswer(queued.callId, queued.sdp);
+      }
 
       return { ok: true, callId };
     } catch (e) {
@@ -275,7 +301,41 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
     } finally {
       setIsInitiating(false);
     }
-  }, [conversationId, releasePc, terminateSilently]);
+  }, [conversationId, releasePc, terminateSilently, applyAnswer]);
+
+  // Fallback: o webhook `connect` com SDP answer pode chegar ANTES do
+  // browser ter o callId (SSE dropado). Poll persiste o SDP no evento.
+  React.useEffect(() => {
+    if (phase !== "need_answer" || !conversationId) return;
+    const callId = expectedCallIdRef.current;
+    if (!callId) return;
+    let stopped = false;
+    const tick = async () => {
+      try {
+        const res = await fetch(
+          apiUrl(
+            `/api/conversations/${conversationId}/whatsapp-calls?answerFor=${encodeURIComponent(callId)}`,
+          ),
+        );
+        const data = (await res.json().catch(() => ({}))) as {
+          pendingAnswer?: { sdp_type?: string; sdp?: string } | null;
+        };
+        if (stopped) return;
+        const sess = data.pendingAnswer;
+        if (sess?.sdp && sess.sdp_type?.toLowerCase() === "answer") {
+          void applyAnswer(callId, sess.sdp);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    const timer = window.setInterval(() => void tick(), 900);
+    void tick();
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [phase, conversationId, applyAnswer]);
 
   // Inicia automaticamente a gravação assim que a mídia fica ativa.
   // Precisa do local stream (criado no initiate), do remote stream
@@ -320,17 +380,20 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
           conversationId?: string;
           callId?: string;
           event?: string;
+          session?: { sdp_type?: string; sdp?: string };
         };
-        if (!conversationId || p.conversationId !== conversationId) return;
+        const sdp = p.session?.sdp;
+        const sdpType = p.session?.sdp_type?.toLowerCase();
+        if (p.callId && sdp && sdpType === "answer") {
+          void applyAnswer(p.callId, sdp);
+        }
         if ((p.event ?? "").toLowerCase() !== "terminate") return;
         const mine = expectedCallIdRef.current ?? activeCallId;
         if (!mine || p.callId !== mine) return;
-        // Meta sinalizou fim da chamada — dispara finishRecording() via
-        // releasePc() e volta a fase para idle.
         releasePc();
         setPhase("idle");
       },
-      [conversationId, activeCallId, releasePc],
+      [activeCallId, releasePc, applyAnswer],
     ),
     !!conversationId,
   );

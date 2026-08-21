@@ -287,19 +287,87 @@ export function WhatsappCallChip({
   applyAnswerRef.current = outbound.applyAnswer;
 
   const remoteAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = React.useRef<AudioContext | null>(null);
+  const remoteSourceRef = React.useRef<MediaStreamAudioSourceNode | null>(null);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
+
+  const unlockAudio = React.useCallback(async () => {
+    try {
+      const AC =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AC) return;
+      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+        audioCtxRef.current = new AC();
+      }
+      if (audioCtxRef.current.state === "suspended") {
+        await audioCtxRef.current.resume();
+      }
+    } catch {
+      /* ignore */
+    }
+    const el = remoteAudioRef.current;
+    if (!el) return;
+    el.muted = false;
+    el.volume = 1;
+    try {
+      await el.play();
+    } catch {
+      /* stream ainda não chegou — o clique já desbloqueou a política */
+    }
+  }, []);
+
   React.useEffect(() => {
     const el = remoteAudioRef.current;
     const stream = outbound.remoteStream;
     if (!el) return;
     el.srcObject = stream;
+    el.muted = false;
+    el.volume = 1;
     if (!stream) {
+      try {
+        remoteSourceRef.current?.disconnect();
+      } catch {
+        /* ignore */
+      }
+      remoteSourceRef.current = null;
       setAudioBlocked(false);
       return;
     }
     setAudioBlocked(false);
-    void el.play().catch(() => setAudioBlocked(true));
+    const ctx = audioCtxRef.current;
+    let viaCtx = false;
+    if (ctx && ctx.state !== "closed") {
+      try {
+        remoteSourceRef.current?.disconnect();
+        const src = ctx.createMediaStreamSource(stream);
+        src.connect(ctx.destination);
+        remoteSourceRef.current = src;
+        if (ctx.state === "suspended") void ctx.resume();
+        viaCtx = true;
+      } catch {
+        /* elemento <audio> continua como fallback */
+      }
+    }
+    if (viaCtx) {
+      el.muted = true;
+      setAudioBlocked(false);
+    } else {
+      void el.play().catch(() => setAudioBlocked(true));
+    }
   }, [outbound.remoteStream]);
+
+  React.useEffect(() => {
+    if (outbound.phase !== "live") return;
+    const el = remoteAudioRef.current;
+    if (!el || !outbound.remoteStream) return;
+    el.muted = false;
+    el.volume = 1;
+    void el.play().then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
+    if (audioCtxRef.current?.state === "suspended") {
+      void audioCtxRef.current.resume();
+    }
+  }, [outbound.phase, outbound.remoteStream]);
 
   React.useEffect(() => {
     outbound.reset();
@@ -331,10 +399,10 @@ export function WhatsappCallChip({
             session?: { sdp_type?: string; sdp?: string };
           };
           if (
-            p.conversationId === conversationId &&
             p.callId &&
             p.session?.sdp_type?.toLowerCase() === "answer" &&
-            p.session.sdp
+            p.session.sdp &&
+            (p.conversationId === conversationId || p.callId === outbound.activeCallId)
           ) {
             void applyAnswerRef.current(p.callId, p.session.sdp);
           }
@@ -353,7 +421,7 @@ export function WhatsappCallChip({
           }
         }
       },
-      [conversationId, queryClient, key, recentCallsKey],
+      [conversationId, queryClient, key, recentCallsKey, outbound.activeCallId],
     ),
     !!conversationId && isWaVoiceChannel,
   );
@@ -583,9 +651,13 @@ export function WhatsappCallChip({
     !terminateCall.isPending;
 
   const initiate = async () => {
+    await unlockAudio();
     const r = await outbound.initiate();
-    if (r.ok) toast.success("Pedido aceito pela Meta. Aguarde…");
-    else if (r.error) toast.error(r.error);
+    if (r.ok) {
+      toast.success("Pedido aceito pela Meta. Aguarde…");
+      queryClient.invalidateQueries({ queryKey: messagesKey(conversationId) });
+      queryClient.invalidateQueries({ queryKey: recentCallsKey });
+    } else if (r.error) toast.error(r.error);
   };
 
   const handleTerminate = () => {
@@ -596,9 +668,15 @@ export function WhatsappCallChip({
   };
 
   const activateAudio = () => {
+    void unlockAudio();
     const el = remoteAudioRef.current;
-    if (!el) return;
-    void el.play().then(() => setAudioBlocked(false)).catch(() => {});
+    if (el) {
+      el.muted = audioCtxRef.current?.state === "running";
+      void el.play().then(() => setAudioBlocked(false)).catch(() => {});
+    }
+    if (audioCtxRef.current?.state === "suspended") {
+      void audioCtxRef.current.resume().then(() => setAudioBlocked(false));
+    }
   };
 
   if (isLoading) {
@@ -953,13 +1031,28 @@ export function WhatsappCallChip({
         ref={remoteAudioRef}
         autoPlay
         playsInline
-        className="hidden"
+        className="pointer-events-none fixed bottom-0 left-0 h-px w-px opacity-[0.01]"
         aria-hidden
       />
       {isCta ? (
         <>
           {canTerminate ? (
-            <TooltipHost label="Encerrar chamada" side="bottom">
+            <>
+              {outbound.phase === "live" && audioBlocked ? (
+                <TooltipHost label="Ativar som da chamada" side="bottom">
+                  <button
+                    type="button"
+                    className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105"
+                    aria-label="Ativar som da chamada"
+                    onClick={() => void activateAudio()}
+                  >
+                    <span className="flex size-10 items-center justify-center rounded-full bg-amber-500 shadow-[0_4px_14px_rgba(245,158,11,0.4)]">
+                      <Mic className="size-5 text-white" strokeWidth={2.4} />
+                    </span>
+                  </button>
+                </TooltipHost>
+              ) : null}
+              <TooltipHost label="Encerrar chamada" side="bottom">
               <button
                 type="button"
                 className="relative inline-flex size-11 shrink-0 items-center justify-center overflow-visible outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-red-500/50"
@@ -971,6 +1064,7 @@ export function WhatsappCallChip({
                 </span>
               </button>
             </TooltipHost>
+            </>
           ) : (
             <TooltipHost
               label={

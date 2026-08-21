@@ -1,7 +1,6 @@
 import type {
   AutomationListItemDto,
   AutomationListPage,
-  AutomationListSummary,
   FetchAutomationsParams,
 } from "./api";
 
@@ -139,25 +138,6 @@ export function mockAutomationsPage(
     total,
     page,
     perPage,
-  };
-}
-
-export function mockAutomationSummary(): AutomationListSummary {
-  const active = MOCK_ITEMS.filter((a) => a.active).length;
-  const runsToday = MOCK_ITEMS.reduce((sum, a) => sum + (a.runsToday ?? 0), 0);
-  const avgSuccess =
-    MOCK_ITEMS.length === 0
-      ? 0
-      : Math.round(
-          MOCK_ITEMS.reduce((sum, a) => sum + (a.successRate ?? 0), 0) /
-            MOCK_ITEMS.length,
-        );
-  return {
-    total: MOCK_ITEMS.length,
-    active,
-    paused: MOCK_ITEMS.length - active,
-    runsToday,
-    avgSuccess,
   };
 }
 

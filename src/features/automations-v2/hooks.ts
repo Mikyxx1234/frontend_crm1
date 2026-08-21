@@ -6,7 +6,6 @@ import {
   createAutomation,
   deleteAutomation,
   fetchAutomation,
-  fetchAutomationSummary,
   fetchAutomations,
   replaceAutomation,
   saveAutomationSteps,
@@ -15,7 +14,6 @@ import {
   type AutomationDetailDto,
   type AutomationListItemDto,
   type AutomationListPage,
-  type AutomationListSummary,
   type AutomationStepInput,
   type AutomationWriteBody,
 } from "./api";
@@ -52,17 +50,8 @@ export function useAutomations(params: {
         perPage,
       }),
     enabled: resolveEnabled(params.enabled),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10_000,
     placeholderData: (prev) => prev,
-  });
-}
-
-export function useAutomationsSummary(enabled?: boolean) {
-  return useQuery<AutomationListSummary>({
-    queryKey: ["v2-automations-summary"],
-    queryFn: fetchAutomationSummary,
-    enabled: resolveEnabled(enabled),
-    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -72,7 +61,6 @@ export function useToggleAutomation() {
     mutationFn: toggleAutomationActive,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["v2-automations"], exact: false });
-      qc.invalidateQueries({ queryKey: ["v2-automations-summary"] });
       qc.invalidateQueries({ queryKey: ["v2-automation"], exact: false });
     },
   });
@@ -92,7 +80,6 @@ function invalidateAutomations(
   id?: string,
 ) {
   qc.invalidateQueries({ queryKey: ["v2-automations"], exact: false });
-  qc.invalidateQueries({ queryKey: ["v2-automations-summary"] });
   if (id) qc.invalidateQueries({ queryKey: ["v2-automation", id] });
 }
 

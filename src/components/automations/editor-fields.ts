@@ -142,9 +142,9 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
         { value: "bot", label: "Bot (automação)" },
         { value: "assignee", label: "Responsável da conversa" },
       ],
-      hint: "Responsável = 1ª resposta do consultor.",
+      hint: "Responsável = conta como 1ª resposta do consultor (Entrada → Respondidas).",
     },
-    { kind: "source", source: "template", key: "fallbackTemplateName", label: "Template fallback (sessão expirada)", optional: true },
+    { kind: "text", key: "fallbackTemplateName", label: "Template fallback (sessão expirada)", optional: true },
     { kind: "duration", key: "timeoutMs", label: "Sem resposta em" },
     {
       kind: "select",
@@ -162,6 +162,7 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   send_whatsapp_template: [
     { kind: "channelPicker" },
     { kind: "source", source: "template", key: "templateName", label: "Template" },
+    { kind: "text", key: "languageCode", label: "Idioma", placeholder: "pt_BR" },
     { kind: "templatePreview" },
     { kind: "duration", key: "timeoutMs", label: "Sem resposta em" },
     {
@@ -201,11 +202,11 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
   send_whatsapp_interactive: [
     { kind: "channelPicker" },
     { kind: "textarea", key: "body", label: "Texto da mensagem" },
-    { kind: "text", key: "header", label: "Cabeçalho", optional: true, placeholder: "Título acima da mensagem" },
-    { kind: "text", key: "footer", label: "Rodapé", optional: true, placeholder: "Texto abaixo da mensagem" },
-    { kind: "builder", builder: "buttonsTitle", key: "buttons", label: "Opções (até 3 = botões; 4–10 = lista)" },
+    { kind: "text", key: "header", label: "Cabeçalho", optional: true },
+    { kind: "text", key: "footer", label: "Rodapé", optional: true },
+    { kind: "builder", builder: "buttonsTitle", key: "buttons", label: "Botões (máx. 3)" },
     { kind: "step", key: "elseGotoStepId", label: "Se resposta não bater → ir para", optional: true },
-    { kind: "text", key: "saveToVariable", label: "Salvar resposta em variável", optional: true, placeholder: "ex.: resposta" },
+    { kind: "text", key: "saveToVariable", label: "Salvar resposta em variável", optional: true },
     { kind: "duration", key: "timeoutMs", label: "Sem resposta em" },
     {
       kind: "select",
@@ -288,8 +289,8 @@ export const STEP_FIELDS: Record<string, EditorField[]> = {
     { kind: "step", key: "timeoutGotoStepId", label: "Sem resposta (timeout) → ir para", optional: true },
   ],
   set_variable: [
-    { kind: "text", key: "variableName", label: "Nome da variável", placeholder: "ex.: resposta" },
-    { kind: "text", key: "value", label: "Valor", variables: true, placeholder: "Texto ou { para variáveis" },
+    { kind: "text", key: "variableName", label: "Nome da variável" },
+    { kind: "text", key: "value", label: "Valor" },
   ],
   goto: [{ kind: "step", key: "targetStepId", label: "Ir para qual passo?" }],
   transfer_automation: [

@@ -24,7 +24,6 @@ export type AutomationTriggerType =
   | "message_sent"
   | "call_received"
   | "call_made"
-  | "call_permission_granted"
   | "conversation_tabulated"
   | "whatsapp_session_expiring"
   | "lead_distributed"
@@ -51,7 +50,6 @@ export const AUTOMATION_TRIGGER_TYPES: AutomationTriggerType[] = [
   "message_sent",
   "call_received",
   "call_made",
-  "call_permission_granted",
   "conversation_tabulated",
   "whatsapp_session_expiring",
   "lead_distributed",
@@ -161,7 +159,6 @@ export function triggerTypeLabel(t: string): string {
     message_sent: "Mensagem enviada",
     call_received: "Ligação recebida",
     call_made: "Ligação realizada",
-    call_permission_granted: "Permissão de ligação concedida",
     conversation_tabulated: "Conversa encerrada",
     whatsapp_session_expiring: "Sessão do WhatsApp prestes a encerrar",
     lead_distributed: "Lead distribuído (consultor humano)",
@@ -295,12 +292,6 @@ export function summarizeTriggerConfig(
       };
       return status ? (statusLabel[status] ?? status) : "Qualquer ligação";
     }
-    case "call_permission_granted": {
-      const t = c.consentType ? String(c.consentType) : "";
-      if (t === "PERMANENT") return "Permanente";
-      if (t === "TEMPORARY") return "Temporária 7 dias";
-      return "Qualquer tipo";
-    }
     case "message_received":
     case "message_sent": {
       const parts: string[] = [];
@@ -389,32 +380,11 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
       return "Selecionar funil e motivo";
     }
     case "assign_owner": {
-      const target =
-        c.assignAll || c.assignTo === "all" || c.target === "all" || c.target === "both"
-          ? "all"
-          : c.assignTo
-            ? String(c.assignTo)
-            : c.target
-              ? String(c.target)
-              : "deal";
-      const targetLabel =
-        target === "all" || target === "both"
-          ? "todas as entidades"
-          : target === "contact"
-            ? "contato"
-            : target === "conversation"
-              ? "conversa"
-              : "negócio";
-      const who = c.departmentName
-        ? String(c.departmentName)
-        : c.userLabel
-          ? String(c.userLabel)
-          : c.departmentId
-            ? "Departamento"
-            : "";
+      const target = c.target ? String(c.target) : "deal";
+      const targetLabel = target === "both" ? "negócio e contato" : target === "contact" ? "contato" : "negócio";
       const userId = c.userId ? String(c.userId).trim() : "";
-      if (!who && !userId) return `Limpar responsável (${targetLabel})`;
-      return `${who || userId} · ${targetLabel}`;
+      if (!userId) return `Limpar responsável (${targetLabel})`;
+      return `Usuário: ${userId} (${targetLabel})`;
     }
     case "transfer_department":
       return c.departmentName
@@ -936,8 +906,6 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
     case "call_received":
     case "call_made":
       return { status: "" };
-    case "call_permission_granted":
-      return { consentType: "" };
     case "lead_distributed":
       return { departmentId: "" };
     case "manual":

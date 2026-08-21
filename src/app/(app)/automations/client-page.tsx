@@ -33,7 +33,6 @@ import { KpiCard, type KpiTone } from "@/components/crm/kpi-card"
 import { cn } from "@/lib/utils"
 import {
   useAutomations,
-  useAutomationsSummary,
   useCreateAutomation,
   useDeleteAutomation,
   useReplaceAutomation,
@@ -80,8 +79,8 @@ export default function V2AutomationsClientPage() {
     active: activeParam,
   })
 
-  // KPIs / popover — COUNT + logs de hoje. Não bloqueia a galeria.
-  const summaryQuery = useAutomationsSummary()
+  // Métricas/KPIs e contagens do popover — lote amplo, sem filtros da lista.
+  const metricsQuery = useAutomations({ page: 1, perPage: 200 })
 
   const toggleMutation = useToggleAutomation()
   const createMutation = useCreateAutomation()
@@ -101,16 +100,29 @@ export default function V2AutomationsClientPage() {
     [listQuery.data?.items],
   )
 
-  const summary = useMemo(
-    () => ({
-      total: summaryQuery.data?.total ?? 0,
-      active: summaryQuery.data?.active ?? 0,
-      paused: summaryQuery.data?.paused ?? 0,
-      runsToday: summaryQuery.data?.runsToday ?? 0,
-      avgSuccess: summaryQuery.data?.avgSuccess ?? 0,
-    }),
-    [summaryQuery.data],
+  const metricsItems = useMemo(
+    () => (metricsQuery.data?.items ?? []).map(dtoToAutomation),
+    [metricsQuery.data?.items],
   )
+
+  const summary = useMemo(() => {
+    const active = metricsItems.filter((a) => a.active)
+    const runsToday = metricsItems.reduce((sum, a) => sum + a.runsToday, 0)
+    const avgSuccess =
+      metricsItems.length === 0
+        ? 0
+        : Math.round(
+            metricsItems.reduce((sum, a) => sum + a.successRate, 0) /
+              metricsItems.length,
+          )
+    return {
+      total: metricsQuery.data?.total ?? metricsItems.length,
+      active: active.length,
+      paused: metricsItems.length - active.length,
+      runsToday,
+      avgSuccess,
+    }
+  }, [metricsItems, metricsQuery.data?.total])
 
   const total = listQuery.data?.total ?? 0
   const lastPage = Math.max(1, Math.ceil(total / perPage))
@@ -132,7 +144,9 @@ export default function V2AutomationsClientPage() {
       toast.info("Modo demonstração — exclusão indisponível.")
       return
     }
-    const target = listItems.find((a) => a.id === id)
+    const target =
+      listItems.find((a) => a.id === id) ??
+      metricsItems.find((a) => a.id === id)
     const name = target?.name ?? "esta automação"
 
     const ok = await confirm({

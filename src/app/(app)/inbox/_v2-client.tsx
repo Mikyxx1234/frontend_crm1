@@ -483,14 +483,23 @@ export default function InboxV2ClientPage({
   // fecha sozinha. Mantemos a ultima row vista enquanto o user nao
   // trocar de conversa explicitamente.
   const [stickyRow, setStickyRow] = useState<ConversationListRow | null>(null);
+  const [pinnedFromSearch, setPinnedFromSearch] = useState<ConversationListRow | null>(null);
+
+  const displayRows = useMemo(() => {
+    if (!pinnedFromSearch) return rows;
+    const rest = rows.filter((r) => r.id !== pinnedFromSearch.id);
+    return [pinnedFromSearch, ...rest];
+  }, [rows, pinnedFromSearch]);
 
   // Conversa ativa presente na lista carregada da aba/filtro atual?
   const foundActiveRow = useMemo(
     () =>
       activeId
-        ? rows.find((r) => matchesConversationUrlRef(r, activeId)) ?? null
+        ? displayRows.find((r) => matchesConversationUrlRef(r, activeId)) ??
+          rows.find((r) => matchesConversationUrlRef(r, activeId)) ??
+          null
         : null,
-    [rows, activeId],
+    [displayRows, rows, activeId],
   );
 
   // Deep-link: se o id da URL (ou de qualquer seleção) não estiver na lista
@@ -513,6 +522,7 @@ export default function InboxV2ClientPage({
   useEffect(() => {
     if (!activeId) {
       setStickyRow(null);
+      setPinnedFromSearch(null);
       return;
     }
     if (foundActiveRow) {
@@ -898,6 +908,7 @@ export default function InboxV2ClientPage({
     );
 
   function handleSelect(id: string) {
+    if (pinnedFromSearch && pinnedFromSearch.id !== id) setPinnedFromSearch(null);
     if (id === activeId) return;
     setActiveId(id);
     markRead.mutate(id);
@@ -905,9 +916,15 @@ export default function InboxV2ClientPage({
   }
 
   function handlePickSearchConversation(row: ConversationListRow) {
+    setPinnedFromSearch(row);
+    setStickyRow(row);
     const queue = pickVisibleInboxTab(inboxQueueTabFor(row), visibleTabs);
     if (queue && queue !== tab) setTab(queue);
-    handleSelect(row.id);
+    if (row.id !== activeId) {
+      setActiveId(row.id);
+      markRead.mutate(row.id);
+      setReplyTo(null);
+    }
     setSearchInput("");
     setMobilePaneTab("chat");
   }
@@ -968,10 +985,10 @@ export default function InboxV2ClientPage({
   // ── Adapters → tipos do v0 ─────────────────────────────────────
   const conversationCards = useMemo(
     () =>
-      rows
+      displayRows
         .filter(Boolean)
         .map((r) => toConversationCard(r, { active: r.id === activeId })),
-    [rows, activeId],
+    [displayRows, activeId],
   );
   const contactName = activeRow?.contact?.name ?? "";
   const pinnedMessageIds = useMemo(
@@ -1176,6 +1193,7 @@ export default function InboxV2ClientPage({
       searchValue={searchInput}
       onSearchChange={setSearchInput}
       hideSearch={searchInHeader}
+      scrollToTopKey={pinnedFromSearch?.id}
       // Sem PageHeader, o filtro permanece ao lado do status. No Inbox ele
       // sobe junto da busca, como botão irmão (fora do input).
       filterSlot={

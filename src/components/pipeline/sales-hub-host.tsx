@@ -642,6 +642,8 @@ export function SalesHubHost({ showPipelineName = false }: SalesHubHostProps = {
               sortKey={sortKey}
               onSortKeyChange={setSortKey}
               placeholder="Buscar no funil…"
+              pipelineId={pipelineId}
+              onPickDeal={(deal) => setActiveDeal(deal.id, deal.number)}
             />
           }
           pipelineNameSlot={

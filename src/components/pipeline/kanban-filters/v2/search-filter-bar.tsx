@@ -1,17 +1,26 @@
 /**
- * Barra de busca do Kanban — abre o modal canônico de filtros (B + Kommo).
- *
- * O popover tabulado anterior foi substituído pelo FilterModalThreeCol:
- * shell de Dialog central + 3 colunas (visualizações · propriedades · tags),
- * com multi-seletores fechados para listas longas. [jul/26]
+ * Barra de busca do Kanban — abre o modal canônico de filtros (B + Kommo)
+ * e o dropdown de resultados (mesmo mecanismo da Inbox).
  */
 
 "use client";
 
 import * as React from "react";
 import { toast } from "sonner";
+import { IconBriefcase } from "@tabler/icons-react";
 
 import { FilterSearchTrigger } from "@/components/crm/filter-search-trigger";
+import {
+  OmnisearchHitAvatar,
+  OmnisearchHitButton,
+  OmnisearchResultsPanel,
+  OmnisearchSection,
+  OmnisearchStatusPill,
+} from "@/components/crm/omnisearch-results";
+import { useOmnisearchMenu } from "@/components/crm/use-omnisearch-menu";
+import { sanitizeContactName } from "@/lib/display-name";
+import type { DealListItemDto } from "@/features/pipeline-v2/api/list";
+import { usePipelineOmnisearch } from "@/features/pipeline-v2/use-pipeline-omnisearch";
 
 import { countActiveFilters, type AdvancedDealFilters } from "../types";
 import { createSavedFilter } from "../api";
@@ -22,6 +31,12 @@ import {
 import type { FilterOptionsResponse } from "../types";
 
 export type { PipelineSortKey };
+
+const DEAL_STATUS: Record<DealListItemDto["status"], string> = {
+  OPEN: "Aberto",
+  WON: "Ganho",
+  LOST: "Perdido",
+};
 
 interface PipelineSearchFilterBarProps {
   search: string;
@@ -36,6 +51,8 @@ interface PipelineSearchFilterBarProps {
   onSortKeyChange?: (key: PipelineSortKey) => void;
   placeholder?: string;
   className?: string;
+  pipelineId?: string | null;
+  onPickDeal?: (deal: DealListItemDto) => void;
 }
 
 export function PipelineSearchFilterBar({
@@ -51,11 +68,21 @@ export function PipelineSearchFilterBar({
   onSortKeyChange,
   placeholder = "Pesquisar e filtrar...",
   className,
+  pipelineId,
+  onPickDeal,
 }: PipelineSearchFilterBarProps) {
   const [open, setOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
+  const hits = usePipelineOmnisearch(search, search.trim().length >= 3, pipelineId);
+  const menu = useOmnisearchMenu(search, hits.items.length);
   const activeCount = countActiveFilters(filters) + (search.trim() ? 1 : 0);
+
+  function pickDeal(deal: DealListItemDto) {
+    onPickDeal?.(deal);
+    onSearch("");
+    menu.close();
+  }
 
   async function handleSave(current: AdvancedDealFilters) {
     if (saving) return;
@@ -78,17 +105,83 @@ export function PipelineSearchFilterBar({
   }
 
   return (
-    <>
-      <FilterSearchTrigger
-        search={search}
-        onSearch={onSearch}
-        onOpenFilters={() => setOpen(true)}
-        filtersOpen={open}
-        activeCount={activeCount}
-        placeholder={placeholder}
-        ariaLabel="Buscar e filtrar negócios"
-        className={className}
-      />
+    <div className={className}>
+      <div ref={menu.wrapRef}>
+        <FilterSearchTrigger
+          search={search}
+          onSearch={onSearch}
+          onFocus={() => menu.setFocused(true)}
+          onKeyDown={(e) =>
+            menu.onInputKeyDown(e, () => {
+              const deal = hits.items[menu.activeIndex] ?? hits.items[0];
+              if (deal) pickDeal(deal);
+            })
+          }
+          onOpenFilters={() => {
+            setOpen(true);
+            menu.close();
+          }}
+          filtersOpen={open}
+          activeCount={activeCount}
+          placeholder={placeholder}
+          ariaLabel="Buscar e filtrar negócios"
+        />
+      </div>
+
+      {menu.showHits && menu.coords && typeof document !== "undefined" && (
+        <OmnisearchResultsPanel
+          coords={menu.coords}
+          loading={hits.isLoading || hits.waitingDebounce}
+          query={hits.query || search.trim()}
+          empty={hits.items.length === 0}
+          total={hits.items.length}
+          onSeeAll={menu.close}
+        >
+          <OmnisearchSection
+            icon={<IconBriefcase size={13} />}
+            label="Negócios"
+            count={hits.items.length}
+          >
+            {hits.items.map((deal, i) => {
+              const name = sanitizeContactName(deal.contact?.name) || deal.title || "Negócio";
+              const stage = deal.stage?.name?.trim() || null;
+              return (
+                <OmnisearchHitButton
+                  key={deal.id}
+                  active={i === menu.activeIndex}
+                  onHover={() => menu.setActiveIndex(i)}
+                  onClick={() => pickDeal(deal)}
+                >
+                  <OmnisearchHitAvatar
+                    id={deal.contact?.id ?? deal.id}
+                    name={name}
+                    imageUrl={deal.contact?.avatarUrl}
+                    overlay={<IconBriefcase size={10} />}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex min-w-0 items-baseline gap-1.5">
+                      <span className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                        {name}
+                      </span>
+                      {deal.number != null && (
+                        <span className="shrink-0 font-body text-[12px] tabular-nums text-[var(--text-muted)]">
+                          #{deal.number}
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 truncate font-body text-[12px] text-[var(--text-secondary)]">
+                      {stage ? `Etapa ${stage}` : deal.title}
+                    </span>
+                  </span>
+                  <OmnisearchStatusPill tone={deal.status === "LOST" ? "danger" : "success"}>
+                    {DEAL_STATUS[deal.status]}
+                  </OmnisearchStatusPill>
+                </OmnisearchHitButton>
+              );
+            })}
+          </OmnisearchSection>
+        </OmnisearchResultsPanel>
+      )}
 
       <FilterModalThreeCol
         open={open}
@@ -103,6 +196,6 @@ export function PipelineSearchFilterBar({
         sortKey={sortKey}
         onSortKeyChange={onSortKeyChange}
       />
-    </>
+    </div>
   );
 }

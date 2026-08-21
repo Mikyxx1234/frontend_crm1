@@ -71,6 +71,14 @@ import { formatPhoneDisplay } from "@/lib/phone";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
 import { AVATAR_SIZE } from "@/lib/avatar";
 import {
+  OmnisearchHitAvatar,
+  OmnisearchHitButton,
+  OmnisearchResultsPanel,
+  OmnisearchSection,
+} from "@/components/crm/omnisearch-results";
+import { useOmnisearchMenu } from "@/components/crm/use-omnisearch-menu";
+import { useContactsOmnisearch } from "@/features/directory-v2/use-directory-omnisearch";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -320,6 +328,7 @@ export default function V2ContactsClientPage() {
   const [columnsOpen, setColumnsOpen] = useState(false);
   const [dupesOpen, setDupesOpen] = useState(false);
   const [editing, setEditing] = useState<ContactListItemDto | null>(null);
+  const [pinnedFromSearch, setPinnedFromSearch] = useState<ContactListItemDto | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const deleteMut = useDeleteContact();
@@ -330,6 +339,17 @@ export default function V2ContactsClientPage() {
   const canExportContact = useCan("contact:export");
 
   function requestEdit(c: ContactListItemDto) {
+    if (pinnedFromSearch && pinnedFromSearch.id !== c.id) setPinnedFromSearch(null);
+    if (!canEditContact) {
+      toast.error("Sem permissão para editar contato.");
+      return;
+    }
+    setEditing(c);
+  }
+
+  function handlePickSearchContact(c: ContactListItemDto) {
+    setPinnedFromSearch(c);
+    setSearch("");
     if (!canEditContact) {
       toast.error("Sem permissão para editar contato.");
       return;
@@ -452,17 +472,21 @@ export default function V2ContactsClientPage() {
   }
 
   const items = query.data?.items ?? [];
+  const displayItems = useMemo(() => {
+    if (!pinnedFromSearch) return items;
+    return [pinnedFromSearch, ...items.filter((c) => c.id !== pinnedFromSearch.id)];
+  }, [items, pinnedFromSearch]);
   const total = query.data?.total ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / perPage));
 
-  const allChecked = items.length > 0 && items.every((c) => selected.has(c.id));
-  const someChecked = items.some((c) => selected.has(c.id));
+  const allChecked = displayItems.length > 0 && displayItems.every((c) => selected.has(c.id));
+  const someChecked = displayItems.some((c) => selected.has(c.id));
 
   function toggleAll() {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allChecked) items.forEach((c) => next.delete(c.id));
-      else items.forEach((c) => next.add(c.id));
+      if (allChecked) displayItems.forEach((c) => next.delete(c.id));
+      else displayItems.forEach((c) => next.add(c.id));
       return next;
     });
   }
@@ -526,6 +550,7 @@ export default function V2ContactsClientPage() {
                 sortOrder={sortOrder}
                 activeCount={activeFilterCount}
                 onClear={clearPanelFilters}
+                onPick={handlePickSearchContact}
                 onApply={(next) => {
                   setSortBy(next.sortBy);
                   setSortOrder(next.sortOrder);
@@ -683,7 +708,7 @@ export default function V2ContactsClientPage() {
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
             {query.error instanceof Error ? query.error.message : "Erro ao carregar."}
           </div>
-        ) : items.length === 0 ? (
+        ) : displayItems.length === 0 ? (
           <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
             <EmptyState
               icon={<IconUsers size={28} />}
@@ -699,7 +724,7 @@ export default function V2ContactsClientPage() {
           </div>
         ) : view === "tabela" ? (
           <TabelaView
-            items={items}
+            items={displayItems}
             selected={selected}
             allChecked={allChecked}
             someChecked={someChecked}
@@ -715,7 +740,7 @@ export default function V2ContactsClientPage() {
           />
         ) : (
           <CardsView
-            items={items}
+            items={displayItems}
             selected={selected}
             allChecked={allChecked}
             someChecked={someChecked}
@@ -815,7 +840,7 @@ type ContactFilterDraft = {
 function SearchFilterBar({
   search, onSearch, tags, tagIds,
   createdFrom, createdTo, updatedFrom, updatedTo,
-  sortBy, sortOrder, activeCount, onClear, onApply,
+  sortBy, sortOrder, activeCount, onClear, onApply, onPick,
 }: {
   search: string;
   onSearch: (v: string) => void;
@@ -830,6 +855,7 @@ function SearchFilterBar({
   activeCount: number;
   onClear: () => void;
   onApply: (next: ContactFilterDraft) => void;
+  onPick?: (c: ContactListItemDto) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<FilterPanelTab>("ordenar");
@@ -838,6 +864,13 @@ function SearchFilterBar({
     sortBy, sortOrder, tagIds, createdFrom, createdTo, updatedFrom, updatedTo,
   });
   const ref = useRef<HTMLDivElement>(null);
+  const hits = useContactsOmnisearch(search, search.trim().length >= 3);
+  const menu = useOmnisearchMenu(search, hits.items.length);
+
+  function pickContact(c: ContactListItemDto) {
+    onPick?.(c);
+    menu.close();
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -915,19 +948,77 @@ function SearchFilterBar({
 
   return (
     <div ref={ref} className="relative w-full">
+      <div ref={menu.wrapRef}>
       <IconSearch size={15} className="absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-[var(--text-muted)]" />
       <input
         type="search"
         value={search}
         onChange={(e) => onSearch(e.target.value)}
-        onFocus={() => setOpen(true)}
+        onFocus={() => menu.setFocused(true)}
+        onKeyDown={(e) =>
+          menu.onInputKeyDown(e, () => {
+            const c = hits.items[menu.activeIndex] ?? hits.items[0];
+            if (c) pickContact(c);
+          })
+        }
         placeholder="Pesquisar e filtrar..."
         aria-label="Buscar e filtrar contatos"
         className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-24 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
       />
+      </div>
+      {menu.showHits && menu.coords && typeof document !== "undefined" && (
+        <OmnisearchResultsPanel
+          coords={menu.coords}
+          loading={hits.isLoading || hits.waitingDebounce}
+          query={hits.query || search.trim()}
+          empty={hits.items.length === 0}
+          total={hits.items.length}
+          onSeeAll={menu.close}
+        >
+          <OmnisearchSection icon={<IconUsers size={13} />} label="Contatos" count={hits.items.length}>
+            {hits.items.map((c, i) => {
+              const phone = formatPhoneDisplay(c.phone) || c.phone?.trim() || null;
+              return (
+                <OmnisearchHitButton
+                  key={c.id}
+                  active={i === menu.activeIndex}
+                  onHover={() => menu.setActiveIndex(i)}
+                  onClick={() => pickContact(c)}
+                >
+                  <OmnisearchHitAvatar
+                    id={c.id}
+                    name={c.name}
+                    imageUrl={c.avatarUrl}
+                    overlay={<IconUsers size={10} />}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex min-w-0 items-baseline gap-1.5">
+                      <span className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                        {c.name}
+                      </span>
+                      {c.number != null && (
+                        <span className="shrink-0 font-body text-[12px] tabular-nums text-[var(--text-muted)]">
+                          #{c.number}
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 flex items-center gap-1.5 font-body text-[12px] text-[var(--text-secondary)]">
+                      <IconPhone size={12} className="shrink-0 text-[var(--text-muted)]" />
+                      <span className="truncate">{phone || c.email || c.company?.name || "Abrir contato"}</span>
+                    </span>
+                  </span>
+                </OmnisearchHitButton>
+              );
+            })}
+          </OmnisearchSection>
+        </OmnisearchResultsPanel>
+      )}
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          menu.close();
+          setOpen((o) => !o);
+        }}
         aria-label="Filtros"
         className={cn(
           "absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center gap-1.5 rounded-full px-2.5 transition-colors",

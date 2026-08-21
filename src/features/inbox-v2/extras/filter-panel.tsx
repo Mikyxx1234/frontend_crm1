@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { FilterSearchTrigger } from "@/components/crm/filter-search-trigger";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { TagChip } from "@/components/crm/tag-chip";
-import { SEARCH_MIN_CHARS } from "@/lib/search-query";
+import { useOmnisearchMenu } from "@/components/crm/use-omnisearch-menu";
 import { useInboxOmnisearch } from "../hooks/use-inbox-omnisearch";
 import {
   flattenInboxSearchHits,
@@ -462,81 +462,25 @@ export function InboxSearchFilterBar({
   onPickDeal,
 }: InboxSearchFilterBarProps) {
   const [open, setOpen] = React.useState(false);
-  const [focused, setFocused] = React.useState(false);
-  const [coords, setCoords] = React.useState<{
-    top: number;
-    left: number;
-    width: number;
-  } | null>(null);
-  const wrapRef = React.useRef<HTMLDivElement>(null);
-  const [activeHit, setActiveHit] = React.useState(0);
   const activeCount = countActive(filters);
-  const showHits = focused && search.trim().length >= SEARCH_MIN_CHARS;
-  const hits = useInboxOmnisearch(search, showHits);
+  const hits = useInboxOmnisearch(search, search.trim().length >= 3);
   const flatHits = flattenInboxSearchHits(hits.conversations, hits.deals);
-
-  React.useEffect(() => {
-    setActiveHit(0);
-  }, [hits.query, hits.conversations.length, hits.deals.length]);
-
-  const updateCoords = React.useCallback(() => {
-    const rect = wrapRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const width = Math.max(rect.width, 280);
-    const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
-    setCoords({
-      top: Math.min(rect.bottom + 6, window.innerHeight - 8),
-      left,
-      width: rect.width,
-    });
-  }, []);
-
-  React.useLayoutEffect(() => {
-    if (!showHits) {
-      setCoords(null);
-      return;
-    }
-    updateCoords();
-  }, [showHits, search, hits.conversations.length, hits.deals.length, updateCoords]);
-
-  React.useEffect(() => {
-    if (!showHits) return;
-    function onDown(e: PointerEvent) {
-      const target = e.target as Node | null;
-      if (!target) return;
-      if (wrapRef.current?.contains(target)) return;
-      if ((target as HTMLElement).closest?.("[data-inbox-search-results]")) return;
-      setFocused(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setFocused(false);
-    }
-    window.addEventListener("pointerdown", onDown);
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("resize", updateCoords, { passive: true });
-    window.addEventListener("scroll", updateCoords, { capture: true, passive: true });
-    return () => {
-      window.removeEventListener("pointerdown", onDown);
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", updateCoords);
-      window.removeEventListener("scroll", updateCoords, true);
-    };
-  }, [showHits, updateCoords]);
+  const menu = useOmnisearchMenu(search, flatHits.length);
 
   function pickConversation(row: ConversationListRow) {
     onPickConversation?.(row);
     onSearch("");
-    setFocused(false);
+    menu.close();
   }
 
   function pickDeal(id: string) {
     onPickDeal?.(id);
     onSearch("");
-    setFocused(false);
+    menu.close();
   }
 
   function pickActiveHit() {
-    const hit = flatHits[activeHit] ?? flatHits[0];
+    const hit = flatHits[menu.activeIndex] ?? flatHits[0];
     if (!hit) return;
     if (hit.kind === "conversation") pickConversation(hit.row);
     else pickDeal(hit.deal.id);
@@ -549,30 +493,15 @@ export function InboxSearchFilterBar({
   // ativos sem reabrir o modal.
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <div ref={wrapRef}>
+      <div ref={menu.wrapRef}>
         <FilterSearchTrigger
           search={search}
           onSearch={onSearch}
-          onFocus={() => setFocused(true)}
-          onKeyDown={(e) => {
-            if (!showHits) return;
-            if (e.key === "ArrowDown") {
-              e.preventDefault();
-              setActiveHit((i) => Math.min(i + 1, Math.max(flatHits.length - 1, 0)));
-              return;
-            }
-            if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setActiveHit((i) => Math.max(i - 1, 0));
-              return;
-            }
-            if (e.key !== "Enter") return;
-            e.preventDefault();
-            pickActiveHit();
-          }}
+          onFocus={() => menu.setFocused(true)}
+          onKeyDown={(e) => menu.onInputKeyDown(e, pickActiveHit)}
           onOpenFilters={() => {
             setOpen(true);
-            setFocused(false);
+            menu.close();
           }}
           filtersOpen={open}
           activeCount={activeCount}
@@ -581,15 +510,15 @@ export function InboxSearchFilterBar({
           tooltipLabel="Filtrar conversas"
         />
       </div>
-      {showHits && coords && typeof document !== "undefined" && (
+      {menu.showHits && menu.coords && typeof document !== "undefined" && (
         <InboxSearchResultsPanel
-          coords={coords}
+          coords={menu.coords}
           loading={hits.isLoading || hits.waitingDebounce}
           query={hits.query || search.trim()}
           conversations={hits.conversations}
           deals={hits.deals}
-          activeIndex={activeHit}
-          onActiveIndexChange={setActiveHit}
+          activeIndex={menu.activeIndex}
+          onActiveIndexChange={menu.setActiveIndex}
           onPickConversation={pickConversation}
           onPickDeal={pickDeal}
         />

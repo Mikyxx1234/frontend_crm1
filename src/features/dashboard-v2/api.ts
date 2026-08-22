@@ -158,6 +158,17 @@ export interface DashboardSummary {
   };
 }
 
+/** Coorte de negócios criados no período e onde estão agora. */
+export interface DashboardNewDeals {
+  count: number;
+  value: number;
+  open: number;
+  won: number;
+  lost: number;
+  wonValue: number;
+  lostValue: number;
+}
+
 export interface DashboardFunnelStage {
   id: string;
   name: string;
@@ -228,6 +239,7 @@ export interface DashboardOwnerRow {
 export interface DashboardData {
   pipelineId: string;
   summary: DashboardSummary;
+  newDeals: DashboardNewDeals;
   funnel: DashboardFunnelStage[];
   bySource: DashboardSourceRow[];
   byOwner: DashboardOwnerRow[];

@@ -13,6 +13,7 @@ import {
 import { StatCard } from "@/components/crm/stat-card";
 import { ChartCard } from "@/components/crm/chart-card";
 import { EmptyState } from "@/components/crm/empty-state";
+import { FunnelProgressStrip } from "@/components/crm/dashboard/funnel-progress-strip";
 import { formatCurrency, formatNumber } from "@/features/dashboard-v2/format";
 import type { DashboardData } from "@/features/dashboard-v2/api";
 
@@ -60,6 +61,26 @@ export function ManagerDashboard({ data }: { data: DashboardData }) {
           caption="por negócio ganho"
         />
       </div>
+
+      <FunnelProgressStrip
+        funnel={data.funnel ?? []}
+        pipelineId={data.pipelineId}
+        newDeals={
+          data.newDeals ?? {
+            count: 0,
+            value: 0,
+            open: 0,
+            won: 0,
+            lost: 0,
+            wonValue: 0,
+            lostValue: 0,
+          }
+        }
+        wonCount={s.wonCount}
+        wonValue={s.wonValue}
+        lostCount={s.lostCount}
+        lostValue={s.lostValue}
+      />
 
       <ChartCard
         title="Leads parados"

@@ -151,7 +151,9 @@ function ManagerHome({
           error={dashboardQuery.error}
           hasData={!!dashboardQuery.data}
         >
-          {dashboardQuery.data ? <ManagerDashboard data={dashboardQuery.data} /> : null}
+          {dashboardQuery.data ? (
+            <ManagerDashboard data={dashboardQuery.data} period={period} />
+          ) : null}
         </QueryState>
       ) : isService ? (
         <QueryState

@@ -13,11 +13,17 @@ import {
 import { StatCard } from "@/components/crm/stat-card";
 import { ChartCard } from "@/components/crm/chart-card";
 import { EmptyState } from "@/components/crm/empty-state";
-import { FunnelProgressStrip } from "@/components/crm/dashboard/funnel-progress-strip";
+import { PipelineProgress } from "@/components/pipeline-progress";
 import { formatCurrency, formatNumber } from "@/features/dashboard-v2/format";
 import type { DashboardData } from "@/features/dashboard-v2/api";
 
-export function ManagerDashboard({ data }: { data: DashboardData }) {
+export function ManagerDashboard({
+  data,
+  period,
+}: {
+  data: DashboardData;
+  period?: { from: string; to: string };
+}) {
   const s = data.summary;
   const owners = (data.byOwner ?? []).slice(0, 5);
   const losses = (data.lossReasons ?? []).slice(0, 5);
@@ -62,24 +68,27 @@ export function ManagerDashboard({ data }: { data: DashboardData }) {
         />
       </div>
 
-      <FunnelProgressStrip
-        funnel={data.funnel ?? []}
-        pipelineId={data.pipelineId}
-        newDeals={
-          data.newDeals ?? {
-            count: 0,
-            value: 0,
-            open: 0,
-            won: 0,
-            lost: 0,
-            wonValue: 0,
-            lostValue: 0,
-          }
-        }
-        wonCount={s.wonCount}
-        wonValue={s.wonValue}
-        lostCount={s.lostCount}
-        lostValue={s.lostValue}
+      <PipelineProgress
+        stages={(data.funnel ?? []).map((stage) => ({
+          id: stage.id,
+          name: stage.name,
+          color: stage.color,
+          count: stage.count,
+          value: stage.value,
+          entered: stage.entered,
+          lost: stage.lost,
+          href: `/pipeline?${new URLSearchParams({ pipeline: data.pipelineId, stage: stage.id }).toString()}`,
+        }))}
+        summary={{
+          wonCount: s.wonCount,
+          wonValue: s.wonValue,
+          lostCount: s.lostCount,
+          lostValue: s.lostValue,
+          href: `/pipeline?pipeline=${encodeURIComponent(data.pipelineId)}`,
+        }}
+        cohort={data.newDeals}
+        pipelineHref={`/pipeline?pipeline=${encodeURIComponent(data.pipelineId)}`}
+        period={period}
       />
 
       <ChartCard

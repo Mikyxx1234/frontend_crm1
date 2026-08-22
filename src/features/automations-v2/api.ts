@@ -16,8 +16,12 @@ import type { AutomationStats } from "@/lib/automation-stats-types";
 import { isPageMockMode } from "@/lib/page-mock-mode";
 import { mockAutomationSummary, mockAutomationsPage } from "./mock-automations";
 
-async function getJson<T>(path: string, errLabel: string): Promise<T> {
-  const res = await fetch(apiUrl(path));
+async function getJson<T>(
+  path: string,
+  errLabel: string,
+  init?: RequestInit,
+): Promise<T> {
+  const res = await fetch(apiUrl(path), init);
   const text = await res.text();
   if (!res.ok) {
     let message = errLabel;
@@ -205,10 +209,16 @@ export function fetchAutomationLogs(
   sp.set("page", String(params.page ?? 1));
   sp.set("perPage", String(params.perPage ?? 50));
   if (params.stepId) sp.set("stepId", params.stepId);
-  if (params.status?.length) sp.set("status", params.status.join(","));
+  if (params.status?.length) {
+    // `status` CSV: o que 381fcdb lê. `logStatus` repetido: não depende
+    // de split por vírgula nem de um único get("status").
+    sp.set("status", params.status.join(","));
+    for (const s of params.status) sp.append("logStatus", s);
+  }
   return getJson<AutomationLogsPage>(
     `/api/automations/${id}/logs?${sp.toString()}`,
     "Erro ao carregar logs da automação.",
+    { cache: "no-store" },
   );
 }
 

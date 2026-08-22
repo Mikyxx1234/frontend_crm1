@@ -34,7 +34,12 @@ import {
   type LogStatus,
 } from "@/lib/logs-data"
 import { useAutomationLogs, useAutomationStats } from "@/features/automations-v2/hooks"
-import { statsForNode, statusesForLogTab, type LogTabKey } from "@/lib/flow-node-stats"
+import {
+  logRowMatchesTab,
+  statsForNode,
+  statusesForLogTab,
+  type LogTabKey,
+} from "@/lib/flow-node-stats"
 import { SessionInspectionModal } from "./session-inspection-modal"
 
 export type LogsTarget = {
@@ -73,6 +78,11 @@ export function LogsModal({
   const [lastNode, setLastNode] = useState<string | null>(null)
 
   // Mesmo render em que o alvo muda: a busca já vai com a aba certa.
+  // Ao fechar, zera lastNode — senão clicar Erros no mesmo card reabre
+  // na aba anterior e ignora `initialTab`.
+  if ((!open || !target) && lastNode !== null) {
+    setLastNode(null)
+  }
   const nodeChanged = Boolean(target && target.nodeId !== lastNode)
   const activeTab: TabKey = nodeChanged
     ? (target?.initialTab ?? "success")
@@ -100,17 +110,28 @@ export function LogsModal({
     error: cardStats.erros,
   }
   const tabCount = counts[activeTab]
+  const nodeId = target?.nodeId ?? ""
 
   const logs = useMemo(() => {
     const pages = query.data?.pages ?? []
-    // A rota já filtra por status da aba; `items`/`logs` é a mesma tolerância
-    // do editor legado. STARTED do gatilho não entra no aggregate do card.
+    // Preferir `items` (o que GET /logs devolve). `logs ?? items` do legado
+    // mostrava a página inteira se `logs` viesse sem filtro da aba.
     const rows = pages
-      .flatMap((page) => page.logs ?? page.items ?? [])
+      .flatMap((page) => page.items ?? page.logs ?? [])
       .filter((row) => !isTriggerEcho(row))
+      .filter((row) => logRowMatchesTab(row.status, activeTab, nodeId))
       .map(automationLogToEntry)
+      .filter((entry) =>
+        activeTab === "entered"
+          ? true
+          : activeTab === "success"
+            ? entry.status === "success"
+            : activeTab === "alert"
+              ? entry.status === "alert"
+              : entry.status === "error",
+      )
     return { rows }
-  }, [query.data])
+  }, [query.data, activeTab, nodeId])
 
   if (!target) return null
 

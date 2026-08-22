@@ -55,8 +55,9 @@ function triggerStats(trigger: Record<string, number> | undefined): FlowNodeStat
 }
 
 /**
- * Status crus enviados em `GET /logs?status=`. No gatilho o sucesso é o
- * desfecho; no passo o card só conta `SUCCESS` (o groupBy de `/stats`).
+ * Status crus enviados em `GET /logs?status=` e `logStatus=`. No gatilho o
+ * sucesso é o desfecho; no passo o card só conta `SUCCESS` (o groupBy
+ * de `/stats`).
  */
 export function statusesForLogTab(tab: LogTabKey, nodeId: string): string[] {
   const success =
@@ -65,6 +66,16 @@ export function statusesForLogTab(tab: LogTabKey, nodeId: string): string[] {
   if (tab === "alert") return [...ALERT_LOG_STATUSES]
   if (tab === "error") return [...ERROR_LOG_STATUSES]
   return [...success, ...ALERT_LOG_STATUSES, ...ERROR_LOG_STATUSES]
+}
+
+/** Guard da lista: sucesso nunca aparece na aba Erros, mesmo se a API errar. */
+export function logRowMatchesTab(
+  rawStatus: string,
+  tab: LogTabKey,
+  nodeId: string,
+): boolean {
+  if (tab === "entered") return true
+  return statusesForLogTab(tab, nodeId).includes(rawStatus.trim().toUpperCase())
 }
 
 export function statsForNode(

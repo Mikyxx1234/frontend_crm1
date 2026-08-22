@@ -11,6 +11,11 @@
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { apiUrl } from "@/lib/api"
+import { readStepAllowedChannelIds } from "@/lib/automation-workflow"
+import {
+  fetchConnectedMetaCloudWhatsAppChannels,
+  formatMetaChannelLabel,
+} from "@/lib/meta-whatsapp/meta-cloud-channels"
 import { usePipelinesQuery } from "@/features/shared/queries/pipelines"
 import { useTeamUsersQuery } from "@/features/shared/queries/team-users"
 
@@ -180,53 +185,121 @@ export function useChannelOptions() {
 
 type RawTemplate = { metaTemplateName?: string; name?: string; label?: string; language?: string; languageCode?: string }
 
-/** Canal da WABA deste passo: `channelId`, único `channelIds`, ou o herdado. */
-export function resolveTemplateChannelId(
-  config?: { channelId?: unknown; channelIds?: unknown } | null,
-  inherited?: string | null,
-): string | undefined {
-  const c = config ?? {}
-  const one = typeof c.channelId === "string" ? c.channelId.trim() : ""
-  if (one) return one
-  const many = Array.isArray(c.channelIds)
-    ? c.channelIds.filter((x): x is string => typeof x === "string" && x.trim() !== "")
-    : []
-  if (many.length === 1) return many[0]
-  const inh = inherited?.trim()
-  return inh || undefined
-}
-
-/** Templates aprovados da WABA. Com `channelId`, filtra pelo canal Cloud API. */
-export function useTemplateOptions(channelId?: string | null) {
-  const q = useQuery({
-    queryKey: ["editor-wa-templates", channelId ?? "default"],
-    staleTime: 60_000,
-    queryFn: async (): Promise<Opt[]> => {
-      const qs = channelId?.trim()
-        ? `?channelId=${encodeURIComponent(channelId.trim())}`
-        : ""
-      const list = asArray(
-        await getJson(`/api/whatsapp-template-configs/approved${qs}`),
-      ) as RawTemplate[]
-      return list.map((t) => {
-        const v = t.metaTemplateName ?? t.name ?? ""
-        return { value: v, label: t.label || v }
-      })
-    },
-  })
-  return { options: q.data ?? [], isLoading: q.isLoading }
-}
-
-type RawTemplateDetail = {
-  metaTemplateName?: string
-  name?: string
-  language?: string
-  languageCode?: string
+type RawTemplateDetail = RawTemplate & {
   bodyPreview?: string
   headerPreview?: string
   footerPreview?: string
   buttons?: { type?: string; text?: string }[]
   headerFormat?: string | null
+}
+
+/**
+ * Um canal só quando o envio é daquela WABA.
+ * Vários = interseção (não usar o último CONNECTED).
+ * `undefined` = ainda carregando a lista de canais — não buscar.
+ */
+export function resolveTemplateChannelIds(
+  config?: { channelId?: unknown; channelIds?: unknown; channelScope?: unknown } | null,
+  inherited?: string | null,
+  connectedIds?: string[] | null,
+  opts?: { bindToInbound?: boolean },
+): string[] | undefined {
+  const allowed = readStepAllowedChannelIds(config)
+  if (allowed) {
+    return [...new Set(allowed.map((id) => id.trim()).filter(Boolean))]
+  }
+  const inh = inherited?.trim()
+  if (inh) return [inh]
+  const override =
+    typeof config?.channelId === "string" ? config.channelId.trim() : ""
+  if (override && !opts?.bindToInbound) return [override]
+  if (connectedIds == null) return undefined
+  return [...new Set(connectedIds.map((id) => id.trim()).filter(Boolean))]
+}
+
+/** Canal único quando dá para afirmar a WABA; senão `undefined` (não cai no último CONNECTED). */
+export function resolveTemplateChannelId(
+  config?: { channelId?: unknown; channelIds?: unknown; channelScope?: unknown } | null,
+  inherited?: string | null,
+  opts?: { bindToInbound?: boolean },
+): string | undefined {
+  const ids = resolveTemplateChannelIds(config, inherited, null, opts)
+  return ids?.length === 1 ? ids[0] : undefined
+}
+
+function templateNameOf(t: { metaTemplateName?: string; name?: string }): string {
+  return (t.metaTemplateName ?? t.name ?? "").trim()
+}
+
+function templateLangOf(t: { language?: string; languageCode?: string }): string {
+  return (t.language ?? t.languageCode ?? "pt_BR").trim()
+}
+
+function templateLangKey(t: { language?: string; languageCode?: string }): string {
+  return templateLangOf(t).toLowerCase()
+}
+
+function rowHasTemplate(
+  rows: RawTemplate[],
+  name: string,
+  language?: string | null,
+): boolean {
+  const n = name.trim()
+  if (!n) return true
+  const lang = language?.trim().toLowerCase()
+  return rows.some((t) => {
+    if (templateNameOf(t) !== n) return false
+    if (!lang) return true
+    return templateLangKey(t) === lang
+  })
+}
+
+function intersectApprovedRows(lists: RawTemplate[][]): RawTemplate[] {
+  if (lists.length === 0) return []
+  if (lists.length === 1) return lists[0] ?? []
+  const keySets = lists.map((list) => {
+    const s = new Set<string>()
+    for (const t of list) {
+      const n = templateNameOf(t)
+      if (n) s.add(`${n}::${templateLangKey(t)}`)
+    }
+    return s
+  })
+  const first = keySets[0]!
+  const common = new Set([...first].filter((k) => keySets.every((s) => s.has(k))))
+  return (lists[0] ?? []).filter((t) => {
+    const n = templateNameOf(t)
+    return n !== "" && common.has(`${n}::${templateLangKey(t)}`)
+  })
+}
+
+function optionsFromApproved(list: RawTemplate[]): Opt[] {
+  return list
+    .map((t) => {
+      const v = templateNameOf(t)
+      return { value: v, label: t.label || v }
+    })
+    .filter((o) => o.value !== "")
+}
+
+async function fetchApprovedTemplates(channelId: string): Promise<RawTemplateDetail[]> {
+  const qs = `?channelId=${encodeURIComponent(channelId)}`
+  return asArray(
+    await getJson(`/api/whatsapp-template-configs/approved${qs}`),
+  ) as RawTemplateDetail[]
+}
+
+/** Templates aprovados da WABA. Sem `channelId` não busca o último CONNECTED. */
+export function useTemplateOptions(channelId?: string | null) {
+  const id = channelId?.trim() || ""
+  const q = useQuery({
+    queryKey: ["editor-wa-templates", id || "none"],
+    staleTime: 60_000,
+    enabled: id !== "",
+    queryFn: async (): Promise<Opt[]> =>
+      optionsFromApproved(await fetchApprovedTemplates(id)),
+  })
+  return { options: id ? q.data ?? [] : [], isLoading: id ? q.isLoading : false }
 }
 
 export type TemplateButtonKind = "reply" | "url" | "call" | "flow" | "copy"
@@ -268,60 +341,151 @@ export function mergeTemplateQuickReplies(
   })
 }
 
+function detailFromApproved(t: RawTemplateDetail): TemplateDetail | null {
+  const name = templateNameOf(t)
+  if (!name) return null
+  const language = templateLangOf(t)
+  const buttons = (t.buttons ?? [])
+    .map((b) => {
+      const title = (b.text ?? "").trim()
+      if (!title) return null
+      const type = String(b.type ?? "").toUpperCase()
+      const kind: TemplateButtonKind =
+        type === "URL" ? "url"
+        : type === "PHONE_NUMBER" || type === "VOICE_CALL" ? "call"
+        : type === "FLOW" ? "flow"
+        : type === "COPY_CODE" || type === "OTP" ? "copy"
+        : "reply"
+      return { title, kind }
+    })
+    .filter((x): x is { title: string; kind: TemplateButtonKind } => Boolean(x))
+  return {
+    bodyPreview: (t.bodyPreview ?? "").trim(),
+    headerPreview: (t.headerPreview ?? "").trim(),
+    footerPreview: (t.footerPreview ?? "").trim(),
+    quickReplies: buttons.filter((b) => b.kind === "reply").map((b) => b.title),
+    headerFormat: t.headerFormat ?? null,
+    language,
+    buttons,
+  }
+}
+
+function detailsMapFromApproved(list: RawTemplateDetail[]): Map<string, TemplateDetail> {
+  const map = new Map<string, TemplateDetail>()
+  for (const t of list) {
+    const name = templateNameOf(t)
+    const detail = detailFromApproved(t)
+    if (!name || !detail) continue
+    const language = detail.language ?? "pt_BR"
+    map.set(`${name}::${language.toLowerCase()}`, detail)
+    const existing = map.get(name)
+    if (!existing || language.toLowerCase() === "pt_br") map.set(name, detail)
+  }
+  return map
+}
+
+type ChannelTemplateList = { id: string; list: RawTemplateDetail[] }
+
+export type StepTemplateCatalog = {
+  options: Opt[]
+  detailsMap: Map<string, TemplateDetail>
+  isLoading: boolean
+  isIntersect: boolean
+  scopedChannelIds: string[]
+  missingChannelLabels: (name: string, language?: string | null) => string[]
+}
+
 /**
- * Mapa nome-do-template → { bodyPreview, quickReplies }. Usado pelo nó
- * "Template WhatsApp" para exibir o corpo e derivar os botões de resposta
- * rápida (roteamento). Com `channelId`, lê a WABA daquele canal — sem isso
- * a Graph devolve o último CONNECTED, que pode ser outro número.
+ * Mapa nome-do-template → preview. Sem `channelId` não busca o último CONNECTED.
  */
 export function useTemplateDetailsMap(channelId?: string | null) {
+  const id = channelId?.trim() || ""
   const q = useQuery({
-    queryKey: ["editor-wa-templates-detail", channelId ?? "default"],
+    queryKey: ["editor-wa-templates-detail", id || "none"],
     staleTime: 60_000,
-    queryFn: async (): Promise<Map<string, TemplateDetail>> => {
-      const qs = channelId?.trim()
-        ? `?channelId=${encodeURIComponent(channelId.trim())}`
-        : ""
-      const list = asArray(
-        await getJson(`/api/whatsapp-template-configs/approved${qs}`),
-      ) as RawTemplateDetail[]
-      const map = new Map<string, TemplateDetail>()
-      for (const t of list) {
-        const name = t.metaTemplateName ?? t.name ?? ""
-        if (!name) continue
-        const language = (t.language ?? t.languageCode ?? "pt_BR").trim()
-        const buttons = (t.buttons ?? [])
-          .map((b) => {
-            const title = (b.text ?? "").trim()
-            if (!title) return null
-            const type = String(b.type ?? "").toUpperCase()
-            const kind: TemplateButtonKind =
-              type === "URL" ? "url"
-              : type === "PHONE_NUMBER" || type === "VOICE_CALL" ? "call"
-              : type === "FLOW" ? "flow"
-              : type === "COPY_CODE" || type === "OTP" ? "copy"
-              : "reply"
-            return { title, kind }
-          })
-          .filter((x): x is { title: string; kind: TemplateButtonKind } => Boolean(x))
-        const quickReplies = buttons.filter((b) => b.kind === "reply").map((b) => b.title)
-        const detail: TemplateDetail = {
-          bodyPreview: (t.bodyPreview ?? "").trim(),
-          headerPreview: (t.headerPreview ?? "").trim(),
-          footerPreview: (t.footerPreview ?? "").trim(),
-          quickReplies,
-          headerFormat: t.headerFormat ?? null,
-          language,
-          buttons,
-        }
-        map.set(`${name}::${language.toLowerCase()}`, detail)
-        const existing = map.get(name)
-        if (!existing || language.toLowerCase() === "pt_br") map.set(name, detail)
-      }
-      return map
-    },
+    enabled: id !== "",
+    queryFn: async (): Promise<Map<string, TemplateDetail>> =>
+      detailsMapFromApproved(await fetchApprovedTemplates(id)),
   })
-  return { detailsMap: q.data ?? new Map<string, TemplateDetail>(), isLoading: q.isLoading }
+  return {
+    detailsMap: id ? q.data ?? new Map<string, TemplateDetail>() : new Map<string, TemplateDetail>(),
+    isLoading: id ? q.isLoading : false,
+  }
+}
+
+/**
+ * Catálogo do passo: 1 canal → WABA dele; vários / todos → interseção
+ * dos CONNECTED. Avisa quais canais não têm o `templateName` gravado.
+ */
+export function useStepTemplateCatalog(
+  config?: { channelId?: unknown; channelIds?: unknown; channelScope?: unknown } | null,
+  inherited?: string | null,
+  opts?: { bindToInbound?: boolean; enabled?: boolean },
+): StepTemplateCatalog {
+  const enabled = opts?.enabled !== false
+  const channelsQ = useQuery({
+    queryKey: ["automation-step-connected-channels", "whatsapp"],
+    staleTime: 60_000,
+    enabled,
+    queryFn: fetchConnectedMetaCloudWhatsAppChannels,
+  })
+  const connectedIds = channelsQ.isLoading
+    ? undefined
+    : (channelsQ.data ?? []).map((c) => c.id)
+  const scoped = resolveTemplateChannelIds(config, inherited, connectedIds, {
+    bindToInbound: opts?.bindToInbound,
+  })
+  const ready = enabled && Array.isArray(scoped)
+  const ids = ready ? scoped : []
+  const listsQ = useQuery({
+    queryKey: ["editor-wa-templates-scoped", ids.slice().sort().join(",") || "none"],
+    staleTime: 60_000,
+    enabled: ready && ids.length > 0,
+    queryFn: async (): Promise<ChannelTemplateList[]> =>
+      Promise.all(
+        ids.map(async (id) => ({ id, list: await fetchApprovedTemplates(id) })),
+      ),
+  })
+
+  const labelById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const c of channelsQ.data ?? []) {
+      m.set(c.id, formatMetaChannelLabel(c))
+    }
+    return m
+  }, [channelsQ.data])
+
+  return useMemo(() => {
+    const lists = listsQ.data ?? []
+    const intersect = intersectApprovedRows(lists.map((x) => x.list))
+    const union = lists.flatMap((x) => x.list)
+    const isIntersect = ids.length > 1
+    const isLoading =
+      (enabled && (channelsQ.isLoading || scoped === undefined)) ||
+      (ready && ids.length > 0 && listsQ.isLoading)
+    return {
+      options: optionsFromApproved(isIntersect ? intersect : (lists[0]?.list ?? [])),
+      detailsMap: detailsMapFromApproved(union.length > 0 ? union : intersect),
+      isLoading,
+      isIntersect,
+      scopedChannelIds: ids,
+      missingChannelLabels: (name: string, language?: string | null) => {
+        if (!name.trim() || lists.length === 0) return []
+        return lists
+          .filter((x) => !rowHasTemplate(x.list, name, language))
+          .map((x) => labelById.get(x.id) ?? x.id)
+      },
+    }
+  }, [
+    channelsQ.isLoading,
+    enabled,
+    ids,
+    labelById,
+    listsQ.data,
+    listsQ.isLoading,
+    ready,
+    scoped,
+  ])
 }
 
 type RawAutomation = { id: string; name: string }

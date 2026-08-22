@@ -7,8 +7,7 @@ import { resolveFlowPresentation } from "./node-presentation"
 import {
   getTemplateDetail,
   mergeTemplateQuickReplies,
-  resolveTemplateChannelId,
-  useTemplateDetailsMap,
+  useStepTemplateCatalog,
 } from "./editor-data"
 
 type TemplateBtn = { id?: string; title?: string; text?: string; gotoStepId?: string }
@@ -325,9 +324,9 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
   // editor (inline ou diálogo) escolheu o template — garante que os ramos de
   // roteamento e o preview apareçam no card. Preserva gotoStepId por título.
   const isTemplate = d.stepType === "send_whatsapp_template"
-  const { detailsMap } = useTemplateDetailsMap(
-    isTemplate ? resolveTemplateChannelId(d.config) : undefined,
-  )
+  const { detailsMap } = useStepTemplateCatalog(d.config, undefined, {
+    enabled: isTemplate,
+  })
   const templateName = isTemplate ? String((d.config ?? {}).templateName ?? "") : ""
   const tplDetail = isTemplate
     ? getTemplateDetail(detailsMap, templateName, String((d.config ?? {}).languageCode ?? ""))

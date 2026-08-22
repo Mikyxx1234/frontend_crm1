@@ -35,8 +35,7 @@ import { stepIcon, stepColor } from "@/components/automations/add-step-node"
 import {
   getTemplateDetail,
   mergeTemplateQuickReplies,
-  resolveTemplateChannelId,
-  useTemplateDetailsMap,
+  useStepTemplateCatalog,
 } from "@/components/automations/editor-data"
 import { useTriggerNameLookup } from "@/components/automations/trigger-config-fields"
 import { summarizeTriggerConfig } from "@/lib/automation-workflow"
@@ -216,8 +215,9 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
   const iconClass = stepColor[stepType] ?? "text-[var(--text-muted)]"
   const triggerLookup = useTriggerNameLookup()
   const isTemplateCard = stepType === "send_whatsapp_template"
-  const templateChannelId = resolveTemplateChannelId(d.config ?? {})
-  const { detailsMap: tplMap } = useTemplateDetailsMap(isTemplateCard ? templateChannelId : undefined)
+  const { detailsMap: tplMap } = useStepTemplateCatalog(d.config ?? {}, undefined, {
+    enabled: isTemplateCard,
+  })
   const tplName = String(d.config?.templateName ?? d.config?.template ?? "")
   const tplLang = String(d.config?.languageCode ?? d.config?.idioma ?? "")
   const tplDetail = isTemplateCard ? getTemplateDetail(tplMap, tplName, tplLang) : undefined

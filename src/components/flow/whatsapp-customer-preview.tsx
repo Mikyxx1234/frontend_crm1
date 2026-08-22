@@ -30,8 +30,7 @@ import {
 import { useConnectedStepChannels } from "@/components/automations/step-channel-picker"
 import {
   getTemplateDetail,
-  resolveTemplateChannelId,
-  useTemplateDetailsMap,
+  useStepTemplateCatalog,
 } from "@/components/automations/editor-data"
 import type { NodeConfig, Output } from "@/lib/flow-data"
 
@@ -161,8 +160,9 @@ export function WhatsAppCustomerPreview({
   cardPreview?: string
 }) {
   const { options } = useConnectedStepChannels(stepType, { mockIfEmpty: true })
-  const channelId = resolveTemplateChannelId(config)
-  const { detailsMap } = useTemplateDetailsMap(channelId)
+  const catalog = useStepTemplateCatalog(config)
+  const { detailsMap } = catalog
+  const channelId = catalog.scopedChannelIds.length === 1 ? catalog.scopedChannelIds[0] : undefined
   const channel = options.find((o) => o.id === channelId)
   const bizName = channel?.label || "Empresa"
   const bizDetail = channel?.detail

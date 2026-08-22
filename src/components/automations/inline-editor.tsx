@@ -42,9 +42,7 @@ import {
   useTagOptions,
   getTemplateDetail,
   mergeTemplateQuickReplies,
-  resolveTemplateChannelId,
-  useTemplateDetailsMap,
-  useTemplateOptions,
+  useStepTemplateCatalog,
   useUserOptions,
   type Opt,
 } from "./editor-data"
@@ -281,7 +279,9 @@ function Field({
           <SourceSelect
             source={field.source}
             value={str(config[field.key])}
-            channelId={resolveTemplateChannelId(config, inheritedChannelId)}
+            config={config}
+            inheritedChannelId={inheritedChannelId}
+            bindToInbound={bindToInbound}
             onChange={(v) => set(field.key, v)}
           />
         </Labeled>
@@ -350,6 +350,7 @@ function Field({
         <TemplatePreview
           config={config}
           inheritedChannelId={inheritedChannelId}
+          bindToInbound={bindToInbound}
           onChange={onChange}
         />
       )
@@ -858,12 +859,16 @@ function SourceSelect({
   source,
   value,
   onChange,
-  channelId,
+  config,
+  inheritedChannelId,
+  bindToInbound,
 }: {
   source: SourceKey
   value: string
   onChange: (v: string) => void
-  channelId?: string
+  config: Cfg
+  inheritedChannelId?: string
+  bindToInbound?: boolean
 }) {
   switch (source) {
     case "stage":
@@ -872,7 +877,13 @@ function SourceSelect({
       return <HookSelect hook={useDepartmentOptions} value={value} onChange={onChange} placeholder="Selecione um departamento…" />
     case "template":
       return (
-        <TemplateNameSelect channelId={channelId} value={value} onChange={onChange} />
+        <TemplateNameSelect
+          config={config}
+          inheritedChannelId={inheritedChannelId}
+          bindToInbound={bindToInbound}
+          value={value}
+          onChange={onChange}
+        />
       )
     case "automation":
       return <HookSelect hook={useAutomationOptions} value={value} onChange={onChange} placeholder="Selecione uma automação…" />
@@ -1049,23 +1060,41 @@ function DepartmentMultiSelect({
 }
 
 function TemplateNameSelect({
-  channelId,
+  config,
+  inheritedChannelId,
+  bindToInbound,
   value,
   onChange,
 }: {
-  channelId?: string
+  config: Cfg
+  inheritedChannelId?: string
+  bindToInbound?: boolean
   value: string
   onChange: (v: string) => void
 }) {
-  const { options, isLoading } = useTemplateOptions(channelId)
+  const catalog = useStepTemplateCatalog(config, inheritedChannelId, { bindToInbound })
+  const missing = catalog.missingChannelLabels(value, str(config.languageCode))
   return (
-    <ConfigSelect
-      value={value}
-      options={options}
-      onChange={onChange}
-      placeholder="Selecione um template…"
-      loading={isLoading}
-    />
+    <>
+      <ConfigSelect
+        value={value}
+        options={catalog.options}
+        onChange={onChange}
+        placeholder="Selecione um template…"
+        loading={catalog.isLoading}
+      />
+      {catalog.isIntersect && !catalog.isLoading ? (
+        <p className="cfg-hint">
+          Só templates aprovados em todos os WhatsApp deste passo. Cada envio sai no número da conversa.
+        </p>
+      ) : null}
+      {missing.length > 0 ? (
+        <p className="cfg-warning">
+          O template {value} não está aprovado na WABA de {missing.join(", ")}.
+          O envio nesse número vai falhar — não usamos outro WhatsApp.
+        </p>
+      ) : null}
+    </>
   )
 }
 
@@ -1248,15 +1277,18 @@ function UpdateFieldEditor({ config, onChange }: { config: Cfg; onChange: (next:
 function TemplatePreview({
   config,
   inheritedChannelId,
+  bindToInbound,
   onChange,
 }: {
   config: Cfg
   inheritedChannelId?: string
+  bindToInbound?: boolean
   onChange: (next: Cfg) => void
 }) {
   const templateName = str(config.templateName)
-  const channelId = resolveTemplateChannelId(config, inheritedChannelId)
-  const { detailsMap, isLoading } = useTemplateDetailsMap(channelId)
+  const { detailsMap, isLoading } = useStepTemplateCatalog(config, inheritedChannelId, {
+    bindToInbound,
+  })
   const detail = getTemplateDetail(detailsMap, templateName, str(config.languageCode))
 
   useEffect(() => {
@@ -1288,7 +1320,7 @@ function TemplatePreview({
         : {}),
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateName, detail, channelId])
+  }, [templateName, detail])
 
   if (!templateName) return null
   if (isLoading && !detail) return <p className="cfg-info">Carregando preview…</p>

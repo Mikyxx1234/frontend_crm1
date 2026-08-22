@@ -7,7 +7,22 @@
 // mostrava histórico inexistente. O gerador foi removido.
 // ============================================================================
 
+import { stepTypeLabel, triggerTypeLabel } from "@/lib/automation-workflow"
+
 export type LogStatus = "success" | "alert" | "error"
+
+export interface LogWebhookEvent {
+  id: string
+  receivedAt: string
+  eventType: string
+  objectType?: string | null
+  phoneNumberId?: string | null
+  waMessageId?: string | null
+  fromPhone?: string | null
+  signatureValid?: boolean
+  processed?: boolean
+  processingError?: string | null
+}
 
 export interface LogEntry {
   id: string
@@ -22,6 +37,12 @@ export interface LogEntry {
   dealLabel: string
   contactPhone: string | null
   stepType: string | null
+  eventLabel: string | null
+  channelLabel: string | null
+  snippet: string | null
+  reason: string | null
+  payload: Record<string, unknown> | null
+  webhook: LogWebhookEvent | null
   summary: Record<string, string | number | boolean>
   params: Record<string, string | number | boolean>
 }
@@ -36,6 +57,10 @@ const STATUS_META: Record<LogStatus, { label: string; code: string }> = {
   success: { label: "Concluído com sucesso", code: "SUCCESS" },
   alert: { label: "Concluído com alerta", code: "WARNING" },
   error: { label: "Falha na execução", code: "ERROR" },
+}
+
+const EVENT_LABEL: Record<string, string> = {
+  continue: "Continuação do fluxo",
 }
 
 export function statusMeta(status: LogStatus) {
@@ -57,6 +82,7 @@ export interface AutomationLogRow {
   contactPhone?: string | null
   dealName?: string | null
   dealNumber?: number | null
+  metaWebhookEvent?: LogWebhookEvent | null
 }
 
 /**
@@ -83,6 +109,56 @@ function shortRef(id: string): string {
   return id.length > 8 ? id.slice(-6) : id
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null
+  return value as Record<string, unknown>
+}
+
+function payloadString(
+  payload: Record<string, unknown> | null,
+  keys: string[],
+): string | null {
+  if (!payload) return null
+  for (const key of keys) {
+    const value = payload[key]
+    if (typeof value === "string" && value.trim()) return value.trim()
+  }
+  return null
+}
+
+function humanizeEventName(raw: string): string {
+  if (EVENT_LABEL[raw]) return EVENT_LABEL[raw]
+  const trigger = triggerTypeLabel(raw)
+  if (trigger !== raw) return trigger
+  const step = stepTypeLabel(raw)
+  if (step !== raw) return step
+  return raw.replace(/_/g, " ")
+}
+
+function eventNameFromRow(row: AutomationLogRow): string | null {
+  const payload = asRecord(row.payload)
+  const raw =
+    payloadString(payload, ["evento", "event", "triggerType", "trigger"]) ||
+    row.stepType ||
+    row.metaWebhookEvent?.eventType ||
+    null
+  return raw ? humanizeEventName(raw) : null
+}
+
+function channelFromRow(row: AutomationLogRow): string | null {
+  const payload = asRecord(row.payload)
+  const named = payloadString(payload, ["canal", "channel", "channelName"])
+  if (named) return named
+  const channelId = payloadString(payload, ["channelId"])
+  if (channelId) return channelId.length > 16 ? `Canal ${shortRef(channelId)}` : channelId
+  return null
+}
+
+function snippetFromRow(row: AutomationLogRow): string | null {
+  const payload = asRecord(row.payload)
+  return payloadString(payload, ["mensagem", "content", "text", "body"])
+}
+
 /** Achata o `payload` (Json livre) para o formato chave→escalar da inspeção. */
 function flattenPayload(
   payload: Record<string, unknown> | null | undefined,
@@ -104,11 +180,45 @@ function flattenPayload(
   return out
 }
 
+function flattenWebhook(
+  webhook: LogWebhookEvent | null | undefined,
+): Record<string, string | number | boolean> {
+  if (!webhook) return {}
+  const out: Record<string, string | number | boolean> = {}
+  if (webhook.id) out.id = webhook.id
+  if (webhook.receivedAt) out.receivedAt = webhook.receivedAt
+  if (webhook.eventType) out.eventType = webhook.eventType
+  if (webhook.objectType) out.objectType = webhook.objectType
+  if (webhook.phoneNumberId) out.phoneNumberId = webhook.phoneNumberId
+  if (webhook.waMessageId) out.waMessageId = webhook.waMessageId
+  if (webhook.fromPhone) out.fromPhone = webhook.fromPhone
+  if (typeof webhook.signatureValid === "boolean") {
+    out.signatureValid = webhook.signatureValid
+  }
+  if (typeof webhook.processed === "boolean") out.processed = webhook.processed
+  if (webhook.processingError) out.processingError = webhook.processingError
+  return out
+}
+
 export function automationLogToEntry(row: AutomationLogRow): LogEntry {
   const status = toLogStatus(row.status)
-  const message = row.message?.trim() || STATUS_TITLE[status]
+  const payload = asRecord(row.payload)
+  const webhook = row.metaWebhookEvent ?? null
+  const eventLabel = eventNameFromRow(row)
+  const channelLabel = channelFromRow(row)
+  const snippet = snippetFromRow(row)
+  const rawMessage = row.message?.trim() || ""
+  const message = rawMessage || STATUS_TITLE[status]
+  const reason =
+    status !== "success" && rawMessage && rawMessage !== eventLabel
+      ? rawMessage
+      : null
   const contactId = row.contactId ?? ""
   const dealId = row.dealId ?? ""
+
+  const title =
+    eventLabel ||
+    (rawMessage && rawMessage !== STATUS_TITLE[status] ? rawMessage : STATUS_TITLE[status])
 
   const summary: Record<string, string | number | boolean> = {
     id: row.id,
@@ -116,6 +226,10 @@ export function automationLogToEntry(row: AutomationLogRow): LogEntry {
     message,
     executedAt: row.executedAt,
   }
+  if (eventLabel) summary.evento = eventLabel
+  if (channelLabel) summary.canal = channelLabel
+  if (snippet) summary.mensagem = snippet
+  if (reason) summary.alerta = reason
   if (row.stepId) summary.stepId = row.stepId
   if (row.stepType) summary.stepType = row.stepType
   if (contactId) summary.contactId = contactId
@@ -140,10 +254,7 @@ export function automationLogToEntry(row: AutomationLogRow): LogEntry {
     id: row.id,
     sessionId: row.id,
     status,
-    title:
-      status === "error" && row.message?.trim()
-        ? row.message.trim()
-        : STATUS_TITLE[status],
+    title,
     message,
     timestamp: row.executedAt,
     contactId,
@@ -152,8 +263,17 @@ export function automationLogToEntry(row: AutomationLogRow): LogEntry {
     dealLabel,
     contactPhone: row.contactPhone?.trim() || null,
     stepType: row.stepType ?? null,
+    eventLabel,
+    channelLabel,
+    snippet,
+    reason,
+    payload,
+    webhook,
     summary,
-    params: flattenPayload(row.payload),
+    params: {
+      ...flattenPayload(payload),
+      ...flattenWebhook(webhook),
+    },
   }
 }
 
@@ -163,6 +283,10 @@ export function matchesLogQuery(entry: LogEntry, rawQuery: string): boolean {
   const haystack = [
     entry.title,
     entry.message,
+    entry.eventLabel,
+    entry.channelLabel,
+    entry.snippet,
+    entry.reason,
     entry.contactLabel,
     entry.dealLabel,
     entry.contactPhone,
@@ -170,6 +294,7 @@ export function matchesLogQuery(entry: LogEntry, rawQuery: string): boolean {
     entry.dealId,
     entry.stepType,
     formatDateTime(entry.timestamp),
+    entry.payload ? JSON.stringify(entry.payload) : null,
   ]
     .filter(Boolean)
     .join(" ")

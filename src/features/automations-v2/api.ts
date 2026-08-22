@@ -147,6 +147,19 @@ export function fetchAutomationStats(id: string): Promise<AutomationStats> {
   );
 }
 
+export interface AutomationLogWebhookDto {
+  id: string;
+  receivedAt: string;
+  eventType: string;
+  objectType?: string | null;
+  phoneNumberId?: string | null;
+  waMessageId?: string | null;
+  fromPhone?: string | null;
+  signatureValid?: boolean;
+  processed?: boolean;
+  processingError?: string | null;
+}
+
 export interface AutomationLogRowDto {
   id: string;
   status: string;
@@ -161,6 +174,7 @@ export interface AutomationLogRowDto {
   contactPhone?: string | null;
   dealName?: string | null;
   dealNumber?: number | null;
+  metaWebhookEvent?: AutomationLogWebhookDto | null;
 }
 
 /**
@@ -172,14 +186,17 @@ export interface AutomationLogsPage {
   logs?: AutomationLogRowDto[];
   items?: AutomationLogRowDto[];
   total: number;
+  page?: number;
+  perPage?: number;
 }
 
 /** `stepId: "trigger"` é a convenção do backend para os logs sem passo. */
 export function fetchAutomationLogs(
   id: string,
-  params: { stepId?: string; perPage?: number } = {},
+  params: { stepId?: string; page?: number; perPage?: number } = {},
 ): Promise<AutomationLogsPage> {
   const sp = new URLSearchParams();
+  sp.set("page", String(params.page ?? 1));
   sp.set("perPage", String(params.perPage ?? 50));
   if (params.stepId) sp.set("stepId", params.stepId);
   return getJson<AutomationLogsPage>(

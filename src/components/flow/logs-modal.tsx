@@ -12,6 +12,8 @@ import {
   GitBranch,
   Inbox,
   Loader2,
+  MessageSquare,
+  Radio,
 } from "lucide-react"
 import {
   Dialog,
@@ -70,17 +72,17 @@ export function LogsModal({
   )
 
   const logs = useMemo(() => {
-    const data = query.data
+    const pages = query.data?.pages ?? []
     // A rota responde `items`; o editor legado lê `logs ?? items` e mantemos
     // a mesma tolerância.
-    const rows = data?.logs ?? data?.items ?? []
+    const rows = pages.flatMap((page) => page.logs ?? page.items ?? [])
     const entered = rows.map(automationLogToEntry)
     return {
       entered,
       success: entered.filter((e) => e.status === "success"),
       alert: entered.filter((e) => e.status === "alert"),
       error: entered.filter((e) => e.status === "error"),
-      total: data?.total ?? entered.length,
+      total: pages[0]?.total ?? entered.length,
     }
   }, [query.data])
 
@@ -94,6 +96,7 @@ export function LogsModal({
     setLastNode(target.nodeId)
     setTab(target.initialTab ?? "success")
     setQueryText("")
+    setSelected(null)
   }
 
   if (!target) return null
@@ -190,7 +193,7 @@ export function LogsModal({
                 withSearch
                 value={queryText}
                 onChange={(e) => setQueryText(e.target.value)}
-                placeholder="Buscar contato, negócio, telefone ou mensagem…"
+                placeholder="Buscar evento, contato, telefone ou mensagem…"
                 autoComplete="off"
               />
             </div>
@@ -205,17 +208,38 @@ export function LogsModal({
                 onRetry={() => query.refetch()}
               />
             ) : list.length === 0 ? (
-              <EmptyState hasQuery={queryText.trim().length > 0} />
+              <EmptyState
+                hasQuery={queryText.trim().length > 0}
+                canLoadMore={query.hasNextPage === true}
+                onLoadMore={() => query.fetchNextPage()}
+                loadingMore={query.isFetchingNextPage}
+              />
             ) : (
-              <ul className="space-y-3 py-4">
-                {list.map((entry) => (
-                  <LogRow
-                    key={entry.id}
-                    entry={entry}
-                    onDetails={() => setSelected(entry)}
-                  />
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-3 py-4">
+                  {list.map((entry) => (
+                    <LogRow
+                      key={entry.id}
+                      entry={entry}
+                      onDetails={() => setSelected(entry)}
+                    />
+                  ))}
+                </ul>
+                {query.hasNextPage && (
+                  <div className="flex justify-center pb-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={query.isFetchingNextPage}
+                      onClick={() => query.fetchNextPage()}
+                    >
+                      {query.isFetchingNextPage
+                        ? "Carregando…"
+                        : `Carregar mais (${logs.entered.length.toLocaleString("pt-BR")} de ${logs.total.toLocaleString("pt-BR")})`}
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -245,6 +269,11 @@ function LogRow({
 }) {
   const style = STATUS_STYLE[entry.status]
   const Icon = style.icon
+  const detail =
+    entry.reason ||
+    (entry.message && entry.message !== entry.title ? entry.message : null)
+  const quotedSnippet =
+    entry.snippet && entry.snippet !== detail ? `“${entry.snippet}”` : null
   return (
     <li className="flex items-center gap-4 rounded-xl border border-border bg-[var(--glass-bg-base)] p-4 transition-colors hover:border-[var(--brand-primary)]/30 hover:bg-[var(--color-primary-soft)]/40">
       <span
@@ -261,13 +290,17 @@ function LogRow({
         <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">
           {formatDateTime(entry.timestamp)}
         </p>
-        {entry.status === "error" &&
-          entry.message &&
-          entry.message !== entry.title && (
-            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-              {entry.message}
-            </p>
-          )}
+        {detail && (
+          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+            {detail}
+          </p>
+        )}
+        {quotedSnippet && (
+          <p className="mt-0.5 inline-flex min-w-0 items-start gap-1.5 text-sm text-muted-foreground">
+            <MessageSquare className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span className="line-clamp-2">{quotedSnippet}</span>
+          </p>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <User className="size-4" aria-hidden />
@@ -281,6 +314,12 @@ function LogRow({
             <span className="inline-flex items-center gap-1.5">
               <Phone className="size-4" aria-hidden />
               {entry.contactPhone}
+            </span>
+          )}
+          {entry.channelLabel && (
+            <span className="inline-flex items-center gap-1.5">
+              <Radio className="size-4" aria-hidden />
+              {entry.channelLabel}
             </span>
           )}
           {entry.stepType && (
@@ -305,7 +344,17 @@ function LogRow({
   )
 }
 
-function EmptyState({ hasQuery }: { hasQuery?: boolean }) {
+function EmptyState({
+  hasQuery,
+  canLoadMore,
+  onLoadMore,
+  loadingMore,
+}: {
+  hasQuery?: boolean
+  canLoadMore?: boolean
+  onLoadMore?: () => void
+  loadingMore?: boolean
+}) {
   return (
     <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -313,9 +362,22 @@ function EmptyState({ hasQuery }: { hasQuery?: boolean }) {
       </span>
       <p className="text-sm text-muted-foreground">
         {hasQuery
-          ? "Nenhum registro para esta busca."
+          ? canLoadMore
+            ? "Nenhum registro para esta busca nos carregados."
+            : "Nenhum registro para esta busca."
           : "Nenhum registro nesta categoria."}
       </p>
+      {hasQuery && canLoadMore && onLoadMore && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-1"
+          disabled={loadingMore}
+          onClick={onLoadMore}
+        >
+          {loadingMore ? "Carregando…" : "Carregar mais registros"}
+        </Button>
+      )}
     </div>
   )
 }

@@ -43,21 +43,35 @@ export function SessionInspectionModal({
 }) {
   const sections = useMemo(() => {
     if (!entry) return []
-    return [
+    const next: { key: string; label: string; data: unknown }[] = [
       { key: "summary", label: "Resumo", data: entry.summary },
-      { key: "params", label: "Parâmetros", data: entry.params },
     ]
+    if (entry.payload && Object.keys(entry.payload).length > 0) {
+      next.push({ key: "event", label: "Evento", data: entry.payload })
+    }
+    if (entry.webhook) {
+      next.push({ key: "webhook", label: "Webhook", data: entry.webhook })
+    }
+    if (
+      Object.keys(entry.params).length > 0 &&
+      (!entry.payload || Object.keys(entry.payload).length === 0)
+    ) {
+      next.push({ key: "params", label: "Parâmetros", data: entry.params })
+    }
+    return next
   }, [entry])
 
   const [activeSection, setActiveSection] = useState(0)
   const [view, setView] = useState<ViewMode>("tree")
   const [copied, setCopied] = useState(false)
 
-  if (!entry) return null
+  const section =
+    sections[Math.min(activeSection, Math.max(sections.length - 1, 0))] ??
+    sections[0]
+  if (!entry || !section) return null
   const status = STATUS_STYLE[entry.status]
   const StatusIcon = status.icon
   const meta = statusMeta(entry.status)
-  const section = sections[activeSection] ?? sections[0]
   const data = section.data
 
   async function copyJson() {
@@ -84,8 +98,11 @@ export function SessionInspectionModal({
               <Microscope className="size-5 shrink-0 text-[var(--brand-primary)]" />
               Inspeção da sessão
             </DialogTitle>
-            <DialogDescription className="mt-1 break-all font-mono text-xs text-muted-foreground">
-              Sessão {entry.sessionId}
+            <DialogDescription className="mt-1 text-xs text-muted-foreground">
+              {entry.title}
+              <span className="mt-0.5 block break-all font-mono text-muted-foreground">
+                Sessão {entry.sessionId}
+              </span>
             </DialogDescription>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -135,7 +152,7 @@ export function SessionInspectionModal({
                         i === activeSection ? "text-[var(--brand-primary)]" : "text-muted-foreground",
                       )}
                     >
-                      {Object.keys(s.data).length}
+                      {sectionSize(s.data)}
                     </span>
                   </button>
                 </li>
@@ -197,34 +214,67 @@ function ToggleButton({
   )
 }
 
+function sectionSize(data: unknown): number {
+  if (Array.isArray(data)) return data.length
+  if (data && typeof data === "object") return Object.keys(data).length
+  return data == null ? 0 : 1
+}
+
 function valueColor(v: unknown) {
   if (typeof v === "number" || typeof v === "boolean") return "var(--brand-primary)"
   return "var(--color-success-text)"
 }
 
-function renderValue(v: string | number | boolean) {
+function renderScalar(v: unknown) {
   if (typeof v === "string") return `"${v}"`
+  if (v === null) return "null"
   return String(v)
 }
 
-function TreeView({ data }: { data: Record<string, string | number | boolean> }) {
-  const entries = Object.entries(data)
-  return (
-    <div className="font-mono text-[13px] leading-relaxed">
-      <div className="text-muted-foreground">{"{…}"}</div>
-      <div className="mt-0.5 flex flex-col gap-0.5 pl-4">
-        {entries.map(([k, v]) => (
-          <div key={k} className="flex min-w-0 gap-1.5">
-            <span className="shrink-0 text-[var(--brand-primary)]">{k}:</span>
-            <span className="min-w-0 break-all" style={{ color: valueColor(v) }}>{renderValue(v)}</span>
-          </div>
-        ))}
+function TreeNode({ name, value }: { name?: string; value: unknown }) {
+  if (value !== null && typeof value === "object") {
+    const entries = Array.isArray(value)
+      ? value.map((item, i) => [String(i), item] as const)
+      : Object.entries(value as Record<string, unknown>)
+    return (
+      <div>
+        <div>
+          {name ? (
+            <span className="text-[var(--brand-primary)]">{name}: </span>
+          ) : null}
+          <span className="text-muted-foreground">
+            {Array.isArray(value) ? "[…]" : "{…}"}
+          </span>
+        </div>
+        <div className="mt-0.5 flex flex-col gap-0.5 pl-4">
+          {entries.map(([key, child]) => (
+            <TreeNode key={key} name={key} value={child} />
+          ))}
+        </div>
       </div>
+    )
+  }
+  return (
+    <div className="flex min-w-0 gap-1.5">
+      {name ? (
+        <span className="shrink-0 text-[var(--brand-primary)]">{name}:</span>
+      ) : null}
+      <span className="min-w-0 break-all" style={{ color: valueColor(value) }}>
+        {renderScalar(value)}
+      </span>
     </div>
   )
 }
 
-function RawView({ data }: { data: Record<string, string | number | boolean> }) {
+function TreeView({ data }: { data: unknown }) {
+  return (
+    <div className="font-mono text-[13px] leading-relaxed">
+      <TreeNode value={data} />
+    </div>
+  )
+}
+
+function RawView({ data }: { data: unknown }) {
   return (
     <pre className="whitespace-pre-wrap break-all font-mono text-[13px] leading-relaxed text-foreground">
       {JSON.stringify(data, null, 2)}

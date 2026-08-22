@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
   createAutomation,
@@ -115,13 +120,21 @@ export function useAutomationLogs(
   stepId: string | null,
   enabled: boolean,
 ) {
-  return useQuery<AutomationLogsPage>({
+  return useInfiniteQuery<AutomationLogsPage>({
     queryKey: ["v2-automation-logs", id ?? "__none__", stepId ?? "__all__"],
-    queryFn: () =>
+    queryFn: ({ pageParam }) =>
       fetchAutomationLogs(id as string, {
         stepId: stepId ?? undefined,
+        page: pageParam as number,
         perPage: 50,
       }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => {
+      const page = last.page ?? 1;
+      const perPage = last.perPage ?? 50;
+      const loaded = page * perPage;
+      return loaded < last.total ? page + 1 : undefined;
+    },
     enabled: !!id && enabled,
     staleTime: 10_000,
   });

@@ -144,6 +144,35 @@ export function readTriggerChannelIds(cfg: unknown): string[] {
   return one ? [one] : [];
 }
 
+/** `all` = qualquer conexão; `selected` = só os ids em `channelIds`. */
+export function readTriggerChannelScope(cfg: unknown): "all" | "selected" {
+  const c = asRecord(cfg);
+  if (c.channelScope === "selected") return "selected";
+  if (c.channelScope === "all") return "all";
+  return readTriggerChannelIds(cfg).length > 0 ? "selected" : "all";
+}
+
+/**
+ * Allowlist do passo de envio. `null` = todos os canais ativos.
+ * `channelId` legado sozinho NÃO vira filtro — era override de envio.
+ */
+export function readStepAllowedChannelIds(cfg: unknown): string[] | null {
+  const c = asRecord(cfg);
+  if (c.channelScope === "all") return null;
+  const many = Array.isArray(c.channelIds)
+    ? c.channelIds
+        .filter((x): x is string => typeof x === "string" && x.trim() !== "")
+        .map((s) => s.trim())
+    : [];
+  const unique = [...new Set(many)];
+  if (c.channelScope === "selected") return unique;
+  return unique.length > 0 ? unique : null;
+}
+
+export function readStepChannelScope(cfg: unknown): "all" | "selected" {
+  return readStepAllowedChannelIds(cfg) === null ? "all" : "selected";
+}
+
 /**
  * Padrão dos passos de envio: 1 conexão no gatilho → esse id;
  * vários/nenhum → vazio (canal da conversa / entrada).
@@ -250,6 +279,25 @@ function asRecord(v: unknown): Record<string, unknown> {
     : {};
 }
 
+function summarizeTriggerChannelScope(
+  c: Record<string, unknown>,
+  lookup?: Record<string, string>,
+): string {
+  if (readTriggerChannelScope(c) === "selected") {
+    const ids = readTriggerChannelIds(c);
+    if (ids.length === 0) return "Selecione os canais";
+    if (ids.length === 1) {
+      const id = ids[0]!;
+      return lookup?.[id] ?? "1 canal";
+    }
+    return `${ids.length} canais`;
+  }
+  const type = typeof c.channel === "string" ? c.channel.trim().toLowerCase() : "";
+  if (type === "whatsapp") return "Todos os canais · WhatsApp";
+  if (type === "email") return "Todos os canais · E-mail";
+  return "Todos os canais";
+}
+
 export function summarizeTriggerConfig(
   triggerType: string,
   triggerConfig: unknown,
@@ -302,15 +350,8 @@ export function summarizeTriggerConfig(
       }
       return parts.length ? parts.join(" · ") : "Novo contato";
     }
-    case "conversation_created": {
-      const ids = readTriggerChannelIds(c);
-      if (ids.length === 1) {
-        const id = ids[0]!;
-        return `Conexão: ${lookup?.[id] ?? id.slice(0, 8)}`;
-      }
-      if (ids.length > 1) return `${ids.length} conexões`;
-      return c.channel ? `Canal: ${String(c.channel)}` : "Qualquer canal";
-    }
+    case "conversation_created":
+      return summarizeTriggerChannelScope(c, lookup);
     case "whatsapp_session_expiring":
       return `${String(c.hoursBeforeExpiry ?? 1)}h antes do encerramento`;
     case "lifecycle_changed": {
@@ -341,16 +382,7 @@ export function summarizeTriggerConfig(
     }
     case "message_received":
     case "message_sent": {
-      const parts: string[] = [];
-      const ids = readTriggerChannelIds(c);
-      if (ids.length === 1) {
-        const id = ids[0]!;
-        parts.push(`Conexão: ${lookup?.[id] ?? id.slice(0, 8)}`);
-      } else if (ids.length > 1) {
-        parts.push(`${ids.length} conexões`);
-      } else if (c.channel) {
-        parts.push(`Canal: ${String(c.channel)}`);
-      }
+      const parts: string[] = [summarizeTriggerChannelScope(c, lookup)];
       if (c.pipelineId) {
         const id = String(c.pipelineId);
         parts.push(`Pipeline: ${lookup?.[id] ?? id}`);
@@ -373,7 +405,7 @@ export function summarizeTriggerConfig(
         };
         parts.push(statusLabels[raw] ?? `Status: ${raw}`);
       }
-      return parts.length ? parts.join(" · ") : "Qualquer canal";
+      return parts.filter(Boolean).join(" · ");
     }
     case "lead_distributed": {
       if (c.departmentId) return `Departamento: ${String(c.departmentId).slice(0, 8)}…`;
@@ -960,14 +992,14 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
     case "contact_created":
       return { pipelineId: "", stageId: "" };
     case "conversation_created":
-      return { channel: "", channelIds: [] };
+      return { channel: "", channelIds: [], channelScope: "all" };
     case "lifecycle_changed":
       return { fromLifecycle: "", toLifecycle: "" };
     case "agent_changed":
       return { toAgentId: "" };
     case "message_received":
     case "message_sent":
-      return { channel: "", channelIds: [], pipelineId: "", stageId: "", dealStatus: "" };
+      return { channel: "", channelIds: [], channelScope: "all", pipelineId: "", stageId: "", dealStatus: "" };
     case "call_received":
     case "call_made":
       return { status: "" };

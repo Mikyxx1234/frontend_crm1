@@ -25,10 +25,9 @@ import { NodeInlineConfig } from "./node-inline-config";
 import {
   channelLabelFromOptions,
   StepChannelBadge,
-  StepChannelKebabMenu,
   useConnectedStepChannels,
 } from "./step-channel-picker";
-import { isMessageChannelStep } from "@/lib/automation-workflow";
+import { isMessageChannelStep, readStepAllowedChannelIds } from "@/lib/automation-workflow";
 import { CustomHandle } from "./custom-handle";
 import {
   FlowNodeDeleteButton,
@@ -52,6 +51,7 @@ export type ActionNodeData = {
   onConfigChange?: (next: Record<string, unknown>) => void;
   isFirstMessageStep?: boolean;
   inheritedChannelId?: string;
+  bindToInbound?: boolean;
 };
 
 type ActionRF = Node<ActionNodeData, "action">;
@@ -108,19 +108,17 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
   const hasFailureOutput = META_LINEAR_FAILURE_TYPES.has(data.stepType);
   const hasTimeoutOutput = META_WAIT_TIMEOUT_TYPES.has(data.stepType);
   const isChannelStep = isMessageChannelStep(data.stepType);
-  const channelId =
-    isChannelStep && data.config && typeof data.config.channelId === "string"
-      ? (data.config.channelId as string)
-      : "";
   const { options: channelOptions } = useConnectedStepChannels(data.stepType, {
     enabled: isChannelStep,
   });
-  const channelBadgeLabel = channelId
-    ? channelLabelFromOptions(channelOptions, channelId)
-    : isChannelStep
-      ? channelLabelFromOptions(channelOptions, data.inheritedChannelId) ??
-        "Canal da conversa"
-      : null;
+  const allowed = isChannelStep ? readStepAllowedChannelIds(data.config) : null;
+  const channelBadgeLabel = !isChannelStep
+    ? null
+    : allowed === null
+      ? "Todos os canais"
+      : allowed.length === 1
+        ? channelLabelFromOptions(channelOptions, allowed[0]) ?? "1 canal"
+        : `${allowed.length} canais`;
   const nodeType = actionNodeType(data.stepType);
   const s = data.stats;
   const hasReplyTimeout =
@@ -151,21 +149,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
             <StepChannelBadge label={channelBadgeLabel} />
           ) : undefined
         }
-        actions={
-          <>
-            {isChannelStep && selected && (
-              <StepChannelKebabMenu
-                stepType={data.stepType}
-                channelId={channelId}
-                isFirstMessageStep={!!data.isFirstMessageStep}
-                onChange={(v) =>
-                  data.onConfigChange?.({ ...(data.config ?? {}), channelId: v })
-                }
-              />
-            )}
-            <FlowNodeDeleteButton onDelete={data.onDelete} />
-          </>
-        }
+        actions={<FlowNodeDeleteButton onDelete={data.onDelete} />}
       />
       {hasFailureOutput ? (
         <div className="wf-node__outs">
@@ -214,6 +198,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
         stepOptions={data.stepOptions ?? []}
         isFirstMessageStep={data.isFirstMessageStep}
         inheritedChannelId={data.inheritedChannelId}
+        bindToInbound={data.bindToInbound}
         onChange={(next) => data.onConfigChange?.(next)}
       />
       {s && (

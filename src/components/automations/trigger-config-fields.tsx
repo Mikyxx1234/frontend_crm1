@@ -21,11 +21,12 @@ import { cn } from "@/lib/utils";
 import {
   AUTOMATION_TRIGGER_TYPES,
   readTriggerChannelIds,
+  readTriggerChannelScope,
   triggerTypeLabel,
 } from "@/lib/automation-workflow";
 
 import { useTagOptions } from "./editor-data";
-import { useConnectedStepChannels } from "./step-channel-picker";
+import { ActiveChannelMultiSelect } from "./step-channel-picker";
 
 type Props = {
   triggerType: string;
@@ -270,176 +271,63 @@ function StageMultiSelect({
   );
 }
 
-function TriggerChannelMultiSelect({
+export function TriggerChannelScope({
   id,
   values,
+  scope,
   onChange,
-  helper,
 }: {
   id: string;
   values: string[];
-  onChange: (channelIds: string[]) => void;
-  helper?: string;
+  scope: "all" | "selected";
+  onChange: (scope: "all" | "selected", channelIds: string[]) => void;
 }) {
-  const wa = useConnectedStepChannels("send_whatsapp_message");
-  const email = useConnectedStepChannels("send_email");
-  const portalContainer = useModalPortalContainer();
-  const [q, setQ] = React.useState("");
+  return (
+    <ActiveChannelMultiSelect
+      id={id}
+      kinds="all"
+      scope={scope}
+      values={values}
+      onChange={onChange}
+    />
+  );
+}
 
-  const groups = [
-    { key: "whatsapp", label: "WhatsApp", options: wa.options },
-    { key: "email", label: "E-mail", options: email.options },
-  ].filter((g) => g.options.length > 0);
-  const all = groups.flatMap((g) => g.options);
-  const isLoading = wa.isLoading || email.isLoading;
-
-  const toggle = (cid: string) => {
-    onChange(
-      values.includes(cid) ? values.filter((v) => v !== cid) : [...values, cid],
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        <Label htmlFor={id}>Conexão (opcional)</Label>
-        <p className="text-xs text-muted-foreground">Carregando canais…</p>
-      </div>
-    );
-  }
-
-  if (all.length === 0) {
-    return (
-      <div className="space-y-2">
-        <Label htmlFor={id}>Conexão (opcional)</Label>
-        <p className="text-xs text-muted-foreground">
-          Nenhum canal conectado. Qualquer conexão dispara o gatilho.
-        </p>
-      </div>
-    );
-  }
-
-  const triggerLabel =
-    values.length === 0
-      ? "Todas as conexões"
-      : values.length === 1
-        ? all.find((o) => o.id === values[0])?.label ?? "1 conexão"
-        : `${values.length} conexões selecionadas`;
-
-  const matchesQuery = (name: string) =>
-    !q.trim() || name.toLowerCase().includes(q.trim().toLowerCase());
-
+function TriggerChannelTypeField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>Conexão (opcional)</Label>
-      <DropdownPrimitive.Root
-        modal={false}
-        onOpenChange={(o) => {
-          if (!o) setQ("");
-        }}
-      >
-        <DropdownPrimitive.Trigger asChild suppressHydrationWarning>
-          <button
-            type="button"
-            id={id}
-            className={cn(
-              FILTER_FIELD_TRIGGER_CLASS,
-              "group",
-              values.length > 0 && "text-[var(--text-primary)]",
-            )}
-          >
-            <span className="min-w-0 flex-1 truncate text-left">{triggerLabel}</span>
-            <IconChevronDown
-              size={15}
-              className="ml-auto shrink-0 text-current opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180"
-            />
-          </button>
-        </DropdownPrimitive.Trigger>
-        <DropdownPrimitive.Portal container={portalContainer ?? undefined}>
-          <DropdownPrimitive.Content
-            align="start"
-            sideOffset={6}
-            className={cn(
-              FILTER_FIELD_MENU_CLASS,
-              "min-w-[var(--radix-dropdown-menu-trigger-width)]",
-            )}
-          >
-            <div className="p-1 pb-1.5">
-              <input
-                autoFocus
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => {
-                  if (!["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(e.key))
-                    e.stopPropagation();
-                }}
-                placeholder="Buscar conexão…"
-                className={FILTER_FIELD_INPUT_CLASS}
-              />
-            </div>
-            {values.length > 0 ? (
-              <DropdownPrimitive.Item
-                onSelect={(e) => {
-                  e.preventDefault();
-                  onChange([]);
-                }}
-                className={cn(FILTER_FIELD_ITEM_CLASS, "text-[var(--text-muted)]")}
-              >
-                Todas as conexões
-              </DropdownPrimitive.Item>
-            ) : null}
-            {groups.map((g) => {
-              const opts = g.options.filter((o) => matchesQuery(o.label));
-              if (opts.length === 0) return null;
-              return (
-                <DropdownPrimitive.Group key={g.key}>
-                  <DropdownPrimitive.Label className="px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                    {g.label}
-                  </DropdownPrimitive.Label>
-                  {opts.map((o) => {
-                    const checked = values.includes(o.id);
-                    return (
-                      <DropdownPrimitive.CheckboxItem
-                        key={o.id}
-                        checked={checked}
-                        onSelect={(e) => e.preventDefault()}
-                        onCheckedChange={() => toggle(o.id)}
-                        className={FILTER_FIELD_ITEM_CLASS}
-                      >
-                        <span
-                          className={cn(
-                            "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                            checked
-                              ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                              : "border-[var(--glass-border)]",
-                          )}
-                        >
-                          {checked ? <IconCheck size={12} /> : null}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate">{o.label}</span>
-                      </DropdownPrimitive.CheckboxItem>
-                    );
-                  })}
-                </DropdownPrimitive.Group>
-              );
-            })}
-          </DropdownPrimitive.Content>
-        </DropdownPrimitive.Portal>
-      </DropdownPrimitive.Root>
-      {helper ? (
-        <p className="text-xs text-muted-foreground">{helper}</p>
-      ) : null}
+      <Label>Restringir por tipo (opcional)</Label>
+      <DropdownGlass
+        triggerClassName="w-full"
+        placeholder="Todos os tipos"
+        value={value}
+        options={[
+          { value: "", label: "Todos os tipos" },
+          { value: "whatsapp", label: "WhatsApp" },
+          { value: "email", label: "E-mail" },
+        ]}
+        onValueChange={onChange}
+      />
     </div>
   );
 }
 
 function patchTriggerChannels(
   patch: (next: Record<string, unknown>) => void,
+  scope: "all" | "selected",
   ids: string[],
 ) {
   patch({
-    channelIds: ids,
-    channelId: ids.length === 1 ? ids[0] : "",
+    channelScope: scope,
+    channelIds: scope === "all" ? [] : ids,
+    channelId: scope === "selected" && ids.length === 1 ? ids[0] : "",
+    ...(scope === "selected" ? { channel: "" } : {}),
   });
 }
 
@@ -696,26 +584,18 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
     case "conversation_created":
       return (
         <div className="space-y-3">
-          <TriggerChannelMultiSelect
+          <TriggerChannelScope
             id="tc-conv-ch"
             values={readTriggerChannelIds(value)}
-            onChange={(ids) => patchTriggerChannels(patch, ids)}
-            helper="Vazio = qualquer conexão. Uma conexão vira o padrão dos passos de envio; várias usam o canal da conversa."
+            scope={readTriggerChannelScope(value)}
+            onChange={(scope, ids) => patchTriggerChannels(patch, scope, ids)}
           />
-          <div className="space-y-2">
-            <Label htmlFor="tc-ch">Tipo (opcional)</Label>
-            <DropdownGlass
-              triggerClassName="w-full"
-              placeholder="Todos os tipos"
+          {readTriggerChannelScope(value) === "all" ? (
+            <TriggerChannelTypeField
               value={String(value.channel ?? "")}
-              options={[
-                { value: "", label: "Todos os tipos" },
-                { value: "whatsapp", label: "WhatsApp" },
-                { value: "email", label: "E-mail" },
-              ]}
-              onValueChange={(v) => set("channel", v)}
+              onChange={(v) => set("channel", v)}
             />
-          </div>
+          ) : null}
         </div>
       );
     case "whatsapp_session_expiring": {
@@ -765,30 +645,18 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
     case "message_sent":
       return (
         <div className="space-y-3">
-          <TriggerChannelMultiSelect
+          <TriggerChannelScope
             id="tc-msg-ch"
             values={readTriggerChannelIds(value)}
-            onChange={(ids) => patchTriggerChannels(patch, ids)}
-            helper={
-              triggerType === "message_received"
-                ? "Quais conexões disparam esta automação. Os passos de envio usam o canal da mensagem (entrada), salvo override no card."
-                : "Quais conexões disparam esta automação. Os passos seguintes herdam o canal da entrada."
-            }
+            scope={readTriggerChannelScope(value)}
+            onChange={(scope, ids) => patchTriggerChannels(patch, scope, ids)}
           />
-          <div className="space-y-2">
-            <Label htmlFor="tc-ch">Tipo (opcional)</Label>
-            <DropdownGlass
-              triggerClassName="w-full"
-              placeholder="Todos os tipos"
+          {readTriggerChannelScope(value) === "all" ? (
+            <TriggerChannelTypeField
               value={String(value.channel ?? "")}
-              options={[
-                { value: "", label: "Todos os tipos" },
-                { value: "whatsapp", label: "WhatsApp" },
-                { value: "email", label: "E-mail" },
-              ]}
-              onValueChange={(v) => set("channel", v)}
+              onChange={(v) => set("channel", v)}
             />
-          </div>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <PipelineSelect
               id="tc-msg-pipe"

@@ -28,7 +28,12 @@ import {
   resolveStepType,
   stepTypeToNodeKind,
 } from "./flow-step-adapter"
-import { stepTypeLabel, triggerTypeLabel, type ActionStepType } from "./automation-workflow"
+import {
+  stepTypeLabel,
+  summarizeTriggerConfig,
+  triggerTypeLabel,
+  type ActionStepType,
+} from "./automation-workflow"
 import { layoutFlow, NODE_WIDTH, type LayoutDirection } from "./layout"
 
 export const TRIGGER_NODE_ID = "trigger"
@@ -141,6 +146,7 @@ export function automationToFlowGraph(source: AutomationFlowSource): AutomationF
       ref: 1,
       kind: "trigger",
       stepType: "trigger",
+      triggerType: source.triggerType,
       topic: "inicio",
       title: triggerTypeLabel(source.triggerType),
       preview: summarizeTrigger(source.triggerType, triggerCfg),
@@ -178,8 +184,7 @@ function summarizeTrigger(triggerType: string, cfg: Rec): string {
   if (typeof cfg.stageName === "string" && cfg.stageName) parts.push(cfg.stageName)
   if (typeof cfg.tagName === "string" && cfg.tagName) parts.push(`Tag: ${cfg.tagName}`)
   if (parts.length) return parts.join(" · ")
-  // O título do card já é o rótulo do gatilho — repetir aqui só polui.
-  return `Inicia o fluxo em: ${triggerTypeLabel(triggerType).toLowerCase()}`
+  return summarizeTriggerConfig(triggerType, cfg)
 }
 
 // ─────────────────────────────────────────────────────────────────

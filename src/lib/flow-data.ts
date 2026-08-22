@@ -57,6 +57,8 @@ export interface NodeConfig {
   delayUnit?: "minutes" | "hours" | "days"
   timeoutMs?: number
   channelId?: string
+  channelIds?: string[]
+  channelScope?: "all" | "selected"
   button?: string
   sectionTitle?: string
   header?: string
@@ -111,6 +113,8 @@ export interface FlowNodeData extends Record<string, unknown> {
   kind: NodeKind
   /** Tipo real do catálogo de automações, quando o card veio da paleta/modal. */
   stepType?: string
+  /** Tipo do gatilho persistido (`message_received`, etc.) — só no card inicial. */
+  triggerType?: string
   topic: TopicKey
   title: string
   preview: string

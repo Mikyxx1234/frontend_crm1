@@ -28,6 +28,7 @@ export function NodeInlineConfig({
   stepOptions,
   isFirstMessageStep,
   inheritedChannelId,
+  bindToInbound,
   onChange,
 }: {
   selected: boolean | undefined;
@@ -36,6 +37,7 @@ export function NodeInlineConfig({
   stepOptions: StepOpt[];
   isFirstMessageStep?: boolean;
   inheritedChannelId?: string;
+  bindToInbound?: boolean;
   onChange: (next: Record<string, unknown>) => void;
 }) {
   if (!selected) return null;
@@ -57,6 +59,7 @@ export function NodeInlineConfig({
         steps={stepOptions}
         isFirstMessageStep={isFirstMessageStep}
         inheritedChannelId={inheritedChannelId}
+        bindToInbound={bindToInbound}
         onChange={onChange}
       />
     </div>

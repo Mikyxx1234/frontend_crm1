@@ -10,7 +10,6 @@
  */
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "sonner"
-import { IconChevronDown } from "@tabler/icons-react"
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass"
 import { InputGlass } from "@/components/crm/input-glass"
 import { apiUrl } from "@/lib/api"
@@ -53,7 +52,8 @@ import {
   showsUpdateFieldVariableHint,
   UpdateFieldValueControl,
 } from "./update-field-value"
-import { INHERIT_CHANNEL_VALUE, useConnectedStepChannels } from "./step-channel-picker"
+import { ActiveChannelMultiSelect } from "./step-channel-picker"
+import { readStepAllowedChannelIds, readStepChannelScope } from "@/lib/automation-workflow"
 
 const CUSTOM_FIELD_SENTINEL = "__custom__"
 
@@ -73,6 +73,7 @@ export function NodeConfigEditor({
   steps,
   isFirstMessageStep,
   inheritedChannelId,
+  bindToInbound,
   fields: fieldsOverride,
   hideStepTargets,
   onChange,
@@ -84,6 +85,8 @@ export function NodeConfigEditor({
   isFirstMessageStep?: boolean
   /** Canal herdado do gatilho (1 conexão) ou do 1º passo. */
   inheritedChannelId?: string
+  /** Gatilho inbound: o envio usa o canal da conversa, não um número fixo. */
+  bindToInbound?: boolean
   /** Substitui `STEP_FIELDS[stepType]` — usado pelo editor /fluxo para omitir destinos via handle. */
   fields?: EditorField[]
   /** Esconde “Ir para passo” nos builders (o /fluxo usa handles). */
@@ -120,6 +123,7 @@ export function NodeConfigEditor({
           stepType={stepType}
           isFirstMessageStep={isFirstMessageStep}
           inheritedChannelId={inheritedChannelId}
+          bindToInbound={bindToInbound}
           hideStepTargets={hideStepTargets}
         />
       ))}
@@ -138,6 +142,7 @@ function Field({
   stepType,
   isFirstMessageStep,
   inheritedChannelId,
+  bindToInbound,
   hideStepTargets,
 }: {
   field: EditorField
@@ -148,6 +153,7 @@ function Field({
   stepType: string
   isFirstMessageStep?: boolean
   inheritedChannelId?: string
+  bindToInbound?: boolean
   hideStepTargets?: boolean
 }) {
   switch (field.kind) {
@@ -351,11 +357,16 @@ function Field({
       return (
         <ChannelPickerField
           stepType={stepType}
-          channelId={str(config.channelId)}
-          isFirstMessageStep={!!isFirstMessageStep}
-          inheritedChannelId={inheritedChannelId}
+          config={config}
           mockIfEmpty={!!hideStepTargets}
-          onChange={(v) => set("channelId", v)}
+          onChange={(scope, ids) =>
+            onChange({
+              ...config,
+              channelScope: scope,
+              channelIds: scope === "all" ? [] : ids,
+              channelId: scope === "selected" && ids.length === 1 ? ids[0] : "",
+            })
+          }
         />
       )
 
@@ -773,83 +784,37 @@ function ConfigSelect({
   )
 }
 
-const ENTRADA_CHANNEL_VALUE = "__entrada__"
-
 /**
- * Campo "Canal de envio". Padrão = canal da conversa (entrada / gatilho).
- * `channelId` vazio herda; override só quando o operador escolhe uma conexão.
+ * Canais do passo — mesmo padrão do Kommo: "Selecionar tudo" + checkboxes
+ * dos canais CONNECTED. `channelId` legado sozinho não vira filtro.
  */
 function ChannelPickerField({
   stepType,
-  channelId,
-  isFirstMessageStep,
-  inheritedChannelId,
+  config,
   mockIfEmpty,
   onChange,
 }: {
   stepType: string
-  channelId: string
-  isFirstMessageStep: boolean
-  inheritedChannelId?: string
+  config: Cfg
   mockIfEmpty?: boolean
-  onChange: (v: string) => void
+  onChange: (scope: "all" | "selected", channelIds: string[]) => void
 }) {
-  const { options, isLoading } = useConnectedStepChannels(stepType, { mockIfEmpty })
-
-  useEffect(() => {
-    if (options.length === 1 && !channelId && !inheritedChannelId) onChange(options[0]!.id)
-  }, [options, channelId, inheritedChannelId, onChange])
-
-  if (isLoading) return null
-
-  const inherited = inheritedChannelId?.trim() || ""
-  const inheritedLabel = inherited
-    ? options.find((o) => o.id === inherited)?.label
-    : null
-  const entradaLabel = inheritedLabel
-    ? `Canal da conversa (entrada · ${inheritedLabel})`
-    : "Canal da conversa (entrada)"
-  const value = channelId || ENTRADA_CHANNEL_VALUE
-  const selectedLabel =
-    value === ENTRADA_CHANNEL_VALUE
-      ? entradaLabel
-      : options.find((o) => o.id === value)?.label
-  const placeholder = options.length === 0 ? "Nenhum canal conectado" : entradaLabel
+  const allowed = readStepAllowedChannelIds(config)
+  const scope = readStepChannelScope(config)
+  const values = allowed ?? []
 
   return (
-    <Labeled
-      label="Canal de envio"
-      hint={
-        !channelId
-          ? isFirstMessageStep
-            ? "Padrão do gatilho: responde no mesmo canal em que a mensagem entrou."
-            : inheritedLabel
-              ? `Herdado da entrada (${inheritedLabel}). Pode trocar neste card.`
-              : "Herdado da entrada. Pode trocar neste card."
-          : undefined
-      }
-    >
-      <div className="cfg-select-wrap nodrag nopan" onPointerDown={stopFlowPointer}>
-        <DropdownGlass
-          options={[
-            { value: ENTRADA_CHANNEL_VALUE, label: entradaLabel },
-            ...options.map((o) => ({ value: o.id, label: o.label })),
-          ]}
-          value={value}
-          onValueChange={(v) =>
-            onChange(v === ENTRADA_CHANNEL_VALUE || v === inherited ? "" : v)
-          }
-          placeholder={placeholder}
-          matchTriggerWidth
-          trigger={
-            <button type="button" className="w-full justify-between gap-2 px-2.5 text-left text-[13px]">
-              <span className="min-w-0 flex-1 truncate leading-5">{selectedLabel || placeholder}</span>
-              <IconChevronDown size={15} className="shrink-0 opacity-50" />
-            </button>
-          }
-        />
-      </div>
-    </Labeled>
+    <div className="cfg-select-wrap nodrag nopan" onPointerDown={stopFlowPointer}>
+      <ActiveChannelMultiSelect
+        id="step-channels"
+        kinds={stepType === "send_email" ? "email" : "whatsapp"}
+        scope={scope}
+        values={values}
+        mockIfEmpty={mockIfEmpty}
+        emptyHint="Marque ao menos um canal. Sem seleção, este passo não envia."
+        onChange={onChange}
+      />
+    </div>
   )
 }
 

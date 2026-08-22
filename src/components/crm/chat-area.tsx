@@ -587,7 +587,7 @@ export function ChatArea({
           o footer (composer) sempre visível na base. */}
       <div ref={messagesRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto [overflow-anchor:none] px-3 pt-6 pb-8 max-md:px-2">
         <StickyDayPill date={stickyDayLabel} />
-        <ul className="flex list-none flex-col gap-3">
+        <ul className="flex list-none flex-col gap-0.5">
         {(() => {
           // Pills de dia inline no fluxo (Hoje / Ontem / weekday). O dia
           // visível no topo vem do overlay `StickyDayPill`, não de várias
@@ -598,6 +598,7 @@ export function ChatArea({
           const showConnSwitches = distinctChannels.size >= 2
           let lastChannelId: string | null = null
           let lastDayLabel: string | null = null
+          let lastLane: "in" | "out" | "other" | null = null
           const sectionHasEvent = (
             from: number,
             pred: (content: string) => boolean,
@@ -620,6 +621,7 @@ export function ChatArea({
                   )
                 : sectionHasEvent(index, isConversationCloseEventText)
               if (hideDivider) return null
+              lastLane = null
               return (
                 <li key={message.id || `sep-${index}`} className="list-none">
                   <TicketDivider
@@ -658,6 +660,10 @@ export function ChatArea({
               }
             }
             const isEvent = message.kind === "event"
+            const lane: "in" | "out" | "other" =
+              isEvent || message.isNote ? "other" : message.type === "outgoing" ? "out" : "in"
+            const clusterBreak = !showDay && lastLane !== null && lastLane !== lane
+            lastLane = lane
             return (
               <Fragment key={`${message.id || "msg"}-${index}`}>
                 {showDay && dayLabel ? (
@@ -666,7 +672,7 @@ export function ChatArea({
                   </li>
                 ) : null}
                 <li
-                  className="list-none"
+                  className={cn("list-none", clusterBreak && "mt-2")}
                   data-day-label={dayLabel || daySeparator || undefined}
                 >
                 {connLabel && <ConnectionDivider label={connLabel} />}

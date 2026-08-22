@@ -9,12 +9,13 @@ import {
   IconEye,
   IconEyeOff,
   IconMaximize,
+  IconDeviceMobile,
   IconPlayerPlay,
   IconPlayerPause,
   IconSitemap,
 } from "@tabler/icons-react"
 import { PageHeader } from "@/components/crm/page-header"
-import { PageActionsMenu, PagePrimaryButton } from "@/components/crm/page-toolbar"
+import { PageActionsMenu, PageGhostButton, PagePrimaryButton } from "@/components/crm/page-toolbar"
 import {
   addEdge,
   Background,
@@ -70,6 +71,7 @@ import { FlowNode } from "./flow-node"
 import { LogsContext } from "./logs-context"
 import { LogsModal, type LogsTarget } from "./logs-modal"
 import { DeletableEdge } from "./deletable-edge"
+import { FlowSimulator } from "./flow-simulator"
 
 const nodeTypes = { flowNode: FlowNode }
 const edgeTypes = { deletable: DeletableEdge }
@@ -99,6 +101,7 @@ function InnerEditor({ automationId }: { automationId: string }) {
   const [logsTarget, setLogsTarget] = useState<LogsTarget | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [simOpen, setSimOpen] = useState(false)
   const [connectStroke, setConnectStroke] = useState("var(--route-navigation)")
   const [dirty, setDirty] = useState(false)
   const readyRef = useRef(false)
@@ -644,6 +647,10 @@ function InnerEditor({ automationId }: { automationId: string }) {
         }
         actions={
           <>
+            <PageGhostButton onClick={() => setSimOpen(true)} disabled={isEmpty}>
+              <IconDeviceMobile size={16} stroke={2.2} />
+              Simular
+            </PageGhostButton>
             <PagePrimaryButton onClick={() => void saveFlow()} disabled={!dirty || replaceAutomation.isPending}>
               <IconDeviceFloppy size={16} stroke={2.2} />
               {replaceAutomation.isPending ? "Salvando…" : dirty ? "Salvar" : "Salvo"}
@@ -672,6 +679,12 @@ function InnerEditor({ automationId }: { automationId: string }) {
                 label: showErrors ? "Ocultar erros" : "Mostrar erros",
                 onClick: () => setShowErrors((v) => !v),
                 active: showErrors,
+              },
+              {
+                icon: <IconDeviceMobile size={16} stroke={2.2} />,
+                label: "Simular fluxo",
+                onClick: () => setSimOpen(true),
+                disabled: isEmpty,
               },
               {
                 icon: <IconDownload size={16} stroke={2.2} />,
@@ -796,6 +809,13 @@ function InnerEditor({ automationId }: { automationId: string }) {
           pendingConn.current = null
         }}
         onSelect={(type) => addNode(type)}
+      />
+      <FlowSimulator
+        open={simOpen}
+        onOpenChange={setSimOpen}
+        nodes={nodes}
+        edges={edges}
+        onStepChange={setSelectedNodeId}
       />
       </div>
       </div>

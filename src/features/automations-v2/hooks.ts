@@ -1,11 +1,18 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
   createAutomation,
   deleteAutomation,
   fetchAutomation,
+  fetchAutomationLogs,
+  fetchAutomationStats,
   fetchAutomationSummary,
   fetchAutomations,
   replaceAutomation,
@@ -16,10 +23,12 @@ import {
   type AutomationListItemDto,
   type AutomationListPage,
   type AutomationListSummary,
+  type AutomationLogsPage,
   type AutomationStepInput,
   type AutomationWriteBody,
 } from "./api";
 
+import type { AutomationStats } from "@/lib/automation-stats-types";
 import { isPreviewMode } from "@/lib/preview-mode";
 import { isPageMockMode } from "@/lib/page-mock-mode";
 
@@ -83,6 +92,62 @@ export function useAutomation(id: string | null) {
     queryKey: ["v2-automation", id ?? "__none__"],
     queryFn: () => fetchAutomation(id as string),
     enabled: isPreviewMode() ? !!id : !!id,
+    staleTime: 10_000,
+  });
+}
+
+/**
+ * Contadores reais de execução (sucesso/falha/skip) por passo. O
+ * `refetchInterval` espelha o editor legado — o canvas fica aberto por
+ * muito tempo e os números precisam acompanhar as execuções.
+ */
+export function useAutomationStats(id: string | null, enabled?: boolean) {
+  return useQuery<AutomationStats>({
+    queryKey: ["v2-automation-stats", id ?? "__none__"],
+    queryFn: () => fetchAutomationStats(id as string),
+    enabled: !!id && (enabled ?? true),
+    refetchInterval: 30_000,
+    staleTime: 10_000,
+  });
+}
+
+/**
+ * Logs de um passo (ou do gatilho, via `stepId: "trigger"`). Só dispara
+ * com `enabled` — a modal de logs é quem liga a busca ao abrir.
+ * `statuses` filtra no servidor (aba Sucessos/Alertas/Erros); sem isso
+ * a lista mistura os 50 mais recentes e as abas mentem.
+ */
+export function useAutomationLogs(
+  id: string | null,
+  stepId: string | null,
+  enabled: boolean,
+  statuses?: readonly string[],
+) {
+  const statusKey = statuses?.length
+    ? [...statuses].sort().join(",")
+    : "__any__";
+  return useInfiniteQuery<AutomationLogsPage>({
+    queryKey: [
+      "v2-automation-logs",
+      id ?? "__none__",
+      stepId ?? "__all__",
+      statusKey,
+    ],
+    queryFn: ({ pageParam }) =>
+      fetchAutomationLogs(id as string, {
+        stepId: stepId ?? undefined,
+        page: pageParam as number,
+        perPage: 50,
+        status: statuses,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => {
+      const page = last.page ?? 1;
+      const perPage = last.perPage ?? 50;
+      const loaded = page * perPage;
+      return loaded < last.total ? page + 1 : undefined;
+    },
+    enabled: !!id && enabled,
     staleTime: 10_000,
   });
 }

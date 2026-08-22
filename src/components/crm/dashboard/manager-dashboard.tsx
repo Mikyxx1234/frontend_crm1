@@ -13,10 +13,23 @@ import {
 import { StatCard } from "@/components/crm/stat-card";
 import { ChartCard } from "@/components/crm/chart-card";
 import { EmptyState } from "@/components/crm/empty-state";
+import { PipelineProgress } from "@/components/pipeline-progress";
 import { formatCurrency, formatNumber } from "@/features/dashboard-v2/format";
 import type { DashboardData } from "@/features/dashboard-v2/api";
 
-export function ManagerDashboard({ data }: { data: DashboardData }) {
+export function ManagerDashboard({
+  data,
+  period,
+  pipelines,
+  selectedPipelineId,
+  onPipelineChange,
+}: {
+  data: DashboardData;
+  period?: { from: string; to: string };
+  pipelines?: Array<{ id: string; name: string }>;
+  selectedPipelineId?: string;
+  onPipelineChange?: (pipelineId: string) => void;
+}) {
   const s = data.summary;
   const owners = (data.byOwner ?? []).slice(0, 5);
   const losses = (data.lossReasons ?? []).slice(0, 5);
@@ -24,7 +37,7 @@ export function ManagerDashboard({ data }: { data: DashboardData }) {
   const lossTotal = losses.reduce((acc, r) => acc + r.count, 0);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
         <Link href="/pipeline" className="min-w-0 rounded-[var(--radius-xl)] outline-none ring-[var(--brand-primary)] focus-visible:ring-2">
           <StatCard
@@ -60,6 +73,46 @@ export function ManagerDashboard({ data }: { data: DashboardData }) {
           caption="por negócio ganho"
         />
       </div>
+
+      <PipelineProgress
+        stages={(data.funnel ?? []).map((stage) => ({
+          id: stage.id,
+          name: stage.name,
+          color: stage.color,
+          count: stage.count,
+          value: stage.value,
+          entered: stage.entered,
+          lost: stage.lost,
+          href: stage.id.startsWith("all:")
+            ? "/pipeline"
+            : `/pipeline?${new URLSearchParams({ pipeline: data.pipelineId, stage: stage.id }).toString()}`,
+        }))}
+        summary={{
+          wonCount: s.wonCount,
+          wonValue: s.wonValue,
+          lostCount: s.lostCount,
+          lostValue: s.lostValue,
+          href: `/pipeline?pipeline=${encodeURIComponent(data.pipelineId)}`,
+        }}
+        totals={{
+          newCount: data.newDeals?.count ?? 0,
+          newValue: data.newDeals?.value ?? 0,
+          openCount: s.openDeals,
+          wonCount: s.wonCount,
+          wonValue: s.wonValue,
+          lostCount: s.lostCount,
+          lostValue: s.lostValue,
+        }}
+        pipelineHref={
+          data.pipelineId && !data.pipelineId.startsWith("__")
+            ? `/pipeline?pipeline=${encodeURIComponent(data.pipelineId)}`
+            : "/pipeline"
+        }
+        period={period}
+        pipelines={pipelines}
+        selectedPipelineId={selectedPipelineId}
+        onPipelineChange={onPipelineChange}
+      />
 
       <ChartCard
         title="Leads parados"

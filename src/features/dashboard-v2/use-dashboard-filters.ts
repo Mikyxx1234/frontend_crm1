@@ -20,7 +20,7 @@ import {
   pipelineUrlParam,
 } from "@/features/pipeline-v2/hooks/use-pipeline-url-sync";
 
-import type { DashboardFiltersState, PeriodKey } from "./api";
+import { PIPELINE_ALL, type DashboardFiltersState, type PeriodKey } from "./api";
 
 const VALID_PERIODS: PeriodKey[] = [
   "today",
@@ -84,7 +84,9 @@ function resolveToIds(
   let pipelineId: string | undefined;
   let stageIds: string[] = [];
 
-  if (keys.pipelineKey && pipelines?.length) {
+  if (keys.pipelineKey === "all" || keys.pipelineKey === PIPELINE_ALL) {
+    pipelineId = PIPELINE_ALL;
+  } else if (keys.pipelineKey && pipelines?.length) {
     const p = findPipelineByUrlParam(pipelines, keys.pipelineKey);
     pipelineId = p?.id;
     if (p && keys.stageKeys.length) {
@@ -125,12 +127,14 @@ function toSearchParams(
     if (f.startDate) sp.set("startDate", f.startDate);
     if (f.endDate) sp.set("endDate", f.endDate);
   }
-  if (f.pipelineId) {
+  if (f.pipelineId === PIPELINE_ALL) {
+    sp.set("pipeline", "all");
+  } else if (f.pipelineId) {
     const p = pipelines?.find((x) => x.id === f.pipelineId);
     const urlVal = pipelineUrlParam(p);
     if (urlVal) sp.set("pipeline", urlVal);
   }
-  if (f.stageIds.length && f.pipelineId) {
+  if (f.stageIds.length && f.pipelineId && f.pipelineId !== PIPELINE_ALL) {
     const p = pipelines?.find((x) => x.id === f.pipelineId);
     const stages = p?.stages ?? [];
     const slugs = f.stageIds
@@ -190,6 +194,17 @@ export function useDashboardFilters(
 
   useEffect(() => {
     if (!pipelines?.length || !filters.pipelineId) return;
+    if (filters.pipelineId === PIPELINE_ALL) {
+      if (searchParams.get("pipeline") === "all" && !searchParams.has("pipelineId")) {
+        return;
+      }
+      const sp = new URLSearchParams(searchParams.toString());
+      sp.set("pipeline", "all");
+      sp.delete("pipelineId");
+      const qs = sp.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      return;
+    }
     const p = pipelines.find((x) => x.id === filters.pipelineId);
     const want = pipelineUrlParam(p);
     if (!want) return;

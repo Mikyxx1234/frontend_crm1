@@ -224,6 +224,20 @@
   --text-secondary:      #374151;
   --text-muted:          #4b5563;
 
+  /* Funil operacional (dashboard) — tema claro */
+  --pipeline-surface:         #f7f9fc;
+  --pipeline-surface-raised:  #ffffff;
+  --pipeline-surface-summary: #eef2f7;
+  --pipeline-border:          rgba(15, 23, 42, 0.10);
+  --pipeline-text:            #1e293b;
+  --pipeline-text-secondary:  #475569;
+  --pipeline-text-muted:      #64748b;
+  --pipeline-control:         #e2e8f0;
+  --pipeline-control-hover:   #cbd5e1;
+  --pipeline-shadow:          0 1px 8px rgba(15, 23, 42, 0.06);
+  --pipeline-success:         #047857;
+  --pipeline-danger:          #b91c1c;
+
   /* Warning text (âmbar escuro sobre lead-bg) — token faltante */
   --color-warning-text:  #b45309;
 
@@ -646,6 +660,20 @@ html[data-nav-expanded="true"] {
   --text-muted:     #64748b;
   --text-faint:     #475569;
 
+  /* Funil operacional (dashboard) — tema escuro */
+  --pipeline-surface:         #152033;
+  --pipeline-surface-raised:  #1b2a42;
+  --pipeline-surface-summary: #121c2e;
+  --pipeline-border:          rgba(148, 163, 184, 0.16);
+  --pipeline-text:            #e8edf5;
+  --pipeline-text-secondary:  #b6c2d4;
+  --pipeline-text-muted:      #8b9bb0;
+  --pipeline-control:         #24344d;
+  --pipeline-control-hover:   #2e425e;
+  --pipeline-shadow:          0 2px 14px rgba(0, 0, 0, 0.35);
+  --pipeline-success:         #34d399;
+  --pipeline-danger:          #fca5a5;
+
   /* Glass — escuro com blur */
   --glass-bg-base:     rgba(30, 41, 59, 0.85);
   --glass-bg-overlay:  rgba(30, 41, 59, 0.65);
@@ -970,4 +998,127 @@ dialog *  { scrollbar-width: thin; scrollbar-color: rgba(15,23,42,0.18) transpar
 
 .v2-dark .v2-root [role="switch"] span.bg-white {
   background-color: #ffffff !important;
+}
+
+/* next-themes também marca <html class="dark"> — mesmos tokens do funil. */
+.dark {
+  --pipeline-surface:         #152033;
+  --pipeline-surface-raised:  #1b2a42;
+  --pipeline-surface-summary: #121c2e;
+  --pipeline-border:          rgba(148, 163, 184, 0.16);
+  --pipeline-text:            #e8edf5;
+  --pipeline-text-secondary:  #b6c2d4;
+  --pipeline-text-muted:      #8b9bb0;
+  --pipeline-control:         #24344d;
+  --pipeline-control-hover:   #2e425e;
+  --pipeline-shadow:          0 2px 14px rgba(0, 0, 0, 0.35);
+  --pipeline-success:         #34d399;
+  --pipeline-danger:          #fca5a5;
+}
+
+/* ── Funil operacional (dashboard) ───────────────────────────────── */
+.pipeline-progress {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--pipeline-border);
+  border-radius: var(--radius-xl);
+  background: var(--pipeline-surface);
+  box-shadow: var(--pipeline-shadow);
+  color: var(--pipeline-text);
+}
+
+.pipeline-progress-scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  touch-action: pan-y;
+  cursor: grab;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pipeline-control-hover) transparent;
+}
+
+.pipeline-progress-scroller.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.pipeline-progress-scroller a {
+  cursor: pointer;
+}
+
+.pipeline-progress-scroller::-webkit-scrollbar {
+  height: 8px;
+}
+
+.pipeline-progress-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pipeline-progress-scroller::-webkit-scrollbar-thumb {
+  background: var(--pipeline-control-hover);
+  border-radius: 9999px;
+}
+
+.pipeline-progress-track {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+}
+
+.pipeline-progress-col {
+  display: flex;
+  flex: 0 0 240px;
+  width: 240px;
+  min-width: 225px;
+  max-width: 260px;
+  flex-direction: column;
+  gap: 0.65rem;
+  border-right: 1px solid var(--pipeline-border);
+  background: var(--pipeline-surface-raised);
+  padding: 1rem 1.05rem 1.1rem;
+}
+
+.pipeline-progress-col.is-summary {
+  background: var(--pipeline-surface-summary);
+}
+
+@media (max-width: 767px) {
+  .pipeline-progress-col {
+    flex-basis: 78vw;
+    width: 78vw;
+    min-width: 78vw;
+    max-width: 78vw;
+  }
+}
+
+.pipeline-progress-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem 1rem;
+  background: var(--pipeline-surface-summary);
+}
+
+.pipeline-progress-totals.is-top {
+  border-bottom: 1px solid var(--pipeline-border);
+}
+
+.pipeline-progress-totals.is-bottom {
+  border-top: 1px solid var(--pipeline-border);
+}
+
+@media (min-width: 768px) {
+  .pipeline-progress-totals {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.pipeline-progress-total {
+  min-width: 0;
+  border: 1px solid var(--pipeline-border);
+  border-radius: var(--radius-lg);
+  background: var(--pipeline-surface-raised);
+  box-shadow: var(--pipeline-shadow);
+  padding: 0.85rem 1rem 0.95rem;
 }

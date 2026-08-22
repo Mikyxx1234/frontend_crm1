@@ -11,7 +11,7 @@ import {
   type NodeKind,
   type Output,
 } from "@/lib/flow-data"
-import { newBranchId } from "@/lib/automation-condition"
+import { hydrateConditionBranches } from "@/lib/automation-condition"
 import { normalizeRoundRobinConfig, roundRobinOptionLabel } from "@/lib/automation-round-robin"
 
 const INTERACTIVE_TYPES = new Set<ActionStepType>([
@@ -194,12 +194,21 @@ export function outputsFromStepConfig(
       kind: "response" as const,
       target: t(`btn_${i}`, item.gotoStepId),
     }))
-    return [
-      ...buttons,
-      { key: "else", label: "Outra resposta", kind: "navigation", target: t("else", cfg.elseGotoStepId) },
-      { key: "timeout", label: "Caso o contato não responda", kind: "error", target: t("timeout", cfg.timeoutGotoStepId) },
-      { key: "failure", label: "Caso ocorrer erro no envio de mensagem", kind: "error", target: t("failure", cfg.failureGotoStepId) },
+    const common = [
+      { key: "else", label: "Outra resposta", kind: "navigation" as const, target: t("else", cfg.elseGotoStepId) },
+      { key: "timeout", label: "Caso o contato não responda", kind: "error" as const, target: t("timeout", cfg.timeoutGotoStepId) },
+      { key: "failure", label: "Caso ocorrer erro no envio de mensagem", kind: "error" as const, target: t("failure", cfg.failureGotoStepId) },
     ]
+    // Template com botões ainda precisa de "Próximo passo" — o fluxo BV
+    // liga o webhook nesse handle; sem ele o nextStepId some no reload.
+    if (type === "send_whatsapp_template") {
+      return [
+        ...buttons,
+        { key: "next", label: "Próximo passo", kind: "navigation" as const, target: t("next", cfg.nextStepId) },
+        ...common,
+      ]
+    }
+    return [...buttons, ...common]
   }
   if (type === "wait_for_reply") {
     return [
@@ -263,11 +272,33 @@ export function defaultOutputsForStepType(type: ActionStepType): Output[] {
   return outputsFromStepConfig(type, defaultStepConfig(type))
 }
 
-export function cardPreview(data: FlowNodeData): string {
-  if (data.preview.trim()) return data.preview
+const LOOKUP_PREVIEW_TYPES = new Set([
+  "condition",
+  "move_stage",
+  "mark_deal_won",
+  "mark_deal_lost",
+  "assign_owner",
+  "transfer_department",
+  "add_tag",
+  "remove_tag",
+  "create_deal",
+  "tabulate_conversation",
+  "ask_ai_agent",
+  "transfer_to_ai_agent",
+  "execute_distribution",
+  "send_product",
+  "transfer_automation",
+  "update_field",
+])
+
+export function cardPreview(data: FlowNodeData, lookup?: Record<string, string>): string {
   const type = resolveStepType(data)
   if (type === "trigger" || data.kind === "trigger") return data.preview
-  return summarizeStepConfig(type, data.config ?? {})
+  if (LOOKUP_PREVIEW_TYPES.has(type)) {
+    return summarizeStepConfig(type, data.config ?? {}, lookup)
+  }
+  if (data.preview.trim()) return data.preview
+  return summarizeStepConfig(type, data.config ?? {}, lookup)
 }
 
 export function previewPlaceholder(type: string): string {
@@ -629,33 +660,17 @@ export function migrateConditionNode(data: FlowNodeData): FlowNodeData {
   const cfg = data.config ?? {}
   const trueTarget = data.outputs.find((o) => o.key === "true")?.target
   const falseTarget = data.outputs.find((o) => o.key === "false" || o.key === "else")?.target
-  let branches = Array.isArray(cfg.branches) ? [...cfg.branches] : []
-  if (branches.length === 0) {
-    branches = [
-      {
-        id: newBranchId(),
-        label: "",
-        rules: [
-          {
-            field: typeof cfg.field === "string" ? cfg.field : "",
-            op: typeof cfg.op === "string" ? cfg.op : "eq",
-            value: cfg.value ?? "",
-          },
-        ],
-        nextStepId: trueTarget,
-      },
-    ]
-  } else if (trueTarget) {
-    branches = branches.map((b, i) => {
-      const rec = b && typeof b === "object" ? (b as Record<string, unknown>) : {}
-      if (i !== 0 || rec.nextStepId) return b
-      return { ...rec, nextStepId: trueTarget }
-    })
-  }
+  const branches = hydrateConditionBranches(cfg).map((b, i) => ({
+    ...b,
+    nextStepId: b.nextStepId ?? (i === 0 ? trueTarget : undefined),
+  }))
   const nextCfg: NodeConfig = {
     ...cfg,
     branches,
-    elseStepId: typeof cfg.elseStepId === "string" && cfg.elseStepId ? cfg.elseStepId : falseTarget,
+    elseStepId:
+      typeof cfg.elseStepId === "string" && cfg.elseStepId
+        ? cfg.elseStepId
+        : falseTarget,
     field: undefined,
     op: undefined,
     value: undefined,

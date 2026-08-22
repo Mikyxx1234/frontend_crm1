@@ -12,11 +12,16 @@
  */
 
 import { apiUrl } from "@/lib/api";
+import type { AutomationStats } from "@/lib/automation-stats-types";
 import { isPageMockMode } from "@/lib/page-mock-mode";
 import { mockAutomationSummary, mockAutomationsPage } from "./mock-automations";
 
-async function getJson<T>(path: string, errLabel: string): Promise<T> {
-  const res = await fetch(apiUrl(path));
+async function getJson<T>(
+  path: string,
+  errLabel: string,
+  init?: RequestInit,
+): Promise<T> {
+  const res = await fetch(apiUrl(path), init);
   const text = await res.text();
   if (!res.ok) {
     let message = errLabel;
@@ -129,6 +134,91 @@ export function fetchAutomation(id: string): Promise<AutomationDetailDto> {
   return getJson<AutomationDetailDto>(
     `/api/automations/${id}`,
     "Erro ao carregar automação.",
+  );
+}
+
+// ── Telemetria: contadores e logs de execução ────────────────────
+
+/**
+ * `GET /api/automations/:id/stats` — mesmos contadores que o editor
+ * legado consome. `trigger` vem por status cru (`COMPLETED`, `SKIPPED`,
+ * `FAILED`…; `STARTED` é eco e o card não soma); `steps` já vem
+ * agregado por passo.
+ */
+export function fetchAutomationStats(id: string): Promise<AutomationStats> {
+  return getJson<AutomationStats>(
+    `/api/automations/${id}/stats`,
+    "Erro ao carregar estatísticas da automação.",
+  );
+}
+
+export interface AutomationLogWebhookDto {
+  id: string;
+  receivedAt: string;
+  eventType: string;
+  objectType?: string | null;
+  phoneNumberId?: string | null;
+  waMessageId?: string | null;
+  fromPhone?: string | null;
+  signatureValid?: boolean;
+  processed?: boolean;
+  processingError?: string | null;
+}
+
+export interface AutomationLogRowDto {
+  id: string;
+  status: string;
+  message: string | null;
+  contactId: string | null;
+  dealId: string | null;
+  stepId: string | null;
+  stepType: string | null;
+  executedAt: string;
+  payload?: Record<string, unknown> | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  dealName?: string | null;
+  dealNumber?: number | null;
+  metaWebhookEvent?: AutomationLogWebhookDto | null;
+}
+
+/**
+ * A rota responde `{ items, total }`, mas o editor legado lê
+ * `logs ?? items` — mantemos a mesma leitura defensiva para não
+ * quebrar caso o backend passe a nomear a chave de outro jeito.
+ */
+export interface AutomationLogsPage {
+  logs?: AutomationLogRowDto[];
+  items?: AutomationLogRowDto[];
+  total: number;
+  page?: number;
+  perPage?: number;
+}
+
+/** `stepId: "trigger"` é a convenção do backend para os logs sem passo. */
+export function fetchAutomationLogs(
+  id: string,
+  params: {
+    stepId?: string;
+    page?: number;
+    perPage?: number;
+    status?: readonly string[];
+  } = {},
+): Promise<AutomationLogsPage> {
+  const sp = new URLSearchParams();
+  sp.set("page", String(params.page ?? 1));
+  sp.set("perPage", String(params.perPage ?? 50));
+  if (params.stepId) sp.set("stepId", params.stepId);
+  if (params.status?.length) {
+    // `status` CSV: o que 381fcdb lê. `logStatus` repetido: não depende
+    // de split por vírgula nem de um único get("status").
+    sp.set("status", params.status.join(","));
+    for (const s of params.status) sp.append("logStatus", s);
+  }
+  return getJson<AutomationLogsPage>(
+    `/api/automations/${id}/logs?${sp.toString()}`,
+    "Erro ao carregar logs da automação.",
+    { cache: "no-store" },
   );
 }
 

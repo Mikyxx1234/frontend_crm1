@@ -26,11 +26,20 @@ import {
   nodeFamily,
   outputsFromStepConfig,
   previewPlaceholder,
+  remapFlowEdges,
   removeInteractiveChoice,
   renameInteractiveChoice,
   resolveStepType,
 } from "@/lib/flow-step-adapter"
 import { stepIcon, stepColor } from "@/components/automations/add-step-node"
+import {
+  getTemplateDetail,
+  mergeTemplateQuickReplies,
+  useConditionNameLookup,
+  useStepTemplateCatalog,
+} from "@/components/automations/editor-data"
+import { useTriggerNameLookup } from "@/components/automations/trigger-config-fields"
+import { summarizeTriggerConfig } from "@/lib/automation-workflow"
 import { useLogs } from "./logs-context"
 import { NodeConfigPanel } from "./node-config-panel"
 import { useVariableTrigger, VariablePickerMenu } from "./flow-variable-picker"
@@ -205,7 +214,49 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
       : familyAccent(family)
   const Icon = stepIcon[stepType] ?? MessageSquare
   const iconClass = stepColor[stepType] ?? "text-[var(--text-muted)]"
-  const preview = cardPreview(d)
+  const triggerLookup = useTriggerNameLookup()
+  const conditionLookup = useConditionNameLookup()
+  const nameLookup = { ...triggerLookup, ...conditionLookup }
+  const isTemplateCard = stepType === "send_whatsapp_template"
+  const { detailsMap: tplMap } = useStepTemplateCatalog(d.config ?? {}, undefined, {
+    enabled: isTemplateCard,
+  })
+  const tplName = String(d.config?.templateName ?? d.config?.template ?? "")
+  const tplLang = String(d.config?.languageCode ?? d.config?.idioma ?? "")
+  const tplDetail = isTemplateCard ? getTemplateDetail(tplMap, tplName, tplLang) : undefined
+  const isTriggerCard = stepType === "trigger" || d.kind === "trigger"
+
+  useEffect(() => {
+    if (!isTemplateCard || !tplDetail) return
+    const cfg = (d.config ?? {}) as Record<string, unknown>
+    const prev = Array.isArray(cfg.buttons)
+      ? (cfg.buttons as { title?: string; text?: string; gotoStepId?: string }[])
+      : []
+    const desired = mergeTemplateQuickReplies(prev, tplDetail.quickReplies)
+    const buttonsSame =
+      desired.length === prev.length &&
+      desired.every(
+        (b, i) =>
+          b.title === String(prev[i]?.title ?? prev[i]?.text ?? "") &&
+          (b.gotoStepId ?? "") === String(prev[i]?.gotoStepId ?? ""),
+      )
+    const bodySame = String(cfg.bodyPreview ?? "") === tplDetail.bodyPreview
+    const langSame = !tplDetail.language || String(cfg.languageCode ?? "") === tplDetail.language
+    if (buttonsSame && bodySame && langSame) return
+    const nextCfg = {
+      ...cfg,
+      buttons: desired,
+      bodyPreview: tplDetail.bodyPreview,
+      ...(tplDetail.language ? { languageCode: tplDetail.language } : {}),
+    }
+    const outputs = outputsFromStepConfig(stepType, nextCfg, d.outputs)
+    updateNodeData(id, { config: nextCfg, outputs })
+    setEdges((eds) => remapFlowEdges(eds, [{ id, data: { ...d, config: nextCfg, outputs } }]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTemplateCard, tplName, tplDetail, id])
+  const preview = isTriggerCard
+    ? summarizeTriggerConfig(String(d.triggerType ?? ""), d.config ?? {}, nameLookup)
+    : cardPreview(d, nameLookup)
   const isFinish = family === "finish"
 
   useLayoutEffect(() => {
@@ -242,11 +293,10 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
         nodeId: id,
         title: d.title,
         ref: d.ref,
-        stats: d.stats,
         initialTab,
       })
     },
-    [logs, id, d.title, d.ref, d.stats],
+    [logs, id, d.title, d.ref],
   )
 
   const setOutputLabel = useCallback(
@@ -402,11 +452,12 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
       </div>
 
       <div
-        className={`px-3.5 text-[13px] leading-relaxed ${
+        className={`px-3.5 pb-2 text-[13px] leading-relaxed ${
           isMilestone ? "text-white/80" : "text-muted-foreground"
         }`}
       >
-        {stepType === "send_product" ||
+        {isTriggerCard ||
+        stepType === "send_product" ||
         stepType === "assign_owner" ||
         stepType === "transfer_automation" ||
         stepType === "condition" ||
@@ -460,6 +511,8 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
           </button>
         )}
       </div>
+
+      {selected && isTriggerCard && <NodeConfigPanel id={id} data={d} />}
 
       {d.outputs.length > 0 && (
         <div
@@ -558,7 +611,7 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
         </div>
       )}
 
-      {selected && <NodeConfigPanel id={id} data={d} />}
+      {selected && !isTriggerCard && <NodeConfigPanel id={id} data={d} />}
 
       <div className="flex items-center justify-around gap-2 rounded-b-xl border-t border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2 text-center">
         <Stat value={d.stats.sucessos} label="Sucessos" color="var(--route-response)" onClick={() => openLogs("success")} />

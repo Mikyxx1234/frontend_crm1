@@ -10,7 +10,6 @@
  */
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "sonner"
-import { IconChevronDown } from "@tabler/icons-react"
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass"
 import { InputGlass } from "@/components/crm/input-glass"
 import { apiUrl } from "@/lib/api"
@@ -41,8 +40,9 @@ import {
   usePipelineOptions,
   useStageOptions,
   useTagOptions,
-  useTemplateDetailsMap,
-  useTemplateOptions,
+  getTemplateDetail,
+  mergeTemplateQuickReplies,
+  useStepTemplateCatalog,
   useUserOptions,
   type Opt,
 } from "./editor-data"
@@ -53,7 +53,8 @@ import {
   showsUpdateFieldVariableHint,
   UpdateFieldValueControl,
 } from "./update-field-value"
-import { INHERIT_CHANNEL_VALUE, useConnectedStepChannels } from "./step-channel-picker"
+import { ActiveChannelMultiSelect } from "./step-channel-picker"
+import { readStepAllowedChannelIds, readStepChannelScope } from "@/lib/automation-workflow"
 
 const CUSTOM_FIELD_SENTINEL = "__custom__"
 
@@ -73,6 +74,7 @@ export function NodeConfigEditor({
   steps,
   isFirstMessageStep,
   inheritedChannelId,
+  bindToInbound,
   fields: fieldsOverride,
   hideStepTargets,
   onChange,
@@ -80,10 +82,12 @@ export function NodeConfigEditor({
   stepType: string
   config: Cfg
   steps: StepOpt[]
-  /** 1º passo de mensagem do fluxo — exige `channelId` explícito (sem "herdar"). */
+  /** 1º passo de mensagem do fluxo (legado: exigia canal explícito). */
   isFirstMessageStep?: boolean
-  /** Canal do 1º passo — cards seguintes mostram este valor até o operador trocar. */
+  /** Canal herdado do gatilho (1 conexão) ou do 1º passo. */
   inheritedChannelId?: string
+  /** Gatilho inbound: o envio usa o canal da conversa, não um número fixo. */
+  bindToInbound?: boolean
   /** Substitui `STEP_FIELDS[stepType]` — usado pelo editor /fluxo para omitir destinos via handle. */
   fields?: EditorField[]
   /** Esconde “Ir para passo” nos builders (o /fluxo usa handles). */
@@ -120,6 +124,7 @@ export function NodeConfigEditor({
           stepType={stepType}
           isFirstMessageStep={isFirstMessageStep}
           inheritedChannelId={inheritedChannelId}
+          bindToInbound={bindToInbound}
           hideStepTargets={hideStepTargets}
         />
       ))}
@@ -138,6 +143,7 @@ function Field({
   stepType,
   isFirstMessageStep,
   inheritedChannelId,
+  bindToInbound,
   hideStepTargets,
 }: {
   field: EditorField
@@ -148,6 +154,7 @@ function Field({
   stepType: string
   isFirstMessageStep?: boolean
   inheritedChannelId?: string
+  bindToInbound?: boolean
   hideStepTargets?: boolean
 }) {
   switch (field.kind) {
@@ -235,6 +242,18 @@ function Field({
     case "source":
       // Departamento: grava também `departmentName` pra o summary do card
       // (summarizeStepConfig) e o executor exibirem o nome legível.
+      if (field.source === "stage") {
+        return (
+          <Labeled label={field.label} optional={field.optional} hint={field.hint}>
+            <StageSelect
+              value={str(config[field.key])}
+              onPick={(id, name) =>
+                onChange({ ...config, stageId: id, stageName: name })
+              }
+            />
+          </Labeled>
+        )
+      }
       if (field.source === "department") {
         return (
           <Labeled label={field.label} optional={field.optional} hint={field.hint}>
@@ -272,6 +291,9 @@ function Field({
           <SourceSelect
             source={field.source}
             value={str(config[field.key])}
+            config={config}
+            inheritedChannelId={inheritedChannelId}
+            bindToInbound={bindToInbound}
             onChange={(v) => set(field.key, v)}
           />
         </Labeled>
@@ -336,7 +358,14 @@ function Field({
       return <UpdateFieldEditor config={config} onChange={onChange} />
 
     case "templatePreview":
-      return <TemplatePreview config={config} onChange={onChange} />
+      return (
+        <TemplatePreview
+          config={config}
+          inheritedChannelId={inheritedChannelId}
+          bindToInbound={bindToInbound}
+          onChange={onChange}
+        />
+      )
 
     case "webhookConfig":
       return <InlineWebhookConfig config={config} onChange={onChange} />
@@ -351,11 +380,16 @@ function Field({
       return (
         <ChannelPickerField
           stepType={stepType}
-          channelId={str(config.channelId)}
-          isFirstMessageStep={!!isFirstMessageStep}
-          inheritedChannelId={inheritedChannelId}
+          config={config}
           mockIfEmpty={!!hideStepTargets}
-          onChange={(v) => set("channelId", v)}
+          onChange={(scope, ids) =>
+            onChange({
+              ...config,
+              channelScope: scope,
+              channelIds: scope === "all" ? [] : ids,
+              channelId: scope === "selected" && ids.length === 1 ? ids[0] : "",
+            })
+          }
         />
       )
 
@@ -774,62 +808,36 @@ function ConfigSelect({
 }
 
 /**
- * Campo "Canal de envio". Sempre visível nos passos de mensagem.
- * No canvas de produção, passos seguintes ainda podem herdar (`channelId` vazio).
+ * Canais do passo — mesmo padrão do Kommo: "Selecionar tudo" + checkboxes
+ * dos canais CONNECTED. `channelId` legado sozinho não vira filtro.
  */
 function ChannelPickerField({
   stepType,
-  channelId,
-  isFirstMessageStep,
-  inheritedChannelId,
+  config,
   mockIfEmpty,
   onChange,
 }: {
   stepType: string
-  channelId: string
-  isFirstMessageStep: boolean
-  inheritedChannelId?: string
+  config: Cfg
   mockIfEmpty?: boolean
-  onChange: (v: string) => void
+  onChange: (scope: "all" | "selected", channelIds: string[]) => void
 }) {
-  const { options, isLoading } = useConnectedStepChannels(stepType, { mockIfEmpty })
-
-  useEffect(() => {
-    if (isFirstMessageStep && options.length === 1 && !channelId) onChange(options[0]!.id)
-  }, [options, channelId, onChange, isFirstMessageStep])
-
-  if (isLoading) return null
-
-  const inherited = inheritedChannelId?.trim() || ""
-  const value = channelId || inherited
-  const selected = options.find((o) => o.id === value)
-  const placeholder = options.length === 0 ? "Nenhum canal conectado" : "Selecione o canal…"
+  const allowed = readStepAllowedChannelIds(config)
+  const scope = readStepChannelScope(config)
+  const values = allowed ?? []
 
   return (
-    <Labeled
-      label="Canal de envio"
-      hint={
-        !isFirstMessageStep && inherited && !channelId
-          ? "Herdado do 1º passo de mensagem. Pode trocar neste card."
-          : undefined
-      }
-    >
-      <div className="cfg-select-wrap nodrag nopan" onPointerDown={stopFlowPointer}>
-        <DropdownGlass
-          options={options.map((o) => ({ value: o.id, label: o.label }))}
-          value={value}
-          onValueChange={(v) => onChange(!isFirstMessageStep && v === inherited ? "" : v)}
-          placeholder={placeholder}
-          matchTriggerWidth
-          trigger={
-            <button type="button" className="w-full justify-between gap-2 px-2.5 text-left text-[13px]">
-              <span className="min-w-0 flex-1 truncate leading-5">{selected?.label || placeholder}</span>
-              <IconChevronDown size={15} className="shrink-0 opacity-50" />
-            </button>
-          }
-        />
-      </div>
-    </Labeled>
+    <div className="cfg-select-wrap nodrag nopan" onPointerDown={stopFlowPointer}>
+      <ActiveChannelMultiSelect
+        id="step-channels"
+        kinds={stepType === "send_email" ? "email" : "whatsapp"}
+        scope={scope}
+        values={values}
+        mockIfEmpty={mockIfEmpty}
+        emptyHint="Marque ao menos um canal. Sem seleção, este passo não envia."
+        onChange={onChange}
+      />
+    </div>
   )
 }
 
@@ -859,14 +867,36 @@ function InlineWebhookConfig({
   return <WebhookStepConfig draft={config} setDraft={setDraft} />
 }
 
-function SourceSelect({ source, value, onChange }: { source: SourceKey; value: string; onChange: (v: string) => void }) {
+function SourceSelect({
+  source,
+  value,
+  onChange,
+  config,
+  inheritedChannelId,
+  bindToInbound,
+}: {
+  source: SourceKey
+  value: string
+  onChange: (v: string) => void
+  config: Cfg
+  inheritedChannelId?: string
+  bindToInbound?: boolean
+}) {
   switch (source) {
     case "stage":
       return <HookSelect hook={useStageOptions} value={value} onChange={onChange} placeholder="Selecione um estágio…" />
     case "department":
       return <HookSelect hook={useDepartmentOptions} value={value} onChange={onChange} placeholder="Selecione um departamento…" />
     case "template":
-      return <HookSelect hook={useTemplateOptions} value={value} onChange={onChange} placeholder="Selecione um template…" />
+      return (
+        <TemplateNameSelect
+          config={config}
+          inheritedChannelId={inheritedChannelId}
+          bindToInbound={bindToInbound}
+          value={value}
+          onChange={onChange}
+        />
+      )
     case "automation":
       return <HookSelect hook={useAutomationOptions} value={value} onChange={onChange} placeholder="Selecione uma automação…" />
     case "aiAgentId":
@@ -878,6 +908,28 @@ function SourceSelect({ source, value, onChange }: { source: SourceKey; value: s
       // responsável" desatribui no target configurado pro step.
       return <OwnerSelect value={value} onChange={onChange} placeholder="Sem responsável (limpar)…" />
   }
+}
+
+function StageSelect({
+  value,
+  onPick,
+}: {
+  value: string
+  onPick: (id: string, name: string) => void
+}) {
+  const { options, isLoading } = useStageOptions()
+  return (
+    <ConfigSelect
+      value={value}
+      options={options}
+      loading={isLoading}
+      placeholder="Selecione um estágio…"
+      onChange={(id) => {
+        const opt = options.find((o) => o.value === id)
+        onPick(id, opt?.label ?? "")
+      }}
+    />
+  )
 }
 
 function DepartmentSelect({
@@ -1038,6 +1090,45 @@ function DepartmentMultiSelect({
         </button>
       )}
     </div>
+  )
+}
+
+function TemplateNameSelect({
+  config,
+  inheritedChannelId,
+  bindToInbound,
+  value,
+  onChange,
+}: {
+  config: Cfg
+  inheritedChannelId?: string
+  bindToInbound?: boolean
+  value: string
+  onChange: (v: string) => void
+}) {
+  const catalog = useStepTemplateCatalog(config, inheritedChannelId, { bindToInbound })
+  const missing = catalog.missingChannelLabels(value, str(config.languageCode))
+  return (
+    <>
+      <ConfigSelect
+        value={value}
+        options={catalog.options}
+        onChange={onChange}
+        placeholder="Selecione um template…"
+        loading={catalog.isLoading}
+      />
+      {catalog.isIntersect && !catalog.isLoading ? (
+        <p className="cfg-hint">
+          Só templates aprovados em todos os WhatsApp deste passo. Cada envio sai no número da conversa.
+        </p>
+      ) : null}
+      {missing.length > 0 ? (
+        <p className="cfg-warning">
+          O template {value} não está aprovado na WABA de {missing.join(", ")}.
+          O envio nesse número vai falhar — não usamos outro WhatsApp.
+        </p>
+      ) : null}
+    </>
   )
 }
 
@@ -1209,8 +1300,6 @@ function UpdateFieldEditor({ config, onChange }: { config: Cfg; onChange: (next:
 
 // ─────────────────────── Preview do template WhatsApp ───────────────────────
 
-const norm = (s: string) => s.trim().toLowerCase()
-
 /**
  * Preview do template (estilo WhatsApp): apenas o CORPO da mensagem. Os
  * botões NÃO aparecem aqui — eles viram linhas com handle no próprio card
@@ -1221,28 +1310,32 @@ const norm = (s: string) => s.trim().toLowerCase()
  */
 function TemplatePreview({
   config,
+  inheritedChannelId,
+  bindToInbound,
   onChange,
 }: {
   config: Cfg
+  inheritedChannelId?: string
+  bindToInbound?: boolean
   onChange: (next: Cfg) => void
 }) {
   const templateName = str(config.templateName)
-  const { detailsMap, isLoading } = useTemplateDetailsMap()
-  const detail = templateName ? detailsMap.get(templateName) : undefined
+  const { detailsMap, isLoading } = useStepTemplateCatalog(config, inheritedChannelId, {
+    bindToInbound,
+  })
+  const detail = getTemplateDetail(detailsMap, templateName, str(config.languageCode))
 
   useEffect(() => {
     if (!detail) return
     const prev = asArr(config.buttons) as BtnItem[]
-    const desired = detail.quickReplies.map((t, i) => {
-      const match = prev.find((b) => norm(str(b.title ?? b.text)) === norm(t))
-      return { id: `btn_${i}`, title: t, gotoStepId: str(match?.gotoStepId) }
-    })
+    const desired = mergeTemplateQuickReplies(prev, detail.quickReplies)
     const sameBtns =
       desired.length === prev.length &&
       desired.every(
         (b, i) => b.title === str(prev[i]?.title) && b.gotoStepId === str(prev[i]?.gotoStepId),
       )
     const sameBody = str(config.bodyPreview) === detail.bodyPreview
+    const sameLang = !detail.language || str(config.languageCode) === detail.language
     const hf = (detail.headerFormat || "").toUpperCase()
     const needsMedia = hf === "IMAGE" || hf === "VIDEO" || hf === "DOCUMENT"
     const clearHeader =
@@ -1250,11 +1343,12 @@ function TemplatePreview({
       (str(config.headerMediaUrl) !== "" ||
         str(config.headerMediaType) !== "" ||
         str(config.headerUploadedFileName) !== "")
-    if (sameBtns && sameBody && !clearHeader) return
+    if (sameBtns && sameBody && sameLang && !clearHeader) return
     onChange({
       ...config,
       buttons: desired,
       bodyPreview: detail.bodyPreview,
+      ...(detail.language ? { languageCode: detail.language } : {}),
       ...(clearHeader
         ? { headerMediaUrl: "", headerMediaType: "", headerUploadedFileName: "" }
         : {}),

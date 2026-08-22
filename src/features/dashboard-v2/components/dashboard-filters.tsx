@@ -19,6 +19,7 @@ import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-gl
 import type { FilterOptionsResponse } from "@/components/pipeline/kanban-filters/types";
 
 import {
+  PIPELINE_ALL,
   SOURCE_NONE,
   type DashboardFiltersState,
   type PeriodKey,
@@ -75,11 +76,14 @@ export function DashboardFilters({
   }));
 
   const pipelines = options?.pipelines ?? [];
-  const pipelineOptions: DropdownOption[] = pipelines.map((p) => ({
-    value: p.id,
-    label: p.name,
-    icon: <IconFilter size={15} />,
-  }));
+  const pipelineOptions: DropdownOption[] = [
+    { value: PIPELINE_ALL, label: "Todos os funis" },
+    ...pipelines.map((p) => ({
+      value: p.id,
+      label: p.name,
+      icon: <IconFilter size={15} />,
+    })),
+  ];
 
   const activePipeline = pipelines.find((p) => p.id === effectivePipelineId);
   const stageOptions: MultiSelectOption[] = (activePipeline?.stages ?? [])
@@ -158,7 +162,11 @@ export function DashboardFilters({
             {pipelineOptions.length > 0 && (
               <DropdownGlass
                 options={pipelineOptions}
-                value={effectivePipelineId}
+                value={
+                  filters.pipelineId === PIPELINE_ALL
+                    ? PIPELINE_ALL
+                    : effectivePipelineId
+                }
                 onValueChange={(v) => onPatch({ pipelineId: v, stageIds: [] })}
                 placeholder="Pipeline"
                 menuLabel="Pipeline"
@@ -166,14 +174,16 @@ export function DashboardFilters({
               />
             )}
 
-            <MultiSelectPopover
-              label="Etapa"
-              icon={<IconFilter size={14} />}
-              options={stageOptions}
-              selected={filters.stageIds}
-              onChange={(stageIds) => onPatch({ stageIds })}
-              emptyLabel="Selecione um pipeline"
-            />
+            {filters.pipelineId !== PIPELINE_ALL && (
+              <MultiSelectPopover
+                label="Etapa"
+                icon={<IconFilter size={14} />}
+                options={stageOptions}
+                selected={filters.stageIds}
+                onChange={(stageIds) => onPatch({ stageIds })}
+                emptyLabel="Selecione um pipeline"
+              />
+            )}
 
             <MultiSelectPopover
               label="Tags"
@@ -229,6 +239,13 @@ export function DashboardFilters({
               onRemove={() =>
                 onPatch({ period: "this_month", startDate: undefined, endDate: undefined })
               }
+            />
+          )}
+          {showStructural && filters.pipelineId === PIPELINE_ALL && (
+            <Chip
+              label="Pipeline"
+              value="Todos os funis"
+              onRemove={() => onPatch({ pipelineId: undefined, stageIds: [] })}
             />
           )}
           {showStructural && filters.pipelineId && activePipeline && (

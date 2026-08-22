@@ -28,7 +28,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useConnectedStepChannels } from "@/components/automations/step-channel-picker"
-import { useTemplateDetailsMap } from "@/components/automations/editor-data"
+import {
+  getTemplateDetail,
+  useStepTemplateCatalog,
+} from "@/components/automations/editor-data"
 import type { NodeConfig, Output } from "@/lib/flow-data"
 
 const PREVIEWABLE = new Set([
@@ -157,12 +160,16 @@ export function WhatsAppCustomerPreview({
   cardPreview?: string
 }) {
   const { options } = useConnectedStepChannels(stepType, { mockIfEmpty: true })
-  const { detailsMap } = useTemplateDetailsMap(config.channelId)
-  const channel = options.find((o) => o.id === config.channelId)
+  const catalog = useStepTemplateCatalog(config)
+  const { detailsMap } = catalog
+  const channelId = catalog.scopedChannelIds.length === 1 ? catalog.scopedChannelIds[0] : undefined
+  const channel = options.find((o) => o.id === channelId)
   const bizName = channel?.label || "Empresa"
   const bizDetail = channel?.detail
   const templateKey = config.templateName || config.template
-  const tpl = templateKey ? detailsMap.get(templateKey) : undefined
+  const tpl = templateKey
+    ? getTemplateDetail(detailsMap, templateKey, config.languageCode || config.idioma)
+    : undefined
 
   const isQuestion = stepType === "question"
   const isProduct = stepType === "send_product"

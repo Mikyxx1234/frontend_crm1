@@ -598,6 +598,7 @@ export function ChatArea({
           const showConnSwitches = distinctChannels.size >= 2
           let lastChannelId: string | null = null
           let lastDayLabel: string | null = null
+          let lastLane: "in" | "out" | "other" | null = null
           const sectionHasEvent = (
             from: number,
             pred: (content: string) => boolean,
@@ -620,6 +621,7 @@ export function ChatArea({
                   )
                 : sectionHasEvent(index, isConversationCloseEventText)
               if (hideDivider) return null
+              lastLane = null
               return (
                 <li key={message.id || `sep-${index}`} className="list-none">
                   <TicketDivider
@@ -658,6 +660,10 @@ export function ChatArea({
               }
             }
             const isEvent = message.kind === "event"
+            const lane: "in" | "out" | "other" =
+              isEvent || message.isNote ? "other" : message.type === "outgoing" ? "out" : "in"
+            const clusterBreak = !showDay && lastLane !== null && lastLane !== lane
+            lastLane = lane
             return (
               <Fragment key={`${message.id || "msg"}-${index}`}>
                 {showDay && dayLabel ? (
@@ -666,7 +672,7 @@ export function ChatArea({
                   </li>
                 ) : null}
                 <li
-                  className="list-none"
+                  className={cn("list-none", clusterBreak && "mt-2")}
                   data-day-label={dayLabel || daySeparator || undefined}
                 >
                 {connLabel && <ConnectionDivider label={connLabel} />}

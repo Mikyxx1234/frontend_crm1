@@ -27,14 +27,17 @@ export function NodeInlineConfig({
   config,
   stepOptions,
   isFirstMessageStep,
+  inheritedChannelId,
+  bindToInbound,
   onChange,
 }: {
   selected: boolean | undefined;
   stepType: string;
   config: Record<string, unknown> | undefined;
   stepOptions: StepOpt[];
-  /** 1º passo de mensagem do fluxo — exige `channelId` explícito. */
   isFirstMessageStep?: boolean;
+  inheritedChannelId?: string;
+  bindToInbound?: boolean;
   onChange: (next: Record<string, unknown>) => void;
 }) {
   if (!selected) return null;
@@ -55,6 +58,8 @@ export function NodeInlineConfig({
         config={config ?? {}}
         steps={stepOptions}
         isFirstMessageStep={isFirstMessageStep}
+        inheritedChannelId={inheritedChannelId}
+        bindToInbound={bindToInbound}
         onChange={onChange}
       />
     </div>

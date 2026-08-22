@@ -604,6 +604,7 @@ export function useDealChatBinding(params: {
     const showConnSwitches = distinctChannels.size >= 2;
     let lastChannelId: string | null = null;
     let lastDayLabel: string | null = null;
+    let lastLane: "in" | "out" | "other" | null = null;
     const hasPersistedClose = bubbles.some(
       (m) => m.kind === "event" && isConversationCloseEventText(m.content),
     );
@@ -629,6 +630,7 @@ export function useDealChatBinding(params: {
             )
           : sectionHasEvent(index, isConversationCloseEventText);
         if (hideDivider) return null;
+        lastLane = null;
         return (
           <li key={b.id || `sep-${index}`} className="list-none">
             <TicketDivider
@@ -666,6 +668,10 @@ export function useDealChatBinding(params: {
       }
       const isNoteBubble = b.isNote === true;
       const isEvent = b.kind === "event";
+      const lane: "in" | "out" | "other" =
+        isEvent || isNoteBubble ? "other" : b.type === "outgoing" ? "out" : "in";
+      const clusterBreak = !showDay && lastLane !== null && lastLane !== lane;
+      lastLane = lane;
       return (
         <Fragment key={b.id}>
           {showDay && dayLabel ? (
@@ -673,7 +679,7 @@ export function useDealChatBinding(params: {
               <DaySeparator date={dayLabel} />
             </li>
           ) : null}
-        <li className="list-none" data-day-label={dayLabel || undefined}>
+        <li className={`list-none${clusterBreak ? " mt-2" : ""}`} data-day-label={dayLabel || undefined}>
           {connLabel && <ConnectionDivider label={connLabel} />}
           <div
             data-message-id={b.id}
@@ -727,7 +733,7 @@ export function useDealChatBinding(params: {
     messagesNode = (
       <>
         <StickyDayPill date={stickyDayLabel} />
-        <ul className="flex list-none flex-col gap-1.5">
+        <ul className="flex list-none flex-col gap-0.5">
           {bubbleNodes}
         </ul>
         {isResolved && !hasPersistedClose && (

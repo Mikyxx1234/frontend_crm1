@@ -11,12 +11,11 @@ import {
   IconClick as MousePointerClick,
 } from "@tabler/icons-react";
 
-import { isMessageChannelStep } from "@/lib/automation-workflow";
+import { isMessageChannelStep, readStepAllowedChannelIds } from "@/lib/automation-workflow";
 import { NodeInlineConfig } from "./node-inline-config";
 import {
   channelLabelFromOptions,
   StepChannelBadge,
-  StepChannelKebabMenu,
   useConnectedStepChannels,
 } from "./step-channel-picker";
 import { CustomHandle } from "./custom-handle";
@@ -50,6 +49,8 @@ export type InteractiveNodeData = {
   stepOptions?: Array<{ value: string; label: string }>;
   onConfigChange?: (next: Record<string, unknown>) => void;
   isFirstMessageStep?: boolean;
+  inheritedChannelId?: string;
+  bindToInbound?: boolean;
 };
 
 type InteractiveRF = Node<InteractiveNodeData, "interactive">;
@@ -69,14 +70,17 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveRF>) {
       ? ListDetails
       : MousePointerClick;
   const isChannelStep = isMessageChannelStep(data.stepType);
-  const channelId =
-    isChannelStep && data.config && typeof data.config.channelId === "string"
-      ? (data.config.channelId as string)
-      : "";
   const { options: channelOptions } = useConnectedStepChannels(data.stepType, {
     enabled: isChannelStep,
   });
-  const channelBadgeLabel = channelLabelFromOptions(channelOptions, channelId);
+  const allowed = isChannelStep ? readStepAllowedChannelIds(data.config) : null;
+  const channelBadgeLabel = !isChannelStep
+    ? null
+    : allowed === null
+      ? "Todos os canais"
+      : allowed.length === 1
+        ? channelLabelFromOptions(channelOptions, allowed[0]) ?? "1 canal"
+        : `${allowed.length} canais`;
 
   return (
     <FlowNodeShell
@@ -96,21 +100,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveRF>) {
         badge={
           channelBadgeLabel ? <StepChannelBadge label={channelBadgeLabel} /> : undefined
         }
-        actions={
-          <>
-            {isChannelStep && (
-              <StepChannelKebabMenu
-                stepType={data.stepType}
-                channelId={channelId}
-                isFirstMessageStep={!!data.isFirstMessageStep}
-                onChange={(v) =>
-                  data.onConfigChange?.({ ...(data.config ?? {}), channelId: v })
-                }
-              />
-            )}
-            <FlowNodeDeleteButton onDelete={data.onDelete} />
-          </>
-        }
+        actions={<FlowNodeDeleteButton onDelete={data.onDelete} />}
       />
 
       <div className="wf-node__outs">
@@ -185,6 +175,8 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveRF>) {
         config={data.config}
         stepOptions={data.stepOptions ?? []}
         isFirstMessageStep={data.isFirstMessageStep}
+        inheritedChannelId={data.inheritedChannelId}
+        bindToInbound={data.bindToInbound}
         onChange={(next) => data.onConfigChange?.(next)}
       />
       {s && (

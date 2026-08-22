@@ -115,6 +115,8 @@ export async function fetchPipelines(): Promise<PipelineOption[]> {
 
 /** Sentinela do filtro de origem para "Sem origem" (espelha o backend). */
 export const SOURCE_NONE = "__none__";
+/** Sentinela: consolidado de todos os funis. */
+export const PIPELINE_ALL = "__all__";
 
 export type PeriodKey =
   | "today"
@@ -156,6 +158,17 @@ export interface DashboardSummary {
     wonCount: number;
     wonValue: number;
   };
+}
+
+/** Coorte de negócios criados no período e onde estão agora. */
+export interface DashboardNewDeals {
+  count: number;
+  value: number;
+  open: number;
+  won: number;
+  lost: number;
+  wonValue: number;
+  lostValue: number;
 }
 
 export interface DashboardFunnelStage {
@@ -228,6 +241,7 @@ export interface DashboardOwnerRow {
 export interface DashboardData {
   pipelineId: string;
   summary: DashboardSummary;
+  newDeals: DashboardNewDeals;
   funnel: DashboardFunnelStage[];
   bySource: DashboardSourceRow[];
   byOwner: DashboardOwnerRow[];
@@ -246,7 +260,11 @@ export async function fetchDashboard(
     sp.set("startDate", filters.startDate);
     sp.set("endDate", filters.endDate);
   }
-  if (filters.pipelineId) sp.set("pipelineId", filters.pipelineId);
+  if (filters.pipelineId === PIPELINE_ALL) {
+    sp.set("pipeline", "all");
+  } else if (filters.pipelineId) {
+    sp.set("pipelineId", filters.pipelineId);
+  }
   if (filters.stageIds.length) sp.set("stages", filters.stageIds.join(","));
   if (filters.tagIds.length) sp.set("tags", filters.tagIds.join(","));
   if (filters.ownerIds.length) sp.set("owners", filters.ownerIds.join(","));

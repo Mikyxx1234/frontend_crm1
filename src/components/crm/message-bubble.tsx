@@ -813,11 +813,11 @@ function AudioPlayer({
 }
 
 /**
- * Reserva no fim do texto (padrão WhatsApp Web): inline-block da largura
- * do horário. Cabe na última linha → o relógio fica no canto; se não cabe,
- * quebra numa linha de ~13px (não a line-height do corpo).
- * O wrapper do texto usa `leading-[0]` pra o strut do pai não inflar essa
- * linha extra.
+ * Reserva no fim do texto (padrão WhatsApp Web): float à direita com a
+ * mesma largura do horário+ticks. O texto envolve o float; se a última
+ * linha não cabe, o float desce e o overlay não cobre a mensagem.
+ * `flow-root` no wrapper contém o float (sem o hack de leading-0, que
+ * colapsava a linha extra e gerava overlap).
  */
 function MetaReserve({
   time,
@@ -833,11 +833,28 @@ function MetaReserve({
   return (
     <span
       aria-hidden
-      className="invisible inline-block h-[13px] align-bottom whitespace-nowrap pl-1.5 text-[10.5px] leading-[13px]"
+      className="invisible float-right ml-2 inline-flex h-[15px] items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none"
     >
       {isFavorited && <IconStarFilled size={10} />}
       {time}
       {isOutgoing && status ? <StatusTicks status={status} onLightBg={false} /> : null}
+    </span>
+  )
+}
+
+function TextWithMeta({
+  children,
+  metaReserve,
+  className,
+}: {
+  children: ReactNode
+  metaReserve?: ReactNode
+  className?: string
+}) {
+  return (
+    <span className={cn("block flow-root break-words [overflow-wrap:anywhere]", className)}>
+      <span className="whitespace-pre-wrap leading-[1.45]">{children}</span>
+      {metaReserve}
     </span>
   )
 }
@@ -957,19 +974,20 @@ function MessageContent({
       : null
   if (unsupportedText) {
     return (
-      <span className={cn("block leading-[0] break-words italic [overflow-wrap:anywhere]", isOutgoing ? "text-white/80" : "text-[var(--text-muted)]")}>
-        <span className="whitespace-pre-wrap leading-[1.45]">{unsupportedText}</span>
-        {metaReserve}
-      </span>
+      <TextWithMeta
+        metaReserve={metaReserve}
+        className={cn("italic", isOutgoing ? "text-white/80" : "text-[var(--text-muted)]")}
+      >
+        {unsupportedText}
+      </TextWithMeta>
     )
   }
 
   // ── Texto ──────────────────────────────────────────────────────
   return (
-    <span className="block leading-[0] break-words [overflow-wrap:anywhere]">
-      <span className="whitespace-pre-wrap leading-[1.45]">{formatWhatsapp(content)}</span>
-      {metaReserve}
-    </span>
+    <TextWithMeta metaReserve={metaReserve}>
+      {formatWhatsapp(content)}
+    </TextWithMeta>
   )
 }
 
@@ -1026,15 +1044,15 @@ function CaptionText({
   metaReserve?: ReactNode
 }) {
   return (
-    <span
+    <TextWithMeta
+      metaReserve={metaReserve}
       className={cn(
-        "block leading-[0] break-words [overflow-wrap:anywhere]",
+        "text-[13px]",
         !isOutgoing && "text-[var(--chat-bubble-received-text)]",
       )}
     >
-      <span className="whitespace-pre-wrap text-[13px] leading-[1.45]">{formatWhatsapp(caption)}</span>
-      {metaReserve}
-    </span>
+      {formatWhatsapp(caption)}
+    </TextWithMeta>
   )
 }
 
@@ -1601,7 +1619,7 @@ export function MessageBubble({
         )}
         <div
           className={cn(
-            "relative min-w-0 overflow-visible rounded-[var(--radius-lg)] px-3 py-1.5 text-sm leading-[1.45]",
+            "relative min-w-0 overflow-visible rounded-[var(--radius-lg)] px-3 py-2 text-sm leading-[1.45]",
             hasReactions && "z-[2]",
             isOutgoing ? "chat-bubble-sent" : "chat-bubble-received",
             isOutgoing
@@ -1752,14 +1770,14 @@ export function MessageBubble({
           )}
           {/* Horário + ticks. Sem botões, overlay no spacer do texto
               (canto inferior direito — padrão WhatsApp Web).
-              `bottom`/`right` batem com py-1.5 / px-3.
+              `bottom`/`right` batem com py-2 / px-3.
               COM botões, entra em fluxo abaixo deles. */}
           <span
             className={cn(
               "pointer-events-none select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
               hasButtons
-                ? "mt-1 flex w-full justify-end"
-                : "absolute bottom-1.5 right-3 inline-flex",
+                ? "mt-1.5 flex w-full justify-end"
+                : "absolute bottom-2 right-3 inline-flex",
               timeOverMedia &&
                 "rounded px-1 py-0.5 text-white shadow-[0_1px_2px_rgba(0,0,0,0.55)] [text-shadow:0_1px_2px_rgba(0,0,0,0.75)] bg-black/35",
               !timeOverMedia && isOutgoing && isBot && !isCampaign && "text-white/70",

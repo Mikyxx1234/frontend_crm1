@@ -1,0 +1,546 @@
+"use client";
+
+import Link from "next/link";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconFilter,
+  IconLayoutBottombar,
+  IconLayoutNavbar,
+} from "@tabler/icons-react";
+
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { EmptyState } from "@/components/crm/empty-state";
+import { PIPELINE_ALL } from "@/features/dashboard-v2/api";
+import { cn } from "@/lib/utils";
+
+export type PipelineProgressStage = {
+  id: string;
+  name: string;
+  color: string;
+  count: number;
+  value: number;
+  entered: number;
+  lost: number;
+  href?: string;
+};
+
+export type PipelineProgressSummary = {
+  wonCount: number;
+  wonValue: number;
+  lostCount: number;
+  lostValue: number;
+  href?: string;
+};
+
+/** Totais do período — mesmos recortes da salsicha (não a coorte dos novos). */
+export type PipelineProgressTotals = {
+  newCount: number;
+  newValue: number;
+  openCount: number;
+  wonCount: number;
+  wonValue: number;
+  lostCount: number;
+  lostValue: number;
+};
+
+export type PipelineProgressLayout = "funnel-first" | "summary-first";
+
+export type PipelineProgressPeriod = {
+  from: string;
+  to: string;
+};
+
+const numberFmt = new Intl.NumberFormat("pt-BR");
+const currencyFmt = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  maximumFractionDigits: 0,
+});
+const compactCurrencyFmt = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+const dateFmt = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "short",
+});
+
+function formatCount(value: number) {
+  return numberFmt.format(value);
+}
+
+function formatMoney(value: number) {
+  return Math.abs(value) >= 1000
+    ? compactCurrencyFmt.format(value)
+    : currencyFmt.format(value);
+}
+
+function formatDay(iso: string) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : dateFmt.format(d);
+}
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+function scrollBehavior(): ScrollBehavior {
+  return prefersReducedMotion() ? "auto" : "smooth";
+}
+
+function MetricLink({
+  href,
+  children,
+  className,
+}: {
+  href?: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  if (!href) return <div className={className}>{children}</div>;
+  return (
+    <Link href={href} className={cn("min-w-0 outline-none", className)}>
+      {children}
+    </Link>
+  );
+}
+
+function StageColumn({ stage }: { stage: PipelineProgressStage }) {
+  return (
+    <article className="pipeline-progress-col">
+      <span
+        className="h-1.5 w-full rounded-full"
+        style={{ background: stage.color || "var(--brand-primary)" }}
+        aria-hidden
+      />
+      <h3 className="truncate font-display text-[11px] font-bold uppercase tracking-wide text-[var(--pipeline-text-muted)]">
+        {stage.name}
+      </h3>
+      <MetricLink href={stage.href}>
+        <p className="font-display text-[26px] font-bold leading-none tabular-nums text-[var(--pipeline-text)]">
+          {formatCount(stage.count)}
+        </p>
+        <p className="mt-1 font-body text-[12px] text-[var(--pipeline-text-secondary)]">
+          {formatMoney(stage.value)}
+        </p>
+      </MetricLink>
+      <div className="mt-auto rounded-[var(--radius-md)] border border-[var(--pipeline-border)] bg-[var(--pipeline-surface)] px-2.5 py-2">
+        <p
+          className={cn(
+            "font-display text-[16px] font-bold tabular-nums",
+            stage.entered > 0
+              ? "text-[var(--pipeline-success)]"
+              : "text-[var(--pipeline-text-muted)]",
+          )}
+        >
+          {stage.entered > 0 ? `+${formatCount(stage.entered)}` : "0"}
+        </p>
+        <p className="font-body text-[11px] text-[var(--pipeline-text-muted)]">
+          {stage.entered === 1 ? "entrou" : "entraram"}
+        </p>
+      </div>
+      <MetricLink
+        href={stage.href}
+        className={cn(
+          "font-body text-[12px] tabular-nums",
+          stage.lost > 0
+            ? "font-semibold text-[var(--pipeline-danger)]"
+            : "text-[var(--pipeline-text-muted)]",
+        )}
+      >
+        {stage.lost > 0
+          ? `${formatCount(stage.lost)} ${stage.lost === 1 ? "perda" : "perdas"}`
+          : "0 perdas"}
+      </MetricLink>
+    </article>
+  );
+}
+
+function SummaryColumn({ summary }: { summary: PipelineProgressSummary }) {
+  return (
+    <article className="pipeline-progress-col is-summary justify-between">
+      <MetricLink href={summary.href}>
+        <p className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--pipeline-text-muted)]">
+          Ganhos
+        </p>
+        <p className="mt-2 font-display text-[26px] font-bold leading-none tabular-nums text-[var(--pipeline-success)]">
+          {formatCount(summary.wonCount)}
+        </p>
+        <p className="mt-1 font-body text-[12px] text-[var(--pipeline-text-secondary)]">
+          {formatMoney(summary.wonValue)}
+        </p>
+      </MetricLink>
+      <MetricLink href={summary.href}>
+        <p className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--pipeline-text-muted)]">
+          Perdidos
+        </p>
+        <p className="mt-2 font-display text-[22px] font-bold leading-none tabular-nums text-[var(--pipeline-danger)]">
+          {formatCount(summary.lostCount)}
+        </p>
+        <p className="mt-1 font-body text-[12px] text-[var(--pipeline-text-secondary)]">
+          {formatMoney(summary.lostValue)}
+        </p>
+      </MetricLink>
+    </article>
+  );
+}
+
+function TotalsRow({
+  totals,
+  position,
+}: {
+  totals: PipelineProgressTotals;
+  position: "top" | "bottom";
+}) {
+  return (
+    <ul
+      className={cn(
+        "pipeline-progress-totals",
+        position === "top" ? "is-top" : "is-bottom",
+      )}
+    >
+      <li className="pipeline-progress-total">
+        <p className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--pipeline-text-muted)]">
+          Novos no período
+        </p>
+        <p className="mt-1.5 font-display text-[24px] font-bold leading-none tabular-nums text-[var(--pipeline-success)]">
+          {totals.newCount > 0 ? `+${formatCount(totals.newCount)}` : "0"}
+        </p>
+        <p className="mt-1 font-body text-[12px] text-[var(--pipeline-text-secondary)]">
+          {formatMoney(totals.newValue)}
+        </p>
+      </li>
+      <li className="pipeline-progress-total">
+        <p className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--pipeline-text-muted)]">
+          Em andamento
+        </p>
+        <p className="mt-1.5 font-display text-[24px] font-bold leading-none tabular-nums text-[var(--pipeline-text)]">
+          {formatCount(totals.openCount)}
+        </p>
+      </li>
+      <li className="pipeline-progress-total">
+        <p className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--pipeline-text-muted)]">
+          Ganhos no período
+        </p>
+        <p className="mt-1.5 font-display text-[24px] font-bold leading-none tabular-nums text-[var(--pipeline-success)]">
+          {formatCount(totals.wonCount)}
+        </p>
+        <p className="mt-1 font-body text-[12px] text-[var(--pipeline-text-secondary)]">
+          {formatMoney(totals.wonValue)}
+        </p>
+      </li>
+      <li className="pipeline-progress-total">
+        <p className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--pipeline-text-muted)]">
+          Perdidos no período
+        </p>
+        <p className="mt-1.5 font-display text-[24px] font-bold leading-none tabular-nums text-[var(--pipeline-danger)]">
+          {formatCount(totals.lostCount)}
+        </p>
+        <p className="mt-1 font-body text-[12px] text-[var(--pipeline-text-secondary)]">
+          {formatMoney(totals.lostValue)}
+        </p>
+      </li>
+    </ul>
+  );
+}
+
+export function PipelineProgress({
+  stages,
+  summary,
+  totals,
+  pipelineHref,
+  period,
+  defaultLayout = "funnel-first",
+  pipelines,
+  selectedPipelineId,
+  onPipelineChange,
+}: {
+  stages: PipelineProgressStage[];
+  summary: PipelineProgressSummary;
+  totals?: PipelineProgressTotals;
+  pipelineHref: string;
+  period?: PipelineProgressPeriod;
+  defaultLayout?: PipelineProgressLayout;
+  pipelines?: Array<{ id: string; name: string }>;
+  selectedPipelineId?: string;
+  onPipelineChange?: (pipelineId: string) => void;
+}) {
+  const labelId = useId();
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef({
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    startScroll: 0,
+    armed: false,
+    active: false,
+    moved: false,
+  });
+  const suppressClickRef = useRef(false);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [layout, setLayout] = useState<PipelineProgressLayout>(defaultLayout);
+  const summaryOnTop = layout === "summary-first";
+
+  const updateEdges = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    setCanPrev(el.scrollLeft > 2);
+    setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    updateEdges();
+    el.addEventListener("scroll", updateEdges, { passive: true });
+    const ro = new ResizeObserver(updateEdges);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateEdges);
+      ro.disconnect();
+    };
+  }, [stages.length, updateEdges]);
+
+  const scrollByDir = useCallback((dir: -1 | 1) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const step = Math.round(el.clientWidth * 0.72);
+    el.scrollBy({ left: dir * step, behavior: scrollBehavior() });
+  }, []);
+
+  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const el = scrollerRef.current;
+    if (!el) return;
+    dragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startScroll: el.scrollLeft,
+      armed: true,
+      active: false,
+      moved: false,
+    };
+  };
+
+  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current;
+    const el = scrollerRef.current;
+    if (!d.armed || !el) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (!d.active) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        d.armed = false;
+        return;
+      }
+      d.active = true;
+      setDragging(true);
+      el.setPointerCapture(e.pointerId);
+    }
+    d.moved = true;
+    el.scrollLeft = d.startScroll - dx;
+    e.preventDefault();
+  };
+
+  const endDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current;
+    const el = scrollerRef.current;
+    if (d.active && el?.hasPointerCapture(e.pointerId)) {
+      el.releasePointerCapture(e.pointerId);
+    }
+    if (d.moved) suppressClickRef.current = true;
+    d.armed = false;
+    d.active = false;
+    d.moved = false;
+    setDragging(false);
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      scrollByDir(-1);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      scrollByDir(1);
+    }
+  };
+
+  const fromLabel = period ? formatDay(period.from) : "";
+  const toLabel = period ? formatDay(period.to) : "";
+
+  return (
+    <section
+      className="pipeline-progress group/pipeline"
+      role="region"
+      aria-labelledby={labelId}
+    >
+      <header className="flex items-start justify-between gap-3 border-b border-[var(--pipeline-border)] px-4 py-3.5">
+        <div className="min-w-0">
+          <h2
+            id={labelId}
+            className="font-display text-[14px] font-bold tracking-tight text-[var(--pipeline-text)]"
+          >
+            Funil e progresso
+          </h2>
+          <p className="mt-0.5 font-body text-[11px] text-[var(--pipeline-text-muted)]">
+            Estoque aberto, entradas e perdas por etapa
+            {period && fromLabel && toLabel ? (
+              <>
+                {" · "}
+                <time dateTime={period.from}>{fromLabel}</time>
+                {" – "}
+                <time dateTime={period.to}>{toLabel}</time>
+              </>
+            ) : null}
+          </p>
+          {pipelines && pipelines.length > 0 && onPipelineChange ? (
+            <div className="mt-2 min-w-0 max-w-[16rem]">
+              <DropdownGlass
+                options={[
+                  { value: PIPELINE_ALL, label: "Todos os funis" },
+                  ...pipelines.map((p) => ({ value: p.id, label: p.name })),
+                ]}
+                value={selectedPipelineId ?? PIPELINE_ALL}
+                onValueChange={onPipelineChange}
+                menuLabel="Funil"
+                searchable={pipelines.length > 6}
+                searchPlaceholder="Buscar funil"
+                triggerClassName="h-8 min-w-[10rem] border-[var(--pipeline-border)] bg-[var(--pipeline-surface-raised)] text-[var(--pipeline-text)]"
+              />
+            </div>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <div
+            className="flex rounded-[var(--radius-md)] border border-[var(--pipeline-border)] bg-[var(--pipeline-surface-raised)] p-0.5"
+            role="group"
+            aria-label="Posição do resumo"
+          >
+            <button
+              type="button"
+              aria-pressed={summaryOnTop}
+              aria-label="Resumo acima da salsicha"
+              onClick={() => setLayout("summary-first")}
+              className={cn(
+                "flex size-8 items-center justify-center rounded-[calc(var(--radius-md)-2px)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]",
+                summaryOnTop
+                  ? "bg-[var(--pipeline-control)] text-[var(--pipeline-text)]"
+                  : "text-[var(--pipeline-text-muted)] hover:bg-[var(--pipeline-control)]/60",
+              )}
+            >
+              <IconLayoutNavbar size={16} stroke={2.1} />
+            </button>
+            <button
+              type="button"
+              aria-pressed={!summaryOnTop}
+              aria-label="Resumo abaixo da salsicha"
+              onClick={() => setLayout("funnel-first")}
+              className={cn(
+                "flex size-8 items-center justify-center rounded-[calc(var(--radius-md)-2px)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]",
+                !summaryOnTop
+                  ? "bg-[var(--pipeline-control)] text-[var(--pipeline-text)]"
+                  : "text-[var(--pipeline-text-muted)] hover:bg-[var(--pipeline-control)]/60",
+              )}
+            >
+              <IconLayoutBottombar size={16} stroke={2.1} />
+            </button>
+          </div>
+          <Link
+            href={pipelineHref}
+            className="rounded-[var(--radius-md)] font-display text-[11px] font-semibold text-[var(--brand-primary)] outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+          >
+            Pipeline
+          </Link>
+        </div>
+      </header>
+
+      {totals ? (
+        summaryOnTop ? <TotalsRow totals={totals} position="top" /> : null
+      ) : null}
+
+      {stages.length === 0 ? (
+        <EmptyState
+          icon={<IconFilter size={24} />}
+          title="Sem etapas neste funil"
+          description="Selecione outro pipeline ou cadastre etapas."
+          className="py-10"
+        />
+      ) : (
+        <div className="relative min-w-0">
+          <div
+            ref={scrollerRef}
+            tabIndex={0}
+            role="region"
+            aria-label="Etapas do funil"
+            className={cn(
+              "pipeline-progress-scroller outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand-primary)]",
+              dragging && "is-dragging",
+            )}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onKeyDown={onKeyDown}
+            onClickCapture={(e) => {
+              if (!suppressClickRef.current) return;
+              e.preventDefault();
+              e.stopPropagation();
+              suppressClickRef.current = false;
+            }}
+          >
+            <div className="pipeline-progress-track">
+              {stages.map((stage) => (
+                <StageColumn key={stage.id} stage={stage} />
+              ))}
+              <SummaryColumn summary={summary} />
+            </div>
+          </div>
+
+          {canPrev ? (
+            <button
+              type="button"
+              aria-label="Ver etapas anteriores"
+              onClick={() => scrollByDir(-1)}
+              className="absolute left-2 top-1/2 z-10 hidden size-9 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--pipeline-control)] text-[var(--pipeline-text)] opacity-0 shadow-[var(--pipeline-shadow)] outline-none transition-opacity hover:bg-[var(--pipeline-control-hover)] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] group-hover/pipeline:opacity-100 group-focus-within/pipeline:opacity-100 motion-reduce:transition-none md:flex"
+            >
+              <IconChevronLeft size={18} stroke={2.2} />
+            </button>
+          ) : null}
+          {canNext ? (
+            <button
+              type="button"
+              aria-label="Ver próximas etapas"
+              onClick={() => scrollByDir(1)}
+              className="absolute right-2 top-1/2 z-10 hidden size-9 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--pipeline-control)] text-[var(--pipeline-text)] opacity-0 shadow-[var(--pipeline-shadow)] outline-none transition-opacity hover:bg-[var(--pipeline-control-hover)] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] group-hover/pipeline:opacity-100 group-focus-within/pipeline:opacity-100 motion-reduce:transition-none md:flex"
+            >
+              <IconChevronRight size={18} stroke={2.2} />
+            </button>
+          ) : null}
+        </div>
+      )}
+
+      {totals && !summaryOnTop ? (
+        <TotalsRow totals={totals} position="bottom" />
+      ) : null}
+    </section>
+  );
+}

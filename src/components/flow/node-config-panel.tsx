@@ -14,10 +14,21 @@ import {
   remapFlowEdges,
   resolveStepType,
 } from "@/lib/flow-step-adapter"
-import { summarizeStepConfig } from "@/lib/automation-workflow"
+import {
+  defaultTriggerConfig,
+  summarizeStepConfig,
+  summarizeTriggerConfig,
+  triggerBindsInboundChannel,
+  triggerTypeLabel,
+} from "@/lib/automation-workflow"
+import {
+  TriggerConfigFields,
+  TriggerTypeSelect,
+  useTriggerNameLookup,
+} from "@/components/automations/trigger-config-fields"
 import { STEP_FIELDS, type EditorField } from "@/components/automations/editor-fields"
 import { NodeConfigEditor } from "@/components/automations/inline-editor"
-import { useDepartmentOptions, useUserOptions } from "@/components/automations/editor-data"
+import { useConditionNameLookup, useDepartmentOptions, useUserOptions } from "@/components/automations/editor-data"
 import { FlowConditionConfig } from "./flow-condition-config"
 import { FlowRoundRobinConfig } from "./flow-round-robin-config"
 import { cn } from "@/lib/utils"
@@ -62,17 +73,31 @@ export function NodeConfigPanel({ id, data }: { id: string; data: FlowNodeData }
 
   const cfg = data.config ?? {}
   const stepType = resolveStepType(data)
+  const triggerType = String(
+    data.triggerType ??
+      allNodes.find((n) => n.data.kind === "trigger")?.data.triggerType ??
+      "",
+  )
+  const isTrigger = data.kind === "trigger" || stepType === "trigger"
+  const inboundBound = triggerBindsInboundChannel(triggerType)
   const isCondition = stepType === "condition"
   const isRoundRobin = stepType === "round_robin"
-  const catalogFields = !CUSTOM_STEP_TYPES.has(stepType) ? fieldsForFlow(stepType) : null
+  const catalogFields = !CUSTOM_STEP_TYPES.has(stepType) && !isTrigger ? fieldsForFlow(stepType) : null
   const { firstId, channelId: inheritedChannelId } = firstMessageChannel(allNodes)
   const isFirstMessageStep = id === firstId
   const isFinish = (stepType === "finish" || stepType === "stop_automation") && !catalogFields
   const isAssignOwner = stepType === "assign_owner"
   const { options: userOptions, isLoading: loadingUsers } = useUserOptions()
   const { options: deptOptions, isLoading: loadingDepts } = useDepartmentOptions()
+  const triggerLookup = useTriggerNameLookup()
+  const conditionLookup = useConditionNameLookup()
+  const nameLookup = useMemo(
+    () => ({ ...triggerLookup, ...conditionLookup }),
+    [triggerLookup, conditionLookup],
+  )
 
   useEffect(() => {
+    if (isTrigger) return
     const migrated = isCondition ? migrateConditionNode(data) : data
     const outputs = outputsFromStepConfig(stepType, (migrated.config ?? {}) as Record<string, unknown>, migrated.outputs)
     const same =
@@ -98,14 +123,67 @@ export function NodeConfigPanel({ id, data }: { id: string; data: FlowNodeData }
       updateNodeData(id, {
         config: next,
         outputs: outputsFromStepConfig(stepType, next as Record<string, unknown>, data.outputs),
-        preview: summarizeStepConfig(stepType, next),
+        preview: summarizeStepConfig(stepType, next, nameLookup),
       })
     },
-    [id, stepType, data.outputs, updateNodeData],
+    [id, stepType, data.outputs, nameLookup, updateNodeData],
   )
 
+  const commitTriggerType = useCallback(
+    (nextType: string) => {
+      if (!nextType || nextType === triggerType) return
+      const prev = (data.config ?? {}) as Record<string, unknown>
+      const nextConfig: Record<string, unknown> = { ...defaultTriggerConfig(nextType) }
+      if (prev.__rfPos !== undefined) nextConfig.__rfPos = prev.__rfPos
+      if (prev.__entryDisconnected === true) nextConfig.__entryDisconnected = true
+      updateNodeData(id, {
+        triggerType: nextType,
+        title: triggerTypeLabel(nextType),
+        config: nextConfig as NodeConfig,
+        preview: summarizeTriggerConfig(nextType, nextConfig, triggerLookup),
+      })
+    },
+    [id, triggerType, data.config, triggerLookup, updateNodeData],
+  )
+
+  useEffect(() => {
+    if (!isTrigger || !triggerType) return
+    const next = summarizeTriggerConfig(triggerType, cfg, nameLookup)
+    if (next !== data.preview) updateNodeData(id, { preview: next })
+  }, [isTrigger, triggerType, cfg, nameLookup, data.preview, id, updateNodeData])
+
+  useEffect(() => {
+    if (!isCondition) return
+    const next = summarizeStepConfig("condition", cfg, nameLookup)
+    if (next !== data.preview) updateNodeData(id, { preview: next })
+  }, [isCondition, cfg, nameLookup, data.preview, id, updateNodeData])
+
   return (
-    <div className="nodrag nopan cursor-default border-t border-border bg-[var(--color-bg-card)] px-3.5 py-4">
+    <div
+      className={cn(
+        "nodrag nopan cursor-default border-t border-border bg-[var(--color-bg-card)] px-3.5 py-4",
+        isTrigger && "[&_label]:text-xs",
+      )}
+    >
+      {isTrigger ? (
+        <div className="space-y-4">
+          <TriggerTypeSelect value={triggerType} onChange={commitTriggerType} />
+          {triggerType ? (
+            <TriggerConfigFields
+              stacked
+              triggerType={triggerType}
+              value={cfg as Record<string, unknown>}
+              onChange={(next) => {
+                updateNodeData(id, {
+                  config: next as NodeConfig,
+                  preview: summarizeTriggerConfig(triggerType, next, triggerLookup),
+                })
+              }}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
       {isCondition && <FlowConditionConfig cfg={cfg} onChange={commitConfig} />}
 
       {isRoundRobin && <FlowRoundRobinConfig cfg={cfg} onChange={commitConfig} />}
@@ -117,11 +195,14 @@ export function NodeConfigPanel({ id, data }: { id: string; data: FlowNodeData }
             fields={catalogFields}
             hideStepTargets
             isFirstMessageStep={isFirstMessageStep}
-            inheritedChannelId={isFirstMessageStep ? undefined : inheritedChannelId}
+            inheritedChannelId={inboundBound || isFirstMessageStep ? undefined : inheritedChannelId}
+            bindToInbound={inboundBound}
             config={cfg as Record<string, unknown>}
             steps={targetOptions.map((n) => ({ value: n.id, label: `#${n.ref} · ${n.title}` }))}
             onChange={(next) => {
-              if (typeof next.channelId === "string") rememberFlowDefaultChannel(next.channelId)
+              if (!inboundBound && typeof next.channelId === "string") {
+                rememberFlowDefaultChannel(next.channelId)
+              }
               commitConfig(next as NodeConfig)
             }}
           />

@@ -151,7 +151,19 @@ function ManagerHome({
           error={dashboardQuery.error}
           hasData={!!dashboardQuery.data}
         >
-          {dashboardQuery.data ? <ManagerDashboard data={dashboardQuery.data} /> : null}
+          {dashboardQuery.data ? (
+            <ManagerDashboard
+              data={dashboardQuery.data}
+              period={period}
+              pipelines={options?.pipelines?.map((p) => ({ id: p.id, name: p.name }))}
+              selectedPipelineId={
+                filters.pipelineId ?? dashboardQuery.data.pipelineId
+              }
+              onPipelineChange={(pipelineId) =>
+                patch({ pipelineId, stageIds: [] })
+              }
+            />
+          ) : null}
         </QueryState>
       ) : isService ? (
         <QueryState

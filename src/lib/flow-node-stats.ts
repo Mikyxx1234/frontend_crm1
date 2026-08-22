@@ -24,14 +24,18 @@ const ZERO: FlowNodeStats = { sucessos: 0, alertas: 0, erros: 0 }
 
 /**
  * O gatilho não tem `stepId`, então o backend agrega os logs da automação por
- * status cru. "Sucesso" aqui é toda execução que chegou a começar.
+ * status cru. `STARTED` é só o eco do disparo — sucesso é o desfecho
+ * (`COMPLETED` / `SUCCESS`), o mesmo critério das abas da modal.
  */
 function triggerStats(trigger: Record<string, number> | undefined): FlowNodeStats {
   const t = trigger ?? {}
   return {
-    sucessos: (t["STARTED"] ?? 0) + (t["COMPLETED"] ?? 0) + (t["COMPLETED_WITH_ERRORS"] ?? 0),
+    sucessos:
+      (t["COMPLETED"] ?? 0) +
+      (t["COMPLETED_WITH_ERRORS"] ?? 0) +
+      (t["SUCCESS"] ?? 0),
     alertas: t["SKIPPED"] ?? 0,
-    erros: t["FAILED"] ?? 0,
+    erros: (t["FAILED"] ?? 0) + (t["FAILED_HANDLED"] ?? 0),
   }
 }
 

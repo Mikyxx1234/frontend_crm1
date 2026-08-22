@@ -137,8 +137,9 @@ export function fetchAutomation(id: string): Promise<AutomationDetailDto> {
 
 /**
  * `GET /api/automations/:id/stats` — mesmos contadores que o editor
- * legado consome. `trigger` vem por status cru (`STARTED`, `COMPLETED`,
- * `FAILED`…); `steps` já vem agregado por passo.
+ * legado consome. `trigger` vem por status cru (`COMPLETED`, `SKIPPED`,
+ * `FAILED`…; `STARTED` é eco e o card não soma); `steps` já vem
+ * agregado por passo.
  */
 export function fetchAutomationStats(id: string): Promise<AutomationStats> {
   return getJson<AutomationStats>(

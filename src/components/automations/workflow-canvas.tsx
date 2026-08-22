@@ -781,8 +781,11 @@ function WorkflowCanvasInner({
           label: triggerTypeLabel(triggerType),
           summary: triggerSummary,
           stats: {
-            success: (ts["STARTED"] ?? 0) + (ts["COMPLETED"] ?? 0) + (ts["COMPLETED_WITH_ERRORS"] ?? 0),
-            failed: ts["FAILED"] ?? 0,
+            success:
+              (ts["COMPLETED"] ?? 0) +
+              (ts["COMPLETED_WITH_ERRORS"] ?? 0) +
+              (ts["SUCCESS"] ?? 0),
+            failed: (ts["FAILED"] ?? 0) + (ts["FAILED_HANDLED"] ?? 0),
             skipped: ts["SKIPPED"] ?? 0,
           },
           onStatsClick: () => onStepLogsOpenRef.current?.("trigger"),

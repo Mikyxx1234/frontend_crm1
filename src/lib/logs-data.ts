@@ -28,6 +28,7 @@ export interface LogEntry {
   id: string
   sessionId: string
   status: LogStatus
+  rawStatus: string
   title: string
   message: string
   timestamp: string // ISO
@@ -86,14 +87,14 @@ export interface AutomationLogRow {
 }
 
 /**
- * Vocabulário do backend → o das abas do canvas. `SKIPPED` é alerta e
- * `FAILED`/`FAILED_HANDLED` são erro, o mesmo mapeamento dos contadores dos
- * cards. Status desconhecido cai em alerta para não sumir da lista.
+ * Vocabulário do backend → o das abas do canvas. Igual aos rodapés dos
+ * cards: `SUCCESS`/`COMPLETED` = sucesso, `SKIPPED` = alerta,
+ * `FAILED`/`FAILED_HANDLED` = erro. `STARTED` é eco do disparo e não
+ * entra na lista (ver `isTriggerEcho`). Desconhecido cai em alerta.
  */
 function toLogStatus(raw: string): LogStatus {
   switch (raw) {
     case "SUCCESS":
-    case "STARTED":
     case "COMPLETED":
     case "COMPLETED_WITH_ERRORS":
       return "success"
@@ -103,6 +104,11 @@ function toLogStatus(raw: string): LogStatus {
     default:
       return "alert"
   }
+}
+
+/** Eco do gatilho (`stepId` nulo + STARTED) — a linha útil é o desfecho. */
+export function isTriggerEcho(row: Pick<AutomationLogRow, "status" | "stepId">): boolean {
+  return row.status === "STARTED" && (row.stepId == null || row.stepId === "")
 }
 
 function shortRef(id: string): string {
@@ -126,13 +132,40 @@ function payloadString(
   return null
 }
 
-function humanizeEventName(raw: string): string {
-  if (EVENT_LABEL[raw]) return EVENT_LABEL[raw]
-  const trigger = triggerTypeLabel(raw)
-  if (trigger !== raw) return trigger
-  const step = stepTypeLabel(raw)
-  if (step !== raw) return step
-  return raw.replace(/_/g, " ")
+/** Uma chave de evento/passo (`message_sent`) → rótulo em português. */
+export function eventTypeLabel(raw: string): string {
+  const key = raw.trim()
+  if (!key) return raw
+  if (EVENT_LABEL[key]) return EVENT_LABEL[key]
+  const lower = key.toLowerCase()
+  if (EVENT_LABEL[lower]) return EVENT_LABEL[lower]
+  const trigger = triggerTypeLabel(lower)
+  if (trigger !== lower) return trigger
+  const triggerOrig = triggerTypeLabel(key)
+  if (triggerOrig !== key) return triggerOrig
+  const step = stepTypeLabel(key)
+  if (step !== key) return step
+  const stepLower = stepTypeLabel(lower)
+  if (stepLower !== lower) return stepLower
+  if (/^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/i.test(key)) {
+    return key.replace(/_/g, " ")
+  }
+  return key
+}
+
+const EVENT_TOKEN = /\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/gi
+
+function humanizeLogMessage(raw: string): string {
+  const sep = " — "
+  const idx = raw.indexOf(sep)
+  if (idx === -1) {
+    return raw.replace(EVENT_TOKEN, (token) => eventTypeLabel(token))
+  }
+  const head = raw.slice(0, idx)
+  const tail = raw.slice(idx + sep.length)
+  const labeled = eventTypeLabel(tail)
+  if (labeled !== tail) return `${head}${sep}${labeled}`
+  return `${head}${sep}${tail.replace(EVENT_TOKEN, (token) => eventTypeLabel(token))}`
 }
 
 function eventNameFromRow(row: AutomationLogRow): string | null {
@@ -142,7 +175,7 @@ function eventNameFromRow(row: AutomationLogRow): string | null {
     row.stepType ||
     row.metaWebhookEvent?.eventType ||
     null
-  return raw ? humanizeEventName(raw) : null
+  return raw ? eventTypeLabel(raw) : null
 }
 
 function channelFromRow(row: AutomationLogRow): string | null {
@@ -208,17 +241,23 @@ export function automationLogToEntry(row: AutomationLogRow): LogEntry {
   const channelLabel = channelFromRow(row)
   const snippet = snippetFromRow(row)
   const rawMessage = row.message?.trim() || ""
-  const message = rawMessage || STATUS_TITLE[status]
+  const message = rawMessage ? humanizeLogMessage(rawMessage) : STATUS_TITLE[status]
   const reason =
-    status !== "success" && rawMessage && rawMessage !== eventLabel
-      ? rawMessage
-      : null
+    status !== "success" && message && message !== eventLabel ? message : null
   const contactId = row.contactId ?? ""
   const dealId = row.dealId ?? ""
+  const contactLabel =
+    row.contactName?.trim() ||
+    (contactId ? `Contato ${shortRef(contactId)}` : "Sem contato")
 
+  // Desfecho em português (ex.: "finalizada com sucesso"), não o nome cru
+  // do gatilho. O evento vai no chip / Detalhes.
   const title =
-    eventLabel ||
-    (rawMessage && rawMessage !== STATUS_TITLE[status] ? rawMessage : STATUS_TITLE[status])
+    message && message !== STATUS_TITLE[status]
+      ? message
+      : eventLabel
+        ? `${contactLabel} — ${eventLabel}`
+        : STATUS_TITLE[status]
 
   const summary: Record<string, string | number | boolean> = {
     id: row.id,
@@ -239,9 +278,6 @@ export function automationLogToEntry(row: AutomationLogRow): LogEntry {
   if (row.dealName) summary.dealName = row.dealName
   if (row.dealNumber != null) summary.dealNumber = row.dealNumber
 
-  const contactLabel =
-    row.contactName?.trim() ||
-    (contactId ? `Contato ${shortRef(contactId)}` : "Sem contato")
   const dealLabel =
     row.dealName?.trim() ||
     (row.dealNumber != null
@@ -254,6 +290,7 @@ export function automationLogToEntry(row: AutomationLogRow): LogEntry {
     id: row.id,
     sessionId: row.id,
     status,
+    rawStatus: row.status,
     title,
     message,
     timestamp: row.executedAt,

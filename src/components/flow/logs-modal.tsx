@@ -28,6 +28,7 @@ import { blockKeyForStepType, getBlockMeta } from "@/components/crm/flow-block-i
 import {
   automationLogToEntry,
   formatDateTime,
+  isTriggerEcho,
   matchesLogQuery,
   type LogEntry,
   type LogStatus,
@@ -75,7 +76,9 @@ export function LogsModal({
     const pages = query.data?.pages ?? []
     // A rota responde `items`; o editor legado lê `logs ?? items` e mantemos
     // a mesma tolerância.
-    const rows = pages.flatMap((page) => page.logs ?? page.items ?? [])
+    const rows = pages
+      .flatMap((page) => page.logs ?? page.items ?? [])
+      .filter((row) => !isTriggerEcho(row))
     const entered = rows.map(automationLogToEntry)
     return {
       entered,
@@ -270,7 +273,7 @@ function LogRow({
   const style = STATUS_STYLE[entry.status]
   const Icon = style.icon
   const detail =
-    entry.reason ||
+    (entry.reason && entry.reason !== entry.title ? entry.reason : null) ||
     (entry.message && entry.message !== entry.title ? entry.message : null)
   const quotedSnippet =
     entry.snippet && entry.snippet !== detail ? `“${entry.snippet}”` : null
@@ -322,6 +325,13 @@ function LogRow({
               {entry.channelLabel}
             </span>
           )}
+          {entry.eventLabel &&
+            !entry.title.toLowerCase().includes(entry.eventLabel.toLowerCase()) && (
+              <span className="inline-flex items-center gap-1.5">
+                <Inbox className="size-4" aria-hidden />
+                {entry.eventLabel}
+              </span>
+            )}
           {entry.stepType && (
             <span className="inline-flex items-center gap-1.5">
               <GitBranch className="size-4" aria-hidden />

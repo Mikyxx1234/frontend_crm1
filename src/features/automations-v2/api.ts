@@ -194,12 +194,18 @@ export interface AutomationLogsPage {
 /** `stepId: "trigger"` é a convenção do backend para os logs sem passo. */
 export function fetchAutomationLogs(
   id: string,
-  params: { stepId?: string; page?: number; perPage?: number } = {},
+  params: {
+    stepId?: string;
+    page?: number;
+    perPage?: number;
+    status?: readonly string[];
+  } = {},
 ): Promise<AutomationLogsPage> {
   const sp = new URLSearchParams();
   sp.set("page", String(params.page ?? 1));
   sp.set("perPage", String(params.perPage ?? 50));
   if (params.stepId) sp.set("stepId", params.stepId);
+  if (params.status?.length) sp.set("status", params.status.join(","));
   return getJson<AutomationLogsPage>(
     `/api/automations/${id}/logs?${sp.toString()}`,
     "Erro ao carregar logs da automação.",

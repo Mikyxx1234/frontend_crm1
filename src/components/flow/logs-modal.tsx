@@ -33,7 +33,8 @@ import {
   type LogEntry,
   type LogStatus,
 } from "@/lib/logs-data"
-import { useAutomationLogs } from "@/features/automations-v2/hooks"
+import { useAutomationLogs, useAutomationStats } from "@/features/automations-v2/hooks"
+import { statsForNode, statusesForLogTab, type LogTabKey } from "@/lib/flow-node-stats"
 import { SessionInspectionModal } from "./session-inspection-modal"
 
 export type LogsTarget = {
@@ -44,7 +45,7 @@ export type LogsTarget = {
   initialTab?: TabKey
 }
 
-type TabKey = "entered" | "success" | "alert" | "error"
+type TabKey = LogTabKey
 
 const STATUS_STYLE: Record<
   LogStatus,
@@ -66,60 +67,61 @@ export function LogsModal({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const query = useAutomationLogs(
-    automationId,
-    target?.nodeId ?? null,
-    open && target !== null,
-  )
-
-  const logs = useMemo(() => {
-    const pages = query.data?.pages ?? []
-    // A rota responde `items`; o editor legado lê `logs ?? items` e mantemos
-    // a mesma tolerância.
-    const rows = pages
-      .flatMap((page) => page.logs ?? page.items ?? [])
-      .filter((row) => !isTriggerEcho(row))
-    const entered = rows.map(automationLogToEntry)
-    return {
-      entered,
-      success: entered.filter((e) => e.status === "success"),
-      alert: entered.filter((e) => e.status === "alert"),
-      error: entered.filter((e) => e.status === "error"),
-      total: pages[0]?.total ?? entered.length,
-    }
-  }, [query.data])
-
   const [tab, setTab] = useState<TabKey>(target?.initialTab ?? "success")
   const [queryText, setQueryText] = useState("")
   const [selected, setSelected] = useState<LogEntry | null>(null)
-
-  // Sincroniza a aba inicial quando o alvo muda
   const [lastNode, setLastNode] = useState<string | null>(null)
-  if (target && target.nodeId !== lastNode) {
+
+  // Mesmo render em que o alvo muda: a busca já vai com a aba certa.
+  const nodeChanged = Boolean(target && target.nodeId !== lastNode)
+  const activeTab: TabKey = nodeChanged
+    ? (target?.initialTab ?? "success")
+    : tab
+  if (target && nodeChanged) {
     setLastNode(target.nodeId)
     setTab(target.initialTab ?? "success")
     setQueryText("")
     setSelected(null)
   }
 
+  const statuses = target ? statusesForLogTab(activeTab, target.nodeId) : undefined
+  const query = useAutomationLogs(
+    automationId,
+    target?.nodeId ?? null,
+    open && target !== null,
+    statuses,
+  )
+  const statsQuery = useAutomationStats(automationId, open && target !== null)
+  const cardStats = statsForNode(target?.nodeId ?? "", statsQuery.data)
+  const counts = {
+    entered: cardStats.sucessos + cardStats.alertas + cardStats.erros,
+    success: cardStats.sucessos,
+    alert: cardStats.alertas,
+    error: cardStats.erros,
+  }
+  const tabCount = counts[activeTab]
+
+  const logs = useMemo(() => {
+    const pages = query.data?.pages ?? []
+    // A rota já filtra por status da aba; `items`/`logs` é a mesma tolerância
+    // do editor legado. STARTED do gatilho não entra no aggregate do card.
+    const rows = pages
+      .flatMap((page) => page.logs ?? page.items ?? [])
+      .filter((row) => !isTriggerEcho(row))
+      .map(automationLogToEntry)
+    return { rows }
+  }, [query.data])
+
   if (!target) return null
 
   const tabs: { key: TabKey; label: string; count: number; tone?: LogStatus }[] = [
-    { key: "entered", label: "Entraram", count: logs.entered.length },
-    { key: "success", label: "Sucessos", count: logs.success.length, tone: "success" },
-    { key: "alert", label: "Alertas", count: logs.alert.length, tone: "alert" },
-    { key: "error", label: "Erros", count: logs.error.length, tone: "error" },
+    { key: "entered", label: "Entraram", count: counts.entered },
+    { key: "success", label: "Sucessos", count: counts.success, tone: "success" },
+    { key: "alert", label: "Alertas", count: counts.alert, tone: "alert" },
+    { key: "error", label: "Erros", count: counts.error, tone: "error" },
   ]
 
-  const scoped =
-    tab === "entered"
-      ? logs.entered
-      : tab === "success"
-        ? logs.success
-        : tab === "alert"
-          ? logs.alert
-          : logs.error
-  const list = scoped.filter((entry) => matchesLogQuery(entry, queryText))
+  const list = logs.rows.filter((entry) => matchesLogQuery(entry, queryText))
 
   return (
     <>
@@ -139,9 +141,9 @@ export function LogsModal({
                 ? "Carregando registros…"
                 : query.isError
                   ? "Não foi possível carregar os registros."
-                  : `${logs.total.toLocaleString("pt-BR")} registro(s)${
-                      logs.total > logs.entered.length
-                        ? ` · exibindo os ${logs.entered.length} mais recentes`
+                  : `${counts.entered.toLocaleString("pt-BR")} registro(s)${
+                      tabCount > logs.rows.length
+                        ? ` · exibindo os ${logs.rows.length} mais recentes`
                         : ""
                     }`}
             </DialogDescription>
@@ -152,7 +154,7 @@ export function LogsModal({
               className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border pb-3"
             >
               {tabs.map((t) => {
-                const active = tab === t.key
+                const active = activeTab === t.key
                 return (
                   <button
                     key={t.key}
@@ -213,6 +215,7 @@ export function LogsModal({
             ) : list.length === 0 ? (
               <EmptyState
                 hasQuery={queryText.trim().length > 0}
+                categoryEmpty={tabCount === 0}
                 canLoadMore={query.hasNextPage === true}
                 onLoadMore={() => query.fetchNextPage()}
                 loadingMore={query.isFetchingNextPage}
@@ -238,7 +241,7 @@ export function LogsModal({
                     >
                       {query.isFetchingNextPage
                         ? "Carregando…"
-                        : `Carregar mais (${logs.entered.length.toLocaleString("pt-BR")} de ${logs.total.toLocaleString("pt-BR")})`}
+                        : `Carregar mais (${logs.rows.length.toLocaleString("pt-BR")} de ${tabCount.toLocaleString("pt-BR")})`}
                     </Button>
                   </div>
                 )}
@@ -356,15 +359,18 @@ function LogRow({
 
 function EmptyState({
   hasQuery,
+  categoryEmpty,
   canLoadMore,
   onLoadMore,
   loadingMore,
 }: {
   hasQuery?: boolean
+  categoryEmpty?: boolean
   canLoadMore?: boolean
   onLoadMore?: () => void
   loadingMore?: boolean
 }) {
+  const showLoadMore = Boolean((hasQuery || !categoryEmpty) && canLoadMore && onLoadMore)
   return (
     <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -375,9 +381,13 @@ function EmptyState({
           ? canLoadMore
             ? "Nenhum registro para esta busca nos carregados."
             : "Nenhum registro para esta busca."
-          : "Nenhum registro nesta categoria."}
+          : categoryEmpty
+            ? "Nenhum registro nesta categoria."
+            : canLoadMore
+              ? "Os registros desta categoria não estão nesta página."
+              : "Não foi possível localizar os registros desta categoria."}
       </p>
-      {hasQuery && canLoadMore && onLoadMore && (
+      {showLoadMore && (
         <Button
           variant="outline"
           size="sm"

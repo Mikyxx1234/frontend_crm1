@@ -20,7 +20,25 @@ import { TRIGGER_NODE_ID } from "./flow-automation-adapter"
 
 export type FlowNodeStats = { sucessos: number; alertas: number; erros: number }
 
+export type LogTabKey = "entered" | "success" | "alert" | "error"
+
+/** Mesmos status que o rodapé do card e as abas da modal de logs. */
+export const SUCCESS_LOG_STATUSES = [
+  "COMPLETED",
+  "COMPLETED_WITH_ERRORS",
+  "SUCCESS",
+] as const
+export const ALERT_LOG_STATUSES = ["SKIPPED"] as const
+export const ERROR_LOG_STATUSES = ["FAILED", "FAILED_HANDLED"] as const
+
 const ZERO: FlowNodeStats = { sucessos: 0, alertas: 0, erros: 0 }
+
+function sumStatuses(
+  counts: Record<string, number>,
+  keys: readonly string[],
+): number {
+  return keys.reduce((n, key) => n + (counts[key] ?? 0), 0)
+}
 
 /**
  * O gatilho não tem `stepId`, então o backend agrega os logs da automação por
@@ -30,13 +48,23 @@ const ZERO: FlowNodeStats = { sucessos: 0, alertas: 0, erros: 0 }
 function triggerStats(trigger: Record<string, number> | undefined): FlowNodeStats {
   const t = trigger ?? {}
   return {
-    sucessos:
-      (t["COMPLETED"] ?? 0) +
-      (t["COMPLETED_WITH_ERRORS"] ?? 0) +
-      (t["SUCCESS"] ?? 0),
-    alertas: t["SKIPPED"] ?? 0,
-    erros: (t["FAILED"] ?? 0) + (t["FAILED_HANDLED"] ?? 0),
+    sucessos: sumStatuses(t, SUCCESS_LOG_STATUSES),
+    alertas: sumStatuses(t, ALERT_LOG_STATUSES),
+    erros: sumStatuses(t, ERROR_LOG_STATUSES),
   }
+}
+
+/**
+ * Status crus enviados em `GET /logs?status=`. No gatilho o sucesso é o
+ * desfecho; no passo o card só conta `SUCCESS` (o groupBy de `/stats`).
+ */
+export function statusesForLogTab(tab: LogTabKey, nodeId: string): string[] {
+  const success =
+    nodeId === TRIGGER_NODE_ID ? [...SUCCESS_LOG_STATUSES] : ["SUCCESS"]
+  if (tab === "success") return success
+  if (tab === "alert") return [...ALERT_LOG_STATUSES]
+  if (tab === "error") return [...ERROR_LOG_STATUSES]
+  return [...success, ...ALERT_LOG_STATUSES, ...ERROR_LOG_STATUSES]
 }
 
 export function statsForNode(

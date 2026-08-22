@@ -114,19 +114,31 @@ export function useAutomationStats(id: string | null, enabled?: boolean) {
 /**
  * Logs de um passo (ou do gatilho, via `stepId: "trigger"`). Só dispara
  * com `enabled` — a modal de logs é quem liga a busca ao abrir.
+ * `statuses` filtra no servidor (aba Sucessos/Alertas/Erros); sem isso
+ * a lista mistura os 50 mais recentes e as abas mentem.
  */
 export function useAutomationLogs(
   id: string | null,
   stepId: string | null,
   enabled: boolean,
+  statuses?: readonly string[],
 ) {
+  const statusKey = statuses?.length
+    ? [...statuses].sort().join(",")
+    : "__any__";
   return useInfiniteQuery<AutomationLogsPage>({
-    queryKey: ["v2-automation-logs", id ?? "__none__", stepId ?? "__all__"],
+    queryKey: [
+      "v2-automation-logs",
+      id ?? "__none__",
+      stepId ?? "__all__",
+      statusKey,
+    ],
     queryFn: ({ pageParam }) =>
       fetchAutomationLogs(id as string, {
         stepId: stepId ?? undefined,
         page: pageParam as number,
         perPage: 50,
+        status: statuses,
       }),
     initialPageParam: 1,
     getNextPageParam: (last) => {

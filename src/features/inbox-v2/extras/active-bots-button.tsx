@@ -19,7 +19,6 @@ import {
   IconPlayerPlayFilled,
   IconPencil,
   IconChevronDown,
-  IconChevronUp,
   IconClock,
   IconPlus,
   IconTrendingUp,
@@ -48,7 +47,7 @@ import { useAutomation, useAutomationStats } from "@/features/automations-v2/hoo
 import { usePortalPopover } from "@/features/pipeline-v2/extras/use-portal-popover";
 import { AgentAutomationPickerModal } from "./agent-automation-picker-modal";
 
-const POPOVER_W = 400;
+const POPOVER_W = 448;
 const POPOVER_GAP = 8;
 const POPOVER_MARGIN = 8;
 
@@ -57,22 +56,32 @@ const POPOVER_MARGIN = 8;
  * trigger (`align="end"`). Usa `bottom` em vez de altura estimada —
  * o accordion varia e um `top` com 440px fictícios afastava o painel
  * para o alto da tela.
+ *
+ * `maxHeight` trava no vão real até o topo da viewport: sem isso o
+ * accordion (fluxo + métricas + histórico) estoura e o card corta.
  */
 function computeAboveEndPosition(
   rect: DOMRect | null,
   popoverWidth: number,
-): { bottom: number; left: number } {
-  if (!rect) return { bottom: 0, left: 0 };
+): { bottom: number; left: number; width: number; maxHeight: number } {
+  if (!rect) {
+    return { bottom: 0, left: 0, width: popoverWidth, maxHeight: 420 };
+  }
   const viewportW = typeof window !== "undefined" ? window.innerWidth : 1200;
   const viewportH = typeof window !== "undefined" ? window.innerHeight : 800;
+  const width = Math.min(
+    popoverWidth,
+    Math.max(280, viewportW - POPOVER_MARGIN * 2),
+  );
 
   const bottom = Math.max(POPOVER_MARGIN, viewportH - rect.top + POPOVER_GAP);
-  let left = rect.right - popoverWidth;
+  const maxHeight = Math.max(220, rect.top - POPOVER_GAP - POPOVER_MARGIN);
+  let left = rect.right - width;
   left = Math.max(
     POPOVER_MARGIN,
-    Math.min(left, viewportW - popoverWidth - POPOVER_MARGIN),
+    Math.min(left, viewportW - width - POPOVER_MARGIN),
   );
-  return { bottom, left };
+  return { bottom, left, width, maxHeight };
 }
 
 type RowStatus = "RUNNING" | "PAUSED" | "COMPLETED" | "TIMED_OUT";
@@ -127,27 +136,24 @@ function badgeFor(status: RowStatus): { label: string; className: string; dot?: 
   switch (status) {
     case "RUNNING":
       return {
-        label: "RODANDO",
-        className:
-          "bg-(--color-success-bg) text-(--color-success-text)",
+        label: "Rodando",
+        className: "bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
         dot: true,
       };
     case "PAUSED":
       return {
-        label: "PAUSADA",
-        className:
-          "bg-(--color-warn-bg) text-(--color-warn)",
+        label: "Pausada",
+        className: "bg-[var(--color-warning-soft)] text-[var(--color-warning)]",
       };
     case "COMPLETED":
       return {
-        label: "CONCLUÍDA",
-        className: "bg-(--color-success-bg) text-(--color-success-text)",
+        label: "Concluída",
+        className: "bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
       };
     case "TIMED_OUT":
       return {
-        label: "COM ERRO",
-        className:
-          "bg-(--color-danger-bg) text-(--color-danger-text)",
+        label: "Falhou",
+        className: "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
       };
   }
 }
@@ -352,34 +358,37 @@ export function ActiveBotsButton({
                 position: "fixed",
                 bottom: pos.bottom,
                 left: pos.left,
-                width: POPOVER_W,
+                width: pos.width,
+                maxHeight: pos.maxHeight,
                 isolation: "isolate",
               }}
-              className="z-(--z-popover) overflow-hidden rounded-[var(--radius-lg)] border border-(--glass-border) bg-(--glass-bg-modal) shadow-(--glass-shadow-lg) backdrop-blur-xl"
+              className="z-(--z-popover) flex flex-col overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] text-[var(--text-primary)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
             >
-              <div className="flex items-center gap-2 border-b border-(--glass-border-subtle) px-3.5 py-2.5">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-(--color-primary-soft) text-(--brand-primary)">
-                  <IconRobot size={15} stroke={2} />
-                </span>
-                <span className="font-display text-[13px] font-bold text-(--text-primary)">
-                  Automações
-                </span>
-                {hasActive && (
-                  <span className="rounded-full bg-(--color-primary-soft) px-1.5 py-px text-[10px] font-bold text-(--brand-primary-dark) v2-dark:text-(--brand-primary-light)">
-                    {count} ativa{count === 1 ? "" : "s"}
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--glass-border)] px-5 py-4">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary-soft)] text-[var(--brand-primary)]">
+                    <IconRobot size={18} stroke={2} />
                   </span>
-                )}
+                  <span className="font-display text-base font-semibold tracking-tight">
+                    Automações
+                  </span>
+                  {hasActive && (
+                    <span className="rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--brand-primary)]">
+                      {count} ativa{count === 1 ? "" : "s"}
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={openPicker}
-                  className="ml-auto inline-flex cursor-pointer items-center gap-0.5 text-[12.5px] font-semibold text-(--brand-primary) transition-colors hover:text-(--brand-primary-dark)"
+                  className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-primary-soft)]"
                 >
-                  <IconPlus size={13} stroke={2.4} />
+                  <IconPlus size={16} stroke={2.2} />
                   Adicionar
                 </button>
               </div>
 
-              <div className="max-h-[min(420px,60vh)] overflow-y-auto">
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
                 {(isLoading || (open && loadingHistory && rows.length === 0)) && (
                   <p className="px-3.5 py-4 text-[12.5px] text-(--text-muted)">
                     Carregando…
@@ -477,93 +486,111 @@ function AutomationRow({
 }) {
   const badge = badgeFor(row.status);
   const isLive = row.status === "RUNNING" || row.status === "PAUSED";
-  const Chevron = expanded ? IconChevronUp : IconChevronDown;
+  const running = row.status === "RUNNING";
 
   return (
-    <li className={cn(showDivider && "border-b border-(--glass-border-subtle)")}>
-      <div className="flex items-start gap-1.5 px-2.5 py-2.5">
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={expanded}
-          aria-label={expanded ? `Recolher ${row.name}` : `Expandir ${row.name}`}
-          className="mt-0.5 flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--text-muted) transition-colors hover:bg-(--glass-bg-strong) hover:text-(--text-secondary)"
-        >
-          <Chevron size={14} stroke={2.2} />
-        </button>
-
-        <button
-          type="button"
-          onClick={onToggle}
-          className="min-w-0 flex-1 cursor-pointer text-left"
-        >
-          <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[13px] font-bold text-(--text-primary)">
-              {row.name}
-            </span>
-            <span
+    <li className={cn(showDivider && "border-b border-[var(--glass-border)]")}>
+      <div className="px-5 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            className="group flex min-w-0 flex-1 items-start gap-2 text-left"
+          >
+            <IconChevronDown
+              size={16}
+              stroke={2.2}
               className={cn(
-                "inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
-                badge.className,
+                "mt-0.5 shrink-0 text-[var(--text-muted)] transition-transform",
+                expanded ? "rotate-0" : "-rotate-90",
               )}
-            >
-              {badge.dot && (
-                <span className="size-1.5 rounded-full bg-(--color-success)" />
-              )}
-              {badge.label}
+              aria-hidden
+            />
+            <span className="min-w-0">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="truncate font-semibold text-[var(--text-primary)]">
+                  {row.name}
+                </span>
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                    badge.className,
+                  )}
+                >
+                  <span className="relative flex size-1.5">
+                    {running && (
+                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--color-success)] opacity-75" />
+                    )}
+                    <span
+                      className={cn(
+                        "relative inline-flex size-1.5 rounded-full",
+                        running
+                          ? "bg-[var(--color-success)]"
+                          : row.status === "PAUSED"
+                            ? "bg-[var(--color-warning)]"
+                            : row.status === "TIMED_OUT"
+                              ? "bg-[var(--color-danger)]"
+                              : "bg-[var(--text-muted)]",
+                      )}
+                    />
+                  </span>
+                  {badge.label}
+                </span>
+              </span>
+              <span className="mt-0.5 block truncate text-sm text-[var(--text-muted)]">
+                {subtextFor(row)}
+              </span>
             </span>
+          </button>
+
+          <div className="flex shrink-0 items-center gap-1">
+            {isLive ? (
+              <TooltipGlass label="Interromper automação" side="top">
+                <button
+                  type="button"
+                  disabled={cancelPending}
+                  onClick={onPause}
+                  aria-label={`Interromper ${row.name}`}
+                  className="flex size-9 cursor-pointer items-center justify-center rounded-full bg-[var(--color-warning-soft)] text-[var(--color-warning)] transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <IconPlayerPauseFilled size={16} />
+                </button>
+              </TooltipGlass>
+            ) : (
+              <TooltipGlass label="Executar novamente" side="top">
+                <button
+                  type="button"
+                  disabled={runningReplay}
+                  onClick={onPlay}
+                  aria-label={`Executar ${row.name}`}
+                  className="flex size-9 cursor-pointer items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success-text)] transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <IconPlayerPlayFilled size={16} />
+                </button>
+              </TooltipGlass>
+            )}
+            <TooltipGlass label="Editar automação" side="top">
+              <Link
+                href={`/automations/${row.automationId}`}
+                aria-label={`Editar ${row.name}`}
+                className="flex size-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+              >
+                <IconPencil size={16} stroke={1.8} />
+              </Link>
+            </TooltipGlass>
           </div>
-          <p className="mt-0.5 truncate text-[11.5px] text-(--text-muted)">
-            {subtextFor(row)}
-          </p>
-        </button>
-
-        <div className="flex shrink-0 items-center gap-0.5 pt-0.5">
-          {isLive ? (
-            <TooltipGlass label="Interromper automação" side="top">
-              <button
-                type="button"
-                disabled={cancelPending}
-                onClick={onPause}
-                aria-label={`Interromper ${row.name}`}
-                className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-(--color-warning-soft) text-(--color-warning) transition-colors hover:bg-(--color-warning)/20 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <IconPlayerPauseFilled size={13} />
-              </button>
-            </TooltipGlass>
-          ) : (
-            <TooltipGlass label="Executar novamente" side="top">
-              <button
-                type="button"
-                disabled={runningReplay}
-                onClick={onPlay}
-                aria-label={`Executar ${row.name}`}
-                className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-(--color-warning-soft) text-(--color-warning) transition-colors hover:bg-(--color-warning)/20 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <IconPlayerPlayFilled size={13} />
-              </button>
-            </TooltipGlass>
-          )}
-          <TooltipGlass label="Editar automação" side="top">
-            <Link
-              href={`/automations/${row.automationId}`}
-              aria-label={`Editar ${row.name}`}
-              className="flex size-7 items-center justify-center rounded-md text-(--text-muted) transition-colors hover:bg-(--glass-bg-strong) hover:text-(--text-secondary)"
-            >
-              <IconPencil size={14} stroke={1.8} />
-            </Link>
-          </TooltipGlass>
         </div>
-      </div>
 
-      {expanded && (
-        <ExpandedBody
-          automationId={row.automationId}
-          history={history}
-          stepLabel={row.stepLabel}
-          live={isLive}
-        />
-      )}
+        {expanded && (
+          <ExpandedBody
+            automationId={row.automationId}
+            history={history}
+            stepLabel={row.stepLabel}
+            live={isLive}
+          />
+        )}
+      </div>
     </li>
   );
 }
@@ -592,85 +619,86 @@ function ExpandedBody({
   );
 
   return (
-    <div className="space-y-3 px-3.5 pb-3 pl-10">
+    <div className="mt-4 space-y-5">
       <section>
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-(--text-muted)">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)]">
           Fluxo
         </p>
         {isLoading ? (
-          <p className="text-[11.5px] text-(--text-muted)">Carregando fluxo…</p>
+          <p className="mt-3 text-sm text-[var(--text-muted)]">Carregando fluxo…</p>
         ) : stepTypes.length === 0 ? (
-          <p className="text-[11.5px] text-(--text-muted)">Sem passos definidos.</p>
+          <p className="mt-3 text-sm text-[var(--text-muted)]">Sem passos definidos.</p>
         ) : (
-          <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mt-3 overflow-x-auto pt-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <FlowStrip stepTypes={stepTypes} activeIndex={activeIndex} />
           </div>
         )}
       </section>
 
-      <div className="grid grid-cols-3 overflow-hidden rounded-lg bg-(--glass-bg-overlay) text-center">
+      <div className="flex items-center gap-4 rounded-xl bg-[var(--glass-bg-overlay)] px-4 py-3">
         <MetricCell value={metrics.steps} label="Passos" />
-        <MetricCell
-          value={metrics.runs}
-          label="Execuções"
-          className="border-x border-(--glass-border-subtle)"
-        />
+        <span className="h-8 w-px shrink-0 bg-[var(--glass-border)]" aria-hidden />
+        <MetricCell value={metrics.runs} label="Execuções" />
+        <span className="h-8 w-px shrink-0 bg-[var(--glass-border)]" aria-hidden />
         <MetricCell
           value={metrics.rate == null ? "—" : `${metrics.rate}%`}
           label="Taxa de sucesso"
           icon={
             metrics.rate != null && metrics.rate >= 70 ? (
-              <IconTrendingUp size={11} className="text-(--color-success)" />
+              <IconTrendingUp size={14} className="text-[var(--color-success)]" />
             ) : undefined
           }
         />
       </div>
 
       <section>
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-(--text-muted)">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)]">
           Histórico
         </p>
         {history.length === 0 ? (
-          <p className="text-[11.5px] text-(--text-muted)">Sem execuções anteriores.</p>
+          <p className="mt-3 text-sm text-[var(--text-muted)]">Sem execuções anteriores.</p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ol className="relative ml-1 mt-3 border-l border-[var(--glass-border)]">
             {history.slice(0, 5).map((h) => {
               const failed = h.status === "TIMED_OUT";
               const duration = formatDuration(h.startedAt, h.finishedAt);
               return (
                 <li
                   key={h.contextId}
-                  className="flex items-center justify-between gap-2 py-0.5"
+                  className="relative flex items-center justify-between gap-3 rounded-md py-2 pl-5 pr-2 transition-colors hover:bg-[var(--glass-bg-overlay)]"
                 >
-                  <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-(--text-muted)">
-                    <span
-                      className={cn(
-                        "size-1.5 shrink-0 rounded-full",
-                        failed ? "bg-(--color-danger)" : "bg-(--color-success)",
-                      )}
-                    />
-                    <span className="tabular-nums">{formatWhen(h.finishedAt)}</span>
+                  <span
+                    className={cn(
+                      "absolute -left-[5px] top-1/2 size-2.5 -translate-y-1/2 rounded-full ring-2 ring-[var(--glass-bg-modal)]",
+                      failed ? "bg-[var(--color-danger)]" : "bg-[var(--color-success)]",
+                    )}
+                    aria-hidden
+                  />
+                  <div className="flex items-center gap-3 tabular-nums">
+                    <span className="text-sm font-medium text-[var(--text-primary)]">
+                      {formatWhen(h.finishedAt)}
+                    </span>
                     {duration && (
-                      <span className="inline-flex items-center gap-0.5 tabular-nums">
-                        <IconClock size={10} stroke={1.75} />
+                      <span className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                        <IconClock size={14} stroke={1.75} />
                         {duration}
                       </span>
                     )}
-                  </span>
+                  </div>
                   <span
                     className={cn(
-                      "shrink-0 rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
+                      "rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
                       failed
-                        ? "bg-(--color-danger-bg) text-(--color-danger-text)"
-                        : "bg-(--color-success-bg) text-(--color-success-text)",
+                        ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]"
+                        : "bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
                     )}
                   >
-                    {failed ? "COM ERRO" : "CONCLUÍDA"}
+                    {failed ? "Falhou" : "Concluída"}
                   </span>
                 </li>
               );
             })}
-          </ul>
+          </ol>
         )}
       </section>
     </div>
@@ -689,12 +717,12 @@ function MetricCell({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center gap-0.5 px-1.5 py-2", className)}>
-      <span className="inline-flex items-center gap-0.5 font-display text-[13px] font-bold tabular-nums text-(--text-primary)">
+    <div className={cn("flex flex-col gap-0.5", className)}>
+      <span className="inline-flex items-center gap-1 text-sm font-semibold tabular-nums text-[var(--text-primary)]">
         {icon}
         {value}
       </span>
-      <span className="text-[9px] font-semibold uppercase tracking-wider text-(--text-muted)">
+      <span className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
         {label}
       </span>
     </div>
@@ -748,10 +776,11 @@ function FlowStrip({
   stepTypes: string[];
   activeIndex: number;
 }) {
-  const visible = stepTypes.slice(0, 8);
-  const overflow = stepTypes.length - visible.length;
+  const [expanded, setExpanded] = useState(false);
+  const overflow = stepTypes.length - 8;
+  const visible = expanded || overflow <= 0 ? stepTypes : stepTypes.slice(0, 8);
   return (
-    <div className="flex items-center">
+    <div className="flex flex-wrap items-center gap-y-3">
       {visible.map((type, i) => {
         const meta = getBlockMeta(type);
         const Icon = meta.Icon;
@@ -759,34 +788,39 @@ function FlowStrip({
         return (
           <div key={`${type}-${i}`} className="flex items-center">
             <TooltipGlass label={meta.label} side="top">
-              <span className="relative flex">
+              <button
+                type="button"
+                className="group relative rounded-full outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+                aria-label={`Passo ${i + 1}: ${meta.label}`}
+              >
                 <span
                   className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-full border border-(--glass-border-subtle) transition-shadow",
-                    active && "ring-2 ring-(--brand-primary) ring-offset-1 ring-offset-(--glass-bg-modal)",
+                    "flex size-10 shrink-0 items-center justify-center rounded-full ring-1 ring-inset ring-[var(--glass-border)]",
+                    active && "ring-2 ring-[var(--brand-primary)]",
                   )}
                   style={blockChipStyle(type)}
                 >
-                  <Icon size={13} stroke={2} />
+                  <Icon size={18} stroke={2} />
                 </span>
-                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-slate-500 px-0.5 text-[8px] font-bold leading-none text-white">
+                <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-[var(--glass-bg-modal)] text-[10px] font-semibold text-[var(--text-muted)] ring-1 ring-[var(--glass-border)]">
                   {i + 1}
                 </span>
-              </span>
+              </button>
             </TooltipGlass>
-            {(i < visible.length - 1 || overflow > 0) && (
-              <span
-                className="mx-0.5 h-px w-2.5 shrink-0 bg-(--glass-border)"
-                aria-hidden
-              />
+            {i < visible.length - 1 && (
+              <span className="mx-1 h-px w-4 shrink-0 bg-[var(--glass-border)]" aria-hidden />
             )}
           </div>
         );
       })}
       {overflow > 0 && (
-        <span className="flex h-7 min-w-7 items-center justify-center rounded-full border border-(--glass-border-subtle) bg-(--glass-bg-overlay) px-1.5 text-[10px] font-semibold text-(--text-muted)">
-          +{overflow}
-        </span>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="ml-1 flex h-10 items-center justify-center rounded-full border border-dashed border-[var(--glass-border)] px-3 text-sm font-medium text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--color-primary-soft)] hover:text-[var(--brand-primary)]"
+        >
+          {expanded ? "Recolher" : `+${overflow}`}
+        </button>
       )}
     </div>
   );

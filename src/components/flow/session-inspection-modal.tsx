@@ -14,11 +14,20 @@ import { statusMeta } from "@/lib/logs-data"
 
 const STATUS_STYLE: Record<
   LogStatus,
-  { icon: typeof CircleCheck; color: string; tint: string }
+  { icon: typeof CircleCheck; pillClass: string }
 > = {
-  success: { icon: CircleCheck, color: "var(--route-response)", tint: "var(--topic-financeiro-tint)" },
-  alert: { icon: TriangleAlert, color: "var(--topic-documentos)", tint: "var(--topic-documentos-tint)" },
-  error: { icon: CircleX, color: "var(--route-error)", tint: "var(--topic-fallback-tint)" },
+  success: {
+    icon: CircleCheck,
+    pillClass: "bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
+  },
+  alert: {
+    icon: TriangleAlert,
+    pillClass: "bg-[var(--color-warning-soft)] text-[var(--color-warning)]",
+  },
+  error: {
+    icon: CircleX,
+    pillClass: "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
+  },
 }
 
 type ViewMode = "tree" | "raw"
@@ -65,93 +74,92 @@ export function SessionInspectionModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size="lg"
-        showCloseButton={false}
-        panelClassName="max-h-[min(70vh,520px)]"
+        showCloseButton
+        panelClassName="max-w-3xl max-h-[min(85vh,640px)]"
         bodyClassName="flex min-h-0 flex-col gap-0 overflow-hidden p-0"
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-3">
+        <header className="flex shrink-0 items-start justify-between gap-4 px-6 pb-4 pt-6">
           <div className="min-w-0">
-            <DialogTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
-              <Microscope className="h-4 w-4 shrink-0 text-brand" />
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
+              <Microscope className="size-5 shrink-0 text-[var(--brand-primary)]" />
               Inspeção da sessão
             </DialogTitle>
-            <DialogDescription className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+            <DialogDescription className="mt-1 break-all font-mono text-xs text-muted-foreground">
               Sessão {entry.sessionId}
             </DialogDescription>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <span
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
-              style={{ backgroundColor: status.tint, color: status.color }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium",
+                status.pillClass,
+              )}
             >
-              <StatusIcon className="h-3.5 w-3.5" />
+              <StatusIcon className="size-4" />
               {meta.label}
             </span>
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="Fechar"
             >
-              <X className="h-4 w-4" />
+              <X className="size-4" />
             </button>
           </div>
-        </div>
+        </header>
 
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <div className="w-40 shrink-0 border-r border-border bg-muted/30 px-3 py-3">
-            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <div className="grid min-h-0 flex-1 grid-cols-[180px_1fr] overflow-hidden border-t border-border">
+          <nav className="border-r border-border p-3" aria-label="Seções">
+            <p className="px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Seções
             </p>
-            <div className="flex flex-col gap-0.5">
+            <ul className="space-y-1">
               {sections.map((s, i) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => setActiveSection(i)}
-                  className={cn(
-                    "flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors",
-                    i === activeSection
-                      ? "bg-brand/10 font-semibold text-brand"
-                      : "text-foreground hover:bg-muted",
-                  )}
-                >
-                  <span className="min-w-0 truncate">{s.label}</span>
-                  <span
+                <li key={s.key}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection(i)}
+                    aria-current={i === activeSection ? "true" : undefined}
                     className={cn(
-                      "shrink-0 text-[10px]",
-                      i === activeSection ? "text-brand/70" : "text-muted-foreground",
+                      "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors",
+                      i === activeSection
+                        ? "bg-[var(--color-primary-soft)] font-medium text-[var(--brand-primary)]"
+                        : "text-foreground hover:bg-muted",
                     )}
                   >
-                    {Object.keys(s.data).length}
-                  </span>
-                </button>
+                    {s.label}
+                    <span
+                      className={cn(
+                        "text-xs tabular-nums",
+                        i === activeSection ? "text-[var(--brand-primary)]" : "text-muted-foreground",
+                      )}
+                    >
+                      {Object.keys(s.data).length}
+                    </span>
+                  </button>
+                </li>
               ))}
-            </div>
-          </div>
+            </ul>
+          </nav>
 
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2">
-              <h3 className="min-w-0 truncate text-xs font-medium text-foreground">{section.label}</h3>
-              <div className="ml-auto flex shrink-0 items-center gap-0.5">
+          <div className="min-w-0 p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-medium text-foreground">{section.label}</h3>
+              <div className="flex items-center gap-1">
                 <ToggleButton active={view === "tree"} onClick={() => setView("tree")} icon={Network}>
                   Árvore
                 </ToggleButton>
                 <ToggleButton active={view === "raw"} onClick={() => setView("raw")} icon={Code2}>
                   Raw
                 </ToggleButton>
-                <button
-                  type="button"
-                  onClick={copyJson}
-                  className="ml-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  {copied ? <Check className="h-3.5 w-3.5 text-[var(--route-response)]" /> : <Copy className="h-3.5 w-3.5" />}
+                <ToggleButton active={false} onClick={copyJson} icon={copied ? Check : Copy}>
                   {copied ? "Copiado" : "Copiar"}
-                </button>
+                </ToggleButton>
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
+            <div className="max-h-[45vh] overflow-auto rounded-lg border border-border bg-[var(--glass-bg-base)] p-4">
               {view === "tree" ? <TreeView data={data} /> : <RawView data={data} />}
             </div>
           </div>
@@ -190,9 +198,8 @@ function ToggleButton({
 }
 
 function valueColor(v: unknown) {
-  if (typeof v === "number") return "var(--topic-documentos)"
-  if (typeof v === "boolean") return "var(--route-navigation)"
-  return "var(--route-response)"
+  if (typeof v === "number" || typeof v === "boolean") return "var(--brand-primary)"
+  return "var(--color-success-text)"
 }
 
 function renderValue(v: string | number | boolean) {
@@ -208,7 +215,7 @@ function TreeView({ data }: { data: Record<string, string | number | boolean> })
       <div className="mt-0.5 flex flex-col gap-0.5 pl-4">
         {entries.map(([k, v]) => (
           <div key={k} className="flex min-w-0 gap-1.5">
-            <span className="shrink-0 text-brand">{k}:</span>
+            <span className="shrink-0 text-[var(--brand-primary)]">{k}:</span>
             <span className="min-w-0 break-all" style={{ color: valueColor(v) }}>{renderValue(v)}</span>
           </div>
         ))}

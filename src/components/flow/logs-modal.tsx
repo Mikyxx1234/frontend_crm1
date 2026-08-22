@@ -40,11 +40,11 @@ type TabKey = "entered" | "success" | "alert" | "error"
 
 const STATUS_STYLE: Record<
   LogStatus,
-  { icon: typeof CircleCheck; color: string }
+  { icon: typeof CircleCheck; iconClass: string }
 > = {
-  success: { icon: CircleCheck, color: "var(--route-response)" },
-  alert: { icon: TriangleAlert, color: "var(--topic-documentos)" },
-  error: { icon: CircleX, color: "var(--route-error)" },
+  success: { icon: CircleCheck, iconClass: "bg-[var(--color-success)] text-[var(--color-success-foreground)]" },
+  alert: { icon: TriangleAlert, iconClass: "bg-[var(--color-warning)] text-[var(--color-warning-foreground)]" },
+  error: { icon: CircleX, iconClass: "bg-[var(--color-danger)] text-white" },
 }
 
 export function LogsModal({
@@ -111,16 +111,16 @@ export function LogsModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          size="xl"
+          size="lg"
           showCloseButton={false}
-          panelClassName="h-[min(82vh,720px)]"
+          panelClassName="max-w-3xl h-[min(85vh,720px)]"
           bodyClassName="flex h-full min-h-0 flex-col gap-0 overflow-hidden p-0"
         >
-          <div className="shrink-0 border-b border-border px-5 py-3">
-            <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
+          <header className="shrink-0 px-6 pb-0 pt-6">
+            <DialogTitle className="text-xl font-semibold text-balance text-foreground">
               Logs — {target.title}
             </DialogTitle>
-            <DialogDescription className="mt-0.5 text-xs text-muted-foreground">
+            <DialogDescription className="mt-1 text-sm text-muted-foreground">
               {query.isPending
                 ? "Carregando registros…"
                 : query.isError
@@ -131,40 +131,49 @@ export function LogsModal({
                         : ""
                     }`}
             </DialogDescription>
-          </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-5 py-2">
-            {tabs.map((t) => {
-              const active = tab === t.key
-              const toneColor = t.tone ? STATUS_STYLE[t.tone].color : "var(--muted-foreground)"
-              return (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setTab(t.key)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors",
-                    active
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {t.label}
-                  <span
-                    className="rounded-full px-1.5 py-0.5 text-[11px] font-semibold"
-                    style={{
-                      backgroundColor: active ? `color-mix(in oklch, ${toneColor} 15%, transparent)` : "var(--muted)",
-                      color: active ? toneColor : "var(--muted-foreground)",
-                    }}
+            <div
+              role="tablist"
+              aria-label="Filtrar logs por status"
+              className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border pb-3"
+            >
+              {tabs.map((t) => {
+                const active = tab === t.key
+                return (
+                  <button
+                    key={t.key}
+                    role="tab"
+                    aria-selected={active}
+                    type="button"
+                    onClick={() => setTab(t.key)}
+                    className={cn(
+                      "group relative flex items-center gap-2 pb-3 text-sm transition-colors",
+                      active
+                        ? "font-semibold text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
                   >
-                    {t.count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+                    <span>{t.label}</span>
+                    <span
+                      className={cn(
+                        "inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-medium tabular-nums",
+                        active
+                          ? "bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {t.count}
+                    </span>
+                    {active && (
+                      <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--brand-primary)]" />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </header>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+          <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6">
             {query.isPending ? (
               <LoadingState />
             ) : query.isError ? (
@@ -175,7 +184,7 @@ export function LogsModal({
             ) : list.length === 0 ? (
               <EmptyState />
             ) : (
-              <div className="flex flex-col gap-2 px-5 py-3">
+              <ul className="space-y-3 py-4">
                 {list.map((entry) => (
                   <LogRow
                     key={entry.id}
@@ -183,19 +192,15 @@ export function LogsModal({
                     onDetails={() => setSelected(entry)}
                   />
                 ))}
-              </div>
+              </ul>
             )}
           </div>
 
-          <div className="flex shrink-0 justify-end border-t border-border bg-muted/40 px-5 py-2.5">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-            >
+          <footer className="flex shrink-0 justify-end border-t border-border p-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Fechar
             </Button>
-          </div>
+          </footer>
         </DialogContent>
       </Dialog>
 
@@ -218,47 +223,43 @@ function LogRow({
   const style = STATUS_STYLE[entry.status]
   const Icon = style.icon
   return (
-    <div className="flex items-start justify-between gap-3 overflow-hidden rounded-xl bg-[var(--color-bg-card)] p-3 ring-1 ring-border/70">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-2.5">
-          <span
-            className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white"
-            style={{ backgroundColor: style.color }}
-          >
-            <Icon className="h-3 w-3" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold leading-snug text-foreground">
-              {entry.status === "success" ? "Concluído com sucesso" : entry.message}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{formatDateTime(entry.timestamp)}</p>
-          </div>
-        </div>
+    <li className="flex items-center gap-4 rounded-xl border border-border bg-[var(--glass-bg-base)] p-4 transition-colors hover:border-[var(--brand-primary)]/30 hover:bg-[var(--color-primary-soft)]/40">
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-full",
+          style.iconClass,
+        )}
+      >
+        <Icon className="size-4" aria-hidden />
+      </span>
 
-        <div className="mt-2 flex flex-wrap gap-1.5 pl-8">
-          <Chip icon={User} label={entry.contactLabel} />
-          <Chip icon={Briefcase} label={entry.dealLabel} />
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-foreground">{entry.title}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">
+          {formatDateTime(entry.timestamp)}
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <User className="size-4" aria-hidden />
+            {entry.contactLabel}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Briefcase className="size-4" aria-hidden />
+            {entry.dealLabel}
+          </span>
         </div>
       </div>
 
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
+        className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
         onClick={onDetails}
-        className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-brand"
       >
-        <Microscope className="h-3.5 w-3.5" />
+        <Microscope className="size-4" aria-hidden />
         Detalhes
-      </button>
-    </div>
-  )
-}
-
-function Chip({ icon: Icon, label }: { icon: typeof User; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-      <Icon className="h-3 w-3" />
-      {label}
-    </span>
+      </Button>
+    </li>
   )
 }
 

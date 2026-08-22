@@ -22,7 +22,6 @@ import { AppLoading } from "@/components/crm/app-loading"
 import { InputGlass } from "./input-glass"
 import { type TabItem } from "./tabs-glass"
 import { TooltipGlass } from "./tooltip-glass"
-import { CountUpNumber } from "./count-up"
 import { ConversationCard, type Conversation } from "./conversation-card"
 import { CheckboxGlass } from "./checkbox-glass"
 
@@ -378,7 +377,7 @@ export function ConversationColumn({
           </span>
           {currentTabCount != null && (
             <span className="shrink-0 rounded-full bg-[var(--brand-primary)] px-1.5 py-px text-[10.5px] font-bold tabular-nums text-white">
-              <CountUpNumber key={currentTabLabel} value={currentTabCount} fromZero />
+              {currentTabCount.toLocaleString("pt-BR")}
             </span>
           )}
         </span>
@@ -471,7 +470,7 @@ export function ConversationColumn({
                             : "bg-black/[0.06] text-[var(--text-muted)]",
                         )}
                       >
-                        <CountUpNumber value={tab.count} fromZero />
+                        {tab.count.toLocaleString("pt-BR")}
                       </span>
                     )}
                   </span>

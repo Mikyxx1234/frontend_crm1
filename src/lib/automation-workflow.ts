@@ -1,4 +1,5 @@
 import {
+  looksLikeOpaqueId,
   newBranchId,
   summarizeConditionConfig,
   type ConditionConfig,
@@ -319,14 +320,21 @@ function configIds(
   return asStringList(c[singular]);
 }
 
-/** CUID/UUID não entram no resumo do card — o operador vê nome ou um rótulo curto. */
-function looksLikeOpaqueId(s: string): boolean {
-  if (s.length < 16) return false;
-  return (
-    /^c[a-z0-9]{20,}$/i.test(s) ||
-    /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(s) ||
-    /^[0-9a-f]{24,}$/i.test(s)
-  );
+
+/** Nome gravado ou lookup — nunca devolve CUID/UUID. */
+function resolveNamed(
+  id: unknown,
+  lookup: Record<string, string> | undefined,
+  storedName: unknown,
+  fallback: string,
+): string | null {
+  const raw = typeof id === "string" ? id.trim() : "";
+  if (!raw) return null;
+  const stored = typeof storedName === "string" ? storedName.trim() : "";
+  if (stored && !looksLikeOpaqueId(stored)) return stored;
+  const looked = lookup?.[raw];
+  if (looked && !looksLikeOpaqueId(looked)) return looked;
+  return fallback;
 }
 
 function resolveLabels(
@@ -533,27 +541,13 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
   switch (stepType) {
     case "send_email":
       return c.subject ? String(c.subject) : c.to ? `Para: ${String(c.to)}` : "Configurar e-mail";
-    case "move_stage": {
-      if (c.stageName) return String(c.stageName);
-      const sid = c.stageId ? String(c.stageId) : "";
-      if (sid && lookup?.[sid]) return lookup[sid];
-      return sid ? `Estágio: ${sid.slice(0, 12)}…` : "Definir estágio";
-    }
-    case "mark_deal_won": {
-      if (c.pipelineName) return `Funil: ${String(c.pipelineName)}`;
-      const pid = c.pipelineId ? String(c.pipelineId) : "";
-      if (pid && lookup?.[pid]) return `Funil: ${lookup[pid]}`;
-      return pid ? `Funil: ${pid.slice(0, 12)}…` : "Selecionar funil";
-    }
+    case "move_stage":
+      return resolveNamed(c.stageId, lookup, c.stageName, "Estágio") ?? "Definir estágio";
+    case "mark_deal_won":
+      return resolveNamed(c.pipelineId, lookup, c.pipelineName, "Funil") ?? "Selecionar funil";
     case "mark_deal_lost": {
-      const pipelineLabel = c.pipelineName
-        ? String(c.pipelineName)
-        : c.pipelineId && lookup?.[String(c.pipelineId)]
-          ? lookup[String(c.pipelineId)]
-          : c.pipelineId
-            ? `${String(c.pipelineId).slice(0, 12)}…`
-            : "";
-      const reason = c.lostReason ? String(c.lostReason) : "";
+      const pipelineLabel = resolveNamed(c.pipelineId, lookup, c.pipelineName, "Funil");
+      const reason = c.lostReason && !looksLikeOpaqueId(String(c.lostReason)) ? String(c.lostReason) : "";
       if (pipelineLabel && reason) return `${pipelineLabel} · ${reason}`;
       if (pipelineLabel) return `Funil: ${pipelineLabel} (sem motivo)`;
       return "Selecionar funil e motivo";
@@ -575,26 +569,18 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
             : target === "conversation"
               ? "conversa"
               : "negócio";
-      const who = c.departmentName
-        ? String(c.departmentName)
-        : c.userLabel
-          ? String(c.userLabel)
-          : c.departmentId
-            ? "Departamento"
-            : "";
-      const userId = c.userId ? String(c.userId).trim() : "";
-      if (!who && !userId) return `Limpar responsável (${targetLabel})`;
-      return `${who || userId} · ${targetLabel}`;
+      const who =
+        resolveNamed(c.departmentId, lookup, c.departmentName, "Departamento") ||
+        resolveNamed(c.userId, lookup, c.userLabel, "Usuário") ||
+        "";
+      if (!who) return `Limpar responsável (${targetLabel})`;
+      return `${who} · ${targetLabel}`;
     }
     case "transfer_department":
-      return c.departmentName
-        ? String(c.departmentName)
-        : c.departmentId
-          ? `Depto: ${String(c.departmentId).slice(0, 8)}…`
-          : "Selecionar departamento";
+      return resolveNamed(c.departmentId, lookup, c.departmentName, "Departamento") ?? "Selecionar departamento";
     case "add_tag":
     case "remove_tag":
-      return c.tagName ? String(c.tagName) : c.tagId ? `ID: ${String(c.tagId)}` : "Definir tag";
+      return resolveNamed(c.tagId, lookup, c.tagName, "Tag") ?? "Definir tag";
     case "update_field":
       return c.field ? `${String(c.field)} = ${String(c.value ?? "")}` : "Campo / valor";
     case "create_activity":
@@ -636,7 +622,7 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
       return ms ? `${ms / 1000} s` : "Duração";
     }
     case "condition":
-      return summarizeConditionConfig(c);
+      return summarizeConditionConfig(c, lookup);
     case "round_robin":
       return summarizeRoundRobinConfig(c);
     case "update_lead_score":
@@ -668,8 +654,8 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
       return target ? `Ir para: ${String(target).slice(0, 12)}` : "Definir destino";
     }
     case "transfer_automation": {
-      const tName = c.targetAutomationName ?? c.targetAutomationId;
-      return tName ? `→ ${String(tName)}` : "Selecionar automação";
+      const tName = resolveNamed(c.targetAutomationId, lookup, c.targetAutomationName, "Automação");
+      return tName ? `→ ${tName}` : "Selecionar automação";
     }
     case "stop_automation":
       return "Parar automação atual";
@@ -690,16 +676,23 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
       const channel = c.channel ? String(c.channel) : "";
       if (name && channel) return `${name} · ${channel}`;
       if (name) return `Produto: ${name}`;
-      return c.productId ? `Produto: ${String(c.productId).slice(0, 8)}…` : "Selecionar produto";
+      return resolveNamed(c.productId, lookup, null, "Produto") ?? "Selecionar produto";
     }
     case "consume_stock":
       return "Baixar estoque dos produtos do negócio";
     case "execute_distribution": {
-      const names = Array.isArray(c.departmentNames)
+      const storedNames = Array.isArray(c.departmentNames)
         ? (c.departmentNames as unknown[]).filter(
-            (v): v is string => typeof v === "string" && v.trim().length > 0,
+            (v): v is string => typeof v === "string" && v.trim().length > 0 && !looksLikeOpaqueId(v),
           )
         : [];
+      const ids = Array.isArray(c.departmentIds)
+        ? (c.departmentIds as unknown[]).filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+        : [];
+      const names =
+        storedNames.length > 0
+          ? storedNames
+          : ids.map((id) => lookup?.[id]).filter((n): n is string => !!n && !looksLikeOpaqueId(n));
       const t = c.distributionType ? String(c.distributionType) : "";
       if (names.length > 0) {
         const deptLabel =
@@ -717,16 +710,12 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
     case "check_agent_status":
       return "Responsável da conversa";
     case "ask_ai_agent": {
-      const agentName = c.agentLabel ?? c.agentName;
-      if (agentName) return `Agente: ${String(agentName)}`;
-      return c.agentId ? `ID: ${String(c.agentId).slice(0, 8)}…` : "Selecionar agente";
+      const agentName = resolveNamed(c.agentId, lookup, c.agentLabel ?? c.agentName, "Agente");
+      return agentName ? `Agente: ${agentName}` : "Selecionar agente";
     }
     case "transfer_to_ai_agent": {
-      const agentName = c.agentLabel;
-      if (agentName) return `→ ${String(agentName)}`;
-      return c.agentUserId
-        ? `ID: ${String(c.agentUserId).slice(0, 8)}…`
-        : "Selecionar agente IA";
+      const agentName = resolveNamed(c.agentUserId, lookup, c.agentLabel, "Agente IA");
+      return agentName ? `→ ${agentName}` : "Selecionar agente IA";
     }
     default:
       return "—";

@@ -99,21 +99,59 @@ function normalizeOp(raw: unknown): ConditionOp {
   return (allowed.includes(s as ConditionOp) ? s : "eq") as ConditionOp;
 }
 
-function normalizeRule(raw: unknown): ConditionRule | null {
+/** CUID/UUID não entram no resumo do card — o operador vê nome ou um rótulo curto. */
+export function looksLikeOpaqueId(s: string): boolean {
+  if (s.length < 16) return false;
+  return (
+    /^c[a-z0-9]{20,}$/i.test(s) ||
+    /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(s) ||
+    /^[0-9a-f]{24,}$/i.test(s)
+  );
+}
+
+const FIELD_ALIASES: Record<string, string> = {
+  stageId: "deal.stageId",
+  "deal.stage": "deal.stageId",
+  pipelineId: "deal.pipelineId",
+  "deal.pipeline": "deal.pipelineId",
+  departmentId: "conversation.departmentId",
+};
+
+function canonicalizeField(field: string): string {
+  return FIELD_ALIASES[field] ?? field;
+}
+
+function branchRulesOf(b: Record<string, unknown>): unknown[] {
+  if (Array.isArray(b.rules)) return b.rules;
+  if (Array.isArray(b.conditions)) return b.conditions;
+  return [];
+}
+
+function scalarRuleValue(value: unknown): unknown {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const rec = value as Record<string, unknown>;
+    if (typeof rec.id === "string" && rec.id.trim()) return rec.id.trim();
+    if (typeof rec.value === "string") return rec.value;
+  }
+  return value ?? "";
+}
+
+export function normalizeRule(raw: unknown): ConditionRule | null {
   const r = asRecord(raw);
-  const field = String(r.field ?? r.path ?? r.left ?? "").trim();
+  const field = canonicalizeField(String(r.field ?? r.path ?? r.left ?? "").trim());
   if (!field) return null;
   return {
     field,
     op: normalizeOp(r.op ?? r.operator),
-    value: r.value ?? r.right ?? "",
+    value: scalarRuleValue(r.value ?? r.right),
   };
 }
 
 function normalizeBranch(raw: unknown): ConditionBranch | null {
   const b = asRecord(raw);
-  const rawRules = Array.isArray(b.rules) ? b.rules : [];
-  const rules = rawRules.map(normalizeRule).filter((x): x is ConditionRule => x !== null);
+  const rules = branchRulesOf(b)
+    .map(normalizeRule)
+    .filter((x): x is ConditionRule => x !== null);
   if (rules.length === 0) return null;
   return {
     id: typeof b.id === "string" && b.id ? b.id : newBranchId(),
@@ -123,6 +161,18 @@ function normalizeBranch(raw: unknown): ConditionBranch | null {
   };
 }
 
+function elseStepOf(c: Record<string, unknown>): string | undefined {
+  return typeof c.elseStepId === "string" && c.elseStepId ? c.elseStepId : undefined;
+}
+
+function legacyRuleFromConfig(c: Record<string, unknown>): ConditionRule | null {
+  return normalizeRule({
+    field: c.field ?? c.path ?? c.left,
+    op: c.op ?? c.operator,
+    value: c.value ?? c.right,
+  });
+}
+
 /**
  * Converte qualquer config (novo ou antigo) pra ConditionConfig
  * canônico. Chame isto antes de avaliar / renderizar.
@@ -130,28 +180,19 @@ function normalizeBranch(raw: unknown): ConditionBranch | null {
 export function normalizeConditionConfig(raw: unknown): ConditionConfig {
   const c = asRecord(raw);
 
-  // Formato novo
   if (Array.isArray(c.branches)) {
     const branches = c.branches
       .map(normalizeBranch)
       .filter((b): b is ConditionBranch => b !== null);
-    return {
-      branches,
-      elseStepId:
-        typeof c.elseStepId === "string" && c.elseStepId ? c.elseStepId : undefined,
-    };
+    if (branches.length > 0) {
+      return { branches, elseStepId: elseStepOf(c) };
+    }
   }
 
   // Formato antigo `{ path, op, value, elseStepId }` → migra pra 1 branch.
-  const legacyField = String(c.path ?? c.field ?? c.left ?? "").trim();
-  if (legacyField) {
-    const rule: ConditionRule = {
-      field: legacyField,
-      op: normalizeOp(c.op ?? c.operator),
-      value: c.value ?? c.right ?? "",
-    };
-    // O nextStepId do step legado era o "caminho SIM" — vira nextStepId
-    // do primeiro branch pra preservar o comportamento.
+  // Também cobre `branches: []` / rules vazias com field/path no topo.
+  const legacy = legacyRuleFromConfig(c);
+  if (legacy) {
     const legacyNext =
       typeof c.nextStepId === "string" && c.nextStepId && c.nextStepId !== "__none__"
         ? c.nextStepId
@@ -160,16 +201,60 @@ export function normalizeConditionConfig(raw: unknown): ConditionConfig {
       branches: [
         {
           id: newBranchId(),
-          rules: [rule],
+          rules: [legacy],
           nextStepId: legacyNext,
         },
       ],
-      elseStepId:
-        typeof c.elseStepId === "string" && c.elseStepId ? c.elseStepId : undefined,
+      elseStepId: elseStepOf(c),
     };
   }
 
-  return { branches: [], elseStepId: undefined };
+  return { branches: [], elseStepId: elseStepOf(c) };
+}
+
+function emptyRule(): ConditionRule {
+  return { field: "", op: "eq", value: "" };
+}
+
+/**
+ * Hidrata branches pra UI: preserva ids (handles `branch:id`) e linhas
+ * vazias do editor; promove `path`/`operator`/`conditions` e o field
+ * legado no topo quando as rules vieram em branco.
+ */
+export function hydrateConditionBranches(raw: unknown): ConditionBranch[] {
+  const c = asRecord(raw);
+  const rawBranches = Array.isArray(c.branches) ? c.branches : [];
+  if (rawBranches.length > 0) {
+    const hydrated = rawBranches.map((b, i) => {
+      const rec = asRecord(b);
+      const rawRules = branchRulesOf(rec);
+      const rules =
+        rawRules.length > 0
+          ? rawRules.map((r) => normalizeRule(r) ?? emptyRule())
+          : [emptyRule()];
+      return {
+        id: typeof rec.id === "string" && rec.id ? rec.id : `branch_${i}`,
+        label: typeof rec.label === "string" ? rec.label : "",
+        rules,
+        nextStepId:
+          typeof rec.nextStepId === "string" && rec.nextStepId ? rec.nextStepId : undefined,
+      } satisfies ConditionBranch;
+    });
+    const hasField = hydrated.some((b) => b.rules.some((r) => r.field));
+    if (!hasField) {
+      const legacy = legacyRuleFromConfig(c);
+      if (legacy) {
+        return hydrated.map((b, i) => (i === 0 ? { ...b, rules: [legacy] } : b));
+      }
+    }
+    return hydrated;
+  }
+
+  const normalized = normalizeConditionConfig(c);
+  if (normalized.branches.length > 0) {
+    return normalized.branches.map((b) => ({ ...b, label: b.label ?? "" }));
+  }
+  return [{ id: newBranchId(), label: "", rules: [emptyRule()] }];
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -214,33 +299,62 @@ const OP_LABELS: Record<string, string> = {
   not_in_business_hours: "fora do expediente",
 };
 
-function describeRule(rule: ConditionRule): string {
+const VALUE_LABELS: Record<string, string> = {
+  true: "Sim",
+  false: "Não",
+  OPEN: "Aberto",
+  WON: "Ganho",
+  LOST: "Perdido",
+  whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  messenger: "Messenger",
+  telegram: "Telegram",
+  webchat: "Webchat",
+};
+
+function resolveRuleValue(rule: ConditionRule, lookup?: Record<string, string>): string {
+  const raw = String(rule.value ?? "").trim();
+  if (!raw) return "";
+  const named = lookup?.[raw] ?? VALUE_LABELS[raw];
+  if (named && !looksLikeOpaqueId(named)) return named;
+  if (looksLikeOpaqueId(raw)) return "";
+  return raw;
+}
+
+function describeRule(rule: ConditionRule, lookup?: Record<string, string>): string {
+  const resolved = resolveRuleValue(rule, lookup);
   if (rule.op === "has_tag") {
-    return `tem tag "${String(rule.value ?? "")}"`;
+    return resolved ? `tem tag "${resolved}"` : "tem tag";
   }
   if (rule.op === "not_has_tag") {
-    return `não tem tag "${String(rule.value ?? "")}"`;
+    return resolved ? `não tem tag "${resolved}"` : "não tem tag";
   }
-  const field = FIELD_LABELS[rule.field] ?? rule.field;
+  const fieldFromLookup = lookup?.[rule.field];
+  const field =
+    fieldFromLookup && !looksLikeOpaqueId(fieldFromLookup)
+      ? fieldFromLookup
+      : (FIELD_LABELS[rule.field] ?? (looksLikeOpaqueId(rule.field) ? "Campo" : rule.field));
   const op = OP_LABELS[rule.op] ?? rule.op;
   if (rule.op === "empty" || rule.op === "not_empty" || rule.op === "in_business_hours" || rule.op === "not_in_business_hours") {
     return `${field} ${op}`;
   }
-  const value = String(rule.value ?? "").slice(0, 24);
-  return value ? `${field} ${op} ${value}` : `${field} ${op}`;
+  return resolved ? `${field} ${op} ${resolved.slice(0, 28)}` : `${field} ${op}`;
 }
 
 /**
  * Retorna uma string curta pro summary dentro do node. Mostra a
  * primeira regra da primeira branch + qtd de branches extras.
  */
-export function summarizeConditionConfig(raw: unknown): string {
+export function summarizeConditionConfig(
+  raw: unknown,
+  lookup?: Record<string, string>,
+): string {
   const cfg = normalizeConditionConfig(raw);
   if (cfg.branches.length === 0) return "Definir regra";
   const first = cfg.branches[0];
   const firstRule = first.rules[0];
   const base = firstRule
-    ? describeRule(firstRule)
+    ? describeRule(firstRule, lookup)
     : first.label ?? "Branch 1";
   const extras =
     cfg.branches.length > 1

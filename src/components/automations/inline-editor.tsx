@@ -242,6 +242,18 @@ function Field({
     case "source":
       // Departamento: grava também `departmentName` pra o summary do card
       // (summarizeStepConfig) e o executor exibirem o nome legível.
+      if (field.source === "stage") {
+        return (
+          <Labeled label={field.label} optional={field.optional} hint={field.hint}>
+            <StageSelect
+              value={str(config[field.key])}
+              onPick={(id, name) =>
+                onChange({ ...config, stageId: id, stageName: name })
+              }
+            />
+          </Labeled>
+        )
+      }
       if (field.source === "department") {
         return (
           <Labeled label={field.label} optional={field.optional} hint={field.hint}>
@@ -896,6 +908,28 @@ function SourceSelect({
       // responsável" desatribui no target configurado pro step.
       return <OwnerSelect value={value} onChange={onChange} placeholder="Sem responsável (limpar)…" />
   }
+}
+
+function StageSelect({
+  value,
+  onPick,
+}: {
+  value: string
+  onPick: (id: string, name: string) => void
+}) {
+  const { options, isLoading } = useStageOptions()
+  return (
+    <ConfigSelect
+      value={value}
+      options={options}
+      loading={isLoading}
+      placeholder="Selecione um estágio…"
+      onChange={(id) => {
+        const opt = options.find((o) => o.value === id)
+        onPick(id, opt?.label ?? "")
+      }}
+    />
+  )
 }
 
 function DepartmentSelect({

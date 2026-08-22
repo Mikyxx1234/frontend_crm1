@@ -21,6 +21,19 @@ import { useTeamUsersQuery } from "@/features/shared/queries/team-users"
 
 export type Opt = { value: string; label: string; group?: string }
 
+/** Mantém o id salvo visível no select mesmo se o catálogo ainda carrega ou o item sumiu. */
+export function optionsWithSaved(
+  options: Opt[],
+  value: string | undefined,
+  label?: string,
+): Opt[] {
+  const v = (value ?? "").trim()
+  if (!v) return options
+  if (options.some((o) => o.value === v)) return options
+  const fallback = (label ?? "").trim()
+  return [{ value: v, label: fallback || v, group: "Salvo" }, ...options]
+}
+
 const STALE = 5 * 60_000
 
 function asArray(json: unknown): unknown[] {
@@ -39,7 +52,11 @@ async function getJson(path: string): Promise<unknown> {
   return res.json()
 }
 
-type RawPipeline = { id: string; name: string; stages?: { id: string; name: string }[] }
+type RawPipeline = {
+  id: string
+  name: string
+  stages?: { id: string; name: string; slug?: string }[]
+}
 
 /** Estágios de todos os funis → value: stageId, group: nome do funil. */
 export function useStageOptions() {
@@ -598,6 +615,52 @@ export function useConditionFieldOptions() {
     },
   })
   return { options: q.data ?? [], isLoading: q.isLoading }
+}
+
+function displayUserLabel(label: string): string {
+  return label.replace(/\s*\([^)]+@[^)]+\)\s*$/, "").trim() || label
+}
+
+/**
+ * id → nome pra preview de condição (etapas, funis, usuários, depto, tags, campos).
+ * Reusa as mesmas queries dos dropdowns do editor.
+ */
+export function useConditionNameLookup(): Record<string, string> {
+  const pipelines = usePipelinesQuery<RawPipeline>()
+  const users = useUserOptions()
+  const depts = useDepartmentOptions()
+  const tags = useTagOptions()
+  const fields = useConditionFieldOptions()
+  const tokens = useCustomFieldTokens()
+  return useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const p of pipelines.data ?? []) {
+      if (p.id && p.name) map[p.id] = p.name
+      for (const s of p.stages ?? []) {
+        if (s.id && s.name) {
+          map[s.id] = s.name
+          map[`${p.id}:${s.id}`] = s.name
+        }
+        if (s.slug && s.name) map[s.slug] = s.name
+      }
+    }
+    for (const o of users.options) if (o.value) map[o.value] = displayUserLabel(o.label)
+    for (const o of depts.options) if (o.value) map[o.value] = o.label
+    for (const o of tags.options) if (o.value) map[o.value] = o.label
+    for (const o of fields.options) if (o.value) map[o.value] = o.label
+    const indexCustom = (entity: "contact" | "deal", list: RawCustomField[]) => {
+      for (const c of list) {
+        const label = c.label || c.name || c.id
+        if (!label) continue
+        const prefix = entity === "contact" ? "contactCustomFields" : "dealCustomFields"
+        if (c.name) map[`${prefix}.${c.name}`] = label
+        if (c.id) map[`${prefix}.${c.id}`] = label
+      }
+    }
+    indexCustom("contact", tokens.contact)
+    indexCustom("deal", tokens.deal)
+    return map
+  }, [pipelines.data, users.options, depts.options, tags.options, fields.options, tokens.contact, tokens.deal])
 }
 
 export type CustomFieldConditionMeta = { type: string; options: string[] }

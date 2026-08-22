@@ -15,7 +15,9 @@ import {
   WEEK_DAYS,
 } from "@/components/automations/editor-fields"
 import {
+  optionsWithSaved,
   useConditionFieldOptions,
+  useConditionNameLookup,
   useCustomFieldConditionMeta,
   useDepartmentOptions,
   usePipelineOptions,
@@ -23,7 +25,13 @@ import {
   useTagOptions,
   useUserOptions,
 } from "@/components/automations/editor-data"
-import { newBranchId, type ConditionBranch, type ConditionRule } from "@/lib/automation-condition"
+import {
+  hydrateConditionBranches,
+  looksLikeOpaqueId,
+  newBranchId,
+  type ConditionBranch,
+  type ConditionRule,
+} from "@/lib/automation-condition"
 import { FlowVariableInput } from "./flow-variable-picker"
 import type { NodeConfig } from "@/lib/flow-data"
 
@@ -33,30 +41,7 @@ const CUSTOM_FIELD_SENTINEL = "__custom__"
 type Schedule = { days?: number[]; from?: string; to?: string }
 
 function asBranches(cfg: NodeConfig): ConditionBranch[] {
-  const raw = Array.isArray(cfg.branches) ? cfg.branches : []
-  const parsed = raw
-    .map((b) => {
-      const rec = b && typeof b === "object" ? (b as Record<string, unknown>) : {}
-      const rules = Array.isArray(rec.rules) ? (rec.rules as ConditionRule[]) : []
-      return {
-        id: typeof rec.id === "string" && rec.id ? rec.id : newBranchId(),
-        label: typeof rec.label === "string" ? rec.label : "",
-        rules: rules.length > 0 ? rules : [{ field: "", op: "eq" as const, value: "" }],
-        nextStepId: typeof rec.nextStepId === "string" ? rec.nextStepId : undefined,
-      } satisfies ConditionBranch
-    })
-    .filter(Boolean)
-  if (parsed.length > 0) return parsed
-  if (cfg.field) {
-    return [
-      {
-        id: newBranchId(),
-        label: "",
-        rules: [{ field: String(cfg.field), op: (cfg.op as ConditionRule["op"]) ?? "eq", value: cfg.value ?? "" }],
-      },
-    ]
-  }
-  return [{ id: newBranchId(), label: "", rules: [{ field: "", op: "eq", value: "" }] }]
+  return hydrateConditionBranches(cfg)
 }
 
 function fieldLabel(field: string): string {
@@ -73,20 +58,32 @@ function isRuleReady(rule: ConditionRule): boolean {
   return String(rule.value ?? "").trim() !== ""
 }
 
-function summarizeRule(rule: ConditionRule): string {
+function displayValue(raw: string, lookup?: Record<string, string>): string {
+  const v = raw.trim()
+  if (!v) return ""
+  const named = lookup?.[v]
+  if (named && !looksLikeOpaqueId(named)) return named
+  if (looksLikeOpaqueId(v)) return ""
+  return v
+}
+
+function summarizeRule(rule: ConditionRule, lookup?: Record<string, string>): string {
   if (!rule.field) return "Definir regra"
   const value =
     NO_VALUE_OPS.has(rule.op) || CONDITION_SCHEDULE_OPS.has(rule.op)
       ? ""
-      : ` ${String(rule.value ?? "").slice(0, 28)}`
-  return `${fieldLabel(rule.field)} ${opLabel(rule.op)}${value}`.trim()
+      : displayValue(String(rule.value ?? ""), lookup)
+  const field = lookup?.[rule.field] && !looksLikeOpaqueId(lookup[rule.field]!)
+    ? lookup[rule.field]!
+    : fieldLabel(rule.field)
+  return `${field} ${opLabel(rule.op)}${value ? ` ${value}` : ""}`.trim()
 }
 
-function summarizeBranch(branch: ConditionBranch): string {
+function summarizeBranch(branch: ConditionBranch, lookup?: Record<string, string>): string {
   const ready = (branch.rules ?? []).filter(isRuleReady)
   if (ready.length === 0) return "Clique para definir"
   const extra = ready.length > 1 ? ` · e +${ready.length - 1}` : ""
-  return summarizeRule(ready[0]) + extra
+  return summarizeRule(ready[0], lookup) + extra
 }
 
 export function FlowConditionConfig({
@@ -96,6 +93,7 @@ export function FlowConditionConfig({
   cfg: NodeConfig
   onChange: (next: NodeConfig) => void
 }) {
+  const lookup = useConditionNameLookup()
   const branches = asBranches(cfg)
   const [openId, setOpenId] = useState<string | null>(() => {
     const incomplete = branches.find((b) => !(b.rules ?? []).some(isRuleReady))
@@ -137,7 +135,7 @@ export function FlowConditionConfig({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[12px] font-semibold text-foreground">{title}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">{summarizeBranch(branch)}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">{summarizeBranch(branch, lookup)}</span>
                 </span>
                 {branches.length > 1 && (
                   <span
@@ -270,13 +268,14 @@ function ConditionRuleRow({
   onRemove?: () => void
 }) {
   const { options: customFields, isLoading } = useConditionFieldOptions()
+  const lookup = useConditionNameLookup()
   const knownFields = useMemo(
     () => new Set([...CONDITION_FIELDS, ...customFields].map((o) => o.value)),
     [customFields],
   )
-  const isCustom = !!rule.field && !knownFields.has(rule.field)
-  const fieldOptions = useMemo(
-    () => [
+  const isCustom = !!rule.field && !knownFields.has(rule.field) && !isLoading
+  const fieldOptions = useMemo(() => {
+    const catalog = [
       ...CONDITION_FIELDS.map((o) => ({
         value: o.value,
         label: o.label,
@@ -289,10 +288,15 @@ function ConditionRuleRow({
         description: o.group,
         searchText: `${o.label} ${o.value} ${o.group ?? ""}`,
       })),
+    ]
+    const withSaved = isCustom
+      ? catalog
+      : optionsWithSaved(catalog, rule.field, lookup[rule.field] ?? fieldLabel(rule.field))
+    return [
+      ...withSaved,
       { value: CUSTOM_FIELD_SENTINEL, label: "Outro (caminho livre)…", searchText: "outro caminho livre custom" },
-    ],
-    [customFields],
-  )
+    ]
+  }, [customFields, isCustom, lookup, rule.field])
   const hideValue = NO_VALUE_OPS.has(rule.op)
 
   return (
@@ -321,7 +325,7 @@ function ConditionRuleRow({
           <DropdownGlass
             triggerClassName="w-full"
             value={rule.op}
-            options={CONDITION_OPS}
+            options={optionsWithSaved(CONDITION_OPS, rule.op, opLabel(rule.op))}
             onValueChange={(v) =>
               onChange({ op: v as ConditionRule["op"] }, NO_VALUE_OPS.has(v) || CONDITION_SCHEDULE_OPS.has(v))
             }
@@ -366,7 +370,9 @@ function ConditionValue({
   const depts = useDepartmentOptions()
   const stages = useStageOptions()
   const pipelines = usePipelineOptions()
+  const lookup = useConditionNameLookup()
   const { byPath: customFieldMeta } = useCustomFieldConditionMeta()
+  const savedLabel = lookup[value] ?? (looksLikeOpaqueId(value) ? value : undefined)
 
   const isTag = op === "has_tag" || op === "not_has_tag" || field.endsWith(".tags") || field.endsWith(".tagIds")
   if (isTag) {
@@ -374,9 +380,9 @@ function ConditionValue({
       <DropdownGlass
         triggerClassName="w-full"
         searchable
-        placeholder="Selecione uma tag…"
+        placeholder={tags.isLoading && !value ? "Carregando…" : "Selecione uma tag…"}
         value={value}
-        options={tags.options}
+        options={optionsWithSaved(tags.options, value, savedLabel)}
         onValueChange={(v) => onChange(v, true)}
       />
     )
@@ -386,7 +392,12 @@ function ConditionValue({
   }
   if (CONDITION_BOOL_FIELDS.has(field)) {
     return (
-      <DropdownGlass triggerClassName="w-full" value={value} options={BOOL_OPTS} onValueChange={(v) => onChange(v, true)} />
+      <DropdownGlass
+        triggerClassName="w-full"
+        value={value}
+        options={optionsWithSaved(BOOL_OPTS, value)}
+        onValueChange={(v) => onChange(v, true)}
+      />
     )
   }
   if (field.endsWith("assignedToId") || field.endsWith("ownerId")) {
@@ -394,9 +405,9 @@ function ConditionValue({
       <DropdownGlass
         triggerClassName="w-full"
         searchable
-        placeholder="Selecione um usuário…"
+        placeholder={users.isLoading && !value ? "Carregando…" : "Selecione um usuário…"}
         value={value}
-        options={users.options}
+        options={optionsWithSaved(users.options, value, savedLabel)}
         onValueChange={(v) => onChange(v, true)}
       />
     )
@@ -406,9 +417,9 @@ function ConditionValue({
       <DropdownGlass
         triggerClassName="w-full"
         searchable
-        placeholder="Departamento…"
+        placeholder={depts.isLoading && !value ? "Carregando…" : "Departamento…"}
         value={value}
-        options={depts.options}
+        options={optionsWithSaved(depts.options, value, savedLabel)}
         onValueChange={(v) => onChange(v, true)}
       />
     )
@@ -418,9 +429,9 @@ function ConditionValue({
       <DropdownGlass
         triggerClassName="w-full"
         searchable
-        placeholder="Etapa…"
+        placeholder={stages.isLoading && !value ? "Carregando…" : "Etapa…"}
         value={value}
-        options={stages.options}
+        options={optionsWithSaved(stages.options, value, savedLabel)}
         onValueChange={(v) => onChange(v, true)}
       />
     )
@@ -430,9 +441,9 @@ function ConditionValue({
       <DropdownGlass
         triggerClassName="w-full"
         searchable
-        placeholder="Selecione um funil…"
+        placeholder={pipelines.isLoading && !value ? "Carregando…" : "Selecione um funil…"}
         value={value}
-        options={pipelines.options}
+        options={optionsWithSaved(pipelines.options, value, savedLabel)}
         onValueChange={(v) => onChange(v, true)}
       />
     )
@@ -442,7 +453,7 @@ function ConditionValue({
       <DropdownGlass
         triggerClassName="w-full"
         value={value}
-        options={DEAL_STATUS_OPTS}
+        options={optionsWithSaved(DEAL_STATUS_OPTS, value)}
         onValueChange={(v) => onChange(v, true)}
       />
     )
@@ -452,7 +463,7 @@ function ConditionValue({
       <DropdownGlass
         triggerClassName="w-full"
         value={value}
-        options={CHANNEL_KIND_OPTS}
+        options={optionsWithSaved(CHANNEL_KIND_OPTS, value)}
         onValueChange={(v) => onChange(v, true)}
       />
     )
@@ -460,7 +471,12 @@ function ConditionValue({
   const meta = customFieldMeta.get(field)
   if (meta?.type === "BOOLEAN") {
     return (
-      <DropdownGlass triggerClassName="w-full" value={value} options={BOOL_OPTS} onValueChange={(v) => onChange(v, true)} />
+      <DropdownGlass
+        triggerClassName="w-full"
+        value={value}
+        options={optionsWithSaved(BOOL_OPTS, value)}
+        onValueChange={(v) => onChange(v, true)}
+      />
     )
   }
   if ((meta?.type === "SELECT" || meta?.type === "MULTI_SELECT") && meta.options.length > 0) {
@@ -470,7 +486,11 @@ function ConditionValue({
         searchable
         placeholder="Selecione…"
         value={value}
-        options={meta.options.map((opt) => ({ value: opt, label: opt }))}
+        options={optionsWithSaved(
+          meta.options.map((opt) => ({ value: opt, label: opt })),
+          value,
+          savedLabel,
+        )}
         onValueChange={(v) => onChange(v, true)}
       />
     )

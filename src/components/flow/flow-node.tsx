@@ -35,6 +35,7 @@ import { stepIcon, stepColor } from "@/components/automations/add-step-node"
 import {
   getTemplateDetail,
   mergeTemplateQuickReplies,
+  useConditionNameLookup,
   useStepTemplateCatalog,
 } from "@/components/automations/editor-data"
 import { useTriggerNameLookup } from "@/components/automations/trigger-config-fields"
@@ -214,6 +215,8 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
   const Icon = stepIcon[stepType] ?? MessageSquare
   const iconClass = stepColor[stepType] ?? "text-[var(--text-muted)]"
   const triggerLookup = useTriggerNameLookup()
+  const conditionLookup = useConditionNameLookup()
+  const nameLookup = { ...triggerLookup, ...conditionLookup }
   const isTemplateCard = stepType === "send_whatsapp_template"
   const { detailsMap: tplMap } = useStepTemplateCatalog(d.config ?? {}, undefined, {
     enabled: isTemplateCard,
@@ -252,8 +255,8 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTemplateCard, tplName, tplDetail, id])
   const preview = isTriggerCard
-    ? summarizeTriggerConfig(String(d.triggerType ?? ""), d.config ?? {}, triggerLookup)
-    : cardPreview(d)
+    ? summarizeTriggerConfig(String(d.triggerType ?? ""), d.config ?? {}, nameLookup)
+    : cardPreview(d, nameLookup)
   const isFinish = family === "finish"
 
   useLayoutEffect(() => {

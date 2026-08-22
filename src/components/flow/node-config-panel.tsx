@@ -28,7 +28,7 @@ import {
 } from "@/components/automations/trigger-config-fields"
 import { STEP_FIELDS, type EditorField } from "@/components/automations/editor-fields"
 import { NodeConfigEditor } from "@/components/automations/inline-editor"
-import { useDepartmentOptions, useUserOptions } from "@/components/automations/editor-data"
+import { useConditionNameLookup, useDepartmentOptions, useUserOptions } from "@/components/automations/editor-data"
 import { FlowConditionConfig } from "./flow-condition-config"
 import { FlowRoundRobinConfig } from "./flow-round-robin-config"
 import { cn } from "@/lib/utils"
@@ -90,6 +90,11 @@ export function NodeConfigPanel({ id, data }: { id: string; data: FlowNodeData }
   const { options: userOptions, isLoading: loadingUsers } = useUserOptions()
   const { options: deptOptions, isLoading: loadingDepts } = useDepartmentOptions()
   const triggerLookup = useTriggerNameLookup()
+  const conditionLookup = useConditionNameLookup()
+  const nameLookup = useMemo(
+    () => ({ ...triggerLookup, ...conditionLookup }),
+    [triggerLookup, conditionLookup],
+  )
 
   useEffect(() => {
     if (isTrigger) return
@@ -118,10 +123,10 @@ export function NodeConfigPanel({ id, data }: { id: string; data: FlowNodeData }
       updateNodeData(id, {
         config: next,
         outputs: outputsFromStepConfig(stepType, next as Record<string, unknown>, data.outputs),
-        preview: summarizeStepConfig(stepType, next),
+        preview: summarizeStepConfig(stepType, next, nameLookup),
       })
     },
-    [id, stepType, data.outputs, updateNodeData],
+    [id, stepType, data.outputs, nameLookup, updateNodeData],
   )
 
   const commitTriggerType = useCallback(
@@ -143,9 +148,15 @@ export function NodeConfigPanel({ id, data }: { id: string; data: FlowNodeData }
 
   useEffect(() => {
     if (!isTrigger || !triggerType) return
-    const next = summarizeTriggerConfig(triggerType, cfg, triggerLookup)
+    const next = summarizeTriggerConfig(triggerType, cfg, nameLookup)
     if (next !== data.preview) updateNodeData(id, { preview: next })
-  }, [isTrigger, triggerType, cfg, triggerLookup, data.preview, id, updateNodeData])
+  }, [isTrigger, triggerType, cfg, nameLookup, data.preview, id, updateNodeData])
+
+  useEffect(() => {
+    if (!isCondition) return
+    const next = summarizeStepConfig("condition", cfg, nameLookup)
+    if (next !== data.preview) updateNodeData(id, { preview: next })
+  }, [isCondition, cfg, nameLookup, data.preview, id, updateNodeData])
 
   return (
     <div

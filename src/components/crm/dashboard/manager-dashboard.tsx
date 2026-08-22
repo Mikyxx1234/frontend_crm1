@@ -25,7 +25,7 @@ export function ManagerDashboard({ data }: { data: DashboardData }) {
   const lossTotal = losses.reduce((acc, r) => acc + r.count, 0);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
         <Link href="/pipeline" className="min-w-0 rounded-[var(--radius-xl)] outline-none ring-[var(--brand-primary)] focus-visible:ring-2">
           <StatCard

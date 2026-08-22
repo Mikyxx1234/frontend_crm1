@@ -7,12 +7,8 @@
  * (`inline-editor.tsx`, via `useConnectedStepChannels`) e o menu kebab
  * dos nodes do canvas (`StepChannelKebabMenu`).
  *
- * Regra de herança (ver `lib/automation-workflow.ts`):
- *  - 1º passo de mensagem do fluxo: seleção OBRIGATÓRIA (sem "herdar"),
- *    exigida somente quando a org tem 2+ canais conectados do tipo certo.
- *  - Passos seguintes: `channelId` vazio = herda o canal usado
- *    anteriormente no caminho (resolvido em runtime pelo executor).
- *  - Org com ≤1 canal conectado: UI oculta tudo (nada pra escolher).
+ * Padrão: `channelId` vazio = canal da conversa (entrada / gatilho).
+ * Override explícito só quando o operador escolhe uma conexão no passo.
  */
 
 import { useMemo } from "react";
@@ -134,14 +130,12 @@ export function StepChannelKebabMenu({
             Canal de envio
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {!isFirstMessageStep && (
-            <DropdownMenuItem
-              onClick={() => onChange("")}
-              className={cn("text-[12.5px]", !channelId && "font-semibold text-primary")}
-            >
-              Usar canal do fluxo (herdar)
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem
+            onClick={() => onChange("")}
+            className={cn("text-[12.5px]", !channelId && "font-semibold text-primary")}
+          >
+            Canal da conversa (entrada)
+          </DropdownMenuItem>
           {options.map((o) => (
             <DropdownMenuItem
               key={o.id}

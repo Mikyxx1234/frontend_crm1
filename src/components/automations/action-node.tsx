@@ -51,6 +51,7 @@ export type ActionNodeData = {
   stepOptions?: Array<{ value: string; label: string }>;
   onConfigChange?: (next: Record<string, unknown>) => void;
   isFirstMessageStep?: boolean;
+  inheritedChannelId?: string;
 };
 
 type ActionRF = Node<ActionNodeData, "action">;
@@ -114,7 +115,12 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
   const { options: channelOptions } = useConnectedStepChannels(data.stepType, {
     enabled: isChannelStep,
   });
-  const channelBadgeLabel = channelLabelFromOptions(channelOptions, channelId);
+  const channelBadgeLabel = channelId
+    ? channelLabelFromOptions(channelOptions, channelId)
+    : isChannelStep
+      ? channelLabelFromOptions(channelOptions, data.inheritedChannelId) ??
+        "Canal da conversa"
+      : null;
   const nodeType = actionNodeType(data.stepType);
   const s = data.stats;
   const hasReplyTimeout =
@@ -207,6 +213,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionRF>) {
         config={data.config}
         stepOptions={data.stepOptions ?? []}
         isFirstMessageStep={data.isFirstMessageStep}
+        inheritedChannelId={data.inheritedChannelId}
         onChange={(next) => data.onConfigChange?.(next)}
       />
       {s && (

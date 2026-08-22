@@ -27,11 +27,13 @@ import {
   type AutomationStep,
   defaultStepConfig,
   findFirstMessageStepIndex,
+  inheritedChannelFromTrigger,
   isStepIncomplete,
   newStepId,
   stepTypeLabel,
   summarizeStepConfig,
   summarizeTriggerConfig,
+  triggerBindsInboundChannel,
   triggerTypeLabel,
 } from "@/lib/automation-workflow";
 import { ALIGN_TRIGGER_POS, estimateStepNodeSize } from "@/lib/automation-layout";
@@ -753,10 +755,15 @@ function WorkflowCanvasInner({
       onDelete: (id: string) => void,
       onAddStep: (type: ActionStepType, afterStepId: string | null) => void
     ): Node[] => {
+      const channelLookup: Record<string, string> = {};
+      for (const o of connectedWaChannels) channelLookup[o.id] = o.label;
+      for (const o of connectedEmailChannels) channelLookup[o.id] = o.label;
+      const triggerLookup = { ...stageNameLookup, ...channelLookup };
+      const inheritedChannelId = inheritedChannelFromTrigger(triggerConfig);
       const triggerSummary = summarizeTriggerConfig(
         triggerType,
         triggerConfig,
-        stageNameLookup,
+        triggerLookup,
       );
       const ts = stats?.trigger ?? {};
       // 27/mai/26 — Posição do nó do gatilho agora vem de
@@ -801,7 +808,11 @@ function WorkflowCanvasInner({
         firstMsgIdx >= 0 && list[firstMsgIdx].type === "send_email"
           ? connectedEmailCount
           : connectedWaCount;
-      const firstMsgRequiresChannel = firstMsgIdx >= 0 && firstMsgConnectedCount > 1;
+      const firstMsgRequiresChannel =
+        firstMsgIdx >= 0 &&
+        firstMsgConnectedCount > 1 &&
+        !triggerBindsInboundChannel(triggerType) &&
+        !inheritedChannelId;
 
       const stepNodes: Node[] = list.map((step, index) => {
         const saved = readRfPos(step.config);
@@ -826,6 +837,7 @@ function WorkflowCanvasInner({
             requireChannel: isFirstMessageStep && firstMsgRequiresChannel,
           }),
           isFirstMessageStep,
+          inheritedChannelId,
           onDelete: () => onDelete(step.id),
           stats: ss ? { success: ss.success, failed: ss.failed, skipped: ss.skipped } : undefined,
           onStatsClick: () => onStepLogsOpenRef.current?.(step.id),
@@ -968,7 +980,7 @@ function WorkflowCanvasInner({
 
       return [triggerNode, ...stepNodes, ...addStepNodes];
     },
-    [triggerConfig, triggerType, stats, stageNameLookup, connectedWaCount, connectedEmailCount]
+    [triggerConfig, triggerType, stats, stageNameLookup, connectedWaCount, connectedEmailCount, connectedWaChannels, connectedEmailChannels]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -1013,7 +1025,11 @@ function WorkflowCanvasInner({
             config: next,
             summary,
             incomplete: isStepIncomplete(step.type, next, {
-              requireChannel: isFirstMessageStep && connectedCount > 1,
+              requireChannel:
+                isFirstMessageStep &&
+                connectedCount > 1 &&
+                !triggerBindsInboundChannel(triggerType) &&
+                !inheritedChannelFromTrigger(triggerConfig),
             }),
           };
           if (isInteractiveStep({ type: step.type, config: next })) {
@@ -1046,7 +1062,7 @@ function WorkflowCanvasInner({
         })
       );
     },
-    [onStepsChange, setNodes, stageNameLookup, connectedWaCount, connectedEmailCount]
+    [onStepsChange, setNodes, stageNameLookup, connectedWaCount, connectedEmailCount, triggerType, triggerConfig]
   );
   patchStepConfigRef.current = patchStepConfig;
 

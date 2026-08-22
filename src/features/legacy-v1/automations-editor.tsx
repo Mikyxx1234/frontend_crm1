@@ -86,11 +86,13 @@ function firstMessageChannelError(
   steps: AutomationStep[],
   connectedWaCount: number,
   connectedEmailCount: number,
+  triggerType?: string,
+  triggerConfig?: unknown,
 ): string | null {
   const idx = findFirstMessageStepIndex(steps);
   if (idx < 0) return null;
   const count = steps[idx].type === "send_email" ? connectedEmailCount : connectedWaCount;
-  const code = validateFirstMessageChannel(steps, count);
+  const code = validateFirstMessageChannel(steps, count, { triggerType, triggerConfig });
   return code ? (CHANNEL_VALIDATION_MESSAGES[code] ?? code) : null;
 }
 
@@ -898,25 +900,37 @@ export default function AutomationDetailPage() {
 
   const handleSaveClick = useCallback(() => {
     if (active) {
-      const err = firstMessageChannelError(steps, connectedWaChannels.length, connectedEmailChannels.length);
+      const err = firstMessageChannelError(
+        steps,
+        connectedWaChannels.length,
+        connectedEmailChannels.length,
+        triggerType,
+        triggerConfig,
+      );
       if (err) {
         toast.error(err);
         return;
       }
     }
     saveMutation.mutate();
-  }, [active, steps, connectedWaChannels, connectedEmailChannels, saveMutation]);
+  }, [active, steps, connectedWaChannels, connectedEmailChannels, saveMutation, triggerType, triggerConfig]);
 
   const handleToggleClick = useCallback(() => {
     if (!active) {
-      const err = firstMessageChannelError(steps, connectedWaChannels.length, connectedEmailChannels.length);
+      const err = firstMessageChannelError(
+        steps,
+        connectedWaChannels.length,
+        connectedEmailChannels.length,
+        triggerType,
+        triggerConfig,
+      );
       if (err) {
         toast.error(err);
         return;
       }
     }
     toggleMutation.mutate();
-  }, [active, steps, connectedWaChannels, connectedEmailChannels, toggleMutation]);
+  }, [active, steps, connectedWaChannels, connectedEmailChannels, toggleMutation, triggerType, triggerConfig]);
 
   const openNameEdit = () => {
     setNameDraft(name);

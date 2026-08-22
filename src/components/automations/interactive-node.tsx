@@ -50,6 +50,7 @@ export type InteractiveNodeData = {
   stepOptions?: Array<{ value: string; label: string }>;
   onConfigChange?: (next: Record<string, unknown>) => void;
   isFirstMessageStep?: boolean;
+  inheritedChannelId?: string;
 };
 
 type InteractiveRF = Node<InteractiveNodeData, "interactive">;
@@ -76,7 +77,12 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveRF>) {
   const { options: channelOptions } = useConnectedStepChannels(data.stepType, {
     enabled: isChannelStep,
   });
-  const channelBadgeLabel = channelLabelFromOptions(channelOptions, channelId);
+  const channelBadgeLabel = channelId
+    ? channelLabelFromOptions(channelOptions, channelId)
+    : isChannelStep
+      ? channelLabelFromOptions(channelOptions, data.inheritedChannelId) ??
+        "Canal da conversa"
+      : null;
 
   return (
     <FlowNodeShell
@@ -185,6 +191,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveRF>) {
         config={data.config}
         stepOptions={data.stepOptions ?? []}
         isFirstMessageStep={data.isFirstMessageStep}
+        inheritedChannelId={data.inheritedChannelId}
         onChange={(next) => data.onConfigChange?.(next)}
       />
       {s && (

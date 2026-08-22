@@ -80,9 +80,9 @@ export function NodeConfigEditor({
   stepType: string
   config: Cfg
   steps: StepOpt[]
-  /** 1º passo de mensagem do fluxo — exige `channelId` explícito (sem "herdar"). */
+  /** 1º passo de mensagem do fluxo (legado: exigia canal explícito). */
   isFirstMessageStep?: boolean
-  /** Canal do 1º passo — cards seguintes mostram este valor até o operador trocar. */
+  /** Canal herdado do gatilho (1 conexão) ou do 1º passo. */
   inheritedChannelId?: string
   /** Substitui `STEP_FIELDS[stepType]` — usado pelo editor /fluxo para omitir destinos via handle. */
   fields?: EditorField[]
@@ -773,9 +773,11 @@ function ConfigSelect({
   )
 }
 
+const ENTRADA_CHANNEL_VALUE = "__entrada__"
+
 /**
- * Campo "Canal de envio". Sempre visível nos passos de mensagem.
- * No canvas de produção, passos seguintes ainda podem herdar (`channelId` vazio).
+ * Campo "Canal de envio". Padrão = canal da conversa (entrada / gatilho).
+ * `channelId` vazio herda; override só quando o operador escolhe uma conexão.
  */
 function ChannelPickerField({
   stepType,
@@ -795,35 +797,53 @@ function ChannelPickerField({
   const { options, isLoading } = useConnectedStepChannels(stepType, { mockIfEmpty })
 
   useEffect(() => {
-    if (isFirstMessageStep && options.length === 1 && !channelId) onChange(options[0]!.id)
-  }, [options, channelId, onChange, isFirstMessageStep])
+    if (options.length === 1 && !channelId && !inheritedChannelId) onChange(options[0]!.id)
+  }, [options, channelId, inheritedChannelId, onChange])
 
   if (isLoading) return null
 
   const inherited = inheritedChannelId?.trim() || ""
-  const value = channelId || inherited
-  const selected = options.find((o) => o.id === value)
-  const placeholder = options.length === 0 ? "Nenhum canal conectado" : "Selecione o canal…"
+  const inheritedLabel = inherited
+    ? options.find((o) => o.id === inherited)?.label
+    : null
+  const entradaLabel = inheritedLabel
+    ? `Canal da conversa (entrada · ${inheritedLabel})`
+    : "Canal da conversa (entrada)"
+  const value = channelId || ENTRADA_CHANNEL_VALUE
+  const selectedLabel =
+    value === ENTRADA_CHANNEL_VALUE
+      ? entradaLabel
+      : options.find((o) => o.id === value)?.label
+  const placeholder = options.length === 0 ? "Nenhum canal conectado" : entradaLabel
 
   return (
     <Labeled
       label="Canal de envio"
       hint={
-        !isFirstMessageStep && inherited && !channelId
-          ? "Herdado do 1º passo de mensagem. Pode trocar neste card."
+        !channelId
+          ? isFirstMessageStep
+            ? "Padrão do gatilho: responde no mesmo canal em que a mensagem entrou."
+            : inheritedLabel
+              ? `Herdado da entrada (${inheritedLabel}). Pode trocar neste card.`
+              : "Herdado da entrada. Pode trocar neste card."
           : undefined
       }
     >
       <div className="cfg-select-wrap nodrag nopan" onPointerDown={stopFlowPointer}>
         <DropdownGlass
-          options={options.map((o) => ({ value: o.id, label: o.label }))}
+          options={[
+            { value: ENTRADA_CHANNEL_VALUE, label: entradaLabel },
+            ...options.map((o) => ({ value: o.id, label: o.label })),
+          ]}
           value={value}
-          onValueChange={(v) => onChange(!isFirstMessageStep && v === inherited ? "" : v)}
+          onValueChange={(v) =>
+            onChange(v === ENTRADA_CHANNEL_VALUE || v === inherited ? "" : v)
+          }
           placeholder={placeholder}
           matchTriggerWidth
           trigger={
             <button type="button" className="w-full justify-between gap-2 px-2.5 text-left text-[13px]">
-              <span className="min-w-0 flex-1 truncate leading-5">{selected?.label || placeholder}</span>
+              <span className="min-w-0 flex-1 truncate leading-5">{selectedLabel || placeholder}</span>
               <IconChevronDown size={15} className="shrink-0 opacity-50" />
             </button>
           }

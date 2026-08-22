@@ -125,19 +125,50 @@ export function findFirstMessageStepIndex(steps: { type: string }[]): number {
   return steps.findIndex((s) => isMessageChannelStep(s.type));
 }
 
+/** Gatilhos cuja mensagem/ticket já define o canal de envio. */
+export const INBOUND_CHANNEL_TRIGGER_TYPES = new Set([
+  "message_received",
+  "message_sent",
+  "conversation_created",
+]);
+
+/** Conexões (`Channel.id`) do gatilho. Vazio = qualquer canal. */
+export function readTriggerChannelIds(cfg: unknown): string[] {
+  const c = asRecord(cfg);
+  const many = Array.isArray(c.channelIds)
+    ? c.channelIds.filter((x): x is string => typeof x === "string" && x.trim() !== "")
+        .map((s) => s.trim())
+    : [];
+  if (many.length > 0) return [...new Set(many)];
+  const one = typeof c.channelId === "string" ? c.channelId.trim() : "";
+  return one ? [one] : [];
+}
+
 /**
- * Regra de herança de canal: só o PRIMEIRO passo de mensagem do fluxo
- * precisa de `config.channelId` explícito — e só quando a org tem 2+
- * canais conectados do tipo relevante (`connectedChannelCount` já vem
- * filtrado pelo chamador: WhatsApp para os demais tipos, e-mail para
- * `send_email`). Passos posteriores herdam em runtime (backend
- * `resolveOutboundChannelId`); vazio não é erro para eles.
+ * Padrão dos passos de envio: 1 conexão no gatilho → esse id;
+ * vários/nenhum → vazio (canal da conversa / entrada).
+ */
+export function inheritedChannelFromTrigger(triggerConfig: unknown): string {
+  const ids = readTriggerChannelIds(triggerConfig);
+  return ids.length === 1 ? ids[0]! : "";
+}
+
+export function triggerBindsInboundChannel(triggerType: string): boolean {
+  return INBOUND_CHANNEL_TRIGGER_TYPES.has(triggerType);
+}
+
+/**
+ * 1º passo de mensagem só exige `channelId` quando a org tem 2+ canais
+ * E o gatilho não amarra o envio à entrada (inbound / 1 conexão).
  */
 export function validateFirstMessageChannel(
   steps: { type: string; config?: unknown }[],
   connectedChannelCount: number,
+  opts?: { triggerType?: string; triggerConfig?: unknown },
 ): string | null {
   if (connectedChannelCount < 2) return null;
+  if (opts?.triggerType && triggerBindsInboundChannel(opts.triggerType)) return null;
+  if (readTriggerChannelIds(opts?.triggerConfig).length === 1) return null;
   const idx = findFirstMessageStepIndex(steps);
   if (idx < 0) return null;
   const cfg = asRecord(steps[idx].config);
@@ -271,8 +302,15 @@ export function summarizeTriggerConfig(
       }
       return parts.length ? parts.join(" · ") : "Novo contato";
     }
-    case "conversation_created":
+    case "conversation_created": {
+      const ids = readTriggerChannelIds(c);
+      if (ids.length === 1) {
+        const id = ids[0]!;
+        return `Conexão: ${lookup?.[id] ?? id.slice(0, 8)}`;
+      }
+      if (ids.length > 1) return `${ids.length} conexões`;
       return c.channel ? `Canal: ${String(c.channel)}` : "Qualquer canal";
+    }
     case "whatsapp_session_expiring":
       return `${String(c.hoursBeforeExpiry ?? 1)}h antes do encerramento`;
     case "lifecycle_changed": {
@@ -304,7 +342,15 @@ export function summarizeTriggerConfig(
     case "message_received":
     case "message_sent": {
       const parts: string[] = [];
-      if (c.channel) parts.push(`Canal: ${String(c.channel)}`);
+      const ids = readTriggerChannelIds(c);
+      if (ids.length === 1) {
+        const id = ids[0]!;
+        parts.push(`Conexão: ${lookup?.[id] ?? id.slice(0, 8)}`);
+      } else if (ids.length > 1) {
+        parts.push(`${ids.length} conexões`);
+      } else if (c.channel) {
+        parts.push(`Canal: ${String(c.channel)}`);
+      }
       if (c.pipelineId) {
         const id = String(c.pipelineId);
         parts.push(`Pipeline: ${lookup?.[id] ?? id}`);
@@ -914,14 +960,14 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
     case "contact_created":
       return { pipelineId: "", stageId: "" };
     case "conversation_created":
-      return { channel: "" };
+      return { channel: "", channelIds: [] };
     case "lifecycle_changed":
       return { fromLifecycle: "", toLifecycle: "" };
     case "agent_changed":
       return { toAgentId: "" };
     case "message_received":
     case "message_sent":
-      return { channel: "", pipelineId: "", stageId: "", dealStatus: "" };
+      return { channel: "", channelIds: [], pipelineId: "", stageId: "", dealStatus: "" };
     case "call_received":
     case "call_made":
       return { status: "" };

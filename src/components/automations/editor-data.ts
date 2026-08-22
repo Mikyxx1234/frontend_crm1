@@ -178,13 +178,29 @@ export function useChannelOptions() {
   return { options: q.data ?? [], isLoading: q.isLoading }
 }
 
-type RawTemplate = { metaTemplateName?: string; name?: string; label?: string; languageCode?: string }
+type RawTemplate = { metaTemplateName?: string; name?: string; label?: string; language?: string; languageCode?: string }
+
+/** Canal da WABA deste passo: `channelId`, único `channelIds`, ou o herdado. */
+export function resolveTemplateChannelId(
+  config?: { channelId?: unknown; channelIds?: unknown } | null,
+  inherited?: string | null,
+): string | undefined {
+  const c = config ?? {}
+  const one = typeof c.channelId === "string" ? c.channelId.trim() : ""
+  if (one) return one
+  const many = Array.isArray(c.channelIds)
+    ? c.channelIds.filter((x): x is string => typeof x === "string" && x.trim() !== "")
+    : []
+  if (many.length === 1) return many[0]
+  const inh = inherited?.trim()
+  return inh || undefined
+}
 
 /** Templates aprovados da WABA. Com `channelId`, filtra pelo canal Cloud API. */
 export function useTemplateOptions(channelId?: string | null) {
   const q = useQuery({
     queryKey: ["editor-wa-templates", channelId ?? "default"],
-    staleTime: STALE,
+    staleTime: 60_000,
     queryFn: async (): Promise<Opt[]> => {
       const qs = channelId?.trim()
         ? `?channelId=${encodeURIComponent(channelId.trim())}`
@@ -204,6 +220,8 @@ export function useTemplateOptions(channelId?: string | null) {
 type RawTemplateDetail = {
   metaTemplateName?: string
   name?: string
+  language?: string
+  languageCode?: string
   bodyPreview?: string
   headerPreview?: string
   footerPreview?: string
@@ -219,19 +237,47 @@ export type TemplateDetail = {
   footerPreview: string
   quickReplies: string[]
   headerFormat?: string | null
+  language?: string
   buttons: { title: string; kind: TemplateButtonKind }[]
+}
+
+export function getTemplateDetail(
+  map: Map<string, TemplateDetail>,
+  name: string,
+  language?: string | null,
+): TemplateDetail | undefined {
+  const n = name.trim()
+  if (!n) return undefined
+  const lang = language?.trim().toLowerCase()
+  if (lang) {
+    const hit = map.get(`${n}::${lang}`)
+    if (hit) return hit
+  }
+  return map.get(n)
+}
+
+export function mergeTemplateQuickReplies(
+  prev: { title?: string; text?: string; gotoStepId?: string }[],
+  quickReplies: string[],
+): { id: string; title: string; gotoStepId: string }[] {
+  return quickReplies.map((title, i) => {
+    const match = prev.find(
+      (p) => (p.title ?? p.text ?? "").trim().toLowerCase() === title.toLowerCase(),
+    )
+    return { id: `btn_${i}`, title, gotoStepId: match?.gotoStepId ?? "" }
+  })
 }
 
 /**
  * Mapa nome-do-template → { bodyPreview, quickReplies }. Usado pelo nó
  * "Template WhatsApp" para exibir o corpo e derivar os botões de resposta
- * rápida (roteamento). Reusa a MESMA query de useTemplateOptions (cache
- * compartilhado) para não duplicar fetch.
+ * rápida (roteamento). Com `channelId`, lê a WABA daquele canal — sem isso
+ * a Graph devolve o último CONNECTED, que pode ser outro número.
  */
 export function useTemplateDetailsMap(channelId?: string | null) {
   const q = useQuery({
     queryKey: ["editor-wa-templates-detail", channelId ?? "default"],
-    staleTime: STALE,
+    staleTime: 60_000,
     queryFn: async (): Promise<Map<string, TemplateDetail>> => {
       const qs = channelId?.trim()
         ? `?channelId=${encodeURIComponent(channelId.trim())}`
@@ -243,6 +289,7 @@ export function useTemplateDetailsMap(channelId?: string | null) {
       for (const t of list) {
         const name = t.metaTemplateName ?? t.name ?? ""
         if (!name) continue
+        const language = (t.language ?? t.languageCode ?? "pt_BR").trim()
         const buttons = (t.buttons ?? [])
           .map((b) => {
             const title = (b.text ?? "").trim()
@@ -258,14 +305,18 @@ export function useTemplateDetailsMap(channelId?: string | null) {
           })
           .filter((x): x is { title: string; kind: TemplateButtonKind } => Boolean(x))
         const quickReplies = buttons.filter((b) => b.kind === "reply").map((b) => b.title)
-        map.set(name, {
+        const detail: TemplateDetail = {
           bodyPreview: (t.bodyPreview ?? "").trim(),
           headerPreview: (t.headerPreview ?? "").trim(),
           footerPreview: (t.footerPreview ?? "").trim(),
           quickReplies,
           headerFormat: t.headerFormat ?? null,
+          language,
           buttons,
-        })
+        }
+        map.set(`${name}::${language.toLowerCase()}`, detail)
+        const existing = map.get(name)
+        if (!existing || language.toLowerCase() === "pt_br") map.set(name, detail)
       }
       return map
     },

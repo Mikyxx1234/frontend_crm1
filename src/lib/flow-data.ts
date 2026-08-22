@@ -71,6 +71,7 @@ export interface NodeConfig {
   targetStepId?: string
   templateName?: string
   templateLabel?: string
+  languageCode?: string
   userId?: string
   userLabel?: string
   departmentId?: string

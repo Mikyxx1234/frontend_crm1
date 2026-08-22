@@ -11,7 +11,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useConnectedStepChannels } from "@/components/automations/step-channel-picker"
-import { useTemplateDetailsMap } from "@/components/automations/editor-data"
+import {
+  getTemplateDetail,
+  resolveTemplateChannelId,
+  useTemplateDetailsMap,
+} from "@/components/automations/editor-data"
 import type { FlowNodeData } from "@/lib/flow-data"
 import { clipWa, WA_META } from "./whatsapp-phone-ui"
 import {
@@ -57,11 +61,10 @@ export function FlowSimulator({
   const current = nodes.find((n) => n.id === sim.currentId)
   const { options } = useConnectedStepChannels("send_whatsapp_message", { mockIfEmpty: true })
   const channelId =
-    current && typeof current.data.config?.channelId === "string"
-      ? current.data.config.channelId
-      : nodes
-          .map((n) => n.data.config?.channelId)
-          .find((id): id is string => typeof id === "string" && id.length > 0)
+    resolveTemplateChannelId(current?.data.config) ??
+    nodes
+      .map((n) => resolveTemplateChannelId(n.data.config))
+      .find((id): id is string => typeof id === "string" && id.length > 0)
   const channel = options.find((o) => o.id === channelId)
   const bizName = channel?.label || "Empresa"
   const { detailsMap } = useTemplateDetailsMap(channelId)
@@ -85,7 +88,11 @@ export function FlowSimulator({
 
   const lastBot = [...sim.events].reverse().find((e): e is Extract<SimEvent, { kind: "bot" }> => e.kind === "bot")
   const lastBotTpl = lastBot
-    ? detailsMap.get(lastBot.config.templateName || lastBot.config.template || "")
+    ? getTemplateDetail(
+        detailsMap,
+        lastBot.config.templateName || lastBot.config.template || "",
+        lastBot.config.languageCode || lastBot.config.idioma,
+      )
     : undefined
 
   const lastChoices: WaChoice[] = lastBot

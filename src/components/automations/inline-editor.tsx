@@ -40,6 +40,9 @@ import {
   usePipelineOptions,
   useStageOptions,
   useTagOptions,
+  getTemplateDetail,
+  mergeTemplateQuickReplies,
+  resolveTemplateChannelId,
   useTemplateDetailsMap,
   useTemplateOptions,
   useUserOptions,
@@ -278,6 +281,7 @@ function Field({
           <SourceSelect
             source={field.source}
             value={str(config[field.key])}
+            channelId={resolveTemplateChannelId(config, inheritedChannelId)}
             onChange={(v) => set(field.key, v)}
           />
         </Labeled>
@@ -342,7 +346,13 @@ function Field({
       return <UpdateFieldEditor config={config} onChange={onChange} />
 
     case "templatePreview":
-      return <TemplatePreview config={config} onChange={onChange} />
+      return (
+        <TemplatePreview
+          config={config}
+          inheritedChannelId={inheritedChannelId}
+          onChange={onChange}
+        />
+      )
 
     case "webhookConfig":
       return <InlineWebhookConfig config={config} onChange={onChange} />
@@ -844,14 +854,26 @@ function InlineWebhookConfig({
   return <WebhookStepConfig draft={config} setDraft={setDraft} />
 }
 
-function SourceSelect({ source, value, onChange }: { source: SourceKey; value: string; onChange: (v: string) => void }) {
+function SourceSelect({
+  source,
+  value,
+  onChange,
+  channelId,
+}: {
+  source: SourceKey
+  value: string
+  onChange: (v: string) => void
+  channelId?: string
+}) {
   switch (source) {
     case "stage":
       return <HookSelect hook={useStageOptions} value={value} onChange={onChange} placeholder="Selecione um estágio…" />
     case "department":
       return <HookSelect hook={useDepartmentOptions} value={value} onChange={onChange} placeholder="Selecione um departamento…" />
     case "template":
-      return <HookSelect hook={useTemplateOptions} value={value} onChange={onChange} placeholder="Selecione um template…" />
+      return (
+        <TemplateNameSelect channelId={channelId} value={value} onChange={onChange} />
+      )
     case "automation":
       return <HookSelect hook={useAutomationOptions} value={value} onChange={onChange} placeholder="Selecione uma automação…" />
     case "aiAgentId":
@@ -1026,6 +1048,27 @@ function DepartmentMultiSelect({
   )
 }
 
+function TemplateNameSelect({
+  channelId,
+  value,
+  onChange,
+}: {
+  channelId?: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  const { options, isLoading } = useTemplateOptions(channelId)
+  return (
+    <ConfigSelect
+      value={value}
+      options={options}
+      onChange={onChange}
+      placeholder="Selecione um template…"
+      loading={isLoading}
+    />
+  )
+}
+
 function HookSelect({
   hook,
   value,
@@ -1194,8 +1237,6 @@ function UpdateFieldEditor({ config, onChange }: { config: Cfg; onChange: (next:
 
 // ─────────────────────── Preview do template WhatsApp ───────────────────────
 
-const norm = (s: string) => s.trim().toLowerCase()
-
 /**
  * Preview do template (estilo WhatsApp): apenas o CORPO da mensagem. Os
  * botões NÃO aparecem aqui — eles viram linhas com handle no próprio card
@@ -1206,28 +1247,29 @@ const norm = (s: string) => s.trim().toLowerCase()
  */
 function TemplatePreview({
   config,
+  inheritedChannelId,
   onChange,
 }: {
   config: Cfg
+  inheritedChannelId?: string
   onChange: (next: Cfg) => void
 }) {
   const templateName = str(config.templateName)
-  const { detailsMap, isLoading } = useTemplateDetailsMap()
-  const detail = templateName ? detailsMap.get(templateName) : undefined
+  const channelId = resolveTemplateChannelId(config, inheritedChannelId)
+  const { detailsMap, isLoading } = useTemplateDetailsMap(channelId)
+  const detail = getTemplateDetail(detailsMap, templateName, str(config.languageCode))
 
   useEffect(() => {
     if (!detail) return
     const prev = asArr(config.buttons) as BtnItem[]
-    const desired = detail.quickReplies.map((t, i) => {
-      const match = prev.find((b) => norm(str(b.title ?? b.text)) === norm(t))
-      return { id: `btn_${i}`, title: t, gotoStepId: str(match?.gotoStepId) }
-    })
+    const desired = mergeTemplateQuickReplies(prev, detail.quickReplies)
     const sameBtns =
       desired.length === prev.length &&
       desired.every(
         (b, i) => b.title === str(prev[i]?.title) && b.gotoStepId === str(prev[i]?.gotoStepId),
       )
     const sameBody = str(config.bodyPreview) === detail.bodyPreview
+    const sameLang = !detail.language || str(config.languageCode) === detail.language
     const hf = (detail.headerFormat || "").toUpperCase()
     const needsMedia = hf === "IMAGE" || hf === "VIDEO" || hf === "DOCUMENT"
     const clearHeader =
@@ -1235,17 +1277,18 @@ function TemplatePreview({
       (str(config.headerMediaUrl) !== "" ||
         str(config.headerMediaType) !== "" ||
         str(config.headerUploadedFileName) !== "")
-    if (sameBtns && sameBody && !clearHeader) return
+    if (sameBtns && sameBody && sameLang && !clearHeader) return
     onChange({
       ...config,
       buttons: desired,
       bodyPreview: detail.bodyPreview,
+      ...(detail.language ? { languageCode: detail.language } : {}),
       ...(clearHeader
         ? { headerMediaUrl: "", headerMediaType: "", headerUploadedFileName: "" }
         : {}),
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateName, detail])
+  }, [templateName, detail, channelId])
 
   if (!templateName) return null
   if (isLoading && !detail) return <p className="cfg-info">Carregando preview…</p>

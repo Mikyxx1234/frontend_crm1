@@ -4,7 +4,12 @@ import { memo, useEffect } from "react"
 import { Handle, Position, useReactFlow, type NodeProps } from "@xyflow/react"
 import { NodeConfigEditor } from "./inline-editor"
 import { resolveFlowPresentation } from "./node-presentation"
-import { useTemplateDetailsMap } from "./editor-data"
+import {
+  getTemplateDetail,
+  mergeTemplateQuickReplies,
+  resolveTemplateChannelId,
+  useTemplateDetailsMap,
+} from "./editor-data"
 
 type TemplateBtn = { id?: string; title?: string; text?: string; gotoStepId?: string }
 
@@ -320,19 +325,18 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
   // editor (inline ou diálogo) escolheu o template — garante que os ramos de
   // roteamento e o preview apareçam no card. Preserva gotoStepId por título.
   const isTemplate = d.stepType === "send_whatsapp_template"
-  const { detailsMap } = useTemplateDetailsMap()
+  const { detailsMap } = useTemplateDetailsMap(
+    isTemplate ? resolveTemplateChannelId(d.config) : undefined,
+  )
   const templateName = isTemplate ? String((d.config ?? {}).templateName ?? "") : ""
-  const tplDetail = isTemplate && templateName ? detailsMap.get(templateName) : undefined
+  const tplDetail = isTemplate
+    ? getTemplateDetail(detailsMap, templateName, String((d.config ?? {}).languageCode ?? ""))
+    : undefined
   useEffect(() => {
     if (!isTemplate || !tplDetail) return
     const cfg = d.config ?? {}
     const prev = Array.isArray(cfg.buttons) ? (cfg.buttons as TemplateBtn[]) : []
-    const desired = tplDetail.quickReplies.map((title, i) => {
-      const match = prev.find(
-        (p) => (p.title ?? p.text ?? "").trim().toLowerCase() === title.toLowerCase(),
-      )
-      return { id: `btn_${i}`, title, gotoStepId: match?.gotoStepId ?? "" }
-    })
+    const desired = mergeTemplateQuickReplies(prev, tplDetail.quickReplies)
     const buttonsSame =
       desired.length === prev.length &&
       desired.every(

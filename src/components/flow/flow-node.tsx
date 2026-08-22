@@ -26,11 +26,18 @@ import {
   nodeFamily,
   outputsFromStepConfig,
   previewPlaceholder,
+  remapFlowEdges,
   removeInteractiveChoice,
   renameInteractiveChoice,
   resolveStepType,
 } from "@/lib/flow-step-adapter"
 import { stepIcon, stepColor } from "@/components/automations/add-step-node"
+import {
+  getTemplateDetail,
+  mergeTemplateQuickReplies,
+  resolveTemplateChannelId,
+  useTemplateDetailsMap,
+} from "@/components/automations/editor-data"
 import { useTriggerNameLookup } from "@/components/automations/trigger-config-fields"
 import { summarizeTriggerConfig } from "@/lib/automation-workflow"
 import { useLogs } from "./logs-context"
@@ -208,7 +215,42 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
   const Icon = stepIcon[stepType] ?? MessageSquare
   const iconClass = stepColor[stepType] ?? "text-[var(--text-muted)]"
   const triggerLookup = useTriggerNameLookup()
+  const isTemplateCard = stepType === "send_whatsapp_template"
+  const templateChannelId = resolveTemplateChannelId(d.config ?? {})
+  const { detailsMap: tplMap } = useTemplateDetailsMap(isTemplateCard ? templateChannelId : undefined)
+  const tplName = String(d.config?.templateName ?? d.config?.template ?? "")
+  const tplLang = String(d.config?.languageCode ?? d.config?.idioma ?? "")
+  const tplDetail = isTemplateCard ? getTemplateDetail(tplMap, tplName, tplLang) : undefined
   const isTriggerCard = stepType === "trigger" || d.kind === "trigger"
+
+  useEffect(() => {
+    if (!isTemplateCard || !tplDetail) return
+    const cfg = (d.config ?? {}) as Record<string, unknown>
+    const prev = Array.isArray(cfg.buttons)
+      ? (cfg.buttons as { title?: string; text?: string; gotoStepId?: string }[])
+      : []
+    const desired = mergeTemplateQuickReplies(prev, tplDetail.quickReplies)
+    const buttonsSame =
+      desired.length === prev.length &&
+      desired.every(
+        (b, i) =>
+          b.title === String(prev[i]?.title ?? prev[i]?.text ?? "") &&
+          (b.gotoStepId ?? "") === String(prev[i]?.gotoStepId ?? ""),
+      )
+    const bodySame = String(cfg.bodyPreview ?? "") === tplDetail.bodyPreview
+    const langSame = !tplDetail.language || String(cfg.languageCode ?? "") === tplDetail.language
+    if (buttonsSame && bodySame && langSame) return
+    const nextCfg = {
+      ...cfg,
+      buttons: desired,
+      bodyPreview: tplDetail.bodyPreview,
+      ...(tplDetail.language ? { languageCode: tplDetail.language } : {}),
+    }
+    const outputs = outputsFromStepConfig(stepType, nextCfg, d.outputs)
+    updateNodeData(id, { config: nextCfg, outputs })
+    setEdges((eds) => remapFlowEdges(eds, [{ id, data: { ...d, config: nextCfg, outputs } }]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTemplateCard, tplName, tplDetail, id])
   const preview = isTriggerCard
     ? summarizeTriggerConfig(String(d.triggerType ?? ""), d.config ?? {}, triggerLookup)
     : cardPreview(d)

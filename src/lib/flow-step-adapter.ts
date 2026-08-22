@@ -194,12 +194,21 @@ export function outputsFromStepConfig(
       kind: "response" as const,
       target: t(`btn_${i}`, item.gotoStepId),
     }))
-    return [
-      ...buttons,
-      { key: "else", label: "Outra resposta", kind: "navigation", target: t("else", cfg.elseGotoStepId) },
-      { key: "timeout", label: "Caso o contato não responda", kind: "error", target: t("timeout", cfg.timeoutGotoStepId) },
-      { key: "failure", label: "Caso ocorrer erro no envio de mensagem", kind: "error", target: t("failure", cfg.failureGotoStepId) },
+    const common = [
+      { key: "else", label: "Outra resposta", kind: "navigation" as const, target: t("else", cfg.elseGotoStepId) },
+      { key: "timeout", label: "Caso o contato não responda", kind: "error" as const, target: t("timeout", cfg.timeoutGotoStepId) },
+      { key: "failure", label: "Caso ocorrer erro no envio de mensagem", kind: "error" as const, target: t("failure", cfg.failureGotoStepId) },
     ]
+    // Template com botões ainda precisa de "Próximo passo" — o fluxo BV
+    // liga o webhook nesse handle; sem ele o nextStepId some no reload.
+    if (type === "send_whatsapp_template") {
+      return [
+        ...buttons,
+        { key: "next", label: "Próximo passo", kind: "navigation" as const, target: t("next", cfg.nextStepId) },
+        ...common,
+      ]
+    }
+    return [...buttons, ...common]
   }
   if (type === "wait_for_reply") {
     return [

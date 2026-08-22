@@ -643,6 +643,7 @@ export function CoverageBoard({
           onToggle={toggleSelected}
           onEdit={openEdit}
         />
+
       )}
 
       {/* Barra de ação em massa */}

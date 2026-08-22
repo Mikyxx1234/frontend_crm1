@@ -13,7 +13,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { isPageMockMode } from "@/lib/page-mock-mode";
-import { mockAutomationSummary, mockAutomationsPage } from "./mock-automations";
+import { mockAutomationsPage } from "./mock-automations";
 
 async function getJson<T>(path: string, errLabel: string): Promise<T> {
   const res = await fetch(apiUrl(path));
@@ -54,8 +54,9 @@ export interface AutomationListItemDto {
   /** Tipos dos passos na ordem (vocabulário backend, ex.: "send_email"). */
   stepTypes?: string[];
   /**
-   * Métricas da janela de hoje (buildAutomationListStats). Opcionais
-   * porque o detalhe (GET /api/automations/:id) não as retorna.
+   * Métricas reais agregadas pelo backend (buildAutomationListStats).
+   * Opcionais porque o endpoint de detalhe (GET /api/automations/:id) não
+   * as retorna — apenas a listagem (GET /api/automations).
    */
   runs?: number;
   runsToday?: number;
@@ -82,14 +83,6 @@ export interface AutomationDetailDto extends AutomationListItemDto {
   steps: AutomationStepDto[];
 }
 
-export interface AutomationListSummary {
-  total: number;
-  active: number;
-  paused: number;
-  runsToday: number;
-  avgSuccess: number;
-}
-
 export interface FetchAutomationsParams {
   active?: boolean;
   search?: string;
@@ -112,16 +105,6 @@ export function fetchAutomations(
   return getJson<AutomationListPage>(
     `/api/automations${qs ? `?${qs}` : ""}`,
     "Erro ao carregar automações.",
-  );
-}
-
-export function fetchAutomationSummary(): Promise<AutomationListSummary> {
-  if (isPageMockMode()) {
-    return Promise.resolve(mockAutomationSummary());
-  }
-  return getJson<AutomationListSummary>(
-    "/api/automations/summary",
-    "Erro ao carregar resumo de automações.",
   );
 }
 

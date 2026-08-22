@@ -6,11 +6,11 @@
  */
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
-import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { Input } from "@/components/ui/input";
 import { apiUrl } from "@/lib/api";
-import { useProductOptions } from "./editor-data";
 
 type ProductOption = { id: string; name: string; sku?: string | null; price?: number };
 
@@ -94,19 +94,35 @@ export function ProductPicker({
   valueDiscountPercent?: number;
   onChange: (selection: ProductSelection) => void;
 }) {
+  const [search, setSearch] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const products = useProductOptions();
   const [pendingPricing, setPendingPricing] = useState<{
     productId: string;
     productName: string;
     options: CoursePricingPick[];
   } | null>(null);
 
-  const options: ProductOption[] = products.options.map((o) => ({
-    id: o.value,
-    name: o.label.split(" · ")[0] ?? o.label,
-    sku: o.label.includes(" · ") ? o.label.split(" · ").slice(1).join(" · ") : null,
-  }));
+  const productsQuery = useQuery({
+    queryKey: ["products-for-automation", search],
+    staleTime: 30_000,
+    enabled: !value && !pendingPricing,
+    queryFn: async () => {
+      const qs = new URLSearchParams({ perPage: "20", active: "true" });
+      if (search.trim()) qs.set("search", search.trim());
+      const res = await fetch(apiUrl(`/api/products?${qs.toString()}`));
+      if (!res.ok) return [] as ProductOption[];
+      const data = await res.json();
+      const list = Array.isArray(data?.products) ? data.products : [];
+      return list.map((p: Record<string, unknown>) => ({
+        id: String(p.id),
+        name: String(p.name ?? ""),
+        sku: (p.sku as string | null) ?? null,
+        price: typeof p.price === "number" ? p.price : Number(p.price ?? 0),
+      })) as ProductOption[];
+    },
+  });
+
+  const options = productsQuery.data ?? [];
 
   async function handlePickProduct(p: ProductOption) {
     if (loadingId) return;
@@ -247,24 +263,39 @@ export function ProductPicker({
           </Button>
         </div>
       ) : (
-        <DropdownGlass
-          triggerClassName="w-full"
-          searchable
-          searchPlaceholder="Buscar produto pelo nome ou SKU…"
-          placeholder={
-            products.isLoading
-              ? "Carregando produtos…"
-              : products.isError
-                ? "Não foi possível carregar"
-                : "Selecione um produto…"
-          }
-          value={value}
-          options={products.options}
-          onValueChange={(id) => {
-            const p = options.find((o) => o.id === id)
-            if (p) void handlePickProduct(p)
-          }}
-        />
+        <>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar produto pelo nome ou SKU…"
+          />
+          <div className="max-h-48 overflow-auto rounded-md border border-border">
+            {productsQuery.isLoading ? (
+              <p className="px-3 py-2 text-[12px] text-muted-foreground">Carregando…</p>
+            ) : options.length === 0 ? (
+              <p className="px-3 py-2 text-[12px] text-muted-foreground">
+                Nenhum produto encontrado.
+              </p>
+            ) : (
+              options.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={loadingId === p.id}
+                  onClick={() => void handlePickProduct(p)}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-muted disabled:opacity-60"
+                >
+                  <span className="truncate">{p.name}</span>
+                  {p.sku ? (
+                    <span className="ml-2 shrink-0 text-[11px] text-muted-foreground">
+                      {loadingId === p.id ? "…" : p.sku}
+                    </span>
+                  ) : null}
+                </button>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );

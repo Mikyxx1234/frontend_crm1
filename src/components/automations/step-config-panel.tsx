@@ -4208,13 +4208,7 @@ function TransferAutomationConfig({
       const res = await fetch(apiUrl("/api/automations?perPage=100"));
       if (!res.ok) return [];
       const json = await res.json();
-      const items = Array.isArray(json.items)
-        ? json.items
-        : Array.isArray(json.data)
-          ? json.data
-          : Array.isArray(json)
-            ? json
-            : [];
+      const items = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
       return items.map((a: Record<string, unknown>) => ({
         id: String(a.id ?? ""),
         name: String(a.name ?? ""),

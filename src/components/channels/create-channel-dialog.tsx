@@ -191,7 +191,10 @@ export function CreateChannelDialog({
       const res = await fetch(apiUrl("/api/channels/meta/webhook-info"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || undefined }),
+        body: JSON.stringify({
+          name: name.trim() || undefined,
+          type: channelType === "INSTAGRAM" ? "INSTAGRAM" : "WHATSAPP",
+        }),
       });
       const data = (await res.json()) as {
         channelId?: string;

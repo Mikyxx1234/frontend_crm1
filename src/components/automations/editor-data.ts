@@ -152,9 +152,31 @@ export function useTagOptions() {
   return { options: q.data ?? [], isLoading: q.isLoading }
 }
 
-type RawChannel = { id: string; name?: string; type?: string; status?: string }
+type RawChannel = {
+  id: string
+  name?: string
+  type?: string
+  status?: string
+  phoneNumber?: string | null
+}
 
-/** Canais da org (para condições de gatilho "Se canal = X"). value: channelId. */
+const CHANNEL_TYPE_LABEL: Record<string, string> = {
+  WHATSAPP: "WhatsApp",
+  INSTAGRAM: "Instagram",
+  FACEBOOK: "Messenger",
+  EMAIL: "E-mail",
+  WEBCHAT: "Webchat",
+}
+
+function formatChannelOptionLabel(c: RawChannel): string {
+  const name = c.name?.trim() || "Canal"
+  const phone = typeof c.phoneNumber === "string" ? c.phoneNumber.trim() : ""
+  const type = CHANNEL_TYPE_LABEL[String(c.type ?? "").toUpperCase()] ?? ""
+  const base = phone ? `${name} · ${phone}` : name
+  return type ? `${base} (${type})` : base
+}
+
+/** Canais da org. value: channelId. Preferência: CONNECTED primeiro. */
 export function useChannelOptions() {
   const q = useQuery({
     queryKey: ["editor-channels"],
@@ -168,9 +190,11 @@ export function useChannelOptions() {
             ? (json as { channels: unknown[] }).channels
             : asArray(json)
       ) as RawChannel[]
-      return list.map((c) => ({
+      const connected = list.filter((c) => String(c.status ?? "").toUpperCase() === "CONNECTED")
+      const rest = list.filter((c) => String(c.status ?? "").toUpperCase() !== "CONNECTED")
+      return [...connected, ...rest].map((c) => ({
         value: c.id,
-        label: c.name || c.id,
+        label: formatChannelOptionLabel(c),
         group: c.type || undefined,
       }))
     },
@@ -205,21 +229,14 @@ type RawTemplateDetail = {
   metaTemplateName?: string
   name?: string
   bodyPreview?: string
-  headerPreview?: string
-  footerPreview?: string
   buttons?: { type?: string; text?: string }[]
   headerFormat?: string | null
 }
 
-export type TemplateButtonKind = "reply" | "url" | "call" | "flow" | "copy"
-
 export type TemplateDetail = {
   bodyPreview: string
-  headerPreview: string
-  footerPreview: string
   quickReplies: string[]
   headerFormat?: string | null
-  buttons: { title: string; kind: TemplateButtonKind }[]
 }
 
 /**
@@ -243,28 +260,13 @@ export function useTemplateDetailsMap(channelId?: string | null) {
       for (const t of list) {
         const name = t.metaTemplateName ?? t.name ?? ""
         if (!name) continue
-        const buttons = (t.buttons ?? [])
-          .map((b) => {
-            const title = (b.text ?? "").trim()
-            if (!title) return null
-            const type = String(b.type ?? "").toUpperCase()
-            const kind: TemplateButtonKind =
-              type === "URL" ? "url"
-              : type === "PHONE_NUMBER" || type === "VOICE_CALL" ? "call"
-              : type === "FLOW" ? "flow"
-              : type === "COPY_CODE" || type === "OTP" ? "copy"
-              : "reply"
-            return { title, kind }
-          })
-          .filter((x): x is { title: string; kind: TemplateButtonKind } => Boolean(x))
-        const quickReplies = buttons.filter((b) => b.kind === "reply").map((b) => b.title)
+        const quickReplies = (t.buttons ?? [])
+          .filter((b) => String(b.type).toUpperCase() === "QUICK_REPLY" && (b.text ?? "").trim() !== "")
+          .map((b) => b.text!.trim())
         map.set(name, {
           bodyPreview: (t.bodyPreview ?? "").trim(),
-          headerPreview: (t.headerPreview ?? "").trim(),
-          footerPreview: (t.footerPreview ?? "").trim(),
           quickReplies,
           headerFormat: t.headerFormat ?? null,
-          buttons,
         })
       }
       return map
@@ -432,28 +434,6 @@ export type CustomFieldSlugMeta = { type: string; options: string[] }
  * para o nó `update_field` (que grava só o slug em `config.field`).
  * Reusa a queryKey de `useCustomFieldTokens` / `useCustomFieldConditionMeta`.
  */
-type RawProduct = { id: string; name?: string; sku?: string | null }
-
-export function useProductOptions() {
-  const q = useQuery({
-    queryKey: ["editor-products"],
-    staleTime: STALE,
-    queryFn: async (): Promise<Opt[]> => {
-      const json = (await getJson("/api/products?perPage=200")) as Record<string, unknown>
-      const list = (
-        Array.isArray(json.products) ? json.products : asArray(json)
-      ) as RawProduct[]
-      return list
-        .filter((p) => p.id && (p.name || "").trim())
-        .map((p) => ({
-          value: p.id,
-          label: p.sku ? `${p.name} · ${p.sku}` : p.name || p.id,
-        }))
-    },
-  })
-  return { options: q.data ?? [], isLoading: q.isLoading, isError: q.isError }
-}
-
 export function useCustomFieldMetaBySlug(entity: "contact" | "deal") {
   const q = useQuery({
     queryKey: ["editor-custom-fields-raw", entity],

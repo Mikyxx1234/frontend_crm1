@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-import type { ActionStepType } from "@/lib/automation-workflow";
 import { NodePalette } from "./node-palette";
 
 const PIN_KEY = "automations.blocksDrawer.pinned";
@@ -31,11 +30,7 @@ function writePinned(next: boolean) {
  * (overlay; fecha no clique fora / Escape / após arrastar). Default
  * unpinned+fechada — o canvas fica largo; a aba "Blocos" reabre.
  */
-export function NodePaletteDrawer({
-  onAdd,
-}: {
-  onAdd?: (type: ActionStepType) => void;
-}) {
+export function NodePaletteDrawer() {
   const [pinned, setPinned] = useState(false);
   const [open, setOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -124,14 +119,6 @@ export function NodePaletteDrawer({
           className="h-full w-full"
           pinned={pinned}
           onTogglePin={togglePinned}
-          onAdd={
-            onAdd
-              ? (type) => {
-                  onAdd(type);
-                  if (!pinned) setOpen(false);
-                }
-              : undefined
-          }
         />
       </div>
     </>

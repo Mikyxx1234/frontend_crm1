@@ -267,6 +267,7 @@ function nudgeFromOverlap(
 export type AutomationFlowPersistPayload = {
   steps: { id: string; type: string; config: Rec }[]
   triggerConfig: Rec
+  triggerType: string
 }
 
 /**
@@ -312,6 +313,10 @@ export function flowGraphToAutomation(
   let triggerConfig: Rec = triggerNode
     ? withRfPos(triggerNode.data.config, triggerNode.position)
     : { ...baseTrigger }
+  const triggerType =
+    typeof triggerNode?.data.triggerType === "string" && triggerNode.data.triggerType
+      ? triggerNode.data.triggerType
+      : source.triggerType
 
   // `__entryDisconnected` é a forma legada de dizer "o gatilho não aponta para
   // o primeiro step". Mantemos a mesma semântica nos dois sentidos.
@@ -322,7 +327,7 @@ export function flowGraphToAutomation(
     triggerConfig = rest
   }
 
-  return { steps, triggerConfig }
+  return { steps, triggerConfig, triggerType }
 }
 
 function withRfPos(config: unknown, position: { x: number; y: number }): Rec {

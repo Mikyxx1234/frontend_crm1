@@ -14,8 +14,18 @@ import {
   remapFlowEdges,
   resolveStepType,
 } from "@/lib/flow-step-adapter"
-import { summarizeStepConfig, summarizeTriggerConfig, triggerBindsInboundChannel } from "@/lib/automation-workflow"
-import { TriggerConfigFields, useTriggerNameLookup } from "@/components/automations/trigger-config-fields"
+import {
+  defaultTriggerConfig,
+  summarizeStepConfig,
+  summarizeTriggerConfig,
+  triggerBindsInboundChannel,
+  triggerTypeLabel,
+} from "@/lib/automation-workflow"
+import {
+  TriggerConfigFields,
+  TriggerTypeSelect,
+  useTriggerNameLookup,
+} from "@/components/automations/trigger-config-fields"
 import { STEP_FIELDS, type EditorField } from "@/components/automations/editor-fields"
 import { NodeConfigEditor } from "@/components/automations/inline-editor"
 import { useDepartmentOptions, useUserOptions } from "@/components/automations/editor-data"
@@ -114,6 +124,23 @@ export function NodeConfigPanel({ id, data }: { id: string; data: FlowNodeData }
     [id, stepType, data.outputs, updateNodeData],
   )
 
+  const commitTriggerType = useCallback(
+    (nextType: string) => {
+      if (!nextType || nextType === triggerType) return
+      const prev = (data.config ?? {}) as Record<string, unknown>
+      const nextConfig: Record<string, unknown> = { ...defaultTriggerConfig(nextType) }
+      if (prev.__rfPos !== undefined) nextConfig.__rfPos = prev.__rfPos
+      if (prev.__entryDisconnected === true) nextConfig.__entryDisconnected = true
+      updateNodeData(id, {
+        triggerType: nextType,
+        title: triggerTypeLabel(nextType),
+        config: nextConfig as NodeConfig,
+        preview: summarizeTriggerConfig(nextType, nextConfig, triggerLookup),
+      })
+    },
+    [id, triggerType, data.config, triggerLookup, updateNodeData],
+  )
+
   useEffect(() => {
     if (!isTrigger || !triggerType) return
     const next = summarizeTriggerConfig(triggerType, cfg, triggerLookup)
@@ -127,18 +154,23 @@ export function NodeConfigPanel({ id, data }: { id: string; data: FlowNodeData }
         isTrigger && "[&_label]:text-xs",
       )}
     >
-      {isTrigger && triggerType ? (
-        <TriggerConfigFields
-          stacked
-          triggerType={triggerType}
-          value={cfg as Record<string, unknown>}
-          onChange={(next) => {
-            updateNodeData(id, {
-              config: next as NodeConfig,
-              preview: summarizeTriggerConfig(triggerType, next, triggerLookup),
-            })
-          }}
-        />
+      {isTrigger ? (
+        <div className="space-y-4">
+          <TriggerTypeSelect value={triggerType} onChange={commitTriggerType} />
+          {triggerType ? (
+            <TriggerConfigFields
+              stacked
+              triggerType={triggerType}
+              value={cfg as Record<string, unknown>}
+              onChange={(next) => {
+                updateNodeData(id, {
+                  config: next as NodeConfig,
+                  preview: summarizeTriggerConfig(triggerType, next, triggerLookup),
+                })
+              }}
+            />
+          ) : null}
+        </div>
       ) : null}
 
       {isCondition && <FlowConditionConfig cfg={cfg} onChange={commitConfig} />}

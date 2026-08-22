@@ -107,8 +107,8 @@ function InnerEditor({ automationId }: { automationId: string }) {
   const readyRef = useRef(false)
   /**
    * Última versão conhecida do registro persistido. É a base do save: tudo o
-   * que o canvas não edita (name, description, triggerType, ordem original dos
-   * steps) sai daqui inalterado.
+   * que o canvas não edita (name, description, ordem original dos steps)
+   * sai daqui inalterado. `triggerType` / `triggerConfig` vêm do card.
    */
   const sourceRef = useRef<AutomationFlowSource | null>(null)
   const loadedIdRef = useRef<string | null>(null)
@@ -546,12 +546,12 @@ function InnerEditor({ automationId }: { automationId: string }) {
   const exportJson = useCallback(() => {
     const source = sourceRef.current
     if (!source || !detail) return
-    const { steps, triggerConfig } = flowGraphToAutomation(nodes, edges, source)
+    const { steps, triggerConfig, triggerType } = flowGraphToAutomation(nodes, edges, source)
     const payload = {
       id: detail.id,
       name: detail.name,
       description: detail.description,
-      triggerType: detail.triggerType,
+      triggerType,
       triggerConfig,
       active: detail.active,
       steps,
@@ -569,20 +569,20 @@ function InnerEditor({ automationId }: { automationId: string }) {
   const saveFlow = useCallback(async () => {
     const source = sourceRef.current
     if (!source || !detail || replaceAutomation.isPending) return
-    const { steps, triggerConfig } = flowGraphToAutomation(nodes, edges, source)
+    const { steps, triggerConfig, triggerType } = flowGraphToAutomation(nodes, edges, source)
     try {
       await replaceAutomation.mutateAsync({
         id: source.id,
         body: {
           name: detail.name,
           description: detail.description,
-          triggerType: detail.triggerType,
+          triggerType,
           triggerConfig,
           allowManualRun: detail.allowManualRun,
           steps,
         },
       })
-      sourceRef.current = { ...source, triggerConfig, steps }
+      sourceRef.current = { ...source, triggerType, triggerConfig, steps }
       setDirty(false)
       toast.success("Fluxo salvo")
     } catch (e) {

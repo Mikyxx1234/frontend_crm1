@@ -6,6 +6,8 @@ import {
   createAutomation,
   deleteAutomation,
   fetchAutomation,
+  fetchAutomationLogs,
+  fetchAutomationStats,
   fetchAutomationSummary,
   fetchAutomations,
   replaceAutomation,
@@ -16,10 +18,12 @@ import {
   type AutomationListItemDto,
   type AutomationListPage,
   type AutomationListSummary,
+  type AutomationLogsPage,
   type AutomationStepInput,
   type AutomationWriteBody,
 } from "./api";
 
+import type { AutomationStats } from "@/lib/automation-stats-types";
 import { isPreviewMode } from "@/lib/preview-mode";
 import { isPageMockMode } from "@/lib/page-mock-mode";
 
@@ -83,6 +87,42 @@ export function useAutomation(id: string | null) {
     queryKey: ["v2-automation", id ?? "__none__"],
     queryFn: () => fetchAutomation(id as string),
     enabled: isPreviewMode() ? !!id : !!id,
+    staleTime: 10_000,
+  });
+}
+
+/**
+ * Contadores reais de execução (sucesso/falha/skip) por passo. O
+ * `refetchInterval` espelha o editor legado — o canvas fica aberto por
+ * muito tempo e os números precisam acompanhar as execuções.
+ */
+export function useAutomationStats(id: string | null, enabled?: boolean) {
+  return useQuery<AutomationStats>({
+    queryKey: ["v2-automation-stats", id ?? "__none__"],
+    queryFn: () => fetchAutomationStats(id as string),
+    enabled: !!id && (enabled ?? true),
+    refetchInterval: 30_000,
+    staleTime: 10_000,
+  });
+}
+
+/**
+ * Logs de um passo (ou do gatilho, via `stepId: "trigger"`). Só dispara
+ * com `enabled` — a modal de logs é quem liga a busca ao abrir.
+ */
+export function useAutomationLogs(
+  id: string | null,
+  stepId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<AutomationLogsPage>({
+    queryKey: ["v2-automation-logs", id ?? "__none__", stepId ?? "__all__"],
+    queryFn: () =>
+      fetchAutomationLogs(id as string, {
+        stepId: stepId ?? undefined,
+        perPage: 50,
+      }),
+    enabled: !!id && enabled,
     staleTime: 10_000,
   });
 }

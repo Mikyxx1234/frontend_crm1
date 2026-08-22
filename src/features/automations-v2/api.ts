@@ -12,6 +12,7 @@
  */
 
 import { apiUrl } from "@/lib/api";
+import type { AutomationStats } from "@/lib/automation-stats-types";
 import { isPageMockMode } from "@/lib/page-mock-mode";
 import { mockAutomationSummary, mockAutomationsPage } from "./mock-automations";
 
@@ -129,6 +130,60 @@ export function fetchAutomation(id: string): Promise<AutomationDetailDto> {
   return getJson<AutomationDetailDto>(
     `/api/automations/${id}`,
     "Erro ao carregar automação.",
+  );
+}
+
+// ── Telemetria: contadores e logs de execução ────────────────────
+
+/**
+ * `GET /api/automations/:id/stats` — mesmos contadores que o editor
+ * legado consome. `trigger` vem por status cru (`STARTED`, `COMPLETED`,
+ * `FAILED`…); `steps` já vem agregado por passo.
+ */
+export function fetchAutomationStats(id: string): Promise<AutomationStats> {
+  return getJson<AutomationStats>(
+    `/api/automations/${id}/stats`,
+    "Erro ao carregar estatísticas da automação.",
+  );
+}
+
+export interface AutomationLogRowDto {
+  id: string;
+  status: string;
+  message: string | null;
+  contactId: string | null;
+  dealId: string | null;
+  stepId: string | null;
+  stepType: string | null;
+  executedAt: string;
+  payload?: Record<string, unknown> | null;
+  contactName?: string | null;
+  dealName?: string | null;
+  dealNumber?: number | null;
+}
+
+/**
+ * A rota responde `{ items, total }`, mas o editor legado lê
+ * `logs ?? items` — mantemos a mesma leitura defensiva para não
+ * quebrar caso o backend passe a nomear a chave de outro jeito.
+ */
+export interface AutomationLogsPage {
+  logs?: AutomationLogRowDto[];
+  items?: AutomationLogRowDto[];
+  total: number;
+}
+
+/** `stepId: "trigger"` é a convenção do backend para os logs sem passo. */
+export function fetchAutomationLogs(
+  id: string,
+  params: { stepId?: string; perPage?: number } = {},
+): Promise<AutomationLogsPage> {
+  const sp = new URLSearchParams();
+  sp.set("perPage", String(params.perPage ?? 50));
+  if (params.stepId) sp.set("stepId", params.stepId);
+  return getJson<AutomationLogsPage>(
+    `/api/automations/${id}/logs?${sp.toString()}`,
+    "Erro ao carregar logs da automação.",
   );
 }
 

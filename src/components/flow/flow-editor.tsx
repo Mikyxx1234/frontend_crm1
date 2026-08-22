@@ -54,8 +54,10 @@ import {
   TRIGGER_NODE_ID,
   type AutomationFlowSource,
 } from "@/lib/flow-automation-adapter"
+import { applyStatsToNodes } from "@/lib/flow-node-stats"
 import {
   useAutomation,
+  useAutomationStats,
   useReplaceAutomation,
   useToggleAutomation,
 } from "@/features/automations-v2/hooks"
@@ -118,6 +120,7 @@ function InnerEditor({ automationId }: { automationId: string }) {
   )
 
   const automation = useAutomation(automationId)
+  const stats = useAutomationStats(automationId)
   const replaceAutomation = useReplaceAutomation()
   const toggleAutomation = useToggleAutomation()
   const detail = automation.data
@@ -175,6 +178,15 @@ function InnerEditor({ automationId }: { automationId: string }) {
     }, 400)
     return () => window.clearTimeout(t)
   }, [detail, fitView, setNodes, setEdges])
+
+  // Telemetria é aplicada DEPOIS da montagem do grafo, nunca dentro do
+  // adaptador: os contadores não são persistidos no save e não podem virar
+  // dependência da conversão. Sem resposta ainda, os cards ficam em zero.
+  // `detail` entra nas deps porque a carga acima reconstrói os nós zerados.
+  const statsData = stats.data
+  useEffect(() => {
+    setNodes((prev) => applyStatsToNodes(prev, statsData))
+  }, [statsData, detail, setNodes])
 
   // Rede de segurança para o fechamento acidental da aba: o canvas não guarda
   // mais rascunho local, então alteração não salva é alteração perdida.
@@ -771,6 +783,7 @@ function InnerEditor({ automationId }: { automationId: string }) {
       )}
 
       <LogsModal
+        automationId={automationId}
         target={logsTarget}
         open={logsTarget !== null}
         onOpenChange={(o) => !o && setLogsTarget(null)}

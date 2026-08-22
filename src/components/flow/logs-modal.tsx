@@ -9,6 +9,7 @@ import {
   User,
   Briefcase,
   Inbox,
+  Loader2,
 } from "lucide-react"
 import {
   Dialog,
@@ -19,18 +20,19 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
-  getNodeLogs,
+  automationLogToEntry,
   formatDateTime,
   type LogEntry,
   type LogStatus,
 } from "@/lib/logs-data"
+import { useAutomationLogs } from "@/features/automations-v2/hooks"
 import { SessionInspectionModal } from "./session-inspection-modal"
 
 export type LogsTarget = {
+  /** Id do passo; o gatilho usa `"trigger"`, convenção aceita pela API. */
   nodeId: string
   title: string
   ref: number
-  stats: { sucessos: number; alertas: number; erros: number }
   initialTab?: TabKey
 }
 
@@ -46,21 +48,36 @@ const STATUS_STYLE: Record<
 }
 
 export function LogsModal({
+  automationId,
   target,
   open,
   onOpenChange,
 }: {
+  automationId: string
   target: LogsTarget | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const logs = useMemo(
-    () =>
-      target
-        ? getNodeLogs(target.nodeId, target.title, target.ref, target.stats)
-        : null,
-    [target],
+  const query = useAutomationLogs(
+    automationId,
+    target?.nodeId ?? null,
+    open && target !== null,
   )
+
+  const logs = useMemo(() => {
+    const data = query.data
+    // A rota responde `items`; o editor legado lê `logs ?? items` e mantemos
+    // a mesma tolerância.
+    const rows = data?.logs ?? data?.items ?? []
+    const entered = rows.map(automationLogToEntry)
+    return {
+      entered,
+      success: entered.filter((e) => e.status === "success"),
+      alert: entered.filter((e) => e.status === "alert"),
+      error: entered.filter((e) => e.status === "error"),
+      total: data?.total ?? entered.length,
+    }
+  }, [query.data])
 
   const [tab, setTab] = useState<TabKey>(target?.initialTab ?? "success")
   const [selected, setSelected] = useState<LogEntry | null>(null)
@@ -72,7 +89,7 @@ export function LogsModal({
     setTab(target.initialTab ?? "success")
   }
 
-  if (!target || !logs) return null
+  if (!target) return null
 
   const tabs: { key: TabKey; label: string; count: number; tone?: LogStatus }[] = [
     { key: "entered", label: "Entraram", count: logs.entered.length },
@@ -104,7 +121,15 @@ export function LogsModal({
               Logs — {target.title}
             </DialogTitle>
             <DialogDescription className="mt-0.5 text-xs text-muted-foreground">
-              {logs.total.toLocaleString("pt-BR")} registro(s)
+              {query.isPending
+                ? "Carregando registros…"
+                : query.isError
+                  ? "Não foi possível carregar os registros."
+                  : `${logs.total.toLocaleString("pt-BR")} registro(s)${
+                      logs.total > logs.entered.length
+                        ? ` · exibindo os ${logs.entered.length} mais recentes`
+                        : ""
+                    }`}
             </DialogDescription>
           </div>
 
@@ -140,7 +165,14 @@ export function LogsModal({
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-            {list.length === 0 ? (
+            {query.isPending ? (
+              <LoadingState />
+            ) : query.isError ? (
+              <ErrorState
+                message={query.error?.message ?? "Erro ao carregar os logs."}
+                onRetry={() => query.refetch()}
+              />
+            ) : list.length === 0 ? (
               <EmptyState />
             ) : (
               <div className="flex flex-col gap-2 px-5 py-3">
@@ -237,6 +269,32 @@ function EmptyState() {
         <Inbox className="h-4 w-4" />
       </span>
       <p className="text-sm text-muted-foreground">Nenhum registro nesta categoria.</p>
+    </div>
+  )
+}
+
+function LoadingState() {
+  return (
+    <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
+      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">Carregando registros…</p>
+    </div>
+  )
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--route-error)]/10 text-[var(--route-error)]">
+        <CircleX className="h-4 w-4" />
+      </span>
+      <p className="text-sm font-semibold text-foreground">
+        Não foi possível carregar os logs
+      </p>
+      <p className="max-w-sm text-xs text-muted-foreground">{message}</p>
+      <Button variant="outline" size="sm" className="mt-1" onClick={onRetry}>
+        Tentar novamente
+      </Button>
     </div>
   )
 }

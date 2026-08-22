@@ -242,11 +242,10 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
         nodeId: id,
         title: d.title,
         ref: d.ref,
-        stats: d.stats,
         initialTab,
       })
     },
-    [logs, id, d.title, d.ref, d.stats],
+    [logs, id, d.title, d.ref],
   )
 
   const setOutputLabel = useCallback(

@@ -2,10 +2,9 @@
  * Adapter entre `AutomationListItemDto` do backend e o tipo `Automation`
  * usado pela UI v2 (`@/lib/automations-data`).
  *
- * Métricas (`runs`, `runsToday`, `successRate`, `lastRunAt`) são agregadas
- * pelo backend em `buildAutomationListStats` (logs com `stepId = null`).
- * O `lastRunAt` (ISO ou null) é convertido aqui para texto relativo
- * pt-BR exibido no card.
+ * Métricas (`runs`, `runsToday`, `successRate`, `lastRunAt`) vêm da
+ * janela de hoje no backend. O `lastRunAt` (ISO ou null) é convertido
+ * aqui para texto relativo pt-BR exibido no card.
  */
 
 import type { Automation, AutomationTrigger } from "@/lib/automations-data";

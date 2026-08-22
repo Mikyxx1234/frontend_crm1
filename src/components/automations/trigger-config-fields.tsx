@@ -20,7 +20,7 @@ import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { AUTOMATION_TRIGGER_TYPES, triggerTypeLabel } from "@/lib/automation-workflow";
 
-import { useTagOptions, useChannelOptions } from "./editor-data";
+import { useTagOptions } from "./editor-data";
 
 type Props = {
   triggerType: string;
@@ -258,64 +258,6 @@ function StageMultiSelect({
           </DropdownPrimitive.Content>
         </DropdownPrimitive.Portal>
       </DropdownPrimitive.Root>
-      {helper ? (
-        <p className="text-xs text-muted-foreground">{helper}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function readChannelIdsFromConfig(value: Record<string, unknown>): string[] {
-  const raw = value.channelIds;
-  if (Array.isArray(raw)) {
-    return raw.filter((x): x is string => typeof x === "string" && x.trim() !== "");
-  }
-  const one = typeof value.channelId === "string" ? value.channelId.trim() : "";
-  return one ? [one] : [];
-}
-
-function ChannelSelect({
-  id,
-  label,
-  helper,
-  value,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  helper?: string;
-  value: string;
-  onChange: (channelId: string) => void;
-}) {
-  const { options, isLoading } = useChannelOptions();
-
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        <Label htmlFor={id}>{label}</Label>
-        <p className="text-xs text-muted-foreground">Carregando canais…</p>
-      </div>
-    );
-  }
-
-  const hasCurrent = value.length > 0 && options.some((o) => o.value === value);
-
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <DropdownGlass
-        triggerClassName="w-full"
-        placeholder="Todos os canais"
-        value={value}
-        options={[
-          { value: "", label: "Todos os canais" },
-          ...(!hasCurrent && value
-            ? [{ value, label: `${value.slice(0, 8)}… (canal atual)` }]
-            : []),
-          ...options.map((o) => ({ value: o.value, label: o.label })),
-        ]}
-        onValueChange={onChange}
-      />
       {helper ? (
         <p className="text-xs text-muted-foreground">{helper}</p>
       ) : null}
@@ -637,19 +579,20 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
     case "message_sent":
       return (
         <div className="space-y-3">
-          <ChannelSelect
-            id="tc-conn"
-            label="Canal"
-            helper={
-              triggerType === "message_received"
-                ? "Escolha a conexão em que a mensagem chegou. Vazio = qualquer canal da org."
-                : "Escolha a conexão por onde a mensagem saiu. Vazio = qualquer canal da org."
-            }
-            value={readChannelIdsFromConfig(value)[0] ?? ""}
-            onChange={(id) =>
-              patch({ channelIds: id ? [id] : [], channelId: id, channel: "" })
-            }
-          />
+          <div className="space-y-2">
+            <Label htmlFor="tc-ch">Canal (opcional)</Label>
+            <DropdownGlass
+              triggerClassName="w-full"
+              placeholder="Todos os canais"
+              value={String(value.channel ?? "")}
+              options={[
+                { value: "", label: "Todos os canais" },
+                { value: "whatsapp", label: "WhatsApp" },
+                { value: "email", label: "E-mail" },
+              ]}
+              onValueChange={(v) => set("channel", v)}
+            />
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <PipelineSelect
               id="tc-msg-pipe"

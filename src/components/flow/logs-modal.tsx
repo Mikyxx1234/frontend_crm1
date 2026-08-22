@@ -296,9 +296,20 @@ function LogRow({
 }) {
   const style = STATUS_STYLE[entry.status]
   const Icon = style.icon
+  const reasonText = entry.reason?.trim() || ""
+  const titleHasReason =
+    reasonText.length > 0 &&
+    entry.title.toLowerCase().includes(reasonText.toLowerCase())
   const detail =
-    (entry.reason && entry.reason !== entry.title ? entry.reason : null) ||
-    (entry.message && entry.message !== entry.title ? entry.message : null)
+    entry.status !== "success" && reasonText && !titleHasReason
+      ? reasonText
+      : entry.status !== "success" && !reasonText
+        ? "Motivo não registrado nesta execução."
+        : entry.message &&
+            entry.message !== entry.title &&
+            !entry.title.includes(entry.message)
+          ? entry.message
+          : null
   const quotedSnippet =
     entry.snippet && entry.snippet !== detail ? `“${entry.snippet}”` : null
   return (

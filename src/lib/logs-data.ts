@@ -56,9 +56,21 @@ const STATUS_TITLE: Record<LogStatus, string> = {
 
 const STATUS_META: Record<LogStatus, { label: string; code: string }> = {
   success: { label: "Concluído com sucesso", code: "SUCCESS" },
-  alert: { label: "Concluído com alerta", code: "WARNING" },
-  error: { label: "Falha na execução", code: "ERROR" },
+  alert: { label: "Alerta (pulada)", code: "SKIPPED" },
+  error: { label: "Erro (falhou)", code: "FAILED" },
 }
+
+const MISSING_REASON = "motivo não registrado nesta execução"
+const PAYLOAD_REASON_KEYS = [
+  "reason",
+  "motivo",
+  "error",
+  "erro",
+  "cause",
+  "why",
+  "skipReason",
+  "failureReason",
+]
 
 const EVENT_LABEL: Record<string, string> = {
   continue: "Continuação do fluxo",
@@ -233,6 +245,53 @@ function flattenWebhook(
   return out
 }
 
+function isGenericOutcomeText(
+  text: string,
+  status: LogStatus,
+  eventLabel: string | null,
+): boolean {
+  const t = text.trim()
+  if (!t) return true
+  if (t === STATUS_TITLE[status] || t === STATUS_META[status].label) return true
+  if (eventLabel && (t === eventLabel || t.endsWith(` — ${eventLabel}`))) return true
+  return false
+}
+
+function reasonFromPayload(payload: Record<string, unknown> | null): string | null {
+  return payloadString(payload, PAYLOAD_REASON_KEYS)
+}
+
+/** Motivo da pulada/falha — nunca o rótulo genérico da aba. */
+export function outcomeReason(
+  status: LogStatus,
+  message: string,
+  payload: Record<string, unknown> | null,
+  eventLabel: string | null,
+): string {
+  if (status === "success") return message
+  const fromPayload = reasonFromPayload(payload)
+  for (const candidate of [fromPayload, message]) {
+    if (!candidate) continue
+    const trimmed = candidate.trim()
+    if (!isGenericOutcomeText(trimmed, status, eventLabel)) return trimmed
+  }
+  return MISSING_REASON
+}
+
+export function outcomeTitle(status: LogStatus, reason: string): string {
+  if (status === "success") return reason
+  const lower = reason.toLowerCase()
+  if (
+    lower.startsWith("pulada:") ||
+    lower.startsWith("falha:") ||
+    lower.startsWith("alerta:")
+  ) {
+    return reason
+  }
+  const prefix = status === "error" ? "Falha" : "Pulada"
+  return `${prefix}: ${reason}`
+}
+
 export function automationLogToEntry(row: AutomationLogRow): LogEntry {
   const status = toLogStatus(row.status)
   const payload = asRecord(row.payload)
@@ -241,25 +300,33 @@ export function automationLogToEntry(row: AutomationLogRow): LogEntry {
   const channelLabel = channelFromRow(row)
   const snippet = snippetFromRow(row)
   const rawMessage = row.message?.trim() || ""
-  const message = rawMessage ? humanizeLogMessage(rawMessage) : STATUS_TITLE[status]
-  const reason =
-    status !== "success" && message && message !== eventLabel ? message : null
+  const humanized = rawMessage ? humanizeLogMessage(rawMessage) : ""
   const contactId = row.contactId ?? ""
   const dealId = row.dealId ?? ""
   const contactLabel =
     row.contactName?.trim() ||
     (contactId ? `Contato ${shortRef(contactId)}` : "Sem contato")
 
-  // Desfecho em português (ex.: "finalizada com sucesso"), não o nome cru
-  // do gatilho. O evento vai no chip / Detalhes.
+  const reason =
+    status === "success"
+      ? null
+      : outcomeReason(status, humanized || rawMessage, payload, eventLabel)
+  const message =
+    humanized ||
+    (status === "success" ? STATUS_TITLE.success : (reason ?? STATUS_TITLE[status]))
+
+  // Alerta/erro: o motivo vem primeiro. Sucesso: desfecho, não o gatilho.
   const title =
-    message && message !== STATUS_TITLE[status]
-      ? message
-      : eventLabel
-        ? `${contactLabel} — ${eventLabel}`
-        : STATUS_TITLE[status]
+    status === "success"
+      ? message && message !== STATUS_TITLE.success
+        ? message
+        : eventLabel
+          ? `${contactLabel} — ${eventLabel}`
+          : STATUS_TITLE.success
+      : outcomeTitle(status, reason ?? MISSING_REASON)
 
   const summary: Record<string, string | number | boolean> = {
+    ...(status !== "success" ? { motivo: reason ?? MISSING_REASON } : {}),
     id: row.id,
     status: row.status,
     message,
@@ -268,7 +335,6 @@ export function automationLogToEntry(row: AutomationLogRow): LogEntry {
   if (eventLabel) summary.evento = eventLabel
   if (channelLabel) summary.canal = channelLabel
   if (snippet) summary.mensagem = snippet
-  if (reason) summary.alerta = reason
   if (row.stepId) summary.stepId = row.stepId
   if (row.stepType) summary.stepType = row.stepType
   if (contactId) summary.contactId = contactId
@@ -308,6 +374,7 @@ export function automationLogToEntry(row: AutomationLogRow): LogEntry {
     webhook,
     summary,
     params: {
+      ...(status !== "success" ? { motivo: reason ?? MISSING_REASON } : {}),
       ...flattenPayload(payload),
       ...flattenWebhook(webhook),
     },

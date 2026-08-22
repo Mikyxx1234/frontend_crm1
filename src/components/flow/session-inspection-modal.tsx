@@ -99,9 +99,17 @@ export function SessionInspectionModal({
               Inspeção da sessão
             </DialogTitle>
             <DialogDescription className="mt-1 text-xs text-muted-foreground">
-              {entry.title}
+              {entry.reason && entry.reason !== entry.title
+                ? `${entry.title} — ${entry.reason}`
+                : entry.title}
+              {entry.status !== "success" && !entry.reason && (
+                <span className="mt-0.5 block">
+                  Motivo não registrado nesta execução.
+                </span>
+              )}
               <span className="mt-0.5 block break-all font-mono text-muted-foreground">
                 Sessão {entry.sessionId}
+                {entry.rawStatus ? ` · ${entry.rawStatus}` : ""}
               </span>
             </DialogDescription>
           </div>

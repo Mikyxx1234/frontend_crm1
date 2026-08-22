@@ -727,7 +727,7 @@ export function useDealChatBinding(params: {
     messagesNode = (
       <>
         <StickyDayPill date={stickyDayLabel} />
-        <ul className="flex list-none flex-col gap-1.5">
+        <ul className="flex list-none flex-col gap-3">
           {bubbleNodes}
         </ul>
         {isResolved && !hasPersistedClose && (

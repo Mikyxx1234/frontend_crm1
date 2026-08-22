@@ -315,7 +315,13 @@ export function WhatsAppBotBubble({
   config: NodeConfig
   outputs: Output[]
   cardPreview?: string
-  tpl?: { bodyPreview?: string; headerPreview?: string; footerPreview?: string; headerFormat?: string; buttons: { title: string; kind: WaActionKind }[] }
+  tpl?: {
+    bodyPreview?: string
+    headerPreview?: string
+    footerPreview?: string
+    headerFormat?: string | null
+    buttons: { title: string; kind: WaActionKind }[]
+  }
   time: string
   onChoice?: (c: WaChoice, index: number) => void
   onOpenList?: () => void

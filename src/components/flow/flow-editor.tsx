@@ -37,8 +37,6 @@ import "./flow-canvas.css"
 import {
   ROUTE_META,
   TOPIC_META,
-  rawEdges,
-  rawNodes,
   type FlowNodeData,
   type RouteType,
 } from "@/lib/flow-data"
@@ -46,10 +44,21 @@ import {
   applyHandleToConfig,
   blankFlowNodeFromStep,
   clearHandleFromConfig,
-  migrateFlowNode,
-  remapFlowEdges,
   stripDeletedStepTargets,
 } from "@/lib/flow-step-adapter"
+import {
+  applySavedLayout,
+  automationToFlowGraph,
+  flowGraphToAutomation,
+  markExplicitEdges,
+  TRIGGER_NODE_ID,
+  type AutomationFlowSource,
+} from "@/lib/flow-automation-adapter"
+import {
+  useAutomation,
+  useReplaceAutomation,
+  useToggleAutomation,
+} from "@/features/automations-v2/hooks"
 import type { ActionStepType } from "@/lib/automation-workflow"
 import { layoutFlow, type LayoutDirection } from "@/lib/layout"
 import { NodePaletteDrawer } from "@/components/automations/node-palette-drawer"
@@ -76,53 +85,12 @@ function routeTypeFromHandle(
   return out?.kind ?? "navigation"
 }
 
-function toFlowNodes(): Node<FlowNodeData>[] {
-  return rawNodes.map((n) => ({
-    id: n.id,
-    type: "flowNode",
-    position: { x: 0, y: 0 },
-    data: n.data,
-  }))
-}
-
-function toFlowEdges(): Edge[] {
-  return rawEdges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    sourceHandle: e.sourceHandle,
-    target: e.target,
-    type: "deletable",
-    data: { routeType: e.type } satisfies EdgeData,
-  }))
-}
-
 function getInitialDirection(): LayoutDirection {
   if (typeof window !== "undefined" && window.innerWidth < 768) return "TB"
   return "LR"
 }
 
-const FLOW_DRAFT_KEY = "crm1.fluxo.bv-calouros"
-
-type FlowDraft = {
-  active: boolean
-  nodes: Node<FlowNodeData>[]
-  edges: Edge[]
-}
-
-function readDraft(): FlowDraft | null {
-  if (typeof window === "undefined") return null
-  try {
-    const raw = window.localStorage.getItem(FLOW_DRAFT_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as FlowDraft
-    if (!Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) return null
-    return parsed
-  } catch {
-    return null
-  }
-}
-
-function InnerEditor() {
+function InnerEditor({ automationId }: { automationId: string }) {
   const [direction, setDirection] = useState<LayoutDirection>("LR")
   const [showErrors, setShowErrors] = useState(true)
   const [hovered, setHovered] = useState<string | null>(null)
@@ -130,9 +98,15 @@ function InnerEditor() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [connectStroke, setConnectStroke] = useState("var(--route-navigation)")
-  const [active, setActive] = useState(false)
   const [dirty, setDirty] = useState(false)
   const readyRef = useRef(false)
+  /**
+   * Última versão conhecida do registro persistido. É a base do save: tudo o
+   * que o canvas não edita (name, description, triggerType, ordem original dos
+   * steps) sai daqui inalterado.
+   */
+  const sourceRef = useRef<AutomationFlowSource | null>(null)
+  const loadedIdRef = useRef<string | null>(null)
   const pendingPosition = useRef<{ x: number; y: number } | null>(null)
   const pendingConn = useRef<{ sourceId: string; sourceHandle: string } | null>(null)
   const connectStartRef = useRef<{ sourceId: string; sourceHandle: string } | null>(null)
@@ -143,42 +117,73 @@ function InnerEditor() {
     [],
   )
 
-  // Estado real = fonte da verdade. As edições do usuário ficam aqui.
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowNodeData>>(
-    layoutFlow(toFlowNodes(), toFlowEdges(), "LR"),
-  )
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(toFlowEdges())
+  const automation = useAutomation(automationId)
+  const replaceAutomation = useReplaceAutomation()
+  const toggleAutomation = useToggleAutomation()
+  const detail = automation.data
+  const active = detail?.active ?? false
 
-  // Reaplica o layout automático (Dagre) preservando as edições atuais
+  // Estado real = fonte da verdade. As edições do usuário ficam aqui.
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowNodeData>>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+
+  // Reaplica o layout automático (Dagre) — ação explícita do operador, é o
+  // único caminho que sobrescreve as posições já salvas em `__rfPos`.
   const runLayout = useCallback(
     (dir: LayoutDirection) => {
       setNodes((prev) => layoutFlow(prev, edges, dir))
+      readyRef.current = true
+      setDirty(true)
       window.requestAnimationFrame(() => fitView({ padding: 0.15, duration: 500 }))
     },
     [edges, fitView, setNodes],
   )
 
+  // Carga da automação real. Roda uma vez por id: o refetch disparado pelo
+  // save não pode reconstruir o canvas por baixo do operador.
   useEffect(() => {
-    const draft = readDraft()
-    if (draft) {
-      const nodes = draft.nodes.map((n) => ({ ...n, data: migrateFlowNode(n.data) }))
-      setActive(draft.active)
-      setNodes(nodes)
-      setEdges(remapFlowEdges(draft.edges, nodes))
-    } else {
-      const initial = getInitialDirection()
-      if (initial !== "LR") {
-        setDirection(initial)
-        setNodes((prev) => layoutFlow(prev, toFlowEdges(), initial))
-      }
+    if (!detail || loadedIdRef.current === detail.id) return
+    loadedIdRef.current = detail.id
+
+    const source: AutomationFlowSource = {
+      id: detail.id,
+      name: detail.name,
+      triggerType: detail.triggerType,
+      triggerConfig: detail.triggerConfig,
+      steps: detail.steps.map((s) => ({ id: s.id, type: s.type, config: s.config })),
     }
+    sourceRef.current = source
+
+    const dir = getInitialDirection()
+    setDirection(dir)
+
+    const graph = automationToFlowGraph(source)
+    const positioned = applySavedLayout(
+      graph.nodes,
+      graph.edges,
+      new Set(graph.unpositionedIds),
+      dir,
+    )
+    readyRef.current = false
+    setDirty(false)
+    setNodes(positioned)
+    setEdges(graph.edges)
+
     window.requestAnimationFrame(() => fitView({ padding: 0.15 }))
     const t = window.setTimeout(() => {
       readyRef.current = true
     }, 400)
     return () => window.clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [detail, fitView, setNodes, setEdges])
+
+  // Rede de segurança para o fechamento acidental da aba: o canvas não guarda
+  // mais rascunho local, então alteração não salva é alteração perdida.
+  useEffect(() => {
+    if (!dirty) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener("beforeunload", onBeforeUnload)
+    return () => window.removeEventListener("beforeunload", onBeforeUnload)
+  }, [dirty])
 
   const markDirty = useCallback(() => {
     if (readyRef.current) setDirty(true)
@@ -210,7 +215,11 @@ function InnerEditor() {
               let outputs = n.data.outputs
               for (const e of mine) {
                 const handle = e.sourceHandle ?? ""
-                config = clearHandleFromConfig(config, handle, n.data.stepType)
+                // O gatilho não é um step: a ligação com a entrada vive na
+                // ordem do array, não em `nextStepId` do triggerConfig.
+                if (n.id !== TRIGGER_NODE_ID) {
+                  config = markExplicitEdges(clearHandleFromConfig(config, handle, n.data.stepType))
+                }
                 outputs = outputs.map((o) =>
                   o.key === handle || (!handle && o.key === outputs[0]?.key)
                     ? { ...o, target: undefined }
@@ -276,7 +285,12 @@ function InnerEditor() {
                     ? { ...o, target: c.target! }
                     : o,
                 ),
-                config: applyHandleToConfig(n.data.config ?? {}, handle, c.target!, n.data.stepType),
+                config:
+                  n.id === TRIGGER_NODE_ID
+                    ? n.data.config
+                    : markExplicitEdges(
+                        applyHandleToConfig(n.data.config ?? {}, handle, c.target!, n.data.stepType),
+                      ),
               },
             }
           }),
@@ -402,13 +416,20 @@ function InnerEditor() {
       pendingPosition.current = null
       const conn = pendingConn.current
       pendingConn.current = null
+      const data = blankFlowNodeFromStep(type, ref)
+      // Mesma convenção do editor legado: passo novo nasce como folha
+      // explícita, senão o runtime cai no próximo item do array por engano.
+      data.config = markExplicitEdges(data.config)
+      if (type !== "condition" && type !== "round_robin") {
+        data.config = { ...data.config, nextStepId: "__none__" }
+      }
       setNodes((prev) => [
         ...prev,
         {
           id,
           type: "flowNode",
           position: pos,
-          data: blankFlowNodeFromStep(type, ref),
+          data,
         },
       ])
       if (conn) {
@@ -439,12 +460,17 @@ function InnerEditor() {
                       outputs: n.data.outputs.map((o) =>
                         o.key === conn.sourceHandle ? { ...o, target: id } : o,
                       ),
-                      config: applyHandleToConfig(
-                        n.data.config ?? {},
-                        conn.sourceHandle,
-                        id,
-                        n.data.stepType,
-                      ),
+                      config:
+                        n.id === TRIGGER_NODE_ID
+                          ? n.data.config
+                          : markExplicitEdges(
+                              applyHandleToConfig(
+                                n.data.config ?? {},
+                                conn.sourceHandle,
+                                id,
+                                n.data.stepType,
+                              ),
+                            ),
                     },
                   }
                 : n,
@@ -500,49 +526,84 @@ function InnerEditor() {
     [screenToFlowPosition],
   )
 
+  // Exporta no MESMO formato do editor legado (o `.json` precisa poder ser
+  // reimportado por lá), e não no formato interno de nós/arestas.
   const exportJson = useCallback(() => {
+    const source = sourceRef.current
+    if (!source || !detail) return
+    const { steps, triggerConfig } = flowGraphToAutomation(nodes, edges, source)
     const payload = {
-      nodes: nodes.map((n) => ({ id: n.id, position: n.position, data: n.data })),
-      edges: edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        sourceHandle: e.sourceHandle,
-        target: e.target,
-        data: e.data,
-      })),
+      id: detail.id,
+      name: detail.name,
+      description: detail.description,
+      triggerType: detail.triggerType,
+      triggerConfig,
+      active: detail.active,
+      steps,
+      exportedAt: new Date().toISOString(),
     }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = "fluxo-bv-calouros.json"
+    a.download = `${(detail.name || "automacao").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-fluxo.json`
     a.click()
     URL.revokeObjectURL(url)
-  }, [nodes, edges])
+  }, [nodes, edges, detail])
 
-  const saveFlow = useCallback(() => {
-    const draft: FlowDraft = { active, nodes, edges }
+  const saveFlow = useCallback(async () => {
+    const source = sourceRef.current
+    if (!source || !detail || replaceAutomation.isPending) return
+    const { steps, triggerConfig } = flowGraphToAutomation(nodes, edges, source)
     try {
-      window.localStorage.setItem(FLOW_DRAFT_KEY, JSON.stringify(draft))
+      await replaceAutomation.mutateAsync({
+        id: source.id,
+        body: {
+          name: detail.name,
+          description: detail.description,
+          triggerType: detail.triggerType,
+          triggerConfig,
+          allowManualRun: detail.allowManualRun,
+          steps,
+        },
+      })
+      sourceRef.current = { ...source, triggerConfig, steps }
       setDirty(false)
-      toast.success("Rascunho salvo neste navegador — não publica a automação")
-    } catch {
-      toast.error("Não foi possível salvar o rascunho")
+      toast.success("Fluxo salvo")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar o fluxo")
     }
-  }, [active, nodes, edges])
+  }, [nodes, edges, detail, replaceAutomation])
 
-  const toggleActive = useCallback(() => {
-    setActive((prev) => {
-      const next = !prev
-      toast.success(
-        next
-          ? "Marcado ativo só neste navegador — o worker não executa /fluxo"
-          : "Desmarcado neste navegador",
-      )
-      return next
-    })
-    setDirty(true)
-  }, [])
+  const toggleActive = useCallback(async () => {
+    if (!detail || toggleAutomation.isPending) return
+    try {
+      const next = await toggleAutomation.mutateAsync(detail.id)
+      toast.success(next.active ? "Automação ativada" : "Automação pausada")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível alterar o status")
+    }
+  }, [detail, toggleAutomation])
+
+  if (automation.isLoading) {
+    return <EditorPlaceholder state="loading" />
+  }
+
+  if (automation.isError || !detail) {
+    return (
+      <EditorPlaceholder
+        state="error"
+        message={
+          automation.error instanceof Error
+            ? automation.error.message
+            : "Não foi possível carregar a automação."
+        }
+        onRetry={() => void automation.refetch()}
+      />
+    )
+  }
+
+  const isEmpty = nodes.every((n) => n.id === TRIGGER_NODE_ID)
 
   return (
     <LogsContext.Provider value={logsContext}>
@@ -550,7 +611,7 @@ function InnerEditor() {
       <PageHeader
         back={{ href: "/automations", label: "Automações" }}
         icon={<IconBolt size={22} stroke={2.2} />}
-        title="BV – Calouros"
+        title={detail.name}
         titleAccessory={
           <div className="flex items-center gap-2">
             <span
@@ -560,7 +621,7 @@ function InnerEditor() {
                   : "rounded-full bg-[var(--color-bg-subtle)] px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--text-muted)]"
               }
             >
-              {active ? "Rascunho · ativo local" : "Rascunho local"}
+              {active ? "Ativa" : "Pausada"}
             </span>
             {dirty ? (
               <span className="rounded-full bg-[var(--color-amber-soft,#fef3c7)] px-2.5 py-0.5 text-[11px] font-extrabold tracking-tight text-[var(--color-amber-text,#92400e)]">
@@ -571,16 +632,16 @@ function InnerEditor() {
         }
         actions={
           <>
-            <PagePrimaryButton onClick={saveFlow} disabled={!dirty}>
+            <PagePrimaryButton onClick={() => void saveFlow()} disabled={!dirty || replaceAutomation.isPending}>
               <IconDeviceFloppy size={16} stroke={2.2} />
-              {dirty ? "Salvar" : "Salvo"}
+              {replaceAutomation.isPending ? "Salvando…" : dirty ? "Salvar" : "Salvo"}
             </PagePrimaryButton>
             <PageActionsMenu
             items={[
               {
                 icon: active ? <IconPlayerPause size={16} stroke={2.2} /> : <IconPlayerPlay size={16} stroke={2.2} />,
-                label: active ? "Desmarcar (local)" : "Marcar ativo (local)",
-                onClick: toggleActive,
+                label: active ? "Pausar automação" : "Ativar automação",
+                onClick: () => void toggleActive(),
                 active,
               },
               {
@@ -695,6 +756,20 @@ function InnerEditor() {
 
       <Legend />
 
+      {isEmpty && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <div className="pointer-events-auto max-w-sm rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--color-bg-card)] px-6 py-5 text-center shadow-[var(--glass-shadow-sm)]">
+            <p className="text-sm font-bold text-[var(--text-strong)]">
+              Esta automação ainda não tem passos
+            </p>
+            <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+              Arraste um bloco da paleta à esquerda, ou puxe uma conexão do
+              gatilho, para criar o primeiro passo do fluxo.
+            </p>
+          </div>
+        </div>
+      )}
+
       <LogsModal
         target={logsTarget}
         open={logsTarget !== null}
@@ -738,10 +813,51 @@ function Legend() {
   )
 }
 
-export function FlowEditor() {
+function EditorPlaceholder({
+  state,
+  message,
+  onRetry,
+}: {
+  state: "loading" | "error"
+  message?: string
+  onRetry?: () => void
+}) {
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+      <PageHeader
+        back={{ href: "/automations", label: "Automações" }}
+        icon={<IconBolt size={22} stroke={2.2} />}
+        title={state === "loading" ? "Carregando fluxo…" : "Fluxo indisponível"}
+      />
+      <div className="flex min-h-0 flex-1 items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]">
+        {state === "loading" ? (
+          <p className="text-sm text-[var(--text-muted)]">Carregando os passos da automação…</p>
+        ) : (
+          <div className="max-w-sm text-center">
+            <p className="text-sm font-bold text-[var(--text-strong)]">
+              Não foi possível abrir o fluxo
+            </p>
+            <p className="mt-1 text-[13px] text-[var(--text-muted)]">{message}</p>
+            {onRetry ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="mt-4 rounded-full bg-primary px-4 py-2 text-[12px] font-extrabold tracking-tight text-white"
+              >
+                Tentar novamente
+              </button>
+            ) : null}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function FlowEditor({ automationId }: { automationId: string }) {
   return (
     <ReactFlowProvider>
-      <InnerEditor />
+      <InnerEditor automationId={automationId} />
     </ReactFlowProvider>
   )
 }

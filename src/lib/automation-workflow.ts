@@ -488,7 +488,7 @@ export function summarizeTriggerConfig(
     }
     case "message_received":
     case "message_sent": {
-      const parts: string[] = [
+      const parts = [
         summarizeTriggerChannelScope(c, lookup),
         pipelineSummaryPart(c, lookup),
         stageSummaryPart(c, lookup, {
@@ -498,18 +498,17 @@ export function summarizeTriggerConfig(
           names: "stageNames",
           prefix: "Estágio",
         }),
+        c.dealStatus
+          ? ({
+              OPEN: "Status: Em aberto",
+              WON: "Status: Ganho",
+              LOST: "Status: Perdido",
+              "WON,LOST": "Status: Ganho ou Perdido",
+              "LOST,WON": "Status: Ganho ou Perdido",
+            } as Record<string, string>)[String(c.dealStatus).toUpperCase()] ??
+            `Status: ${String(c.dealStatus).toUpperCase()}`
+          : null,
       ];
-      if (c.dealStatus) {
-        const raw = String(c.dealStatus).toUpperCase();
-        const statusLabels: Record<string, string> = {
-          OPEN: "Status: Em aberto",
-          WON: "Status: Ganho",
-          LOST: "Status: Perdido",
-          "WON,LOST": "Status: Ganho ou Perdido",
-          "LOST,WON": "Status: Ganho ou Perdido",
-        };
-        parts.push(statusLabels[raw] ?? `Status: ${raw}`);
-      }
       return parts.filter(Boolean).join(" · ");
     }
     case "lead_distributed": {

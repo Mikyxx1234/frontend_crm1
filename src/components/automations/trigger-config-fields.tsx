@@ -243,7 +243,7 @@ function StageMultiSelect({
               <DropdownPrimitive.Item
                 onSelect={(e) => {
                   e.preventDefault();
-                  onChange([], null);
+                  onChange([], null, []);
                 }}
                 className={cn(
                   FILTER_FIELD_ITEM_CLASS,

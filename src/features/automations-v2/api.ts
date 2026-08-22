@@ -158,6 +158,7 @@ export interface AutomationLogRowDto {
   executedAt: string;
   payload?: Record<string, unknown> | null;
   contactName?: string | null;
+  contactPhone?: string | null;
   dealName?: string | null;
   dealNumber?: number | null;
 }

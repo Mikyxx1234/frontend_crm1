@@ -8,6 +8,8 @@ import {
   Microscope,
   User,
   Briefcase,
+  Phone,
+  GitBranch,
   Inbox,
   Loader2,
 } from "lucide-react"
@@ -19,9 +21,12 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { InputGlass } from "@/components/crm/input-glass"
+import { blockKeyForStepType, getBlockMeta } from "@/components/crm/flow-block-icon"
 import {
   automationLogToEntry,
   formatDateTime,
+  matchesLogQuery,
   type LogEntry,
   type LogStatus,
 } from "@/lib/logs-data"
@@ -80,6 +85,7 @@ export function LogsModal({
   }, [query.data])
 
   const [tab, setTab] = useState<TabKey>(target?.initialTab ?? "success")
+  const [queryText, setQueryText] = useState("")
   const [selected, setSelected] = useState<LogEntry | null>(null)
 
   // Sincroniza a aba inicial quando o alvo muda
@@ -87,6 +93,7 @@ export function LogsModal({
   if (target && target.nodeId !== lastNode) {
     setLastNode(target.nodeId)
     setTab(target.initialTab ?? "success")
+    setQueryText("")
   }
 
   if (!target) return null
@@ -98,7 +105,7 @@ export function LogsModal({
     { key: "error", label: "Erros", count: logs.error.length, tone: "error" },
   ]
 
-  const list =
+  const scoped =
     tab === "entered"
       ? logs.entered
       : tab === "success"
@@ -106,6 +113,7 @@ export function LogsModal({
         : tab === "alert"
           ? logs.alert
           : logs.error
+  const list = scoped.filter((entry) => matchesLogQuery(entry, queryText))
 
   return (
     <>
@@ -171,6 +179,21 @@ export function LogsModal({
                 )
               })}
             </div>
+
+            <div className="py-4">
+              <label className="sr-only" htmlFor="automation-logs-search">
+                Buscar logs por contato, negócio, telefone ou mensagem
+              </label>
+              <InputGlass
+                id="automation-logs-search"
+                type="search"
+                withSearch
+                value={queryText}
+                onChange={(e) => setQueryText(e.target.value)}
+                placeholder="Buscar contato, negócio, telefone ou mensagem…"
+                autoComplete="off"
+              />
+            </div>
           </header>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6">
@@ -182,7 +205,7 @@ export function LogsModal({
                 onRetry={() => query.refetch()}
               />
             ) : list.length === 0 ? (
-              <EmptyState />
+              <EmptyState hasQuery={queryText.trim().length > 0} />
             ) : (
               <ul className="space-y-3 py-4">
                 {list.map((entry) => (
@@ -238,6 +261,13 @@ function LogRow({
         <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">
           {formatDateTime(entry.timestamp)}
         </p>
+        {entry.status === "error" &&
+          entry.message &&
+          entry.message !== entry.title && (
+            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+              {entry.message}
+            </p>
+          )}
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <User className="size-4" aria-hidden />
@@ -247,6 +277,18 @@ function LogRow({
             <Briefcase className="size-4" aria-hidden />
             {entry.dealLabel}
           </span>
+          {entry.contactPhone && (
+            <span className="inline-flex items-center gap-1.5">
+              <Phone className="size-4" aria-hidden />
+              {entry.contactPhone}
+            </span>
+          )}
+          {entry.stepType && (
+            <span className="inline-flex items-center gap-1.5">
+              <GitBranch className="size-4" aria-hidden />
+              {getBlockMeta(blockKeyForStepType(entry.stepType)).label}
+            </span>
+          )}
         </div>
       </div>
 
@@ -263,13 +305,17 @@ function LogRow({
   )
 }
 
-function EmptyState() {
+function EmptyState({ hasQuery }: { hasQuery?: boolean }) {
   return (
     <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <Inbox className="h-4 w-4" />
       </span>
-      <p className="text-sm text-muted-foreground">Nenhum registro nesta categoria.</p>
+      <p className="text-sm text-muted-foreground">
+        {hasQuery
+          ? "Nenhum registro para esta busca."
+          : "Nenhum registro nesta categoria."}
+      </p>
     </div>
   )
 }

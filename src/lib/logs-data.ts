@@ -20,6 +20,8 @@ export interface LogEntry {
   dealId: string
   contactLabel: string
   dealLabel: string
+  contactPhone: string | null
+  stepType: string | null
   summary: Record<string, string | number | boolean>
   params: Record<string, string | number | boolean>
 }
@@ -52,6 +54,7 @@ export interface AutomationLogRow {
   executedAt: string
   payload?: Record<string, unknown> | null
   contactName?: string | null
+  contactPhone?: string | null
   dealName?: string | null
   dealNumber?: number | null
 }
@@ -117,29 +120,61 @@ export function automationLogToEntry(row: AutomationLogRow): LogEntry {
   if (row.stepType) summary.stepType = row.stepType
   if (contactId) summary.contactId = contactId
   if (dealId) summary.dealId = dealId
+  if (row.contactName) summary.contactName = row.contactName
+  if (row.contactPhone) summary.contactPhone = row.contactPhone
+  if (row.dealName) summary.dealName = row.dealName
+  if (row.dealNumber != null) summary.dealNumber = row.dealNumber
+
+  const contactLabel =
+    row.contactName?.trim() ||
+    (contactId ? `Contato ${shortRef(contactId)}` : "Sem contato")
+  const dealLabel =
+    row.dealName?.trim() ||
+    (row.dealNumber != null
+      ? `Negócio #${row.dealNumber}`
+      : dealId
+        ? `Negócio ${shortRef(dealId)}`
+        : "Sem negócio")
 
   return {
     id: row.id,
     sessionId: row.id,
     status,
-    title: STATUS_TITLE[status],
+    title:
+      status === "error" && row.message?.trim()
+        ? row.message.trim()
+        : STATUS_TITLE[status],
     message,
     timestamp: row.executedAt,
     contactId,
     dealId,
-    contactLabel:
-      row.contactName?.trim() ||
-      (contactId ? `Contato ${shortRef(contactId)}` : "Sem contato"),
-    dealLabel:
-      row.dealName?.trim() ||
-      (row.dealNumber != null
-        ? `Negócio #${row.dealNumber}`
-        : dealId
-          ? `Negócio ${shortRef(dealId)}`
-          : "Sem negócio"),
+    contactLabel,
+    dealLabel,
+    contactPhone: row.contactPhone?.trim() || null,
+    stepType: row.stepType ?? null,
     summary,
     params: flattenPayload(row.payload),
   }
+}
+
+export function matchesLogQuery(entry: LogEntry, rawQuery: string): boolean {
+  const q = rawQuery.trim().toLowerCase()
+  if (!q) return true
+  const haystack = [
+    entry.title,
+    entry.message,
+    entry.contactLabel,
+    entry.dealLabel,
+    entry.contactPhone,
+    entry.contactId,
+    entry.dealId,
+    entry.stepType,
+    formatDateTime(entry.timestamp),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+  return haystack.includes(q)
 }
 
 export function formatDateTime(iso: string) {

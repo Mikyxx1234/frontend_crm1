@@ -179,11 +179,6 @@ export function automationToFlowGraph(source: AutomationFlowSource): AutomationF
 }
 
 function summarizeTrigger(triggerType: string, cfg: Rec): string {
-  const parts: string[] = []
-  if (typeof cfg.pipelineName === "string" && cfg.pipelineName) parts.push(cfg.pipelineName)
-  if (typeof cfg.stageName === "string" && cfg.stageName) parts.push(cfg.stageName)
-  if (typeof cfg.tagName === "string" && cfg.tagName) parts.push(`Tag: ${cfg.tagName}`)
-  if (parts.length) return parts.join(" · ")
   return summarizeTriggerConfig(triggerType, cfg)
 }
 

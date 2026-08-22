@@ -288,7 +288,8 @@ function summarizeTriggerChannelScope(
     if (ids.length === 0) return "Selecione os canais";
     if (ids.length === 1) {
       const id = ids[0]!;
-      return lookup?.[id] ?? "1 canal";
+      const name = lookup?.[id];
+      return name && !looksLikeOpaqueId(name) ? name : "1 canal";
     }
     return `${ids.length} canais`;
   }
@@ -296,6 +297,100 @@ function summarizeTriggerChannelScope(
   if (type === "whatsapp") return "Todos os canais · WhatsApp";
   if (type === "email") return "Todos os canais · E-mail";
   return "Todos os canais";
+}
+
+function asStringList(v: unknown): string[] {
+  if (Array.isArray(v)) {
+    return v
+      .filter((x): x is string => typeof x === "string" && x.trim() !== "")
+      .map((s) => s.trim());
+  }
+  if (typeof v === "string" && v.trim()) return [v.trim()];
+  return [];
+}
+
+function configIds(
+  c: Record<string, unknown>,
+  singular: string,
+  plural: string,
+): string[] {
+  const many = asStringList(c[plural]);
+  if (many.length) return many;
+  return asStringList(c[singular]);
+}
+
+/** CUID/UUID não entram no resumo do card — o operador vê nome ou um rótulo curto. */
+function looksLikeOpaqueId(s: string): boolean {
+  if (s.length < 16) return false;
+  return (
+    /^c[a-z0-9]{20,}$/i.test(s) ||
+    /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(s) ||
+    /^[0-9a-f]{24,}$/i.test(s)
+  );
+}
+
+function resolveLabels(
+  ids: string[],
+  lookup: Record<string, string> | undefined,
+  stored: unknown,
+): string[] {
+  const storedList = asStringList(stored);
+  if (ids.length === 0) return storedList.filter((n) => !looksLikeOpaqueId(n));
+  const out: string[] = [];
+  for (let i = 0; i < ids.length; i++) {
+    const n = lookup?.[ids[i]!] ?? storedList[i] ?? (ids.length === 1 ? storedList[0] : undefined);
+    if (n && !looksLikeOpaqueId(n)) out.push(n);
+  }
+  return [...new Set(out)];
+}
+
+function labeledPart(
+  names: string[],
+  prefix: string,
+  fallback?: string | null,
+): string | null {
+  if (names.length === 0) return fallback ?? null;
+  if (names.length === 1) return `${prefix}: ${names[0]}`;
+  if (names.length === 2) return `${prefix}: ${names[0]}, ${names[1]}`;
+  return `${prefix}: ${names[0]} +${names.length - 1}`;
+}
+
+function pipelineSummaryPart(
+  c: Record<string, unknown>,
+  lookup?: Record<string, string>,
+): string | null {
+  const id = typeof c.pipelineId === "string" ? c.pipelineId.trim() : "";
+  if (!id) return null;
+  return labeledPart(resolveLabels([id], lookup, c.pipelineName), "Pipeline", "Pipeline filtrado");
+}
+
+function stageSummaryPart(
+  c: Record<string, unknown>,
+  lookup: Record<string, string> | undefined,
+  keys: { id: string; ids: string; name: string; names: string; prefix: string },
+): string | null {
+  const ids = configIds(c, keys.id, keys.ids);
+  const stored = asStringList(c[keys.names]).length ? c[keys.names] : c[keys.name];
+  const names = resolveLabels(ids, lookup, stored);
+  if (ids.length === 0 && names.length === 0) return null;
+  return labeledPart(
+    names,
+    keys.prefix,
+    ids.length > 1 ? "Estágios filtrados" : "Estágio filtrado",
+  );
+}
+
+function departmentSummaryPart(
+  c: Record<string, unknown>,
+  lookup?: Record<string, string>,
+): string | null {
+  const id = typeof c.departmentId === "string" ? c.departmentId.trim() : "";
+  if (!id) return null;
+  return labeledPart(
+    resolveLabels([id], lookup, c.departmentName),
+    "Departamento",
+    "Departamento filtrado",
+  );
 }
 
 export function summarizeTriggerConfig(
@@ -306,20 +401,27 @@ export function summarizeTriggerConfig(
   const c = asRecord(triggerConfig);
   switch (triggerType) {
     case "stage_changed": {
-      const parts: string[] = [];
-      if (c.fromStageId) {
-        const id = String(c.fromStageId);
-        parts.push(`De: ${lookup?.[id] ?? id}`);
-      }
-      if (c.toStageId) {
-        const id = String(c.toStageId);
-        parts.push(`Para: ${lookup?.[id] ?? id}`);
-      }
+      const parts = [
+        stageSummaryPart(c, lookup, {
+          id: "fromStageId",
+          ids: "fromStageIds",
+          name: "fromStageName",
+          names: "fromStageNames",
+          prefix: "De",
+        }),
+        stageSummaryPart(c, lookup, {
+          id: "toStageId",
+          ids: "toStageIds",
+          name: "toStageName",
+          names: "toStageNames",
+          prefix: "Para",
+        }),
+      ].filter(Boolean);
       return parts.length ? parts.join(" · ") : "Qualquer mudança de estágio";
     }
     case "tag_added": {
       if (c.tagName) return `Tag: ${String(c.tagName)}`;
-      if (c.tagId) return `ID: ${String(c.tagId)}`;
+      if (c.tagId) return "Tag filtrada";
       return "Qualquer tag";
     }
     case "lead_score_reached":
@@ -327,27 +429,29 @@ export function summarizeTriggerConfig(
     case "deal_created":
     case "deal_won":
     case "deal_lost": {
-      const parts: string[] = [];
-      if (c.pipelineId) {
-        const id = String(c.pipelineId);
-        parts.push(`Pipeline: ${lookup?.[id] ?? id}`);
-      }
-      if (c.stageId) {
-        const id = String(c.stageId);
-        parts.push(`Estágio: ${lookup?.[id] ?? id}`);
-      }
+      const parts = [
+        pipelineSummaryPart(c, lookup),
+        stageSummaryPart(c, lookup, {
+          id: "stageId",
+          ids: "stageIds",
+          name: "stageName",
+          names: "stageNames",
+          prefix: "Estágio",
+        }),
+      ].filter(Boolean);
       return parts.length ? parts.join(" · ") : "Qualquer pipeline";
     }
     case "contact_created": {
-      const parts: string[] = [];
-      if (c.pipelineId) {
-        const id = String(c.pipelineId);
-        parts.push(`Pipeline: ${lookup?.[id] ?? id}`);
-      }
-      if (c.stageId) {
-        const id = String(c.stageId);
-        parts.push(`Estágio: ${lookup?.[id] ?? id}`);
-      }
+      const parts = [
+        pipelineSummaryPart(c, lookup),
+        stageSummaryPart(c, lookup, {
+          id: "stageId",
+          ids: "stageIds",
+          name: "stageName",
+          names: "stageNames",
+          prefix: "Estágio",
+        }),
+      ].filter(Boolean);
       return parts.length ? parts.join(" · ") : "Novo contato";
     }
     case "conversation_created":
@@ -362,8 +466,10 @@ export function summarizeTriggerConfig(
       return "Qualquer mudança";
     }
     case "agent_changed": {
+      const name = typeof c.toAgentName === "string" ? c.toAgentName : "";
+      if (name && !looksLikeOpaqueId(name)) return `Agente: ${name}`;
       const toAgent = c.toAgentId;
-      return toAgent ? `Agente: ${String(toAgent)}` : "Qualquer agente";
+      return toAgent ? "Agente filtrado" : "Qualquer agente";
     }
     case "call_received":
     case "call_made": {
@@ -382,20 +488,19 @@ export function summarizeTriggerConfig(
     }
     case "message_received":
     case "message_sent": {
-      const parts: string[] = [summarizeTriggerChannelScope(c, lookup)];
-      if (c.pipelineId) {
-        const id = String(c.pipelineId);
-        parts.push(`Pipeline: ${lookup?.[id] ?? id}`);
-      }
-      if (c.stageId) {
-        const id = String(c.stageId);
-        parts.push(`Estágio: ${lookup?.[id] ?? id}`);
-      }
+      const parts: string[] = [
+        summarizeTriggerChannelScope(c, lookup),
+        pipelineSummaryPart(c, lookup),
+        stageSummaryPart(c, lookup, {
+          id: "stageId",
+          ids: "stageIds",
+          name: "stageName",
+          names: "stageNames",
+          prefix: "Estágio",
+        }),
+      ];
       if (c.dealStatus) {
         const raw = String(c.dealStatus).toUpperCase();
-        // Mapa intencionalmente simples; combinacoes ainda nao expostas
-        // na UI caem no fallback (raw) — assim importacoes futuras de
-        // bots tipo Kommo nao quebram a UI.
         const statusLabels: Record<string, string> = {
           OPEN: "Status: Em aberto",
           WON: "Status: Ganho",
@@ -408,15 +513,14 @@ export function summarizeTriggerConfig(
       return parts.filter(Boolean).join(" · ");
     }
     case "lead_distributed": {
-      if (c.departmentId) return `Departamento: ${String(c.departmentId).slice(0, 8)}…`;
-      return "Quando um consultor humano assume o lead";
+      return departmentSummaryPart(c, lookup) ?? "Quando um consultor humano assume o lead";
     }
     case "manual":
       return "Disparada manualmente da conversa";
     case "conversation_tabulated": {
       if (c.tabulationLabel) return `Tabulação: ${String(c.tabulationLabel)}`;
-      if (c.tabulationId) return `Tabulação ID: ${String(c.tabulationId).slice(0, 8)}…`;
-      if (c.departmentId) return `Departamento: ${String(c.departmentId).slice(0, 8)}…`;
+      const dept = departmentSummaryPart(c, lookup);
+      if (dept) return dept;
       if (c.requireTabulation === true) return "Qualquer encerramento tabulado";
       return "Qualquer encerramento";
     }

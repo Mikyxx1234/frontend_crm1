@@ -15,7 +15,7 @@ import {
   resolveStepType,
 } from "@/lib/flow-step-adapter"
 import { summarizeStepConfig, summarizeTriggerConfig, triggerBindsInboundChannel } from "@/lib/automation-workflow"
-import { TriggerConfigFields } from "@/components/automations/trigger-config-fields"
+import { TriggerConfigFields, useTriggerNameLookup } from "@/components/automations/trigger-config-fields"
 import { STEP_FIELDS, type EditorField } from "@/components/automations/editor-fields"
 import { NodeConfigEditor } from "@/components/automations/inline-editor"
 import { useDepartmentOptions, useUserOptions } from "@/components/automations/editor-data"
@@ -79,6 +79,7 @@ export function NodeConfigPanel({ id, data }: { id: string; data: FlowNodeData }
   const isAssignOwner = stepType === "assign_owner"
   const { options: userOptions, isLoading: loadingUsers } = useUserOptions()
   const { options: deptOptions, isLoading: loadingDepts } = useDepartmentOptions()
+  const triggerLookup = useTriggerNameLookup()
 
   useEffect(() => {
     if (isTrigger) return
@@ -113,16 +114,28 @@ export function NodeConfigPanel({ id, data }: { id: string; data: FlowNodeData }
     [id, stepType, data.outputs, updateNodeData],
   )
 
+  useEffect(() => {
+    if (!isTrigger || !triggerType) return
+    const next = summarizeTriggerConfig(triggerType, cfg, triggerLookup)
+    if (next !== data.preview) updateNodeData(id, { preview: next })
+  }, [isTrigger, triggerType, cfg, triggerLookup, data.preview, id, updateNodeData])
+
   return (
-    <div className="nodrag nopan cursor-default border-t border-border bg-[var(--color-bg-card)] px-3.5 py-4">
+    <div
+      className={cn(
+        "nodrag nopan cursor-default border-t border-border bg-[var(--color-bg-card)] px-3.5 py-4",
+        isTrigger && "[&_label]:text-xs",
+      )}
+    >
       {isTrigger && triggerType ? (
         <TriggerConfigFields
+          stacked
           triggerType={triggerType}
           value={cfg as Record<string, unknown>}
           onChange={(next) => {
             updateNodeData(id, {
               config: next as NodeConfig,
-              preview: summarizeTriggerConfig(triggerType, next),
+              preview: summarizeTriggerConfig(triggerType, next, triggerLookup),
             })
           }}
         />

@@ -31,6 +31,8 @@ import {
   resolveStepType,
 } from "@/lib/flow-step-adapter"
 import { stepIcon, stepColor } from "@/components/automations/add-step-node"
+import { useTriggerNameLookup } from "@/components/automations/trigger-config-fields"
+import { summarizeTriggerConfig } from "@/lib/automation-workflow"
 import { useLogs } from "./logs-context"
 import { NodeConfigPanel } from "./node-config-panel"
 import { useVariableTrigger, VariablePickerMenu } from "./flow-variable-picker"
@@ -205,7 +207,11 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
       : familyAccent(family)
   const Icon = stepIcon[stepType] ?? MessageSquare
   const iconClass = stepColor[stepType] ?? "text-[var(--text-muted)]"
-  const preview = cardPreview(d)
+  const triggerLookup = useTriggerNameLookup()
+  const isTriggerCard = stepType === "trigger" || d.kind === "trigger"
+  const preview = isTriggerCard
+    ? summarizeTriggerConfig(String(d.triggerType ?? ""), d.config ?? {}, triggerLookup)
+    : cardPreview(d)
   const isFinish = family === "finish"
 
   useLayoutEffect(() => {
@@ -401,11 +407,12 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
       </div>
 
       <div
-        className={`px-3.5 text-[13px] leading-relaxed ${
+        className={`px-3.5 pb-2 text-[13px] leading-relaxed ${
           isMilestone ? "text-white/80" : "text-muted-foreground"
         }`}
       >
-        {stepType === "send_product" ||
+        {isTriggerCard ||
+        stepType === "send_product" ||
         stepType === "assign_owner" ||
         stepType === "transfer_automation" ||
         stepType === "condition" ||
@@ -459,6 +466,8 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
           </button>
         )}
       </div>
+
+      {selected && isTriggerCard && <NodeConfigPanel id={id} data={d} />}
 
       {d.outputs.length > 0 && (
         <div
@@ -557,7 +566,7 @@ function FlowNodeComponent({ id, data, selected }: NodeProps) {
         </div>
       )}
 
-      {selected && <NodeConfigPanel id={id} data={d} />}
+      {selected && !isTriggerCard && <NodeConfigPanel id={id} data={d} />}
 
       <div className="flex items-center justify-around gap-2 rounded-b-xl border-t border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2 text-center">
         <Stat value={d.stats.sucessos} label="Sucessos" color="var(--route-response)" onClick={() => openLogs("success")} />

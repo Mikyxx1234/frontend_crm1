@@ -26,12 +26,14 @@ import {
 } from "@/lib/automation-workflow";
 
 import { useTagOptions } from "./editor-data";
-import { ActiveChannelMultiSelect } from "./step-channel-picker";
+import { ActiveChannelMultiSelect, useConnectedStepChannels } from "./step-channel-picker";
 
 type Props = {
   triggerType: string;
   value: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
+  /** Card do canvas (320px): um campo por linha, no modelo de "Mensagem recebida". */
+  stacked?: boolean;
 };
 
 // Estrutura espelha o retorno de `GET /api/pipelines` no backend.
@@ -45,7 +47,7 @@ type Pipeline = { id: string; name: string; stages: PipelineStage[] };
  * graças ao cache do react-query, abrir o config dialog não bate duas
  * vezes no backend.
  */
-function usePipelines() {
+export function usePipelines() {
   return useQuery({
     queryKey: ["pipelines-for-trigger"],
     staleTime: 60_000,
@@ -55,6 +57,23 @@ function usePipelines() {
       return (await res.json()) as Pipeline[];
     },
   });
+}
+
+/** id → nome de pipeline, estágio e canal — resumo do card sem CUID. */
+export function useTriggerNameLookup(): Record<string, string> {
+  const { data: pipelines = [] } = usePipelines();
+  const wa = useConnectedStepChannels("send_whatsapp_message");
+  const em = useConnectedStepChannels("send_email");
+  return React.useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of pipelines) {
+      map[p.id] = p.name;
+      for (const s of p.stages) map[s.id] = s.name;
+    }
+    for (const o of wa.options) map[o.id] = o.label;
+    for (const o of em.options) map[o.id] = o.label;
+    return map;
+  }, [pipelines, wa.options, em.options]);
 }
 
 /**
@@ -89,7 +108,11 @@ function StageMultiSelect({
   label: string;
   helper?: string;
   values: string[];
-  onChange: (stageIds: string[], ownerPipelineId: string | null) => void;
+  onChange: (
+    stageIds: string[],
+    owner: { id: string; name: string } | null,
+    stageNames: string[],
+  ) => void;
   pipelinesFromValue?: string;
 }) {
   const { data: pipelines = [], isLoading } = usePipelines();
@@ -104,16 +127,22 @@ function StageMultiSelect({
     : pipelines;
   const allStages = visiblePipelines.flatMap((p) => p.stages);
 
-  const ownerOf = (ids: string[]): string | null =>
-    ids.length === 1
-      ? pipelines.find((p) => p.stages.some((s) => s.id === ids[0]))?.id ?? null
-      : null;
+  const namesOf = (ids: string[]) =>
+    ids
+      .map((id) => allStages.find((s) => s.id === id)?.name)
+      .filter((n): n is string => Boolean(n));
+
+  const ownerOf = (ids: string[]): { id: string; name: string } | null => {
+    if (ids.length !== 1) return null;
+    const p = pipelines.find((pipe) => pipe.stages.some((s) => s.id === ids[0]));
+    return p ? { id: p.id, name: p.name } : null;
+  };
 
   const toggle = (sid: string) => {
     const next = values.includes(sid)
       ? values.filter((v) => v !== sid)
       : [...values, sid];
-    onChange(next, ownerOf(next));
+    onChange(next, ownerOf(next), namesOf(next));
   };
 
   if (isLoading) {
@@ -132,15 +161,13 @@ function StageMultiSelect({
         <Input
           id={id}
           value={values.join(", ")}
-          onChange={(e) =>
-            onChange(
-              e.target.value
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean),
-              null,
-            )
-          }
+          onChange={(e) => {
+            const ids = e.target.value
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            onChange(ids, null, ids);
+          }}
           placeholder="IDs dos estágios (separados por vírgula)"
         />
         {helper ? (
@@ -340,7 +367,7 @@ function PipelineSelect({
   id: string;
   label: string;
   value: string;
-  onChange: (pipelineId: string) => void;
+  onChange: (pipelineId: string, pipelineName: string) => void;
 }) {
   const { data: pipelines = [], isLoading } = usePipelines();
 
@@ -360,7 +387,7 @@ function PipelineSelect({
         <Input
           id={id}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value, "")}
           placeholder="ID do pipeline"
         />
       </div>
@@ -378,7 +405,9 @@ function PipelineSelect({
           { value: "", label: "Qualquer pipeline" },
           ...pipelines.map((p) => ({ value: p.id, label: p.name })),
         ]}
-        onValueChange={onChange}
+        onValueChange={(v) =>
+          onChange(v, pipelines.find((p) => p.id === v)?.name ?? "")
+        }
       />
     </div>
   );
@@ -468,27 +497,42 @@ function readStageIdsFromConfig(
   return typeof single === "string" && single ? [single] : [];
 }
 
-export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
+export function TriggerConfigFields({ triggerType, value, onChange, stacked }: Props) {
   const set = (k: string, v: unknown) => onChange({ ...value, [k]: v });
   // Patch parcial — usado quando uma mesma interação muda mais de um
   // campo (ex.: ao escolher um estágio, preencher pipelineId junto).
   const patch = (next: Record<string, unknown>) => onChange({ ...value, ...next });
+  const pair = stacked ? "flex flex-col gap-3" : "grid gap-4 sm:grid-cols-2";
 
   switch (triggerType) {
     case "stage_changed":
       return (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={pair}>
           <StageMultiSelect
             id="tc-from"
             label="Estágio(s) de origem (opcional)"
             values={readStageIdsFromConfig(value, "fromStage")}
-            onChange={(sids) => patch({ fromStageIds: sids, fromStageId: "" })}
+            onChange={(sids, _owner, names) =>
+              patch({
+                fromStageIds: sids,
+                fromStageId: "",
+                fromStageNames: names,
+                fromStageName: names[0] ?? "",
+              })
+            }
           />
           <StageMultiSelect
             id="tc-to"
             label="Estágio(s) de destino"
             values={readStageIdsFromConfig(value, "toStage")}
-            onChange={(sids) => patch({ toStageIds: sids, toStageId: "" })}
+            onChange={(sids, _owner, names) =>
+              patch({
+                toStageIds: sids,
+                toStageId: "",
+                toStageNames: names,
+                toStageName: names[0] ?? "",
+              })
+            }
             helper="Deixe vazio para qualquer destino. Pode escolher mais de um."
           />
         </div>
@@ -519,28 +563,39 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
     case "deal_won":
     case "deal_lost":
       return (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={pair}>
           <PipelineSelect
             id="tc-pipe"
             label="Pipeline (opcional)"
             value={String(value.pipelineId ?? "")}
-            onChange={(pid) => {
+            onChange={(pid, pipelineName) => {
               // Trocou de pipeline: limpa estágios (evita filtro
               // inconsistente do tipo "pipeline A, estágio do B").
-              patch({ pipelineId: pid, stageIds: [], stageId: "" });
+              patch({
+                pipelineId: pid,
+                pipelineName,
+                stageIds: [],
+                stageId: "",
+                stageNames: [],
+                stageName: "",
+              });
             }}
           />
           <StageMultiSelect
             id="tc-stage"
             label="Estágio(s) (opcional)"
             values={readStageIdsFromConfig(value, "stage")}
-            onChange={(sids, ownerPid) =>
+            onChange={(sids, owner, names) =>
               patch({
                 stageIds: sids,
                 stageId: "",
+                stageNames: names,
+                stageName: names[0] ?? "",
                 // Só preenche pipelineId quando o usuário ainda não tinha
                 // setado um (senão respeita a escolha explícita do operador).
-                ...(ownerPid && !value.pipelineId ? { pipelineId: ownerPid } : {}),
+                ...(owner && !value.pipelineId
+                  ? { pipelineId: owner.id, pipelineName: owner.name }
+                  : {}),
               })
             }
             pipelinesFromValue={String(value.pipelineId ?? "")}
@@ -556,24 +611,35 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
             restrinja a um pipeline/estágio — o filtro só vale se o auto-deal
             já tiver sido criado no momento do evento.
           </p>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={pair}>
             <PipelineSelect
               id="tc-cc-pipe"
               label="Pipeline (opcional)"
               value={String(value.pipelineId ?? "")}
-              onChange={(pid) =>
-                patch({ pipelineId: pid, stageIds: [], stageId: "" })
+              onChange={(pid, pipelineName) =>
+                patch({
+                  pipelineId: pid,
+                  pipelineName,
+                  stageIds: [],
+                  stageId: "",
+                  stageNames: [],
+                  stageName: "",
+                })
               }
             />
             <StageMultiSelect
               id="tc-cc-stage"
               label="Estágio(s) (opcional)"
               values={readStageIdsFromConfig(value, "stage")}
-              onChange={(sids, ownerPid) =>
+              onChange={(sids, owner, names) =>
                 patch({
                   stageIds: sids,
                   stageId: "",
-                  ...(ownerPid && !value.pipelineId ? { pipelineId: ownerPid } : {}),
+                  stageNames: names,
+                  stageName: names[0] ?? "",
+                  ...(owner && !value.pipelineId
+                    ? { pipelineId: owner.id, pipelineName: owner.name }
+                    : {}),
                 })
               }
               pipelinesFromValue={String(value.pipelineId ?? "")}
@@ -657,24 +723,35 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
               onChange={(v) => set("channel", v)}
             />
           ) : null}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={pair}>
             <PipelineSelect
               id="tc-msg-pipe"
               label="Pipeline (opcional)"
               value={String(value.pipelineId ?? "")}
-              onChange={(pid) =>
-                patch({ pipelineId: pid, stageIds: [], stageId: "" })
+              onChange={(pid, pipelineName) =>
+                patch({
+                  pipelineId: pid,
+                  pipelineName,
+                  stageIds: [],
+                  stageId: "",
+                  stageNames: [],
+                  stageName: "",
+                })
               }
             />
             <StageMultiSelect
               id="tc-msg-stage"
               label="Estágio(s) (opcional)"
               values={readStageIdsFromConfig(value, "stage")}
-              onChange={(sids, ownerPid) =>
+              onChange={(sids, owner, names) =>
                 patch({
                   stageIds: sids,
                   stageId: "",
-                  ...(ownerPid && !value.pipelineId ? { pipelineId: ownerPid } : {}),
+                  stageNames: names,
+                  stageName: names[0] ?? "",
+                  ...(owner && !value.pipelineId
+                    ? { pipelineId: owner.id, pipelineName: owner.name }
+                    : {}),
                 })
               }
               pipelinesFromValue={String(value.pipelineId ?? "")}
@@ -781,7 +858,7 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
       );
     case "lifecycle_changed":
       return (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={pair}>
           <div className="space-y-2">
             <Label htmlFor="tc-lf">De (opcional)</Label>
             <Input
@@ -859,7 +936,10 @@ function LeadDistributedFields({
               icon: <DeptGlyph icon={d.icon} size={16} />,
             })),
           ]}
-          onValueChange={(v) => patch({ departmentId: v })}
+          onValueChange={(v) => {
+            const d = (departmentsQuery.data ?? []).find((x) => x.id === v);
+            patch({ departmentId: v, departmentName: d?.name ?? "" });
+          }}
         />
       </div>
     </div>
@@ -953,13 +1033,15 @@ function ConversationTabulatedFields({
               icon: <DeptGlyph icon={d.icon} size={16} />,
             })),
           ]}
-          onValueChange={(v) =>
+          onValueChange={(v) => {
+            const d = (departmentsQuery.data ?? []).find((x) => x.id === v);
             patch({
               departmentId: v,
+              departmentName: d?.name ?? "",
               tabulationId: "",
               tabulationLabel: "",
-            })
-          }
+            });
+          }}
         />
       </div>
 
